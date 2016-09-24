@@ -37,11 +37,14 @@ import Language.Haskell.LSP.Utility
 import qualified Language.Haskell.LSP.TH.InitializeRequestJSON as J
 import qualified Language.Haskell.LSP.TH.InitializeResponseCapabilitiesJSON as J
 import qualified Language.Haskell.LSP.TH.InitializeResponseJSON as J
+import qualified Language.Haskell.LSP.TH.ShutdownRequestJSON as J
+import qualified Language.Haskell.LSP.TH.ShutdownResponseJSON as J
 -- import qualified Phoityne.VSCode.TH.LaunchRequestArgumentsJSON as J
 -- import qualified Phoityne.VSCode.TH.LaunchRequestJSON as J
 -- import qualified Phoityne.VSCode.TH.LaunchResponseJSON as J
 -- import qualified Phoityne.VSCode.TH.NextRequestJSON as J
 -- import qualified Phoityne.VSCode.TH.NextResponseJSON as J
+import qualified Language.Haskell.LSP.TH.ExitNotificationJSON as J
 import qualified Language.Haskell.LSP.TH.OutputEventJSON as J
 import qualified Language.Haskell.LSP.TH.OutputEventBodyJSON as J
 -- import qualified Phoityne.VSCode.TH.PauseRequestJSON as J
@@ -86,6 +89,7 @@ import qualified Language.Haskell.LSP.TH.TerminatedEventBodyJSON as J
 import System.IO
 import System.FilePath
 import System.Directory
+import System.Exit
 import System.Log.Logger
 import qualified Data.Aeson as J
 import qualified Data.ByteString.Lazy as BSL
@@ -104,6 +108,7 @@ import qualified System.Log.Handler as LH
 import qualified System.Log.Handler.Simple as LHS
 import Safe
 import Text.Parsec
+import qualified Data.ByteString.Lazy.Char8 as B
 
 -- |
 --
@@ -255,10 +260,6 @@ handleRequest mvarDat contLenStr jsonStr = do
   return ()
   case J.eitherDecode jsonStr :: Either String J.Request of
     Left  err -> do
-      -- req_secが不明のため、エラー出力のみ行う。
-      -- ただし、initializeが完了していない場合は、エラー出力イベントが受理されない。
-      -- launchしていな場合はログ出力ができない。
-      -- 無視して、次のリクエストを待つ。
       let msg =  L.intercalate " " [ "request request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err]
               ++ L.intercalate "\n" ("" : "" : _ERR_MSG_URL)
               ++ "\n"
@@ -277,13 +278,20 @@ handleRequest mvarDat contLenStr jsonStr = do
     handle contLenStr jsonStr "initialize" = case J.eitherDecode jsonStr :: Either String J.InitializeRequest of
       Right req -> initializeRequestHandler mvarDat req
       Left  err -> do
-        -- initializeが完了していない場合は、エラー出力イベントが受理されない。
-        -- responceをエラーで返す。メッセージは1行で作成する必要がある。
-        -- launchしていな場合はログ出力ができない。
-        -- res_seqは1固定とする。
         let msg = L.intercalate " " $ ["initialize request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err] ++ _ERR_MSG_URL
         resSeq <- getIncreasedResponseSequence mvarDat
         sendResponse $ J.encode $ J.parseErrorInitializeResponse resSeq msg
+
+    handle contLenStr jsonStr "shutdown" = case J.eitherDecode jsonStr :: Either String J.ShutdownRequest of
+      Right req -> shutdownRequestHandler mvarDat req
+      Left  err -> do
+        let msg = L.intercalate " " $ ["shutdown request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err] ++ _ERR_MSG_URL
+        resSeq <- getIncreasedResponseSequence mvarDat
+        sendResponse $ J.encode $ J.parseErrorShutdownResponse resSeq msg
+
+    handle contLenStr jsonStr "exit" = do
+      logm $ B.pack "Got exit, exiting"
+      exitSuccess
 
 {-
     handle contLenStr jsonStr "launch" = case J.eitherDecode jsonStr :: Either String J.LaunchRequest of
@@ -501,6 +509,7 @@ sendResponseInternal str = do
   BSL.hPut stdout $ str2lbs _TWO_CRLF
   BSL.hPut stdout str
   hFlush stdout
+  logm str
 
 {-
 -- |
@@ -541,10 +550,10 @@ sendErrorEvent mvarCtx msg = do
 -- |
 --
 initializeRequestHandler :: MVar DebugContextData -> J.InitializeRequest -> IO ()
-initializeRequestHandler mvarCtx req@(J.InitializeRequest seq _) = flip E.catches handlers $ do
+initializeRequestHandler mvarCtx req@(J.InitializeRequest seq _ _) = flip E.catches handlers $ do
   resSeq <- getIncreasedResponseSequence mvarCtx
-  let capa = J.InitializeResponseCapabilites True True True True False False False False False True
-      res  = J.InitializeResponse resSeq "response" seq True "initialize" "" capa
+  let capa = J.InitializeResponseCapabilites
+      res  = J.InitializeResponse "2.0" resSeq capa
 
   sendResponse2 mvarCtx $ J.encode res
 
@@ -554,6 +563,23 @@ initializeRequestHandler mvarCtx req@(J.InitializeRequest seq _) = flip E.catche
       let msg = L.intercalate " " ["initialize request error.", show req, show e]
       resSeq <- getIncreasedResponseSequence mvarCtx
       sendResponse $ J.encode $ J.errorInitializeResponse resSeq req msg
+      sendErrorEvent mvarCtx msg
+
+-- |
+--
+shutdownRequestHandler :: MVar DebugContextData -> J.ShutdownRequest -> IO ()
+shutdownRequestHandler mvarCtx req@(J.ShutdownRequest seq ) = flip E.catches handlers $ do
+  -- resSeq <- getIncreasedResponseSequence mvarCtx
+  let res  = J.ShutdownResponse "2.0" seq "ok"
+
+  sendResponse2 mvarCtx $ J.encode res
+
+  where
+    handlers = [ E.Handler someExcept ]
+    someExcept (e :: E.SomeException) = do
+      let msg = L.intercalate " " ["shutdown request error.", show req, show e]
+      resSeq <- getIncreasedResponseSequence mvarCtx
+      sendResponse $ J.encode $ J.errorShutdownResponse resSeq req msg
       sendErrorEvent mvarCtx msg
 
 {-

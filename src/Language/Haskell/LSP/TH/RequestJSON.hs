@@ -11,7 +11,6 @@ import Language.Haskell.LSP.Utility
 --
 data Request =
   Request {
-    -- commandRequest   :: String    -- The command to execute
     methodRequest   :: String    -- The command to execute
   -- , argumentsRequest :: [String]  -- Object containing arguments for the command
   } deriving (Show, Read, Eq)

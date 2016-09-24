@@ -14,7 +14,9 @@ import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Encoding as TLE
 import qualified Data.ConfigFile as CFG
 import qualified Data.Tree as TR
-
+import qualified Data.ByteString.Lazy.Char8 as B
+import Control.Exception    (bracket)
+import System.IO
 
 -- |
 --  UTF8文字列をByteStringへの変換
@@ -73,3 +75,12 @@ pushWithLimit buf item maxSize = if length buf > maxSize then item : L.init buf 
 --
 rdrop :: Eq a => Int -> [a] -> [a]
 rdrop cnt = reverse . drop cnt . reverse
+
+-- ---------------------------------------------------------------------
+
+logm str = appendFileAndFlush "/tmp/hie-vscode.log" str
+
+-- | Append a 'ByteString' to a file.
+appendFileAndFlush :: FilePath -> B.ByteString -> IO ()
+appendFileAndFlush f txt = bracket (openBinaryFile f AppendMode) hClose
+    (\hdl -> B.hPut hdl txt >> hFlush hdl)

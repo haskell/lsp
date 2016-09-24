@@ -14,13 +14,14 @@ import Language.Haskell.LSP.TH.InitializeRequestJSON
 --
 data InitializeResponse =
   InitializeResponse {
-    seqInitializeResponse         :: Int     -- Sequence number
-  , typeInitializeResponse        :: String  -- One of "request", "response", or "event"
-  , request_seqInitializeResponse :: Int     -- Sequence number of the corresponding request
-  , successInitializeResponse     :: Bool    -- Outcome of the request
-  , commandInitializeResponse     :: String  -- The command requested 
-  , messageInitializeResponse     :: String  -- Contains error message if success == false.
-  , bodyInitializeResponse        :: InitializeResponseCapabilites  -- The capabilities of this debug adapter
+    jsonrpcInitializeResponse    :: String
+  , idInitializeResponse         :: Int     -- Sequence number
+  -- , typeInitializeResponse        :: String  -- One of "request", "response", or "event"
+  -- , request_seqInitializeResponse :: Int     -- Sequence number of the corresponding request
+  -- , successInitializeResponse     :: Bool    -- Outcome of the request
+  -- , commandInitializeResponse     :: String  -- The command requested 
+  -- , messageInitializeResponse     :: String  -- Contains error message if success == false.
+  , resultInitializeResponse        :: InitializeResponseCapabilites  -- The capabilities of this debug adapter
   } deriving (Show, Read, Eq)
 
 $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "InitializeResponse") } ''InitializeResponse)
@@ -30,11 +31,11 @@ $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "InitializeResp
 --
 parseErrorInitializeResponse :: Int -> String -> InitializeResponse
 parseErrorInitializeResponse seq msg =
-  InitializeResponse seq "response" seq False "initialize" msg defaultInitializeResponseCapabilites
+  InitializeResponse  "2.0" seq defaultInitializeResponseCapabilites
 
 -- |
 --
 errorInitializeResponse :: Int -> InitializeRequest -> String -> InitializeResponse
-errorInitializeResponse seq (InitializeRequest reqSeq _) msg =
-  InitializeResponse seq "response" reqSeq False "initialize" msg defaultInitializeResponseCapabilites
+errorInitializeResponse seq (InitializeRequest reqSeq _ _) msg =
+  InitializeResponse "2.0" seq defaultInitializeResponseCapabilites
 

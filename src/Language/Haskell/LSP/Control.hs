@@ -13,12 +13,10 @@ import           Language.Haskell.LSP.Utility
 import qualified Language.Haskell.LSP.Argument as A
 import qualified Language.Haskell.LSP.Core as GUI
 import qualified Data.ByteString.Lazy as BSL
-import qualified Data.ByteString.Lazy.Char8 as B
 import System.IO
 import Control.Concurrent
 import qualified Data.ConfigFile as C
 import Text.Parsec
-import Control.Exception    (bracket)
 
 -- ---------------------------------------------------------------------
 -- |
@@ -78,6 +76,7 @@ sendResponse str = do
   BSL.hPut stdout $ str2lbs _TWO_CRLF
   BSL.hPut stdout str
   hFlush stdout
+  logm str
 
 -- |
 --
@@ -85,13 +84,5 @@ sendResponse str = do
 _TWO_CRLF :: String
 _TWO_CRLF = "\r\n\r\n"
 
--- ---------------------------------------------------------------------
-
-logm str = appendFileAndFlush "/tmp/hie-vscode.log" str
-
--- | Append a 'ByteString' to a file.
-appendFileAndFlush :: FilePath -> B.ByteString -> IO ()
-appendFileAndFlush f txt = bracket (openBinaryFile f AppendMode) hClose
-    (\hdl -> B.hPut hdl txt >> hFlush hdl)
 
  
