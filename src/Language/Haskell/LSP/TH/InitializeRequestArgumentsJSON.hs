@@ -4,6 +4,8 @@
 module Language.Haskell.LSP.TH.InitializeRequestArgumentsJSON where
 
 import Data.Aeson.TH
+import qualified Data.Aeson as A
+import Data.Monoid
 
 import Language.Haskell.LSP.Utility
 
@@ -12,14 +14,13 @@ import Language.Haskell.LSP.Utility
 --
 data InitializeRequestArguments =
   InitializeRequestArguments {
-    adapterIDInitializeRequestArguments       :: String  -- The ID of the debugger adapter. Used to select or verify debugger adapter.
-  , linesStartAt1InitializeRequestArguments   :: Bool    -- If true all line numbers are 1-based (default).
-  , columnsStartAt1InitializeRequestArguments :: Bool    -- If true all column numbers are 1-based (default).
-  , pathFormatInitializeRequestArguments      :: String  -- Determines in what format paths are specified. Possible values are 'path' or 'uri'. The default is 'path', which is the native format.
+    processIdInitializeRequestArguments    :: Int
+  , capabilitiesInitializeRequestArguments :: A.Object -- None currently defined, but empty object sent
+  , traceInitializeRequestArguments        :: String
   } deriving (Show, Read, Eq)
 
 
 $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "InitializeRequestArguments") } ''InitializeRequestArguments)
 
 defaultInitializeRequestArguments :: InitializeRequestArguments
-defaultInitializeRequestArguments = InitializeRequestArguments "" False False ""
+defaultInitializeRequestArguments = InitializeRequestArguments 0 mempty mempty

@@ -259,7 +259,7 @@ handleRequest mvarDat contLenStr jsonStr = do
       -- ただし、initializeが完了していない場合は、エラー出力イベントが受理されない。
       -- launchしていな場合はログ出力ができない。
       -- 無視して、次のリクエストを待つ。
-      let msg =  L.intercalate " " [ "request request parce error.", lbs2str contLenStr, lbs2str jsonStr, show err]
+      let msg =  L.intercalate " " [ "request request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err]
               ++ L.intercalate "\n" ("" : "" : _ERR_MSG_URL)
               ++ "\n"
 
@@ -281,7 +281,7 @@ handleRequest mvarDat contLenStr jsonStr = do
         -- responceをエラーで返す。メッセージは1行で作成する必要がある。
         -- launchしていな場合はログ出力ができない。
         -- res_seqは1固定とする。
-        let msg = L.intercalate " " $ ["initialize request parce error.", lbs2str contLenStr, lbs2str jsonStr, show err] ++ _ERR_MSG_URL
+        let msg = L.intercalate " " $ ["initialize request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err] ++ _ERR_MSG_URL
         resSeq <- getIncreasedResponseSequence mvarDat
         sendResponse $ J.encode $ J.parseErrorInitializeResponse resSeq msg
 
@@ -291,7 +291,7 @@ handleRequest mvarDat contLenStr jsonStr = do
       Left  err -> do
         -- launchしていな場合はログ出力ができない。
         -- req_secが不明のため、エラー出力のみ行う。
-        let msg = L.intercalate " " ["launch request parce error.", lbs2str contLenStr, lbs2str jsonStr, show err]
+        let msg = L.intercalate " " ["launch request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err]
                 ++ L.intercalate "\n" ("" : "" : _ERR_MSG_URL) ++ "\n"
         sendErrorEvent mvarDat msg
 
@@ -304,14 +304,14 @@ handleRequest mvarDat contLenStr jsonStr = do
     handle contLenStr jsonStr "configurationDone" = case J.eitherDecode jsonStr :: Either String J.ConfigurationDoneRequest of
       Right req -> configurationDoneRequestHandler mvarDat req
       Left  err -> do
-        let msg = L.intercalate " " ["configurationDone request parce error.", lbs2str contLenStr, lbs2str jsonStr, show err]
+        let msg = L.intercalate " " ["configurationDone request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err]
                 ++ L.intercalate "\n" ("" : "" : _ERR_MSG_URL) ++ "\n"
         sendErrorEvent mvarDat msg
 
     handle contLenStr jsonStr "disconnect" = case J.eitherDecode jsonStr :: Either String J.DisconnectRequest of
       Right req -> disconnectRequestHandler mvarDat req
       Left  err -> do
-        let msg = L.intercalate " " ["disconnect request parce error.", lbs2str contLenStr, lbs2str jsonStr, show err]
+        let msg = L.intercalate " " ["disconnect request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err]
                 ++ L.intercalate "\n" ("" : "" : _ERR_MSG_URL) ++ "\n"
         sendErrorEvent mvarDat msg
 
@@ -319,7 +319,7 @@ handleRequest mvarDat contLenStr jsonStr = do
     handle contLenStr jsonStr "setBreakpoints" = case J.eitherDecode jsonStr :: Either String J.SetBreakpointsRequest of
       Right req -> setBreakpointsRequestHandler mvarDat req
       Left  err -> do
-        let msg = L.intercalate " " ["setBreakpoints request parce error.", lbs2str contLenStr, lbs2str jsonStr, show err]
+        let msg = L.intercalate " " ["setBreakpoints request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err]
                 ++ L.intercalate "\n" ("" : "" : _ERR_MSG_URL) ++ "\n"
         sendErrorEvent mvarDat msg
 
@@ -327,7 +327,7 @@ handleRequest mvarDat contLenStr jsonStr = do
     handle contLenStr jsonStr "setFunctionBreakpoints" = case J.eitherDecode jsonStr :: Either String J.SetFunctionBreakpointsRequest of
       Right req -> setFunctionBreakpointsRequestHandler mvarDat req
       Left  err -> do
-        let msg = L.intercalate " " ["setFunctionBreakpoints request parce error.", lbs2str contLenStr, lbs2str jsonStr, show err]
+        let msg = L.intercalate " " ["setFunctionBreakpoints request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err]
                 ++ L.intercalate "\n" ("" : "" : _ERR_MSG_URL) ++ "\n"
         sendErrorEvent mvarDat msg
 
@@ -335,7 +335,7 @@ handleRequest mvarDat contLenStr jsonStr = do
     handle contLenStr jsonStr "continue" = case J.eitherDecode jsonStr :: Either String J.ContinueRequest of
       Right req -> continueRequestHandler mvarDat req
       Left  err -> do
-        let msg = L.intercalate " " ["continue request parce error.", lbs2str contLenStr, lbs2str jsonStr, show err]
+        let msg = L.intercalate " " ["continue request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err]
                 ++ L.intercalate "\n" ("" : "" : _ERR_MSG_URL) ++ "\n"
         sendErrorEvent mvarDat msg
 
@@ -343,7 +343,7 @@ handleRequest mvarDat contLenStr jsonStr = do
     handle contLenStr jsonStr "next" = case J.eitherDecode jsonStr :: Either String J.NextRequest of
       Right req -> nextRequestHandler mvarDat req
       Left  err -> do
-        let msg = L.intercalate " " ["next request parce error.", lbs2str contLenStr, lbs2str jsonStr, show err]
+        let msg = L.intercalate " " ["next request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err]
                 ++ L.intercalate "\n" ("" : "" : _ERR_MSG_URL) ++ "\n"
         sendErrorEvent mvarDat msg
 
@@ -351,7 +351,7 @@ handleRequest mvarDat contLenStr jsonStr = do
     handle contLenStr jsonStr "stepIn" = case J.eitherDecode jsonStr :: Either String J.StepInRequest of
       Right req -> stepInRequestHandler mvarDat req
       Left  err -> do
-        let msg = L.intercalate " " ["stepIn request parce error.", lbs2str contLenStr, lbs2str jsonStr, show err]
+        let msg = L.intercalate " " ["stepIn request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err]
                 ++ L.intercalate "\n" ("" : "" : _ERR_MSG_URL) ++ "\n"
         sendErrorEvent mvarDat msg
 
@@ -368,7 +368,7 @@ handleRequest mvarDat contLenStr jsonStr = do
         sendErrorEvent mvarDat "stepOut command is not supported."
 
       Left  err -> do
-        let msg = L.intercalate " " ["stepOut request parce error.", lbs2str contLenStr, lbs2str jsonStr, show err]
+        let msg = L.intercalate " " ["stepOut request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err]
                 ++ L.intercalate "\n" ("" : "" : _ERR_MSG_URL) ++ "\n"
         sendErrorEvent mvarDat msg
 
@@ -385,7 +385,7 @@ handleRequest mvarDat contLenStr jsonStr = do
         sendErrorEvent  mvarDat "pause command is not supported."
 
       Left  err -> do
-        let msg = L.intercalate " " ["pause request parce error.", lbs2str contLenStr, lbs2str jsonStr, show err]
+        let msg = L.intercalate " " ["pause request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err]
                 ++ L.intercalate "\n" ("" : "" : _ERR_MSG_URL) ++ "\n"
         sendErrorEvent  mvarDat msg
 
@@ -393,7 +393,7 @@ handleRequest mvarDat contLenStr jsonStr = do
     handle contLenStr jsonStr "stackTrace" = case J.eitherDecode jsonStr :: Either String J.StackTraceRequest of
       Right req -> stackTraceRequestHandler mvarDat req
       Left  err -> do
-        let msg = L.intercalate " " ["stackTrace request parce error.", lbs2str contLenStr, lbs2str jsonStr, show err]
+        let msg = L.intercalate " " ["stackTrace request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err]
                 ++ L.intercalate "\n" ("" : "" : _ERR_MSG_URL) ++ "\n"
         sendErrorEvent  mvarDat msg
 
@@ -401,7 +401,7 @@ handleRequest mvarDat contLenStr jsonStr = do
     handle contLenStr jsonStr "scopes" = case J.eitherDecode jsonStr :: Either String J.ScopesRequest of
       Right req -> scopesRequestHandler mvarDat req
       Left  err -> do
-        let msg = L.intercalate " " ["scopes request parce error.", lbs2str contLenStr, lbs2str jsonStr, show err]
+        let msg = L.intercalate " " ["scopes request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err]
                 ++ L.intercalate "\n" ("" : "" : _ERR_MSG_URL) ++ "\n"
         sendErrorEvent mvarDat msg
 
@@ -409,7 +409,7 @@ handleRequest mvarDat contLenStr jsonStr = do
     handle contLenStr jsonStr "variables" = case J.eitherDecode jsonStr :: Either String J.VariablesRequest of
       Right req -> variablesRequestHandler mvarDat req
       Left  err -> do
-        let msg = L.intercalate " " ["variables request parce error.", lbs2str contLenStr, lbs2str jsonStr, show err]
+        let msg = L.intercalate " " ["variables request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err]
                 ++ L.intercalate "\n" ("" : "" : _ERR_MSG_URL) ++ "\n"
         sendErrorEvent mvarDat msg
 
@@ -426,7 +426,7 @@ handleRequest mvarDat contLenStr jsonStr = do
         sendErrorEvent  mvarDat "source command is not supported."
 
       Left  err -> do
-        let msg = L.intercalate " " ["source request parce error.", lbs2str contLenStr, lbs2str jsonStr, show err]
+        let msg = L.intercalate " " ["source request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err]
                 ++ L.intercalate "\n" ("" : "" : _ERR_MSG_URL) ++ "\n"
         sendErrorEvent mvarDat msg
 
@@ -434,7 +434,7 @@ handleRequest mvarDat contLenStr jsonStr = do
     handle contLenStr jsonStr "threads" = case J.eitherDecode jsonStr :: Either String J.ThreadsRequest of
       Right req -> threadsRequestHandler mvarDat req
       Left  err -> do
-        let msg = L.intercalate " " ["threads request parce error.", lbs2str contLenStr, lbs2str jsonStr, show err]
+        let msg = L.intercalate " " ["threads request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err]
                 ++ L.intercalate "\n" ("" : "" : _ERR_MSG_URL) ++ "\n"
         sendErrorEvent mvarDat msg
 
@@ -442,14 +442,14 @@ handleRequest mvarDat contLenStr jsonStr = do
     handle contLenStr jsonStr "evaluate" = case J.eitherDecode jsonStr :: Either String J.EvaluateRequest of
       Right req -> evaluateRequestHandler mvarDat req
       Left  err -> do
-        let msg = L.intercalate " " ["evaluate request parce error.", lbs2str contLenStr, lbs2str jsonStr, show err]
+        let msg = L.intercalate " " ["evaluate request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err]
                 ++ L.intercalate "\n" ("" : "" : _ERR_MSG_URL) ++ "\n"
         sendErrorEvent mvarDat msg
 
     handle contLenStr jsonStr "completions" = case J.eitherDecode jsonStr :: Either String J.CompletionsRequest of
       Right req -> completionsRequestHandler mvarDat req
       Left  err -> do
-        let msg = L.intercalate " " ["completions request parce error.", lbs2str contLenStr, lbs2str jsonStr, show err]
+        let msg = L.intercalate " " ["completions request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err]
                 ++ L.intercalate "\n" ("" : "" : _ERR_MSG_URL) ++ "\n"
         sendErrorEvent mvarDat msg
 
@@ -541,7 +541,7 @@ sendErrorEvent mvarCtx msg = do
 -- |
 --
 initializeRequestHandler :: MVar DebugContextData -> J.InitializeRequest -> IO ()
-initializeRequestHandler mvarCtx req@(J.InitializeRequest seq _ _ _) = flip E.catches handlers $ do
+initializeRequestHandler mvarCtx req@(J.InitializeRequest seq _) = flip E.catches handlers $ do
   resSeq <- getIncreasedResponseSequence mvarCtx
   let capa = J.InitializeResponseCapabilites True True True True False False False False False True
       res  = J.InitializeResponse resSeq "response" seq True "initialize" "" capa

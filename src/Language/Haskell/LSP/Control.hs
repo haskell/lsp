@@ -9,18 +9,18 @@
 
 module Language.Haskell.LSP.Control where
 
--- モジュール
 import           Language.Haskell.LSP.Utility
 import qualified Language.Haskell.LSP.Argument as A
 import qualified Language.Haskell.LSP.Core as GUI
 import qualified Data.ByteString.Lazy as BSL
-
--- システム
+import qualified Data.ByteString.Lazy.Char8 as B
 import System.IO
 import Control.Concurrent
 import qualified Data.ConfigFile as C
 import Text.Parsec
+import Control.Exception    (bracket)
 
+-- ---------------------------------------------------------------------
 -- |
 --  ロジックメイン
 --
@@ -56,6 +56,7 @@ wait mvarDat = go BSL.empty
         Left _ -> go newBuf
         Right len -> do
           cnt <- BSL.hGet stdin len
+          logm cnt
           GUI.handleRequest mvarDat newBuf cnt
           wait mvarDat
 
@@ -83,3 +84,14 @@ sendResponse str = do
 --
 _TWO_CRLF :: String
 _TWO_CRLF = "\r\n\r\n"
+
+-- ---------------------------------------------------------------------
+
+logm str = appendFileAndFlush "/tmp/hie-vscode.log" str
+
+-- | Append a 'ByteString' to a file.
+appendFileAndFlush :: FilePath -> B.ByteString -> IO ()
+appendFileAndFlush f txt = bracket (openBinaryFile f AppendMode) hClose
+    (\hdl -> B.hPut hdl txt >> hFlush hdl)
+
+ 

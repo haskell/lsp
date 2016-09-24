@@ -35,6 +35,6 @@ parseErrorInitializeResponse seq msg =
 -- |
 --
 errorInitializeResponse :: Int -> InitializeRequest -> String -> InitializeResponse
-errorInitializeResponse seq (InitializeRequest reqSeq _ _ _) msg =
+errorInitializeResponse seq (InitializeRequest reqSeq _) msg =
   InitializeResponse seq "response" reqSeq False "initialize" msg defaultInitializeResponseCapabilites
 
