@@ -15,11 +15,11 @@ import Language.Haskell.LSP.TH.InitializeRequestArgumentsJSON
 data InitializeRequest =
   InitializeRequest {
     idInitializeRequest       :: Int                         -- Sequence number
-  , rootPathInitializeRequest :: String
+  , rootPathInitializeRequest :: Maybe String
   , paramsInitializeRequest   :: InitializeRequestArguments  -- Object containing arguments for the command
   } deriving (Show, Read, Eq)
 
 $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "InitializeRequest") } ''InitializeRequest)
 
 defaultInitializeRequest :: InitializeRequest
-defaultInitializeRequest = InitializeRequest 0 "" defaultInitializeRequestArguments
+defaultInitializeRequest = InitializeRequest 0 Nothing defaultInitializeRequestArguments

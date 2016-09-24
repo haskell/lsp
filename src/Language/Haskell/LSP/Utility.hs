@@ -8,6 +8,7 @@ import Data.Either.Utils
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.List as L
+import           Data.Monoid
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import qualified Data.Text.Lazy as TL
@@ -78,7 +79,8 @@ rdrop cnt = reverse . drop cnt . reverse
 
 -- ---------------------------------------------------------------------
 
-logm str = appendFileAndFlush "/tmp/hie-vscode.log" str
+logm :: B.ByteString -> IO ()
+logm str = appendFileAndFlush "/tmp/hie-vscode.log" (str <> B.pack "\n")
 
 -- | Append a 'ByteString' to a file.
 appendFileAndFlush :: FilePath -> B.ByteString -> IO ()

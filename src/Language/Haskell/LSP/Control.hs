@@ -17,6 +17,7 @@ import System.IO
 import Control.Concurrent
 import qualified Data.ConfigFile as C
 import Text.Parsec
+import qualified Data.ByteString.Lazy.Char8 as B
 
 -- ---------------------------------------------------------------------
 -- |
@@ -27,6 +28,7 @@ run :: A.ArgData      -- コマンドライン引数
     -> IO Int         -- exit code
 run _ _ = do
 
+  logm $ B.pack "Starting up server ..."
   hSetBuffering stdin NoBuffering
   hSetEncoding  stdin utf8
 

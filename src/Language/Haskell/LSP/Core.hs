@@ -86,6 +86,7 @@ import qualified Language.Haskell.LSP.TH.TerminatedEventBodyJSON as J
 
 -- import qualified Phoityne.GHCi as G
 
+import Data.Monoid
 import System.IO
 import System.FilePath
 import System.Directory
@@ -257,7 +258,7 @@ defaultDebugContextData = DebugContextData _INITIAL_RESPONSE_SEQUENCE BSL.putStr
 --
 handleRequest :: MVar DebugContextData -> BSL.ByteString -> BSL.ByteString -> IO ()
 handleRequest mvarDat contLenStr jsonStr = do
-  return ()
+  logm $ (B.pack $ "handleRequest:req=") <> jsonStr
   case J.eitherDecode jsonStr :: Either String J.Request of
     Left  err -> do
       let msg =  L.intercalate " " [ "request request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err]
@@ -271,13 +272,18 @@ handleRequest mvarDat contLenStr jsonStr = do
           terminatedEvtStr = J.encode terminatedEvt
       sendEventL terminatedEvtStr
 
-    Right (J.Request cmd) -> handle contLenStr jsonStr cmd
+    Right (J.Request cmd) -> do
+      logm $ (B.pack $ "handleRequest:cmd=" <> cmd)
+      handle contLenStr jsonStr cmd
 
   where
 
     handle contLenStr jsonStr "initialize" = case J.eitherDecode jsonStr :: Either String J.InitializeRequest of
-      Right req -> initializeRequestHandler mvarDat req
+      Right req -> do
+        logm $ B.pack $ "handle initialize:Right:req=" ++ show req
+        initializeRequestHandler mvarDat req
       Left  err -> do
+        logm $ B.pack $ "handle initialize:Left:err=" ++ show err
         let msg = L.intercalate " " $ ["initialize request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err] ++ _ERR_MSG_URL
         resSeq <- getIncreasedResponseSequence mvarDat
         sendResponse $ J.encode $ J.parseErrorInitializeResponse resSeq msg
@@ -498,8 +504,6 @@ sendResponse2 :: MVar DebugContextData -> BSL.ByteString -> IO ()
 sendResponse2 mvarCtx str = do
   ctx <- readMVar mvarCtx
   responseHandlerDebugContextData ctx str
-    -- "{\"seq\":1,\"type\":\"response\",\"request_seq\":1,\"success\":true,\"command\":\"initialize\",\"message\":\"\",\"body\":{\"supportsCompletionsRequest\":true}}"
-    --  responseHandlerDebugContextData ctx $ "{\"seq\":1,\"type\":\"response\",\"request_seq\":1,\"success\":true,\"command\":\"initialize\",\"message\":\"\",\"body\":{\"supportsConfigurationDoneRequest\":true,\"supportsFunctionBreakpoints\":false,\"supportsConditionalBreakpoints\":true,\"supportsEvaluateForHovers\":true,\"exceptionBreakpointFilters\":[],\"supportsStepBack\":false,\"supportsSetVariable\":false,\"supportsRestartFrame\":false,\"supportsGotoTargetsRequest\":false,\"supportsStepInTargetsRequest\":false,\"supportsCompletionsRequest\":false}}"
 
 -- |
 --
@@ -551,18 +555,19 @@ sendErrorEvent mvarCtx msg = do
 --
 initializeRequestHandler :: MVar DebugContextData -> J.InitializeRequest -> IO ()
 initializeRequestHandler mvarCtx req@(J.InitializeRequest seq _ _) = flip E.catches handlers $ do
-  resSeq <- getIncreasedResponseSequence mvarCtx
   let capa = J.InitializeResponseCapabilites
-      res  = J.InitializeResponse "2.0" resSeq capa
+      res  = J.InitializeResponse "2.0" seq capa
+      -- res  = J.InitializeResponse "2.0" 500 capa
 
+  logm $ B.pack $ "initializeRequestHandler:seq=" ++ show seq
   sendResponse2 mvarCtx $ J.encode res
 
   where
     handlers = [ E.Handler someExcept ]
     someExcept (e :: E.SomeException) = do
       let msg = L.intercalate " " ["initialize request error.", show req, show e]
-      resSeq <- getIncreasedResponseSequence mvarCtx
-      sendResponse $ J.encode $ J.errorInitializeResponse resSeq req msg
+      logm $ B.pack "sending errorInitializeResponse"
+      sendResponse $ J.encode $ J.errorInitializeResponse req msg
       sendErrorEvent mvarCtx msg
 
 -- |
