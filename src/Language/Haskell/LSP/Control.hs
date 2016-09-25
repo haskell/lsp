@@ -9,15 +9,16 @@
 
 module Language.Haskell.LSP.Control where
 
-import           Language.Haskell.LSP.Utility
+import           Control.Concurrent
+import qualified Data.ByteString.Lazy as BSL
+import qualified Data.ByteString.Lazy.Char8 as B
+import qualified Data.ConfigFile as C
+import           Data.Monoid
 import qualified Language.Haskell.LSP.Argument as A
 import qualified Language.Haskell.LSP.Core as GUI
-import qualified Data.ByteString.Lazy as BSL
-import System.IO
-import Control.Concurrent
-import qualified Data.ConfigFile as C
-import Text.Parsec
-import qualified Data.ByteString.Lazy.Char8 as B
+import           Language.Haskell.LSP.Utility
+import           System.IO
+import           Text.Parsec
 
 -- ---------------------------------------------------------------------
 -- |
@@ -56,7 +57,7 @@ wait mvarDat = go BSL.empty
         Left _ -> go newBuf
         Right len -> do
           cnt <- BSL.hGet stdin len
-          logm cnt
+          logm $ (B.pack "---> ") <> cnt
           GUI.handleRequest mvarDat newBuf cnt
           wait mvarDat
 
@@ -78,7 +79,7 @@ sendResponse str = do
   BSL.hPut stdout $ str2lbs _TWO_CRLF
   BSL.hPut stdout str
   hFlush stdout
-  logm str
+  logm $ (B.pack "<--2--") <> str
 
 -- |
 --

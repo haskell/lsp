@@ -258,7 +258,7 @@ defaultDebugContextData = DebugContextData _INITIAL_RESPONSE_SEQUENCE BSL.putStr
 --
 handleRequest :: MVar DebugContextData -> BSL.ByteString -> BSL.ByteString -> IO ()
 handleRequest mvarDat contLenStr jsonStr = do
-  logm $ (B.pack $ "handleRequest:req=") <> jsonStr
+  -- logm $ (B.pack $ "handleRequest:req=") <> jsonStr
   case J.eitherDecode jsonStr :: Either String J.Request of
     Left  err -> do
       let msg =  L.intercalate " " [ "request request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err]
@@ -273,14 +273,14 @@ handleRequest mvarDat contLenStr jsonStr = do
       sendEventL terminatedEvtStr
 
     Right (J.Request cmd) -> do
-      logm $ (B.pack $ "handleRequest:cmd=" <> cmd)
+      -- logm $ (B.pack $ "handleRequest:cmd=" <> cmd)
       handle contLenStr jsonStr cmd
 
   where
 
     handle contLenStr jsonStr "initialize" = case J.eitherDecode jsonStr :: Either String J.InitializeRequest of
       Right req -> do
-        logm $ B.pack $ "handle initialize:Right:req=" ++ show req
+        -- logm $ B.pack $ "handle initialize:Right:req=" ++ show req
         initializeRequestHandler mvarDat req
       Left  err -> do
         logm $ B.pack $ "handle initialize:Left:err=" ++ show err
@@ -513,7 +513,7 @@ sendResponseInternal str = do
   BSL.hPut stdout $ str2lbs _TWO_CRLF
   BSL.hPut stdout str
   hFlush stdout
-  logm str
+  logm $ (B.pack "<---") <> str
 
 {-
 -- |
@@ -555,11 +555,11 @@ sendErrorEvent mvarCtx msg = do
 --
 initializeRequestHandler :: MVar DebugContextData -> J.InitializeRequest -> IO ()
 initializeRequestHandler mvarCtx req@(J.InitializeRequest seq _ _) = flip E.catches handlers $ do
-  let capa = J.InitializeResponseCapabilites
+  let capa = J.InitializeResponseCapabilities (J.InitializeResponseCapabilitiesInner True True)
       res  = J.InitializeResponse "2.0" seq capa
       -- res  = J.InitializeResponse "2.0" 500 capa
 
-  logm $ B.pack $ "initializeRequestHandler:seq=" ++ show seq
+  -- logm $ B.pack $ "initializeRequestHandler:seq=" ++ show seq
   sendResponse2 mvarCtx $ J.encode res
 
   where

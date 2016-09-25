@@ -6,30 +6,36 @@ module Language.Haskell.LSP.TH.InitializeResponseCapabilitiesJSON where
 import Data.Aeson.TH
 
 import Language.Haskell.LSP.Utility
--- import Language.Haskell.LSP.TH.ExceptionBreakpointsFilterJSON
 
 -- |
---   Information about the capabilities of a debug adapter.
+--   Information about the capabilities of a language server
 --
-data InitializeResponseCapabilites =
-  InitializeResponseCapabilites {
-  --   supportsConfigurationDoneRequestInitializeResponseCapabilites :: Bool  -- The debug adapter supports the configurationDoneRequest.
-  -- , supportsFunctionBreakpointsInitializeResponseCapabilites      :: Bool  -- The debug adapter supports functionBreakpoints.
-  -- , supportsConditionalBreakpointsInitializeResponseCapabilites   :: Bool  -- The debug adapter supports conditionalBreakpoints.
-  -- , supportsEvaluateForHoversInitializeResponseCapabilites        :: Bool  -- The debug adapter supports a (side effect free) evaluate request for data hovers.
-  -- -- , exceptionBreakpointFiltersInitializeResponseCapabilites       :: [ExceptionBreakpointsFilter]  -- Available filters for the setExceptionBreakpoints request.
-  -- , supportsStepBackInitializeResponseCapabilites                 :: Bool  -- The debug adapter supports stepping back.
-  -- , supportsSetVariableInitializeResponseCapabilites              :: Bool  -- The debug adapter supports setting a variable to a value.
-  -- , supportsRestartFrameInitializeResponseCapabilites             :: Bool  -- The debug adapter supports restarting a frame.
-  -- , supportsGotoTargetsRequestInitializeResponseCapabilites       :: Bool  -- The debug adapter supports the gotoTargetsRequest.
-  -- , supportsStepInTargetsRequestInitializeResponseCapabilites     :: Bool  -- The debug adapter supports the stepInTargetsRequest. 
-  -- , supportsCompletionsRequestInitializeResponseCapabilites       :: Bool  -- The debug adapter supports the completionsRequest.
+data InitializeResponseCapabilitiesInner =
+  InitializeResponseCapabilitiesInner {
+    definitionProviderInitializeResponseCapabilitiesInner :: Bool
+  , renameProviderInitializeResponseCapabilitiesInner     :: Bool
   } deriving (Show, Read, Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "InitializeResponseCapabilites") } ''InitializeResponseCapabilites)
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "InitializeResponseCapabilitiesInner") } ''InitializeResponseCapabilitiesInner)
 
 -- |
 --
-defaultInitializeResponseCapabilites :: InitializeResponseCapabilites
-defaultInitializeResponseCapabilites = InitializeResponseCapabilites
+defaultInitializeResponseCapabilitiesInner :: InitializeResponseCapabilitiesInner
+defaultInitializeResponseCapabilitiesInner = InitializeResponseCapabilitiesInner True True
+
+-- ---------------------------------------------------------------------
+-- |
+--   Information about the capabilities of a language server
+--
+data InitializeResponseCapabilities =
+  InitializeResponseCapabilities {
+    capabilitiesInitializeResponseCapabilities :: InitializeResponseCapabilitiesInner
+  } deriving (Show, Read, Eq)
+
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "InitializeResponseCapabilities") } ''InitializeResponseCapabilities)
+
+-- |
+--
+defaultInitializeResponseCapabilities :: InitializeResponseCapabilities
+defaultInitializeResponseCapabilities = InitializeResponseCapabilities defaultInitializeResponseCapabilitiesInner
 

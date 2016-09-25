@@ -16,7 +16,7 @@ data InitializeResponse =
   InitializeResponse {
     jsonrpcInitializeResponse    :: String
   , idInitializeResponse         :: Int     -- Sequence number
-  , resultInitializeResponse        :: InitializeResponseCapabilites  -- The capabilities of this debug adapter
+  , resultInitializeResponse     :: InitializeResponseCapabilities  -- The capabilities of this debug adapter
   } deriving (Show, Read, Eq)
 
 $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "InitializeResponse") } ''InitializeResponse)
@@ -26,11 +26,11 @@ $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "InitializeResp
 --
 parseErrorInitializeResponse :: Int -> String -> InitializeResponse
 parseErrorInitializeResponse seq msg =
-  InitializeResponse  "2.0" seq defaultInitializeResponseCapabilites
+  InitializeResponse  "2.0" seq defaultInitializeResponseCapabilities
 
 -- |
 --
 errorInitializeResponse :: InitializeRequest -> String -> InitializeResponse
 errorInitializeResponse (InitializeRequest reqSeq _ _) msg =
-  InitializeResponse "2.0" reqSeq defaultInitializeResponseCapabilites
+  InitializeResponse "2.0" reqSeq defaultInitializeResponseCapabilities
 
