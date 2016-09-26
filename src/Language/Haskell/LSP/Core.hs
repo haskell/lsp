@@ -272,7 +272,14 @@ handleRequest mvarDat contLenStr jsonStr = do
         sendResponse $ J.encode $ J.parseErrorDefinitionResponse resSeq msg
 
 
-
+-- {\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"textDocument/rename\",\"params\":{\"textDocument\":{\"uri\":\"file:///home/alanz/mysrc/github/alanz/haskell-lsp/src/HieVscode.hs\"},\"position\":{\"line\":37,\"character\":17},\"newName\":\"getArgs'\"}}
+    handle contLenStr jsonStr "textDocument/rename" = case J.eitherDecode jsonStr :: Either String J.RenameRequest of
+      Right req -> renameRequestHandler mvarDat req
+      Left  err -> do
+        logm $ "rename parse failed:" <> B.pack err
+        let msg = L.intercalate " " $ ["textDocument/rename request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err] ++ _ERR_MSG_URL
+        resSeq <- getIncreasedResponseSequence mvarDat
+        sendResponse $ J.encode $ J.parseErrorRenameResponse resSeq msg
 
 {-
     handle contLenStr jsonStr "launch" = case J.eitherDecode jsonStr :: Either String J.LaunchRequest of
@@ -577,6 +584,23 @@ definitionRequestHandler mvarCtx req@(J.DefinitionRequest seq _) = flip E.catche
       let msg = L.intercalate " " ["definition request error.", show req, show e]
       logm $ B.pack "sending errorDefinitionResponse"
       sendResponse $ J.encode $ J.errorDefinitionResponse req msg
+      sendErrorEvent mvarCtx msg
+
+-- |
+--
+renameRequestHandler :: MVar DebugContextData -> J.RenameRequest -> IO ()
+renameRequestHandler mvarCtx req@(J.RenameRequest seq _) = flip E.catches handlers $ do
+  let loc = def
+      res  = J.RenameResponse "2.0" seq loc
+
+  sendResponse2 mvarCtx $ J.encode res
+
+  where
+    handlers = [ E.Handler someExcept ]
+    someExcept (e :: E.SomeException) = do
+      let msg = L.intercalate " " ["rename request error.", show req, show e]
+      logm $ B.pack "sending errorRenameResponse"
+      sendResponse $ J.encode $ J.errorRenameResponse req msg
       sendErrorEvent mvarCtx msg
 
 {-

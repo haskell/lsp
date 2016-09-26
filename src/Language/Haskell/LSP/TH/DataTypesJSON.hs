@@ -10,6 +10,46 @@ import Language.Haskell.LSP.Utility
 import Data.Default
 
 -- ---------------------------------------------------------------------
+
+{-
+
+Typescript definition
+
+interface TextDocumentItem {
+    /**
+     * The text document's URI.
+     */
+    uri: string;
+
+    /**
+     * The text document's language identifier.
+     */
+    languageId: string;
+
+    /**
+     * The version number of this document (it will strictly increase after each
+     * change, including undo/redo).
+     */
+    version: number;
+
+    /**
+     * The content of the opened text document.
+     */
+    text: string;
+}
+-}
+
+data TextDocumentItem =
+  TextDocumentItem {
+    uriTextDocumentItem        :: String
+  , languageIdTextDocumentItem :: String
+  , versionTextDocumentItem    :: Int
+  , textTextDocumentItem       :: String
+  } deriving (Show, Read, Eq)
+
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "TextDocumentItem") } ''TextDocumentItem)
+
+-- ---------------------------------------------------------------------
 {-
 Position in a text document expressed as zero-based line and character offset. A
 position is between two characters like an 'insert' cursor in a editor.
@@ -135,15 +175,6 @@ instance Default TextDocumentPositionParams where
 
 -- ---------------------------------------------------------------------
 
-data DidOpenTextDocumentNotificationParams =
-  DidOpenTextDocumentNotificationParams {
-    paramsDidOpenTextDocumentNotificationParams :: DidOpenTextDocumentNotificationParams
-  } deriving (Show, Read, Eq)
-
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DidOpenTextDocumentNotificationParams") } ''DidOpenTextDocumentNotificationParams)
-
--- -----------------
-
 data DefinitionRequestParams =
   DefinitionRequestParams
     { textDocumentDefinitionRequestParams :: TextDocumentIdentifier
@@ -200,6 +231,63 @@ errorDefinitionResponse (DefinitionRequest reqSeq _) msg =
 
 -- ---------------------------------------------------------------------
 
+data RenameRequestParams =
+  RenameRequestParams
+    { textDocumentRenameRequestParams :: TextDocumentIdentifier
+    , positionRenameRequestParams     :: Position
+    , newNameRenameRequestParams      :: String
+    } deriving (Show, Read, Eq)
+
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "RenameRequestParams") } ''RenameRequestParams)
+
+instance Default RenameRequestParams where
+  def = RenameRequestParams def def def
+
+-- |
+--   Client-initiated request
+--
+
+-- {\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"textDocument/rename\",\"params\":{\"textDocument\":{\"uri\":\"file:///home/alanz/mysrc/github/alanz/haskell-lsp/src/HieVscode.hs\"},\"position\":{\"line\":37,\"character\":17},\"newName\":\"getArgs'\"}}
+data RenameRequest =
+  RenameRequest {
+    idRenameRequest       :: Int
+  , paramsRenameRequest   :: RenameRequestParams
+  } deriving (Show, Read, Eq)
+
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "RenameRequest") } ''RenameRequest)
+
+defaultRenameRequest :: RenameRequest
+defaultRenameRequest = RenameRequest 0 def
+
+-- ---------------------------------------------------------------------
+
+-- |
+--   Server-initiated response to client request
+--
+data RenameResponse =
+  RenameResponse {
+    jsonrpcRenameResponse    :: String
+  , idRenameResponse         :: Int     -- Sequence number
+  , resultRenameResponse     :: Location
+  } deriving (Show, Read, Eq)
+
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "RenameResponse") } ''RenameResponse)
+
+
+-- |
+--
+parseErrorRenameResponse :: Int -> String -> RenameResponse
+parseErrorRenameResponse seq msg =
+  RenameResponse  "2.0" seq def
+
+-- |
+--
+errorRenameResponse :: RenameRequest -> String -> RenameResponse
+errorRenameResponse (RenameRequest reqSeq _) msg =
+  RenameResponse "2.0" reqSeq def
+
+-- ---------------------------------------------------------------------
+
 -- |
 --   Notification from the server to actually exit now, after shutdown acked
 --
@@ -228,7 +316,6 @@ defaultDidChangeConfigurationParamsNotification :: DidChangeConfigurationParamsN
 defaultDidChangeConfigurationParamsNotification = DidChangeConfigurationParamsNotification defaultDidChangeConfigurationParamsNotificationParams
 
 -- ---------------------------------------------------------------------
-{-
 -- |
 --   Notification from the server to actually exit now, after shutdown acked
 --
@@ -239,9 +326,6 @@ data DidOpenTextDocumentNotificationParams =
 
 $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DidOpenTextDocumentNotificationParams") } ''DidOpenTextDocumentNotificationParams)
 
--- defaultDidOpenTextDocumentNotificationParams :: DidOpenTextDocumentNotificationParams
--- defaultDidOpenTextDocumentNotificationParams = DidOpenTextDocumentNotificationParams mempty
--}
 -- ---------------------------------------
 -- |
 --   Notification from the server to actually exit now, after shutdown acked
@@ -494,46 +578,6 @@ $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "TerminatedEven
 
 defaultTerminatedEvent :: Int -> TerminatedEvent
 defaultTerminatedEvent seq = TerminatedEvent seq "event" "terminated" defaultTerminatedEventBody
-
--- ---------------------------------------------------------------------
-
-{-
-
-Typescript definition
-
-interface TextDocumentItem {
-    /**
-     * The text document's URI.
-     */
-    uri: string;
-
-    /**
-     * The text document's language identifier.
-     */
-    languageId: string;
-
-    /**
-     * The version number of this document (it will strictly increase after each
-     * change, including undo/redo).
-     */
-    version: number;
-
-    /**
-     * The content of the opened text document.
-     */
-    text: string;
-}
--}
-
-data TextDocumentItem =
-  TextDocumentItem {
-    uriTextDocumentItem        :: String
-  , languageIdTextDocumentItem :: String
-  , versionTextDocumentItem    :: Int
-  , textTextDocumentItem       :: String
-  } deriving (Show, Read, Eq)
-
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "TextDocumentItem") } ''TextDocumentItem)
 
 -- ---------------------------------------------------------------------
 
