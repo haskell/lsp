@@ -29,7 +29,7 @@ run :: A.ArgData      -- コマンドライン引数
     -> IO Int         -- exit code
 run _ _ = do
 
-  logm $ B.pack "Starting up server ..."
+  logm $ B.pack "\n\n\n\n\nStarting up server ..."
   hSetBuffering stdin NoBuffering
   hSetEncoding  stdin utf8
 
@@ -79,7 +79,7 @@ sendResponse str = do
   BSL.hPut stdout $ str2lbs _TWO_CRLF
   BSL.hPut stdout str
   hFlush stdout
-  logm $ (B.pack "<--2--") <> str
+  logm $ B.pack "<--2--" <> str
 
 -- |
 --

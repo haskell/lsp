@@ -17,75 +17,10 @@ module Language.Haskell.LSP.Core (
 import Language.Haskell.LSP.Constant
 import Language.Haskell.LSP.Utility
 -- import Phoityne.VSCode.IO.Utility
--- import qualified Phoityne.VSCode.TH.BreakpointJSON as J
--- import qualified Phoityne.VSCode.TH.CompletionsItemJSON as J
--- import qualified Phoityne.VSCode.TH.CompletionsArgumentsJSON as J
--- import qualified Phoityne.VSCode.TH.CompletionsResponseBodyJSON as J
--- import qualified Phoityne.VSCode.TH.CompletionsRequestJSON as J
--- import qualified Phoityne.VSCode.TH.CompletionsResponseJSON as J
--- import qualified Phoityne.VSCode.TH.ConfigurationDoneRequestJSON as J
--- import qualified Phoityne.VSCode.TH.ConfigurationDoneResponseJSON as J
--- import qualified Phoityne.VSCode.TH.ContinueRequestJSON as J
--- import qualified Phoityne.VSCode.TH.ContinueResponseJSON as J
--- import qualified Phoityne.VSCode.TH.DisconnectRequestJSON as J
--- import qualified Phoityne.VSCode.TH.DisconnectResponseJSON as J
--- import qualified Phoityne.VSCode.TH.EvaluateArgumentsJSON as J
--- import qualified Phoityne.VSCode.TH.EvaluateBodyJSON as J
--- import qualified Phoityne.VSCode.TH.EvaluateRequestJSON as J
--- import qualified Phoityne.VSCode.TH.EvaluateResponseJSON as J
--- import qualified Phoityne.VSCode.TH.InitializedEventJSON as J
-import qualified Language.Haskell.LSP.TH.InitializeRequestJSON as J
-import qualified Language.Haskell.LSP.TH.InitializeResponseCapabilitiesJSON as J
-import qualified Language.Haskell.LSP.TH.InitializeResponseJSON as J
-import qualified Language.Haskell.LSP.TH.ShutdownRequestJSON as J
-import qualified Language.Haskell.LSP.TH.ShutdownResponseJSON as J
--- import qualified Phoityne.VSCode.TH.LaunchRequestArgumentsJSON as J
--- import qualified Phoityne.VSCode.TH.LaunchRequestJSON as J
--- import qualified Phoityne.VSCode.TH.LaunchResponseJSON as J
--- import qualified Phoityne.VSCode.TH.NextRequestJSON as J
--- import qualified Phoityne.VSCode.TH.NextResponseJSON as J
-import qualified Language.Haskell.LSP.TH.ExitNotificationJSON as J
-import qualified Language.Haskell.LSP.TH.OutputEventJSON as J
-import qualified Language.Haskell.LSP.TH.OutputEventBodyJSON as J
--- import qualified Phoityne.VSCode.TH.PauseRequestJSON as J
--- import qualified Phoityne.VSCode.TH.PauseResponseJSON as J
-import qualified Language.Haskell.LSP.TH.RequestJSON as J
--- import qualified Phoityne.VSCode.TH.ScopesArgumentsJSON as J
--- import qualified Phoityne.VSCode.TH.ScopesRequestJSON as J
--- import qualified Phoityne.VSCode.TH.ScopesResponseJSON as J
--- import qualified Phoityne.VSCode.TH.SetBreakpointsRequestArgumentsJSON as J
--- import qualified Phoityne.VSCode.TH.SetBreakpointsRequestJSON as J
--- import qualified Phoityne.VSCode.TH.SetBreakpointsResponseBodyJSON as J
--- import qualified Phoityne.VSCode.TH.SetBreakpointsResponseJSON as J
--- import qualified Phoityne.VSCode.TH.SetFunctionBreakpointsRequestArgumentsJSON as J
--- import qualified Phoityne.VSCode.TH.SetFunctionBreakpointsRequestJSON as J
--- import qualified Phoityne.VSCode.TH.SetFunctionBreakpointsResponseBodyJSON as J
--- import qualified Phoityne.VSCode.TH.SetFunctionBreakpointsResponseJSON as J
--- import qualified Phoityne.VSCode.TH.SourceBreakpointJSON as J
--- import qualified Phoityne.VSCode.TH.FunctionBreakpointJSON as J
--- import qualified Phoityne.VSCode.TH.SourceJSON as J
--- import qualified Phoityne.VSCode.TH.SourceRequestJSON as J
--- import qualified Phoityne.VSCode.TH.SourceResponseJSON as J
--- import qualified Phoityne.VSCode.TH.StackFrameJSON as J
--- import qualified Phoityne.VSCode.TH.StackTraceBodyJSON as J
--- import qualified Phoityne.VSCode.TH.StackTraceRequestJSON as J
--- import qualified Phoityne.VSCode.TH.StackTraceResponseJSON as J
--- import qualified Phoityne.VSCode.TH.StepInRequestJSON as J
--- import qualified Phoityne.VSCode.TH.StepInResponseJSON as J
--- import qualified Phoityne.VSCode.TH.StepOutRequestJSON as J
--- import qualified Phoityne.VSCode.TH.StepOutResponseJSON as J
--- import qualified Phoityne.VSCode.TH.StoppedEventJSON as J
-import qualified Language.Haskell.LSP.TH.TerminatedEventJSON as J
-import qualified Language.Haskell.LSP.TH.TerminatedEventBodyJSON as J
--- import qualified Phoityne.VSCode.TH.ThreadsRequestJSON as J
--- import qualified Phoityne.VSCode.TH.ThreadsResponseJSON as J
--- import qualified Phoityne.VSCode.TH.VariableJSON as J
--- import qualified Phoityne.VSCode.TH.VariablesBodyJSON as J
--- import qualified Phoityne.VSCode.TH.VariablesRequestJSON as J
--- import qualified Phoityne.VSCode.TH.VariablesResponseJSON as J
-
+import qualified Language.Haskell.LSP.TH.DataTypesJSON as J
 -- import qualified Phoityne.GHCi as G
 
+import Data.Default
 import Data.Monoid
 import System.IO
 import System.FilePath
@@ -298,6 +233,46 @@ handleRequest mvarDat contLenStr jsonStr = do
     handle contLenStr jsonStr "exit" = do
       logm $ B.pack "Got exit, exiting"
       exitSuccess
+
+    -- {"jsonrpc":"2.0","method":"$/setTraceNotification","params":{"value":"off"}}
+    handle contLenStr jsonStr "$/setTraceNotification" = case J.eitherDecode jsonStr :: Either String J.TraceNotification of
+      Right req -> do
+        logm "Got setTraceNotification, ignoring"
+      Left  err -> do
+        let msg = L.intercalate " " $ ["$/setTraceNotification request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err] ++ _ERR_MSG_URL
+        resSeq <- getIncreasedResponseSequence mvarDat
+        sendResponse $ J.encode $ J.parseErrorShutdownResponse resSeq msg
+
+-- {"jsonrpc":"2.0","method":"workspace/didChangeConfiguration","params":{"settings":{"languageServerHaskell":{"maxNumberOfProblems":100}}}}
+    handle contLenStr jsonStr "workspace/didChangeConfiguration" = case J.eitherDecode jsonStr :: Either String J.DidChangeConfigurationParamsNotification of
+      Right req -> do
+        logm "Got workspace/didChangeConfiguration, ignoring"
+      Left  err -> do
+        let msg = L.intercalate " " $ ["workspace/didChangeConfiguration request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err] ++ _ERR_MSG_URL
+        resSeq <- getIncreasedResponseSequence mvarDat
+        sendResponse $ J.encode $ J.parseErrorShutdownResponse resSeq msg
+
+ -- {"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{...}}}
+    handle contLenStr jsonStr "textDocument/didOpen" = case J.eitherDecode jsonStr :: Either String J.DidOpenTextDocumentNotification of
+      Right req -> do
+        logm "Got textDocument/didOpen, ignoring"
+      Left  err -> do
+        let msg = L.intercalate " " $ ["textDocument/didOpen request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err] ++ _ERR_MSG_URL
+        resSeq <- getIncreasedResponseSequence mvarDat
+        sendResponse $ J.encode $ J.parseErrorShutdownResponse resSeq msg
+
+
+-- {"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{"textDocument":{"uri":"file:///tmp/Foo.hs"},"position":{"line":1,"character":8}}}
+    handle contLenStr jsonStr "textDocument/definition" = case J.eitherDecode jsonStr :: Either String J.DefinitionRequest of
+      Right req -> definitionRequestHandler mvarDat req
+      Left  err -> do
+        logm $ "definition parse failed:" <> B.pack err
+        let msg = L.intercalate " " $ ["textDocument/definition request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err] ++ _ERR_MSG_URL
+        resSeq <- getIncreasedResponseSequence mvarDat
+        sendResponse $ J.encode $ J.parseErrorDefinitionResponse resSeq msg
+
+
+
 
 {-
     handle contLenStr jsonStr "launch" = case J.eitherDecode jsonStr :: Either String J.LaunchRequest of
@@ -585,6 +560,23 @@ shutdownRequestHandler mvarCtx req@(J.ShutdownRequest seq ) = flip E.catches han
       let msg = L.intercalate " " ["shutdown request error.", show req, show e]
       resSeq <- getIncreasedResponseSequence mvarCtx
       sendResponse $ J.encode $ J.errorShutdownResponse resSeq req msg
+      sendErrorEvent mvarCtx msg
+
+-- |
+--
+definitionRequestHandler :: MVar DebugContextData -> J.DefinitionRequest -> IO ()
+definitionRequestHandler mvarCtx req@(J.DefinitionRequest seq _) = flip E.catches handlers $ do
+  let loc = def
+      res  = J.DefinitionResponse "2.0" seq loc
+
+  sendResponse2 mvarCtx $ J.encode res
+
+  where
+    handlers = [ E.Handler someExcept ]
+    someExcept (e :: E.SomeException) = do
+      let msg = L.intercalate " " ["definition request error.", show req, show e]
+      logm $ B.pack "sending errorDefinitionResponse"
+      sendResponse $ J.encode $ J.errorDefinitionResponse req msg
       sendErrorEvent mvarCtx msg
 
 {-
