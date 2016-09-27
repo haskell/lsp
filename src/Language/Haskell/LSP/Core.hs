@@ -238,6 +238,9 @@ handleRequest mvarDat contLenStr jsonStr = do
     handle contLenStr jsonStr "$/setTraceNotification" = case J.eitherDecode jsonStr :: Either String J.TraceNotification of
       Right req -> do
         logm "Got setTraceNotification, ignoring"
+        -- sendErrorLog "Got setTraceNotification, ignoring"
+        sendErrorShow "Got setTraceNotification, ignoring"
+
       Left  err -> do
         let msg = L.intercalate " " $ ["$/setTraceNotification request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err] ++ _ERR_MSG_URL
         resSeq <- getIncreasedResponseSequence mvarDat
@@ -529,6 +532,14 @@ sendErrorEvent mvarCtx msg = do
       outEvtStr = J.encode outEvt{J.bodyOutputEvent = J.OutputEventBody "stderr" msg Nothing }
   sendEvent outEvtStr
 
+sendErrorLog :: String -> IO ()
+sendErrorLog msg =
+  sendEvent $ J.encode (J.defLogMessage J.MtError msg)
+
+sendErrorShow :: String -> IO ()
+sendErrorShow msg =
+  sendEvent $ J.encode (J.defShowMessage J.MtError msg)
+
 -- |=====================================================================
 --
 -- Handlers
@@ -551,6 +562,8 @@ initializeRequestHandler mvarCtx req@(J.InitializeRequest seq _ _) = flip E.catc
       logm $ B.pack "sending errorInitializeResponse"
       sendResponse $ J.encode $ J.errorInitializeResponse req msg
       sendErrorEvent mvarCtx msg
+      sendErrorLog msg
+      sendErrorShow msg
 
 -- |
 --

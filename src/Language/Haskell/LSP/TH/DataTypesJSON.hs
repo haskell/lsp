@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 
 module Language.Haskell.LSP.TH.DataTypesJSON where
 
@@ -146,6 +147,48 @@ $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "TextDocumentId
 
 instance Default TextDocumentIdentifier where
   def = TextDocumentIdentifier def
+
+-- ---------------------------------------------------------------------
+{-
+Where the type is defined as follows:
+
+enum MessageType {
+    /**
+     * An error message.
+     */
+    Error = 1,
+    /**
+     * A warning message.
+     */
+    Warning = 2,
+    /**
+     * An information message.
+     */
+    Info = 3,
+    /**
+     * A log message.
+     */
+    Log = 4
+}
+-}
+data MessageType = MtError  -- ^ Error = 1,
+                 | MtWarning -- ^ Warning = 2,
+                 | MtInfo    -- ^ Info = 3,
+                 | MtLog     -- ^ Log = 4
+        deriving (Eq,Ord,Show,Read,Enum)
+
+instance A.ToJSON MessageType where
+  toJSON MtError   = A.Number 1
+  toJSON MtWarning = A.Number 2
+  toJSON MtInfo    = A.Number 3
+  toJSON MtLog     = A.Number 4
+
+instance A.FromJSON MessageType where
+  parseJSON (A.Number 1) = pure MtError
+  parseJSON (A.Number 2) = pure MtWarning
+  parseJSON (A.Number 3) = pure MtInfo
+  parseJSON (A.Number 4) = pure MtLog
+  parseJSON _            = mempty
 
 -- ---------------------------------------------------------------------
 {-
@@ -607,5 +650,90 @@ $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "TraceNotificat
 
 defaultTraceNotification :: TraceNotification
 defaultTraceNotification = TraceNotification defaultTraceNotificationParams
+
+-- ---------------------------------------------------------------------
+{-
+The log message notification is sent from the server to the client to ask the
+client to log a particular message.
+
+Notification:
+
+    method: 'window/logMessage'
+    params: LogMessageParams defined as follows:
+
+interface LogMessageParams {
+    /**
+     * The message type. See {@link MessageType}
+     */
+    type: number;
+
+    /**
+     * The actual message
+     */
+    message: string;
+}
+-}
+
+-- |
+--
+data MessageNotificationParams =
+  MessageNotificationParams {
+    typeMessageNotificationParams    :: MessageType
+  , messageMessageNotificationParams :: String
+  } deriving (Show, Read, Eq)
+
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "MessageNotificationParams") } ''MessageNotificationParams)
+
+instance Default MessageNotificationParams where
+  def = MessageNotificationParams MtWarning ""
+
+-- ---------------------------------------
+-- |
+--
+data MessageNotification =
+  MessageNotification {
+    jsonrpcMessageNotification :: String
+  , methodMessageNotification  :: String
+  , paramsMessageNotification  :: MessageNotificationParams
+  } deriving (Show, Read, Eq)
+
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "MessageNotification") } ''MessageNotification)
+
+-- -------------------------------------
+
+type LogMessageNotification = MessageNotification
+
+instance Default LogMessageNotification where
+  def = MessageNotification "2.0" "window/logMessage" def
+
+-- -------------------------------------
+{-
+The show message notification is sent from a server to a client to ask the
+client to display a particular message in the user interface.
+
+Notification:
+
+    method: 'window/showMessage'
+    params: ShowMessageParams defined as follows:
+
+interface ShowMessageParams {
+    /**
+     * The message type. See {@link MessageType}.
+     */
+    type: number;
+
+    /**
+     * The actual message.
+     */
+    message: string;
+}
+-}
+
+
+defLogMessage :: MessageType -> String -> MessageNotification
+defLogMessage mt msg = MessageNotification "2.0" "window/logMessage"   (MessageNotificationParams mt msg)
+
+defShowMessage :: MessageType -> String -> MessageNotification
+defShowMessage mt msg = MessageNotification "2.0" "window/showMessage" (MessageNotificationParams mt msg)
 
 -- ---------------------------------------------------------------------
