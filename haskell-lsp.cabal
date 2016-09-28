@@ -49,3 +49,4 @@ executable hie-vscode
                      , split
                      , text
                      , time
+                     , unordered-containers

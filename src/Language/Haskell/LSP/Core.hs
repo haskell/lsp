@@ -353,10 +353,10 @@ defaultErrorHandlers origId req = [ E.Handler someExcept ]
 -- |
 --
 initializeRequestHandler :: MVar DebugContextData -> J.InitializeRequest -> IO ()
-initializeRequestHandler mvarCtx req@(J.InitializeRequest seq _ _) =
-  flip E.catches (defaultErrorHandlers seq req) $ do
+initializeRequestHandler mvarCtx req@(J.InitializeRequest origId _) =
+  flip E.catches (defaultErrorHandlers origId req) $ do
     let capa = J.InitializeResponseCapabilities (J.InitializeResponseCapabilitiesInner True True)
-        res  = J.InitializeResponse "2.0" seq capa
+        res  = J.InitializeResponse "2.0" origId capa
 
     sendResponse2 mvarCtx $ J.encode res
 
@@ -374,31 +374,23 @@ shutdownRequestHandler mvarCtx req@(J.ShutdownRequest seq ) =
 -- |
 --
 definitionRequestHandler :: MVar DebugContextData -> J.DefinitionRequest -> IO ()
-definitionRequestHandler mvarCtx req@(J.DefinitionRequest seq _) =
-  flip E.catches (defaultErrorHandlers seq req) $ do
+definitionRequestHandler mvarCtx req@(J.DefinitionRequest origId _) =
+  flip E.catches (defaultErrorHandlers origId req) $ do
   let loc = def
-      res  = J.DefinitionResponse "2.0" seq loc
+      res  = J.DefinitionResponse "2.0" origId loc
 
   sendResponse2 mvarCtx $ J.encode res
 
 -- |
 --
 renameRequestHandler :: MVar DebugContextData -> J.RenameRequest -> IO ()
--- renameRequestHandler mvarCtx req@(J.RenameRequest seq _) = flip E.catches handlers $ do
-renameRequestHandler mvarCtx req@(J.RenameRequest seq _) =
-  flip E.catches (defaultErrorHandlers seq req) $ do
+renameRequestHandler mvarCtx req@(J.RenameRequest origId _) =
+  flip E.catches (defaultErrorHandlers origId req) $ do
   let loc = def
-      res  = J.RenameResponse "2.0" seq loc
+      res  = J.RenameResponse "2.0" origId loc
 
   sendResponse2 mvarCtx $ J.encode res
 
-  -- where
-  --   handlers = [ E.Handler someExcept ]
-  --   someExcept (e :: E.SomeException) = do
-  --     let msg = unwords ["rename request error.", show req, show e]
-  --     logm $ B.pack "sending errorRenameResponse"
-  --     sendResponse $ J.encode $ J.errorRenameResponse req msg
-  --     sendErrorEvent mvarCtx msg
 
 {-
 -- |
