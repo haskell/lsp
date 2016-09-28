@@ -539,10 +539,27 @@ defaultOutputEvent resSeq = OutputEvent resSeq "event" "output" defaultOutputEve
 data Request =
   Request {
     methodRequest   :: String    -- The command to execute
-  -- , argumentsRequest :: [String]  -- Object containing arguments for the command
   } deriving (Show, Read, Eq)
 
 $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "Request") } ''Request)
+
+-- ---------------------------------------------------------------------
+
+-- |
+--   Client-initiated request
+--
+data ErrorResponse =
+  ErrorResponse {
+    jsonrpcErrorResponse :: String    -- Always "2.0"
+  , idErrorResponse      :: Int -- Original request id
+  , errorErrorResponse   :: String
+  } deriving (Show, Read, Eq)
+
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "ErrorResponse") } ''ErrorResponse)
+
+instance Default ErrorResponse where
+  def = ErrorResponse "2.0" 0 ""
+
 
 -- ---------------------------------------------------------------------
 

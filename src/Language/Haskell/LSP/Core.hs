@@ -46,6 +46,12 @@ import Safe
 import Text.Parsec
 import qualified Data.ByteString.Lazy.Char8 as B
 
+-- ---------------------------------------------------------------------
+{-# ANN module ("HLint: ignore Eta reduce"         :: String) #-}
+{-# ANN module ("HLint: ignore Redundant do"       :: String) #-}
+{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
+-- ---------------------------------------------------------------------
+
 -- |
 --
 --
@@ -169,8 +175,8 @@ _TASKS_JSON_FILE_CONTENTS = str2lbs $ U.join "\n" $
 --
 --
 _ERR_MSG_URL :: [String]
-_ERR_MSG_URL = [ "`stack update` and install new phoityen-vscode."
-               , "Or check information on https://marketplace.visualstudio.com/items?itemName=phoityne.phoityne-vscode"
+_ERR_MSG_URL = [ "`stack update` and install new haskell-lsp."
+               , "Or check information on https://marketplace.visualstudio.com/items?itemName=xxxxxxxxxxxxxxx"
                ]
 
 
@@ -178,7 +184,6 @@ _ERR_MSG_URL = [ "`stack update` and install new phoityen-vscode."
 --
 --
 defaultDebugContextData :: DebugContextData
--- defaultDebugContextData = DebugContextData _INITIAL_RESPONSE_SEQUENCE (MAP.fromList []) (MAP.fromList []) "" "" False Nothing 0 False Nothing BSL.putStr
 defaultDebugContextData = DebugContextData _INITIAL_RESPONSE_SEQUENCE BSL.putStr
 
 -- |
@@ -192,271 +197,73 @@ defaultDebugContextData = DebugContextData _INITIAL_RESPONSE_SEQUENCE BSL.putStr
 --
 --
 handleRequest :: MVar DebugContextData -> BSL.ByteString -> BSL.ByteString -> IO ()
-handleRequest mvarDat contLenStr jsonStr = do
+handleRequest mvarDat contLenStr' jsonStr' = do
   -- logm $ (B.pack $ "handleRequest:req=") <> jsonStr
-  case J.eitherDecode jsonStr :: Either String J.Request of
+  case J.eitherDecode jsonStr' :: Either String J.Request of
     Left  err -> do
-      let msg =  L.intercalate " " [ "request request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err]
+      let msg =  unwords [ "request request parse error.", lbs2str contLenStr', lbs2str jsonStr', show err]
               ++ L.intercalate "\n" ("" : "" : _ERR_MSG_URL)
               ++ "\n"
-
-      sendErrorEvent mvarDat msg
-
-      resSeq <- getIncreasedResponseSequence mvarDat
-      let terminatedEvt    = J.defaultTerminatedEvent resSeq
-          terminatedEvtStr = J.encode terminatedEvt
-      sendEventL terminatedEvtStr
+      sendErrorLog msg
 
     Right (J.Request cmd) -> do
-      -- logm $ (B.pack $ "handleRequest:cmd=" <> cmd)
-      handle contLenStr jsonStr cmd
+      handle jsonStr' cmd
 
   where
-
-    handle contLenStr jsonStr "initialize" = case J.eitherDecode jsonStr :: Either String J.InitializeRequest of
+    helper :: J.FromJSON a => B.ByteString -> (MVar DebugContextData -> a -> IO ())
+           -> IO ()
+    helper jsonStr requestHandler = case J.eitherDecode jsonStr of
       Right req -> do
-        -- logm $ B.pack $ "handle initialize:Right:req=" ++ show req
-        initializeRequestHandler mvarDat req
+        requestHandler mvarDat req
       Left  err -> do
-        logm $ B.pack $ "handle initialize:Left:err=" ++ show err
-        let msg = L.intercalate " " $ ["initialize request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err] ++ _ERR_MSG_URL
-        resSeq <- getIncreasedResponseSequence mvarDat
-        sendResponse $ J.encode $ J.parseErrorInitializeResponse resSeq msg
+        let msg = unwords $ ["parse error.", lbs2str contLenStr', lbs2str jsonStr', show err] ++ _ERR_MSG_URL
+        sendErrorLog msg
 
-    handle contLenStr jsonStr "shutdown" = case J.eitherDecode jsonStr :: Either String J.ShutdownRequest of
-      Right req -> shutdownRequestHandler mvarDat req
-      Left  err -> do
-        let msg = L.intercalate " " $ ["shutdown request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err] ++ _ERR_MSG_URL
-        resSeq <- getIncreasedResponseSequence mvarDat
-        sendResponse $ J.encode $ J.parseErrorShutdownResponse resSeq msg
+    -- ---------------------------------
 
-    handle contLenStr jsonStr "exit" = do
+    handle jsonStr "initialize" = helper jsonStr initializeRequestHandler
+    handle jsonStr "shutdown"   = helper jsonStr shutdownRequestHandler
+
+    handle _jsonStr "exit" = do
       logm $ B.pack "Got exit, exiting"
       exitSuccess
 
     -- {"jsonrpc":"2.0","method":"$/setTraceNotification","params":{"value":"off"}}
-    handle contLenStr jsonStr "$/setTraceNotification" = case J.eitherDecode jsonStr :: Either String J.TraceNotification of
-      Right req -> do
-        logm "Got setTraceNotification, ignoring"
-        -- sendErrorLog "Got setTraceNotification, ignoring"
-        sendErrorShow "Got setTraceNotification, ignoring"
+    handle jsonStr "$/setTraceNotification" = helper jsonStr h
+      where
+        h :: MVar DebugContextData -> J.TraceNotification -> IO ()
+        h _ _ = do
+          logm "Got setTraceNotification, ignoring"
+          sendErrorLog "Got setTraceNotification, ignoring"
 
-      Left  err -> do
-        let msg = L.intercalate " " $ ["$/setTraceNotification request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err] ++ _ERR_MSG_URL
-        resSeq <- getIncreasedResponseSequence mvarDat
-        sendResponse $ J.encode $ J.parseErrorShutdownResponse resSeq msg
 
--- {"jsonrpc":"2.0","method":"workspace/didChangeConfiguration","params":{"settings":{"languageServerHaskell":{"maxNumberOfProblems":100}}}}
-    handle contLenStr jsonStr "workspace/didChangeConfiguration" = case J.eitherDecode jsonStr :: Either String J.DidChangeConfigurationParamsNotification of
-      Right req -> do
-        logm "Got workspace/didChangeConfiguration, ignoring"
-      Left  err -> do
-        let msg = L.intercalate " " $ ["workspace/didChangeConfiguration request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err] ++ _ERR_MSG_URL
-        resSeq <- getIncreasedResponseSequence mvarDat
-        sendResponse $ J.encode $ J.parseErrorShutdownResponse resSeq msg
+     -- {"jsonrpc":"2.0","method":"workspace/didChangeConfiguration","params":{"settings":{"languageServerHaskell":{"maxNumberOfProblems":100}}}}
+    handle jsonStr "workspace/didChangeConfiguration" = helper jsonStr h
+      where
+        h :: MVar DebugContextData -> J.DidChangeConfigurationParamsNotification -> IO ()
+        h _ _ = logm "Got workspace/didChangeConfiguration, ignoring"
+
 
  -- {"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{...}}}
-    handle contLenStr jsonStr "textDocument/didOpen" = case J.eitherDecode jsonStr :: Either String J.DidOpenTextDocumentNotification of
-      Right req -> do
-        logm "Got textDocument/didOpen, ignoring"
-      Left  err -> do
-        let msg = L.intercalate " " $ ["textDocument/didOpen request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err] ++ _ERR_MSG_URL
-        resSeq <- getIncreasedResponseSequence mvarDat
-        sendResponse $ J.encode $ J.parseErrorShutdownResponse resSeq msg
+    handle jsonStr "textDocument/didOpen" = helper jsonStr h
+      where
+        h :: MVar DebugContextData -> J.DidOpenTextDocumentNotification -> IO ()
+        h _ _ = logm "Got textDocument/didOpen, ignoring"
 
 
 -- {"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{"textDocument":{"uri":"file:///tmp/Foo.hs"},"position":{"line":1,"character":8}}}
-    handle contLenStr jsonStr "textDocument/definition" = case J.eitherDecode jsonStr :: Either String J.DefinitionRequest of
-      Right req -> definitionRequestHandler mvarDat req
-      Left  err -> do
-        logm $ "definition parse failed:" <> B.pack err
-        let msg = L.intercalate " " $ ["textDocument/definition request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err] ++ _ERR_MSG_URL
-        resSeq <- getIncreasedResponseSequence mvarDat
-        sendResponse $ J.encode $ J.parseErrorDefinitionResponse resSeq msg
+    handle jsonStr "textDocument/definition" = helper jsonStr definitionRequestHandler
+
 
 
 -- {\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"textDocument/rename\",\"params\":{\"textDocument\":{\"uri\":\"file:///home/alanz/mysrc/github/alanz/haskell-lsp/src/HieVscode.hs\"},\"position\":{\"line\":37,\"character\":17},\"newName\":\"getArgs'\"}}
-    handle contLenStr jsonStr "textDocument/rename" = case J.eitherDecode jsonStr :: Either String J.RenameRequest of
-      Right req -> renameRequestHandler mvarDat req
-      Left  err -> do
-        logm $ "rename parse failed:" <> B.pack err
-        let msg = L.intercalate " " $ ["textDocument/rename request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err] ++ _ERR_MSG_URL
-        resSeq <- getIncreasedResponseSequence mvarDat
-        sendResponse $ J.encode $ J.parseErrorRenameResponse resSeq msg
+    handle jsonStr "textDocument/rename" = helper jsonStr renameRequestHandler
 
-{-
-    handle contLenStr jsonStr "launch" = case J.eitherDecode jsonStr :: Either String J.LaunchRequest of
-      Right req -> launchRequestHandler mvarDat req
-      Left  err -> do
-        -- launchしていな場合はログ出力ができない。
-        -- req_secが不明のため、エラー出力のみ行う。
-        let msg = L.intercalate " " ["launch request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err]
-                ++ L.intercalate "\n" ("" : "" : _ERR_MSG_URL) ++ "\n"
-        sendErrorEvent mvarDat msg
+    handle jsonStr cmd = do
+      let msg = unwords ["unknown request command.", cmd, lbs2str contLenStr', lbs2str jsonStr]
+      sendErrorLog msg
 
-        resSeq <- getIncreasedResponseSequence mvarDat
-        let terminatedEvt    = J.defaultTerminatedEvent resSeq
-            terminatedEvtStr = J.encode terminatedEvt
-        sendEventL terminatedEvtStr
-
-
-    handle contLenStr jsonStr "configurationDone" = case J.eitherDecode jsonStr :: Either String J.ConfigurationDoneRequest of
-      Right req -> configurationDoneRequestHandler mvarDat req
-      Left  err -> do
-        let msg = L.intercalate " " ["configurationDone request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err]
-                ++ L.intercalate "\n" ("" : "" : _ERR_MSG_URL) ++ "\n"
-        sendErrorEvent mvarDat msg
-
-    handle contLenStr jsonStr "disconnect" = case J.eitherDecode jsonStr :: Either String J.DisconnectRequest of
-      Right req -> disconnectRequestHandler mvarDat req
-      Left  err -> do
-        let msg = L.intercalate " " ["disconnect request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err]
-                ++ L.intercalate "\n" ("" : "" : _ERR_MSG_URL) ++ "\n"
-        sendErrorEvent mvarDat msg
-
-
-    handle contLenStr jsonStr "setBreakpoints" = case J.eitherDecode jsonStr :: Either String J.SetBreakpointsRequest of
-      Right req -> setBreakpointsRequestHandler mvarDat req
-      Left  err -> do
-        let msg = L.intercalate " " ["setBreakpoints request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err]
-                ++ L.intercalate "\n" ("" : "" : _ERR_MSG_URL) ++ "\n"
-        sendErrorEvent mvarDat msg
-
-
-    handle contLenStr jsonStr "setFunctionBreakpoints" = case J.eitherDecode jsonStr :: Either String J.SetFunctionBreakpointsRequest of
-      Right req -> setFunctionBreakpointsRequestHandler mvarDat req
-      Left  err -> do
-        let msg = L.intercalate " " ["setFunctionBreakpoints request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err]
-                ++ L.intercalate "\n" ("" : "" : _ERR_MSG_URL) ++ "\n"
-        sendErrorEvent mvarDat msg
-
-
-    handle contLenStr jsonStr "continue" = case J.eitherDecode jsonStr :: Either String J.ContinueRequest of
-      Right req -> continueRequestHandler mvarDat req
-      Left  err -> do
-        let msg = L.intercalate " " ["continue request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err]
-                ++ L.intercalate "\n" ("" : "" : _ERR_MSG_URL) ++ "\n"
-        sendErrorEvent mvarDat msg
-
-
-    handle contLenStr jsonStr "next" = case J.eitherDecode jsonStr :: Either String J.NextRequest of
-      Right req -> nextRequestHandler mvarDat req
-      Left  err -> do
-        let msg = L.intercalate " " ["next request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err]
-                ++ L.intercalate "\n" ("" : "" : _ERR_MSG_URL) ++ "\n"
-        sendErrorEvent mvarDat msg
-
-
-    handle contLenStr jsonStr "stepIn" = case J.eitherDecode jsonStr :: Either String J.StepInRequest of
-      Right req -> stepInRequestHandler mvarDat req
-      Left  err -> do
-        let msg = L.intercalate " " ["stepIn request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err]
-                ++ L.intercalate "\n" ("" : "" : _ERR_MSG_URL) ++ "\n"
-        sendErrorEvent mvarDat msg
-
-    -- |
-    --  not supported.
-    --
-    handle contLenStr jsonStr "stepOut" = case J.eitherDecode jsonStr :: Either String J.StepOutRequest of
-      Right req -> do
-        resSeq <- getIncreasedResponseSequence mvarDat
-        let res    = J.defaultStepOutResponse resSeq req
-            resStr = J.encode $ res{J.successStepOutResponse = False, J.messageStepOutResponse = "unsupported command."}
-        sendResponse resStr
-
-        sendErrorEvent mvarDat "stepOut command is not supported."
-
-      Left  err -> do
-        let msg = L.intercalate " " ["stepOut request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err]
-                ++ L.intercalate "\n" ("" : "" : _ERR_MSG_URL) ++ "\n"
-        sendErrorEvent mvarDat msg
-
-    -- |
-    --  not supported.
-    --
-    handle contLenStr jsonStr "pause" = case J.eitherDecode jsonStr :: Either String J.PauseRequest of
-      Right req -> do
-        resSeq <- getIncreasedResponseSequence mvarDat
-        let res    = J.defaultPauseResponse resSeq req
-            resStr = J.encode $ res{J.successPauseResponse = False, J.messagePauseResponse = "unsupported command."}
-        sendResponse resStr
-
-        sendErrorEvent  mvarDat "pause command is not supported."
-
-      Left  err -> do
-        let msg = L.intercalate " " ["pause request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err]
-                ++ L.intercalate "\n" ("" : "" : _ERR_MSG_URL) ++ "\n"
-        sendErrorEvent  mvarDat msg
-
-
-    handle contLenStr jsonStr "stackTrace" = case J.eitherDecode jsonStr :: Either String J.StackTraceRequest of
-      Right req -> stackTraceRequestHandler mvarDat req
-      Left  err -> do
-        let msg = L.intercalate " " ["stackTrace request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err]
-                ++ L.intercalate "\n" ("" : "" : _ERR_MSG_URL) ++ "\n"
-        sendErrorEvent  mvarDat msg
-
-
-    handle contLenStr jsonStr "scopes" = case J.eitherDecode jsonStr :: Either String J.ScopesRequest of
-      Right req -> scopesRequestHandler mvarDat req
-      Left  err -> do
-        let msg = L.intercalate " " ["scopes request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err]
-                ++ L.intercalate "\n" ("" : "" : _ERR_MSG_URL) ++ "\n"
-        sendErrorEvent mvarDat msg
-
-
-    handle contLenStr jsonStr "variables" = case J.eitherDecode jsonStr :: Either String J.VariablesRequest of
-      Right req -> variablesRequestHandler mvarDat req
-      Left  err -> do
-        let msg = L.intercalate " " ["variables request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err]
-                ++ L.intercalate "\n" ("" : "" : _ERR_MSG_URL) ++ "\n"
-        sendErrorEvent mvarDat msg
-
-    -- |
-    --  not supported.
-    --
-    handle contLenStr jsonStr "source" = case J.eitherDecode jsonStr :: Either String J.SourceRequest of
-      Right req -> do
-        resSeq <- getIncreasedResponseSequence mvarDat
-        let res    = J.defaultSourceResponse resSeq req
-            resStr = J.encode $ res{J.successSourceResponse = False, J.messageSourceResponse = "unsupported command."}
-        sendResponse resStr
-
-        sendErrorEvent  mvarDat "source command is not supported."
-
-      Left  err -> do
-        let msg = L.intercalate " " ["source request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err]
-                ++ L.intercalate "\n" ("" : "" : _ERR_MSG_URL) ++ "\n"
-        sendErrorEvent mvarDat msg
-
-
-    handle contLenStr jsonStr "threads" = case J.eitherDecode jsonStr :: Either String J.ThreadsRequest of
-      Right req -> threadsRequestHandler mvarDat req
-      Left  err -> do
-        let msg = L.intercalate " " ["threads request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err]
-                ++ L.intercalate "\n" ("" : "" : _ERR_MSG_URL) ++ "\n"
-        sendErrorEvent mvarDat msg
-
-
-    handle contLenStr jsonStr "evaluate" = case J.eitherDecode jsonStr :: Either String J.EvaluateRequest of
-      Right req -> evaluateRequestHandler mvarDat req
-      Left  err -> do
-        let msg = L.intercalate " " ["evaluate request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err]
-                ++ L.intercalate "\n" ("" : "" : _ERR_MSG_URL) ++ "\n"
-        sendErrorEvent mvarDat msg
-
-    handle contLenStr jsonStr "completions" = case J.eitherDecode jsonStr :: Either String J.CompletionsRequest of
-      Right req -> completionsRequestHandler mvarDat req
-      Left  err -> do
-        let msg = L.intercalate " " ["completions request parse error.", lbs2str contLenStr, lbs2str jsonStr, show err]
-                ++ L.intercalate "\n" ("" : "" : _ERR_MSG_URL) ++ "\n"
-        sendErrorEvent mvarDat msg
-
--}
-    handle contLenStr jsonStr cmd = do
-      let msg = L.intercalate " " ["unknown request command.", cmd, lbs2str contLenStr, lbs2str jsonStr]
-      sendErrorEvent mvarDat msg
-
+-- ---------------------------------------------------------------------
 -- |
 --
 sendEvent :: BSL.ByteString -> IO ()
@@ -468,14 +275,6 @@ sendEventL :: BSL.ByteString -> IO ()
 sendEventL str = do
   infoM _LOG_NAME $ "[EVENT]" ++ lbs2str str
   sendEvent str
-
-
--- |
---
-sendResponseL :: BSL.ByteString -> IO ()
-sendResponseL str = do
-  infoM _LOG_NAME $ "[RESPONSE]" ++ lbs2str str
-  sendResponse str
 
 
 -- |
@@ -525,12 +324,9 @@ sendStdoutEvent mvarCtx msg = do
 -- |
 --
 --
-sendErrorEvent :: MVar DebugContextData -> String -> IO ()
-sendErrorEvent mvarCtx msg = do
-  resSeq <- getIncreasedResponseSequence mvarCtx
-  let outEvt    = J.defaultOutputEvent resSeq
-      outEvtStr = J.encode outEvt{J.bodyOutputEvent = J.OutputEventBody "stderr" msg Nothing }
-  sendEvent outEvtStr
+sendErrorResponse :: Int -> String -> IO ()
+sendErrorResponse origId msg = do
+  sendEvent $ J.encode (J.ErrorResponse "2.0" origId msg)
 
 sendErrorLog :: String -> IO ()
 sendErrorLog msg =
@@ -540,6 +336,16 @@ sendErrorShow :: String -> IO ()
 sendErrorShow msg =
   sendEvent $ J.encode (J.defShowMessage J.MtError msg)
 
+-- ---------------------------------------------------------------------
+
+defaultErrorHandlers :: (Show a) => Int -> a -> [E.Handler ()]
+defaultErrorHandlers origId req = [ E.Handler someExcept ]
+  where
+    someExcept (e :: E.SomeException) = do
+      let msg = unwords ["request error.", show req, show e]
+      sendErrorResponse origId msg
+      sendErrorLog msg
+
 -- |=====================================================================
 --
 -- Handlers
@@ -547,74 +353,52 @@ sendErrorShow msg =
 -- |
 --
 initializeRequestHandler :: MVar DebugContextData -> J.InitializeRequest -> IO ()
-initializeRequestHandler mvarCtx req@(J.InitializeRequest seq _ _) = flip E.catches handlers $ do
-  let capa = J.InitializeResponseCapabilities (J.InitializeResponseCapabilitiesInner True True)
-      res  = J.InitializeResponse "2.0" seq capa
-      -- res  = J.InitializeResponse "2.0" 500 capa
+initializeRequestHandler mvarCtx req@(J.InitializeRequest seq _ _) =
+  flip E.catches (defaultErrorHandlers seq req) $ do
+    let capa = J.InitializeResponseCapabilities (J.InitializeResponseCapabilitiesInner True True)
+        res  = J.InitializeResponse "2.0" seq capa
 
-  -- logm $ B.pack $ "initializeRequestHandler:seq=" ++ show seq
-  sendResponse2 mvarCtx $ J.encode res
+    sendResponse2 mvarCtx $ J.encode res
 
-  where
-    handlers = [ E.Handler someExcept ]
-    someExcept (e :: E.SomeException) = do
-      let msg = L.intercalate " " ["initialize request error.", show req, show e]
-      logm $ B.pack "sending errorInitializeResponse"
-      sendResponse $ J.encode $ J.errorInitializeResponse req msg
-      sendErrorEvent mvarCtx msg
-      sendErrorLog msg
-      sendErrorShow msg
 
 -- |
 --
 shutdownRequestHandler :: MVar DebugContextData -> J.ShutdownRequest -> IO ()
-shutdownRequestHandler mvarCtx req@(J.ShutdownRequest seq ) = flip E.catches handlers $ do
-  -- resSeq <- getIncreasedResponseSequence mvarCtx
+shutdownRequestHandler mvarCtx req@(J.ShutdownRequest seq ) =
+  flip E.catches (defaultErrorHandlers seq req) $ do
   let res  = J.ShutdownResponse "2.0" seq "ok"
 
   sendResponse2 mvarCtx $ J.encode res
 
-  where
-    handlers = [ E.Handler someExcept ]
-    someExcept (e :: E.SomeException) = do
-      let msg = L.intercalate " " ["shutdown request error.", show req, show e]
-      resSeq <- getIncreasedResponseSequence mvarCtx
-      sendResponse $ J.encode $ J.errorShutdownResponse resSeq req msg
-      sendErrorEvent mvarCtx msg
 
 -- |
 --
 definitionRequestHandler :: MVar DebugContextData -> J.DefinitionRequest -> IO ()
-definitionRequestHandler mvarCtx req@(J.DefinitionRequest seq _) = flip E.catches handlers $ do
+definitionRequestHandler mvarCtx req@(J.DefinitionRequest seq _) =
+  flip E.catches (defaultErrorHandlers seq req) $ do
   let loc = def
       res  = J.DefinitionResponse "2.0" seq loc
 
   sendResponse2 mvarCtx $ J.encode res
 
-  where
-    handlers = [ E.Handler someExcept ]
-    someExcept (e :: E.SomeException) = do
-      let msg = L.intercalate " " ["definition request error.", show req, show e]
-      logm $ B.pack "sending errorDefinitionResponse"
-      sendResponse $ J.encode $ J.errorDefinitionResponse req msg
-      sendErrorEvent mvarCtx msg
-
 -- |
 --
 renameRequestHandler :: MVar DebugContextData -> J.RenameRequest -> IO ()
-renameRequestHandler mvarCtx req@(J.RenameRequest seq _) = flip E.catches handlers $ do
+-- renameRequestHandler mvarCtx req@(J.RenameRequest seq _) = flip E.catches handlers $ do
+renameRequestHandler mvarCtx req@(J.RenameRequest seq _) =
+  flip E.catches (defaultErrorHandlers seq req) $ do
   let loc = def
       res  = J.RenameResponse "2.0" seq loc
 
   sendResponse2 mvarCtx $ J.encode res
 
-  where
-    handlers = [ E.Handler someExcept ]
-    someExcept (e :: E.SomeException) = do
-      let msg = L.intercalate " " ["rename request error.", show req, show e]
-      logm $ B.pack "sending errorRenameResponse"
-      sendResponse $ J.encode $ J.errorRenameResponse req msg
-      sendErrorEvent mvarCtx msg
+  -- where
+  --   handlers = [ E.Handler someExcept ]
+  --   someExcept (e :: E.SomeException) = do
+  --     let msg = unwords ["rename request error.", show req, show e]
+  --     logm $ B.pack "sending errorRenameResponse"
+  --     sendResponse $ J.encode $ J.errorRenameResponse req msg
+  --     sendErrorEvent mvarCtx msg
 
 {-
 -- |
@@ -657,7 +441,7 @@ launchRequestHandler mvarCtx req@(J.LaunchRequest _ _ _ args) = flip E.catches h
   where
     handlers = [ E.Handler someExcept ]
     someExcept (e :: E.SomeException) = do
-      let msg = L.intercalate " " ["launch request error.", show req, show e]
+      let msg = unwords ["launch request error.", show req, show e]
       resSeq <- getIncreasedResponseSequence mvarCtx
       sendResponse $ J.encode $ J.errorLaunchResponse resSeq req msg
       sendErrorEvent mvarCtx $ msg ++ "\n"
@@ -677,7 +461,7 @@ launchRequestHandler mvarCtx req@(J.LaunchRequest _ _ _ args) = flip E.catches h
     -- |
     --
     ghciLaunched (Left err) = do
-      let msg = L.intercalate " " ["ghci launch error.", err]
+      let msg = unwords ["ghci launch error.", err]
       resSeq <- getIncreasedResponseSequence mvarCtx
       sendResponse $ J.encode $ J.errorLaunchResponse resSeq req msg
       sendErrorEvent mvarCtx $ msg ++ "\n"
@@ -689,7 +473,7 @@ launchRequestHandler mvarCtx req@(J.LaunchRequest _ _ _ args) = flip E.catches h
       startupRes <- loadHsFile mvarCtx (J.startupLaunchRequestArguments args)
 
       when (False == startupRes) $ do
-        let msg = L.intercalate " " ["startup load error.", J.startupLaunchRequestArguments args]
+        let msg = unwords ["startup load error.", J.startupLaunchRequestArguments args]
         sendErrorEvent mvarCtx $ msg ++ "\n"
 
       -- レスポンスとinitializedイベント送信
@@ -719,7 +503,7 @@ configurationDoneRequestHandler mvarCtx req = flip E.catches handlers $ do
   where
     handlers = [ E.Handler someExcept ]
     someExcept (e :: E.SomeException) = do
-      let msg = L.intercalate " " ["configurationDone request error.", show req, show e]
+      let msg = unwords ["configurationDone request error.", show req, show e]
       resSeq <- getIncreasedResponseSequence mvarCtx
       sendResponseL $ J.encode $ J.errorConfigurationDoneResponse resSeq req msg
       sendErrorEvent mvarCtx msg
@@ -754,7 +538,7 @@ disconnectRequestHandler mvarCtx req = flip E.catches handlers $ do
   where
     handlers = [ E.Handler someExcept ]
     someExcept (e :: E.SomeException) = do
-      let msg = L.intercalate " " ["disconnect request error.", show req, show e]
+      let msg = unwords ["disconnect request error.", show req, show e]
       resSeq <- getIncreasedResponseSequence mvarCtx
       sendResponseL $ J.encode $ J.errorDisconnectResponse resSeq req msg
       sendErrorEvent mvarCtx msg
@@ -805,7 +589,7 @@ setBreakpointsRequestHandler mvarCtx req = flip E.catches handlers $ do
   where
     handlers = [ E.Handler someExcept ]
     someExcept (e :: E.SomeException) = do
-      let msg = L.intercalate " " ["setBreakpoints request error.", show req, show e]
+      let msg = unwords ["setBreakpoints request error.", show req, show e]
       resSeq <- getIncreasedResponseSequence mvarCtx
       sendResponseL $ J.encode $ J.errorSetBreakpointsResponse resSeq req msg
       sendErrorEvent mvarCtx msg
@@ -883,7 +667,7 @@ setFunctionBreakpointsRequestHandler mvarCtx req = flip E.catches handlers $ do
   where
     handlers = [ E.Handler someExcept ]
     someExcept (e :: E.SomeException) = do
-      let msg = L.intercalate " " ["setBreakpoints request error.", show req, show e]
+      let msg = unwords ["setBreakpoints request error.", show req, show e]
       resSeq <- getIncreasedResponseSequence mvarCtx
       sendResponseL $ J.encode $ J.errorSetFunctionBreakpointsResponse resSeq req msg
       sendErrorEvent mvarCtx msg
@@ -952,7 +736,7 @@ continueRequestHandler mvarCtx req = flip E.catches handlers $ do
   where
     handlers = [ E.Handler someExcept ]
     someExcept (e :: E.SomeException) = do
-      let msg = L.intercalate " " ["continue request error.", show req, show e]
+      let msg = unwords ["continue request error.", show req, show e]
       resSeq <- getIncreasedResponseSequence mvarCtx
       sendResponseL $ J.encode $ J.errorContinueResponse resSeq req msg
       sendErrorEvent mvarCtx msg
@@ -988,7 +772,7 @@ nextRequestHandler mvarCtx req = flip E.catches handlers $ do
   where
     handlers = [ E.Handler someExcept ]
     someExcept (e :: E.SomeException) = do
-      let msg = L.intercalate " " ["stepOver request error.", show req, show e]
+      let msg = unwords ["stepOver request error.", show req, show e]
       resSeq <- getIncreasedResponseSequence mvarCtx
       sendResponseL $ J.encode $ J.errorNextResponse resSeq req msg
       sendErrorEvent mvarCtx msg
@@ -1047,7 +831,7 @@ stepInRequestHandler mvarCtx req = flip E.catches handlers $ do
   where
     handlers = [ E.Handler someExcept ]
     someExcept (e :: E.SomeException) = do
-      let msg = L.intercalate " " ["stepIn request error.", show req, show e]
+      let msg = unwords ["stepIn request error.", show req, show e]
       resSeq <- getIncreasedResponseSequence mvarCtx
       sendResponseL $ J.encode $ J.errorStepInResponse resSeq req msg
       sendErrorEvent mvarCtx msg
@@ -1116,7 +900,7 @@ stackTraceRequestHandler mvarCtx req = flip E.catches handlers $ do
   where
     handlers = [ E.Handler someExcept ]
     someExcept (e :: E.SomeException) = do
-      let msg = L.intercalate " " ["stackTrace request error.", show req, show e]
+      let msg = unwords ["stackTrace request error.", show req, show e]
       resSeq <- getIncreasedResponseSequence mvarCtx
       sendResponseL $ J.encode $ J.errorStackTraceResponse resSeq req msg
       sendErrorEvent mvarCtx msg
@@ -1172,7 +956,7 @@ scopesRequestHandler mvarCtx req = flip E.catches handlers $ do
   where
     handlers = [ E.Handler someExcept ]
     someExcept (e :: E.SomeException) = do
-      let msg = L.intercalate " " ["scopes request error.", show req, show e]
+      let msg = unwords ["scopes request error.", show req, show e]
       resSeq <- getIncreasedResponseSequence mvarCtx
       sendResponseL $ J.encode $ J.errorScopesResponse resSeq req msg
       sendErrorEvent mvarCtx msg
@@ -1194,7 +978,7 @@ variablesRequestHandler mvarCtx req = flip E.catches handlers $ do
   where
     handlers = [ E.Handler someExcept ]
     someExcept (e :: E.SomeException) = do
-      let msg = L.intercalate " " ["variables request error.", show req, show e]
+      let msg = unwords ["variables request error.", show req, show e]
       resSeq <- getIncreasedResponseSequence mvarCtx
       sendResponseL $ J.encode $ J.errorVariablesResponse resSeq req msg
       sendErrorEvent mvarCtx msg
@@ -1235,7 +1019,7 @@ threadsRequestHandler mvarCtx req = flip E.catches handlers $ do
   where
     handlers = [ E.Handler someExcept ]
     someExcept (e :: E.SomeException) = do
-      let msg = L.intercalate " " ["threads request error.", show req, show e]
+      let msg = unwords ["threads request error.", show req, show e]
       resSeq <- getIncreasedResponseSequence mvarCtx
       sendResponseL $ J.encode $ J.errorThreadsResponse resSeq req msg
       sendErrorEvent mvarCtx msg
@@ -1254,7 +1038,7 @@ evaluateRequestHandler mvarCtx req = flip E.catches handlers $ do
   where
     handlers = [ E.Handler someExcept ]
     someExcept (e :: E.SomeException) = do
-      let msg = L.intercalate " " ["evaluate request error.", show req, show e]
+      let msg = unwords ["evaluate request error.", show req, show e]
       resSeq <- getIncreasedResponseSequence mvarCtx
       sendResponseL $ J.encode $ J.errorEvaluateResponse resSeq req msg
       sendErrorEvent mvarCtx msg
@@ -1356,7 +1140,7 @@ completionsRequestHandler mvarCtx req = flip E.catches handlers $ do
   where
     handlers = [ E.Handler someExcept ]
     someExcept (e :: E.SomeException) = do
-      let msg = L.intercalate " " ["completions request error.", show req, show e]
+      let msg = unwords ["completions request error.", show req, show e]
       resSeq <- getIncreasedResponseSequence mvarCtx
       sendResponseL $ J.encode $ J.errorCompletionsResponse resSeq req msg
       sendErrorEvent mvarCtx msg
@@ -1398,7 +1182,7 @@ completionsRequestHandler mvarCtx req = flip E.catches handlers $ do
 --
 logRequest :: String -> IO ()
 logRequest reqStr = do
-  let msg = L.intercalate " " ["[REQUEST]", reqStr]
+  let msg = unwords ["[REQUEST]", reqStr]
   infoM _LOG_NAME msg
 
 
