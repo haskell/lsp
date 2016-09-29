@@ -1349,6 +1349,422 @@ data DidSaveTextDocumentNotification =
 
 $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DidSaveTextDocumentNotification") } ''DidSaveTextDocumentNotification)
 
+-- ---------------------------------------------------------------------
+{-
+DidChangeWatchedFiles Notification
+
+https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#didchangewatchedfiles-notification
+
+The watched files notification is sent from the client to the server when the
+client detects changes to files watched by the language client.
+
+Notification:
+
+    method: 'workspace/didChangeWatchedFiles'
+    params: DidChangeWatchedFilesParams defined as follows:
+
+interface DidChangeWatchedFilesParams {
+    /**
+     * The actual file events.
+     */
+    changes: FileEvent[];
+}
+
+Where FileEvents are described as follows:
+
+/**
+ * The file event type.
+ */
+enum FileChangeType {
+    /**
+     * The file got created.
+     */
+    Created = 1,
+    /**
+     * The file got changed.
+     */
+    Changed = 2,
+    /**
+     * The file got deleted.
+     */
+    Deleted = 3
+}
+
+/**
+ * An event describing a file change.
+ */
+interface FileEvent {
+    /**
+     * The file's URI.
+     */
+    uri: string;
+    /**
+     * The change type.
+     */
+    type: number;
+-}
+data FileChangeType = FcCreated
+                    | FcChanged
+                    | FcDeleted
+       deriving (Read,Show,Eq)
+
+instance A.ToJSON FileChangeType where
+  toJSON FcCreated = A.Number 1
+  toJSON FcChanged = A.Number 2
+  toJSON FcDeleted = A.Number 3
+
+instance A.FromJSON FileChangeType where
+  parseJSON (A.Number 1) = pure FcCreated
+  parseJSON (A.Number 2) = pure FcChanged
+  parseJSON (A.Number 3) = pure FcDeleted
+  parseJSON _            = mempty
+
+instance Default FileChangeType where
+  def = FcChanged -- Choose something random
+
+-- -------------------------------------
+
+data FileEvent =
+  FileEvent
+    { uriFileEvent  :: String
+    , typeFileEvent :: FileChangeType
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "FileEvent") } ''FileEvent)
+
+data DidChangeWatchedFilesParams =
+  DidChangeWatchedFilesParams
+    { paramsDidChangeWatchedFilesParams :: [FileEvent]
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DidChangeWatchedFilesParams") } ''DidChangeWatchedFilesParams)
+
+instance Default DidChangeWatchedFilesParams where
+  def = DidChangeWatchedFilesParams def
+
+data DidChangeWatchedFilesNotification =
+  DidChangeWatchedFilesNotification
+    { methodDidChangeWatchedFilesNotification :: String
+    , paramsDidChangeWatchedFilesNotification :: DidChangeWatchedFilesParams
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DidChangeWatchedFilesNotification") } ''DidChangeWatchedFilesNotification)
+
+instance Default DidChangeWatchedFilesNotification where
+  def = DidChangeWatchedFilesNotification def def
+
+-- ---------------------------------------------------------------------
+{-
+PublishDiagnostics Notification
+
+https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#publishdiagnostics-notification
+
+Diagnostics notification are sent from the server to the client to signal
+results of validation runs.
+
+Notification
+
+    method: 'textDocument/publishDiagnostics'
+    params: PublishDiagnosticsParams defined as follows:
+
+interface PublishDiagnosticsParams {
+    /**
+     * The URI for which diagnostic information is reported.
+     */
+    uri: string;
+
+    /**
+     * An array of diagnostic information items.
+     */
+    diagnostics: Diagnostic[];
+}
+-}
+
+data PublishDiagnosticsParams =
+  PublishDiagnosticsParams
+    { uriPublishDiagnosticsParams :: String
+    , diagnosticsPublishDiagnosticsParams :: [Diagnostic]
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "PublishDiagnosticsParams") } ''PublishDiagnosticsParams)
+
+instance Default PublishDiagnosticsParams where
+  def = PublishDiagnosticsParams def def
+
+data PublishDiagnosticsNotification =
+  PublishDiagnosticsNotification
+    { methodPublishDiagnosticsNotification :: String
+    , paramsPublishDiagnosticsNotification :: PublishDiagnosticsParams
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "PublishDiagnosticsNotification") } ''PublishDiagnosticsNotification)
+
+-- ---------------------------------------------------------------------
+{-
+Completion Request
+
+The Completion request is sent from the client to the server to compute
+completion items at a given cursor position. Completion items are presented in
+the IntelliSense user interface. If computing full completion items is
+expensive, servers can additionally provide a handler for the completion item
+resolve request ('completionItem/resolve'). This request is sent when a
+completion item is selected in the user interface. A typically use case is for
+example: the 'textDocument/completion' request doesn't fill in the documentation
+property for returned completion items since it is expensive to compute. When
+the item is selected in the user interface then a 'completionItem/resolve'
+request is sent with the selected completion item as a param. The returned
+completion item should have the documentation property filled in.
+
+    Changed: In 2.0 the request uses TextDocumentPositionParams with a proper
+    textDocument and position property. In 1.0 the uri of the referenced text
+    document was inlined into the params object.
+
+Request
+
+    method: 'textDocument/completion'
+    params: TextDocumentPositionParams
+-}
+
+data CompletionRequest =
+  CompletionRequest
+    { idCompletionRequest     :: Int
+    , paramsCompletionRequest :: TextDocumentPositionParams
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "CompletionRequest") } ''CompletionRequest)
+
+-- -------------------------------------
+
+{-
+
+Response
+
+    result: CompletionItem[] | CompletionList
+
+/**
+ * Represents a collection of [completion items](#CompletionItem) to be presented
+ * in the editor.
+ */
+interface CompletionList {
+    /**
+     * This list it not complete. Further typing should result in recomputing
+     * this list.
+     */
+    isIncomplete: boolean;
+    /**
+     * The completion items.
+     */
+    items: CompletionItem[];
+}
+
+interface CompletionItem {
+    /**
+     * The label of this completion item. By default
+     * also the text that is inserted when selecting
+     * this completion.
+     */
+    label: string;
+    /**
+     * The kind of this completion item. Based of the kind
+     * an icon is chosen by the editor.
+     */
+    kind?: number;
+    /**
+     * A human-readable string with additional information
+     * about this item, like type or symbol information.
+     */
+    detail?: string;
+    /**
+     * A human-readable string that represents a doc-comment.
+     */
+    documentation?: string;
+    /**
+     * A string that shoud be used when comparing this item
+     * with other items. When `falsy` the label is used.
+     */
+    sortText?: string;
+    /**
+     * A string that should be used when filtering a set of
+     * completion items. When `falsy` the label is used.
+     */
+    filterText?: string;
+    /**
+     * A string that should be inserted a document when selecting
+     * this completion. When `falsy` the label is used.
+     */
+    insertText?: string;
+    /**
+     * An edit which is applied to a document when selecting
+     * this completion. When an edit is provided the value of
+     * insertText is ignored.
+     */
+    textEdit?: TextEdit;
+    /**
+     * An data entry field that is preserved on a completion item between
+     * a completion and a completion resolve request.
+     */
+    data?: any
+}
+
+Where CompletionItemKind is defined as follows:
+
+/**
+ * The kind of a completion entry.
+ */
+enum CompletionItemKind {
+    Text = 1,
+    Method = 2,
+    Function = 3,
+    Constructor = 4,
+    Field = 5,
+    Variable = 6,
+    Class = 7,
+    Interface = 8,
+    Module = 9,
+    Property = 10,
+    Unit = 11,
+    Value = 12,
+    Enum = 13,
+    Keyword = 14,
+    Snippet = 15,
+    Color = 16,
+    File = 17,
+    Reference = 18
+}
+
+    error: code and message set in case an exception happens during the completion request.
+-}
+
+data CompletionItemKind = CiText
+                        | CiMethod
+                        | CiFunction
+                        | CiConstructor
+                        | CiField
+                        | CiVariable
+                        | CiClass
+                        | CiInterface
+                        | CiModule
+                        | CiProperty
+                        | CiUnit
+                        | CiValue
+                        | CiEnum
+                        | CiKeyword
+                        | CiSnippet
+                        | CiColor
+                        | CiFile
+                        | CiReference
+         deriving (Read,Show,Eq)
+
+instance A.ToJSON CompletionItemKind where
+  toJSON CiText        = A.Number 1
+  toJSON CiMethod      = A.Number 2
+  toJSON CiFunction    = A.Number 3
+  toJSON CiConstructor = A.Number 4
+  toJSON CiField       = A.Number 5
+  toJSON CiVariable    = A.Number 6
+  toJSON CiClass       = A.Number 7
+  toJSON CiInterface   = A.Number 8
+  toJSON CiModule      = A.Number 9
+  toJSON CiProperty    = A.Number 10
+  toJSON CiUnit        = A.Number 11
+  toJSON CiValue       = A.Number 12
+  toJSON CiEnum        = A.Number 13
+  toJSON CiKeyword     = A.Number 14
+  toJSON CiSnippet     = A.Number 15
+  toJSON CiColor       = A.Number 16
+  toJSON CiFile        = A.Number 17
+  toJSON CiReference   = A.Number 18
+
+instance A.FromJSON CompletionItemKind where
+  parseJSON (A.Number  1) = pure CiText
+  parseJSON (A.Number  2) = pure CiMethod
+  parseJSON (A.Number  3) = pure CiFunction
+  parseJSON (A.Number  4) = pure CiConstructor
+  parseJSON (A.Number  5) = pure CiField
+  parseJSON (A.Number  6) = pure CiVariable
+  parseJSON (A.Number  7) = pure CiClass
+  parseJSON (A.Number  8) = pure CiInterface
+  parseJSON (A.Number  9) = pure CiModule
+  parseJSON (A.Number 10) = pure CiProperty
+  parseJSON (A.Number 11) = pure CiUnit
+  parseJSON (A.Number 12) = pure CiValue
+  parseJSON (A.Number 13) = pure CiEnum
+  parseJSON (A.Number 14) = pure CiKeyword
+  parseJSON (A.Number 15) = pure CiSnippet
+  parseJSON (A.Number 16) = pure CiColor
+  parseJSON (A.Number 17) = pure CiFile
+  parseJSON (A.Number 18) = pure CiReference
+  parseJSON _            = mempty
+
+instance Default CompletionItemKind where
+  def = CiText
+
+-- -------------------------------------
+
+data CompletionItem =
+  CompletionItem
+    { labelCompletionItem :: String -- ^ The label of this completion item. By
+                                    -- default also the text that is inserted
+                                    -- when selecting this completion.
+    , kindCompletionItem :: Maybe CompletionItemKind
+    , detailCompletionItem :: Maybe String -- ^ A human-readable string with
+                                           -- additional information about this
+                                           -- item, like type or symbol
+                                           -- information.
+    , documentationCompletionItem :: Maybe String-- ^ A human-readable string
+                                                 -- that represents a
+                                                 -- doc-comment.
+    , sortTextCompletionItem :: Maybe String -- ^ A string that should be used
+                                             -- when filtering a set of
+                                             -- completion items. When `falsy`
+                                             -- the label is used.
+    , filterTextCompletionItem :: Maybe String -- ^ A string that should be used
+                                               -- when filtering a set of
+                                               -- completion items. When `falsy`
+                                               -- the label is used.
+    , insertTextCompletionItem :: Maybe String -- ^ A string that should be
+                                               -- inserted a document when
+                                               -- selecting this completion.
+                                               -- When `falsy` the label is
+                                               -- used.
+    , textEditCompletionItem :: Maybe TextEdit -- ^ An edit which is applied to
+                                               -- a document when selecting this
+                                               -- completion. When an edit is
+                                               -- provided the value of
+                                               -- insertText is ignored.
+    , dataCompletionItem :: Maybe A.Object -- ^ An data entry field that is
+                                           -- preserved on a completion item
+                                           -- between a completion and a
+                                           -- completion resolve request.
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "CompletionItem") } ''CompletionItem)
+
+data CompletionListType =
+  CompletionListType
+    { isIncompleteCompletionListType :: Bool
+    , itemsCompletionListType :: [CompletionItem]
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "CompletionListType") } ''CompletionListType)
+
+instance Default CompletionListType where
+  def = CompletionListType False []
+
+data CompletionResponseResult
+  = CompletionList CompletionListType
+  | Completions [CompletionItem]
+  deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "CompletionResponseResult") } ''CompletionResponseResult)
+
+data CompletionResponse =
+  CompletionResponse
+    { jsonrpcCompletionResponse :: String
+    , idCompletionResponse      :: Int
+    , resultCompletionResponse :: CompletionResponseResult
+    } deriving (Read,Show,Eq)
+
 -- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -- ---------------------------------------------------------------------
 
@@ -1376,8 +1792,8 @@ data DefinitionRequest =
 
 $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DefinitionRequest") } ''DefinitionRequest)
 
-defaultDefinitionRequest :: DefinitionRequest
-defaultDefinitionRequest = DefinitionRequest 0 def
+instance Default DefinitionRequest where
+  def = DefinitionRequest 0 def
 
 -- ---------------------------------------------------------------------
 
