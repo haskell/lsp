@@ -230,7 +230,7 @@ data Command =
     , argumentsCommand :: Maybe A.Object
     } deriving (Show, Read, Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "Command") } ''Command)
+$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "Command") } ''Command)
 
 instance Default Command where
   def = Command "" "" Nothing
@@ -433,6 +433,8 @@ instance Default TextDocumentPositionParams where
 -- =====================================================================
 
 -- ---------------------------------------------------------------------
+-- Initialize Request
+-- ---------------------------------------------------------------------
 {-
 Initialize Request
 
@@ -480,7 +482,7 @@ data InitializeRequestArguments =
   } deriving (Show, Read, Eq)
 
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "InitializeRequestArguments") } ''InitializeRequestArguments)
+$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "InitializeRequestArguments") } ''InitializeRequestArguments)
 
 instance Default InitializeRequestArguments where
   def = InitializeRequestArguments 0 mempty mempty mempty mempty
@@ -504,23 +506,264 @@ $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "InitializeRequ
 instance Default InitializeRequest where
   def = InitializeRequest 0 def
 
+
+-- ---------------------------------------------------------------------
+-- Initialize Response
 -- ---------------------------------------------------------------------
 
--- |
---   Information about the capabilities of a language server
---
+{-
+
+    error.data:
+
+interface InitializeError {
+    /**
+     * Indicates whether the client should retry to send the
+     * initilize request after showing the message provided
+     * in the ResponseError.
+     */
+    retry: boolean;
+-
+-}
+data InitializeError =
+  InitializeError
+    { retryInitializeError :: Bool
+    } deriving (Read, Show, Eq)
+
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "InitializeError") } ''InitializeError)
+
+instance Default InitializeError where
+  def = InitializeError False
+
+-- ---------------------------------------------------------------------
+{-
+The server can signal the following capabilities:
+
+/**
+ * Defines how the host (editor) should sync document changes to the language server.
+ */
+enum TextDocumentSyncKind {
+    /**
+     * Documents should not be synced at all.
+     */
+    None = 0,
+    /**
+     * Documents are synced by always sending the full content of the document.
+     */
+    Full = 1,
+    /**
+     * Documents are synced by sending the full content on open. After that only incremental
+     * updates to the document are sent.
+     */
+    Incremental = 2
+}
+-}
+
+data TextDocumentSyncKind = TdSyncNone
+                          | TdSyncFull
+                          | TdSyncIncremental
+       deriving (Read,Eq,Show)
+
+instance A.ToJSON TextDocumentSyncKind where
+  toJSON TdSyncNone        = A.Number 0
+  toJSON TdSyncFull        = A.Number 1
+  toJSON TdSyncIncremental = A.Number 2
+
+instance A.FromJSON TextDocumentSyncKind where
+  parseJSON (A.Number 0) = pure TdSyncNone
+  parseJSON (A.Number 1) = pure TdSyncFull
+  parseJSON (A.Number 2) = pure TdSyncIncremental
+  parseJSON _            = mempty
+
+-- ---------------------------------------------------------------------
+{-
+/**
+ * Completion options.
+ */
+interface CompletionOptions {
+    /**
+     * The server provides support to resolve additional information for a completion item.
+     */
+    resolveProvider?: boolean;
+
+    /**
+     * The characters that trigger completion automatically.
+     */
+    triggerCharacters?: string[];
+}
+-}
+
+data CompletionOptions =
+  CompletionOptions
+    { resolveProvider   :: Maybe Bool
+    , triggerCharacters :: Maybe [String]
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions {omitNothingFields = True } ''CompletionOptions)
+
+instance Default CompletionOptions where
+  def = CompletionOptions Nothing mempty
+
+-- ---------------------------------------------------------------------
+{-
+/**
+ * Signature help options.
+ */
+interface SignatureHelpOptions {
+    /**
+     * The characters that trigger signature help automatically.
+     */
+    triggerCharacters?: string[];
+-}
+
+data SignatureHelpOptions =
+  SignatureHelpOptions
+    { triggerCharactersSHO :: Maybe [String]
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "SHO") } ''SignatureHelpOptions)
+
+instance Default SignatureHelpOptions where
+  def = SignatureHelpOptions mempty
+
+-- ---------------------------------------------------------------------
+{-
+/**
+ * Code Lens options.
+ */
+interface CodeLensOptions {
+    /**
+     * Code lens has a resolve provider as well.
+     */
+    resolveProvider?: boolean;
+}
+-}
+
+data CodeLensOptions =
+  CodeLensOptions
+    { resolveProviderCLO :: Maybe Bool
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "CLO") } ''CodeLensOptions)
+
+instance Default CodeLensOptions where
+  def = CodeLensOptions Nothing
+
+-- ---------------------------------------------------------------------
+{-
+/**
+ * Format document on type options
+ */
+interface DocumentOnTypeFormattingOptions {
+    /**
+     * A character on which formatting should be triggered, like `}`.
+     */
+    firstTriggerCharacter: string;
+    /**
+     * More trigger characters.
+     */
+    moreTriggerCharacter?: string[]
+}
+-}
+data DocumentOnTypeFormattingOptions =
+  DocumentOnTypeFormattingOptions
+    { firstTriggerCharacter :: String
+    , moreTriggerCharacter :: Maybe [String]
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions {omitNothingFields = True } ''DocumentOnTypeFormattingOptions)
+
+instance Default DocumentOnTypeFormattingOptions where
+  def = DocumentOnTypeFormattingOptions mempty mempty
+
+-- ---------------------------------------------------------------------
+{-
+interface ServerCapabilities {
+    /**
+     * Defines how text documents are synced.
+     */
+    textDocumentSync?: number;
+    /**
+     * The server provides hover support.
+     */
+    hoverProvider?: boolean;
+    /**
+     * The server provides completion support.
+     */
+    completionProvider?: CompletionOptions;
+    /**
+     * The server provides signature help support.
+     */
+    signatureHelpProvider?: SignatureHelpOptions;
+    /**
+     * The server provides goto definition support.
+     */
+    definitionProvider?: boolean;
+    /**
+     * The server provides find references support.
+     */
+    referencesProvider?: boolean;
+    /**
+     * The server provides document highlight support.
+     */
+    documentHighlightProvider?: boolean;
+    /**
+     * The server provides document symbol support.
+     */
+    documentSymbolProvider?: boolean;
+    /**
+     * The server provides workspace symbol support.
+     */
+    workspaceSymbolProvider?: boolean;
+    /**
+     * The server provides code actions.
+     */
+    codeActionProvider?: boolean;
+    /**
+     * The server provides code lens.
+     */
+    codeLensProvider?: CodeLensOptions;
+    /**
+     * The server provides document formatting.
+     */
+    documentFormattingProvider?: boolean;
+    /**
+     * The server provides document range formatting.
+     */
+    documentRangeFormattingProvider?: boolean;
+    /**
+     * The server provides document formatting on typing.
+     */
+    documentOnTypeFormattingProvider?: DocumentOnTypeFormattingOptions;
+    /**
+     * The server provides rename support.
+     */
+    renameProvider?: boolean
+}
+-}
+
 data InitializeResponseCapabilitiesInner =
-  InitializeResponseCapabilitiesInner {
-    definitionProviderInitializeResponseCapabilitiesInner :: Bool
-  , renameProviderInitializeResponseCapabilitiesInner     :: Bool
-  } deriving (Show, Read, Eq)
+  InitializeResponseCapabilitiesInner
+    { textDocumentSync                 :: Maybe TextDocumentSyncKind
+    , hoverProvider                    :: Maybe Bool
+    , completionProvider               :: Maybe CompletionOptions
+    , signatureHelpProvider            :: Maybe SignatureHelpOptions
+    , definitionProvider               :: Maybe Bool
+    , referencesProvider               :: Maybe Bool
+    , documentHighlightProvider        :: Maybe Bool
+    , documentSymbolProvider           :: Maybe Bool
+    , workspaceSymbolProvider          :: Maybe Bool
+    , codeActionProvider               :: Maybe Bool
+    , codeLensProvider                 :: Maybe CodeLensOptions
+    , documentFormattingProvider       :: Maybe Bool
+    , documentRangeFormattingProvider  :: Maybe Bool
+    , documentOnTypeFormattingProvider :: Maybe DocumentOnTypeFormattingOptions
+    , renameProvider                   :: Maybe Bool
+    } deriving (Show, Read, Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "InitializeResponseCapabilitiesInner") } ''InitializeResponseCapabilitiesInner)
+$(deriveJSON defaultOptions { omitNothingFields = True }  ''InitializeResponseCapabilitiesInner)
 
--- |
---
-defaultInitializeResponseCapabilitiesInner :: InitializeResponseCapabilitiesInner
-defaultInitializeResponseCapabilitiesInner = InitializeResponseCapabilitiesInner True True
+instance Default InitializeResponseCapabilitiesInner where
+  def = InitializeResponseCapabilitiesInner def def def def def def def def def def def def def def def
 
 -- ---------------------------------------------------------------------
 -- |
@@ -533,10 +776,8 @@ data InitializeResponseCapabilities =
 
 $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "InitializeResponseCapabilities") } ''InitializeResponseCapabilities)
 
--- |
---
-defaultInitializeResponseCapabilities :: InitializeResponseCapabilities
-defaultInitializeResponseCapabilities = InitializeResponseCapabilities defaultInitializeResponseCapabilitiesInner
+instance Default InitializeResponseCapabilities where
+  def = InitializeResponseCapabilities def
 
 -- ---------------------------------------------------------------------
 
@@ -551,19 +792,6 @@ data InitializeResponse =
   } deriving (Show, Read, Eq)
 
 $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "InitializeResponse") } ''InitializeResponse)
-
-
--- |
---
-parseErrorInitializeResponse :: Int -> String -> InitializeResponse
-parseErrorInitializeResponse seq msg =
-  InitializeResponse  "2.0" seq defaultInitializeResponseCapabilities
-
--- |
---
-errorInitializeResponse :: InitializeRequest -> String -> InitializeResponse
-errorInitializeResponse (InitializeRequest reqSeq _) msg =
-  InitializeResponse "2.0" reqSeq defaultInitializeResponseCapabilities
 
 
 {-
@@ -800,7 +1028,7 @@ data OutputEventBody =
   } deriving (Show, Read, Eq)
 
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "OutputEventBody") } ''OutputEventBody)
+$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "OutputEventBody") } ''OutputEventBody)
 
 defaultOutputEventBody :: OutputEventBody
 defaultOutputEventBody = OutputEventBody "console" "" Nothing

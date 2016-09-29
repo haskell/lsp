@@ -355,8 +355,8 @@ defaultErrorHandlers origId req = [ E.Handler someExcept ]
 initializeRequestHandler :: MVar DebugContextData -> J.InitializeRequest -> IO ()
 initializeRequestHandler mvarCtx req@(J.InitializeRequest origId _) =
   flip E.catches (defaultErrorHandlers origId req) $ do
-    let capa = J.InitializeResponseCapabilities (J.InitializeResponseCapabilitiesInner True True)
-        res  = J.InitializeResponse "2.0" origId capa
+    let capa = def { J.definitionProvider = Just True, J.renameProvider = Just True}
+        res  = J.InitializeResponse "2.0" origId (J.InitializeResponseCapabilities capa)
 
     sendResponse2 mvarCtx $ J.encode res
 
@@ -364,9 +364,9 @@ initializeRequestHandler mvarCtx req@(J.InitializeRequest origId _) =
 -- |
 --
 shutdownRequestHandler :: MVar DebugContextData -> J.ShutdownRequest -> IO ()
-shutdownRequestHandler mvarCtx req@(J.ShutdownRequest seq ) =
-  flip E.catches (defaultErrorHandlers seq req) $ do
-  let res  = J.ShutdownResponse "2.0" seq "ok"
+shutdownRequestHandler mvarCtx req@(J.ShutdownRequest origId ) =
+  flip E.catches (defaultErrorHandlers origId req) $ do
+  let res  = J.ShutdownResponse "2.0" origId "ok"
 
   sendResponse2 mvarCtx $ J.encode res
 
