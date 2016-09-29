@@ -121,11 +121,12 @@ enum DiagnosticSeverity {
     Hint = 4
 }
 -}
-data DiagnosticSeverity = DsError  -- ^ Error = 1,
-                 | DsWarning -- ^ Warning = 2,
-                 | DsInfo    -- ^ Info = 3,
-                 | DsHint     -- ^ Hint = 4
-        deriving (Eq,Ord,Show,Read,Enum)
+data DiagnosticSeverity
+  = DsError   -- ^ Error = 1,
+  | DsWarning -- ^ Warning = 2,
+  | DsInfo    -- ^ Info = 3,
+  | DsHint    -- ^ Hint = 4
+  deriving (Eq,Ord,Show,Read)
 
 instance A.ToJSON DiagnosticSeverity where
   toJSON DsError   = A.Number 1
@@ -489,10 +490,6 @@ instance Default InitializeRequestArguments where
 
 -- ---------------------------------------------------------------------
 
--- |
---   Client-initiated request
---
-
 -- {"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":1749,"capabilities":{},"trace":"off"}}
 -- {"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":17554,"rootPath":"/home/alanz/mysrc/github/alanz/haskell-lsp","capabilities":{},"trace":"off"}}
 data InitializeRequest =
@@ -510,7 +507,6 @@ instance Default InitializeRequest where
 -- ---------------------------------------------------------------------
 -- Initialize Response
 -- ---------------------------------------------------------------------
-
 {-
 
     error.data:
@@ -794,7 +790,105 @@ data InitializeResponse =
 $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "InitializeResponse") } ''InitializeResponse)
 
 
+-- ---------------------------------------------------------------------
 {-
+Shutdown Request
+
+https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#shutdown-request
+
+The shutdown request is sent from the client to the server. It asks the server
+to shut down, but to not exit (otherwise the response might not be delivered
+correctly to the client). There is a separate exit notification that asks the
+server to exit.
+
+Request
+
+    method: 'shutdown'
+    params: undefined
+
+Response
+
+    result: undefined
+    error: code and message set in case an exception happens during shutdown request.
+
+
+-}
+
+data ShutdownRequest =
+  ShutdownRequest {
+    idShutdownRequest :: Int
+  } deriving (Show, Read, Eq)
+
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "ShutdownRequest") } ''ShutdownRequest)
+
+instance Default ShutdownRequest where
+  def = ShutdownRequest 0
+
+data ShutdownResponse =
+  ShutdownResponse {
+    jsonrpcShutdownResponse    :: String
+  , idShutdownResponse         :: Int     -- Sequence number
+  , resultShutdownResponse     :: String
+  } deriving (Show, Read, Eq)
+
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "ShutdownResponse") } ''ShutdownResponse)
+
+instance Default ShutdownResponse where
+  def = ShutdownResponse "2.0" 0 ""
+
+-- ---------------------------------------------------------------------
+{-
+Exit Notification
+
+https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#exit-notification
+
+A notification to ask the server to exit its process.
+
+Notification
+
+    method: 'exit'
+
+-}
+
+-- |
+--   Notification from the server to actually exit now, after shutdown acked
+--
+data ExitNotification =
+  ExitNotification
+    {
+    } deriving (Show, Read, Eq)
+
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "ExitNotification") } ''ExitNotification)
+
+instance Default ExitNotification where
+  def = ExitNotification
+
+-- ---------------------------------------------------------------------
+{-
+ShowMessage Notification
+
+https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#showmessage-notification
+
+The show message notification is sent from a server to a client to ask the
+client to display a particular message in the user interface.
+
+Notification:
+
+    method: 'window/showMessage'
+    params: ShowMessageParams defined as follows:
+
+interface ShowMessageParams {
+    /**
+     * The message type. See {@link MessageType}.
+     */
+    type: number;
+
+    /**
+     * The actual message.
+     */
+    message: string;
+}
+
 Where the type is defined as follows:
 
 enum MessageType {
@@ -835,6 +929,134 @@ instance A.FromJSON MessageType where
   parseJSON (A.Number 4) = pure MtLog
   parseJSON _            = mempty
 
+instance Default MessageType where
+  def = MtWarning -- Pick something arbitrary
+
+-- ---------------------------------------
+
+data MessageNotificationParams =
+  MessageNotificationParams {
+    typeMessageNotificationParams    :: MessageType
+  , messageMessageNotificationParams :: String
+  } deriving (Show, Read, Eq)
+
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "MessageNotificationParams") } ''MessageNotificationParams)
+
+instance Default MessageNotificationParams where
+  def = MessageNotificationParams MtWarning ""
+
+-- ---------------------------------------
+
+data MessageNotification =
+  MessageNotification {
+    jsonrpcMessageNotification :: String
+  , methodMessageNotification  :: String
+  , paramsMessageNotification  :: MessageNotificationParams
+  } deriving (Show, Read, Eq)
+
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "MessageNotification") } ''MessageNotification)
+
+defShowMessage :: MessageType -> String -> MessageNotification
+defShowMessage mt msg = MessageNotification "2.0" "window/showMessage" (MessageNotificationParams mt msg)
+
+-- ---------------------------------------------------------------------
+{-
+ShowMessage Request
+
+https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#showmessage-request
+
+    New: The show message request is sent from a server to a client to ask the
+    client to display a particular message in the user interface. In addition to
+    the show message notification the request allows to pass actions and to wait
+    for an answer from the client.
+
+Request:
+
+    method: 'window/showMessageRequest'
+    params: ShowMessageRequestParams defined as follows:
+
+Response:
+
+    result: the selected MessageActionItem
+    error: code and message set in case an exception happens during showing a message.
+
+interface ShowMessageRequestParams {
+    /**
+     * The message type. See {@link MessageType}
+     */
+    type: number;
+
+    /**
+     * The actual message
+     */
+    message: string;
+
+    /**
+     * The message action items to present.
+     */
+    actions?: MessageActionItem[];
+}
+
+Where the MessageActionItem is defined as follows:
+
+interface MessageActionItem {
+    /**
+     * A short title like 'Retry', 'Open Log' etc.
+     */
+    title: string;
+}
+-}
+
+data MessageActionItem =
+  MessageActionItem
+    { titleMessageActionItem :: String
+    } deriving (Show,Read,Eq)
+
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "MessageActionItem") } ''MessageActionItem)
+
+instance Default MessageActionItem where
+  def = MessageActionItem def
+
+data ShowMessageRequestParams =
+  ShowMessageRequestParams
+    { typeShowMessageRequestParams    :: MessageType
+    , messageShowMessageRequestParams :: String
+    , actionsShowMessageRequestParams :: Maybe [MessageActionItem]
+    } deriving (Show,Read,Eq)
+
+$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "ShowMessageRequestParams") } ''ShowMessageRequestParams)
+
+instance Default ShowMessageRequestParams where
+  def = ShowMessageRequestParams def def def
+
+data ShowMessageRequest =
+  ShowMessageRequest
+    { jsonrpcShowMessageRequest :: String
+    , methodShowMessageRequest :: String
+    , idShowMessageRequest :: Int
+    , paramsShowMessageRequest :: ShowMessageRequestParams
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "ShowMessageRequest") } ''ShowMessageRequest)
+
+instance Default ShowMessageRequest where
+  def = ShowMessageRequest "2.0" "window/showMessageRequest" def def
+
+data ShowMessageResponse =
+  ShowMessageResponse
+    { idShowMessageResponse :: Int
+    , resultShowMessageResponse :: Maybe String -- Selected MessageActionItem.
+    , errorShowMessageResponse :: Maybe A.Object -- If an error occurred.
+    } deriving (Show,Read,Eq)
+
+$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "ShowMessageResponse") } ''ShowMessageResponse)
+
+instance Default ShowMessageResponse where
+  def = ShowMessageResponse def def def
+
+-- ---------------------------------------------------------------------
+-- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-- ---------------------------------------------------------------------
 
 data DefinitionRequestParams =
   DefinitionRequestParams
@@ -947,6 +1169,8 @@ errorRenameResponse :: RenameRequest -> String -> RenameResponse
 errorRenameResponse (RenameRequest reqSeq _) msg =
   RenameResponse "2.0" reqSeq def
 
+-- ---------------------------------------
+
 -- ---------------------------------------------------------------------
 
 -- |
@@ -962,10 +1186,8 @@ $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DidChangeConfi
 defaultDidChangeConfigurationParamsNotificationParams :: DidChangeConfigurationParamsNotificationParams
 defaultDidChangeConfigurationParamsNotificationParams = DidChangeConfigurationParamsNotificationParams mempty
 
--- ---------------------------------------
--- |
---   Notification from the server to actually exit now, after shutdown acked
---
+-- -------------------------------------
+
 data DidChangeConfigurationParamsNotification =
   DidChangeConfigurationParamsNotification {
     paramsDidChangeConfigurationParamsNotification :: DidChangeConfigurationParamsNotificationParams
@@ -977,9 +1199,7 @@ defaultDidChangeConfigurationParamsNotification :: DidChangeConfigurationParamsN
 defaultDidChangeConfigurationParamsNotification = DidChangeConfigurationParamsNotification defaultDidChangeConfigurationParamsNotificationParams
 
 -- ---------------------------------------------------------------------
--- |
---   Notification from the server to actually exit now, after shutdown acked
---
+
 data DidOpenTextDocumentNotificationParams =
   DidOpenTextDocumentNotificationParams {
     textDocumentDidOpenTextDocumentNotificationParams :: TextDocumentItem
@@ -988,9 +1208,7 @@ data DidOpenTextDocumentNotificationParams =
 $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DidOpenTextDocumentNotificationParams") } ''DidOpenTextDocumentNotificationParams)
 
 -- ---------------------------------------
--- |
---   Notification from the server to actually exit now, after shutdown acked
---
+
 data DidOpenTextDocumentNotification =
   DidOpenTextDocumentNotification {
     paramsDidOpenTextDocumentNotification :: DidOpenTextDocumentNotificationParams
@@ -1000,20 +1218,6 @@ $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DidOpenTextDoc
 
 -- defaultDidOpenTextDocumentNotification :: DidOpenTextDocumentNotification
 -- defaultDidOpenTextDocumentNotification = DidOpenTextDocumentNotification defaultDidOpenTextDocumentNotificationParams
-
--- ---------------------------------------------------------------------
-
--- |
---   Notification from the server to actually exit now, after shutdown acked
---
-data ExitNotification =
-  ExitNotification {
-  } deriving (Show, Read, Eq)
-
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "ExitNotification") } ''ExitNotification)
-
-defaultExitNotification :: ExitNotification
-defaultExitNotification = ExitNotification
 
 -- ---------------------------------------------------------------------
 
@@ -1084,49 +1288,6 @@ instance Default ErrorResponse where
 -- ---------------------------------------------------------------------
 
 -- |
---   Client-initiated request
---
-
-data ShutdownRequest =
-  ShutdownRequest {
-    idShutdownRequest       :: Int                         -- Sequence number
-  } deriving (Show, Read, Eq)
-
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "ShutdownRequest") } ''ShutdownRequest)
-
-defaultShutdownRequest :: ShutdownRequest
-defaultShutdownRequest = ShutdownRequest 0
-
--- ---------------------------------------------------------------------
-
--- |
---   Server-initiated response to client request
---
-data ShutdownResponse =
-  ShutdownResponse {
-    jsonrpcShutdownResponse    :: String
-  , idShutdownResponse         :: Int     -- Sequence number
-  , resultShutdownResponse     :: String
-  } deriving (Show, Read, Eq)
-
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "ShutdownResponse") } ''ShutdownResponse)
-
-
--- |
---
-parseErrorShutdownResponse :: Int -> String -> ShutdownResponse
-parseErrorShutdownResponse seq msg =
-  ShutdownResponse  "2.0" seq msg
-
--- |
---
-errorShutdownResponse :: Int -> ShutdownRequest -> String -> ShutdownResponse
-errorShutdownResponse seq (ShutdownRequest reqSeq) msg =
-  ShutdownResponse "2.0" seq msg
-
--- ---------------------------------------------------------------------
-
--- |
 --   Event message for "terminated" event types.
 -- The event indicates that debugging of the debuggee has terminated.
 --
@@ -1189,59 +1350,6 @@ defaultTraceNotification :: TraceNotification
 defaultTraceNotification = TraceNotification defaultTraceNotificationParams
 
 -- ---------------------------------------------------------------------
-{-
-The log message notification is sent from the server to the client to ask the
-client to log a particular message.
-
-Notification:
-
-    method: 'window/logMessage'
-    params: LogMessageParams defined as follows:
-
-interface LogMessageParams {
-    /**
-     * The message type. See {@link MessageType}
-     */
-    type: number;
-
-    /**
-     * The actual message
-     */
-    message: string;
-}
--}
-
--- |
---
-data MessageNotificationParams =
-  MessageNotificationParams {
-    typeMessageNotificationParams    :: MessageType
-  , messageMessageNotificationParams :: String
-  } deriving (Show, Read, Eq)
-
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "MessageNotificationParams") } ''MessageNotificationParams)
-
-instance Default MessageNotificationParams where
-  def = MessageNotificationParams MtWarning ""
-
--- ---------------------------------------
--- |
---
-data MessageNotification =
-  MessageNotification {
-    jsonrpcMessageNotification :: String
-  , methodMessageNotification  :: String
-  , paramsMessageNotification  :: MessageNotificationParams
-  } deriving (Show, Read, Eq)
-
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "MessageNotification") } ''MessageNotification)
-
--- -------------------------------------
-
-type LogMessageNotification = MessageNotification
-
-instance Default LogMessageNotification where
-  def = MessageNotification "2.0" "window/logMessage" def
 
 -- -------------------------------------
 {-
@@ -1270,7 +1378,5 @@ interface ShowMessageParams {
 defLogMessage :: MessageType -> String -> MessageNotification
 defLogMessage mt msg = MessageNotification "2.0" "window/logMessage"   (MessageNotificationParams mt msg)
 
-defShowMessage :: MessageType -> String -> MessageNotification
-defShowMessage mt msg = MessageNotification "2.0" "window/showMessage" (MessageNotificationParams mt msg)
 
 -- ---------------------------------------------------------------------

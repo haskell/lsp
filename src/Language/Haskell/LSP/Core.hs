@@ -198,6 +198,8 @@ defaultDebugContextData = DebugContextData _INITIAL_RESPONSE_SEQUENCE BSL.putStr
 --
 handleRequest :: MVar DebugContextData -> BSL.ByteString -> BSL.ByteString -> IO ()
 handleRequest mvarDat contLenStr' jsonStr' = do
+  -- TODO: handle client responses to stuff we have sent. Such as: {"jsonrpc":"2.0","id":1,"result":{"title":"action item 2"}}
+
   -- logm $ (B.pack $ "handleRequest:req=") <> jsonStr
   case J.eitherDecode jsonStr' :: Either String J.Request of
     Left  err -> do
@@ -218,6 +220,7 @@ handleRequest mvarDat contLenStr' jsonStr' = do
       Left  err -> do
         let msg = unwords $ ["parse error.", lbs2str contLenStr', lbs2str jsonStr', show err] ++ _ERR_MSG_URL
         sendErrorLog msg
+
 
     -- ---------------------------------
 
@@ -359,6 +362,13 @@ initializeRequestHandler mvarCtx req@(J.InitializeRequest origId _) =
         res  = J.InitializeResponse "2.0" origId (J.InitializeResponseCapabilities capa)
 
     sendResponse2 mvarCtx $ J.encode res
+
+    -- ++AZ++ experimenting
+    let
+      ais = Just [J.MessageActionItem "action item 1", J.MessageActionItem "action item 2"]
+      p   = J.ShowMessageRequestParams J.MtWarning "playing with ShowMessageRequest" ais
+      smr = def { J.idShowMessageRequest = 1, J.paramsShowMessageRequest = p}
+    sendEvent $ J.encode smr
 
 
 -- |
