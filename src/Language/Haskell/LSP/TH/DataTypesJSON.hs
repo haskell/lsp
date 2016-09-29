@@ -226,7 +226,7 @@ interface Command {
 
 data Command =
   Command
-    { titleCommand    :: String
+    { titleCommand     :: String
     , commandCommand   :: String
     , argumentsCommand :: Maybe A.Object
     } deriving (Show, Read, Eq)
@@ -1055,6 +1055,300 @@ instance Default ShowMessageResponse where
   def = ShowMessageResponse def def def
 
 -- ---------------------------------------------------------------------
+{-
+LogMessage Notification
+
+https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#logmessage-notification
+
+The log message notification is sent from the server to the client to ask the
+client to log a particular message.
+
+Notification:
+
+    method: 'window/logMessage'
+    params: LogMessageParams defined as follows:
+
+interface LogMessageParams {
+    /**
+     * The message type. See {@link MessageType}
+     */
+    type: number;
+
+    /**
+     * The actual message
+     */
+    message: string;
+}
+
+Where type is defined as above.
+-}
+defLogMessage :: MessageType -> String -> MessageNotification
+defLogMessage mt msg = MessageNotification "2.0" "window/logMessage"   (MessageNotificationParams mt msg)
+
+-- ---------------------------------------------------------------------
+{-
+Telemetry Notification
+
+https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#telemetry-notification
+
+    New: The telemetry notification is sent from the server to the client to ask
+    the client to log a telemetry event.
+
+Notification:
+
+    method: 'telemetry/event'
+    params: 'any'
+-}
+
+data TelemetryNotification =
+  TelemetryNotification
+    { jsonrpcTelemetryNotification :: String
+    , methodTelemetryNotification :: String
+    , paramsTelemetryNotification :: A.Object -- ^Can be anything
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "TelemetryNotification") } ''TelemetryNotification)
+
+instance Default TelemetryNotification where
+  def = TelemetryNotification "2.0" "telemetry/event" mempty
+
+-- ---------------------------------------------------------------------
+{-
+DidChangeConfiguration Notification
+
+https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#didchangeconfiguration-notification
+
+A notification sent from the client to the server to signal the change of
+configuration settings.
+
+Notification:
+
+    method: 'workspace/didChangeConfiguration',
+    params: DidChangeConfigurationParams defined as follows:
+
+interface DidChangeConfigurationParams {
+    /**
+     * The actual changed settings
+     */
+    settings: any;
+}
+-}
+
+data DidChangeConfigurationParamsNotificationParams =
+  DidChangeConfigurationParamsNotificationParams {
+    settingsDidChangeConfigurationParamsNotificationParams :: A.Object
+  } deriving (Show, Read, Eq)
+
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DidChangeConfigurationParamsNotificationParams") } ''DidChangeConfigurationParamsNotificationParams)
+
+instance Default DidChangeConfigurationParamsNotificationParams where
+  def = DidChangeConfigurationParamsNotificationParams mempty
+
+-- -------------------------------------
+
+data DidChangeConfigurationParamsNotification =
+  DidChangeConfigurationParamsNotification {
+    paramsDidChangeConfigurationParamsNotification :: DidChangeConfigurationParamsNotificationParams
+  } deriving (Show, Read, Eq)
+
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DidChangeConfigurationParamsNotification") } ''DidChangeConfigurationParamsNotification)
+
+instance Default DidChangeConfigurationParamsNotification where
+  def = DidChangeConfigurationParamsNotification def
+
+-- ---------------------------------------------------------------------
+{-
+DidOpenTextDocument Notification
+
+https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#didopentextdocument-notification
+
+The document open notification is sent from the client to the server to signal
+newly opened text documents. The document's truth is now managed by the client
+and the server must not try to read the document's truth using the document's
+uri.
+
+Notification:
+
+    method: 'textDocument/didOpen'
+    params: DidOpenTextDocumentParams defined as follows:
+
+interface DidOpenTextDocumentParams {
+    /**
+     * The document that was opened.
+     */
+    textDocument: TextDocumentItem;
+}
+-}
+-- ---------------------------------------------------------------------
+
+data DidOpenTextDocumentNotificationParams =
+  DidOpenTextDocumentNotificationParams {
+    textDocumentDidOpenTextDocumentNotificationParams :: TextDocumentItem
+  } deriving (Show, Read, Eq)
+
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DidOpenTextDocumentNotificationParams") } ''DidOpenTextDocumentNotificationParams)
+
+-- ---------------------------------------
+
+data DidOpenTextDocumentNotification =
+  DidOpenTextDocumentNotification {
+    paramsDidOpenTextDocumentNotification :: DidOpenTextDocumentNotificationParams
+  } deriving (Show, Read, Eq)
+
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DidOpenTextDocumentNotification") } ''DidOpenTextDocumentNotification)
+
+-- ---------------------------------------------------------------------
+{-
+DidChangeTextDocument Notification
+
+https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#didchangetextdocument-notification
+
+    Changed: The document change notification is sent from the client to the
+    server to signal changes to a text document. In 2.0 the shape of the params
+    has changed to include proper version numbers and language ids.
+
+Notification:
+
+    method: 'textDocument/didChange'
+    params: DidChangeTextDocumentParams defined as follows:
+
+interface DidChangeTextDocumentParams {
+    /**
+     * The document that did change. The version number points
+     * to the version after all provided content changes have
+     * been applied.
+     */
+    textDocument: VersionedTextDocumentIdentifier;
+
+    /**
+     * The actual content changes.
+     */
+    contentChanges: TextDocumentContentChangeEvent[];
+}
+
+/**
+ * An event describing a change to a text document. If range and rangeLength are omitted
+ * the new text is considered to be the full content of the document.
+ */
+interface TextDocumentContentChangeEvent {
+    /**
+     * The range of the document that changed.
+     */
+    range?: Range;
+
+    /**
+     * The length of the range that got replaced.
+     */
+    rangeLength?: number;
+
+    /**
+     * The new text of the document.
+     */
+    text: string;
+}
+-}
+data TextDocumentContentChangeEvent =
+  TextDocumentContentChangeEvent
+    { rangeTextDocumentContentChangeEvent       :: Maybe Range
+    , rangeLengthTextDocumentContentChangeEvent :: Maybe Int
+    , textTextDocumentContentChangeEvent        :: String
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "TextDocumentContentChangeEvent") } ''TextDocumentContentChangeEvent)
+
+instance Default TextDocumentContentChangeEvent where
+  def = TextDocumentContentChangeEvent Nothing Nothing def
+
+-- -------------------------------------
+data DidChangeTextDocumentParams =
+  DidChangeTextDocumentParams
+    { textDocumentDidChangeTextDocumentParams :: VersionedTextDocumentIdentifier
+    , contentChangesDidChangeTextDocumentParams:: [TextDocumentContentChangeEvent]
+    } deriving (Show,Read,Eq)
+
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DidChangeTextDocumentParams") } ''DidChangeTextDocumentParams)
+
+-- ---------------------------------------------------------------------
+{-
+DidCloseTextDocument Notification
+
+https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#didclosetextdocument-notification
+
+The document close notification is sent from the client to the server when the
+document got closed in the client. The document's truth now exists where the
+document's uri points to (e.g. if the document's uri is a file uri the truth now
+exists on disk).
+
+    Changed: In 2.0 the params are of type DidCloseTextDocumentParams which
+    contains a reference to a text document.
+
+Notification:
+
+    method: 'textDocument/didClose'
+    params: DidCloseTextDocumentParams defined as follows:
+
+interface DidCloseTextDocumentParams {
+    /**
+     * The document that was closed.
+     */
+    textDocument: TextDocumentIdentifier;
+}
+-}
+data DidCloseTextDocumentParams =
+  DidCloseTextDocumentParams
+    { textDocumentDidCloseTextDocumentParams :: TextDocumentIdentifier
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DidCloseTextDocumentParams") } ''DidCloseTextDocumentParams)
+
+instance Default DidCloseTextDocumentParams where
+  def = DidCloseTextDocumentParams def
+
+data DidCloseTextDocumentNotification =
+  DidCloseTextDocumentNotification
+    { methodDidCloseTextDocumentNotification :: String
+    , paramsDidCloseTextDocumentNotification :: DidCloseTextDocumentParams
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DidCloseTextDocumentNotification") } ''DidCloseTextDocumentNotification)
+
+-- ---------------------------------------------------------------------
+{-
+DidSaveTextDocument Notification
+
+https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#didsavetextdocument-notification
+
+    New: The document save notification is sent from the client to the server
+    when the document was saved in the client.
+
+    method: 'textDocument/didSave'
+    params: DidSaveTextDocumentParams defined as follows:
+
+interface DidSaveTextDocumentParams {
+    /**
+     * The document that was saved.
+     */
+    textDocument: TextDocumentIdentifier;
+}
+-}
+data DidSaveTextDocumentParams =
+  DidSaveTextDocumentParams
+    { textDocumentDidSaveTextDocumentParams :: TextDocumentIdentifier
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DidSaveTextDocumentParams") } ''DidSaveTextDocumentParams)
+
+instance Default DidSaveTextDocumentParams where
+  def = DidSaveTextDocumentParams def
+
+data DidSaveTextDocumentNotification =
+  DidSaveTextDocumentNotification
+    { methodDidSaveTextDocumentNotification :: String
+    , paramsDidSaveTextDocumentNotification :: DidSaveTextDocumentParams
+    } deriving (Show,Read,Eq)
+
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DidSaveTextDocumentNotification") } ''DidSaveTextDocumentNotification)
+
 -- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -- ---------------------------------------------------------------------
 
@@ -1170,54 +1464,6 @@ errorRenameResponse (RenameRequest reqSeq _) msg =
   RenameResponse "2.0" reqSeq def
 
 -- ---------------------------------------
-
--- ---------------------------------------------------------------------
-
--- |
---   Notification from the server to actually exit now, after shutdown acked
---
-data DidChangeConfigurationParamsNotificationParams =
-  DidChangeConfigurationParamsNotificationParams {
-    settingsDidChangeConfigurationParamsNotificationParams :: A.Object
-  } deriving (Show, Read, Eq)
-
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DidChangeConfigurationParamsNotificationParams") } ''DidChangeConfigurationParamsNotificationParams)
-
-defaultDidChangeConfigurationParamsNotificationParams :: DidChangeConfigurationParamsNotificationParams
-defaultDidChangeConfigurationParamsNotificationParams = DidChangeConfigurationParamsNotificationParams mempty
-
--- -------------------------------------
-
-data DidChangeConfigurationParamsNotification =
-  DidChangeConfigurationParamsNotification {
-    paramsDidChangeConfigurationParamsNotification :: DidChangeConfigurationParamsNotificationParams
-  } deriving (Show, Read, Eq)
-
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DidChangeConfigurationParamsNotification") } ''DidChangeConfigurationParamsNotification)
-
-defaultDidChangeConfigurationParamsNotification :: DidChangeConfigurationParamsNotification
-defaultDidChangeConfigurationParamsNotification = DidChangeConfigurationParamsNotification defaultDidChangeConfigurationParamsNotificationParams
-
--- ---------------------------------------------------------------------
-
-data DidOpenTextDocumentNotificationParams =
-  DidOpenTextDocumentNotificationParams {
-    textDocumentDidOpenTextDocumentNotificationParams :: TextDocumentItem
-  } deriving (Show, Read, Eq)
-
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DidOpenTextDocumentNotificationParams") } ''DidOpenTextDocumentNotificationParams)
-
--- ---------------------------------------
-
-data DidOpenTextDocumentNotification =
-  DidOpenTextDocumentNotification {
-    paramsDidOpenTextDocumentNotification :: DidOpenTextDocumentNotificationParams
-  } deriving (Show, Read, Eq)
-
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DidOpenTextDocumentNotification") } ''DidOpenTextDocumentNotification)
-
--- defaultDidOpenTextDocumentNotification :: DidOpenTextDocumentNotification
--- defaultDidOpenTextDocumentNotification = DidOpenTextDocumentNotification defaultDidOpenTextDocumentNotificationParams
 
 -- ---------------------------------------------------------------------
 
@@ -1375,8 +1621,6 @@ interface ShowMessageParams {
 -}
 
 
-defLogMessage :: MessageType -> String -> MessageNotification
-defLogMessage mt msg = MessageNotification "2.0" "window/logMessage"   (MessageNotificationParams mt msg)
 
 
 -- ---------------------------------------------------------------------
