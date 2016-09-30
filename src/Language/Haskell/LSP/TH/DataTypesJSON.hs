@@ -14,6 +14,33 @@ import Language.Haskell.LSP.Utility
 import Data.Default
 
 -- ---------------------------------------------------------------------
+
+-- |
+--   Client-initiated request. only pull out the method, for routing
+--
+data Request =
+  Request {
+    methodRequest   :: String    -- The command to execute
+  } deriving (Show, Read, Eq)
+
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "Request") } ''Request)
+
+-- ---------------------------------------------------------------------
+
+data RequestMessage a =
+  RequestMessage
+    { jsonrpcRequestMessage :: String
+    , idRequestMessage      :: Int
+    , methodRequestMessage  :: String
+    , paramsRequestMessage  :: a
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "RequestMessage") } ''RequestMessage)
+
+instance (Default a) => Default (RequestMessage a) where
+  def = RequestMessage "2.0" def def def
+
+-- ---------------------------------------------------------------------
 {-
 interface ResponseError<D> {
     /**
@@ -83,6 +110,21 @@ $(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdr
 
 instance Default ResponseError where
   def = ResponseError def def Nothing
+
+-- ---------------------------------------------------------------------
+
+data ResponseMessage a =
+  ResponseMessage
+    { jsonrpcResponseMessage :: String
+    , idResponseMessage :: Int
+    , resultResponseMessage :: Maybe a
+    , errorResponseMessage  :: Maybe ResponseError
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "ResponseMessage") } ''ResponseMessage)
+
+instance (Default a) => Default (ResponseMessage a) where
+  def = ResponseMessage "2.0" def def Nothing
 
 -- ---------------------------------------------------------------------
 {-
@@ -848,18 +890,7 @@ instance Default InitializeResponseCapabilities where
 
 -- ---------------------------------------------------------------------
 
--- |
---   Server-initiated response to client request
---
-data InitializeResponse =
-  InitializeResponse {
-    jsonrpcInitializeResponse    :: String
-  , idInitializeResponse         :: Int     -- Sequence number
-  , resultInitializeResponse     :: InitializeResponseCapabilities  -- The capabilities of this debug adapter
-  } deriving (Show, Read, Eq)
-
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "InitializeResponse") } ''InitializeResponse)
-
+type InitializeResponse = ResponseMessage InitializeResponseCapabilities
 
 -- ---------------------------------------------------------------------
 {-
@@ -895,17 +926,7 @@ $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "ShutdownReques
 instance Default ShutdownRequest where
   def = ShutdownRequest 0
 
-data ShutdownResponse =
-  ShutdownResponse {
-    jsonrpcShutdownResponse    :: String
-  , idShutdownResponse         :: Int     -- Sequence number
-  , resultShutdownResponse     :: String
-  } deriving (Show, Read, Eq)
-
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "ShutdownResponse") } ''ShutdownResponse)
-
-instance Default ShutdownResponse where
-  def = ShutdownResponse "2.0" 0 ""
+type ShutdownResponse = ResponseMessage String
 
 -- ---------------------------------------------------------------------
 {-
@@ -1829,12 +1850,7 @@ data CompletionResponseResult
 
 $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "CompletionResponseResult") } ''CompletionResponseResult)
 
-data CompletionResponse =
-  CompletionResponse
-    { jsonrpcCompletionResponse :: String
-    , idCompletionResponse      :: Int
-    , resultCompletionResponse :: CompletionResponseResult
-    } deriving (Read,Show,Eq)
+type CompletionResponse = ResponseMessage CompletionResponseResult
 
 -- ---------------------------------------------------------------------
 {-
@@ -1864,18 +1880,7 @@ data CompletionItemResolveRequest =
 
 $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "CompletionItemResolveRequest") } ''CompletionItemResolveRequest)
 
-data CompletionItemResolveResponse =
-  CompletionItemResolveResponse
-    { jsonrpcCompletionItemResolveResponse :: String
-    , idCompletionItemResolveResponse :: Int
-    , resultCompletionItemResolveResponse :: Maybe CompletionItem
-    , errorCompletionItemResolveResponse  :: Maybe ResponseError
-    } deriving (Read,Show,Eq)
-
-$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "CompletionItemResolveResponse") } ''CompletionItemResolveResponse)
-
-instance Default CompletionItemResolveResponse where
-  def = CompletionItemResolveResponse "2.0" def def Nothing
+type CompletionItemResolveResponse = ResponseMessage CompletionItem
 
 -- ---------------------------------------------------------------------
 {-
@@ -1950,18 +1955,7 @@ $(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdr
 instance Default Hover where
   def = Hover def Nothing
 
-data HoverResponse =
-  HoverResponse
-    { jsonrpcHoverResponse :: String
-    , idHoverResponse :: Int
-    , resultHoverResponse :: Maybe Hover
-    , errorHoverResponse  :: Maybe ResponseError
-    } deriving (Read,Show,Eq)
-
-$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "HoverResponse") } ''HoverResponse)
-
-instance Default HoverResponse where
-  def = HoverResponse "2.0" def def def
+type HoverResponse = ResponseMessage Hover
 
 -- ---------------------------------------------------------------------
 {-
@@ -2145,14 +2139,7 @@ $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DefinitionRequ
 instance Default DefinitionRequest where
   def = DefinitionRequest 0 def
 
-data DefinitionResponse =
-  DefinitionResponse {
-    jsonrpcDefinitionResponse    :: String
-  , idDefinitionResponse         :: Int     -- Sequence number
-  , resultDefinitionResponse     :: Location
-  } deriving (Show, Read, Eq)
-
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DefinitionResponse") } ''DefinitionResponse)
+type DefinitionResponse = ResponseMessage Location
 
 -- ---------------------------------------------------------------------
 
@@ -2222,18 +2209,7 @@ data FindReferencesRequest =
 
 $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "FindReferencesRequest") } ''FindReferencesRequest)
 
-data FindReferencesResponse =
-  FindReferencesResponse
-    { jsonrpcFindReferencesResponse :: String
-    , idFindReferencesResponse      :: Int
-    , resultFindReferencesResponse :: Maybe [Location]
-    , errorFindReferencesResponse  :: Maybe ResponseError
-    } deriving (Read,Show,Eq)
-
-$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "FindReferencesResponse") } ''FindReferencesResponse)
-
-instance Default FindReferencesResponse where
-  def = FindReferencesResponse "2.0" def def def
+type FindReferencesResponse = ResponseMessage [Location]
 
 -- ---------------------------------------------------------------------
 {-
@@ -2339,18 +2315,7 @@ data DocumentHighlight =
 
 $(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "DocumentHighlight") } ''DocumentHighlight)
 
-data DocumentHighlightsResponse =
-  DocumentHighlightsResponse
-    { jsonrpcDocumentHighlightsResponse :: String
-    , idDocumentHighlightsResponse      :: Int
-    , resultDocumentHighlightsResponse  :: Maybe [DocumentHighlight]
-    , errorDocumentHighlightsResponse   :: Maybe ResponseError
-    } deriving (Read,Show,Eq)
-
-$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "DocumentHighlightsResponse") } ''DocumentHighlightsResponse)
-
-instance Default DocumentHighlightsResponse where
-  def = DocumentHighlightsResponse "2.0" def def def
+type DocumentHighlightsResponse = ResponseMessage [DocumentHighlight]
 
 -- ---------------------------------------------------------------------
 {-
@@ -2541,18 +2506,7 @@ instance Default SymbolInformation where
 
 -- -------------------------------------
 
-data DocumentSymbolsResponse =
-  DocumentSymbolsResponse
-    { jsonrpcDocumentSymbolsResponse :: String
-    , idDocumentSymbolsResponse      :: Int
-    , resultDocumentSymbolsResponse  :: Maybe [SymbolInformation]
-    , errorDocumentSymbolsResponse   :: Maybe ResponseError
-    } deriving (Read,Show,Eq)
-
-$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "DocumentSymbolsResponse") } ''DocumentSymbolsResponse)
-
-instance Default DocumentSymbolsResponse where
-  def = DocumentSymbolsResponse "2.0" def def def
+type DocumentSymbolsResponse = ResponseMessage [SymbolInformation]
 
 -- ---------------------------------------------------------------------
 {-
@@ -2600,21 +2554,7 @@ data WorkspaceSymbolsRequest =
 
 $(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "WorkspaceSymbolsRequest") } ''WorkspaceSymbolsRequest)
 
--- -------------------------------------
-
--- TODO: Make only a SymbolsResponse
-data WorkspaceSymbolsResponse =
-  WorkspaceSymbolsResponse
-    { jsonrpcWorkspaceSymbolsResponse :: String
-    , idWorkspaceSymbolsResponse      :: Int
-    , resultWorkspaceSymbolsResponse  :: Maybe [SymbolInformation]
-    , errorWorkspaceSymbolsResponse   :: Maybe ResponseError
-    } deriving (Read,Show,Eq)
-
-$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "WorkspaceSymbolsResponse") } ''WorkspaceSymbolsResponse)
-
-instance Default WorkspaceSymbolsResponse where
-  def = WorkspaceSymbolsResponse "2.0" def def def
+type WorkspaceSymbolsResponse = ResponseMessage [SymbolInformation]
 
 -- ---------------------------------------------------------------------
 {-
@@ -2703,20 +2643,7 @@ data CodeActionRequest =
 
 $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "CodeActionRequest") } ''CodeActionRequest)
 
--- -------------------------------------
-
-data CodeActionResponse =
-  CodeActionResponse
-    { jsonrpcCodeActionResponse  :: String
-    , idCodeActionResponse       :: Int
-    , resultCodeActionResponse   :: Maybe [Command]
-    , errorCommandActionResponse :: Maybe ResponseError
-    } deriving (Read,Show,Eq)
-
-$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "CodeActionResponse") } ''CodeActionResponse)
-
-instance Default CodeActionResponse where
-  def = CodeActionResponse "2.0" def def def
+type CodeActionResponse = ResponseMessage [Command]
 
 -- ---------------------------------------------------------------------
 {-
@@ -2801,18 +2728,7 @@ $(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdr
 instance Default CodeLens where
   def = CodeLens def def def
 
-data CodeLensResponse =
-  CodeLensResponse
-    { jsonrpcCodeLensResponse :: String
-    , idCodeLensResponse      :: Int
-    , resultCodeLensResponse  :: Maybe [CodeLens]
-    , errorCodeLensResponse   :: Maybe ResponseError
-    } deriving (Read,Show,Eq)
-
-$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "CodeLensResponse") } ''CodeLensResponse)
-
-instance Default CodeLensResponse where
-  def = CodeLensResponse "2.0" def def def
+type CodeLenseResponse = ResponseMessage [CodeLens]
 
 -- ---------------------------------------------------------------------
 {-
@@ -2845,18 +2761,7 @@ data CodeLensResolveRequest =
 
 $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "CodeLensResolveRequest") } ''CodeLensResolveRequest)
 
-data CodeLensResolveResponse =
-  CodeLensResolveResponse
-    { jsonrpcCodeLensResolveResponse :: String
-    , idCodeLensResolveResponse      :: Int
-    , resultCodeLensResolveResponse  :: Maybe [CodeLens]
-    , errorCodeLensResolveResponse   :: Maybe ResponseError
-    } deriving (Read,Show,Eq)
-
-$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "CodeLensResponse") } ''CodeLensResolveResponse)
-
-instance Default CodeLensResolveResponse where
-  def = CodeLensResolveResponse "2.0" def def def
+type CodeLensResolveResponse = ResponseMessage [CodeLens]
 
 -- ---------------------------------------------------------------------
 {-
@@ -2936,20 +2841,7 @@ data DocumentFormattingRequest =
 
 $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DocumentFormattingRequest") } ''DocumentFormattingRequest)
 
--- -------------------------------------
-
-data DocumentFormattingResponse =
-  DocumentFormattingResponse
-    { jsonrpcDocumentFormattingResponse :: String
-    , idDocumentFormattingResponse      :: Int
-    , resultDocumentFormattingResponse  :: Maybe [TextEdit]
-    , errorDocumentFormattingResponse   :: Maybe ResponseError
-    } deriving (Read,Show,Eq)
-
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DocumentFormattingResponse") } ''DocumentFormattingResponse)
-
-instance Default DocumentFormattingResponse where
-  def = DocumentFormattingResponse "2.0" def def def
+type DocumentFormattingResponse = ResponseMessage [TextEdit]
 
 -- ---------------------------------------------------------------------
 {-
@@ -3009,18 +2901,7 @@ $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DocumentRangeF
 
 -- -------------------------------------
 
-data DocumentRangeFormattingResponse =
-  DocumentRangeFormattingResponse
-    { jsonrpcDocumentRangeFormattingResponse :: String
-    , idDocumentRangeFormattingResponse      :: Int
-    , resultDocumentRangeFormattingResponse  :: Maybe [TextEdit]
-    , errorDocumentRangeFormattingResponse   :: Maybe ResponseError
-    } deriving (Read,Show,Eq)
-
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DocumentRangeFormattingResponse") } ''DocumentRangeFormattingResponse)
-
-instance Default DocumentRangeFormattingResponse where
-  def = DocumentRangeFormattingResponse "2.0" def def def
+type DocumentRangeFormattingResponse = ResponseMessage [TextEdit]
 
 -- ---------------------------------------------------------------------
 {-
@@ -3083,20 +2964,7 @@ data DocumentOnTypeFormattingRequest =
 
 $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DocumentOnTypeFormattingRequest") } ''DocumentOnTypeFormattingRequest)
 
--- -------------------------------------
-
-data DocumentOnTypeFormattingResponse =
-  DocumentOnTypeFormattingResponse
-    { jsonrpcDocumentOnTypeFormattingResponse :: String
-    , idDocumentOnTypeFormattingResponse      :: Int
-    , resultDocumentOnTypeFormattingResponse  :: Maybe [TextEdit]
-    , errorDocumentOnTypeFormattingResponse   :: Maybe ResponseError
-    } deriving (Read,Show,Eq)
-
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DocumentOnTypeFormattingResponse") } ''DocumentOnTypeFormattingResponse)
-
-instance Default DocumentOnTypeFormattingResponse where
-  def = DocumentOnTypeFormattingResponse "2.0" def def def
+type DocumentOnTypeFormattingResponse = ResponseMessage [TextEdit]
 
 -- ---------------------------------------------------------------------
 {-
@@ -3159,71 +3027,9 @@ data RenameRequest =
 
 $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "RenameRequest") } ''RenameRequest)
 
--- -------------------------------------
-
-data RenameResponse =
-  RenameResponse {
-    jsonrpcRenameResponse    :: String
-  , idRenameResponse         :: Int     -- Sequence number
-  , resultRenameResponse     :: Location
-  } deriving (Show, Read, Eq)
-
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "RenameResponse") } ''RenameResponse)
-
-instance Default RenameResponse where
-  def = RenameResponse "2.0" def def
+type RenameResponse = ResponseMessage Location
 
 -- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
--- ---------------------------------------
-
--- ---------------------------------------------------------------------
-{-
--- |
---   Event message for "output" event type. The event indicates that the target has produced output.
---
-data OutputEventBody =
-  OutputEventBody {
-    categoryOutputEventBody :: String        -- The category of output (such as: 'console', 'stdout', 'stderr', 'telemetry'). If not specified, 'console' is assumed. 
-  , outputOutputEventBody   :: String        -- The output to report.
-  , dataOutputEventBody     :: Maybe String  -- Optional data to report. For the 'telemetry' category the data will be sent to telemetry, for the other categories the data is shown in JSON format.
-  } deriving (Show, Read, Eq)
-
-
-$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "OutputEventBody") } ''OutputEventBody)
-
-defaultOutputEventBody :: OutputEventBody
-defaultOutputEventBody = OutputEventBody "console" "" Nothing
-
--- ---------------------------------------------------------------------
-
--- |
---   Event message for "output" event type. The event indicates that the target has produced output.
---
-data OutputEvent =
-  OutputEvent {
-    seqOutputEvent   :: Int     -- Sequence number
-  , typeOutputEvent  :: String  -- One of "request", "response", or "event"
-  , eventOutputEvent :: String  -- Type of event
-  , bodyOutputEvent  :: OutputEventBody 
-  } deriving (Show, Read, Eq)
-
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "OutputEvent") } ''OutputEvent)
-
-defaultOutputEvent :: Int -> OutputEvent
-defaultOutputEvent resSeq = OutputEvent resSeq "event" "output" defaultOutputEventBody
--}
--- ---------------------------------------------------------------------
-
--- |
---   Client-initiated request
---
-data Request =
-  Request {
-    methodRequest   :: String    -- The command to execute
-  } deriving (Show, Read, Eq)
-
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "Request") } ''Request)
 
 -- ---------------------------------------------------------------------
 
@@ -3241,43 +3047,6 @@ $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "ErrorResponse"
 
 instance Default ErrorResponse where
   def = ErrorResponse "2.0" 0 ""
-
-
--- ---------------------------------------------------------------------
-{-
--- |
---   Event message for "terminated" event types.
--- The event indicates that debugging of the debuggee has terminated.
---
-data TerminatedEventBody =
-  TerminatedEventBody {
-    restartTerminatedEventBody :: Bool  -- A debug adapter may set 'restart' to true to request that the front end restarts the session.
-  } deriving (Show, Read, Eq)
-
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "TerminatedEventBody") } ''TerminatedEventBody)
-
-defaultTerminatedEventBody :: TerminatedEventBody
-defaultTerminatedEventBody = TerminatedEventBody False
-
--- ---------------------------------------------------------------------
-
--- |
---   Event message for "terminated" event types.
---   The event indicates that debugging of the debuggee has terminated.
---
-data TerminatedEvent =
-  TerminatedEvent {
-    seqTerminatedEvent   :: Int     -- Sequence number
-  , typeTerminatedEvent  :: String  -- One of "request", "response", or "event"
-  , eventTerminatedEvent :: String  -- Type of event
-  , bodyTerminatedEvent  :: TerminatedEventBody
-  } deriving (Show, Read, Eq)
-
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "TerminatedEvent") } ''TerminatedEvent)
-
-defaultTerminatedEvent :: Int -> TerminatedEvent
-defaultTerminatedEvent seq = TerminatedEvent seq "event" "terminated" defaultTerminatedEventBody
--}
 
 -- ---------------------------------------------------------------------
 
@@ -3300,6 +3069,5 @@ $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "TraceNotificat
 
 instance Default TraceNotification where
   def = TraceNotification def
-
 
 -- ---------------------------------------------------------------------

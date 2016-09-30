@@ -267,6 +267,14 @@ handleRequest mvarDat contLenStr' jsonStr' = do
       sendErrorLog msg
 
 -- ---------------------------------------------------------------------
+
+makeResponseMessage :: (J.ToJSON a) => Int -> a -> J.ResponseMessage a
+makeResponseMessage origId result = J.ResponseMessage "2.0" origId (Just result) Nothing
+
+makeResponseMessageError :: Int -> J.ResponseError -> J.ResponseMessage a
+makeResponseMessageError origId err = J.ResponseMessage "2.0" origId Nothing (Just err)
+
+-- ---------------------------------------------------------------------
 -- |
 --
 sendEvent :: BSL.ByteString -> IO ()
@@ -359,7 +367,8 @@ initializeRequestHandler :: MVar DebugContextData -> J.InitializeRequest -> IO (
 initializeRequestHandler mvarCtx req@(J.InitializeRequest origId _) =
   flip E.catches (defaultErrorHandlers origId req) $ do
     let capa = def { J.definitionProvider = Just True, J.renameProvider = Just True}
-        res  = J.InitializeResponse "2.0" origId (J.InitializeResponseCapabilities capa)
+        -- TODO: wrap this up into a fn to create a response message
+        res  = J.ResponseMessage "2.0" origId (Just $ J.InitializeResponseCapabilities capa) Nothing
 
     sendResponse2 mvarCtx $ J.encode res
 
@@ -376,7 +385,7 @@ initializeRequestHandler mvarCtx req@(J.InitializeRequest origId _) =
 shutdownRequestHandler :: MVar DebugContextData -> J.ShutdownRequest -> IO ()
 shutdownRequestHandler mvarCtx req@(J.ShutdownRequest origId ) =
   flip E.catches (defaultErrorHandlers origId req) $ do
-  let res  = J.ShutdownResponse "2.0" origId "ok"
+  let res  = makeResponseMessage origId ("ok"::String)
 
   sendResponse2 mvarCtx $ J.encode res
 
@@ -386,8 +395,8 @@ shutdownRequestHandler mvarCtx req@(J.ShutdownRequest origId ) =
 definitionRequestHandler :: MVar DebugContextData -> J.DefinitionRequest -> IO ()
 definitionRequestHandler mvarCtx req@(J.DefinitionRequest origId _) =
   flip E.catches (defaultErrorHandlers origId req) $ do
-  let loc = def
-      res  = J.DefinitionResponse "2.0" origId loc
+  let loc = def :: J.Location
+      res  = makeResponseMessage origId loc
 
   sendResponse2 mvarCtx $ J.encode res
 
@@ -396,8 +405,8 @@ definitionRequestHandler mvarCtx req@(J.DefinitionRequest origId _) =
 renameRequestHandler :: MVar DebugContextData -> J.RenameRequest -> IO ()
 renameRequestHandler mvarCtx req@(J.RenameRequest origId _) =
   flip E.catches (defaultErrorHandlers origId req) $ do
-  let loc = def
-      res  = J.RenameResponse "2.0" origId loc
+  let loc = def :: J.Location
+      res  = makeResponseMessage origId loc
 
   sendResponse2 mvarCtx $ J.encode res
 
