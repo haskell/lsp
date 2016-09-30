@@ -15,6 +15,77 @@ import Data.Default
 
 -- ---------------------------------------------------------------------
 {-
+interface ResponseError<D> {
+    /**
+     * A number indicating the error type that occurred.
+     */
+    code: number;
+
+    /**
+     * A string providing a short description of the error.
+     */
+    message: string;
+
+    /**
+     * A Primitive or Structured value that contains additional
+     * information about the error. Can be omitted.
+     */
+    data?: D;
+}
+
+export namespace ErrorCodes {
+    export const ParseError: number = -32700;
+    export const InvalidRequest: number = -32600;
+    export const MethodNotFound: number = -32601;
+    export const InvalidParams: number = -32602;
+    export const InternalError: number = -32603;
+    export const serverErrorStart: number = -32099
+    export const serverErrorEnd: number = -32000;
+}
+-}
+
+data ErrorCode = ParseError
+               | InvalidRequest
+               | MethodNotFound
+               | InvalidParams
+               | InternalError
+               -- ^ Note: server error codes are reserved from -32099 to -32000
+               deriving (Read,Show,Eq)
+
+instance A.ToJSON ErrorCode where
+  toJSON ParseError     = A.Number (-32700)
+  toJSON InvalidRequest = A.Number (-32600)
+  toJSON MethodNotFound = A.Number (-32601)
+  toJSON InvalidParams  = A.Number (-32602)
+  toJSON InternalError  = A.Number (-32603)
+
+instance A.FromJSON ErrorCode where
+  parseJSON (A.Number (-32700)) = pure ParseError
+  parseJSON (A.Number (-32600)) = pure InvalidRequest
+  parseJSON (A.Number (-32601)) = pure MethodNotFound
+  parseJSON (A.Number (-32602)) = pure InvalidParams
+  parseJSON (A.Number (-32603)) = pure InternalError
+  parseJSON _                   = mempty
+
+instance Default ErrorCode where
+  def = InternalError -- Choose something random
+
+-- -------------------------------------
+
+data ResponseError =
+  ResponseError
+    { codeResponseError    :: ErrorCode
+    , messageResponseError :: String
+    , dataResponseError    :: Maybe A.Object
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "ResponseError") } ''ResponseError)
+
+instance Default ResponseError where
+  def = ResponseError def def Nothing
+
+-- ---------------------------------------------------------------------
+{-
 https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#position
 
 Position in a text document expressed as zero-based line and character offset. A
@@ -1765,8 +1836,291 @@ data CompletionResponse =
     , resultCompletionResponse :: CompletionResponseResult
     } deriving (Read,Show,Eq)
 
--- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -- ---------------------------------------------------------------------
+{-
+Completion Item Resolve Request
+
+https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#completion-item-resolve-request
+
+The request is sent from the client to the server to resolve additional
+information for a given completion item.
+
+Request
+
+    method: 'completionItem/resolve'
+    params: CompletionItem
+
+Response
+
+    result: CompletionItem
+    error: code and message set in case an exception happens during the completion resolve request.
+-}
+
+data CompletionItemResolveRequest =
+  CompletionItemResolveRequest
+    { methodCompletionItemResolveRequest :: String
+    , paramsCompletionItemResolveRequest :: CompletionItem
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "CompletionItemResolveRequest") } ''CompletionItemResolveRequest)
+
+data CompletionItemResolveResponse =
+  CompletionItemResolveResponse
+    { jsonrpcCompletionItemResolveResponse :: String
+    , idCompletionItemResolveResponse :: Int
+    , resultCompletionItemResolveResponse :: Maybe CompletionItem
+    , errorCompletionItemResolveResponse  :: Maybe ResponseError
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "CompletionItemResolveResponse") } ''CompletionItemResolveResponse)
+
+instance Default CompletionItemResolveResponse where
+  def = CompletionItemResolveResponse "2.0" def def Nothing
+
+-- ---------------------------------------------------------------------
+{-
+Hover Request
+
+The hover request is sent from the client to the server to request hover
+information at a given text document position.
+
+    Changed: In 2.0 the request uses TextDocumentPositionParams with a proper
+    textDocument and position property. In 1.0 the uri of the referenced text
+    document was inlined into the params object.
+
+Request
+
+    method: 'textDocument/hover'
+    params: TextDocumentPositionParams
+
+Response
+
+    result: Hover defined as follows:
+
+/**
+ * The result of a hove request.
+ */
+interface Hover {
+    /**
+     * The hover's content
+     */
+    contents: MarkedString | MarkedString[];
+
+    /**
+     * An optional range
+     */
+    range?: Range;
+}
+
+Where MarkedString is defined as follows:
+
+type MarkedString = string | { language: string; value: string };
+
+    error: code and message set in case an exception happens during the hover
+    request.
+-}
+
+data HoverRequest =
+  HoverRequest
+    { methodHoverRequest :: String
+    , paramsHoverRequest :: TextDocumentPositionParams
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "HoverRequest") } ''HoverRequest)
+
+data MarkedString =
+  MarkedString
+    { languageMarkedString :: String
+    , valueMarkedString    :: String
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "MarkedString") } ''MarkedString)
+
+instance Default MarkedString where
+  def = MarkedString def def
+
+data Hover =
+  Hover
+    { contentsHover :: [MarkedString]
+    , rangeHover    :: Maybe Range
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "Hover") } ''Hover)
+
+instance Default Hover where
+  def = Hover def Nothing
+
+data HoverResponse =
+  HoverResponse
+    { jsonrpcHoverResponse :: String
+    , idHoverResponse :: Int
+    , resultHoverResponse :: Maybe Hover
+    , errorHoverResponse  :: Maybe ResponseError
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "HoverResponse") } ''HoverResponse)
+
+instance Default HoverResponse where
+  def = HoverResponse "2.0" def def def
+
+-- ---------------------------------------------------------------------
+{-
+Signature Help Request
+
+https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#signature-help-request
+
+The signature help request is sent from the client to the server to request
+signature information at a given cursor position.
+
+    Changed: In 2.0 the request uses TextDocumentPositionParams with proper
+    textDocument and position properties. In 1.0 the uri of the referenced text
+    document was inlined into the params object.
+
+Request
+
+    method: 'textDocument/signatureHelp'
+    params: TextDocumentPositionParams
+
+Response
+
+    result: SignatureHelp defined as follows:
+
+/**
+ * Signature help represents the signature of something
+ * callable. There can be multiple signature but only one
+ * active and only one active parameter.
+ */
+interface SignatureHelp {
+    /**
+     * One or more signatures.
+     */
+    signatures: SignatureInformation[];
+
+    /**
+     * The active signature.
+     */
+    activeSignature?: number;
+
+    /**
+     * The active parameter of the active signature.
+     */
+    activeParameter?: number;
+}
+
+/**
+ * Represents the signature of something callable. A signature
+ * can have a label, like a function-name, a doc-comment, and
+ * a set of parameters.
+ */
+interface SignatureInformation {
+    /**
+     * The label of this signature. Will be shown in
+     * the UI.
+     */
+    label: string;
+
+    /**
+     * The human-readable doc-comment of this signature. Will be shown
+     * in the UI but can be omitted.
+     */
+    documentation?: string;
+
+    /**
+     * The parameters of this signature.
+     */
+    parameters?: ParameterInformation[];
+}
+
+/**
+ * Represents a parameter of a callable-signature. A parameter can
+ * have a label and a doc-comment.
+ */
+interface ParameterInformation {
+    /**
+     * The label of this signature. Will be shown in
+     * the UI.
+     */
+    label: string;
+
+    /**
+     * The human-readable doc-comment of this signature. Will be shown
+     * in the UI but can be omitted.
+     */
+    documentation?: string;
+}
+
+    error: code and message set in case an exception happens during the
+    signature help request.
+-}
+
+data SignatureHelpRequest =
+  SignatureHelpRequest
+    { methodSignatureHelpRequest :: String
+    , paramsSignatureHelpRequest :: TextDocumentPositionParams
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "SignatureHelpRequest") } ''SignatureHelpRequest)
+
+-- -------------------------------------
+
+data ParameterInformation =
+  ParameterInformation
+    { labelParameterInformation :: String
+    , documentationParameterInformation :: Maybe String
+    } deriving (Read,Show,Eq)
+$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "ParameterInformation") } ''ParameterInformation)
+
+instance Default ParameterInformation where
+  def = ParameterInformation def def
+
+-- -------------------------------------
+
+data SignatureInformation =
+  SignatureInformation
+    { labelSignatureInformation         :: String
+    , documentationSignatureInformation :: Maybe String
+    , parametersSignatureInformation    :: Maybe [ParameterInformation]
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "SignatureInformation") } ''SignatureInformation)
+
+data SignatureHelp =
+  SignatureHelp
+    { signaturesSignatureHelp :: [SignatureInformation]
+    , activeSignature :: Maybe Int -- ^ The active signature
+    , activeParameter :: Maybe Int -- ^ The active parameter of the active signature
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "SignatureHelp") } ''SignatureHelp)
+
+instance Default SignatureHelp where
+  def = SignatureHelp def Nothing Nothing
+
+-- ---------------------------------------------------------------------
+{-
+Goto Definition Request
+
+https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#goto-definition-request
+
+The goto definition request is sent from the client to the server to resolve the
+definition location of a symbol at a given text document position.
+
+    Changed: In 2.0 the request uses TextDocumentPositionParams with proper
+    textDocument and position properties. In 1.0 the uri of the referenced text
+    document was inlined into the params object.
+
+Request
+
+    method: 'textDocument/definition'
+    params: TextDocumentPositionParams
+
+Response:
+
+    result: Location | Location[]
+    error: code and message set in case an exception happens during the definition request.
+
+
+-}
 
 data DefinitionRequestParams =
   DefinitionRequestParams
@@ -1778,10 +2132,6 @@ $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DefinitionRequ
 
 instance Default DefinitionRequestParams where
   def = DefinitionRequestParams def def
-
--- |
---   Client-initiated request
---
 
 -- {"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{"textDocument":{"uri":"file:///tmp/Foo.hs"},"position":{"line":1,"character":8}}}
 data DefinitionRequest =
@@ -1795,11 +2145,6 @@ $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DefinitionRequ
 instance Default DefinitionRequest where
   def = DefinitionRequest 0 def
 
--- ---------------------------------------------------------------------
-
--- |
---   Server-initiated response to client request
---
 data DefinitionResponse =
   DefinitionResponse {
     jsonrpcDefinitionResponse    :: String
@@ -1809,21 +2154,990 @@ data DefinitionResponse =
 
 $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DefinitionResponse") } ''DefinitionResponse)
 
+-- ---------------------------------------------------------------------
 
--- |
---
-parseErrorDefinitionResponse :: Int -> String -> DefinitionResponse
-parseErrorDefinitionResponse seq msg =
-  DefinitionResponse  "2.0" seq def
+{-
+Find References Request
 
--- |
---
-errorDefinitionResponse :: DefinitionRequest -> String -> DefinitionResponse
-errorDefinitionResponse (DefinitionRequest reqSeq _) msg =
-  DefinitionResponse "2.0" reqSeq def
+https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#find-references-request
+
+The references request is sent from the client to the server to resolve
+project-wide references for the symbol denoted by the given text document
+position.
+
+    Changed: In 2.0 the request uses TextDocumentPositionParams with proper
+    textDocument and position properties. In 1.0 the uri of the referenced text
+    document was inlined into the params object.
+
+Request
+
+    method: 'textDocument/references'
+    params: ReferenceParams defined as follows:
+
+interface ReferenceParams extends TextDocumentPositionParams {
+    context: ReferenceContext
+}
+
+interface ReferenceContext {
+    /**
+     * Include the declaration of the current symbol.
+     */
+    includeDeclaration: boolean;
+}
+
+Response:
+
+    result: Location[]
+    error: code and message set in case an exception happens during the
+           reference request.
+-}
+
+data ReferenceContext =
+  ReferenceContext
+    { includeDeclarationReferenceContext :: Bool
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "ReferenceContext") } ''ReferenceContext)
+
+instance Default ReferenceContext where
+  def = ReferenceContext False
+
+data ReferenceParams =
+  ReferenceParams
+    { textDocumentReferenceParams :: TextDocumentIdentifier
+    , positionReferenceParams     :: Position
+    , contextReferenceParams     :: ReferenceContext
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "ReferenceParams") } ''ReferenceParams)
+
+instance Default ReferenceParams where
+  def = ReferenceParams def def def
+
+data FindReferencesRequest =
+  FindReferencesRequest
+    { methodFindReferencesRequest :: String
+    , paramsFindReferencesRequest :: ReferenceParams
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "FindReferencesRequest") } ''FindReferencesRequest)
+
+data FindReferencesResponse =
+  FindReferencesResponse
+    { jsonrpcFindReferencesResponse :: String
+    , idFindReferencesResponse      :: Int
+    , resultFindReferencesResponse :: Maybe [Location]
+    , errorFindReferencesResponse  :: Maybe ResponseError
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "FindReferencesResponse") } ''FindReferencesResponse)
+
+instance Default FindReferencesResponse where
+  def = FindReferencesResponse "2.0" def def def
+
+-- ---------------------------------------------------------------------
+{-
+Document Highlights Request
+
+https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#document-highlights-request
+
+The document highlight request is sent from the client to the server to resolve
+a document highlights for a given text document position. For programming
+languages this usually highlights all references to the symbol scoped to this
+file. However we kept 'textDocument/documentHighlight' and
+'textDocument/references' separate requests since the first one is allowed to be
+more fuzzy. Symbol matches usually have a DocumentHighlightKind of Read or Write
+whereas fuzzy or textual matches use Textas the kind.
+
+    Changed: In 2.0 the request uses TextDocumentPositionParams with proper
+    textDocument and position properties. In 1.0 the uri of the referenced text
+    document was inlined into the params object.
+
+Request
+
+    method: 'textDocument/documentHighlight'
+    params: TextDocumentPositionParams
+
+Response
+
+    result: DocumentHighlight[] defined as follows:
+
+/**
+ * A document highlight is a range inside a text document which deserves
+ * special attention. Usually a document highlight is visualized by changing
+ * the background color of its range.
+ *
+ */
+interface DocumentHighlight {
+    /**
+     * The range this highlight applies to.
+     */
+    range: Range;
+
+    /**
+     * The highlight kind, default is DocumentHighlightKind.Text.
+     */
+    kind?: number;
+}
+
+/**
+ * A document highlight kind.
+ */
+enum DocumentHighlightKind {
+    /**
+     * A textual occurrance.
+     */
+    Text = 1,
+
+    /**
+     * Read-access of a symbol, like reading a variable.
+     */
+    Read = 2,
+
+    /**
+     * Write-access of a symbol, like writing to a variable.
+     */
+    Write = 3
+}
+
+    error: code and message set in case an exception happens during the document
+           highlight request.
+
+-}
+
+data DocumentHightlightsRequest =
+  DocumentHightlightsRequest
+    { methodDocumentHightlightsRequest :: String
+    , paramsDocumentHightlightsRequest :: TextDocumentPositionParams
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "DocumentHightlightsRequest") } ''DocumentHightlightsRequest)
+
+-- -------------------------------------
+
+data DocumentHighlightKind = HkText | HkRead | HkWrite
+  deriving (Read,Show,Eq)
+
+instance A.ToJSON DocumentHighlightKind where
+  toJSON HkText  = A.Number 1
+  toJSON HkRead  = A.Number 2
+  toJSON HkWrite = A.Number 3
+
+instance A.FromJSON DocumentHighlightKind where
+  parseJSON (A.Number 1) = pure HkText
+  parseJSON (A.Number 2) = pure HkRead
+  parseJSON (A.Number 3) = pure HkWrite
+  parseJSON _            = mempty
+
+-- -------------------------------------
+
+data DocumentHighlight =
+  DocumentHighlight
+    { rangeDocumentHighlight :: Range
+    , kindDocumentHighlight  :: Maybe DocumentHighlightKind
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "DocumentHighlight") } ''DocumentHighlight)
+
+data DocumentHighlightsResponse =
+  DocumentHighlightsResponse
+    { jsonrpcDocumentHighlightsResponse :: String
+    , idDocumentHighlightsResponse      :: Int
+    , resultDocumentHighlightsResponse  :: Maybe [DocumentHighlight]
+    , errorDocumentHighlightsResponse   :: Maybe ResponseError
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "DocumentHighlightsResponse") } ''DocumentHighlightsResponse)
+
+instance Default DocumentHighlightsResponse where
+  def = DocumentHighlightsResponse "2.0" def def def
+
+-- ---------------------------------------------------------------------
+{-
+Document Symbols Request
+
+https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#document-symbols-request
+
+The document symbol request is sent from the client to the server to list all
+symbols found in a given text document.
+
+    Changed: In 2.0 the request uses DocumentSymbolParams instead of a single
+             uri.
+
+Request
+
+    method: 'textDocument/documentSymbol'
+    params: DocumentSymbolParams defined as follows:
+
+interface DocumentSymbolParams {
+    /**
+     * The text document.
+     */
+    textDocument: TextDocumentIdentifier;
+}
+
+Response
+
+    result: SymbolInformation[] defined as follows:
+
+/**
+ * Represents information about programming constructs like variables, classes,
+ * interfaces etc.
+ */
+interface SymbolInformation {
+    /**
+     * The name of this symbol.
+     */
+    name: string;
+
+    /**
+     * The kind of this symbol.
+     */
+    kind: number;
+
+    /**
+     * The location of this symbol.
+     */
+    location: Location;
+
+    /**
+     * The name of the symbol containing this symbol.
+     */
+    containerName?: string;
+}
+
+Where the kind is defined like this:
+
+/**
+ * A symbol kind.
+ */
+export enum SymbolKind {
+    File = 1,
+    Module = 2,
+    Namespace = 3,
+    Package = 4,
+    Class = 5,
+    Method = 6,
+    Property = 7,
+    Field = 8,
+    Constructor = 9,
+    Enum = 10,
+    Interface = 11,
+    Function = 12,
+    Variable = 13,
+    Constant = 14,
+    String = 15,
+    Number = 16,
+    Boolean = 17,
+    Array = 18,
+}
+
+    error: code and message set in case an exception happens during the document
+           symbol request.
+-}
+
+data DocumentSymbolParams =
+  DocumentSymbolParams
+    { textDocumentDocumentSymbolParams :: TextDocumentIdentifier
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "DocumentSymbolParams") } ''DocumentSymbolParams)
+
+instance Default DocumentSymbolParams where
+  def = DocumentSymbolParams def
+
+-- -------------------------------------
+
+data DocumentSymbolsRequest =
+  DocumentSymbolsRequest
+    { methodDocumentSymbolsRequest :: String
+    , paramsDocumentSymbolsRequest :: DocumentSymbolParams
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "DocumentSymbolsRequest") } ''DocumentSymbolsRequest)
+
+-- -------------------------------------
+
+data SymbolKind
+    = SkFile
+    | SkModule
+    | SkNamespace
+    | SkPackage
+    | SkClass
+    | SkMethod
+    | SkProperty
+    | SkField
+    | SkConstructor
+    | SkEnum
+    | SkInterface
+    | SkFunction
+    | SkVariable
+    | SkConstant
+    | SkString
+    | SkNumber
+    | SkBoolean
+    | SkArray
+    deriving (Read,Show,Eq)
+
+instance A.ToJSON SymbolKind where
+  toJSON SkFile        = A.Number 1
+  toJSON SkModule      = A.Number 2
+  toJSON SkNamespace   = A.Number 3
+  toJSON SkPackage     = A.Number 4
+  toJSON SkClass       = A.Number 5
+  toJSON SkMethod      = A.Number 6
+  toJSON SkProperty    = A.Number 7
+  toJSON SkField       = A.Number 8
+  toJSON SkConstructor = A.Number 9
+  toJSON SkEnum        = A.Number 10
+  toJSON SkInterface   = A.Number 11
+  toJSON SkFunction    = A.Number 12
+  toJSON SkVariable    = A.Number 13
+  toJSON SkConstant    = A.Number 14
+  toJSON SkString      = A.Number 15
+  toJSON SkNumber      = A.Number 16
+  toJSON SkBoolean     = A.Number 17
+  toJSON SkArray       = A.Number 18
+
+instance A.FromJSON SymbolKind where
+  parseJSON (A.Number  1) = pure SkFile
+  parseJSON (A.Number  2) = pure SkModule
+  parseJSON (A.Number  3) = pure SkNamespace
+  parseJSON (A.Number  4) = pure SkPackage
+  parseJSON (A.Number  5) = pure SkClass
+  parseJSON (A.Number  6) = pure SkMethod
+  parseJSON (A.Number  7) = pure SkProperty
+  parseJSON (A.Number  8) = pure SkField
+  parseJSON (A.Number  9) = pure SkConstructor
+  parseJSON (A.Number 10) = pure SkEnum
+  parseJSON (A.Number 11) = pure SkInterface
+  parseJSON (A.Number 12) = pure SkFunction
+  parseJSON (A.Number 13) = pure SkVariable
+  parseJSON (A.Number 14) = pure SkConstant
+  parseJSON (A.Number 15) = pure SkString
+  parseJSON (A.Number 16) = pure SkNumber
+  parseJSON (A.Number 17) = pure SkBoolean
+  parseJSON (A.Number 18) = pure SkArray
+  parseJSON _             = mempty
+
+instance Default SymbolKind where
+  def = SkFile -- Choose something random
 
 -- ---------------------------------------------------------------------
 
+data SymbolInformation =
+  SymbolInformation
+    { nameSymbolInformation          :: String
+    , kindSymbolInformation          :: SymbolKind
+    , locationSymbolInformation      :: Location
+    , containerNameSymbolInformation :: Maybe String -- ^The name of the symbol
+                                                     -- containing this symbol.
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "SymbolInformation") } ''SymbolInformation)
+
+instance Default SymbolInformation where
+  def = SymbolInformation def def def def
+
+-- -------------------------------------
+
+data DocumentSymbolsResponse =
+  DocumentSymbolsResponse
+    { jsonrpcDocumentSymbolsResponse :: String
+    , idDocumentSymbolsResponse      :: Int
+    , resultDocumentSymbolsResponse  :: Maybe [SymbolInformation]
+    , errorDocumentSymbolsResponse   :: Maybe ResponseError
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "DocumentSymbolsResponse") } ''DocumentSymbolsResponse)
+
+instance Default DocumentSymbolsResponse where
+  def = DocumentSymbolsResponse "2.0" def def def
+
+-- ---------------------------------------------------------------------
+{-
+Workspace Symbols Request
+
+https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#workspace-symbols-request
+
+The workspace symbol request is sent from the client to the server to list
+project-wide symbols matching the query string.
+
+Request
+
+    method: 'workspace/symbol'
+    params: WorkspaceSymbolParams defined as follows:
+
+/**
+ * The parameters of a Workspace Symbol Request.
+ */
+interface WorkspaceSymbolParams {
+    /**
+     * A non-empty query string
+     */
+    query: string;
+}
+
+Response
+
+    result: SymbolInformation[] as defined above.
+    error: code and message set in case an exception happens during the
+           workspace symbol request.
+-}
+
+data WorkspaceSymbolParams =
+  WorkspaceSymbolParams
+    { queryWorkspaceSymbolParams :: String
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "WorkspaceSymbolParams") } ''WorkspaceSymbolParams)
+
+data WorkspaceSymbolsRequest =
+  WorkspaceSymbolsRequest
+    { methodWorkspaceSymbolsRequest :: String
+    , paramsWorkspaceSymbolsRequest :: WorkspaceSymbolParams
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "WorkspaceSymbolsRequest") } ''WorkspaceSymbolsRequest)
+
+-- -------------------------------------
+
+-- TODO: Make only a SymbolsResponse
+data WorkspaceSymbolsResponse =
+  WorkspaceSymbolsResponse
+    { jsonrpcWorkspaceSymbolsResponse :: String
+    , idWorkspaceSymbolsResponse      :: Int
+    , resultWorkspaceSymbolsResponse  :: Maybe [SymbolInformation]
+    , errorWorkspaceSymbolsResponse   :: Maybe ResponseError
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "WorkspaceSymbolsResponse") } ''WorkspaceSymbolsResponse)
+
+instance Default WorkspaceSymbolsResponse where
+  def = WorkspaceSymbolsResponse "2.0" def def def
+
+-- ---------------------------------------------------------------------
+{-
+Code Action Request
+
+https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#code-action-request
+
+The code action request is sent from the client to the server to compute
+commands for a given text document and range. The request is triggered when the
+user moves the cursor into a problem marker in the editor or presses the
+lightbulb associated with a marker.
+
+Request
+
+    method: 'textDocument/codeAction'
+    params: CodeActionParams defined as follows:
+
+/**
+ * Params for the CodeActionRequest
+ */
+interface CodeActionParams {
+    /**
+     * The document in which the command was invoked.
+     */
+    textDocument: TextDocumentIdentifier;
+
+    /**
+     * The range for which the command was invoked.
+     */
+    range: Range;
+
+    /**
+     * Context carrying additional information.
+     */
+    context: CodeActionContext;
+}
+
+/**
+ * Contains additional diagnostic information about the context in which
+ * a code action is run.
+ */
+interface CodeActionContext {
+    /**
+     * An array of diagnostics.
+     */
+    diagnostics: Diagnostic[];
+}
+
+Response
+
+    result: Command[] defined as follows:
+    error: code and message set in case an exception happens during the code
+           action request.
+
+-}
+
+data CodeActionContext =
+  CodeActionContext
+    { diagnosticsCodeActionContext :: [Diagnostic]
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "CodeActionContext") } ''CodeActionContext)
+
+instance Default CodeActionContext where
+  def = CodeActionContext def
+
+data CodeActionParams =
+  CodeActionParams
+    { textDocumentCodeActionParams :: TextDocumentIdentifier
+    , rangeCodeActionParams        :: Range
+    , contextCodeActionParams      :: CodeActionContext
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "CodeActionParams") } ''CodeActionParams)
+
+instance Default CodeActionParams where
+  def = CodeActionParams def def def
+
+-- -------------------------------------
+
+data CodeActionRequest =
+  CodeActionRequest
+    { methodCodeActionRequest :: String
+    , paramsCodeActionRequest :: CodeActionParams
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "CodeActionRequest") } ''CodeActionRequest)
+
+-- -------------------------------------
+
+data CodeActionResponse =
+  CodeActionResponse
+    { jsonrpcCodeActionResponse  :: String
+    , idCodeActionResponse       :: Int
+    , resultCodeActionResponse   :: Maybe [Command]
+    , errorCommandActionResponse :: Maybe ResponseError
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "CodeActionResponse") } ''CodeActionResponse)
+
+instance Default CodeActionResponse where
+  def = CodeActionResponse "2.0" def def def
+
+-- ---------------------------------------------------------------------
+{-
+Code Lens Request
+
+The code lens request is sent from the client to the server to compute code
+lenses for a given text document.
+
+    Changed: In 2.0 the request uses CodeLensParams instead of a single uri.
+
+Request
+
+    method: 'textDocument/codeLens'
+    params: CodeLensParams defined as follows:
+
+interface CodeLensParams {
+    /**
+     * The document to request code lens for.
+     */
+    textDocument: TextDocumentIdentifier;
+}
+
+Response
+
+    result: CodeLens[] defined as follows:
+
+/**
+ * A code lens represents a command that should be shown along with
+ * source text, like the number of references, a way to run tests, etc.
+ *
+ * A code lens is _unresolved_ when no command is associated to it. For performance
+ * reasons the creation of a code lens and resolving should be done in two stages.
+ */
+interface CodeLens {
+    /**
+     * The range in which this code lens is valid. Should only span a single line.
+     */
+    range: Range;
+
+    /**
+     * The command this code lens represents.
+     */
+    command?: Command;
+
+    /**
+     * A data entry field that is preserved on a code lens item between
+     * a code lens and a code lens resolve request.
+     */
+    data?: any
+}
+
+    error: code and message set in case an exception happens during the code
+           lens request.
+-}
+
+data CodeLensParams =
+  CodeLensParams
+    { textDocumentCodeLensParams :: TextDocumentIdentifier
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "CodeLensParams") } ''CodeLensParams)
+
+data CodeLensRequest =
+  CodeLensRequest
+    { methodCodeLensRequest :: String
+    , paramsCodeLensRequest :: CodeLensParams
+    } deriving (Show,Read,Eq)
+
+$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "CodeLensRequest") } ''CodeLensRequest)
+
+-- -------------------------------------
+
+data CodeLens =
+  CodeLens
+    { rangeCodeLens :: Range
+    , commandCodeLens :: Maybe Command
+    , dataCodeLens :: Maybe A.Object
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "CodeLens") } ''CodeLens)
+
+instance Default CodeLens where
+  def = CodeLens def def def
+
+data CodeLensResponse =
+  CodeLensResponse
+    { jsonrpcCodeLensResponse :: String
+    , idCodeLensResponse      :: Int
+    , resultCodeLensResponse  :: Maybe [CodeLens]
+    , errorCodeLensResponse   :: Maybe ResponseError
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "CodeLensResponse") } ''CodeLensResponse)
+
+instance Default CodeLensResponse where
+  def = CodeLensResponse "2.0" def def def
+
+-- ---------------------------------------------------------------------
+{-
+Code Lens Resolve Request
+
+https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#code-lens-resolve-request
+
+The code lens resolve request is sent from the client to the server to resolve
+the command for a given code lens item.
+
+Request
+
+    method: 'codeLens/resolve'
+    params: CodeLens
+
+Response
+
+    result: CodeLens
+    error: code and message set in case an exception happens during the code
+           lens resolve request.
+
+
+-}
+
+data CodeLensResolveRequest =
+  CodeLensResolveRequest
+    { methodCodeLensResolveRequest :: String
+    , paramsCodeLensResolveRequest :: CodeLens
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "CodeLensResolveRequest") } ''CodeLensResolveRequest)
+
+data CodeLensResolveResponse =
+  CodeLensResolveResponse
+    { jsonrpcCodeLensResolveResponse :: String
+    , idCodeLensResolveResponse      :: Int
+    , resultCodeLensResolveResponse  :: Maybe [CodeLens]
+    , errorCodeLensResolveResponse   :: Maybe ResponseError
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "CodeLensResponse") } ''CodeLensResolveResponse)
+
+instance Default CodeLensResolveResponse where
+  def = CodeLensResolveResponse "2.0" def def def
+
+-- ---------------------------------------------------------------------
+{-
+Document Formatting Request
+
+https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#document-formatting-request
+
+The document formatting request is sent from the server to the client to format
+a whole document.
+
+Request
+
+    method: 'textDocument/formatting'
+    params: DocumentFormattingParams defined as follows
+
+interface DocumentFormattingParams {
+    /**
+     * The document to format.
+     */
+    textDocument: TextDocumentIdentifier;
+
+    /**
+     * The format options.
+     */
+    options: FormattingOptions;
+}
+
+/**
+ * Value-object describing what options formatting should use.
+ */
+interface FormattingOptions {
+    /**
+     * Size of a tab in spaces.
+     */
+    tabSize: number;
+
+    /**
+     * Prefer spaces over tabs.
+     */
+    insertSpaces: boolean;
+
+    /**
+     * Signature for further properties.
+     */
+    [key: string]: boolean | number | string;
+}
+
+Response
+
+    result: TextEdit[] describing the modification to the document to be
+            formatted.
+    error: code and message set in case an exception happens during the
+           formatting request.
+-}
+
+data FormattingOptions =
+  FormattingOptions
+    { tabSizeFormattingOptions      :: Int
+    , insertSpacesFormattingOptions :: Bool -- ^ Prefer spaces over tabs
+    -- Note: May be more properties
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "FormattingOptions") } ''FormattingOptions)
+
+data DocumentFormattingParams =
+  DocumentFormattingParams
+    { textDocumentDocumentFormattingParams :: TextDocumentIdentifier
+    , optionsDocumentFormattingParams      :: FormattingOptions
+    } deriving (Show,Read,Eq)
+
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DocumentFormattingParams") } ''DocumentFormattingParams)
+data DocumentFormattingRequest =
+  DocumentFormattingRequest
+    { methodDocumentFormattingRequest :: String
+    , paramsDocumentFormattingRequest :: DocumentFormattingParams
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DocumentFormattingRequest") } ''DocumentFormattingRequest)
+
+-- -------------------------------------
+
+data DocumentFormattingResponse =
+  DocumentFormattingResponse
+    { jsonrpcDocumentFormattingResponse :: String
+    , idDocumentFormattingResponse      :: Int
+    , resultDocumentFormattingResponse  :: Maybe [TextEdit]
+    , errorDocumentFormattingResponse   :: Maybe ResponseError
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DocumentFormattingResponse") } ''DocumentFormattingResponse)
+
+instance Default DocumentFormattingResponse where
+  def = DocumentFormattingResponse "2.0" def def def
+
+-- ---------------------------------------------------------------------
+{-
+Document Range Formatting Request
+
+https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#document-range-formatting-request
+
+The document range formatting request is sent from the client to the server to
+format a given range in a document.
+
+Request
+
+    method: 'textDocument/rangeFormatting',
+    params: DocumentRangeFormattingParams defined as follows
+
+interface DocumentRangeFormattingParams {
+    /**
+     * The document to format.
+     */
+    textDocument: TextDocumentIdentifier;
+
+    /**
+     * The range to format
+     */
+    range: Range;
+
+    /**
+     * The format options
+     */
+    options: FormattingOptions;
+}
+
+Response
+
+    result: TextEdit[] describing the modification to the document to be
+            formatted.
+    error: code and message set in case an exception happens during the range
+           formatting request.
+-}
+
+data DocumentRangeFormattingParams =
+  DocumentRangeFormattingParams
+    { textDocumentDocumentRangeFormattingParams :: TextDocumentIdentifier
+    , rangeDocumentRangeFormattingParams        :: Range
+    , optionsDocumentRangeFormattingParams      :: FormattingOptions
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DocumentRangeFormattingParams") } ''DocumentRangeFormattingParams)
+
+data DocumentRangeFormattingRequest =
+  DocumentRangeFormattingRequest
+    { methodDocumentRangeFormattingRequest :: String
+    , paramsDocumentRangeFormattingRequest :: DocumentRangeFormattingParams
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DocumentRangeFormattingRequest") } ''DocumentRangeFormattingRequest)
+
+-- -------------------------------------
+
+data DocumentRangeFormattingResponse =
+  DocumentRangeFormattingResponse
+    { jsonrpcDocumentRangeFormattingResponse :: String
+    , idDocumentRangeFormattingResponse      :: Int
+    , resultDocumentRangeFormattingResponse  :: Maybe [TextEdit]
+    , errorDocumentRangeFormattingResponse   :: Maybe ResponseError
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DocumentRangeFormattingResponse") } ''DocumentRangeFormattingResponse)
+
+instance Default DocumentRangeFormattingResponse where
+  def = DocumentRangeFormattingResponse "2.0" def def def
+
+-- ---------------------------------------------------------------------
+{-
+Document on Type Formatting Request
+
+https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#document-on-type-formatting-request
+
+The document on type formatting request is sent from the client to the server to
+format parts of the document during typing.
+
+Request
+
+    method: 'textDocument/onTypeFormatting'
+    params: DocumentOnTypeFormattingParams defined as follows
+
+interface DocumentOnTypeFormattingParams {
+    /**
+     * The document to format.
+     */
+    textDocument: TextDocumentIdentifier;
+
+    /**
+     * The position at which this request was sent.
+     */
+    position: Position;
+
+    /**
+     * The character that has been typed.
+     */
+    ch: string;
+
+    /**
+     * The format options.
+     */
+    options: FormattingOptions;
+}
+
+Response
+
+    result: TextEdit[] describing the modification to the document.
+    error: code and message set in case an exception happens during the range
+           formatting request.
+-}
+
+data DocumentOnTypeFormattingParams =
+  DocumentOnTypeFormattingParams
+    { textDocumentDocumentOnTypeFormattingParams :: TextDocumentIdentifier
+    , positionDocumentOnTypeFormattingParams     :: Position
+    , chDocumentOnTypeFormattingParams           :: String
+    , optionsDocumentOnTypeFormattingParams      :: FormattingOptions
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DocumentOnTypeFormattingParams") } ''DocumentOnTypeFormattingParams)
+
+data DocumentOnTypeFormattingRequest =
+  DocumentOnTypeFormattingRequest
+    { methodDocumentOnTypeFormattingRequest :: String
+    , paramsDocumentOnTypeFormattingRequest :: DocumentOnTypeFormattingParams
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DocumentOnTypeFormattingRequest") } ''DocumentOnTypeFormattingRequest)
+
+-- -------------------------------------
+
+data DocumentOnTypeFormattingResponse =
+  DocumentOnTypeFormattingResponse
+    { jsonrpcDocumentOnTypeFormattingResponse :: String
+    , idDocumentOnTypeFormattingResponse      :: Int
+    , resultDocumentOnTypeFormattingResponse  :: Maybe [TextEdit]
+    , errorDocumentOnTypeFormattingResponse   :: Maybe ResponseError
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DocumentOnTypeFormattingResponse") } ''DocumentOnTypeFormattingResponse)
+
+instance Default DocumentOnTypeFormattingResponse where
+  def = DocumentOnTypeFormattingResponse "2.0" def def def
+
+-- ---------------------------------------------------------------------
+{-
+Rename Request
+
+https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#rename-request
+
+The rename request is sent from the client to the server to perform a
+workspace-wide rename of a symbol.
+
+Request
+
+    method: 'textDocument/rename'
+    params: RenameParams defined as follows
+
+interface RenameParams {
+    /**
+     * The document to format.
+     */
+    textDocument: TextDocumentIdentifier;
+
+    /**
+     * The position at which this request was sent.
+     */
+    position: Position;
+
+    /**
+     * The new name of the symbol. If the given name is not valid the
+     * request must return a [ResponseError](#ResponseError) with an
+     * appropriate message set.
+     */
+    newName: string;
+}
+
+Response
+
+    result: WorkspaceEdit describing the modification to the workspace.
+    error: code and message set in case an exception happens during the rename
+           request.
+
+-}
 data RenameRequestParams =
   RenameRequestParams
     { textDocumentRenameRequestParams :: TextDocumentIdentifier
@@ -1836,10 +3150,6 @@ $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "RenameRequestP
 instance Default RenameRequestParams where
   def = RenameRequestParams def def def
 
--- |
---   Client-initiated request
---
-
 -- {\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"textDocument/rename\",\"params\":{\"textDocument\":{\"uri\":\"file:///home/alanz/mysrc/github/alanz/haskell-lsp/src/HieVscode.hs\"},\"position\":{\"line\":37,\"character\":17},\"newName\":\"getArgs'\"}}
 data RenameRequest =
   RenameRequest {
@@ -1849,14 +3159,8 @@ data RenameRequest =
 
 $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "RenameRequest") } ''RenameRequest)
 
-defaultRenameRequest :: RenameRequest
-defaultRenameRequest = RenameRequest 0 def
+-- -------------------------------------
 
--- ---------------------------------------------------------------------
-
--- |
---   Server-initiated response to client request
---
 data RenameResponse =
   RenameResponse {
     jsonrpcRenameResponse    :: String
@@ -1866,23 +3170,15 @@ data RenameResponse =
 
 $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "RenameResponse") } ''RenameResponse)
 
+instance Default RenameResponse where
+  def = RenameResponse "2.0" def def
 
--- |
---
-parseErrorRenameResponse :: Int -> String -> RenameResponse
-parseErrorRenameResponse seq msg =
-  RenameResponse  "2.0" seq def
-
--- |
---
-errorRenameResponse :: RenameRequest -> String -> RenameResponse
-errorRenameResponse (RenameRequest reqSeq _) msg =
-  RenameResponse "2.0" reqSeq def
+-- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 -- ---------------------------------------
 
 -- ---------------------------------------------------------------------
-
+{-
 -- |
 --   Event message for "output" event type. The event indicates that the target has produced output.
 --
@@ -1916,7 +3212,7 @@ $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "OutputEvent") 
 
 defaultOutputEvent :: Int -> OutputEvent
 defaultOutputEvent resSeq = OutputEvent resSeq "event" "output" defaultOutputEventBody
-
+-}
 -- ---------------------------------------------------------------------
 
 -- |
@@ -1948,7 +3244,7 @@ instance Default ErrorResponse where
 
 
 -- ---------------------------------------------------------------------
-
+{-
 -- |
 --   Event message for "terminated" event types.
 -- The event indicates that debugging of the debuggee has terminated.
@@ -1981,12 +3277,10 @@ $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "TerminatedEven
 
 defaultTerminatedEvent :: Int -> TerminatedEvent
 defaultTerminatedEvent seq = TerminatedEvent seq "event" "terminated" defaultTerminatedEventBody
+-}
 
 -- ---------------------------------------------------------------------
 
--- |
---   Notification from the server to actually exit now, after shutdown acked
---
 data TraceNotificationParams =
   TraceNotificationParams {
     valueTraceNotificationParams :: String
@@ -1994,13 +3288,9 @@ data TraceNotificationParams =
 
 $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "TraceNotificationParams") } ''TraceNotificationParams)
 
-defaultTraceNotificationParams :: TraceNotificationParams
-defaultTraceNotificationParams = TraceNotificationParams mempty
+instance Default TraceNotificationParams where
+  def = TraceNotificationParams mempty
 
--- ---------------------------------------
--- |
---   Notification from the server to actually exit now, after shutdown acked
---
 data TraceNotification =
   TraceNotification {
     paramsTraceNotification :: TraceNotificationParams
@@ -2008,35 +3298,8 @@ data TraceNotification =
 
 $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "TraceNotification") } ''TraceNotification)
 
-defaultTraceNotification :: TraceNotification
-defaultTraceNotification = TraceNotification defaultTraceNotificationParams
-
--- ---------------------------------------------------------------------
-
--- -------------------------------------
-{-
-The show message notification is sent from a server to a client to ask the
-client to display a particular message in the user interface.
-
-Notification:
-
-    method: 'window/showMessage'
-    params: ShowMessageParams defined as follows:
-
-interface ShowMessageParams {
-    /**
-     * The message type. See {@link MessageType}.
-     */
-    type: number;
-
-    /**
-     * The actual message.
-     */
-    message: string;
-}
--}
-
-
+instance Default TraceNotification where
+  def = TraceNotification def
 
 
 -- ---------------------------------------------------------------------
