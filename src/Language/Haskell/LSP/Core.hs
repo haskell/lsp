@@ -94,7 +94,37 @@ type BreakPointDataKey = (FilePath, Int)
 --
 type BreakPointDatas = MAP.Map BreakPointDataKey BreakPointData
 
+-- ---------------------------------------------------------------------
 
+-- | Callbacks from the language server to the language handler
+data Handlers =
+  Handlers
+    { hoverHandler                   :: Maybe (J.HoverRequest                    -> IO J.HoverResponse)
+    , completionHandler              :: Maybe (J.CompletionRequest               -> IO J.CompletionResponse)
+    , signatureHelpHandler           :: Maybe (J.SignatureHelpRequest            -> IO J.SignatureHelpResponse)
+    , definitionHandler              :: Maybe (J.DefinitionRequest               -> IO J.DefinitionResponse)
+    , referencesHandler              :: Maybe (J.FindReferencesRequest           -> IO J.FindReferencesResponse)
+    , documentHighlightHandler       :: Maybe (J.DocumentHighlightsRequest       -> IO J.DocumentHighlightsResponse)
+    , documentSymbolHandler          :: Maybe (J.DocumentSymbolsRequest          -> IO J.DocumentSymbolsResponse)
+    , workspaceSymbolHandler         :: Maybe (J.WorkspaceSymbolsRequest         -> IO J.WorkspaceSymbolsResponse)
+    , codeActionHandler              :: Maybe (J.CodeActionRequest               -> IO J.CodeActionResponse)
+    , codeLensHandler                :: Maybe (J.CodeLensRequest                 -> IO J.CodeLensResponse)
+    , documentFormattingHandler      :: Maybe (J.DocumentFormattingRequest       -> IO J.DocumentFormattingResponse)
+    , documentRangeFormattingHandler :: Maybe (J.DocumentRangeFormattingRequest  -> IO J.DocumentRangeFormattingResponse)
+    , documentTypeFormattingHandler  :: Maybe (J.DocumentOnTypeFormattingRequest -> IO J.DocumentOnTypeFormattingResponse)
+    , renameHandler                  :: Maybe (J.RenameRequest                   -> IO J.RenameResponse)
+    }
+
+data Options =
+  Options
+    { textDocumentSync                 :: Maybe J.TextDocumentSyncKind
+    , completionProvider               :: Maybe J.CompletionOptions
+    , signatureHelpProvider            :: Maybe J.SignatureHelpOptions
+    , codeLensProvider                 :: Maybe J.CodeLensOptions
+    , documentOnTypeFormattingProvider :: Maybe J.DocumentOnTypeFormattingOptions
+    }
+
+-- ---------------------------------------------------------------------
 -- |
 --
 --

@@ -2090,6 +2090,8 @@ $(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdr
 instance Default SignatureHelp where
   def = SignatureHelp def Nothing Nothing
 
+type SignatureHelpResponse = ResponseMessage SignatureHelp
+
 -- ---------------------------------------------------------------------
 {-
 Goto Definition Request
@@ -2281,13 +2283,13 @@ enum DocumentHighlightKind {
 
 -}
 
-data DocumentHightlightsRequest =
-  DocumentHightlightsRequest
-    { methodDocumentHightlightsRequest :: String
-    , paramsDocumentHightlightsRequest :: TextDocumentPositionParams
+data DocumentHighlightsRequest =
+  DocumentHighlightsRequest
+    { methodDocumentHighlightsRequest :: String
+    , paramsDocumentHighlightsRequest :: TextDocumentPositionParams
     } deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "DocumentHightlightsRequest") } ''DocumentHightlightsRequest)
+$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "DocumentHighlightsRequest") } ''DocumentHighlightsRequest)
 
 -- -------------------------------------
 
@@ -2728,7 +2730,7 @@ $(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdr
 instance Default CodeLens where
   def = CodeLens def def def
 
-type CodeLenseResponse = ResponseMessage [CodeLens]
+type CodeLensResponse = ResponseMessage [CodeLens]
 
 -- ---------------------------------------------------------------------
 {-
