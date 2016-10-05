@@ -607,17 +607,18 @@ instance Default InitializeRequestArguments where
 
 -- {"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":1749,"capabilities":{},"trace":"off"}}
 -- {"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":17554,"rootPath":"/home/alanz/mysrc/github/alanz/haskell-lsp","capabilities":{},"trace":"off"}}
-data InitializeRequest =
-  InitializeRequest {
-    idInitializeRequest       :: Int                         -- Sequence number
-  , paramsInitializeRequest   :: InitializeRequestArguments  -- Object containing arguments for the command
-  } deriving (Show, Read, Eq)
+-- data InitializeRequest =
+--   InitializeRequest {
+--     idInitializeRequest       :: Int                         -- Sequence number
+--   , paramsInitializeRequest   :: InitializeRequestArguments  -- Object containing arguments for the command
+--   } deriving (Show, Read, Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "InitializeRequest") } ''InitializeRequest)
+-- $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "InitializeRequest") } ''InitializeRequest)
 
-instance Default InitializeRequest where
-  def = InitializeRequest 0 def
+-- instance Default InitializeRequest where
+--   def = InitializeRequest 0 def
 
+type InitializeRequest = RequestMessage InitializeRequestArguments
 
 -- ---------------------------------------------------------------------
 -- Initialize Response
@@ -918,16 +919,17 @@ Response
 
 -}
 
-data ShutdownRequest =
-  ShutdownRequest {
-    idShutdownRequest :: Int
-  } deriving (Show, Read, Eq)
+-- data ShutdownRequest =
+--   ShutdownRequest {
+--     idShutdownRequest :: Int
+--   } deriving (Show, Read, Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "ShutdownRequest") } ''ShutdownRequest)
+-- $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "ShutdownRequest") } ''ShutdownRequest)
 
-instance Default ShutdownRequest where
-  def = ShutdownRequest 0
+-- instance Default ShutdownRequest where
+--   def = ShutdownRequest 0
 
+type ShutdownRequest  = RequestMessage ()
 type ShutdownResponse = ResponseMessage String
 
 -- ---------------------------------------------------------------------
@@ -1123,30 +1125,34 @@ $(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdr
 instance Default ShowMessageRequestParams where
   def = ShowMessageRequestParams def def def
 
-data ShowMessageRequest =
-  ShowMessageRequest
-    { jsonrpcShowMessageRequest :: String
-    , methodShowMessageRequest :: String
-    , idShowMessageRequest :: Int
-    , paramsShowMessageRequest :: ShowMessageRequestParams
-    } deriving (Read,Show,Eq)
+-- data ShowMessageRequest =
+--   ShowMessageRequest
+--     { jsonrpcShowMessageRequest :: String
+--     , methodShowMessageRequest :: String
+--     , idShowMessageRequest :: Int
+--     , paramsShowMessageRequest :: ShowMessageRequestParams
+--     } deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "ShowMessageRequest") } ''ShowMessageRequest)
+-- $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "ShowMessageRequest") } ''ShowMessageRequest)
 
-instance Default ShowMessageRequest where
-  def = ShowMessageRequest "2.0" "window/showMessageRequest" def def
+-- instance Default ShowMessageRequest where
+--   def = ShowMessageRequest "2.0" "window/showMessageRequest" def def
 
-data ShowMessageResponse =
-  ShowMessageResponse
-    { idShowMessageResponse :: Int
-    , resultShowMessageResponse :: Maybe String -- Selected MessageActionItem.
-    , errorShowMessageResponse :: Maybe A.Object -- If an error occurred.
-    } deriving (Show,Read,Eq)
+type ShowMessageRequest = RequestMessage ShowMessageRequestParams
 
-$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "ShowMessageResponse") } ''ShowMessageResponse)
+-- data ShowMessageResponse =
+--   ShowMessageResponse
+--     { idShowMessageResponse :: Int
+--     , resultShowMessageResponse :: Maybe String -- Selected MessageActionItem.
+--     , errorShowMessageResponse :: Maybe A.Object -- If an error occurred.
+--     } deriving (Show,Read,Eq)
 
-instance Default ShowMessageResponse where
-  def = ShowMessageResponse def def def
+-- $(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "ShowMessageResponse") } ''ShowMessageResponse)
+
+-- instance Default ShowMessageResponse where
+--   def = ShowMessageResponse def def def
+
+type ShowMessageResponse = ResponseMessage String
 
 -- ---------------------------------------------------------------------
 {-
@@ -1619,13 +1625,15 @@ Request
     params: TextDocumentPositionParams
 -}
 
-data CompletionRequest =
-  CompletionRequest
-    { idCompletionRequest     :: Int
-    , paramsCompletionRequest :: TextDocumentPositionParams
-    } deriving (Read,Show,Eq)
+-- data CompletionRequest =
+--   CompletionRequest
+--     { idCompletionRequest     :: Int
+--     , paramsCompletionRequest :: TextDocumentPositionParams
+--     } deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "CompletionRequest") } ''CompletionRequest)
+-- $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "CompletionRequest") } ''CompletionRequest)
+
+type CompletionRequest = RequestMessage TextDocumentPositionParams
 
 -- -------------------------------------
 
@@ -1874,14 +1882,15 @@ Response
     error: code and message set in case an exception happens during the completion resolve request.
 -}
 
-data CompletionItemResolveRequest =
-  CompletionItemResolveRequest
-    { methodCompletionItemResolveRequest :: String
-    , paramsCompletionItemResolveRequest :: CompletionItem
-    } deriving (Read,Show,Eq)
+-- data CompletionItemResolveRequest =
+--   CompletionItemResolveRequest
+--     { methodCompletionItemResolveRequest :: String
+--     , paramsCompletionItemResolveRequest :: CompletionItem
+--     } deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "CompletionItemResolveRequest") } ''CompletionItemResolveRequest)
+-- $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "CompletionItemResolveRequest") } ''CompletionItemResolveRequest)
 
+type CompletionItemResolveRequest  = RequestMessage CompletionItem
 type CompletionItemResolveResponse = ResponseMessage CompletionItem
 
 -- ---------------------------------------------------------------------
@@ -2050,13 +2059,15 @@ interface ParameterInformation {
     signature help request.
 -}
 
-data SignatureHelpRequest =
-  SignatureHelpRequest
-    { methodSignatureHelpRequest :: String
-    , paramsSignatureHelpRequest :: TextDocumentPositionParams
-    } deriving (Read,Show,Eq)
+-- data SignatureHelpRequest =
+--   SignatureHelpRequest
+--     { methodSignatureHelpRequest :: String
+--     , paramsSignatureHelpRequest :: TextDocumentPositionParams
+--     } deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "SignatureHelpRequest") } ''SignatureHelpRequest)
+-- $(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "SignatureHelpRequest") } ''SignatureHelpRequest)
+
+type SignatureHelpRequest = RequestMessage TextDocumentPositionParams
 
 -- -------------------------------------
 
@@ -2133,17 +2144,18 @@ instance Default DefinitionRequestParams where
   def = DefinitionRequestParams def def
 
 -- {"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{"textDocument":{"uri":"file:///tmp/Foo.hs"},"position":{"line":1,"character":8}}}
-data DefinitionRequest =
-  DefinitionRequest {
-    idDefinitionRequest       :: Int
-  , paramsDefinitionRequest   :: DefinitionRequestParams
-  } deriving (Show, Read, Eq)
+-- data DefinitionRequest =
+--   DefinitionRequest {
+--     idDefinitionRequest       :: Int
+--   , paramsDefinitionRequest   :: DefinitionRequestParams
+--   } deriving (Show, Read, Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DefinitionRequest") } ''DefinitionRequest)
+-- $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DefinitionRequest") } ''DefinitionRequest)
 
-instance Default DefinitionRequest where
-  def = DefinitionRequest 0 def
+-- instance Default DefinitionRequest where
+--   def = DefinitionRequest 0 def
 
+type DefinitionRequest  = RequestMessage DefinitionRequestParams
 type DefinitionResponse = ResponseMessage Location
 
 -- ---------------------------------------------------------------------
@@ -2198,7 +2210,7 @@ data ReferenceParams =
   ReferenceParams
     { textDocumentReferenceParams :: TextDocumentIdentifier
     , positionReferenceParams     :: Position
-    , contextReferenceParams     :: ReferenceContext
+    , contextReferenceParams      :: ReferenceContext
     } deriving (Read,Show,Eq)
 
 $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "ReferenceParams") } ''ReferenceParams)
@@ -2206,14 +2218,15 @@ $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "ReferenceParam
 instance Default ReferenceParams where
   def = ReferenceParams def def def
 
-data FindReferencesRequest =
-  FindReferencesRequest
-    { methodFindReferencesRequest :: String
-    , paramsFindReferencesRequest :: ReferenceParams
-    } deriving (Read,Show,Eq)
+-- data FindReferencesRequest =
+--   FindReferencesRequest
+--     { methodFindReferencesRequest :: String
+--     , paramsFindReferencesRequest :: ReferenceParams
+--     } deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "FindReferencesRequest") } ''FindReferencesRequest)
+-- $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "FindReferencesRequest") } ''FindReferencesRequest)
 
+type FindReferencesRequest  = RequestMessage ReferenceParams
 type FindReferencesResponse = ResponseMessage [Location]
 
 -- ---------------------------------------------------------------------
@@ -2286,13 +2299,15 @@ enum DocumentHighlightKind {
 
 -}
 
-data DocumentHighlightsRequest =
-  DocumentHighlightsRequest
-    { methodDocumentHighlightsRequest :: String
-    , paramsDocumentHighlightsRequest :: TextDocumentPositionParams
-    } deriving (Read,Show,Eq)
+-- data DocumentHighlightsRequest =
+--   DocumentHighlightsRequest
+--     { methodDocumentHighlightsRequest :: String
+--     , paramsDocumentHighlightsRequest :: TextDocumentPositionParams
+--     } deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "DocumentHighlightsRequest") } ''DocumentHighlightsRequest)
+-- $(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "DocumentHighlightsRequest") } ''DocumentHighlightsRequest)
+
+type DocumentHighlightsRequest = RequestMessage TextDocumentPositionParams
 
 -- -------------------------------------
 
@@ -2418,13 +2433,15 @@ instance Default DocumentSymbolParams where
 
 -- -------------------------------------
 
-data DocumentSymbolsRequest =
-  DocumentSymbolsRequest
-    { methodDocumentSymbolsRequest :: String
-    , paramsDocumentSymbolsRequest :: DocumentSymbolParams
-    } deriving (Read,Show,Eq)
+-- data DocumentSymbolsRequest =
+--   DocumentSymbolsRequest
+--     { methodDocumentSymbolsRequest :: String
+--     , paramsDocumentSymbolsRequest :: DocumentSymbolParams
+--     } deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "DocumentSymbolsRequest") } ''DocumentSymbolsRequest)
+-- $(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "DocumentSymbolsRequest") } ''DocumentSymbolsRequest)
+
+type DocumentSymbolsRequest = RequestMessage DocumentSymbolParams
 
 -- -------------------------------------
 
@@ -2551,14 +2568,15 @@ data WorkspaceSymbolParams =
 
 $(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "WorkspaceSymbolParams") } ''WorkspaceSymbolParams)
 
-data WorkspaceSymbolsRequest =
-  WorkspaceSymbolsRequest
-    { methodWorkspaceSymbolsRequest :: String
-    , paramsWorkspaceSymbolsRequest :: WorkspaceSymbolParams
-    } deriving (Read,Show,Eq)
+-- data WorkspaceSymbolsRequest =
+--   WorkspaceSymbolsRequest
+--     { methodWorkspaceSymbolsRequest :: String
+--     , paramsWorkspaceSymbolsRequest :: WorkspaceSymbolParams
+--     } deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "WorkspaceSymbolsRequest") } ''WorkspaceSymbolsRequest)
+-- $(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "WorkspaceSymbolsRequest") } ''WorkspaceSymbolsRequest)
 
+type WorkspaceSymbolsRequest  = RequestMessage WorkspaceSymbolParams
 type WorkspaceSymbolsResponse = ResponseMessage [SymbolInformation]
 
 -- ---------------------------------------------------------------------
@@ -2640,14 +2658,15 @@ instance Default CodeActionParams where
 
 -- -------------------------------------
 
-data CodeActionRequest =
-  CodeActionRequest
-    { methodCodeActionRequest :: String
-    , paramsCodeActionRequest :: CodeActionParams
-    } deriving (Read,Show,Eq)
+-- data CodeActionRequest =
+--   CodeActionRequest
+--     { methodCodeActionRequest :: String
+--     , paramsCodeActionRequest :: CodeActionParams
+--     } deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "CodeActionRequest") } ''CodeActionRequest)
+-- $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "CodeActionRequest") } ''CodeActionRequest)
 
+type CodeActionRequest  = RequestMessage CodeActionParams
 type CodeActionResponse = ResponseMessage [Command]
 
 -- ---------------------------------------------------------------------
@@ -2711,13 +2730,15 @@ data CodeLensParams =
 
 $(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "CodeLensParams") } ''CodeLensParams)
 
-data CodeLensRequest =
-  CodeLensRequest
-    { methodCodeLensRequest :: String
-    , paramsCodeLensRequest :: CodeLensParams
-    } deriving (Show,Read,Eq)
+-- data CodeLensRequest =
+--   CodeLensRequest
+--     { methodCodeLensRequest :: String
+--     , paramsCodeLensRequest :: CodeLensParams
+--     } deriving (Show,Read,Eq)
 
-$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "CodeLensRequest") } ''CodeLensRequest)
+-- $(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "CodeLensRequest") } ''CodeLensRequest)
+
+type CodeLensRequest = RequestMessage CodeLensParams
 
 -- -------------------------------------
 
@@ -2758,14 +2779,15 @@ Response
 
 -}
 
-data CodeLensResolveRequest =
-  CodeLensResolveRequest
-    { methodCodeLensResolveRequest :: String
-    , paramsCodeLensResolveRequest :: CodeLens
-    } deriving (Read,Show,Eq)
+-- data CodeLensResolveRequest =
+--   CodeLensResolveRequest
+--     { methodCodeLensResolveRequest :: String
+--     , paramsCodeLensResolveRequest :: CodeLens
+--     } deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "CodeLensResolveRequest") } ''CodeLensResolveRequest)
+-- $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "CodeLensResolveRequest") } ''CodeLensResolveRequest)
 
+type CodeLensResolveRequest  = RequestMessage CodeLens
 type CodeLensResolveResponse = ResponseMessage [CodeLens]
 
 -- ---------------------------------------------------------------------
@@ -2838,14 +2860,16 @@ data DocumentFormattingParams =
     } deriving (Show,Read,Eq)
 
 $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DocumentFormattingParams") } ''DocumentFormattingParams)
-data DocumentFormattingRequest =
-  DocumentFormattingRequest
-    { methodDocumentFormattingRequest :: String
-    , paramsDocumentFormattingRequest :: DocumentFormattingParams
-    } deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DocumentFormattingRequest") } ''DocumentFormattingRequest)
+-- data DocumentFormattingRequest =
+--   DocumentFormattingRequest
+--     { methodDocumentFormattingRequest :: String
+--     , paramsDocumentFormattingRequest :: DocumentFormattingParams
+--     } deriving (Read,Show,Eq)
 
+-- $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DocumentFormattingRequest") } ''DocumentFormattingRequest)
+
+type DocumentFormattingRequest  = RequestMessage DocumentFormattingParams
 type DocumentFormattingResponse = ResponseMessage [TextEdit]
 
 -- ---------------------------------------------------------------------
@@ -2896,16 +2920,15 @@ data DocumentRangeFormattingParams =
 
 $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DocumentRangeFormattingParams") } ''DocumentRangeFormattingParams)
 
-data DocumentRangeFormattingRequest =
-  DocumentRangeFormattingRequest
-    { methodDocumentRangeFormattingRequest :: String
-    , paramsDocumentRangeFormattingRequest :: DocumentRangeFormattingParams
-    } deriving (Read,Show,Eq)
+-- data DocumentRangeFormattingRequest =
+--   DocumentRangeFormattingRequest
+--     { methodDocumentRangeFormattingRequest :: String
+--     , paramsDocumentRangeFormattingRequest :: DocumentRangeFormattingParams
+--     } deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DocumentRangeFormattingRequest") } ''DocumentRangeFormattingRequest)
+-- $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DocumentRangeFormattingRequest") } ''DocumentRangeFormattingRequest)
 
--- -------------------------------------
-
+type DocumentRangeFormattingRequest  = RequestMessage DocumentRangeFormattingParams
 type DocumentRangeFormattingResponse = ResponseMessage [TextEdit]
 
 -- ---------------------------------------------------------------------
@@ -2961,14 +2984,15 @@ data DocumentOnTypeFormattingParams =
 
 $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DocumentOnTypeFormattingParams") } ''DocumentOnTypeFormattingParams)
 
-data DocumentOnTypeFormattingRequest =
-  DocumentOnTypeFormattingRequest
-    { methodDocumentOnTypeFormattingRequest :: String
-    , paramsDocumentOnTypeFormattingRequest :: DocumentOnTypeFormattingParams
-    } deriving (Read,Show,Eq)
+-- data DocumentOnTypeFormattingRequest =
+--   DocumentOnTypeFormattingRequest
+--     { methodDocumentOnTypeFormattingRequest :: String
+--     , paramsDocumentOnTypeFormattingRequest :: DocumentOnTypeFormattingParams
+--     } deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DocumentOnTypeFormattingRequest") } ''DocumentOnTypeFormattingRequest)
+-- $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DocumentOnTypeFormattingRequest") } ''DocumentOnTypeFormattingRequest)
 
+type DocumentOnTypeFormattingRequest  = RequestMessage DocumentOnTypeFormattingParams
 type DocumentOnTypeFormattingResponse = ResponseMessage [TextEdit]
 
 -- ---------------------------------------------------------------------
@@ -3024,32 +3048,12 @@ instance Default RenameRequestParams where
   def = RenameRequestParams def def def
 
 -- {\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"textDocument/rename\",\"params\":{\"textDocument\":{\"uri\":\"file:///home/alanz/mysrc/github/alanz/haskell-lsp/src/HieVscode.hs\"},\"position\":{\"line\":37,\"character\":17},\"newName\":\"getArgs'\"}}
-data RenameRequest =
-  RenameRequest {
-    idRenameRequest       :: Int
-  , paramsRenameRequest   :: RenameRequestParams
-  } deriving (Show, Read, Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "RenameRequest") } ''RenameRequest)
-
+type RenameRequest  = RequestMessage RenameRequestParams
 type RenameResponse = ResponseMessage Location
 
 -- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
--- ---------------------------------------------------------------------
-{-
-data ErrorResponse =
-  ErrorResponse {
-    jsonrpcErrorResponse :: String    -- Always "2.0"
-  , idErrorResponse      :: Int -- Original request id
-  , errorErrorResponse   :: String
-  } deriving (Show, Read, Eq)
-
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "ErrorResponse") } ''ErrorResponse)
-
-instance Default ErrorResponse where
-  def = ErrorResponse "2.0" 0 ""
--}
 -- ---------------------------------------------------------------------
 
 data TraceNotificationParams =

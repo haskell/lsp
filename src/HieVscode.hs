@@ -65,7 +65,7 @@ hieHandlers :: GUI.Handlers
 hieHandlers = def {GUI.renameHandler = Just renameRequestHandler }
 
 renameRequestHandler :: J.RenameRequest -> IO J.RenameResponse
-renameRequestHandler (J.RenameRequest origId _) = do
+renameRequestHandler (J.RequestMessage _ origId _ _) = do
   let loc = def :: J.Location
       res  = GUI.makeResponseMessage origId loc
   return res

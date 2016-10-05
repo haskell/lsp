@@ -86,7 +86,7 @@ data Handlers =
   Handlers
     { hoverHandler                   :: Maybe (J.HoverRequest                    -> IO J.HoverResponse)
     , completionHandler              :: Maybe (J.CompletionRequest               -> IO J.CompletionResponse)
-    , completionResolveHandler       :: Maybe (J.CompletionRequest               -> IO J.CompletionResponse)
+    , completionResolveHandler       :: Maybe (J.CompletionItemResolveRequest    -> IO J.CompletionItemResolveResponse)
     , signatureHelpHandler           :: Maybe (J.SignatureHelpRequest            -> IO J.SignatureHelpResponse)
     , definitionHandler              :: Maybe (J.DefinitionRequest               -> IO J.DefinitionResponse)
     , referencesHandler              :: Maybe (J.FindReferencesRequest           -> IO J.FindReferencesResponse)
@@ -95,7 +95,7 @@ data Handlers =
     , workspaceSymbolHandler         :: Maybe (J.WorkspaceSymbolsRequest         -> IO J.WorkspaceSymbolsResponse)
     , codeActionHandler              :: Maybe (J.CodeActionRequest               -> IO J.CodeActionResponse)
     , codeLensHandler                :: Maybe (J.CodeLensRequest                 -> IO J.CodeLensResponse)
-    , codeLensResolveHandler         :: Maybe (J.CodeLensRequest                 -> IO J.CodeLensResponse)
+    , codeLensResolveHandler         :: Maybe (J.CodeLensResolveRequest          -> IO J.CodeLensResolveResponse)
     , documentFormattingHandler      :: Maybe (J.DocumentFormattingRequest       -> IO J.DocumentFormattingResponse)
     , documentRangeFormattingHandler :: Maybe (J.DocumentRangeFormattingRequest  -> IO J.DocumentRangeFormattingResponse)
     , documentTypeFormattingHandler  :: Maybe (J.DocumentOnTypeFormattingRequest -> IO J.DocumentOnTypeFormattingResponse)
@@ -440,7 +440,7 @@ defaultErrorHandlers origId req = [ E.Handler someExcept ]
 -- |
 --
 initializeRequestHandler :: MVar LanguageContextData -> J.InitializeRequest -> IO ()
-initializeRequestHandler mvarCtx req@(J.InitializeRequest origId _) =
+initializeRequestHandler mvarCtx req@(J.RequestMessage _ origId _ _) =
   flip E.catches (defaultErrorHandlers origId req) $ do
 
     ctx <- readMVar mvarCtx
@@ -480,14 +480,14 @@ initializeRequestHandler mvarCtx req@(J.InitializeRequest origId _) =
     let
       ais = Just [J.MessageActionItem "action item 1", J.MessageActionItem "action item 2"]
       p   = J.ShowMessageRequestParams J.MtWarning "playing with ShowMessageRequest" ais
-      smr = def { J.idShowMessageRequest = 1, J.paramsShowMessageRequest = p}
+      smr = J.RequestMessage "2.0" 1 "window/showMessageRequest" (Just p)
     sendEvent $ J.encode smr
 
 
 -- |
 --
 shutdownRequestHandler :: MVar LanguageContextData -> J.ShutdownRequest -> IO ()
-shutdownRequestHandler mvarCtx req@(J.ShutdownRequest origId ) =
+shutdownRequestHandler mvarCtx req@(J.RequestMessage _ origId _ _) =
   flip E.catches (defaultErrorHandlers origId req) $ do
   let res  = makeResponseMessage origId ("ok"::String)
 
@@ -497,7 +497,7 @@ shutdownRequestHandler mvarCtx req@(J.ShutdownRequest origId ) =
 -- |
 --
 definitionRequestHandler :: MVar LanguageContextData -> J.DefinitionRequest -> IO ()
-definitionRequestHandler mvarCtx req@(J.DefinitionRequest origId _) =
+definitionRequestHandler mvarCtx req@(J.RequestMessage _ origId _ _) =
   flip E.catches (defaultErrorHandlers origId req) $ do
   let loc = def :: J.Location
       res  = makeResponseMessage origId loc
@@ -507,7 +507,7 @@ definitionRequestHandler mvarCtx req@(J.DefinitionRequest origId _) =
 -- |
 --
 renameRequestHandler :: MVar LanguageContextData -> J.RenameRequest -> IO ()
-renameRequestHandler mvarCtx req@(J.RenameRequest origId _) =
+renameRequestHandler mvarCtx req@(J.RequestMessage _ origId _ _) =
   flip E.catches (defaultErrorHandlers origId req) $ do
   let loc = def :: J.Location
       res  = makeResponseMessage origId loc

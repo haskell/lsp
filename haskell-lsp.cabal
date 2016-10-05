@@ -18,6 +18,7 @@ cabal-version:       >=1.10
 
 library
   exposed-modules:     Language.Haskell.LSP.Core
+                     , Language.Haskell.LSP.Constant
                      , Language.Haskell.LSP.Control
                      , Language.Haskell.LSP.TH.DataTypesJSON 
                      , Language.Haskell.LSP.Utility
