@@ -9,8 +9,10 @@
 
 module Language.Haskell.LSP.Core (
   handleRequest
-, DebugContextData(..)
-, defaultDebugContextData
+, LanguageContextData(..)
+, Handlers(..)
+, Options(..)
+, defaultLanguageContextData
 , initializeRequestHandler
 ) where
 
@@ -55,65 +57,16 @@ import qualified Data.ByteString.Lazy.Char8 as B
 -- |
 --
 --
-data DebugContextData =
-  DebugContextData {
-    resSeqDebugContextData                  :: Int
-  -- , functionBreakPointDatasDebugContextData :: BreakPointDatas
-  -- , breakPointDatasDebugContextData         :: BreakPointDatas
-  -- , workspaceDebugContextData               :: FilePath
-  -- , startupDebugContextData                 :: FilePath
-  -- , debugStartedDebugContextData            :: Bool
-  -- , debugStoppedPosDebugContextData         :: Maybe G.SourcePosition
-  -- , currentFrameIdDebugContextData          :: Int
-  -- , modifiedDebugContextData                :: Bool
-  -- , ghciProcessDebugContextData             :: Maybe G.GHCiProcess
-  , responseHandlerDebugContextData         :: BSL.ByteString -> IO ()
+data LanguageContextData =
+  LanguageContextData {
+    resSeqDebugContextData :: Int
+  , resRootPath            :: Maybe FilePath
+  , resHandlers            :: Handlers
+  , resOptions             :: Options
+  , resSendResponse        :: BSL.ByteString -> IO ()
   }
 
-
--- |
---
---
-data BreakPointData =
-  BreakPointData {
-    nameBreakPointData :: String
-  , filePathBreakPointData   :: FilePath
-  , lineNoBreakPointData     :: Int
-  , breakNoBreakPointData    :: Maybe Int
-  , conditionBreakPointData  :: Maybe String
-  } deriving (Show, Read, Eq, Ord)
-
-
--- |
---
---
-type BreakPointDataKey = (FilePath, Int)
-
--- |
---
---
-type BreakPointDatas = MAP.Map BreakPointDataKey BreakPointData
-
 -- ---------------------------------------------------------------------
-
--- | Callbacks from the language server to the language handler
-data Handlers =
-  Handlers
-    { hoverHandler                   :: Maybe (J.HoverRequest                    -> IO J.HoverResponse)
-    , completionHandler              :: Maybe (J.CompletionRequest               -> IO J.CompletionResponse)
-    , signatureHelpHandler           :: Maybe (J.SignatureHelpRequest            -> IO J.SignatureHelpResponse)
-    , definitionHandler              :: Maybe (J.DefinitionRequest               -> IO J.DefinitionResponse)
-    , referencesHandler              :: Maybe (J.FindReferencesRequest           -> IO J.FindReferencesResponse)
-    , documentHighlightHandler       :: Maybe (J.DocumentHighlightsRequest       -> IO J.DocumentHighlightsResponse)
-    , documentSymbolHandler          :: Maybe (J.DocumentSymbolsRequest          -> IO J.DocumentSymbolsResponse)
-    , workspaceSymbolHandler         :: Maybe (J.WorkspaceSymbolsRequest         -> IO J.WorkspaceSymbolsResponse)
-    , codeActionHandler              :: Maybe (J.CodeActionRequest               -> IO J.CodeActionResponse)
-    , codeLensHandler                :: Maybe (J.CodeLensRequest                 -> IO J.CodeLensResponse)
-    , documentFormattingHandler      :: Maybe (J.DocumentFormattingRequest       -> IO J.DocumentFormattingResponse)
-    , documentRangeFormattingHandler :: Maybe (J.DocumentRangeFormattingRequest  -> IO J.DocumentRangeFormattingResponse)
-    , documentTypeFormattingHandler  :: Maybe (J.DocumentOnTypeFormattingRequest -> IO J.DocumentOnTypeFormattingResponse)
-    , renameHandler                  :: Maybe (J.RenameRequest                   -> IO J.RenameResponse)
-    }
 
 data Options =
   Options
@@ -123,6 +76,72 @@ data Options =
     , codeLensProvider                 :: Maybe J.CodeLensOptions
     , documentOnTypeFormattingProvider :: Maybe J.DocumentOnTypeFormattingOptions
     }
+
+instance Default Options where
+  def = Options Nothing Nothing Nothing Nothing Nothing
+
+-- | Callbacks from the language server to the language handler
+data Handlers =
+  Handlers
+    { hoverHandler                   :: Maybe (J.HoverRequest                    -> IO J.HoverResponse)
+    , completionHandler              :: Maybe (J.CompletionRequest               -> IO J.CompletionResponse)
+    , completionResolveHandler       :: Maybe (J.CompletionRequest               -> IO J.CompletionResponse)
+    , signatureHelpHandler           :: Maybe (J.SignatureHelpRequest            -> IO J.SignatureHelpResponse)
+    , definitionHandler              :: Maybe (J.DefinitionRequest               -> IO J.DefinitionResponse)
+    , referencesHandler              :: Maybe (J.FindReferencesRequest           -> IO J.FindReferencesResponse)
+    , documentHighlightHandler       :: Maybe (J.DocumentHighlightsRequest       -> IO J.DocumentHighlightsResponse)
+    , documentSymbolHandler          :: Maybe (J.DocumentSymbolsRequest          -> IO J.DocumentSymbolsResponse)
+    , workspaceSymbolHandler         :: Maybe (J.WorkspaceSymbolsRequest         -> IO J.WorkspaceSymbolsResponse)
+    , codeActionHandler              :: Maybe (J.CodeActionRequest               -> IO J.CodeActionResponse)
+    , codeLensHandler                :: Maybe (J.CodeLensRequest                 -> IO J.CodeLensResponse)
+    , codeLensResolveHandler         :: Maybe (J.CodeLensRequest                 -> IO J.CodeLensResponse)
+    , documentFormattingHandler      :: Maybe (J.DocumentFormattingRequest       -> IO J.DocumentFormattingResponse)
+    , documentRangeFormattingHandler :: Maybe (J.DocumentRangeFormattingRequest  -> IO J.DocumentRangeFormattingResponse)
+    , documentTypeFormattingHandler  :: Maybe (J.DocumentOnTypeFormattingRequest -> IO J.DocumentOnTypeFormattingResponse)
+    , renameHandler                  :: Maybe (J.RenameRequest                   -> IO J.RenameResponse)
+    }
+
+instance Default Handlers where
+  def = Handlers Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+                 Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+
+-- ---------------------------------------------------------------------
+
+handlerMap :: Handlers
+           -> MAP.Map String (MVar LanguageContextData -> String -> B.ByteString -> IO ())
+handlerMap h = MAP.fromList
+  [ ("textDocument/completion",        hh $ completionHandler h)
+  , ("completionItem/resolve",         hh $ completionResolveHandler h)
+  , ("textDocument/hover",             hh $ hoverHandler h)
+  , ("textDocument/signatureHelp",     hh $ signatureHelpHandler h)
+  , ("textDocument/definition",        hh $ definitionHandler h)
+  , ("textDocument/references",        hh $ referencesHandler h)
+  , ("textDocument/documentHighlight", hh $ documentHighlightHandler h)
+  , ("textDocument/documentSymbol",    hh $ documentSymbolHandler h)
+  , ("workspace/symbol",               hh $ workspaceSymbolHandler h)
+  , ("textDocument/codeAction",        hh $ codeActionHandler h)
+  , ("textDocument/codeLens",          hh $ codeLensHandler h)
+  , ("codeLens/resolve",               hh $ codeLensResolveHandler h)
+  , ("textDocument/formatting",        hh $ documentFormattingHandler h)
+  , ("textDocument/rangeFormatting",   hh $ documentRangeFormattingHandler h)
+  , ("textDocument/onTypeFormatting",  hh $ documentTypeFormattingHandler h)
+  , ("textDocument/rename",            hh $ renameHandler h)
+  ]
+-- ---------------------------------------------------------------------
+
+hh :: forall t a. (J.FromJSON t, J.ToJSON a)
+   => Maybe (t -> IO a) -> MVar LanguageContextData -> String -> B.ByteString -> IO ()
+hh Nothing = \_mvarDat cmd jsonStr -> do
+      let msg = unwords ["unknown request command.", cmd, lbs2str jsonStr]
+      sendErrorLog msg
+hh (Just h) = \mvarDat cmd jsonStr -> do
+      case J.eitherDecode jsonStr of
+        Right req -> do
+          res <- h req
+          sendResponse2 mvarDat $ J.encode res
+        Left  err -> do
+          let msg = unwords $ ["parse error.", lbs2str jsonStr, show err] ++ _ERR_MSG_URL
+          sendErrorLog msg
 
 -- ---------------------------------------------------------------------
 -- |
@@ -213,8 +232,8 @@ _ERR_MSG_URL = [ "`stack update` and install new haskell-lsp."
 -- |
 --
 --
-defaultDebugContextData :: DebugContextData
-defaultDebugContextData = DebugContextData _INITIAL_RESPONSE_SEQUENCE BSL.putStr
+defaultLanguageContextData :: Handlers -> Options -> LanguageContextData
+defaultLanguageContextData h o = LanguageContextData _INITIAL_RESPONSE_SEQUENCE Nothing h o BSL.putStr
 
 -- |
 --
@@ -226,7 +245,7 @@ defaultDebugContextData = DebugContextData _INITIAL_RESPONSE_SEQUENCE BSL.putStr
 -- |
 --
 --
-handleRequest :: MVar DebugContextData -> BSL.ByteString -> BSL.ByteString -> IO ()
+handleRequest :: MVar LanguageContextData -> BSL.ByteString -> BSL.ByteString -> IO ()
 handleRequest mvarDat contLenStr' jsonStr' = do
   -- TODO: handle client responses to stuff we have sent. Such as: {"jsonrpc":"2.0","id":1,"result":{"title":"action item 2"}}
 
@@ -242,7 +261,7 @@ handleRequest mvarDat contLenStr' jsonStr' = do
       handle jsonStr' cmd
 
   where
-    helper :: J.FromJSON a => B.ByteString -> (MVar DebugContextData -> a -> IO ())
+    helper :: J.FromJSON a => B.ByteString -> (MVar LanguageContextData -> a -> IO ())
            -> IO ()
     helper jsonStr requestHandler = case J.eitherDecode jsonStr of
       Right req -> do
@@ -251,6 +270,17 @@ handleRequest mvarDat contLenStr' jsonStr' = do
         let msg = unwords $ ["parse error.", lbs2str contLenStr', lbs2str jsonStr', show err] ++ _ERR_MSG_URL
         sendErrorLog msg
 
+    -- handlerHelper cmd jsonStr Nothing = do
+    --   let msg = unwords ["unknown request command.", cmd, lbs2str contLenStr', lbs2str jsonStr]
+    --   sendErrorLog msg
+    -- handlerHelper cmd jsonStr (Just h) = do
+    --   case J.eitherDecode jsonStr of
+    --     Right req -> do
+    --       res <- h req
+    --       sendResponse2 mvarDat $ J.encode res
+    --     Left  err -> do
+    --       let msg = unwords $ ["parse error.", lbs2str contLenStr', lbs2str jsonStr', show err] ++ _ERR_MSG_URL
+    --       sendErrorLog msg
 
     -- ---------------------------------
 
@@ -264,7 +294,7 @@ handleRequest mvarDat contLenStr' jsonStr' = do
     -- {"jsonrpc":"2.0","method":"$/setTraceNotification","params":{"value":"off"}}
     handle jsonStr "$/setTraceNotification" = helper jsonStr h
       where
-        h :: MVar DebugContextData -> J.TraceNotification -> IO ()
+        h :: MVar LanguageContextData -> J.TraceNotification -> IO ()
         h _ _ = do
           logm "Got setTraceNotification, ignoring"
           sendErrorLog "Got setTraceNotification, ignoring"
@@ -273,20 +303,34 @@ handleRequest mvarDat contLenStr' jsonStr' = do
      -- {"jsonrpc":"2.0","method":"workspace/didChangeConfiguration","params":{"settings":{"languageServerHaskell":{"maxNumberOfProblems":100}}}}
     handle jsonStr "workspace/didChangeConfiguration" = helper jsonStr h
       where
-        h :: MVar DebugContextData -> J.DidChangeConfigurationParamsNotification -> IO ()
+        h :: MVar LanguageContextData -> J.DidChangeConfigurationParamsNotification -> IO ()
         h _ _ = logm "Got workspace/didChangeConfiguration, ignoring"
 
 
  -- {"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{...}}}
     handle jsonStr "textDocument/didOpen" = helper jsonStr h
       where
-        h :: MVar DebugContextData -> J.DidOpenTextDocumentNotification -> IO ()
+        h :: MVar LanguageContextData -> J.DidOpenTextDocumentNotification -> IO ()
         h _ _ = logm "Got textDocument/didOpen, ignoring"
 
 
--- {"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{"textDocument":{"uri":"file:///tmp/Foo.hs"},"position":{"line":1,"character":8}}}
-    handle jsonStr "textDocument/definition" = helper jsonStr definitionRequestHandler
+    -- Start of capability based handlers
+    handle jsonStr cmd = do
+      ctx <- readMVar mvarDat
+      let h = resHandlers ctx
+      case MAP.lookup cmd (handlerMap h) of
+        Just f -> f mvarDat cmd jsonStr
+        Nothing -> do
+          let msg = unwords ["unknown request command.", cmd, lbs2str contLenStr', lbs2str jsonStr]
+          sendErrorLog msg
 
+{-
+-- {"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{"textDocument":{"uri":"file:///tmp/Foo.hs"},"position":{"line":1,"character":8}}}
+    -- handle jsonStr "textDocument/definition" = helper jsonStr definitionRequestHandler
+    handle jsonStr "textDocument/definition" = do
+      ctx <- readMVar mvarDat
+      let h = resHandlers ctx
+      handlerHelper "textDocument/definition" jsonStr (definitionHandler h)
 
 
 -- {\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"textDocument/rename\",\"params\":{\"textDocument\":{\"uri\":\"file:///home/alanz/mysrc/github/alanz/haskell-lsp/src/HieVscode.hs\"},\"position\":{\"line\":37,\"character\":17},\"newName\":\"getArgs'\"}}
@@ -295,7 +339,7 @@ handleRequest mvarDat contLenStr' jsonStr' = do
     handle jsonStr cmd = do
       let msg = unwords ["unknown request command.", cmd, lbs2str contLenStr', lbs2str jsonStr]
       sendErrorLog msg
-
+-}
 -- ---------------------------------------------------------------------
 
 makeResponseMessage :: (J.ToJSON a) => Int -> a -> J.ResponseMessage a
@@ -325,10 +369,10 @@ sendResponse str = sendResponseInternal str
 
 -- |
 --
-sendResponse2 :: MVar DebugContextData -> BSL.ByteString -> IO ()
+sendResponse2 :: MVar LanguageContextData -> BSL.ByteString -> IO ()
 sendResponse2 mvarCtx str = do
   ctx <- readMVar mvarCtx
-  responseHandlerDebugContextData ctx str
+  resSendResponse ctx str
 
 -- |
 --
@@ -367,7 +411,8 @@ sendStdoutEvent mvarCtx msg = do
 --
 sendErrorResponse :: Int -> String -> IO ()
 sendErrorResponse origId msg = do
-  sendEvent $ J.encode (J.ErrorResponse "2.0" origId msg)
+  sendEvent $ J.encode (J.ResponseMessage "2.0" origId Nothing
+                         (Just $ J.ResponseError J.InternalError msg Nothing) :: J.ErrorResponse)
 
 sendErrorLog :: String -> IO ()
 sendErrorLog msg =
@@ -393,12 +438,40 @@ defaultErrorHandlers origId req = [ E.Handler someExcept ]
 
 -- |
 --
-initializeRequestHandler :: MVar DebugContextData -> J.InitializeRequest -> IO ()
+initializeRequestHandler :: MVar LanguageContextData -> J.InitializeRequest -> IO ()
 initializeRequestHandler mvarCtx req@(J.InitializeRequest origId _) =
   flip E.catches (defaultErrorHandlers origId req) $ do
-    let capa = def { J.definitionProvider = Just True, J.renameProvider = Just True}
-        -- TODO: wrap this up into a fn to create a response message
-        res  = J.ResponseMessage "2.0" origId (Just $ J.InitializeResponseCapabilities capa) Nothing
+
+    ctx <- readMVar mvarCtx
+
+    let --  capa = def { J.definitionProvider = Just True, J.renameProvider = Just True}
+      h = resHandlers ctx
+      o = resOptions  ctx
+
+      supported (Just _) = Just True
+      supported Nothing   = Nothing
+
+      capa =
+        J.InitializeResponseCapabilitiesInner
+          { J.textDocumentSync                 = textDocumentSync o
+          , J.hoverProvider                    = supported (hoverHandler h)
+          , J.completionProvider               = completionProvider o
+          , J.signatureHelpProvider            = signatureHelpProvider o
+          , J.definitionProvider               = supported (definitionHandler h)
+          , J.referencesProvider               = supported (referencesHandler h)
+          , J.documentHighlightProvider        = supported (documentHighlightHandler h)
+          , J.documentSymbolProvider           = supported (documentSymbolHandler h)
+          , J.workspaceSymbolProvider          = supported (workspaceSymbolHandler h)
+          , J.codeActionProvider               = supported (codeActionHandler h)
+          , J.codeLensProvider                 = codeLensProvider o
+          , J.documentFormattingProvider       = supported (documentFormattingHandler h)
+          , J.documentRangeFormattingProvider  = supported (documentRangeFormattingHandler h)
+          , J.documentOnTypeFormattingProvider = documentOnTypeFormattingProvider o
+          , J.renameProvider                   = supported (renameHandler h)
+          }
+
+      -- TODO: wrap this up into a fn to create a response message
+      res  = J.ResponseMessage "2.0" origId (Just $ J.InitializeResponseCapabilities capa) Nothing
 
     sendResponse2 mvarCtx $ J.encode res
 
@@ -412,7 +485,7 @@ initializeRequestHandler mvarCtx req@(J.InitializeRequest origId _) =
 
 -- |
 --
-shutdownRequestHandler :: MVar DebugContextData -> J.ShutdownRequest -> IO ()
+shutdownRequestHandler :: MVar LanguageContextData -> J.ShutdownRequest -> IO ()
 shutdownRequestHandler mvarCtx req@(J.ShutdownRequest origId ) =
   flip E.catches (defaultErrorHandlers origId req) $ do
   let res  = makeResponseMessage origId ("ok"::String)
@@ -422,7 +495,7 @@ shutdownRequestHandler mvarCtx req@(J.ShutdownRequest origId ) =
 
 -- |
 --
-definitionRequestHandler :: MVar DebugContextData -> J.DefinitionRequest -> IO ()
+definitionRequestHandler :: MVar LanguageContextData -> J.DefinitionRequest -> IO ()
 definitionRequestHandler mvarCtx req@(J.DefinitionRequest origId _) =
   flip E.catches (defaultErrorHandlers origId req) $ do
   let loc = def :: J.Location
@@ -432,7 +505,7 @@ definitionRequestHandler mvarCtx req@(J.DefinitionRequest origId _) =
 
 -- |
 --
-renameRequestHandler :: MVar DebugContextData -> J.RenameRequest -> IO ()
+renameRequestHandler :: MVar LanguageContextData -> J.RenameRequest -> IO ()
 renameRequestHandler mvarCtx req@(J.RenameRequest origId _) =
   flip E.catches (defaultErrorHandlers origId req) $ do
   let loc = def :: J.Location
@@ -1251,7 +1324,7 @@ src2mod cwd src
 -- |
 --
 --
-getIncreasedResponseSequence :: MVar DebugContextData -> IO Int
+getIncreasedResponseSequence :: MVar LanguageContextData -> IO Int
 getIncreasedResponseSequence mvarCtx = do
   ctx <- takeMVar mvarCtx
   let resSec = 1 + resSeqDebugContextData ctx

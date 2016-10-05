@@ -126,6 +126,8 @@ $(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdr
 instance (Default a) => Default (ResponseMessage a) where
   def = ResponseMessage "2.0" def def Nothing
 
+type ErrorResponse = ResponseMessage ()
+
 -- ---------------------------------------------------------------------
 {-
 https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#position
@@ -1925,13 +1927,14 @@ type MarkedString = string | { language: string; value: string };
     request.
 -}
 
-data HoverRequest =
-  HoverRequest
-    { methodHoverRequest :: String
-    , paramsHoverRequest :: TextDocumentPositionParams
-    } deriving (Read,Show,Eq)
+-- data HoverRequest =
+--   HoverRequest
+--     { methodHoverRequest :: String
+--     , paramsHoverRequest :: TextDocumentPositionParams
+--     } deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "HoverRequest") } ''HoverRequest)
+-- $(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "HoverRequest") } ''HoverRequest)
+type HoverRequest = RequestMessage TextDocumentPositionParams
 
 data MarkedString =
   MarkedString
@@ -3034,10 +3037,7 @@ type RenameResponse = ResponseMessage Location
 -- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 -- ---------------------------------------------------------------------
-
--- |
---   Client-initiated request
---
+{-
 data ErrorResponse =
   ErrorResponse {
     jsonrpcErrorResponse :: String    -- Always "2.0"
@@ -3049,7 +3049,7 @@ $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "ErrorResponse"
 
 instance Default ErrorResponse where
   def = ErrorResponse "2.0" 0 ""
-
+-}
 -- ---------------------------------------------------------------------
 
 data TraceNotificationParams =

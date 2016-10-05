@@ -11,14 +11,15 @@ module Main (main) where
 
 import qualified Control.Exception as E
 import qualified Data.ConfigFile as C
+import           Data.Default
 import           Data.Either.Utils
-import           Network.JsonRpc.Server
 import qualified System.Console.CmdArgs as CMD
 import           System.Exit
 import qualified System.Log.Logger as L
 
 import qualified Language.Haskell.LSP.Argument as A
-import qualified Language.Haskell.LSP.Control as CTRL
+import qualified Language.Haskell.LSP.Control  as CTRL
+import qualified Language.Haskell.LSP.Core     as GUI
 
 -- ---------------------------------------------------------------------
 
@@ -40,9 +41,8 @@ run = flip E.catches handlers $ do
   -- INI設定ファイルのRead
   iniSet <- loadIniFile args
 
-  -- ロジック実行
   flip E.finally finalProc $ do
-    CTRL.run args iniSet
+    CTRL.run hieHandlers hieOptions
 
   where
     handlers = [ E.Handler helpExcept
@@ -53,6 +53,15 @@ run = flip E.catches handlers $ do
     helpExcept (_ :: A.HelpExitException) = return 0
     ioExcept   (e :: E.IOException)       = print e >> return 1
     someExcept (e :: E.SomeException)     = print e >> return 1
+
+-- ---------------------------------------------------------------------
+-- TODO: temporary here, move to hie
+
+hieHandlers :: GUI.Handlers
+hieHandlers = def
+
+hieOptions :: GUI.Options
+hieOptions = def
 
 -- ---------------------------------------------------------------------
 

@@ -24,10 +24,10 @@ import           Text.Parsec
 -- |
 --  ロジックメイン
 --
-run :: A.ArgData      -- コマンドライン引数
-    -> C.ConfigParser -- INI設定
+run :: GUI.Handlers
+    -> GUI.Options
     -> IO Int         -- exit code
-run _ _ = do
+run h o = do
 
   logm $ B.pack "\n\n\n\n\nStarting up server ..."
   hSetBuffering stdin NoBuffering
@@ -36,7 +36,7 @@ run _ _ = do
   hSetBuffering stdout NoBuffering
   hSetEncoding  stdout utf8
 
-  mvarDat <- newMVar GUI.defaultDebugContextData {GUI.responseHandlerDebugContextData = sendResponse}
+  mvarDat <- newMVar $ (GUI.defaultLanguageContextData h o) {GUI.resSendResponse = sendResponse}
 
   wait mvarDat
 
@@ -46,7 +46,7 @@ run _ _ = do
 -- |
 --
 --
-wait :: MVar GUI.DebugContextData -> IO ()
+wait :: MVar GUI.LanguageContextData -> IO ()
 wait mvarDat = go BSL.empty
   where
     go :: BSL.ByteString -> IO ()
@@ -88,4 +88,4 @@ _TWO_CRLF :: String
 _TWO_CRLF = "\r\n\r\n"
 
 
- 
+
