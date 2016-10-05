@@ -32,7 +32,7 @@ data RequestMessage a =
     { jsonrpcRequestMessage :: String
     , idRequestMessage      :: Int
     , methodRequestMessage  :: String
-    , paramsRequestMessage  :: a
+    , paramsRequestMessage  :: Maybe a
     } deriving (Read,Show,Eq)
 
 $(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "RequestMessage") } ''RequestMessage)
