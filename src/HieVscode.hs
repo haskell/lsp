@@ -20,6 +20,7 @@ import qualified System.Log.Logger as L
 import qualified Language.Haskell.LSP.Argument as A
 import qualified Language.Haskell.LSP.Control  as CTRL
 import qualified Language.Haskell.LSP.Core     as GUI
+import qualified Language.Haskell.LSP.TH.DataTypesJSON as J
 
 -- ---------------------------------------------------------------------
 
@@ -57,11 +58,17 @@ run = flip E.catches handlers $ do
 -- ---------------------------------------------------------------------
 -- TODO: temporary here, move to hie
 
-hieHandlers :: GUI.Handlers
-hieHandlers = def
-
 hieOptions :: GUI.Options
 hieOptions = def
+
+hieHandlers :: GUI.Handlers
+hieHandlers = def {GUI.renameHandler = Just renameRequestHandler }
+
+renameRequestHandler :: J.RenameRequest -> IO J.RenameResponse
+renameRequestHandler (J.RenameRequest origId _) = do
+  let loc = def :: J.Location
+      res  = GUI.makeResponseMessage origId loc
+  return res
 
 -- ---------------------------------------------------------------------
 
@@ -104,3 +111,4 @@ defaultIniSetting = unlines [
   , "[PHOITYNE]"
   ]
 
+-- ---------------------------------------------------------------------

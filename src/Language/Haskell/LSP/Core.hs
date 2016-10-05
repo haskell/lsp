@@ -14,6 +14,7 @@ module Language.Haskell.LSP.Core (
 , Options(..)
 , defaultLanguageContextData
 , initializeRequestHandler
+, makeResponseMessage
 ) where
 
 import Language.Haskell.LSP.Constant

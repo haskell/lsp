@@ -2,19 +2,17 @@
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE MultiWayIf          #-}
 {-# LANGUAGE BinaryLiterals      #-}
-{-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE DeriveDataTypeable  #-}
 
 module Language.Haskell.LSP.Control where
 
 import           Control.Concurrent
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as B
-import qualified Data.ConfigFile as C
+-- import qualified Data.ConfigFile as C
 import           Data.Monoid
-import qualified Language.Haskell.LSP.Argument as A
+-- import qualified Language.Haskell.LSP.Argument as A
 import qualified Language.Haskell.LSP.Core as GUI
 import           Language.Haskell.LSP.Utility
 import           System.IO
