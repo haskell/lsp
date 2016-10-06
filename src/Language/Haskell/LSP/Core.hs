@@ -84,7 +84,9 @@ instance Default Options where
 -- | Callbacks from the language server to the language handler
 data Handlers =
   Handlers
-    { hoverHandler                   :: Maybe (J.HoverRequest                    -> IO J.HoverResponse)
+    {
+    -- Capability-advertised handlers
+      hoverHandler                   :: Maybe (J.HoverRequest                    -> IO J.HoverResponse)
     , completionHandler              :: Maybe (J.CompletionRequest               -> IO J.CompletionResponse)
     , completionResolveHandler       :: Maybe (J.CompletionItemResolveRequest    -> IO J.CompletionItemResolveResponse)
     , signatureHelpHandler           :: Maybe (J.SignatureHelpRequest            -> IO J.SignatureHelpResponse)
@@ -100,11 +102,20 @@ data Handlers =
     , documentRangeFormattingHandler :: Maybe (J.DocumentRangeFormattingRequest  -> IO J.DocumentRangeFormattingResponse)
     , documentTypeFormattingHandler  :: Maybe (J.DocumentOnTypeFormattingRequest -> IO J.DocumentOnTypeFormattingResponse)
     , renameHandler                  :: Maybe (J.RenameRequest                   -> IO J.RenameResponse)
+
+    -- Notifications from the client
+    , didChangeConfigurationParamsHandler      :: Maybe (J.DidChangeConfigurationParamsNotification -> IO ())
+    , didOpenTextDocumentNotificationHandler   :: Maybe (J.DidOpenTextDocumentNotification          -> IO ())
+    , didChangeTextDocumentNotificationHandler :: Maybe (J.DidChangeTextDocumentNotification        -> IO ())
+    , didCloseTextDocumentNotificationHandler  :: Maybe (J.DidCloseTextDocumentNotification         -> IO ())
+    , didSaveTextDocumentNotificationHandler   :: Maybe (J.DidSaveTextDocumentNotification          -> IO ())
+    , didChangeWatchedFilesNotificationHandler :: Maybe (J.DidChangeWatchedFilesNotification        -> IO ())
     }
 
 instance Default Handlers where
   def = Handlers Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
-                 Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+                 Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+                 Nothing Nothing Nothing Nothing
 
 -- ---------------------------------------------------------------------
 
@@ -127,19 +138,41 @@ handlerMap h = MAP.fromList
   , ("textDocument/rangeFormatting",   hh $ documentRangeFormattingHandler h)
   , ("textDocument/onTypeFormatting",  hh $ documentTypeFormattingHandler h)
   , ("textDocument/rename",            hh $ renameHandler h)
+
+  , ("workspace/didChangeConfiguration", hn $ didChangeConfigurationParamsHandler h)
+  , ("textDocument/didOpen",             hn $ didOpenTextDocumentNotificationHandler h)
+  , ("textDocument/didChange",           hn $ didChangeTextDocumentNotificationHandler h )
+  , ("textDocument/didClose",            hn $ didCloseTextDocumentNotificationHandler h )
+  , ("textDocument/didSave",             hn $ didSaveTextDocumentNotificationHandler h)
+  , ("workspace/didChangeWatchedFiles",  hn $ didChangeWatchedFilesNotificationHandler h)
   ]
+
 -- ---------------------------------------------------------------------
 
 hh :: forall t a. (J.FromJSON t, J.ToJSON a)
    => Maybe (t -> IO a) -> MVar LanguageContextData -> String -> B.ByteString -> IO ()
 hh Nothing = \_mvarDat cmd jsonStr -> do
-      let msg = unwords ["unknown request command.", cmd, lbs2str jsonStr]
+      let msg = unwords ["no handler for command.", cmd, lbs2str jsonStr]
       sendErrorLog msg
 hh (Just h) = \mvarDat cmd jsonStr -> do
       case J.eitherDecode jsonStr of
         Right req -> do
           res <- h req
           sendResponse2 mvarDat $ J.encode res
+        Left  err -> do
+          let msg = unwords $ ["parse error.", lbs2str jsonStr, show err] ++ _ERR_MSG_URL
+          sendErrorLog msg
+
+-- ---------------------------------------------------------------------
+
+hn :: forall t. (J.FromJSON t)
+   => Maybe (t -> IO ()) -> MVar LanguageContextData -> String -> B.ByteString -> IO ()
+hn Nothing = \_mvarDat cmd jsonStr -> do
+      let msg = unwords ["no handler for notification.", cmd, lbs2str jsonStr]
+      sendErrorLog msg
+hn (Just h) = \_mvarDat _cmd jsonStr -> do
+      case J.eitherDecode jsonStr of
+        Right req -> h req
         Left  err -> do
           let msg = unwords $ ["parse error.", lbs2str jsonStr, show err] ++ _ERR_MSG_URL
           sendErrorLog msg
@@ -271,18 +304,6 @@ handleRequest mvarDat contLenStr' jsonStr' = do
         let msg = unwords $ ["parse error.", lbs2str contLenStr', lbs2str jsonStr', show err] ++ _ERR_MSG_URL
         sendErrorLog msg
 
-    -- handlerHelper cmd jsonStr Nothing = do
-    --   let msg = unwords ["unknown request command.", cmd, lbs2str contLenStr', lbs2str jsonStr]
-    --   sendErrorLog msg
-    -- handlerHelper cmd jsonStr (Just h) = do
-    --   case J.eitherDecode jsonStr of
-    --     Right req -> do
-    --       res <- h req
-    --       sendResponse2 mvarDat $ J.encode res
-    --     Left  err -> do
-    --       let msg = unwords $ ["parse error.", lbs2str contLenStr', lbs2str jsonStr', show err] ++ _ERR_MSG_URL
-    --       sendErrorLog msg
-
     -- ---------------------------------
 
     handle jsonStr "initialize" = helper jsonStr initializeRequestHandler
@@ -315,7 +336,7 @@ handleRequest mvarDat contLenStr' jsonStr' = do
         h _ _ = logm "Got textDocument/didOpen, ignoring"
 
 
-    -- Start of capability based handlers
+    -- capability based handlers
     handle jsonStr cmd = do
       ctx <- readMVar mvarDat
       let h = resHandlers ctx
@@ -325,22 +346,6 @@ handleRequest mvarDat contLenStr' jsonStr' = do
           let msg = unwords ["unknown request command.", cmd, lbs2str contLenStr', lbs2str jsonStr]
           sendErrorLog msg
 
-{-
--- {"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{"textDocument":{"uri":"file:///tmp/Foo.hs"},"position":{"line":1,"character":8}}}
-    -- handle jsonStr "textDocument/definition" = helper jsonStr definitionRequestHandler
-    handle jsonStr "textDocument/definition" = do
-      ctx <- readMVar mvarDat
-      let h = resHandlers ctx
-      handlerHelper "textDocument/definition" jsonStr (definitionHandler h)
-
-
--- {\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"textDocument/rename\",\"params\":{\"textDocument\":{\"uri\":\"file:///home/alanz/mysrc/github/alanz/haskell-lsp/src/HieVscode.hs\"},\"position\":{\"line\":37,\"character\":17},\"newName\":\"getArgs'\"}}
-    handle jsonStr "textDocument/rename" = helper jsonStr renameRequestHandler
-
-    handle jsonStr cmd = do
-      let msg = unwords ["unknown request command.", cmd, lbs2str contLenStr', lbs2str jsonStr]
-      sendErrorLog msg
--}
 -- ---------------------------------------------------------------------
 
 makeResponseMessage :: (J.ToJSON a) => Int -> a -> J.ResponseMessage a

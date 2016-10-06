@@ -129,6 +129,20 @@ instance (Default a) => Default (ResponseMessage a) where
 type ErrorResponse = ResponseMessage ()
 
 -- ---------------------------------------------------------------------
+
+data NotificationMessage a =
+  NotificationMessage
+    { jsonrpcNotificationMessage :: String
+    , methodNotificationMessage  :: String
+    , paramsNotificationMessage  :: Maybe a
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "NotificationMessage") } ''NotificationMessage)
+
+instance (Default a) => Default (NotificationMessage a) where
+  def = NotificationMessage "2.0" def Nothing
+
+-- ---------------------------------------------------------------------
 {-
 https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#position
 
@@ -1200,17 +1214,19 @@ Notification:
     params: 'any'
 -}
 
-data TelemetryNotification =
-  TelemetryNotification
-    { jsonrpcTelemetryNotification :: String
-    , methodTelemetryNotification :: String
-    , paramsTelemetryNotification :: A.Object -- ^Can be anything
-    } deriving (Read,Show,Eq)
+-- data TelemetryNotification =
+--   TelemetryNotification
+--     { jsonrpcTelemetryNotification :: String
+--     , methodTelemetryNotification :: String
+--     , paramsTelemetryNotification :: A.Object -- ^Can be anything
+--     } deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "TelemetryNotification") } ''TelemetryNotification)
+-- $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "TelemetryNotification") } ''TelemetryNotification)
 
-instance Default TelemetryNotification where
-  def = TelemetryNotification "2.0" "telemetry/event" mempty
+-- instance Default TelemetryNotification where
+--   def = TelemetryNotification "2.0" "telemetry/event" mempty
+
+type TelemetryNotification = NotificationMessage A.Object
 
 -- ---------------------------------------------------------------------
 {-
@@ -1246,15 +1262,17 @@ instance Default DidChangeConfigurationParamsNotificationParams where
 
 -- -------------------------------------
 
-data DidChangeConfigurationParamsNotification =
-  DidChangeConfigurationParamsNotification {
-    paramsDidChangeConfigurationParamsNotification :: DidChangeConfigurationParamsNotificationParams
-  } deriving (Show, Read, Eq)
+-- data DidChangeConfigurationParamsNotification =
+--   DidChangeConfigurationParamsNotification {
+--     paramsDidChangeConfigurationParamsNotification :: DidChangeConfigurationParamsNotificationParams
+--   } deriving (Show, Read, Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DidChangeConfigurationParamsNotification") } ''DidChangeConfigurationParamsNotification)
+-- $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DidChangeConfigurationParamsNotification") } ''DidChangeConfigurationParamsNotification)
 
-instance Default DidChangeConfigurationParamsNotification where
-  def = DidChangeConfigurationParamsNotification def
+-- instance Default DidChangeConfigurationParamsNotification where
+--   def = DidChangeConfigurationParamsNotification def
+
+type DidChangeConfigurationParamsNotification = NotificationMessage DidChangeConfigurationParamsNotificationParams
 
 -- ---------------------------------------------------------------------
 {-
@@ -1290,12 +1308,14 @@ $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DidOpenTextDoc
 
 -- ---------------------------------------
 
-data DidOpenTextDocumentNotification =
-  DidOpenTextDocumentNotification {
-    paramsDidOpenTextDocumentNotification :: DidOpenTextDocumentNotificationParams
-  } deriving (Show, Read, Eq)
+-- data DidOpenTextDocumentNotification =
+--   DidOpenTextDocumentNotification {
+--     paramsDidOpenTextDocumentNotification :: DidOpenTextDocumentNotificationParams
+--   } deriving (Show, Read, Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DidOpenTextDocumentNotification") } ''DidOpenTextDocumentNotification)
+-- $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DidOpenTextDocumentNotification") } ''DidOpenTextDocumentNotification)
+
+type DidOpenTextDocumentNotification = NotificationMessage DidOpenTextDocumentNotificationParams
 
 -- ---------------------------------------------------------------------
 {-
@@ -1360,6 +1380,7 @@ instance Default TextDocumentContentChangeEvent where
   def = TextDocumentContentChangeEvent Nothing Nothing def
 
 -- -------------------------------------
+
 data DidChangeTextDocumentParams =
   DidChangeTextDocumentParams
     { textDocumentDidChangeTextDocumentParams :: VersionedTextDocumentIdentifier
@@ -1367,6 +1388,8 @@ data DidChangeTextDocumentParams =
     } deriving (Show,Read,Eq)
 
 $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DidChangeTextDocumentParams") } ''DidChangeTextDocumentParams)
+
+type DidChangeTextDocumentNotification = NotificationMessage DidChangeTextDocumentParams
 
 -- ---------------------------------------------------------------------
 {-
@@ -1404,13 +1427,15 @@ $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DidCloseTextDo
 instance Default DidCloseTextDocumentParams where
   def = DidCloseTextDocumentParams def
 
-data DidCloseTextDocumentNotification =
-  DidCloseTextDocumentNotification
-    { methodDidCloseTextDocumentNotification :: String
-    , paramsDidCloseTextDocumentNotification :: DidCloseTextDocumentParams
-    } deriving (Read,Show,Eq)
+-- data DidCloseTextDocumentNotification =
+--   DidCloseTextDocumentNotification
+--     { methodDidCloseTextDocumentNotification :: String
+--     , paramsDidCloseTextDocumentNotification :: DidCloseTextDocumentParams
+--     } deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DidCloseTextDocumentNotification") } ''DidCloseTextDocumentNotification)
+-- $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DidCloseTextDocumentNotification") } ''DidCloseTextDocumentNotification)
+
+type DidCloseTextDocumentNotification = NotificationMessage DidCloseTextDocumentParams
 
 -- ---------------------------------------------------------------------
 {-
@@ -1441,13 +1466,15 @@ $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DidSaveTextDoc
 instance Default DidSaveTextDocumentParams where
   def = DidSaveTextDocumentParams def
 
-data DidSaveTextDocumentNotification =
-  DidSaveTextDocumentNotification
-    { methodDidSaveTextDocumentNotification :: String
-    , paramsDidSaveTextDocumentNotification :: DidSaveTextDocumentParams
-    } deriving (Show,Read,Eq)
+-- data DidSaveTextDocumentNotification =
+--   DidSaveTextDocumentNotification
+--     { methodDidSaveTextDocumentNotification :: String
+--     , paramsDidSaveTextDocumentNotification :: DidSaveTextDocumentParams
+--     } deriving (Show,Read,Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DidSaveTextDocumentNotification") } ''DidSaveTextDocumentNotification)
+-- $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DidSaveTextDocumentNotification") } ''DidSaveTextDocumentNotification)
+
+type DidSaveTextDocumentNotification = NotificationMessage DidSaveTextDocumentParams
 
 -- ---------------------------------------------------------------------
 {-
@@ -1542,16 +1569,18 @@ $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DidChangeWatch
 instance Default DidChangeWatchedFilesParams where
   def = DidChangeWatchedFilesParams def
 
-data DidChangeWatchedFilesNotification =
-  DidChangeWatchedFilesNotification
-    { methodDidChangeWatchedFilesNotification :: String
-    , paramsDidChangeWatchedFilesNotification :: DidChangeWatchedFilesParams
-    } deriving (Read,Show,Eq)
+-- data DidChangeWatchedFilesNotification =
+--   DidChangeWatchedFilesNotification
+--     { methodDidChangeWatchedFilesNotification :: String
+--     , paramsDidChangeWatchedFilesNotification :: DidChangeWatchedFilesParams
+--     } deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DidChangeWatchedFilesNotification") } ''DidChangeWatchedFilesNotification)
+-- $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DidChangeWatchedFilesNotification") } ''DidChangeWatchedFilesNotification)
 
-instance Default DidChangeWatchedFilesNotification where
-  def = DidChangeWatchedFilesNotification def def
+-- instance Default DidChangeWatchedFilesNotification where
+--   def = DidChangeWatchedFilesNotification def def
+
+type DidChangeWatchedFilesNotification = NotificationMessage DidChangeWatchedFilesParams
 
 -- ---------------------------------------------------------------------
 {-
@@ -1591,13 +1620,15 @@ $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "PublishDiagnos
 instance Default PublishDiagnosticsParams where
   def = PublishDiagnosticsParams def def
 
-data PublishDiagnosticsNotification =
-  PublishDiagnosticsNotification
-    { methodPublishDiagnosticsNotification :: String
-    , paramsPublishDiagnosticsNotification :: PublishDiagnosticsParams
-    } deriving (Read,Show,Eq)
+-- data PublishDiagnosticsNotification =
+--   PublishDiagnosticsNotification
+--     { methodPublishDiagnosticsNotification :: String
+--     , paramsPublishDiagnosticsNotification :: PublishDiagnosticsParams
+--     } deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "PublishDiagnosticsNotification") } ''PublishDiagnosticsNotification)
+-- $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "PublishDiagnosticsNotification") } ''PublishDiagnosticsNotification)
+
+type PublishDiagnosticsNotification = NotificationMessage PublishDiagnosticsParams
 
 -- ---------------------------------------------------------------------
 {-
@@ -2744,9 +2775,9 @@ type CodeLensRequest = RequestMessage CodeLensParams
 
 data CodeLens =
   CodeLens
-    { rangeCodeLens :: Range
+    { rangeCodeLens   :: Range
     , commandCodeLens :: Maybe Command
-    , dataCodeLens :: Maybe A.Object
+    , dataCodeLens    :: Maybe A.Object
     } deriving (Read,Show,Eq)
 
 $(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "CodeLens") } ''CodeLens)
