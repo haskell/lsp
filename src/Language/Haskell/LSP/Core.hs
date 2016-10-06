@@ -306,12 +306,14 @@ handleRequest mvarDat contLenStr' jsonStr' = do
 
     -- ---------------------------------
 
+    -- Server life cycle handlers
     handle jsonStr "initialize" = helper jsonStr initializeRequestHandler
     handle jsonStr "shutdown"   = helper jsonStr shutdownRequestHandler
-
     handle _jsonStr "exit" = do
       logm $ B.pack "Got exit, exiting"
       exitSuccess
+
+    -- ---------------------------------
 
     -- {"jsonrpc":"2.0","method":"$/setTraceNotification","params":{"value":"off"}}
     handle jsonStr "$/setTraceNotification" = helper jsonStr h
@@ -320,21 +322,6 @@ handleRequest mvarDat contLenStr' jsonStr' = do
         h _ _ = do
           logm "Got setTraceNotification, ignoring"
           sendErrorLog "Got setTraceNotification, ignoring"
-
-
-     -- {"jsonrpc":"2.0","method":"workspace/didChangeConfiguration","params":{"settings":{"languageServerHaskell":{"maxNumberOfProblems":100}}}}
-    handle jsonStr "workspace/didChangeConfiguration" = helper jsonStr h
-      where
-        h :: MVar LanguageContextData -> J.DidChangeConfigurationParamsNotification -> IO ()
-        h _ _ = logm "Got workspace/didChangeConfiguration, ignoring"
-
-
- -- {"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{...}}}
-    handle jsonStr "textDocument/didOpen" = helper jsonStr h
-      where
-        h :: MVar LanguageContextData -> J.DidOpenTextDocumentNotification -> IO ()
-        h _ _ = logm "Got textDocument/didOpen, ignoring"
-
 
     -- capability based handlers
     handle jsonStr cmd = do
