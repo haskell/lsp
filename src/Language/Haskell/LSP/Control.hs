@@ -39,9 +39,8 @@ run a h o = do
   hSetBuffering stdout NoBuffering
   hSetEncoding  stdout utf8
 
-  mvarDat <- newMVar $ ((GUI.defaultLanguageContextData h o :: GUI.LanguageContextData a)
+  mvarDat <- newMVar $ ((GUI.defaultLanguageContextData a h o :: GUI.LanguageContextData a)
                          { GUI.resSendResponse = sendResponse
-                         , GUI.resData = a
                          } )
 
   wait mvarDat

@@ -266,8 +266,8 @@ _ERR_MSG_URL = [ "`stack update` and install new haskell-lsp."
 -- |
 --
 --
-defaultLanguageContextData :: (Default a) => Handlers a -> Options -> LanguageContextData a
-defaultLanguageContextData h o = LanguageContextData _INITIAL_RESPONSE_SEQUENCE Nothing h o BSL.putStr def
+defaultLanguageContextData :: a -> Handlers a -> Options -> LanguageContextData a
+defaultLanguageContextData a h o = LanguageContextData _INITIAL_RESPONSE_SEQUENCE Nothing h o BSL.putStr a
 
 -- |
 --
