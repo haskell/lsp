@@ -79,6 +79,9 @@ rdrop cnt = reverse . drop cnt . reverse
 
 -- ---------------------------------------------------------------------
 
+logs :: String -> IO ()
+logs s = logm (B.pack s)
+
 logm :: B.ByteString -> IO ()
 logm str = appendFileAndFlush "/tmp/hie-vscode.log" (str <> B.pack "\n")
 
