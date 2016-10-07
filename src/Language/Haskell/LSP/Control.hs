@@ -27,7 +27,7 @@ import           Text.Parsec
 
 run :: forall a. (Default a)
     => a
-    -> GUI.Handlers
+    -> GUI.Handlers a
     -> GUI.Options
     -> IO Int         -- exit code
 run a h o = do

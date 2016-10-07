@@ -61,11 +61,11 @@ run = flip E.catches handlers $ do
 hieOptions :: GUI.Options
 hieOptions = def
 
-hieHandlers :: GUI.Handlers
+hieHandlers :: GUI.Handlers a
 hieHandlers = def {GUI.renameHandler = Just renameRequestHandler }
 
-renameRequestHandler :: J.RenameRequest -> IO J.RenameResponse
-renameRequestHandler (J.RequestMessage _ origId _ _) = do
+renameRequestHandler :: a -> J.RenameRequest -> IO J.RenameResponse
+renameRequestHandler _ (J.RequestMessage _ origId _ _) = do
   let loc = def :: J.Location
       res  = GUI.makeResponseMessage origId loc
   return res

@@ -58,7 +58,7 @@ data LanguageContextData a =
   LanguageContextData {
     resSeqDebugContextData :: !Int
   , resRootPath            :: !(Maybe FilePath)
-  , resHandlers            :: !Handlers
+  , resHandlers            :: !(Handlers a)
   , resOptions             :: !Options
   , resSendResponse        :: !(BSL.ByteString -> IO ())
   , resData                :: !a
@@ -79,44 +79,44 @@ instance Default Options where
   def = Options Nothing Nothing Nothing Nothing Nothing
 
 -- | Callbacks from the language server to the language handler
-data Handlers =
+data Handlers a =
   Handlers
     {
     -- Capability-advertised handlers
-      hoverHandler                   :: Maybe (J.HoverRequest                    -> IO J.HoverResponse)
-    , completionHandler              :: Maybe (J.CompletionRequest               -> IO J.CompletionResponse)
-    , completionResolveHandler       :: Maybe (J.CompletionItemResolveRequest    -> IO J.CompletionItemResolveResponse)
-    , signatureHelpHandler           :: Maybe (J.SignatureHelpRequest            -> IO J.SignatureHelpResponse)
-    , definitionHandler              :: Maybe (J.DefinitionRequest               -> IO J.DefinitionResponse)
-    , referencesHandler              :: Maybe (J.FindReferencesRequest           -> IO J.FindReferencesResponse)
-    , documentHighlightHandler       :: Maybe (J.DocumentHighlightsRequest       -> IO J.DocumentHighlightsResponse)
-    , documentSymbolHandler          :: Maybe (J.DocumentSymbolsRequest          -> IO J.DocumentSymbolsResponse)
-    , workspaceSymbolHandler         :: Maybe (J.WorkspaceSymbolsRequest         -> IO J.WorkspaceSymbolsResponse)
-    , codeActionHandler              :: Maybe (J.CodeActionRequest               -> IO J.CodeActionResponse)
-    , codeLensHandler                :: Maybe (J.CodeLensRequest                 -> IO J.CodeLensResponse)
-    , codeLensResolveHandler         :: Maybe (J.CodeLensResolveRequest          -> IO J.CodeLensResolveResponse)
-    , documentFormattingHandler      :: Maybe (J.DocumentFormattingRequest       -> IO J.DocumentFormattingResponse)
-    , documentRangeFormattingHandler :: Maybe (J.DocumentRangeFormattingRequest  -> IO J.DocumentRangeFormattingResponse)
-    , documentTypeFormattingHandler  :: Maybe (J.DocumentOnTypeFormattingRequest -> IO J.DocumentOnTypeFormattingResponse)
-    , renameHandler                  :: Maybe (J.RenameRequest                   -> IO J.RenameResponse)
+      hoverHandler                   :: Maybe (a -> J.HoverRequest                    -> IO J.HoverResponse)
+    , completionHandler              :: Maybe (a -> J.CompletionRequest               -> IO J.CompletionResponse)
+    , completionResolveHandler       :: Maybe (a -> J.CompletionItemResolveRequest    -> IO J.CompletionItemResolveResponse)
+    , signatureHelpHandler           :: Maybe (a -> J.SignatureHelpRequest            -> IO J.SignatureHelpResponse)
+    , definitionHandler              :: Maybe (a -> J.DefinitionRequest               -> IO J.DefinitionResponse)
+    , referencesHandler              :: Maybe (a -> J.FindReferencesRequest           -> IO J.FindReferencesResponse)
+    , documentHighlightHandler       :: Maybe (a -> J.DocumentHighlightsRequest       -> IO J.DocumentHighlightsResponse)
+    , documentSymbolHandler          :: Maybe (a -> J.DocumentSymbolsRequest          -> IO J.DocumentSymbolsResponse)
+    , workspaceSymbolHandler         :: Maybe (a -> J.WorkspaceSymbolsRequest         -> IO J.WorkspaceSymbolsResponse)
+    , codeActionHandler              :: Maybe (a -> J.CodeActionRequest               -> IO J.CodeActionResponse)
+    , codeLensHandler                :: Maybe (a -> J.CodeLensRequest                 -> IO J.CodeLensResponse)
+    , codeLensResolveHandler         :: Maybe (a -> J.CodeLensResolveRequest          -> IO J.CodeLensResolveResponse)
+    , documentFormattingHandler      :: Maybe (a -> J.DocumentFormattingRequest       -> IO J.DocumentFormattingResponse)
+    , documentRangeFormattingHandler :: Maybe (a -> J.DocumentRangeFormattingRequest  -> IO J.DocumentRangeFormattingResponse)
+    , documentTypeFormattingHandler  :: Maybe (a -> J.DocumentOnTypeFormattingRequest -> IO J.DocumentOnTypeFormattingResponse)
+    , renameHandler                  :: Maybe (a -> J.RenameRequest                   -> IO J.RenameResponse)
 
     -- Notifications from the client
-    , didChangeConfigurationParamsHandler      :: Maybe (J.DidChangeConfigurationParamsNotification -> IO ())
-    , didOpenTextDocumentNotificationHandler   :: Maybe (J.DidOpenTextDocumentNotification          -> IO ())
-    , didChangeTextDocumentNotificationHandler :: Maybe (J.DidChangeTextDocumentNotification        -> IO ())
-    , didCloseTextDocumentNotificationHandler  :: Maybe (J.DidCloseTextDocumentNotification         -> IO ())
-    , didSaveTextDocumentNotificationHandler   :: Maybe (J.DidSaveTextDocumentNotification          -> IO ())
-    , didChangeWatchedFilesNotificationHandler :: Maybe (J.DidChangeWatchedFilesNotification        -> IO ())
+    , didChangeConfigurationParamsHandler      :: Maybe (a -> J.DidChangeConfigurationParamsNotification -> IO ())
+    , didOpenTextDocumentNotificationHandler   :: Maybe (a -> J.DidOpenTextDocumentNotification          -> IO ())
+    , didChangeTextDocumentNotificationHandler :: Maybe (a -> J.DidChangeTextDocumentNotification        -> IO ())
+    , didCloseTextDocumentNotificationHandler  :: Maybe (a -> J.DidCloseTextDocumentNotification         -> IO ())
+    , didSaveTextDocumentNotificationHandler   :: Maybe (a -> J.DidSaveTextDocumentNotification          -> IO ())
+    , didChangeWatchedFilesNotificationHandler :: Maybe (a -> J.DidChangeWatchedFilesNotification        -> IO ())
     }
 
-instance Default Handlers where
+instance Default (Handlers a) where
   def = Handlers Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
                  Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
                  Nothing Nothing Nothing Nothing
 
 -- ---------------------------------------------------------------------
 
-handlerMap :: Handlers
+handlerMap :: Handlers a
            -> MAP.Map String (MVar (LanguageContextData a) -> String -> B.ByteString -> IO ())
 handlerMap h = MAP.fromList
   [ ("textDocument/completion",        hh $ completionHandler h)
@@ -147,14 +147,15 @@ handlerMap h = MAP.fromList
 -- ---------------------------------------------------------------------
 
 hh :: forall t a b. (J.FromJSON t, J.ToJSON a)
-   => Maybe (t -> IO a) -> MVar (LanguageContextData b) -> String -> B.ByteString -> IO ()
+   => Maybe ( b -> t -> IO a) -> MVar (LanguageContextData b) -> String -> B.ByteString -> IO ()
 hh Nothing = \_mvarDat cmd jsonStr -> do
       let msg = unwords ["no handler for command.", cmd, lbs2str jsonStr]
       sendErrorLog msg
 hh (Just h) = \mvarDat cmd jsonStr -> do
       case J.eitherDecode jsonStr of
         Right req -> do
-          res <- h req
+          ctx <- readMVar mvarDat
+          res <- h (resData ctx) req
           sendResponse2 mvarDat $ J.encode res
         Left  err -> do
           let msg = unwords $ ["parse error.", lbs2str jsonStr, show err] ++ _ERR_MSG_URL
@@ -163,13 +164,15 @@ hh (Just h) = \mvarDat cmd jsonStr -> do
 -- ---------------------------------------------------------------------
 
 hn :: forall t b. (J.FromJSON t)
-   => Maybe (t -> IO ()) -> MVar (LanguageContextData b) -> String -> B.ByteString -> IO ()
+   => Maybe (b -> t -> IO ()) -> MVar (LanguageContextData b) -> String -> B.ByteString -> IO ()
 hn Nothing = \_mvarDat cmd jsonStr -> do
       let msg = unwords ["no handler for notification.", cmd, lbs2str jsonStr]
       sendErrorLog msg
-hn (Just h) = \_mvarDat _cmd jsonStr -> do
+hn (Just h) = \mvarDat _cmd jsonStr -> do
       case J.eitherDecode jsonStr of
-        Right req -> h req
+        Right req -> do
+          ctx <- readMVar mvarDat
+          h (resData ctx) req
         Left  err -> do
           let msg = unwords $ ["parse error.", lbs2str jsonStr, show err] ++ _ERR_MSG_URL
           sendErrorLog msg
@@ -263,7 +266,7 @@ _ERR_MSG_URL = [ "`stack update` and install new haskell-lsp."
 -- |
 --
 --
-defaultLanguageContextData :: (Default a) => Handlers -> Options -> LanguageContextData a
+defaultLanguageContextData :: (Default a) => Handlers a -> Options -> LanguageContextData a
 defaultLanguageContextData h o = LanguageContextData _INITIAL_RESPONSE_SEQUENCE Nothing h o BSL.putStr def
 
 -- |
