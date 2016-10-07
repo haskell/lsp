@@ -2,10 +2,8 @@
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE MultiWayIf          #-}
 {-# LANGUAGE BinaryLiterals      #-}
-{-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE DeriveDataTypeable  #-}
 
 module Language.Haskell.LSP.Core (
   handleRequest
@@ -19,34 +17,32 @@ module Language.Haskell.LSP.Core (
 
 import Language.Haskell.LSP.Constant
 import Language.Haskell.LSP.Utility
--- import Phoityne.VSCode.IO.Utility
 import qualified Language.Haskell.LSP.TH.DataTypesJSON as J
--- import qualified Phoityne.GHCi as G
 
 import Data.Default
 import Data.Monoid
 import System.IO
-import System.FilePath
-import System.Directory
+-- import System.FilePath
+-- import System.Directory
 import System.Exit
 import System.Log.Logger
 import qualified Data.Aeson as J
 import qualified Data.ByteString.Lazy as BSL
-import qualified Data.String.Utils as U
+-- import qualified Data.String.Utils as U
 import qualified Data.List as L
 import qualified Control.Exception as E
 import qualified Data.Map as MAP
 import Control.Concurrent
-import Data.List.Split
-import Data.Char
-import Control.Monad
-import qualified System.FSNotify as FSN
-import qualified System.Log.Logger as L
-import qualified System.Log.Formatter as L
-import qualified System.Log.Handler as LH
-import qualified System.Log.Handler.Simple as LHS
-import Safe
-import Text.Parsec
+-- import Data.List.Split
+-- import Data.Char
+-- import Control.Monad
+-- import qualified System.FSNotify as FSN
+-- import qualified System.Log.Logger as L
+-- import qualified System.Log.Formatter as L
+-- import qualified System.Log.Handler as LH
+-- import qualified System.Log.Handler.Simple as LHS
+-- import Safe
+-- import Text.Parsec
 import qualified Data.ByteString.Lazy.Char8 as B
 
 -- ---------------------------------------------------------------------
@@ -58,13 +54,14 @@ import qualified Data.ByteString.Lazy.Char8 as B
 -- |
 --
 --
-data LanguageContextData =
+data LanguageContextData a =
   LanguageContextData {
-    resSeqDebugContextData :: Int
-  , resRootPath            :: Maybe FilePath
-  , resHandlers            :: Handlers
-  , resOptions             :: Options
-  , resSendResponse        :: BSL.ByteString -> IO ()
+    resSeqDebugContextData :: !Int
+  , resRootPath            :: !(Maybe FilePath)
+  , resHandlers            :: !Handlers
+  , resOptions             :: !Options
+  , resSendResponse        :: !(BSL.ByteString -> IO ())
+  , resData                :: !a
   }
 
 -- ---------------------------------------------------------------------
@@ -120,7 +117,7 @@ instance Default Handlers where
 -- ---------------------------------------------------------------------
 
 handlerMap :: Handlers
-           -> MAP.Map String (MVar LanguageContextData -> String -> B.ByteString -> IO ())
+           -> MAP.Map String (MVar (LanguageContextData a) -> String -> B.ByteString -> IO ())
 handlerMap h = MAP.fromList
   [ ("textDocument/completion",        hh $ completionHandler h)
   , ("completionItem/resolve",         hh $ completionResolveHandler h)
@@ -149,8 +146,8 @@ handlerMap h = MAP.fromList
 
 -- ---------------------------------------------------------------------
 
-hh :: forall t a. (J.FromJSON t, J.ToJSON a)
-   => Maybe (t -> IO a) -> MVar LanguageContextData -> String -> B.ByteString -> IO ()
+hh :: forall t a b. (J.FromJSON t, J.ToJSON a)
+   => Maybe (t -> IO a) -> MVar (LanguageContextData b) -> String -> B.ByteString -> IO ()
 hh Nothing = \_mvarDat cmd jsonStr -> do
       let msg = unwords ["no handler for command.", cmd, lbs2str jsonStr]
       sendErrorLog msg
@@ -165,8 +162,8 @@ hh (Just h) = \mvarDat cmd jsonStr -> do
 
 -- ---------------------------------------------------------------------
 
-hn :: forall t. (J.FromJSON t)
-   => Maybe (t -> IO ()) -> MVar LanguageContextData -> String -> B.ByteString -> IO ()
+hn :: forall t b. (J.FromJSON t)
+   => Maybe (t -> IO ()) -> MVar (LanguageContextData b) -> String -> B.ByteString -> IO ()
 hn Nothing = \_mvarDat cmd jsonStr -> do
       let msg = unwords ["no handler for notification.", cmd, lbs2str jsonStr]
       sendErrorLog msg
@@ -266,8 +263,8 @@ _ERR_MSG_URL = [ "`stack update` and install new haskell-lsp."
 -- |
 --
 --
-defaultLanguageContextData :: Handlers -> Options -> LanguageContextData
-defaultLanguageContextData h o = LanguageContextData _INITIAL_RESPONSE_SEQUENCE Nothing h o BSL.putStr
+defaultLanguageContextData :: (Default a) => Handlers -> Options -> LanguageContextData a
+defaultLanguageContextData h o = LanguageContextData _INITIAL_RESPONSE_SEQUENCE Nothing h o BSL.putStr def
 
 -- |
 --
@@ -279,7 +276,7 @@ defaultLanguageContextData h o = LanguageContextData _INITIAL_RESPONSE_SEQUENCE 
 -- |
 --
 --
-handleRequest :: MVar LanguageContextData -> BSL.ByteString -> BSL.ByteString -> IO ()
+handleRequest :: forall a. MVar (LanguageContextData a) -> BSL.ByteString -> BSL.ByteString -> IO ()
 handleRequest mvarDat contLenStr' jsonStr' = do
   -- TODO: handle client responses to stuff we have sent. Such as: {"jsonrpc":"2.0","id":1,"result":{"title":"action item 2"}}
 
@@ -295,7 +292,7 @@ handleRequest mvarDat contLenStr' jsonStr' = do
       handle jsonStr' cmd
 
   where
-    helper :: J.FromJSON a => B.ByteString -> (MVar LanguageContextData -> a -> IO ())
+    helper :: J.FromJSON b => B.ByteString -> (MVar (LanguageContextData a) -> b -> IO ())
            -> IO ()
     helper jsonStr requestHandler = case J.eitherDecode jsonStr of
       Right req -> do
@@ -318,7 +315,7 @@ handleRequest mvarDat contLenStr' jsonStr' = do
     -- {"jsonrpc":"2.0","method":"$/setTraceNotification","params":{"value":"off"}}
     handle jsonStr "$/setTraceNotification" = helper jsonStr h
       where
-        h :: MVar LanguageContextData -> J.TraceNotification -> IO ()
+        h :: MVar (LanguageContextData a) -> J.TraceNotification -> IO ()
         h _ _ = do
           logm "Got setTraceNotification, ignoring"
           sendErrorLog "Got setTraceNotification, ignoring"
@@ -362,7 +359,7 @@ sendResponse str = sendResponseInternal str
 
 -- |
 --
-sendResponse2 :: MVar LanguageContextData -> BSL.ByteString -> IO ()
+sendResponse2 :: MVar (LanguageContextData a) -> BSL.ByteString -> IO ()
 sendResponse2 mvarCtx str = do
   ctx <- readMVar mvarCtx
   resSendResponse ctx str
@@ -431,7 +428,7 @@ defaultErrorHandlers origId req = [ E.Handler someExcept ]
 
 -- |
 --
-initializeRequestHandler :: MVar LanguageContextData -> J.InitializeRequest -> IO ()
+initializeRequestHandler :: MVar (LanguageContextData a) -> J.InitializeRequest -> IO ()
 initializeRequestHandler mvarCtx req@(J.RequestMessage _ origId _ _) =
   flip E.catches (defaultErrorHandlers origId req) $ do
 
@@ -478,7 +475,7 @@ initializeRequestHandler mvarCtx req@(J.RequestMessage _ origId _ _) =
 
 -- |
 --
-shutdownRequestHandler :: MVar LanguageContextData -> J.ShutdownRequest -> IO ()
+shutdownRequestHandler :: MVar (LanguageContextData a) -> J.ShutdownRequest -> IO ()
 shutdownRequestHandler mvarCtx req@(J.RequestMessage _ origId _ _) =
   flip E.catches (defaultErrorHandlers origId req) $ do
   let res  = makeResponseMessage origId ("ok"::String)
@@ -488,7 +485,7 @@ shutdownRequestHandler mvarCtx req@(J.RequestMessage _ origId _ _) =
 
 -- |
 --
-definitionRequestHandler :: MVar LanguageContextData -> J.DefinitionRequest -> IO ()
+definitionRequestHandler :: MVar (LanguageContextData a) -> J.DefinitionRequest -> IO ()
 definitionRequestHandler mvarCtx req@(J.RequestMessage _ origId _ _) =
   flip E.catches (defaultErrorHandlers origId req) $ do
   let loc = def :: J.Location
@@ -498,7 +495,7 @@ definitionRequestHandler mvarCtx req@(J.RequestMessage _ origId _ _) =
 
 -- |
 --
-renameRequestHandler :: MVar LanguageContextData -> J.RenameRequest -> IO ()
+renameRequestHandler :: MVar (LanguageContextData a) -> J.RenameRequest -> IO ()
 renameRequestHandler mvarCtx req@(J.RequestMessage _ origId _ _) =
   flip E.catches (defaultErrorHandlers origId req) $ do
   let loc = def :: J.Location
@@ -1317,7 +1314,7 @@ src2mod cwd src
 -- |
 --
 --
-getIncreasedResponseSequence :: MVar LanguageContextData -> IO Int
+getIncreasedResponseSequence :: MVar (LanguageContextData a) -> IO Int
 getIncreasedResponseSequence mvarCtx = do
   ctx <- takeMVar mvarCtx
   let resSec = 1 + resSeqDebugContextData ctx

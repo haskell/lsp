@@ -5,27 +5,32 @@
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Language.Haskell.LSP.Control where
+module Language.Haskell.LSP.Control
+  (
+    run
+  , sendResponseMessage
+  ) where
 
 import           Control.Concurrent
+import qualified Data.Aeson as J
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as B
--- import qualified Data.ConfigFile as C
+import           Data.Default
 import           Data.Monoid
--- import qualified Language.Haskell.LSP.Argument as A
 import qualified Language.Haskell.LSP.Core as GUI
+import qualified Language.Haskell.LSP.TH.DataTypesJSON as J
 import           Language.Haskell.LSP.Utility
 import           System.IO
 import           Text.Parsec
 
 -- ---------------------------------------------------------------------
--- |
---  ロジックメイン
---
-run :: GUI.Handlers
+
+run :: forall a. (Default a)
+    => a
+    -> GUI.Handlers
     -> GUI.Options
     -> IO Int         -- exit code
-run h o = do
+run a h o = do
 
   logm $ B.pack "\n\n\n\n\nStarting up server ..."
   hSetBuffering stdin NoBuffering
@@ -34,7 +39,10 @@ run h o = do
   hSetBuffering stdout NoBuffering
   hSetEncoding  stdout utf8
 
-  mvarDat <- newMVar $ (GUI.defaultLanguageContextData h o) {GUI.resSendResponse = sendResponse}
+  mvarDat <- newMVar $ ((GUI.defaultLanguageContextData h o :: GUI.LanguageContextData a)
+                         { GUI.resSendResponse = sendResponse
+                         , GUI.resData = a
+                         } )
 
   wait mvarDat
 
@@ -44,7 +52,7 @@ run h o = do
 -- |
 --
 --
-wait :: MVar GUI.LanguageContextData -> IO ()
+wait :: MVar (GUI.LanguageContextData a) -> IO ()
 wait mvarDat = go BSL.empty
   where
     go :: BSL.ByteString -> IO ()
@@ -67,6 +75,11 @@ wait mvarDat = go BSL.empty
           string "Content-Length: "
           len <- manyTill digit (string _TWO_CRLF)
           return . read $ len
+
+-- ---------------------------------------------------------------------
+
+sendResponseMessage :: (J.ToJSON a) => J.ResponseMessage a -> IO ()
+sendResponseMessage res = sendResponse (J.encode res)
 
 -- ---------------------------------------------------------------------
 -- |

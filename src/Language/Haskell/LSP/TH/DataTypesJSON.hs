@@ -684,6 +684,8 @@ enum TextDocumentSyncKind {
 }
 -}
 
+-- ^ Note: Omitting this parameter from the capabilities is effectively a fourth
+-- state, where DidSave events are generated without sending document contents.
 data TextDocumentSyncKind = TdSyncNone
                           | TdSyncFull
                           | TdSyncIncremental
@@ -1139,33 +1141,7 @@ $(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdr
 instance Default ShowMessageRequestParams where
   def = ShowMessageRequestParams def def def
 
--- data ShowMessageRequest =
---   ShowMessageRequest
---     { jsonrpcShowMessageRequest :: String
---     , methodShowMessageRequest :: String
---     , idShowMessageRequest :: Int
---     , paramsShowMessageRequest :: ShowMessageRequestParams
---     } deriving (Read,Show,Eq)
-
--- $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "ShowMessageRequest") } ''ShowMessageRequest)
-
--- instance Default ShowMessageRequest where
---   def = ShowMessageRequest "2.0" "window/showMessageRequest" def def
-
 type ShowMessageRequest = RequestMessage ShowMessageRequestParams
-
--- data ShowMessageResponse =
---   ShowMessageResponse
---     { idShowMessageResponse :: Int
---     , resultShowMessageResponse :: Maybe String -- Selected MessageActionItem.
---     , errorShowMessageResponse :: Maybe A.Object -- If an error occurred.
---     } deriving (Show,Read,Eq)
-
--- $(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "ShowMessageResponse") } ''ShowMessageResponse)
-
--- instance Default ShowMessageResponse where
---   def = ShowMessageResponse def def def
-
 type ShowMessageResponse = ResponseMessage String
 
 -- ---------------------------------------------------------------------
@@ -1214,17 +1190,6 @@ Notification:
     params: 'any'
 -}
 
--- data TelemetryNotification =
---   TelemetryNotification
---     { jsonrpcTelemetryNotification :: String
---     , methodTelemetryNotification :: String
---     , paramsTelemetryNotification :: A.Object -- ^Can be anything
---     } deriving (Read,Show,Eq)
-
--- $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "TelemetryNotification") } ''TelemetryNotification)
-
--- instance Default TelemetryNotification where
---   def = TelemetryNotification "2.0" "telemetry/event" mempty
 
 type TelemetryNotification = NotificationMessage A.Object
 
@@ -1260,18 +1225,6 @@ $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DidChangeConfi
 instance Default DidChangeConfigurationParamsNotificationParams where
   def = DidChangeConfigurationParamsNotificationParams mempty
 
--- -------------------------------------
-
--- data DidChangeConfigurationParamsNotification =
---   DidChangeConfigurationParamsNotification {
---     paramsDidChangeConfigurationParamsNotification :: DidChangeConfigurationParamsNotificationParams
---   } deriving (Show, Read, Eq)
-
--- $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DidChangeConfigurationParamsNotification") } ''DidChangeConfigurationParamsNotification)
-
--- instance Default DidChangeConfigurationParamsNotification where
---   def = DidChangeConfigurationParamsNotification def
-
 type DidChangeConfigurationParamsNotification = NotificationMessage DidChangeConfigurationParamsNotificationParams
 
 -- ---------------------------------------------------------------------
@@ -1305,15 +1258,6 @@ data DidOpenTextDocumentNotificationParams =
   } deriving (Show, Read, Eq)
 
 $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DidOpenTextDocumentNotificationParams") } ''DidOpenTextDocumentNotificationParams)
-
--- ---------------------------------------
-
--- data DidOpenTextDocumentNotification =
---   DidOpenTextDocumentNotification {
---     paramsDidOpenTextDocumentNotification :: DidOpenTextDocumentNotificationParams
---   } deriving (Show, Read, Eq)
-
--- $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DidOpenTextDocumentNotification") } ''DidOpenTextDocumentNotification)
 
 type DidOpenTextDocumentNotification = NotificationMessage DidOpenTextDocumentNotificationParams
 
@@ -1427,14 +1371,6 @@ $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DidCloseTextDo
 instance Default DidCloseTextDocumentParams where
   def = DidCloseTextDocumentParams def
 
--- data DidCloseTextDocumentNotification =
---   DidCloseTextDocumentNotification
---     { methodDidCloseTextDocumentNotification :: String
---     , paramsDidCloseTextDocumentNotification :: DidCloseTextDocumentParams
---     } deriving (Read,Show,Eq)
-
--- $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DidCloseTextDocumentNotification") } ''DidCloseTextDocumentNotification)
-
 type DidCloseTextDocumentNotification = NotificationMessage DidCloseTextDocumentParams
 
 -- ---------------------------------------------------------------------
@@ -1465,14 +1401,6 @@ $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DidSaveTextDoc
 
 instance Default DidSaveTextDocumentParams where
   def = DidSaveTextDocumentParams def
-
--- data DidSaveTextDocumentNotification =
---   DidSaveTextDocumentNotification
---     { methodDidSaveTextDocumentNotification :: String
---     , paramsDidSaveTextDocumentNotification :: DidSaveTextDocumentParams
---     } deriving (Show,Read,Eq)
-
--- $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DidSaveTextDocumentNotification") } ''DidSaveTextDocumentNotification)
 
 type DidSaveTextDocumentNotification = NotificationMessage DidSaveTextDocumentParams
 
@@ -1569,17 +1497,6 @@ $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DidChangeWatch
 instance Default DidChangeWatchedFilesParams where
   def = DidChangeWatchedFilesParams def
 
--- data DidChangeWatchedFilesNotification =
---   DidChangeWatchedFilesNotification
---     { methodDidChangeWatchedFilesNotification :: String
---     , paramsDidChangeWatchedFilesNotification :: DidChangeWatchedFilesParams
---     } deriving (Read,Show,Eq)
-
--- $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DidChangeWatchedFilesNotification") } ''DidChangeWatchedFilesNotification)
-
--- instance Default DidChangeWatchedFilesNotification where
---   def = DidChangeWatchedFilesNotification def def
-
 type DidChangeWatchedFilesNotification = NotificationMessage DidChangeWatchedFilesParams
 
 -- ---------------------------------------------------------------------
@@ -1619,14 +1536,6 @@ $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "PublishDiagnos
 
 instance Default PublishDiagnosticsParams where
   def = PublishDiagnosticsParams def def
-
--- data PublishDiagnosticsNotification =
---   PublishDiagnosticsNotification
---     { methodPublishDiagnosticsNotification :: String
---     , paramsPublishDiagnosticsNotification :: PublishDiagnosticsParams
---     } deriving (Read,Show,Eq)
-
--- $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "PublishDiagnosticsNotification") } ''PublishDiagnosticsNotification)
 
 type PublishDiagnosticsNotification = NotificationMessage PublishDiagnosticsParams
 
@@ -1913,14 +1822,6 @@ Response
     error: code and message set in case an exception happens during the completion resolve request.
 -}
 
--- data CompletionItemResolveRequest =
---   CompletionItemResolveRequest
---     { methodCompletionItemResolveRequest :: String
---     , paramsCompletionItemResolveRequest :: CompletionItem
---     } deriving (Read,Show,Eq)
-
--- $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "CompletionItemResolveRequest") } ''CompletionItemResolveRequest)
-
 type CompletionItemResolveRequest  = RequestMessage CompletionItem
 type CompletionItemResolveResponse = ResponseMessage CompletionItem
 
@@ -2175,16 +2076,6 @@ instance Default DefinitionRequestParams where
   def = DefinitionRequestParams def def
 
 -- {"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{"textDocument":{"uri":"file:///tmp/Foo.hs"},"position":{"line":1,"character":8}}}
--- data DefinitionRequest =
---   DefinitionRequest {
---     idDefinitionRequest       :: Int
---   , paramsDefinitionRequest   :: DefinitionRequestParams
---   } deriving (Show, Read, Eq)
-
--- $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DefinitionRequest") } ''DefinitionRequest)
-
--- instance Default DefinitionRequest where
---   def = DefinitionRequest 0 def
 
 type DefinitionRequest  = RequestMessage DefinitionRequestParams
 type DefinitionResponse = ResponseMessage Location
@@ -2248,14 +2139,6 @@ $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "ReferenceParam
 
 instance Default ReferenceParams where
   def = ReferenceParams def def def
-
--- data FindReferencesRequest =
---   FindReferencesRequest
---     { methodFindReferencesRequest :: String
---     , paramsFindReferencesRequest :: ReferenceParams
---     } deriving (Read,Show,Eq)
-
--- $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "FindReferencesRequest") } ''FindReferencesRequest)
 
 type FindReferencesRequest  = RequestMessage ReferenceParams
 type FindReferencesResponse = ResponseMessage [Location]
@@ -2599,14 +2482,6 @@ data WorkspaceSymbolParams =
 
 $(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "WorkspaceSymbolParams") } ''WorkspaceSymbolParams)
 
--- data WorkspaceSymbolsRequest =
---   WorkspaceSymbolsRequest
---     { methodWorkspaceSymbolsRequest :: String
---     , paramsWorkspaceSymbolsRequest :: WorkspaceSymbolParams
---     } deriving (Read,Show,Eq)
-
--- $(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "WorkspaceSymbolsRequest") } ''WorkspaceSymbolsRequest)
-
 type WorkspaceSymbolsRequest  = RequestMessage WorkspaceSymbolParams
 type WorkspaceSymbolsResponse = ResponseMessage [SymbolInformation]
 
@@ -2686,16 +2561,6 @@ $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "CodeActionPara
 
 instance Default CodeActionParams where
   def = CodeActionParams def def def
-
--- -------------------------------------
-
--- data CodeActionRequest =
---   CodeActionRequest
---     { methodCodeActionRequest :: String
---     , paramsCodeActionRequest :: CodeActionParams
---     } deriving (Read,Show,Eq)
-
--- $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "CodeActionRequest") } ''CodeActionRequest)
 
 type CodeActionRequest  = RequestMessage CodeActionParams
 type CodeActionResponse = ResponseMessage [Command]
@@ -2810,14 +2675,6 @@ Response
 
 -}
 
--- data CodeLensResolveRequest =
---   CodeLensResolveRequest
---     { methodCodeLensResolveRequest :: String
---     , paramsCodeLensResolveRequest :: CodeLens
---     } deriving (Read,Show,Eq)
-
--- $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "CodeLensResolveRequest") } ''CodeLensResolveRequest)
-
 type CodeLensResolveRequest  = RequestMessage CodeLens
 type CodeLensResolveResponse = ResponseMessage [CodeLens]
 
@@ -2892,14 +2749,6 @@ data DocumentFormattingParams =
 
 $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DocumentFormattingParams") } ''DocumentFormattingParams)
 
--- data DocumentFormattingRequest =
---   DocumentFormattingRequest
---     { methodDocumentFormattingRequest :: String
---     , paramsDocumentFormattingRequest :: DocumentFormattingParams
---     } deriving (Read,Show,Eq)
-
--- $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DocumentFormattingRequest") } ''DocumentFormattingRequest)
-
 type DocumentFormattingRequest  = RequestMessage DocumentFormattingParams
 type DocumentFormattingResponse = ResponseMessage [TextEdit]
 
@@ -2950,14 +2799,6 @@ data DocumentRangeFormattingParams =
     } deriving (Read,Show,Eq)
 
 $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DocumentRangeFormattingParams") } ''DocumentRangeFormattingParams)
-
--- data DocumentRangeFormattingRequest =
---   DocumentRangeFormattingRequest
---     { methodDocumentRangeFormattingRequest :: String
---     , paramsDocumentRangeFormattingRequest :: DocumentRangeFormattingParams
---     } deriving (Read,Show,Eq)
-
--- $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DocumentRangeFormattingRequest") } ''DocumentRangeFormattingRequest)
 
 type DocumentRangeFormattingRequest  = RequestMessage DocumentRangeFormattingParams
 type DocumentRangeFormattingResponse = ResponseMessage [TextEdit]
@@ -3014,14 +2855,6 @@ data DocumentOnTypeFormattingParams =
     } deriving (Read,Show,Eq)
 
 $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DocumentOnTypeFormattingParams") } ''DocumentOnTypeFormattingParams)
-
--- data DocumentOnTypeFormattingRequest =
---   DocumentOnTypeFormattingRequest
---     { methodDocumentOnTypeFormattingRequest :: String
---     , paramsDocumentOnTypeFormattingRequest :: DocumentOnTypeFormattingParams
---     } deriving (Read,Show,Eq)
-
--- $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DocumentOnTypeFormattingRequest") } ''DocumentOnTypeFormattingRequest)
 
 type DocumentOnTypeFormattingRequest  = RequestMessage DocumentOnTypeFormattingParams
 type DocumentOnTypeFormattingResponse = ResponseMessage [TextEdit]
