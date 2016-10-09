@@ -78,7 +78,7 @@ wait mvarDat = go BSL.empty
 
 -- ---------------------------------------------------------------------
 
-sendRequestMessage :: (J.ToJSON a) => J.RequestMessage a
+sendRequestMessage :: (J.ToJSON a) => J.RequestMessage a -> IO ()
 sendRequestMessage res = sendResponse (J.encode res)
 
 -- ---------------------------------------------------------------------
