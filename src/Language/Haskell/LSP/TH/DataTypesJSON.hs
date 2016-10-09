@@ -323,7 +323,7 @@ data Diagnostic =
 $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "Diagnostic") } ''Diagnostic)
 
 instance Default Diagnostic where
-  def = Diagnostic def def 0 "" ""
+  def = Diagnostic def def Nothing Nothing ""
 
 -- ---------------------------------------------------------------------
 {-

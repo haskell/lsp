@@ -8,6 +8,7 @@
 module Language.Haskell.LSP.Control
   (
     run
+  , sendRequestMessage
   , sendResponseMessage
   ) where
 
@@ -74,6 +75,11 @@ wait mvarDat = go BSL.empty
           string "Content-Length: "
           len <- manyTill digit (string _TWO_CRLF)
           return . read $ len
+
+-- ---------------------------------------------------------------------
+
+sendRequestMessage :: (J.ToJSON a) => J.RequestMessage a
+sendRequestMessage res = sendResponse (J.encode res)
 
 -- ---------------------------------------------------------------------
 

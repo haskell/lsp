@@ -37,7 +37,7 @@ run :: IO Int
 run = flip E.catches handlers $ do
 
   -- コマンドライン引数設定
-  args <- getArgs
+  args <- getArgs --
 
   -- INI設定ファイルのRead
   iniSet <- loadIniFile args
