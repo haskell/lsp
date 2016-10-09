@@ -313,10 +313,10 @@ interface Diagnostic {
 -}
 data Diagnostic =
   Diagnostic
-    {  rangeDiagnostic   :: Range
-    , severityDiagnostic :: DiagnosticSeverity
-    , codeDiagnostic     :: Int
-    , sourceDiagnostic   :: String
+    { rangeDiagnostic    :: Range
+    , severityDiagnostic :: Maybe DiagnosticSeverity
+    , codeDiagnostic     :: Maybe String
+    , sourceDiagnostic   :: Maybe String
     , messageDiagnostic  :: String
     } deriving (Show, Read, Eq)
 
