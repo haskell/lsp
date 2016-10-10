@@ -11,6 +11,7 @@ module Main (main) where
 
 import qualified Control.Exception as E
 import qualified Data.ConfigFile as C
+import           Data.Aeson
 import           Data.Default
 import           Data.Either.Utils
 import qualified System.Console.CmdArgs as CMD
@@ -21,6 +22,7 @@ import qualified Language.Haskell.LSP.Argument as A
 import qualified Language.Haskell.LSP.Control  as CTRL
 import qualified Language.Haskell.LSP.Core     as GUI
 import qualified Language.Haskell.LSP.TH.DataTypesJSON as J
+
 
 -- ---------------------------------------------------------------------
 
@@ -64,11 +66,11 @@ hieOptions = def
 hieHandlers :: GUI.Handlers a
 hieHandlers = def {GUI.renameHandler = Just renameRequestHandler }
 
-renameRequestHandler :: a -> J.RenameRequest -> IO J.RenameResponse
-renameRequestHandler _ (J.RequestMessage _ origId _ _) = do
+renameRequestHandler :: GUI.Handler a J.RenameRequest
+renameRequestHandler _ sf (J.RequestMessage _ origId _ _) = do
   let loc = def :: J.Location
       res  = GUI.makeResponseMessage origId loc
-  return res
+  sf (encode res)
 
 -- ---------------------------------------------------------------------
 

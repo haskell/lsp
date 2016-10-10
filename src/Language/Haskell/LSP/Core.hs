@@ -3,13 +3,16 @@
 {-# LANGUAGE MultiWayIf          #-}
 {-# LANGUAGE BinaryLiterals      #-}
 {-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Language.Haskell.LSP.Core (
   handleRequest
 , LanguageContextData(..)
+, Handler
 , Handlers(..)
 , Options(..)
+, OutMessage(..)
 , defaultLanguageContextData
 , initializeRequestHandler
 , makeResponseMessage
@@ -78,35 +81,37 @@ data Options =
 instance Default Options where
   def = Options Nothing Nothing Nothing Nothing Nothing
 
+type Handler a b = a -> (BSL.ByteString -> IO ()) -> b -> IO ()
+
 -- | Callbacks from the language server to the language handler
 data Handlers a =
   Handlers
     {
     -- Capability-advertised handlers
-      hoverHandler                   :: Maybe (a -> J.HoverRequest                    -> IO J.HoverResponse)
-    , completionHandler              :: Maybe (a -> J.CompletionRequest               -> IO J.CompletionResponse)
-    , completionResolveHandler       :: Maybe (a -> J.CompletionItemResolveRequest    -> IO J.CompletionItemResolveResponse)
-    , signatureHelpHandler           :: Maybe (a -> J.SignatureHelpRequest            -> IO J.SignatureHelpResponse)
-    , definitionHandler              :: Maybe (a -> J.DefinitionRequest               -> IO J.DefinitionResponse)
-    , referencesHandler              :: Maybe (a -> J.FindReferencesRequest           -> IO J.FindReferencesResponse)
-    , documentHighlightHandler       :: Maybe (a -> J.DocumentHighlightsRequest       -> IO J.DocumentHighlightsResponse)
-    , documentSymbolHandler          :: Maybe (a -> J.DocumentSymbolsRequest          -> IO J.DocumentSymbolsResponse)
-    , workspaceSymbolHandler         :: Maybe (a -> J.WorkspaceSymbolsRequest         -> IO J.WorkspaceSymbolsResponse)
-    , codeActionHandler              :: Maybe (a -> J.CodeActionRequest               -> IO J.CodeActionResponse)
-    , codeLensHandler                :: Maybe (a -> J.CodeLensRequest                 -> IO J.CodeLensResponse)
-    , codeLensResolveHandler         :: Maybe (a -> J.CodeLensResolveRequest          -> IO J.CodeLensResolveResponse)
-    , documentFormattingHandler      :: Maybe (a -> J.DocumentFormattingRequest       -> IO J.DocumentFormattingResponse)
-    , documentRangeFormattingHandler :: Maybe (a -> J.DocumentRangeFormattingRequest  -> IO J.DocumentRangeFormattingResponse)
-    , documentTypeFormattingHandler  :: Maybe (a -> J.DocumentOnTypeFormattingRequest -> IO J.DocumentOnTypeFormattingResponse)
-    , renameHandler                  :: Maybe (a -> J.RenameRequest                   -> IO J.RenameResponse)
+      hoverHandler                   :: Maybe (Handler a J.HoverRequest)
+    , completionHandler              :: Maybe (Handler a J.CompletionRequest)
+    , completionResolveHandler       :: Maybe (Handler a J.CompletionItemResolveRequest)
+    , signatureHelpHandler           :: Maybe (Handler a J.SignatureHelpRequest)
+    , definitionHandler              :: Maybe (Handler a J.DefinitionRequest)
+    , referencesHandler              :: Maybe (Handler a J.FindReferencesRequest)
+    , documentHighlightHandler       :: Maybe (Handler a J.DocumentHighlightsRequest)
+    , documentSymbolHandler          :: Maybe (Handler a J.DocumentSymbolsRequest)
+    , workspaceSymbolHandler         :: Maybe (Handler a J.WorkspaceSymbolsRequest)
+    , codeActionHandler              :: Maybe (Handler a J.CodeActionRequest)
+    , codeLensHandler                :: Maybe (Handler a J.CodeLensRequest)
+    , codeLensResolveHandler         :: Maybe (Handler a J.CodeLensResolveRequest)
+    , documentFormattingHandler      :: Maybe (Handler a J.DocumentFormattingRequest)
+    , documentRangeFormattingHandler :: Maybe (Handler a J.DocumentRangeFormattingRequest)
+    , documentTypeFormattingHandler  :: Maybe (Handler a J.DocumentOnTypeFormattingRequest)
+    , renameHandler                  :: Maybe (Handler a J.RenameRequest)
 
     -- Notifications from the client
-    , didChangeConfigurationParamsHandler      :: Maybe (a -> J.DidChangeConfigurationParamsNotification -> IO ())
-    , didOpenTextDocumentNotificationHandler   :: Maybe (a -> J.DidOpenTextDocumentNotification          -> IO ())
-    , didChangeTextDocumentNotificationHandler :: Maybe (a -> J.DidChangeTextDocumentNotification        -> IO ())
-    , didCloseTextDocumentNotificationHandler  :: Maybe (a -> J.DidCloseTextDocumentNotification         -> IO ())
-    , didSaveTextDocumentNotificationHandler   :: Maybe (a -> J.DidSaveTextDocumentNotification          -> IO ())
-    , didChangeWatchedFilesNotificationHandler :: Maybe (a -> J.DidChangeWatchedFilesNotification        -> IO ())
+    , didChangeConfigurationParamsHandler      :: Maybe (Handler a J.DidChangeConfigurationParamsNotification)
+    , didOpenTextDocumentNotificationHandler   :: Maybe (Handler a J.DidOpenTextDocumentNotification)
+    , didChangeTextDocumentNotificationHandler :: Maybe (Handler a J.DidChangeTextDocumentNotification)
+    , didCloseTextDocumentNotificationHandler  :: Maybe (Handler a J.DidCloseTextDocumentNotification)
+    , didSaveTextDocumentNotificationHandler   :: Maybe (Handler a J.DidSaveTextDocumentNotification)
+    , didChangeWatchedFilesNotificationHandler :: Maybe (Handler a J.DidChangeWatchedFilesNotification)
     }
 
 instance Default (Handlers a) where
@@ -136,46 +141,74 @@ handlerMap h = MAP.fromList
   , ("textDocument/onTypeFormatting",  hh $ documentTypeFormattingHandler h)
   , ("textDocument/rename",            hh $ renameHandler h)
 
-  , ("workspace/didChangeConfiguration", hn $ didChangeConfigurationParamsHandler h)
-  , ("textDocument/didOpen",             hn $ didOpenTextDocumentNotificationHandler h)
-  , ("textDocument/didChange",           hn $ didChangeTextDocumentNotificationHandler h )
-  , ("textDocument/didClose",            hn $ didCloseTextDocumentNotificationHandler h )
-  , ("textDocument/didSave",             hn $ didSaveTextDocumentNotificationHandler h)
-  , ("workspace/didChangeWatchedFiles",  hn $ didChangeWatchedFilesNotificationHandler h)
+  , ("workspace/didChangeConfiguration", hh $ didChangeConfigurationParamsHandler h)
+  , ("textDocument/didOpen",             hh $ didOpenTextDocumentNotificationHandler h)
+  , ("textDocument/didChange",           hh $ didChangeTextDocumentNotificationHandler h )
+  , ("textDocument/didClose",            hh $ didCloseTextDocumentNotificationHandler h )
+  , ("textDocument/didSave",             hh $ didSaveTextDocumentNotificationHandler h)
+  , ("workspace/didChangeWatchedFiles",  hh $ didChangeWatchedFilesNotificationHandler h)
   ]
 
 -- ---------------------------------------------------------------------
 
-hh :: forall t a b. (J.FromJSON t, J.ToJSON a)
-   => Maybe ( b -> t -> IO a) -> MVar (LanguageContextData b) -> String -> B.ByteString -> IO ()
+hh :: forall a b. (J.FromJSON b)
+   => Maybe (Handler a b) -> MVar (LanguageContextData a) -> String -> B.ByteString -> IO ()
 hh Nothing = \_mvarDat cmd jsonStr -> do
-      let msg = unwords ["no handler for command.", cmd, lbs2str jsonStr]
+      let msg = unwords ["no handler for.", cmd, lbs2str jsonStr]
       sendErrorLog msg
 hh (Just h) = \mvarDat cmd jsonStr -> do
       case J.eitherDecode jsonStr of
         Right req -> do
           ctx <- readMVar mvarDat
-          res <- h (resData ctx) req
-          sendResponse2 mvarDat $ J.encode res
+          h (resData ctx) (resSendResponse ctx) req
         Left  err -> do
           let msg = unwords $ ["parse error.", lbs2str jsonStr, show err] ++ _ERR_MSG_URL
           sendErrorLog msg
 
 -- ---------------------------------------------------------------------
 
-hn :: forall t b. (J.FromJSON t)
-   => Maybe (b -> t -> IO ()) -> MVar (LanguageContextData b) -> String -> B.ByteString -> IO ()
-hn Nothing = \_mvarDat cmd jsonStr -> do
-      let msg = unwords ["no handler for notification.", cmd, lbs2str jsonStr]
-      sendErrorLog msg
-hn (Just h) = \mvarDat _cmd jsonStr -> do
-      case J.eitherDecode jsonStr of
-        Right req -> do
-          ctx <- readMVar mvarDat
-          h (resData ctx) req
-        Left  err -> do
-          let msg = unwords $ ["parse error.", lbs2str jsonStr, show err] ++ _ERR_MSG_URL
-          sendErrorLog msg
+data OutMessage = ReqHover                    J.HoverRequest
+                | ReqCompletion               J.CompletionRequest
+                | ReqCompletionItemResolve    J.CompletionItemResolveRequest
+                | ReqSignatureHelp            J.SignatureHelpRequest
+                | ReqDefinition               J.DefinitionRequest
+                | ReqFindReferences           J.FindReferencesRequest
+                | ReqDocumentHighlights       J.DocumentHighlightsRequest
+                | ReqDocumentSymbols          J.DocumentSymbolsRequest
+                | ReqWorkspaceSymbols         J.WorkspaceSymbolsRequest
+                | ReqCodeAction               J.CodeActionRequest
+                | ReqCodeLens                 J.CodeLensRequest
+                | ReqCodeLensResolve          J.CodeLensResolveRequest
+                | ReqDocumentFormatting       J.DocumentFormattingRequest
+                | ReqDocumentRangeFormatting  J.DocumentRangeFormattingRequest
+                | ReqDocumentOnTypeFormatting J.DocumentOnTypeFormattingRequest
+                | ReqRename                   J.RenameRequest
+                -- responses
+                | RspHover                    J.HoverResponse
+                | RspCompletion               J.CompletionResponse
+                | RspCompletionItemResolve    J.CompletionItemResolveResponse
+                | RspSignatureHelp            J.SignatureHelpResponse
+                | RspDefinition               J.DefinitionResponse
+                | RspFindReferences           J.FindReferencesResponse
+                | RspDocumentHighlights       J.DocumentHighlightsResponse
+                | RspDocumentSymbols          J.DocumentSymbolsResponse
+                | RspWorkspaceSymbols         J.WorkspaceSymbolsResponse
+                | RspCodeAction               J.CodeActionResponse
+                | RspCodeLens                 J.CodeLensResponse
+                | RspCodeLensResolve          J.CodeLensResolveResponse
+                | RspDocumentFormatting       J.DocumentFormattingResponse
+                | RspDocumentRangeFormatting  J.DocumentRangeFormattingResponse
+                | RspDocumentOnTypeFormatting J.DocumentOnTypeFormattingResponse
+                | RspRename                   J.RenameResponse
+
+                -- notifications
+                | NotDidChangeConfigurationParams J.DidChangeConfigurationParamsNotification
+                | NotDidOpenTextDocument          J.DidOpenTextDocumentNotification
+                | NotDidChangeTextDocument        J.DidChangeTextDocumentNotification
+                | NotDidCloseTextDocument         J.DidCloseTextDocumentNotification
+                | NotDidSaveTextDocument          J.DidSaveTextDocumentNotification
+                | NotDidChangeWatchedFiles        J.DidChangeWatchedFilesNotification
+                deriving (Eq,Read,Show)
 
 -- ---------------------------------------------------------------------
 -- |
