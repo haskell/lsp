@@ -45,20 +45,19 @@ run a h o = do
                          { GUI.resSendResponse = sendResponse
                          } )
 
-  wait mvarDat
+  ioLoop mvarDat
 
   return 1
 
 -- ---------------------------------------------------------------------
--- |
---
---
-wait :: MVar (GUI.LanguageContextData a) -> IO ()
-wait mvarDat = go BSL.empty
+
+ioLoop :: MVar (GUI.LanguageContextData a) -> IO ()
+ioLoop mvarDat = go BSL.empty
   where
     go :: BSL.ByteString -> IO ()
     go buf = do
       c <- BSL.hGet stdin 1
+      -- logs $ "ioLoop: got" ++ show c
       let newBuf = BSL.append buf c
       case readContentLength (lbs2str newBuf) of
         Left _ -> go newBuf
@@ -66,7 +65,7 @@ wait mvarDat = go BSL.empty
           cnt <- BSL.hGet stdin len
           logm $ (B.pack "---> ") <> cnt
           GUI.handleRequest mvarDat newBuf cnt
-          wait mvarDat
+          ioLoop mvarDat
 
       where
         readContentLength :: String -> Either ParseError Int
