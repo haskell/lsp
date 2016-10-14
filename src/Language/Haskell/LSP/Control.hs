@@ -23,6 +23,7 @@ import qualified Language.Haskell.LSP.Core as GUI
 import qualified Language.Haskell.LSP.TH.DataTypesJSON as J
 import           Language.Haskell.LSP.Utility
 import           System.IO
+import           System.Log.Logger
 import           Text.Parsec
 
 -- ---------------------------------------------------------------------
@@ -40,6 +41,8 @@ run a h o = do
 
   hSetBuffering stdout NoBuffering
   hSetEncoding  stdout utf8
+
+  GUI.setupLogger "/tmp/hie-vscode.log" DEBUG
 
   mvarDat <- newMVar $ ((GUI.defaultLanguageContextData a h o :: GUI.LanguageContextData a)
                          { GUI.resSendResponse = sendResponse

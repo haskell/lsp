@@ -4,7 +4,7 @@ module Language.Haskell.LSP.Utility where
 -- Based on Phoityne.VSCode.Utility
 
 -- システム
-import Data.Either.Utils
+import           Data.Either.Utils
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.List as L
@@ -16,8 +16,16 @@ import qualified Data.Text.Lazy.Encoding as TLE
 import qualified Data.ConfigFile as CFG
 import qualified Data.Tree as TR
 import qualified Data.ByteString.Lazy.Char8 as B
-import Control.Exception    (bracket)
-import System.IO
+import           Control.Exception (bracket)
+import           System.IO
+import           System.Log.Logger
+import           Language.Haskell.LSP.Constant
+
+-- ---------------------------------------------------------------------
+{-# ANN module ("HLint: ignore Eta reduce"         :: String) #-}
+{-# ANN module ("HLint: ignore Redundant do"       :: String) #-}
+{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
+-- ---------------------------------------------------------------------
 
 -- |
 --  UTF8文字列をByteStringへの変換
@@ -80,10 +88,12 @@ rdrop cnt = reverse . drop cnt . reverse
 -- ---------------------------------------------------------------------
 
 logs :: String -> IO ()
-logs s = logm (B.pack s)
+-- logs s = logm (B.pack s)
+logs s = debugM _LOG_NAME s
 
 logm :: B.ByteString -> IO ()
-logm str = appendFileAndFlush "/tmp/hie-vscode.log" (str <> B.pack "\n")
+-- logm str = appendFileAndFlush "/tmp/hie-vscode.log" (str <> B.pack "\n")
+logm str = logs (B.unpack str)
 
 -- | Append a 'ByteString' to a file.
 appendFileAndFlush :: FilePath -> B.ByteString -> IO ()

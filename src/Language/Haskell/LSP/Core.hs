@@ -16,6 +16,7 @@ module Language.Haskell.LSP.Core (
 , defaultLanguageContextData
 , initializeRequestHandler
 , makeResponseMessage
+, setupLogger
 ) where
 
 import Language.Haskell.LSP.Constant
@@ -40,10 +41,10 @@ import Control.Concurrent
 -- import Data.Char
 -- import Control.Monad
 -- import qualified System.FSNotify as FSN
--- import qualified System.Log.Logger as L
--- import qualified System.Log.Formatter as L
--- import qualified System.Log.Handler as LH
--- import qualified System.Log.Handler.Simple as LHS
+import qualified System.Log.Logger as L
+import qualified System.Log.Formatter as L
+import qualified System.Log.Handler as LH
+import qualified System.Log.Handler.Simple as LHS
 -- import Safe
 -- import Text.Parsec
 import qualified Data.ByteString.Lazy.Char8 as B
@@ -1462,7 +1463,7 @@ addFunctionBreakPointOnGHCi mvarCtx bp@(BreakPointData name _ _ _ _) =
     outHdl msg = do
       sendStdoutEvent mvarCtx msg
       infoM _LOG_NAME msg
-
+-}
 -- |
 --  Loggerのセットアップ
 --
@@ -1485,6 +1486,7 @@ setupLogger logFile level = do
   L.updateGlobalLogger _LOG_NAME $ L.setHandlers [logHandler]
   L.updateGlobalLogger _LOG_NAME $ L.setLevel level
 
+{-
 -- |
 --
 --

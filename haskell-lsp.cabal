@@ -33,10 +33,10 @@ library
                      , ConfigFile
                      , directory
                      , data-default
+                     -- , fast-logger
                      , filepath
                      , fsnotify
                      , hslogger
-                     -- , json-rpc-server
                      , MissingH
                      , mtl
                      , parsec
@@ -62,10 +62,10 @@ executable hie-vscode
                      , ConfigFile
                      , directory
                      , data-default
+                     -- , fast-logger
                      , filepath
                      , fsnotify
                      , hslogger
-                     -- , json-rpc-server
                      , MissingH
                      , mtl
                      , parsec

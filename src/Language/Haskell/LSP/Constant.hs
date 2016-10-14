@@ -20,7 +20,7 @@ _INI_SEC_PHOITYNE = "PHOITYNE"
 --
 --
 _LOG_NAME :: String
-_LOG_NAME = "phoityne"
+_LOG_NAME = "haskell-lsp"
 
 _LOG_FORMAT :: String
 _LOG_FORMAT = "$time [$tid] $prio $loggername - $msg"
