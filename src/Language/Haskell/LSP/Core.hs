@@ -120,7 +120,7 @@ data Handlers a =
     , didChangeWatchedFilesNotificationHandler :: !(Maybe (Handler a J.DidChangeWatchedFilesNotification))
 
     -- Responses to Request messages originated from the server
-    , responseHandler                          :: !(Maybe (Handler a (J.ResponseMessage ())))
+    , responseHandler                          :: !(Maybe (Handler a J.BareResponseMessage))
     }
 
 instance Default (Handlers a) where
@@ -220,6 +220,8 @@ data OutMessage = ReqHover                    J.HoverRequest
                 | NotDidCloseTextDocument         J.DidCloseTextDocumentNotification
                 | NotDidSaveTextDocument          J.DidSaveTextDocumentNotification
                 | NotDidChangeWatchedFiles        J.DidChangeWatchedFilesNotification
+
+                | RspFromClient                   J.BareResponseMessage
                 deriving (Eq,Read,Show)
 
 -- ---------------------------------------------------------------------

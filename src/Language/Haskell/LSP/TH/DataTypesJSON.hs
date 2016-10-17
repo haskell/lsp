@@ -9,7 +9,6 @@ import qualified Data.Aeson as A
 import qualified Data.HashMap.Strict as H
 import qualified Data.Text as T
 
-import Data.Monoid
 import Language.Haskell.LSP.Utility
 import Data.Default
 
@@ -127,6 +126,21 @@ instance (Default a) => Default (ResponseMessage a) where
   def = ResponseMessage "2.0" def def Nothing
 
 type ErrorResponse = ResponseMessage ()
+
+-- ---------------------------------------------------------------------
+
+data BareResponseMessage =
+  BareResponseMessage
+    { jsonrpcBareResponseMessage :: String
+    , idBareResponseMessage :: Int
+    , resultBareResponseMessage :: Maybe A.Object
+    , errorBareResponseMessage  :: Maybe ResponseError
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "BareResponseMessage") } ''BareResponseMessage)
+
+instance Default BareResponseMessage where
+  def = BareResponseMessage "2.0" def def Nothing
 
 -- ---------------------------------------------------------------------
 
