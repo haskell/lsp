@@ -17,15 +17,17 @@ import           Data.Either.Utils
 import qualified System.Console.CmdArgs as CMD
 import           System.Exit
 import qualified System.Log.Logger as L
-
 import qualified Language.Haskell.LSP.Argument as A
 import qualified Language.Haskell.LSP.Control  as CTRL
 import qualified Language.Haskell.LSP.Core     as GUI
 import qualified Language.Haskell.LSP.TH.DataTypesJSON as J
 
-
 -- ---------------------------------------------------------------------
-
+{-# ANN module ("HLint: ignore Eta reduce"         :: String) #-}
+{-# ANN module ("HLint: ignore Redundant do"       :: String) #-}
+{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
+-- ---------------------------------------------------------------------
+--
 main :: IO ()
 main = do
   run >>= \case
@@ -39,7 +41,7 @@ run :: IO Int
 run = flip E.catches handlers $ do
 
   -- コマンドライン引数設定
-  args <- getArgs --
+  args <- getArgs
 
   -- INI設定ファイルのRead
   iniSet <- loadIniFile args

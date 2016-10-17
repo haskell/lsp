@@ -48,6 +48,8 @@ import qualified System.Log.Handler.Simple as LHS
 -- import Safe
 -- import Text.Parsec
 import qualified Data.ByteString.Lazy.Char8 as B
+import qualified Data.HashMap.Strict as HM
+import qualified Data.Text as T
 
 -- ---------------------------------------------------------------------
 {-# ANN module ("HLint: ignore Eta reduce"         :: String) #-}
@@ -82,6 +84,9 @@ data Options =
 instance Default Options where
   def = Options Nothing Nothing Nothing Nothing Nothing
 
+-- | The Handler type captures a function that receives local read-only state
+-- 'a', a function to send a reply message once encoded as a ByteString, and a
+-- received message of type 'b'
 type Handler a b = a -> (BSL.ByteString -> IO ()) -> b -> IO ()
 
 -- | Callbacks from the language server to the language handler
@@ -89,36 +94,39 @@ data Handlers a =
   Handlers
     {
     -- Capability-advertised handlers
-      hoverHandler                   :: Maybe (Handler a J.HoverRequest)
-    , completionHandler              :: Maybe (Handler a J.CompletionRequest)
-    , completionResolveHandler       :: Maybe (Handler a J.CompletionItemResolveRequest)
-    , signatureHelpHandler           :: Maybe (Handler a J.SignatureHelpRequest)
-    , definitionHandler              :: Maybe (Handler a J.DefinitionRequest)
-    , referencesHandler              :: Maybe (Handler a J.FindReferencesRequest)
-    , documentHighlightHandler       :: Maybe (Handler a J.DocumentHighlightsRequest)
-    , documentSymbolHandler          :: Maybe (Handler a J.DocumentSymbolsRequest)
-    , workspaceSymbolHandler         :: Maybe (Handler a J.WorkspaceSymbolsRequest)
-    , codeActionHandler              :: Maybe (Handler a J.CodeActionRequest)
-    , codeLensHandler                :: Maybe (Handler a J.CodeLensRequest)
-    , codeLensResolveHandler         :: Maybe (Handler a J.CodeLensResolveRequest)
-    , documentFormattingHandler      :: Maybe (Handler a J.DocumentFormattingRequest)
-    , documentRangeFormattingHandler :: Maybe (Handler a J.DocumentRangeFormattingRequest)
-    , documentTypeFormattingHandler  :: Maybe (Handler a J.DocumentOnTypeFormattingRequest)
-    , renameHandler                  :: Maybe (Handler a J.RenameRequest)
+      hoverHandler                   :: !(Maybe (Handler a J.HoverRequest))
+    , completionHandler              :: !(Maybe (Handler a J.CompletionRequest))
+    , completionResolveHandler       :: !(Maybe (Handler a J.CompletionItemResolveRequest))
+    , signatureHelpHandler           :: !(Maybe (Handler a J.SignatureHelpRequest))
+    , definitionHandler              :: !(Maybe (Handler a J.DefinitionRequest))
+    , referencesHandler              :: !(Maybe (Handler a J.FindReferencesRequest))
+    , documentHighlightHandler       :: !(Maybe (Handler a J.DocumentHighlightsRequest))
+    , documentSymbolHandler          :: !(Maybe (Handler a J.DocumentSymbolsRequest))
+    , workspaceSymbolHandler         :: !(Maybe (Handler a J.WorkspaceSymbolsRequest))
+    , codeActionHandler              :: !(Maybe (Handler a J.CodeActionRequest))
+    , codeLensHandler                :: !(Maybe (Handler a J.CodeLensRequest))
+    , codeLensResolveHandler         :: !(Maybe (Handler a J.CodeLensResolveRequest))
+    , documentFormattingHandler      :: !(Maybe (Handler a J.DocumentFormattingRequest))
+    , documentRangeFormattingHandler :: !(Maybe (Handler a J.DocumentRangeFormattingRequest))
+    , documentTypeFormattingHandler  :: !(Maybe (Handler a J.DocumentOnTypeFormattingRequest))
+    , renameHandler                  :: !(Maybe (Handler a J.RenameRequest))
 
     -- Notifications from the client
-    , didChangeConfigurationParamsHandler      :: Maybe (Handler a J.DidChangeConfigurationParamsNotification)
-    , didOpenTextDocumentNotificationHandler   :: Maybe (Handler a J.DidOpenTextDocumentNotification)
-    , didChangeTextDocumentNotificationHandler :: Maybe (Handler a J.DidChangeTextDocumentNotification)
-    , didCloseTextDocumentNotificationHandler  :: Maybe (Handler a J.DidCloseTextDocumentNotification)
-    , didSaveTextDocumentNotificationHandler   :: Maybe (Handler a J.DidSaveTextDocumentNotification)
-    , didChangeWatchedFilesNotificationHandler :: Maybe (Handler a J.DidChangeWatchedFilesNotification)
+    , didChangeConfigurationParamsHandler      :: !(Maybe (Handler a J.DidChangeConfigurationParamsNotification))
+    , didOpenTextDocumentNotificationHandler   :: !(Maybe (Handler a J.DidOpenTextDocumentNotification))
+    , didChangeTextDocumentNotificationHandler :: !(Maybe (Handler a J.DidChangeTextDocumentNotification))
+    , didCloseTextDocumentNotificationHandler  :: !(Maybe (Handler a J.DidCloseTextDocumentNotification))
+    , didSaveTextDocumentNotificationHandler   :: !(Maybe (Handler a J.DidSaveTextDocumentNotification))
+    , didChangeWatchedFilesNotificationHandler :: !(Maybe (Handler a J.DidChangeWatchedFilesNotification))
+
+    -- Responses to Request messages originated from the server
+    , responseHandler                          :: !(Maybe (Handler a (J.ResponseMessage ())))
     }
 
 instance Default (Handlers a) where
   def = Handlers Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
                  Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
-                 Nothing Nothing Nothing Nothing
+                 Nothing Nothing Nothing Nothing Nothing
 
 -- ---------------------------------------------------------------------
 
@@ -148,6 +156,9 @@ handlerMap h = MAP.fromList
   , ("textDocument/didClose",            hh $ didCloseTextDocumentNotificationHandler h )
   , ("textDocument/didSave",             hh $ didSaveTextDocumentNotificationHandler h)
   , ("workspace/didChangeWatchedFiles",  hh $ didChangeWatchedFilesNotificationHandler h)
+
+  -- Next is not actually a method value, just a proxy for ResponseMessage
+  , ("response",                         hh $ responseHandler h)
   ]
 
 -- ---------------------------------------------------------------------
@@ -310,23 +321,35 @@ defaultLanguageContextData a h o = LanguageContextData _INITIAL_RESPONSE_SEQUENC
 -- getKeyOfSourcePosition (G.SourcePosition file line _ _ _) = (file, line)
 
 
--- |
---
---
+-- ---------------------------------------------------------------------
+
 handleRequest :: forall a. MVar (LanguageContextData a) -> BSL.ByteString -> BSL.ByteString -> IO ()
 handleRequest mvarDat contLenStr' jsonStr' = do
+  {-
+  Message Types we must handle are the following
+
+  Request      | jsonrpc | id | method | params?
+  Response     | jsonrpc | id |        |         | response? | error?
+  Notification | jsonrpc |    | method | params?
+
+  -}
   -- TODO: handle client responses to stuff we have sent. Such as: {"jsonrpc":"2.0","id":1,"result":{"title":"action item 2"}}
 
   -- logm $ (B.pack $ "handleRequest:req=") <> jsonStr
-  case J.eitherDecode jsonStr' :: Either String J.Request of
+  case J.eitherDecode jsonStr' :: Either String J.Object of
     Left  err -> do
       let msg =  unwords [ "request request parse error.", lbs2str contLenStr', lbs2str jsonStr', show err]
               ++ L.intercalate "\n" ("" : "" : _ERR_MSG_URL)
               ++ "\n"
       sendErrorLog msg
 
-    Right (J.Request cmd) -> do
-      handle jsonStr' cmd
+    Right o -> do
+      case HM.lookup "method" o of
+        Just (J.String cmd) -> handle jsonStr' (T.unpack cmd)
+        Just oops -> logs $ "got strange method param, ignoring:" ++ show oops
+        Nothing -> do
+          logs $ "Got reply message:" ++ show jsonStr'
+          handle jsonStr' "response"
 
   where
     helper :: J.FromJSON b => B.ByteString -> (MVar (LanguageContextData a) -> b -> IO ())
@@ -337,6 +360,17 @@ handleRequest mvarDat contLenStr' jsonStr' = do
       Left  err -> do
         let msg = unwords $ ["parse error.", lbs2str contLenStr', lbs2str jsonStr', show err] ++ _ERR_MSG_URL
         sendErrorLog msg
+
+    -- ---------------------------------
+
+    handleResponse jsonStr = do
+      ctx <- readMVar mvarDat
+      let h = resHandlers ctx
+      case MAP.lookup "response" (handlerMap h) of
+        Just f -> f mvarDat "response" jsonStr
+        Nothing -> do
+          let msg = unwords ["unknown request command.", "response", lbs2str contLenStr', lbs2str jsonStr]
+          sendErrorLog msg
 
     -- ---------------------------------
 
