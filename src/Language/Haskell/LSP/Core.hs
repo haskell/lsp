@@ -17,6 +17,9 @@ module Language.Haskell.LSP.Core (
 , initializeRequestHandler
 , makeResponseMessage
 , setupLogger
+, sendErrorResponseS
+, sendErrorLogS
+, sendErrorShowS
 ) where
 
 import Language.Haskell.LSP.Constant
@@ -473,17 +476,26 @@ sendStdoutEvent mvarCtx msg = do
 --
 --
 sendErrorResponse :: Int -> String -> IO ()
-sendErrorResponse origId msg = do
-  sendEvent $ J.encode (J.ResponseMessage "2.0" origId Nothing
+sendErrorResponse origId msg = sendErrorResponseS sendEvent origId msg
+
+sendErrorResponseS :: (B.ByteString -> IO ()) -> Int -> String -> IO ()
+sendErrorResponseS sf origId msg = do
+  sf $ J.encode (J.ResponseMessage "2.0" origId Nothing
                          (Just $ J.ResponseError J.InternalError msg Nothing) :: J.ErrorResponse)
 
 sendErrorLog :: String -> IO ()
-sendErrorLog msg =
-  sendEvent $ J.encode (J.defLogMessage J.MtError msg)
+sendErrorLog msg = sendErrorLogS sendEvent msg
+
+sendErrorLogS :: (B.ByteString -> IO ()) -> String -> IO ()
+sendErrorLogS sf msg =
+  sf $ J.encode (J.defLogMessage J.MtError msg)
 
 sendErrorShow :: String -> IO ()
-sendErrorShow msg =
-  sendEvent $ J.encode (J.defShowMessage J.MtError msg)
+sendErrorShow msg = sendErrorShowS sendEvent msg
+
+sendErrorShowS :: (B.ByteString -> IO ()) -> String -> IO ()
+sendErrorShowS sf msg =
+  sf $ J.encode (J.defShowMessage J.MtError msg)
 
 -- ---------------------------------------------------------------------
 
