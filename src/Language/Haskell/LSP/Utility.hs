@@ -4,22 +4,22 @@ module Language.Haskell.LSP.Utility where
 -- Based on Phoityne.VSCode.Utility
 
 -- システム
+import           Control.Exception (bracket)
+import qualified Data.ByteString            as BS
+import qualified Data.ByteString.Lazy       as LBS
+import qualified Data.ByteString.Lazy.Char8 as B
+import qualified Data.ConfigFile as CFG
 import           Data.Either.Utils
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Lazy as LBS
 import qualified Data.List as L
 import           Data.Monoid
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Encoding as TLE
-import qualified Data.ConfigFile as CFG
 import qualified Data.Tree as TR
-import qualified Data.ByteString.Lazy.Char8 as B
-import           Control.Exception (bracket)
+import           Language.Haskell.LSP.Constant
 import           System.IO
 import           System.Log.Logger
-import           Language.Haskell.LSP.Constant
 
 -- ---------------------------------------------------------------------
 {-# ANN module ("HLint: ignore Eta reduce"         :: String) #-}
@@ -92,8 +92,7 @@ logs :: String -> IO ()
 logs s = debugM _LOG_NAME s
 
 logm :: B.ByteString -> IO ()
--- logm str = appendFileAndFlush "/tmp/hie-vscode.log" (str <> B.pack "\n")
-logm str = logs (B.unpack str)
+logm str = logs (lbs2str str)
 
 -- | Append a 'ByteString' to a file.
 appendFileAndFlush :: FilePath -> B.ByteString -> IO ()
