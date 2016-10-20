@@ -122,6 +122,8 @@ data Handlers a =
     , didSaveTextDocumentNotificationHandler   :: !(Maybe (Handler a J.DidSaveTextDocumentNotification))
     , didChangeWatchedFilesNotificationHandler :: !(Maybe (Handler a J.DidChangeWatchedFilesNotification))
 
+    , cancelNotificationHandler                :: !(Maybe (Handler a J.CancelNotification))
+
     -- Responses to Request messages originated from the server
     , responseHandler                          :: !(Maybe (Handler a J.BareResponseMessage))
     }
@@ -129,7 +131,7 @@ data Handlers a =
 instance Default (Handlers a) where
   def = Handlers Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
                  Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
-                 Nothing Nothing Nothing Nothing Nothing
+                 Nothing Nothing Nothing Nothing Nothing Nothing
 
 -- ---------------------------------------------------------------------
 
@@ -159,6 +161,8 @@ handlerMap h = MAP.fromList
   , ("textDocument/didClose",            hh $ didCloseTextDocumentNotificationHandler h )
   , ("textDocument/didSave",             hh $ didSaveTextDocumentNotificationHandler h)
   , ("workspace/didChangeWatchedFiles",  hh $ didChangeWatchedFilesNotificationHandler h)
+
+  , ("$/cancelRequest",                  hh $ cancelNotificationHandler h)
 
   -- Next is not actually a method value, just a proxy for ResponseMessage
   , ("response",                         hh $ responseHandler h)
@@ -223,6 +227,8 @@ data OutMessage = ReqHover                    J.HoverRequest
                 | NotDidCloseTextDocument         J.DidCloseTextDocumentNotification
                 | NotDidSaveTextDocument          J.DidSaveTextDocumentNotification
                 | NotDidChangeWatchedFiles        J.DidChangeWatchedFilesNotification
+
+                | NotCancelRequest                J.CancelNotification
 
                 | RspFromClient                   J.BareResponseMessage
                 deriving (Eq,Read,Show)

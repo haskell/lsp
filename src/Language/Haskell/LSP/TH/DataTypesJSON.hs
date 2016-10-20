@@ -158,6 +158,43 @@ instance (Default a) => Default (NotificationMessage a) where
 
 -- ---------------------------------------------------------------------
 {-
+Cancellation Support
+
+https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#cancellation-support
+
+    New: The base protocol now offers support for request cancellation. To
+    cancel a request, a notification message with the following properties is
+    sent:
+
+Notification:
+
+    method: '$/cancelRequest'
+    params: CancelParams defined as follows:
+
+interface CancelParams {
+    /**
+     * The request id to cancel.
+     */
+    id: number | string;
+}
+
+A request that got canceled still needs to return from the server and send a
+response back. It can not be left open / hanging. This is in line with the JSON
+RPC protocol that requires that every request sends a response back. In addition
+it allows for returning partial results on cancel.
+-}
+
+data CancelParams =
+  CancelParams
+    { idCancelParams :: Int
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "CancelParams") } ''CancelParams)
+
+type CancelNotification = NotificationMessage CancelParams
+
+-- ---------------------------------------------------------------------
+{-
 https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#position
 
 Position in a text document expressed as zero-based line and character offset. A
