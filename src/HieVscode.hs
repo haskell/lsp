@@ -47,7 +47,7 @@ run = flip E.catches handlers $ do
   iniSet <- loadIniFile args
 
   flip E.finally finalProc $ do
-    CTRL.run () hieHandlers hieOptions
+    CTRL.run (return ()) () hieHandlers hieOptions
 
   where
     handlers = [ E.Handler helpExcept

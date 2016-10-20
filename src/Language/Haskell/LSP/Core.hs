@@ -30,7 +30,7 @@ import Data.Default
 import Data.Monoid
 import System.IO
 -- import System.FilePath
--- import System.Directory
+import System.Directory
 import System.Exit
 import System.Log.Logger
 import qualified Data.Aeson as J
@@ -171,7 +171,7 @@ hh :: forall a b. (J.FromJSON b)
 hh Nothing = \_mvarDat cmd jsonStr -> do
       let msg = unwords ["no handler for.", cmd, lbs2str jsonStr]
       sendErrorLog msg
-hh (Just h) = \mvarDat cmd jsonStr -> do
+hh (Just h) = \mvarDat _cmd jsonStr -> do
       case J.eitherDecode jsonStr of
         Right req -> do
           ctx <- readMVar mvarDat
@@ -328,8 +328,8 @@ defaultLanguageContextData a h o = LanguageContextData _INITIAL_RESPONSE_SEQUENC
 
 -- ---------------------------------------------------------------------
 
-handleRequest :: forall a. MVar (LanguageContextData a) -> BSL.ByteString -> BSL.ByteString -> IO ()
-handleRequest mvarDat contLenStr' jsonStr' = do
+handleRequest :: forall a. IO () -> MVar (LanguageContextData a) -> BSL.ByteString -> BSL.ByteString -> IO ()
+handleRequest dispatcherProc mvarDat contLenStr' jsonStr' = do
   {-
   Message Types we must handle are the following
 
@@ -368,19 +368,8 @@ handleRequest mvarDat contLenStr' jsonStr' = do
 
     -- ---------------------------------
 
-    handleResponse jsonStr = do
-      ctx <- readMVar mvarDat
-      let h = resHandlers ctx
-      case MAP.lookup "response" (handlerMap h) of
-        Just f -> f mvarDat "response" jsonStr
-        Nothing -> do
-          let msg = unwords ["unknown request command.", "response", lbs2str contLenStr', lbs2str jsonStr]
-          sendErrorLog msg
-
-    -- ---------------------------------
-
     -- Server life cycle handlers
-    handle jsonStr "initialize" = helper jsonStr initializeRequestHandler
+    handle jsonStr "initialize" = helper jsonStr (initializeRequestHandler dispatcherProc)
     handle jsonStr "shutdown"   = helper jsonStr shutdownRequestHandler
     handle _jsonStr "exit" = do
       logm $ B.pack "Got exit, exiting"
@@ -513,13 +502,27 @@ defaultErrorHandlers origId req = [ E.Handler someExcept ]
 
 -- |
 --
-initializeRequestHandler :: MVar (LanguageContextData a) -> J.InitializeRequest -> IO ()
-initializeRequestHandler mvarCtx req@(J.RequestMessage _ origId _ _) =
+initializeRequestHandler :: IO () -> MVar (LanguageContextData a) -> J.InitializeRequest -> IO ()
+initializeRequestHandler dispatcherProc mvarCtx req@(J.RequestMessage _ origId _ mp) =
   flip E.catches (defaultErrorHandlers origId req) $ do
 
     ctx <- readMVar mvarCtx
 
-    let --  capa = def { J.definitionProvider = Just True, J.renameProvider = Just True}
+    case mp of
+      Nothing -> return ()
+      Just params -> do
+        modifyMVar_ mvarCtx (\c -> return c { resRootPath = J.rootPathInitializeRequestArguments params})
+        case J.rootPathInitializeRequestArguments params of
+          Nothing -> return ()
+          Just dir -> do
+            logs $ "initializeRequestHandler: setting current dir to project root:" ++ dir
+            setCurrentDirectory dir
+
+    -- Launch the given process once the project root directory has been set
+    logs "initializeRequestHandler: calling dispatcherProc"
+    dispatcherProc
+
+    let
       h = resHandlers ctx
       o = resOptions  ctx
 

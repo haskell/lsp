@@ -29,11 +29,12 @@ import           Text.Parsec
 -- ---------------------------------------------------------------------
 
 run :: forall a.
-       a
+       IO () -- ^ function to be called once initialize has been received from the client
+    -> a
     -> GUI.Handlers a
     -> GUI.Options
     -> IO Int         -- exit code
-run a h o = do
+run dp a h o = do
 
   logm $ B.pack "\n\n\n\n\nStarting up server ..."
   hSetBuffering stdin NoBuffering
@@ -48,14 +49,14 @@ run a h o = do
                          { GUI.resSendResponse = sendResponse
                          } )
 
-  ioLoop mvarDat
+  ioLoop dp mvarDat
 
   return 1
 
 -- ---------------------------------------------------------------------
 
-ioLoop :: MVar (GUI.LanguageContextData a) -> IO ()
-ioLoop mvarDat = go BSL.empty
+ioLoop :: IO () -> MVar (GUI.LanguageContextData a) -> IO ()
+ioLoop dispatcherProc mvarDat = go BSL.empty
   where
     go :: BSL.ByteString -> IO ()
     go buf = do
@@ -67,8 +68,8 @@ ioLoop mvarDat = go BSL.empty
         Right len -> do
           cnt <- BSL.hGet stdin len
           logm $ (B.pack "---> ") <> cnt
-          GUI.handleRequest mvarDat newBuf cnt
-          ioLoop mvarDat
+          GUI.handleRequest dispatcherProc mvarDat newBuf cnt
+          ioLoop dispatcherProc mvarDat
 
       where
         readContentLength :: String -> Either ParseError Int
