@@ -2928,7 +2928,7 @@ instance Default RenameRequestParams where
 -- {\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"textDocument/rename\",\"params\":{\"textDocument\":{\"uri\":\"file:///home/alanz/mysrc/github/alanz/haskell-lsp/src/HieVscode.hs\"},\"position\":{\"line\":37,\"character\":17},\"newName\":\"getArgs'\"}}
 
 type RenameRequest  = RequestMessage RenameRequestParams
-type RenameResponse = ResponseMessage Location
+type RenameResponse = ResponseMessage WorkspaceEdit
 
 -- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
