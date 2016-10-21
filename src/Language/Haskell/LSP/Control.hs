@@ -17,7 +17,6 @@ import           Control.Concurrent
 import qualified Data.Aeson as J
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as B
-import           Data.Default
 import           Data.Monoid
 import qualified Language.Haskell.LSP.Core as GUI
 import qualified Language.Haskell.LSP.TH.DataTypesJSON as J
@@ -45,7 +44,7 @@ run dp a h o = do
 
   GUI.setupLogger "/tmp/hie-vscode.log" DEBUG
 
-  mvarDat <- newMVar $ ((GUI.defaultLanguageContextData a h o :: GUI.LanguageContextData a)
+  mvarDat <- newMVar ((GUI.defaultLanguageContextData a h o :: GUI.LanguageContextData a)
                          { GUI.resSendResponse = sendResponse
                          } )
 
@@ -76,7 +75,7 @@ ioLoop dispatcherProc mvarDat = go BSL.empty
         readContentLength = parse parser "readContentLength"
 
         parser = do
-          string "Content-Length: "
+          _ <- string "Content-Length: "
           len <- manyTill digit (string _TWO_CRLF)
           return . read $ len
 
@@ -96,8 +95,8 @@ sendResponseMessage :: (J.ToJSON a) => J.ResponseMessage a -> IO ()
 sendResponseMessage res = sendResponse (J.encode res)
 
 -- ---------------------------------------------------------------------
--- |
---
+
+-- | Send a message with the required JSON 2.0 Content-Length header
 sendResponse :: BSL.ByteString -> IO ()
 sendResponse str = do
   BSL.hPut stdout $ BSL.append "Content-Length: " $ str2lbs $ show (BSL.length str)
@@ -106,9 +105,6 @@ sendResponse str = do
   hFlush stdout
   logm $ B.pack "<--2--" <> str
 
--- |
---
---
 _TWO_CRLF :: String
 _TWO_CRLF = "\r\n\r\n"
 

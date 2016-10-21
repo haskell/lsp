@@ -36,7 +36,7 @@ data RequestMessage a =
 
 $(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "RequestMessage") } ''RequestMessage)
 
-instance (Default a) => Default (RequestMessage a) where
+instance Default (RequestMessage a) where
   def = RequestMessage "2.0" def def def
 
 -- ---------------------------------------------------------------------
@@ -122,7 +122,7 @@ data ResponseMessage a =
 
 $(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "ResponseMessage") } ''ResponseMessage)
 
-instance (Default a) => Default (ResponseMessage a) where
+instance Default (ResponseMessage a) where
   def = ResponseMessage "2.0" def def Nothing
 
 type ErrorResponse = ResponseMessage ()
@@ -153,7 +153,7 @@ data NotificationMessage a =
 
 $(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "NotificationMessage") } ''NotificationMessage)
 
-instance (Default a) => Default (NotificationMessage a) where
+instance Default (NotificationMessage a) where
   def = NotificationMessage "2.0" def Nothing
 
 -- ---------------------------------------------------------------------
