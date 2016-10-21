@@ -369,12 +369,12 @@ sendResponseInternal str = do
 --
 --
 sendErrorResponse :: Int -> String -> IO ()
-sendErrorResponse origId msg = sendErrorResponseS sendEvent origId msg
+sendErrorResponse origId msg = sendErrorResponseS sendEvent origId J.InternalError msg
 
-sendErrorResponseS :: (B.ByteString -> IO ()) -> Int -> String -> IO ()
-sendErrorResponseS sf origId msg = do
+sendErrorResponseS :: (B.ByteString -> IO ()) -> Int -> J.ErrorCode -> String -> IO ()
+sendErrorResponseS sf origId err msg = do
   sf $ J.encode (J.ResponseMessage "2.0" origId Nothing
-                         (Just $ J.ResponseError J.InternalError msg Nothing) :: J.ErrorResponse)
+                         (Just $ J.ResponseError err msg Nothing) :: J.ErrorResponse)
 
 sendErrorLog :: String -> IO ()
 sendErrorLog msg = sendErrorLogS sendEvent msg
