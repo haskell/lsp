@@ -1919,16 +1919,10 @@ type MarkedString = string | { language: string; value: string };
     request.
 -}
 
--- data HoverRequest =
---   HoverRequest
---     { methodHoverRequest :: String
---     , paramsHoverRequest :: TextDocumentPositionParams
---     } deriving (Read,Show,Eq)
-
--- $(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "HoverRequest") } ''HoverRequest)
 type HoverRequest = RequestMessage TextDocumentPositionParams
 
 data MarkedString =
+  -- TODO: Add the plain string variant too
   MarkedString
     { languageMarkedString :: String
     , valueMarkedString    :: String
