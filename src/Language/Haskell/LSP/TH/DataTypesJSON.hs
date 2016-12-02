@@ -1849,7 +1849,7 @@ data CompletionResponseResult
   | Completions [CompletionItem]
   deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "CompletionResponseResult") } ''CompletionResponseResult)
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "CompletionResponseResult"), sumEncoding = UntaggedValue } ''CompletionResponseResult)
 
 type CompletionResponse = ResponseMessage CompletionResponseResult
 
