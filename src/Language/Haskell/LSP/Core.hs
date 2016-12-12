@@ -458,11 +458,11 @@ initializeRequestHandler dispatcherProc mvarCtx req@(J.RequestMessage _ origId _
     sendResponse2 mvarCtx $ J.encode res
 
     -- ++AZ++ experimenting
-    let
-      ais = Just [J.MessageActionItem "action item 1", J.MessageActionItem "action item 2"]
-      p   = J.ShowMessageRequestParams J.MtWarning "playing with ShowMessageRequest" ais
-      smr = J.RequestMessage "2.0" 1 "window/showMessageRequest" (Just p)
-    sendEvent $ J.encode smr
+    -- let
+    --   ais = Just [J.MessageActionItem "action item 1", J.MessageActionItem "action item 2"]
+    --   p   = J.ShowMessageRequestParams J.MtWarning "playing with ShowMessageRequest" ais
+    --   smr = J.RequestMessage "2.0" 1 "window/showMessageRequest" (Just p)
+    -- sendEvent $ J.encode smr
 
 
 -- |

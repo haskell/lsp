@@ -35,6 +35,8 @@ run :: forall a.
     -> IO Int         -- exit code
 run dp a h o = do
 
+  GUI.setupLogger "/tmp/hie-vscode.log" DEBUG
+
   logm $ B.pack "\n\n\n\n\nStarting up server ..."
   hSetBuffering stdin NoBuffering
   hSetEncoding  stdin utf8
@@ -42,7 +44,6 @@ run dp a h o = do
   hSetBuffering stdout NoBuffering
   hSetEncoding  stdout utf8
 
-  GUI.setupLogger "/tmp/hie-vscode.log" DEBUG
 
   mvarDat <- newMVar ((GUI.defaultLanguageContextData a h o :: GUI.LanguageContextData a)
                          { GUI.resSendResponse = sendResponse

@@ -659,14 +659,14 @@ data InitializeRequestArguments =
   , rootPathInitializeRequestArguments     :: Maybe String
   , capabilitiesInitializeRequestArguments :: A.Object -- None currently defined, but empty object sent
   , initializationOptionsInitializeRequestArguments :: Maybe A.Object
-  , traceInitializeRequestArguments        :: String -- observed to be present in the wild
+  -- , traceInitializeRequestArguments        :: String -- observed to be present in the wild
   } deriving (Show, Read, Eq)
 
 
 $(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "InitializeRequestArguments") } ''InitializeRequestArguments)
 
 instance Default InitializeRequestArguments where
-  def = InitializeRequestArguments 0 mempty mempty mempty mempty
+  def = InitializeRequestArguments 0 mempty mempty mempty
 
 -- ---------------------------------------------------------------------
 
