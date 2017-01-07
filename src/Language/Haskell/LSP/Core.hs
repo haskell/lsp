@@ -167,7 +167,7 @@ handlerMap h = MAP.fromList
 hh :: forall a b. (J.FromJSON b)
    => Maybe (Handler a b) -> MVar (LanguageContextData a) -> String -> B.ByteString -> IO ()
 hh Nothing = \_mvarDat cmd jsonStr -> do
-      let msg = unwords ["no handler for.", cmd, lbs2str jsonStr]
+      let msg = unwords ["haskell-lsp:no handler for.", cmd, lbs2str jsonStr]
       sendErrorLog msg
 hh (Just h) = \mvarDat _cmd jsonStr -> do
       case J.eitherDecode jsonStr of
@@ -175,7 +175,7 @@ hh (Just h) = \mvarDat _cmd jsonStr -> do
           ctx <- readMVar mvarDat
           h (resData ctx) (resSendResponse ctx) req
         Left  err -> do
-          let msg = unwords $ ["parse error.", lbs2str jsonStr, show err] ++ _ERR_MSG_URL
+          let msg = unwords $ ["haskell-lsp:parse error.", lbs2str jsonStr, show err] ++ _ERR_MSG_URL
           sendErrorLog msg
 
 -- ---------------------------------------------------------------------
@@ -305,7 +305,7 @@ handleRequest dispatcherProc mvarDat contLenStr' jsonStr' = do
       Right req -> do
         requestHandler mvarDat req
       Left  err -> do
-        let msg = unwords $ ["parse error.", lbs2str contLenStr', lbs2str jsonStr', show err] ++ _ERR_MSG_URL
+        let msg = unwords $ ["haskell-lsp:parse error.", lbs2str contLenStr', lbs2str jsonStr', show err] ++ _ERR_MSG_URL
         sendErrorLog msg
 
     -- ---------------------------------
