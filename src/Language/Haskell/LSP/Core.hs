@@ -53,14 +53,13 @@ import qualified Data.Text as T
 -- ---------------------------------------------------------------------
 
 -- | state used by the LSP dispatcher to manage the message loop
-data LanguageContextData a =
+data LanguageContextData =
   LanguageContextData {
     resSeqDebugContextData :: !Int
   , resRootPath            :: !(Maybe FilePath)
-  , resHandlers            :: !(Handlers a)
+  , resHandlers            :: !Handlers
   , resOptions             :: !Options
   , resSendResponse        :: !(BSL.ByteString -> IO ())
-  , resData                :: !a
   }
 
 -- ---------------------------------------------------------------------
@@ -83,53 +82,53 @@ instance Default Options where
 -- | The Handler type captures a function that receives local read-only state
 -- 'a', a function to send a reply message once encoded as a ByteString, and a
 -- received message of type 'b'
-type Handler a b = a -> (BSL.ByteString -> IO ()) -> b -> IO ()
+type Handler b = (BSL.ByteString -> IO ()) -> b -> IO ()
 
 -- | Callbacks from the language server to the language handler
-data Handlers a =
+data Handlers =
   Handlers
     {
     -- Capability-advertised handlers
-      hoverHandler                   :: !(Maybe (Handler a J.HoverRequest))
-    , completionHandler              :: !(Maybe (Handler a J.CompletionRequest))
-    , completionResolveHandler       :: !(Maybe (Handler a J.CompletionItemResolveRequest))
-    , signatureHelpHandler           :: !(Maybe (Handler a J.SignatureHelpRequest))
-    , definitionHandler              :: !(Maybe (Handler a J.DefinitionRequest))
-    , referencesHandler              :: !(Maybe (Handler a J.FindReferencesRequest))
-    , documentHighlightHandler       :: !(Maybe (Handler a J.DocumentHighlightsRequest))
-    , documentSymbolHandler          :: !(Maybe (Handler a J.DocumentSymbolsRequest))
-    , workspaceSymbolHandler         :: !(Maybe (Handler a J.WorkspaceSymbolsRequest))
-    , codeActionHandler              :: !(Maybe (Handler a J.CodeActionRequest))
-    , codeLensHandler                :: !(Maybe (Handler a J.CodeLensRequest))
-    , codeLensResolveHandler         :: !(Maybe (Handler a J.CodeLensResolveRequest))
-    , documentFormattingHandler      :: !(Maybe (Handler a J.DocumentFormattingRequest))
-    , documentRangeFormattingHandler :: !(Maybe (Handler a J.DocumentRangeFormattingRequest))
-    , documentTypeFormattingHandler  :: !(Maybe (Handler a J.DocumentOnTypeFormattingRequest))
-    , renameHandler                  :: !(Maybe (Handler a J.RenameRequest))
+      hoverHandler                   :: !(Maybe (Handler J.HoverRequest))
+    , completionHandler              :: !(Maybe (Handler J.CompletionRequest))
+    , completionResolveHandler       :: !(Maybe (Handler J.CompletionItemResolveRequest))
+    , signatureHelpHandler           :: !(Maybe (Handler J.SignatureHelpRequest))
+    , definitionHandler              :: !(Maybe (Handler J.DefinitionRequest))
+    , referencesHandler              :: !(Maybe (Handler J.FindReferencesRequest))
+    , documentHighlightHandler       :: !(Maybe (Handler J.DocumentHighlightsRequest))
+    , documentSymbolHandler          :: !(Maybe (Handler J.DocumentSymbolsRequest))
+    , workspaceSymbolHandler         :: !(Maybe (Handler J.WorkspaceSymbolsRequest))
+    , codeActionHandler              :: !(Maybe (Handler J.CodeActionRequest))
+    , codeLensHandler                :: !(Maybe (Handler J.CodeLensRequest))
+    , codeLensResolveHandler         :: !(Maybe (Handler J.CodeLensResolveRequest))
+    , documentFormattingHandler      :: !(Maybe (Handler J.DocumentFormattingRequest))
+    , documentRangeFormattingHandler :: !(Maybe (Handler J.DocumentRangeFormattingRequest))
+    , documentTypeFormattingHandler  :: !(Maybe (Handler J.DocumentOnTypeFormattingRequest))
+    , renameHandler                  :: !(Maybe (Handler J.RenameRequest))
 
     -- Notifications from the client
-    , didChangeConfigurationParamsHandler      :: !(Maybe (Handler a J.DidChangeConfigurationParamsNotification))
-    , didOpenTextDocumentNotificationHandler   :: !(Maybe (Handler a J.DidOpenTextDocumentNotification))
-    , didChangeTextDocumentNotificationHandler :: !(Maybe (Handler a J.DidChangeTextDocumentNotification))
-    , didCloseTextDocumentNotificationHandler  :: !(Maybe (Handler a J.DidCloseTextDocumentNotification))
-    , didSaveTextDocumentNotificationHandler   :: !(Maybe (Handler a J.DidSaveTextDocumentNotification))
-    , didChangeWatchedFilesNotificationHandler :: !(Maybe (Handler a J.DidChangeWatchedFilesNotification))
+    , didChangeConfigurationParamsHandler      :: !(Maybe (Handler J.DidChangeConfigurationParamsNotification))
+    , didOpenTextDocumentNotificationHandler   :: !(Maybe (Handler J.DidOpenTextDocumentNotification))
+    , didChangeTextDocumentNotificationHandler :: !(Maybe (Handler J.DidChangeTextDocumentNotification))
+    , didCloseTextDocumentNotificationHandler  :: !(Maybe (Handler J.DidCloseTextDocumentNotification))
+    , didSaveTextDocumentNotificationHandler   :: !(Maybe (Handler J.DidSaveTextDocumentNotification))
+    , didChangeWatchedFilesNotificationHandler :: !(Maybe (Handler J.DidChangeWatchedFilesNotification))
 
-    , cancelNotificationHandler                :: !(Maybe (Handler a J.CancelNotification))
+    , cancelNotificationHandler                :: !(Maybe (Handler J.CancelNotification))
 
     -- Responses to Request messages originated from the server
-    , responseHandler                          :: !(Maybe (Handler a J.BareResponseMessage))
+    , responseHandler                          :: !(Maybe (Handler J.BareResponseMessage))
     }
 
-instance Default (Handlers a) where
+instance Default Handlers where
   def = Handlers Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
                  Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
                  Nothing Nothing Nothing Nothing Nothing Nothing
 
 -- ---------------------------------------------------------------------
 
-handlerMap :: Handlers a
-           -> MAP.Map String (MVar (LanguageContextData a) -> String -> B.ByteString -> IO ())
+handlerMap :: Handlers 
+           -> MAP.Map String (MVar LanguageContextData -> String -> B.ByteString -> IO ())
 handlerMap h = MAP.fromList
   [ ("textDocument/completion",        hh $ completionHandler h)
   , ("completionItem/resolve",         hh $ completionResolveHandler h)
@@ -164,8 +163,8 @@ handlerMap h = MAP.fromList
 -- ---------------------------------------------------------------------
 
 -- | Adapter from the handlers exposed to the library users and the internal message loop
-hh :: forall a b. (J.FromJSON b)
-   => Maybe (Handler a b) -> MVar (LanguageContextData a) -> String -> B.ByteString -> IO ()
+hh :: forall b. (J.FromJSON b)
+   => Maybe (Handler b) -> MVar LanguageContextData -> String -> B.ByteString -> IO ()
 hh Nothing = \_mvarDat cmd jsonStr -> do
       let msg = unwords ["haskell-lsp:no handler for.", cmd, lbs2str jsonStr]
       sendErrorLog msg
@@ -173,7 +172,7 @@ hh (Just h) = \mvarDat _cmd jsonStr -> do
       case J.eitherDecode jsonStr of
         Right req -> do
           ctx <- readMVar mvarDat
-          h (resData ctx) (resSendResponse ctx) req
+          h (resSendResponse ctx) req
         Left  err -> do
           let msg = unwords $ ["haskell-lsp:parse error.", lbs2str jsonStr, show err] ++ _ERR_MSG_URL
           sendErrorLog msg
@@ -267,12 +266,12 @@ _ERR_MSG_URL = [ "`stack update` and install new haskell-lsp."
 -- |
 --
 --
-defaultLanguageContextData :: a -> Handlers a -> Options -> LanguageContextData a
-defaultLanguageContextData a h o = LanguageContextData _INITIAL_RESPONSE_SEQUENCE Nothing h o BSL.putStr a
+defaultLanguageContextData :: Handlers -> Options -> LanguageContextData
+defaultLanguageContextData h o = LanguageContextData _INITIAL_RESPONSE_SEQUENCE Nothing h o BSL.putStr 
 
 -- ---------------------------------------------------------------------
 
-handleRequest :: forall a. IO () -> MVar (LanguageContextData a) -> BSL.ByteString -> BSL.ByteString -> IO ()
+handleRequest :: IO () -> MVar LanguageContextData -> BSL.ByteString -> BSL.ByteString -> IO ()
 handleRequest dispatcherProc mvarDat contLenStr' jsonStr' = do
   {-
   Message Types we must handle are the following
@@ -299,7 +298,7 @@ handleRequest dispatcherProc mvarDat contLenStr' jsonStr' = do
           handle jsonStr' "response"
 
   where
-    helper :: J.FromJSON b => B.ByteString -> (MVar (LanguageContextData a) -> b -> IO ())
+    helper :: J.FromJSON b => B.ByteString -> (MVar LanguageContextData -> b -> IO ())
            -> IO ()
     helper jsonStr requestHandler = case J.eitherDecode jsonStr of
       Right req -> do
@@ -322,7 +321,7 @@ handleRequest dispatcherProc mvarDat contLenStr' jsonStr' = do
     -- {"jsonrpc":"2.0","method":"$/setTraceNotification","params":{"value":"off"}}
     handle jsonStr "$/setTraceNotification" = helper jsonStr h
       where
-        h :: MVar (LanguageContextData a) -> J.TraceNotification -> IO ()
+        h :: MVar LanguageContextData -> J.TraceNotification -> IO ()
         h _ _ = do
           logm "Got setTraceNotification, ignoring"
           sendErrorLog "Got setTraceNotification, ignoring"
@@ -350,7 +349,7 @@ sendEvent str = sendResponseInternal str
 
 -- |
 --
-sendResponse2 :: MVar (LanguageContextData a) -> BSL.ByteString -> IO ()
+sendResponse2 :: MVar LanguageContextData -> BSL.ByteString -> IO ()
 sendResponse2 mvarCtx str = do
   ctx <- readMVar mvarCtx
   resSendResponse ctx str
@@ -406,7 +405,7 @@ defaultErrorHandlers origId req = [ E.Handler someExcept ]
 
 -- |
 --
-initializeRequestHandler :: IO () -> MVar (LanguageContextData a) -> J.InitializeRequest -> IO ()
+initializeRequestHandler :: IO () -> MVar LanguageContextData -> J.InitializeRequest -> IO ()
 initializeRequestHandler dispatcherProc mvarCtx req@(J.RequestMessage _ origId _ mp) =
   flip E.catches (defaultErrorHandlers origId req) $ do
 
@@ -467,7 +466,7 @@ initializeRequestHandler dispatcherProc mvarCtx req@(J.RequestMessage _ origId _
 
 -- |
 --
-shutdownRequestHandler :: MVar (LanguageContextData a) -> J.ShutdownRequest -> IO ()
+shutdownRequestHandler :: MVar LanguageContextData -> J.ShutdownRequest -> IO ()
 shutdownRequestHandler mvarCtx req@(J.RequestMessage _ origId _ _) =
   flip E.catches (defaultErrorHandlers origId req) $ do
   let res  = makeResponseMessage origId ("ok"::String)

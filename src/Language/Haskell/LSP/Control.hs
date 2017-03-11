@@ -27,13 +27,11 @@ import           Text.Parsec
 
 -- ---------------------------------------------------------------------
 
-run :: forall a.
-       IO () -- ^ function to be called once initialize has been received from the client
-    -> a
-    -> GUI.Handlers a
+run :: IO () -- ^ function to be called once initialize has been received from the client
+    -> GUI.Handlers 
     -> GUI.Options
     -> IO Int         -- exit code
-run dp a h o = do
+run dp h o = do
 
   GUI.setupLogger "/tmp/hie-vscode.log" DEBUG
 
@@ -45,7 +43,7 @@ run dp a h o = do
   hSetEncoding  stdout utf8
 
 
-  mvarDat <- newMVar ((GUI.defaultLanguageContextData a h o :: GUI.LanguageContextData a)
+  mvarDat <- newMVar ((GUI.defaultLanguageContextData h o :: GUI.LanguageContextData)
                          { GUI.resSendResponse = sendResponse
                          } )
 
@@ -55,7 +53,7 @@ run dp a h o = do
 
 -- ---------------------------------------------------------------------
 
-ioLoop :: IO () -> MVar (GUI.LanguageContextData a) -> IO ()
+ioLoop :: IO () -> MVar GUI.LanguageContextData -> IO ()
 ioLoop dispatcherProc mvarDat = go BSL.empty
   where
     go :: BSL.ByteString -> IO ()
