@@ -32,7 +32,7 @@ library
   ghc-options:         -Wall
   -- ghc-options:         -Werror
   build-depends:       base >=4.9 && <4.10
-                     , aeson
+                     , aeson >=1.0.0.0
                      , ansi-terminal
                      , bytestring
                      , cmdargs
