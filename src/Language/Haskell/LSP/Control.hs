@@ -26,8 +26,8 @@ import           Text.Parsec
 
 -- ---------------------------------------------------------------------
 
-run :: IO () -- ^ function to be called once initialize has been received from the client
-    -> GUI.Handlers 
+run :: IO (Maybe J.ResponseError) -- ^ function to be called once initialize has been received from the client
+    -> GUI.Handlers
     -> GUI.Options
     -> IO Int         -- exit code
 run dp h o = do
@@ -50,7 +50,7 @@ run dp h o = do
 
 -- ---------------------------------------------------------------------
 
-ioLoop :: IO () -> MVar GUI.LanguageContextData -> IO ()
+ioLoop :: IO (Maybe J.ResponseError) -> MVar GUI.LanguageContextData -> IO ()
 ioLoop dispatcherProc mvarDat = go BSL.empty
   where
     go :: BSL.ByteString -> IO ()
@@ -75,7 +75,6 @@ ioLoop dispatcherProc mvarDat = go BSL.empty
                   logm $ (B.pack "---> ") <> cnt
                   GUI.handleRequest dispatcherProc mvarDat newBuf cnt
                   ioLoop dispatcherProc mvarDat
-
       where
         readContentLength :: String -> Either ParseError Int
         readContentLength = parse parser "readContentLength"

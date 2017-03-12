@@ -120,7 +120,7 @@ data ResponseError =
   ResponseError
     { _code    :: ErrorCode
     , _message :: String
-    , _data    :: Maybe A.Object
+    , _data    :: Maybe A.Value
     } deriving (Read,Show,Eq)
 
 $(deriveJSON lspOptions ''ResponseError)
