@@ -35,8 +35,6 @@ run :: forall a.
     -> IO Int         -- exit code
 run dp a h o = do
 
-  GUI.setupLogger "/tmp/hie-vscode.log" DEBUG
-
   logm $ B.pack "\n\n\n\n\nStarting up server ..."
   hSetBuffering stdin NoBuffering
   hSetEncoding  stdin utf8
