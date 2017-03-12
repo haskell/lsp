@@ -37,7 +37,7 @@ run :: IO Int
 run = flip E.catches handlers $ do
 
   flip E.finally finalProc $ do
-    CTRL.run (return ()) () hieHandlers hieOptions
+    CTRL.run (return ()) hieHandlers hieOptions
 
   where
     handlers = [ E.Handler ioExcept
@@ -53,11 +53,11 @@ run = flip E.catches handlers $ do
 hieOptions :: GUI.Options
 hieOptions = def
 
-hieHandlers :: GUI.Handlers a
+hieHandlers :: GUI.Handlers 
 hieHandlers = def {GUI.renameHandler = Just renameRequestHandler }
 
-renameRequestHandler :: GUI.Handler a J.RenameRequest
-renameRequestHandler _ sf (J.RequestMessage _ origId _ _) = do
+renameRequestHandler :: GUI.Handler J.RenameRequest
+renameRequestHandler sf (J.RequestMessage _ origId _ _) = do
   let loc = def :: J.Location
       res  = GUI.makeResponseMessage origId loc
   sf (encode res)
