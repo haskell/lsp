@@ -1,14 +1,18 @@
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE TemplateHaskell       #-}
+{-# LANGUAGE TypeSynonymInstances  #-}
+{-# LANGUAGE DeriveGeneric         #-}
 
 module Language.Haskell.LSP.TH.DataTypesJSON where
 
-import Data.Aeson.TH
+import           Data.Aeson.TH
+import           Data.Aeson.Types
 import qualified Data.Aeson as A
 import qualified Data.HashMap.Strict as H
 import qualified Data.Text as T
 
+import Language.Haskell.LSP.TH.Constants
 import Language.Haskell.LSP.Utility
 import Data.Default
 
@@ -19,22 +23,22 @@ import Data.Default
 --
 data Request =
   Request {
-    methodRequest   :: String    -- The command to execute
+    _method   :: String    -- The command to execute
   } deriving (Show, Read, Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "Request") } ''Request)
+$(deriveJSON lspOptions ''Request)
 
 -- ---------------------------------------------------------------------
 
 data RequestMessage a =
   RequestMessage
-    { jsonrpcRequestMessage :: String
-    , idRequestMessage      :: Int
-    , methodRequestMessage  :: String
-    , paramsRequestMessage  :: Maybe a
+    { _jsonrpc :: String
+    , _id      :: Int
+    , _method  :: String
+    , _params  :: Maybe a
     } deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "RequestMessage") } ''RequestMessage)
+$(deriveJSON lspOptions ''RequestMessage)
 
 instance Default (RequestMessage a) where
   def = RequestMessage "2.0" def def def
@@ -100,12 +104,12 @@ instance Default ErrorCode where
 
 data ResponseError =
   ResponseError
-    { codeResponseError    :: ErrorCode
-    , messageResponseError :: String
-    , dataResponseError    :: Maybe A.Object
+    { _code    :: ErrorCode
+    , _message :: String
+    , _data    :: Maybe A.Object
     } deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "ResponseError") } ''ResponseError)
+$(deriveJSON lspOptions ''ResponseError)
 
 instance Default ResponseError where
   def = ResponseError def def Nothing
@@ -114,13 +118,13 @@ instance Default ResponseError where
 
 data ResponseMessage a =
   ResponseMessage
-    { jsonrpcResponseMessage :: String
-    , idResponseMessage :: Int
-    , resultResponseMessage :: Maybe a
-    , errorResponseMessage  :: Maybe ResponseError
+    { _jsonrpc :: String
+    , _id      :: Int
+    , _result  :: Maybe a
+    , _error   :: Maybe ResponseError
     } deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "ResponseMessage") } ''ResponseMessage)
+$(deriveJSON lspOptions ''ResponseMessage)
 
 instance Default (ResponseMessage a) where
   def = ResponseMessage "2.0" def def Nothing
@@ -131,13 +135,13 @@ type ErrorResponse = ResponseMessage ()
 
 data BareResponseMessage =
   BareResponseMessage
-    { jsonrpcBareResponseMessage :: String
-    , idBareResponseMessage :: Int
-    , resultBareResponseMessage :: Maybe A.Object
-    , errorBareResponseMessage  :: Maybe ResponseError
+    { _jsonrpc :: String
+    , _id      :: Int
+    , _result  :: Maybe A.Object
+    , _error   :: Maybe ResponseError
     } deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "BareResponseMessage") } ''BareResponseMessage)
+$(deriveJSON lspOptions ''BareResponseMessage)
 
 instance Default BareResponseMessage where
   def = BareResponseMessage "2.0" def def Nothing
@@ -146,12 +150,12 @@ instance Default BareResponseMessage where
 
 data NotificationMessage a =
   NotificationMessage
-    { jsonrpcNotificationMessage :: String
-    , methodNotificationMessage  :: String
-    , paramsNotificationMessage  :: Maybe a
+    { _jsonrpc :: String
+    , _method  :: String
+    , _params  :: Maybe a
     } deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "NotificationMessage") } ''NotificationMessage)
+$(deriveJSON lspOptions ''NotificationMessage)
 
 instance Default (NotificationMessage a) where
   def = NotificationMessage "2.0" def Nothing
@@ -186,10 +190,10 @@ it allows for returning partial results on cancel.
 
 data CancelParams =
   CancelParams
-    { idCancelParams :: Int
+    { _id :: Int
     } deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "CancelParams") } ''CancelParams)
+$(deriveJSON lspOptions ''CancelParams)
 
 type CancelNotification = NotificationMessage CancelParams
 
@@ -214,11 +218,11 @@ interface Position {
 -}
 data Position =
   Position
-    { linePosition       :: Int
-    , characterPosition  :: Int
+    { _line       :: Int
+    , _character  :: Int
     } deriving (Show, Read, Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "Position") } ''Position)
+$(deriveJSON lspOptions ''Position)
 
 instance Default Position where
   def = Position def def
@@ -246,11 +250,11 @@ interface Range {
 
 data Range =
   Range
-    { startRange :: Position
-    , endRange   :: Position
+    { _start :: Position
+    , _end   :: Position
     } deriving (Show, Read, Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "Range") } ''Range)
+$(deriveJSON lspOptions ''Range)
 
 instance Default Range where
   def = Range def def
@@ -269,11 +273,11 @@ interface Location {
 
 data Location =
   Location
-    { uriLocation   :: String
-    , rangeLocation :: Range
+    { _uri   :: String
+    , _range :: Range
     } deriving (Show, Read, Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "Location") } ''Location)
+$(deriveJSON lspOptions ''Location)
 
 instance Default Location where
   def = Location def def
@@ -364,14 +368,14 @@ interface Diagnostic {
 -}
 data Diagnostic =
   Diagnostic
-    { rangeDiagnostic    :: Range
-    , severityDiagnostic :: Maybe DiagnosticSeverity
-    , codeDiagnostic     :: Maybe String
-    , sourceDiagnostic   :: Maybe String
-    , messageDiagnostic  :: String
+    { _range    :: Range
+    , _severity :: Maybe DiagnosticSeverity
+    , _code     :: Maybe String
+    , _source   :: Maybe String
+    , _message  :: String
     } deriving (Show, Read, Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "Diagnostic") } ''Diagnostic)
+$(deriveJSON lspOptions ''Diagnostic)
 
 instance Default Diagnostic where
   def = Diagnostic def def Nothing Nothing ""
@@ -406,12 +410,12 @@ interface Command {
 
 data Command =
   Command
-    { titleCommand     :: String
-    , commandCommand   :: String
-    , argumentsCommand :: Maybe A.Object
+    { _title     :: String
+    , _command   :: String
+    , _arguments :: Maybe A.Object
     } deriving (Show, Read, Eq)
 
-$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "Command") } ''Command)
+$(deriveJSON lspOptions ''Command)
 
 instance Default Command where
   def = Command "" "" Nothing
@@ -441,11 +445,11 @@ interface TextEdit {
 
 data TextEdit =
   TextEdit
-    { rangeTextEdit   :: Range
-    , newTextTextEdit :: String
+    { _range   :: Range
+    , _newText :: String
     } deriving (Show,Read,Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "TextEdit") } ''TextEdit)
+$(deriveJSON lspOptions ''TextEdit)
 
 instance Default TextEdit where
   def = TextEdit def def
@@ -473,10 +477,10 @@ instance Default (H.HashMap T.Text [TextEdit]) where
 
 data WorkspaceEdit =
   WorkspaceEdit
-    { changesWorkspaceEdit :: WorkspaceEditMap
+    { _changes :: WorkspaceEditMap
     } deriving (Show, Read, Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "WorkspaceEdit") } ''WorkspaceEdit)
+$(deriveJSON lspOptions ''WorkspaceEdit)
 
 instance Default WorkspaceEdit where
   def = WorkspaceEdit def
@@ -499,10 +503,10 @@ interface TextDocumentIdentifier {
 -}
 data TextDocumentIdentifier =
   TextDocumentIdentifier
-    { uriTextDocumentIdentifier :: String
+    { _uri :: String
     } deriving (Show, Read, Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "TextDocumentIdentifier") } ''TextDocumentIdentifier)
+$(deriveJSON lspOptions ''TextDocumentIdentifier)
 
 instance Default TextDocumentIdentifier where
   def = TextDocumentIdentifier def
@@ -542,13 +546,13 @@ interface TextDocumentItem {
 
 data TextDocumentItem =
   TextDocumentItem {
-    uriTextDocumentItem        :: String
-  , languageIdTextDocumentItem :: String
-  , versionTextDocumentItem    :: Int
-  , textTextDocumentItem       :: String
+    _uri        :: String
+  , _languageId :: String
+  , _version    :: Int
+  , _text       :: String
   } deriving (Show, Read, Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "TextDocumentItem") } ''TextDocumentItem)
+$(deriveJSON lspOptions ''TextDocumentItem)
 
 -- ---------------------------------------------------------------------
 {-
@@ -566,11 +570,11 @@ interface VersionedTextDocumentIdentifier extends TextDocumentIdentifier {
 -}
 data VersionedTextDocumentIdentifier =
   VersionedTextDocumentIdentifier
-    { uriVersionedTextDocumentIdentifier     :: String
-    , versionVersionedTextDocumentIdentifier :: Int
+    { _uri     :: String
+    , _version :: Int
     } deriving (Show, Read, Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "VersionedTextDocumentIdentifier") } ''VersionedTextDocumentIdentifier)
+$(deriveJSON lspOptions ''VersionedTextDocumentIdentifier)
 
 instance Default VersionedTextDocumentIdentifier where
   def = VersionedTextDocumentIdentifier def def
@@ -599,11 +603,11 @@ interface TextDocumentPositionParams {
 -}
 data TextDocumentPositionParams =
   TextDocumentPositionParams
-    { textDocumentTextDocumentPositionParams :: TextDocumentIdentifier
-    , positionTextDocumentPositionParams     :: Position
+    { _textDocument :: TextDocumentIdentifier
+    , _position     :: Position
     } deriving (Show, Read, Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "TextDocumentPositionParams") } ''TextDocumentPositionParams)
+$(deriveJSON lspOptions ''TextDocumentPositionParams)
 
 instance Default TextDocumentPositionParams where
   def = TextDocumentPositionParams def def
@@ -655,15 +659,15 @@ interface InitializeParams {
 
 data InitializeRequestArguments =
   InitializeRequestArguments {
-    processIdInitializeRequestArguments    :: Int
-  , rootPathInitializeRequestArguments     :: Maybe String
-  , capabilitiesInitializeRequestArguments :: A.Object -- None currently defined, but empty object sent
-  , initializationOptionsInitializeRequestArguments :: Maybe A.Object
+    _processId             :: Int
+  , _rootPath              :: Maybe String
+  , _capabilities          :: A.Object -- None currently defined, but empty object sent
+  , _initializationOptions :: Maybe A.Object
   -- , traceInitializeRequestArguments        :: String -- observed to be present in the wild
   } deriving (Show, Read, Eq)
 
 
-$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "InitializeRequestArguments") } ''InitializeRequestArguments)
+$(deriveJSON lspOptions { omitNothingFields = True } ''InitializeRequestArguments)
 
 instance Default InitializeRequestArguments where
   def = InitializeRequestArguments 0 mempty mempty mempty
@@ -703,10 +707,10 @@ interface InitializeError {
 -}
 data InitializeError =
   InitializeError
-    { retryInitializeError :: Bool
+    { _retry :: Bool
     } deriving (Read, Show, Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "InitializeError") } ''InitializeError)
+$(deriveJSON lspOptions ''InitializeError)
 
 instance Default InitializeError where
   def = InitializeError False
@@ -773,11 +777,11 @@ interface CompletionOptions {
 
 data CompletionOptions =
   CompletionOptions
-    { resolveProvider   :: Maybe Bool
-    , triggerCharacters :: Maybe [String]
+    { _resolveProvider   :: Maybe Bool
+    , _triggerCharacters :: Maybe [String]
     } deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions {omitNothingFields = True } ''CompletionOptions)
+$(deriveJSON lspOptions {omitNothingFields = True } ''CompletionOptions)
 
 instance Default CompletionOptions where
   def = CompletionOptions Nothing mempty
@@ -796,10 +800,10 @@ interface SignatureHelpOptions {
 
 data SignatureHelpOptions =
   SignatureHelpOptions
-    { triggerCharactersSHO :: Maybe [String]
+    { _triggerCharacters :: Maybe [String]
     } deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "SHO") } ''SignatureHelpOptions)
+$(deriveJSON lspOptions ''SignatureHelpOptions)
 
 instance Default SignatureHelpOptions where
   def = SignatureHelpOptions mempty
@@ -819,10 +823,10 @@ interface CodeLensOptions {
 
 data CodeLensOptions =
   CodeLensOptions
-    { resolveProviderCLO :: Maybe Bool
+    { _resolveProvider :: Maybe Bool
     } deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "CLO") } ''CodeLensOptions)
+$(deriveJSON lspOptions ''CodeLensOptions)
 
 instance Default CodeLensOptions where
   def = CodeLensOptions Nothing
@@ -845,11 +849,11 @@ interface DocumentOnTypeFormattingOptions {
 -}
 data DocumentOnTypeFormattingOptions =
   DocumentOnTypeFormattingOptions
-    { firstTriggerCharacter :: String
-    , moreTriggerCharacter :: Maybe [String]
+    { _firstTriggerCharacter :: String
+    , _moreTriggerCharacter  :: Maybe [String]
     } deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions {omitNothingFields = True } ''DocumentOnTypeFormattingOptions)
+$(deriveJSON lspOptions ''DocumentOnTypeFormattingOptions)
 
 instance Default DocumentOnTypeFormattingOptions where
   def = DocumentOnTypeFormattingOptions mempty mempty
@@ -922,24 +926,24 @@ interface ServerCapabilities {
 
 data InitializeResponseCapabilitiesInner =
   InitializeResponseCapabilitiesInner
-    { textDocumentSync                 :: Maybe TextDocumentSyncKind
-    , hoverProvider                    :: Maybe Bool
-    , completionProvider               :: Maybe CompletionOptions
-    , signatureHelpProvider            :: Maybe SignatureHelpOptions
-    , definitionProvider               :: Maybe Bool
-    , referencesProvider               :: Maybe Bool
-    , documentHighlightProvider        :: Maybe Bool
-    , documentSymbolProvider           :: Maybe Bool
-    , workspaceSymbolProvider          :: Maybe Bool
-    , codeActionProvider               :: Maybe Bool
-    , codeLensProvider                 :: Maybe CodeLensOptions
-    , documentFormattingProvider       :: Maybe Bool
-    , documentRangeFormattingProvider  :: Maybe Bool
-    , documentOnTypeFormattingProvider :: Maybe DocumentOnTypeFormattingOptions
-    , renameProvider                   :: Maybe Bool
+    { _textDocumentSync                 :: Maybe TextDocumentSyncKind
+    , _hoverProvider                    :: Maybe Bool
+    , _completionProvider               :: Maybe CompletionOptions
+    , _signatureHelpProvider            :: Maybe SignatureHelpOptions
+    , _definitionProvider               :: Maybe Bool
+    , _referencesProvider               :: Maybe Bool
+    , _documentHighlightProvider        :: Maybe Bool
+    , _documentSymbolProvider           :: Maybe Bool
+    , _workspaceSymbolProvider          :: Maybe Bool
+    , _codeActionProvider               :: Maybe Bool
+    , _codeLensProvider                 :: Maybe CodeLensOptions
+    , _documentFormattingProvider       :: Maybe Bool
+    , _documentRangeFormattingProvider  :: Maybe Bool
+    , _documentOnTypeFormattingProvider :: Maybe DocumentOnTypeFormattingOptions
+    , _renameProvider                   :: Maybe Bool
     } deriving (Show, Read, Eq)
 
-$(deriveJSON defaultOptions { omitNothingFields = True }  ''InitializeResponseCapabilitiesInner)
+$(deriveJSON lspOptions ''InitializeResponseCapabilitiesInner)
 
 instance Default InitializeResponseCapabilitiesInner where
   def = InitializeResponseCapabilitiesInner def def def def def def def def def def def def def def def
@@ -950,10 +954,10 @@ instance Default InitializeResponseCapabilitiesInner where
 --
 data InitializeResponseCapabilities =
   InitializeResponseCapabilities {
-    capabilitiesInitializeResponseCapabilities :: InitializeResponseCapabilitiesInner
+    _capabilities :: InitializeResponseCapabilitiesInner
   } deriving (Show, Read, Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "InitializeResponseCapabilities") } ''InitializeResponseCapabilities)
+$(deriveJSON lspOptions ''InitializeResponseCapabilities)
 
 instance Default InitializeResponseCapabilities where
   def = InitializeResponseCapabilities def
@@ -1021,7 +1025,7 @@ data ExitNotification =
     {
     } deriving (Show, Read, Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "ExitNotification") } ''ExitNotification)
+$(deriveJSON defaultOptions ''ExitNotification)
 
 instance Default ExitNotification where
   def = ExitNotification
@@ -1099,11 +1103,11 @@ instance Default MessageType where
 
 data MessageNotificationParams =
   MessageNotificationParams {
-    typeMessageNotificationParams    :: MessageType
-  , messageMessageNotificationParams :: String
+    _type    :: MessageType
+  , _message :: String
   } deriving (Show, Read, Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "MessageNotificationParams") } ''MessageNotificationParams)
+$(deriveJSON lspOptions ''MessageNotificationParams)
 
 instance Default MessageNotificationParams where
   def = MessageNotificationParams MtWarning ""
@@ -1112,12 +1116,12 @@ instance Default MessageNotificationParams where
 
 data MessageNotification =
   MessageNotification {
-    jsonrpcMessageNotification :: String
-  , methodMessageNotification  :: String
-  , paramsMessageNotification  :: MessageNotificationParams
+    _jsonrpc :: String
+  , _method  :: String
+  , _params  :: MessageNotificationParams
   } deriving (Show, Read, Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "MessageNotification") } ''MessageNotification)
+$(deriveJSON lspOptions ''MessageNotification)
 
 defShowMessage :: MessageType -> String -> MessageNotification
 defShowMessage mt msg = MessageNotification "2.0" "window/showMessage" (MessageNotificationParams mt msg)
@@ -1172,22 +1176,22 @@ interface MessageActionItem {
 
 data MessageActionItem =
   MessageActionItem
-    { titleMessageActionItem :: String
+    { _title :: String
     } deriving (Show,Read,Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "MessageActionItem") } ''MessageActionItem)
+$(deriveJSON lspOptions ''MessageActionItem)
 
 instance Default MessageActionItem where
   def = MessageActionItem def
 
 data ShowMessageRequestParams =
   ShowMessageRequestParams
-    { typeShowMessageRequestParams    :: MessageType
-    , messageShowMessageRequestParams :: String
-    , actionsShowMessageRequestParams :: Maybe [MessageActionItem]
+    { _type    :: MessageType
+    , _message :: String
+    , _actions :: Maybe [MessageActionItem]
     } deriving (Show,Read,Eq)
 
-$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "ShowMessageRequestParams") } ''ShowMessageRequestParams)
+$(deriveJSON lspOptions ''ShowMessageRequestParams)
 
 instance Default ShowMessageRequestParams where
   def = ShowMessageRequestParams def def def
@@ -1268,10 +1272,10 @@ interface DidChangeConfigurationParams {
 
 data DidChangeConfigurationParamsNotificationParams =
   DidChangeConfigurationParamsNotificationParams {
-    settingsDidChangeConfigurationParamsNotificationParams :: A.Object
+    _settings :: A.Object
   } deriving (Show, Read, Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DidChangeConfigurationParamsNotificationParams") } ''DidChangeConfigurationParamsNotificationParams)
+$(deriveJSON lspOptions ''DidChangeConfigurationParamsNotificationParams)
 
 instance Default DidChangeConfigurationParamsNotificationParams where
   def = DidChangeConfigurationParamsNotificationParams mempty
@@ -1305,10 +1309,10 @@ interface DidOpenTextDocumentParams {
 
 data DidOpenTextDocumentNotificationParams =
   DidOpenTextDocumentNotificationParams {
-    textDocumentDidOpenTextDocumentNotificationParams :: TextDocumentItem
+    _textDocument :: TextDocumentItem
   } deriving (Show, Read, Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DidOpenTextDocumentNotificationParams") } ''DidOpenTextDocumentNotificationParams)
+$(deriveJSON lspOptions ''DidOpenTextDocumentNotificationParams)
 
 type DidOpenTextDocumentNotification = NotificationMessage DidOpenTextDocumentNotificationParams
 
@@ -1364,12 +1368,12 @@ interface TextDocumentContentChangeEvent {
 -}
 data TextDocumentContentChangeEvent =
   TextDocumentContentChangeEvent
-    { rangeTextDocumentContentChangeEvent       :: Maybe Range
-    , rangeLengthTextDocumentContentChangeEvent :: Maybe Int
-    , textTextDocumentContentChangeEvent        :: String
+    { _range       :: Maybe Range
+    , _rangeLength :: Maybe Int
+    , _text        :: String
     } deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "TextDocumentContentChangeEvent") } ''TextDocumentContentChangeEvent)
+$(deriveJSON lspOptions { omitNothingFields = True } ''TextDocumentContentChangeEvent)
 
 instance Default TextDocumentContentChangeEvent where
   def = TextDocumentContentChangeEvent Nothing Nothing def
@@ -1378,11 +1382,11 @@ instance Default TextDocumentContentChangeEvent where
 
 data DidChangeTextDocumentParams =
   DidChangeTextDocumentParams
-    { textDocumentDidChangeTextDocumentParams :: VersionedTextDocumentIdentifier
-    , contentChangesDidChangeTextDocumentParams:: [TextDocumentContentChangeEvent]
+    { _textDocument   :: VersionedTextDocumentIdentifier
+    , _contentChanges :: [TextDocumentContentChangeEvent]
     } deriving (Show,Read,Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DidChangeTextDocumentParams") } ''DidChangeTextDocumentParams)
+$(deriveJSON lspOptions ''DidChangeTextDocumentParams)
 
 type DidChangeTextDocumentNotification = NotificationMessage DidChangeTextDocumentParams
 
@@ -1414,10 +1418,10 @@ interface DidCloseTextDocumentParams {
 -}
 data DidCloseTextDocumentParams =
   DidCloseTextDocumentParams
-    { textDocumentDidCloseTextDocumentParams :: TextDocumentIdentifier
+    { _textDocument :: TextDocumentIdentifier
     } deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DidCloseTextDocumentParams") } ''DidCloseTextDocumentParams)
+$(deriveJSON lspOptions ''DidCloseTextDocumentParams)
 
 instance Default DidCloseTextDocumentParams where
   def = DidCloseTextDocumentParams def
@@ -1445,10 +1449,10 @@ interface DidSaveTextDocumentParams {
 -}
 data DidSaveTextDocumentParams =
   DidSaveTextDocumentParams
-    { textDocumentDidSaveTextDocumentParams :: TextDocumentIdentifier
+    { _textDocument :: TextDocumentIdentifier
     } deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DidSaveTextDocumentParams") } ''DidSaveTextDocumentParams)
+$(deriveJSON lspOptions ''DidSaveTextDocumentParams)
 
 instance Default DidSaveTextDocumentParams where
   def = DidSaveTextDocumentParams def
@@ -1532,18 +1536,18 @@ instance Default FileChangeType where
 
 data FileEvent =
   FileEvent
-    { uriFileEvent  :: String
-    , typeFileEvent :: FileChangeType
+    { _uri  :: String
+    , _type :: FileChangeType
     } deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "FileEvent") } ''FileEvent)
+$(deriveJSON lspOptions ''FileEvent)
 
 data DidChangeWatchedFilesParams =
   DidChangeWatchedFilesParams
-    { paramsDidChangeWatchedFilesParams :: [FileEvent]
+    { _params :: [FileEvent]
     } deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DidChangeWatchedFilesParams") } ''DidChangeWatchedFilesParams)
+$(deriveJSON lspOptions ''DidChangeWatchedFilesParams)
 
 instance Default DidChangeWatchedFilesParams where
   def = DidChangeWatchedFilesParams def
@@ -1579,11 +1583,11 @@ interface PublishDiagnosticsParams {
 
 data PublishDiagnosticsParams =
   PublishDiagnosticsParams
-    { uriPublishDiagnosticsParams :: String
-    , diagnosticsPublishDiagnosticsParams :: [Diagnostic]
+    { _uri         :: String
+    , _diagnostics :: [Diagnostic]
     } deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "PublishDiagnosticsParams") } ''PublishDiagnosticsParams)
+$(deriveJSON lspOptions ''PublishDiagnosticsParams)
 
 instance Default PublishDiagnosticsParams where
   def = PublishDiagnosticsParams def def
@@ -1796,50 +1800,42 @@ instance Default CompletionItemKind where
 
 data CompletionItem =
   CompletionItem
-    { labelCompletionItem :: String -- ^ The label of this completion item. By
-                                    -- default also the text that is inserted
-                                    -- when selecting this completion.
-    , kindCompletionItem :: Maybe CompletionItemKind
-    , detailCompletionItem :: Maybe String -- ^ A human-readable string with
-                                           -- additional information about this
-                                           -- item, like type or symbol
-                                           -- information.
-    , documentationCompletionItem :: Maybe String-- ^ A human-readable string
-                                                 -- that represents a
-                                                 -- doc-comment.
-    , sortTextCompletionItem :: Maybe String -- ^ A string that should be used
-                                             -- when filtering a set of
-                                             -- completion items. When `falsy`
-                                             -- the label is used.
-    , filterTextCompletionItem :: Maybe String -- ^ A string that should be used
-                                               -- when filtering a set of
-                                               -- completion items. When `falsy`
-                                               -- the label is used.
-    , insertTextCompletionItem :: Maybe String -- ^ A string that should be
-                                               -- inserted a document when
-                                               -- selecting this completion.
-                                               -- When `falsy` the label is
-                                               -- used.
-    , textEditCompletionItem :: Maybe TextEdit -- ^ An edit which is applied to
-                                               -- a document when selecting this
-                                               -- completion. When an edit is
-                                               -- provided the value of
-                                               -- insertText is ignored.
-    , dataCompletionItem :: Maybe A.Object -- ^ An data entry field that is
-                                           -- preserved on a completion item
-                                           -- between a completion and a
-                                           -- completion resolve request.
+    { _label :: String -- ^ The label of this completion item. By default also
+                       -- the text that is inserted when selecting this
+                       -- completion.
+    , _kind :: Maybe CompletionItemKind
+    , _detail :: Maybe String -- ^ A human-readable string with additional
+                              -- information about this item, like type or
+                              -- symbol information.
+    , _documentation :: Maybe String-- ^ A human-readable string that represents
+                                    -- a doc-comment.
+    , _sortText :: Maybe String -- ^ A string that should be used when filtering
+                                -- a set of completion items. When `falsy` the
+                                -- label is used.
+    , _filterText :: Maybe String -- ^ A string that should be used when
+                                  -- filtering a set of completion items. When
+                                  -- `falsy` the label is used.
+    , _insertText :: Maybe String -- ^ A string that should be inserted a
+                                  -- document when selecting this completion.
+                                  -- When `falsy` the label is used.
+    , _textEdit :: Maybe TextEdit -- ^ An edit which is applied to a document
+                                  -- when selecting this completion. When an
+                                  -- edit is provided the value of insertText is
+                                  -- ignored.
+    , _data :: Maybe A.Object -- ^ An data entry field that is preserved on a
+                              -- completion item between a completion and a
+                              -- completion resolve request.
     } deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "CompletionItem") } ''CompletionItem)
+$(deriveJSON lspOptions ''CompletionItem)
 
 data CompletionListType =
   CompletionListType
-    { isIncompleteCompletionListType :: Bool
-    , itemsCompletionListType :: [CompletionItem]
+    { _isIncomplete :: Bool
+    , _items :: [CompletionItem]
     } deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "CompletionListType") } ''CompletionListType)
+$(deriveJSON lspOptions ''CompletionListType)
 
 instance Default CompletionListType where
   def = CompletionListType False []
@@ -1924,22 +1920,22 @@ type HoverRequest = RequestMessage TextDocumentPositionParams
 data MarkedString =
   -- TODO: Add the plain string variant too
   MarkedString
-    { languageMarkedString :: String
-    , valueMarkedString    :: String
+    { _language :: String
+    , _value    :: String
     } deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "MarkedString") } ''MarkedString)
+$(deriveJSON lspOptions ''MarkedString)
 
 instance Default MarkedString where
   def = MarkedString def def
 
 data Hover =
   Hover
-    { contentsHover :: [MarkedString]
-    , rangeHover    :: Maybe Range
+    { _contents :: [MarkedString]
+    , _range    :: Maybe Range
     } deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "Hover") } ''Hover)
+$(deriveJSON lspOptions ''Hover)
 
 instance Default Hover where
   def = Hover def Nothing
@@ -2050,10 +2046,10 @@ type SignatureHelpRequest = RequestMessage TextDocumentPositionParams
 
 data ParameterInformation =
   ParameterInformation
-    { labelParameterInformation :: String
-    , documentationParameterInformation :: Maybe String
+    { _label         :: String
+    , _documentation :: Maybe String
     } deriving (Read,Show,Eq)
-$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "ParameterInformation") } ''ParameterInformation)
+$(deriveJSON lspOptions ''ParameterInformation)
 
 instance Default ParameterInformation where
   def = ParameterInformation def def
@@ -2062,21 +2058,21 @@ instance Default ParameterInformation where
 
 data SignatureInformation =
   SignatureInformation
-    { labelSignatureInformation         :: String
-    , documentationSignatureInformation :: Maybe String
-    , parametersSignatureInformation    :: Maybe [ParameterInformation]
+    { _label         :: String
+    , _documentation :: Maybe String
+    , _parameters    :: Maybe [ParameterInformation]
     } deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "SignatureInformation") } ''SignatureInformation)
+$(deriveJSON lspOptions ''SignatureInformation)
 
 data SignatureHelp =
   SignatureHelp
-    { signaturesSignatureHelp :: [SignatureInformation]
-    , activeSignature :: Maybe Int -- ^ The active signature
-    , activeParameter :: Maybe Int -- ^ The active parameter of the active signature
+    { _signatures      :: [SignatureInformation]
+    , _activeSignature :: Maybe Int -- ^ The active signature
+    , _activeParameter :: Maybe Int -- ^ The active parameter of the active signature
     } deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "SignatureHelp") } ''SignatureHelp)
+$(deriveJSON lspOptions ''SignatureHelp)
 
 instance Default SignatureHelp where
   def = SignatureHelp def Nothing Nothing
@@ -2111,11 +2107,11 @@ Response:
 
 data DefinitionRequestParams =
   DefinitionRequestParams
-    { textDocumentDefinitionRequestParams :: TextDocumentIdentifier
-    , positionDefinitionRequestParams     :: Position
+    { _textDocument :: TextDocumentIdentifier
+    , _position     :: Position
     } deriving (Show, Read, Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DefinitionRequestParams") } ''DefinitionRequestParams)
+$(deriveJSON lspOptions ''DefinitionRequestParams)
 
 instance Default DefinitionRequestParams where
   def = DefinitionRequestParams def def
@@ -2165,22 +2161,22 @@ Response:
 
 data ReferenceContext =
   ReferenceContext
-    { includeDeclarationReferenceContext :: Bool
+    { _includeDeclaration :: Bool
     } deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "ReferenceContext") } ''ReferenceContext)
+$(deriveJSON lspOptions ''ReferenceContext)
 
 instance Default ReferenceContext where
   def = ReferenceContext False
 
 data ReferenceParams =
   ReferenceParams
-    { textDocumentReferenceParams :: TextDocumentIdentifier
-    , positionReferenceParams     :: Position
-    , contextReferenceParams      :: ReferenceContext
+    { _textDocument :: TextDocumentIdentifier
+    , _position     :: Position
+    , _context      :: ReferenceContext
     } deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "ReferenceParams") } ''ReferenceParams)
+$(deriveJSON lspOptions ''ReferenceParams)
 
 instance Default ReferenceParams where
   def = ReferenceParams def def def
@@ -2288,11 +2284,11 @@ instance A.FromJSON DocumentHighlightKind where
 
 data DocumentHighlight =
   DocumentHighlight
-    { rangeDocumentHighlight :: Range
-    , kindDocumentHighlight  :: Maybe DocumentHighlightKind
+    { _range :: Range
+    , _kind  :: Maybe DocumentHighlightKind
     } deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "DocumentHighlight") } ''DocumentHighlight)
+$(deriveJSON lspOptions ''DocumentHighlight)
 
 type DocumentHighlightsResponse = ResponseMessage [DocumentHighlight]
 
@@ -2382,10 +2378,10 @@ export enum SymbolKind {
 
 data DocumentSymbolParams =
   DocumentSymbolParams
-    { textDocumentDocumentSymbolParams :: TextDocumentIdentifier
+    { _textDocument :: TextDocumentIdentifier
     } deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "DocumentSymbolParams") } ''DocumentSymbolParams)
+$(deriveJSON lspOptions ''DocumentSymbolParams)
 
 instance Default DocumentSymbolParams where
   def = DocumentSymbolParams def
@@ -2473,14 +2469,14 @@ instance Default SymbolKind where
 
 data SymbolInformation =
   SymbolInformation
-    { nameSymbolInformation          :: String
-    , kindSymbolInformation          :: SymbolKind
-    , locationSymbolInformation      :: Location
-    , containerNameSymbolInformation :: Maybe String -- ^The name of the symbol
-                                                     -- containing this symbol.
+    { _name          :: String
+    , _kind          :: SymbolKind
+    , _location      :: Location
+    , _containerName :: Maybe String -- ^The name of the symbol containing this
+                                     -- symbol.
     } deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "SymbolInformation") } ''SymbolInformation)
+$(deriveJSON lspOptions ''SymbolInformation)
 
 instance Default SymbolInformation where
   def = SymbolInformation def def def def
@@ -2522,10 +2518,10 @@ Response
 
 data WorkspaceSymbolParams =
   WorkspaceSymbolParams
-    { queryWorkspaceSymbolParams :: String
+    { _query :: String
     } deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "WorkspaceSymbolParams") } ''WorkspaceSymbolParams)
+$(deriveJSON lspOptions ''WorkspaceSymbolParams)
 
 type WorkspaceSymbolsRequest  = RequestMessage WorkspaceSymbolParams
 type WorkspaceSymbolsResponse = ResponseMessage [SymbolInformation]
@@ -2587,22 +2583,22 @@ Response
 
 data CodeActionContext =
   CodeActionContext
-    { diagnosticsCodeActionContext :: [Diagnostic]
+    { _diagnostics :: [Diagnostic]
     } deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "CodeActionContext") } ''CodeActionContext)
+$(deriveJSON lspOptions ''CodeActionContext)
 
 instance Default CodeActionContext where
   def = CodeActionContext def
 
 data CodeActionParams =
   CodeActionParams
-    { textDocumentCodeActionParams :: TextDocumentIdentifier
-    , rangeCodeActionParams        :: Range
-    , contextCodeActionParams      :: CodeActionContext
+    { _textDocument :: TextDocumentIdentifier
+    , _range        :: Range
+    , _context      :: CodeActionContext
     } deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "CodeActionParams") } ''CodeActionParams)
+$(deriveJSON lspOptions ''CodeActionParams)
 
 instance Default CodeActionParams where
   def = CodeActionParams def def def
@@ -2666,10 +2662,10 @@ interface CodeLens {
 
 data CodeLensParams =
   CodeLensParams
-    { textDocumentCodeLensParams :: TextDocumentIdentifier
+    { _textDocument :: TextDocumentIdentifier
     } deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "CodeLensParams") } ''CodeLensParams)
+$(deriveJSON lspOptions ''CodeLensParams)
 
 -- data CodeLensRequest =
 --   CodeLensRequest
@@ -2685,12 +2681,12 @@ type CodeLensRequest = RequestMessage CodeLensParams
 
 data CodeLens =
   CodeLens
-    { rangeCodeLens   :: Range
-    , commandCodeLens :: Maybe Command
-    , dataCodeLens    :: Maybe A.Object
+    { _range   :: Range
+    , _command :: Maybe Command
+    , _data    :: Maybe A.Object
     } deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "CodeLens") } ''CodeLens)
+$(deriveJSON lspOptions ''CodeLens)
 
 instance Default CodeLens where
   def = CodeLens def def def
@@ -2779,20 +2775,20 @@ Response
 
 data FormattingOptions =
   FormattingOptions
-    { tabSizeFormattingOptions      :: Int
-    , insertSpacesFormattingOptions :: Bool -- ^ Prefer spaces over tabs
+    { _tabSize      :: Int
+    , _insertSpaces :: Bool -- ^ Prefer spaces over tabs
     -- Note: May be more properties
     } deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "FormattingOptions") } ''FormattingOptions)
+$(deriveJSON lspOptions ''FormattingOptions)
 
 data DocumentFormattingParams =
   DocumentFormattingParams
-    { textDocumentDocumentFormattingParams :: TextDocumentIdentifier
-    , optionsDocumentFormattingParams      :: FormattingOptions
+    { _textDocument :: TextDocumentIdentifier
+    , _options      :: FormattingOptions
     } deriving (Show,Read,Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DocumentFormattingParams") } ''DocumentFormattingParams)
+$(deriveJSON lspOptions ''DocumentFormattingParams)
 
 type DocumentFormattingRequest  = RequestMessage DocumentFormattingParams
 type DocumentFormattingResponse = ResponseMessage [TextEdit]
@@ -2838,12 +2834,12 @@ Response
 
 data DocumentRangeFormattingParams =
   DocumentRangeFormattingParams
-    { textDocumentDocumentRangeFormattingParams :: TextDocumentIdentifier
-    , rangeDocumentRangeFormattingParams        :: Range
-    , optionsDocumentRangeFormattingParams      :: FormattingOptions
+    { _textDocument :: TextDocumentIdentifier
+    , _range        :: Range
+    , _options      :: FormattingOptions
     } deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DocumentRangeFormattingParams") } ''DocumentRangeFormattingParams)
+$(deriveJSON lspOptions ''DocumentRangeFormattingParams)
 
 type DocumentRangeFormattingRequest  = RequestMessage DocumentRangeFormattingParams
 type DocumentRangeFormattingResponse = ResponseMessage [TextEdit]
@@ -2893,13 +2889,13 @@ Response
 
 data DocumentOnTypeFormattingParams =
   DocumentOnTypeFormattingParams
-    { textDocumentDocumentOnTypeFormattingParams :: TextDocumentIdentifier
-    , positionDocumentOnTypeFormattingParams     :: Position
-    , chDocumentOnTypeFormattingParams           :: String
-    , optionsDocumentOnTypeFormattingParams      :: FormattingOptions
+    { _textDocument :: TextDocumentIdentifier
+    , _position     :: Position
+    , _ch           :: String
+    , _options      :: FormattingOptions
     } deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "DocumentOnTypeFormattingParams") } ''DocumentOnTypeFormattingParams)
+$(deriveJSON lspOptions ''DocumentOnTypeFormattingParams)
 
 type DocumentOnTypeFormattingRequest  = RequestMessage DocumentOnTypeFormattingParams
 type DocumentOnTypeFormattingResponse = ResponseMessage [TextEdit]
@@ -2946,12 +2942,12 @@ Response
 -}
 data RenameRequestParams =
   RenameRequestParams
-    { textDocumentRenameRequestParams :: TextDocumentIdentifier
-    , positionRenameRequestParams     :: Position
-    , newNameRenameRequestParams      :: String
+    { _textDocument :: TextDocumentIdentifier
+    , _position     :: Position
+    , _newName      :: String
     } deriving (Show, Read, Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "RenameRequestParams") } ''RenameRequestParams)
+$(deriveJSON lspOptions ''RenameRequestParams)
 
 instance Default RenameRequestParams where
   def = RenameRequestParams def def def
@@ -2967,22 +2963,23 @@ type RenameResponse = ResponseMessage WorkspaceEdit
 
 data TraceNotificationParams =
   TraceNotificationParams {
-    valueTraceNotificationParams :: String
+    _value :: String
   } deriving (Show, Read, Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "TraceNotificationParams") } ''TraceNotificationParams)
+$(deriveJSON lspOptions ''TraceNotificationParams)
 
 instance Default TraceNotificationParams where
   def = TraceNotificationParams mempty
 
 data TraceNotification =
   TraceNotification {
-    paramsTraceNotification :: TraceNotificationParams
+    _params :: TraceNotificationParams
   } deriving (Show, Read, Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "TraceNotification") } ''TraceNotification)
+$(deriveJSON lspOptions ''TraceNotification)
 
 instance Default TraceNotification where
   def = TraceNotification def
+
 
 -- ---------------------------------------------------------------------
