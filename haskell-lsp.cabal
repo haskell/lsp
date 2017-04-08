@@ -63,6 +63,7 @@ executable hie-vscode
   other-modules:       Language.Haskell.LSP.Constant
                      , Language.Haskell.LSP.Control
                      , Language.Haskell.LSP.Core
+                     , Language.Haskell.LSP.Constant
                      , Language.Haskell.LSP.TH.DataTypesJSON
                      , Language.Haskell.LSP.Utility
 
