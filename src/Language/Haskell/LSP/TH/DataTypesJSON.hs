@@ -18,6 +18,20 @@ import Data.Default
 
 -- ---------------------------------------------------------------------
 
+-- | This data type is used to host a FromJSON instance for the encoding used by
+-- elisp, where an empty list shows up as "null"
+data List a = List [a]
+            deriving (Show,Read,Eq)
+
+instance (A.ToJSON a) => A.ToJSON (List a) where
+  toJSON (List ls) = toJSON ls
+
+instance (A.FromJSON a) => A.FromJSON (List a) where
+  parseJSON A.Null = return (List [])
+  parseJSON v      = List <$> parseJSON v
+
+-- ---------------------------------------------------------------------
+
 -- |
 --   Client-initiated request. only pull out the method, for routing
 --
@@ -1383,7 +1397,7 @@ instance Default TextDocumentContentChangeEvent where
 data DidChangeTextDocumentParams =
   DidChangeTextDocumentParams
     { _textDocument   :: VersionedTextDocumentIdentifier
-    , _contentChanges :: [TextDocumentContentChangeEvent]
+    , _contentChanges :: List TextDocumentContentChangeEvent
     } deriving (Show,Read,Eq)
 
 $(deriveJSON lspOptions ''DidChangeTextDocumentParams)
