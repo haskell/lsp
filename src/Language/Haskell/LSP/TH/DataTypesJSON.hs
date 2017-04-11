@@ -1,8 +1,8 @@
+{-# LANGUAGE DeriveGeneric         #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE TemplateHaskell       #-}
 {-# LANGUAGE TypeSynonymInstances  #-}
-{-# LANGUAGE DeriveGeneric         #-}
 
 module Language.Haskell.LSP.TH.DataTypesJSON where
 
@@ -30,6 +30,51 @@ instance (A.FromJSON a) => A.FromJSON (List a) where
   parseJSON A.Null = return (List [])
   parseJSON v      = List <$> parseJSON v
 
+instance (Default a) => Default (List a) where
+  def = List def
+
+-- ---------------------------------------------------------------------
+
+-- | Id used for a request, Can be either a String or an Int
+data LspId = IdInt Int | IdString String
+            deriving (Show,Read,Eq)
+
+instance A.ToJSON LspId where
+  toJSON (IdInt i)    = toJSON i
+  toJSON (IdString s) = toJSON s
+
+instance A.FromJSON LspId where
+  parseJSON v@(A.Number _) = IdInt <$> parseJSON v
+  parseJSON  (A.String  s) = return (IdString (T.unpack s))
+  parseJSON _              = mempty
+
+instance Default LspId where
+  def = IdInt def
+
+-- ---------------------------------------------------------------------
+
+-- | Id used for a response, Can be either a String or an Int, or Null. If a
+-- request doesn't provide a result value the receiver of a request still needs
+-- to return a response message to conform to the JSON RPC specification. The
+-- result property of the ResponseMessage should be set to null in this case to
+-- signal a successful request.
+data LspIdRsp = IdRspInt Int | IdRspString String | IdRspNull
+            deriving (Show,Read,Eq)
+
+instance A.ToJSON LspIdRsp where
+  toJSON (IdRspInt i)    = toJSON i
+  toJSON (IdRspString s) = toJSON s
+  toJSON IdRspNull       = A.Null
+
+instance A.FromJSON LspIdRsp where
+  parseJSON v@(A.Number _) = IdRspInt <$> parseJSON v
+  parseJSON  (A.String  s) = return (IdRspString (T.unpack s))
+  parseJSON  A.Null        = return IdRspNull
+  parseJSON _              = mempty
+
+instance Default LspIdRsp where
+  def = IdRspInt def
+
 -- ---------------------------------------------------------------------
 
 -- |
@@ -47,7 +92,7 @@ $(deriveJSON lspOptions ''Request)
 data RequestMessage a =
   RequestMessage
     { _jsonrpc :: String
-    , _id      :: Int
+    , _id      :: LspId
     , _method  :: String
     , _params  :: Maybe a
     } deriving (Read,Show,Eq)
@@ -55,7 +100,7 @@ data RequestMessage a =
 $(deriveJSON lspOptions ''RequestMessage)
 
 instance Default (RequestMessage a) where
-  def = RequestMessage "2.0" def def def
+  def = RequestMessage "3.0" def def def
 
 -- ---------------------------------------------------------------------
 {-
@@ -78,13 +123,19 @@ interface ResponseError<D> {
 }
 
 export namespace ErrorCodes {
-    export const ParseError: number = -32700;
-    export const InvalidRequest: number = -32600;
-    export const MethodNotFound: number = -32601;
-    export const InvalidParams: number = -32602;
-    export const InternalError: number = -32603;
-    export const serverErrorStart: number = -32099
-    export const serverErrorEnd: number = -32000;
+	// Defined by JSON RPC
+	export const ParseError: number = -32700;
+	export const InvalidRequest: number = -32600;
+	export const MethodNotFound: number = -32601;
+	export const InvalidParams: number = -32602;
+	export const InternalError: number = -32603;
+	export const serverErrorStart: number = -32099;
+	export const serverErrorEnd: number = -32000;
+	export const ServerNotInitialized: number = -32002;
+	export const UnknownErrorCode: number = -32001;
+
+	// Defined by the protocol.
+	export const RequestCancelled: number = -32800;
 }
 -}
 
@@ -133,7 +184,7 @@ instance Default ResponseError where
 data ResponseMessage a =
   ResponseMessage
     { _jsonrpc :: String
-    , _id      :: Int
+    , _id      :: LspIdRsp
     , _result  :: Maybe a
     , _error   :: Maybe ResponseError
     } deriving (Read,Show,Eq)
@@ -150,7 +201,7 @@ type ErrorResponse = ResponseMessage ()
 data BareResponseMessage =
   BareResponseMessage
     { _jsonrpc :: String
-    , _id      :: Int
+    , _id      :: LspIdRsp
     , _result  :: Maybe A.Object
     , _error   :: Maybe ResponseError
     } deriving (Read,Show,Eq)
@@ -161,6 +212,16 @@ instance Default BareResponseMessage where
   def = BareResponseMessage "2.0" def def Nothing
 
 -- ---------------------------------------------------------------------
+{-
+$ Notifications and Requests
+
+Notification and requests ids starting with '$/' are messages which are protocol
+implementation dependent and might not be implementable in all clients or
+servers. For example if the server implementation uses a single threaded
+synchronous programming language then there is little a server can do to react
+to a '$/cancelRequest'. If a server or client receives notifications or requests
+starting with '$/' it is free to ignore them if they are unknown.
+-}
 
 data NotificationMessage a =
   NotificationMessage
@@ -204,7 +265,7 @@ it allows for returning partial results on cancel.
 
 data CancelParams =
   CancelParams
-    { _id :: Int
+    { _id :: LspId
     } deriving (Read,Show,Eq)
 
 $(deriveJSON lspOptions ''CancelParams)
@@ -212,6 +273,17 @@ $(deriveJSON lspOptions ''CancelParams)
 type CancelNotification = NotificationMessage CancelParams
 
 -- ---------------------------------------------------------------------
+
+{-
+The current protocol is talored for textual documents which content can be
+represented as a string. There is currently no support for binary documents.
+Positions inside a document (see Position definition below) are expressed as a
+zero-based line and character offset. To ensure that both client and server
+split the string into the same line representation the protocol specs the
+following end of line sequences: '\n', '\r\n' and '\r'.
+
+export const EOL: string[] = ['\n', '\r\n', '\r'];
+-}
 {-
 https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#position
 
@@ -384,7 +456,7 @@ data Diagnostic =
   Diagnostic
     { _range    :: Range
     , _severity :: Maybe DiagnosticSeverity
-    , _code     :: Maybe String
+    , _code     :: Maybe String -- Note: Protocol allows Int too.
     , _source   :: Maybe String
     , _message  :: String
     } deriving (Show, Read, Eq)
@@ -455,6 +527,8 @@ interface TextEdit {
      */
     newText: string;
 }
+
+
 -}
 
 data TextEdit =
@@ -468,19 +542,97 @@ $(deriveJSON lspOptions ''TextEdit)
 instance Default TextEdit where
   def = TextEdit def def
 
+
 -- ---------------------------------------------------------------------
 {-
+VersionedTextDocumentIdentifier
+
+https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#versionedtextdocumentidentifier
+
+    New: An identifier to denote a specific version of a text document.
+
+interface VersionedTextDocumentIdentifier extends TextDocumentIdentifier {
+    /**
+     * The version number of this document.
+     */
+    version: number;
+-}
+data VersionedTextDocumentIdentifier =
+  VersionedTextDocumentIdentifier
+    { _uri     :: String
+    , _version :: Int
+    } deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''VersionedTextDocumentIdentifier)
+
+instance Default VersionedTextDocumentIdentifier where
+  def = VersionedTextDocumentIdentifier def def
+
+-- ---------------------------------------------------------------------
+{-
+New in 3.0
+----------
+
+TextDocumentEdit
+https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#new-textdocumentedit
+
+If multiple TextEdits are applied to a text document, all text edits describe
+changes made to the initial document version. Execution wise text edits should
+applied from the bottom to the top of the text document. Overlapping text edits
+are not supported.
+
+export interface TextDocumentEdit {
+	/**
+	 * The text document to change.
+	 */
+	textDocument: VersionedTextDocumentIdentifier;
+
+	/**
+	 * The edits to be applied.
+	 */
+	edits: TextEdit[];
+}
+
+-}
+
+data TextDocumentEdit =
+  TextDocumentEdit
+    { _textDocument :: VersionedTextDocumentIdentifier
+    , _edits        :: List TextEdit
+    } deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''TextDocumentEdit)
+
+instance Default TextDocumentEdit where
+  def = TextDocumentEdit def def
+
+-- ---------------------------------------------------------------------
+{-
+Changed in 3.0
+--------------
+
 WorkspaceEdit
 
 https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#workspaceedit
 
-A workspace edit represents changes to many resources managed in the workspace.
 
-interface WorkspaceEdit {
-    /**
-     * Holds changes to existing resources.
-     */
-    changes: { [uri: string]: TextEdit[]; };
+Changed A workspace edit represents changes to many resources managed in the
+workspace. The edit should either provide changes or documentChanges. If
+documentChanges are present they are preferred over changes if the client can
+handle versioned document edits.
+
+export interface WorkspaceEdit {
+	/**
+	 * Holds changes to existing resources.
+	 */
+	changes?: { [uri: string]: TextEdit[]; };
+
+	/**
+	 * An array of `TextDocumentEdit`s to express changes to specific a specific
+	 * version of a text document. Whether a client supports versioned document
+	 * edits is expressed via `WorkspaceClientCapabilites.versionedWorkspaceEdit`.
+	 */
+	documentChanges?: TextDocumentEdit[];
 }
 -}
 
@@ -491,13 +643,14 @@ instance Default (H.HashMap T.Text [TextEdit]) where
 
 data WorkspaceEdit =
   WorkspaceEdit
-    { _changes :: WorkspaceEditMap
+    { _changes :: Maybe WorkspaceEditMap
+    , _documentChanges :: Maybe (List TextDocumentEdit)
     } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''WorkspaceEdit)
 
 instance Default WorkspaceEdit where
-  def = WorkspaceEdit def
+  def = WorkspaceEdit def def
 
 -- ---------------------------------------------------------------------
 {-
@@ -570,31 +723,6 @@ $(deriveJSON lspOptions ''TextDocumentItem)
 
 -- ---------------------------------------------------------------------
 {-
-VersionedTextDocumentIdentifier
-
-https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#versionedtextdocumentidentifier
-
-    New: An identifier to denote a specific version of a text document.
-
-interface VersionedTextDocumentIdentifier extends TextDocumentIdentifier {
-    /**
-     * The version number of this document.
-     */
-    version: number;
--}
-data VersionedTextDocumentIdentifier =
-  VersionedTextDocumentIdentifier
-    { _uri     :: String
-    , _version :: Int
-    } deriving (Show, Read, Eq)
-
-$(deriveJSON lspOptions ''VersionedTextDocumentIdentifier)
-
-instance Default VersionedTextDocumentIdentifier where
-  def = VersionedTextDocumentIdentifier def def
-
--- ---------------------------------------------------------------------
-{-
 TextDocumentPositionParams
 
 https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#textdocumentpositionparams
@@ -626,6 +754,680 @@ $(deriveJSON lspOptions ''TextDocumentPositionParams)
 instance Default TextDocumentPositionParams where
   def = TextDocumentPositionParams def def
 
+-- ---------------------------------------------------------------------
+{-
+New in 3.0
+----------
+
+DocumentFilter
+https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#new-documentfilter
+
+A document filter denotes a document through properties like language, schema or
+pattern. Examples are a filter that applies to TypeScript files on disk or a
+filter the applies to JSON files with name package.json:
+
+    { language: 'typescript', scheme: 'file' }
+    { language: 'json', pattern: '**/package.json' }
+
+export interface DocumentFilter {
+	/**
+	 * A language id, like `typescript`.
+	 */
+	language?: string;
+
+	/**
+	 * A Uri [scheme](#Uri.scheme), like `file` or `untitled`.
+	 */
+	scheme?: string;
+
+	/**
+	 * A glob pattern, like `*.{ts,js}`.
+	 */
+	pattern?: string;
+}
+-}
+data DocumentFilter =
+  DocumentFilter
+    { _language :: String
+    , _scheme   :: String
+    , _pattern  :: Maybe String
+    } deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''DocumentFilter)
+
+instance Default DocumentFilter where
+  def = DocumentFilter def def def
+
+{-
+A document selector is the combination of one or many document filters.
+
+export type DocumentSelector = DocumentFilter[];
+-}
+type DocumentSelector = List DocumentFilter
+
+-- ---------------------------------------------------------------------
+{-
+New in 3.0
+----------
+
+WorkspaceClientCapabilites
+
+define capabilities the editor / tool provides on the workspace:
+/**
+ * Workspace specific client capabilities.
+ */
+export interface WorkspaceClientCapabilites {
+	/**
+	 * The client supports applying batch edits to the workspace by supporting
+	 * the request 'workspace/applyEdit'
+	 */
+	applyEdit?: boolean;
+
+	/**
+	 * Capabilities specific to `WorkspaceEdit`s
+	 */
+	workspaceEdit?: {
+		/**
+		 * The client supports versioned document changes in `WorkspaceEdit`s
+		 */
+		documentChanges?: boolean;
+	};
+
+	/**
+	 * Capabilities specific to the `workspace/didChangeConfiguration` notification.
+	 */
+	didChangeConfiguration?: {
+		/**
+		 * Did change configuration notification supports dynamic registration.
+		 */
+		dynamicRegistration?: boolean;
+	};
+
+	/**
+	 * Capabilities specific to the `workspace/didChangeWatchedFiles` notification.
+	 */
+	didChangeWatchedFiles?: {
+		/**
+		 * Did change watched files notification supports dynamic registration.
+		 */
+		dynamicRegistration?: boolean;
+	};
+
+	/**
+	 * Capabilities specific to the `workspace/symbol` request.
+	 */
+	symbol?: {
+		/**
+		 * Symbol request supports dynamic registration.
+		 */
+		dynamicRegistration?: boolean;
+	};
+
+	/**
+	 * Capabilities specific to the `workspace/executeCommand` request.
+	 */
+	executeCommand?: {
+		/**
+		 * Execute command supports dynamic registration.
+		 */
+		dynamicRegistration?: boolean;
+	};
+}
+-}
+
+-- -------------------------------------
+
+data WorkspaceEditClientCapabilities =
+  WorkspaceEditClientCapabilities
+  { _documentChanges :: Maybe Bool -- ^The client supports versioned document
+                                   -- changes in `WorkspaceEdit`s
+  } deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''WorkspaceEditClientCapabilities)
+
+-- -------------------------------------
+
+data DidChangeConfigurationClientCapabilities =
+  DidChangeConfigurationClientCapabilities
+    { _dynamicRegistration :: Maybe Bool -- ^Did change configuration
+                                         -- notification supports dynamic
+                                         -- registration.
+    } deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''DidChangeConfigurationClientCapabilities)
+
+-- -------------------------------------
+
+data DidChangeWatchedFilesClientCapabilities =
+  DidChangeWatchedFilesClientCapabilities
+    { _dynamicRegistration :: Maybe Bool -- ^Did change watched files
+                                         -- notification supports dynamic
+                                         -- registration.
+    } deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''DidChangeWatchedFilesClientCapabilities)
+
+-- -------------------------------------
+
+data SymbolClientCapabilities =
+  SymbolClientCapabilities
+    { _dynamicRegistration :: Maybe Bool -- ^Symbol request supports dynamic
+                                         -- registration.
+    } deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''SymbolClientCapabilities)
+
+-- -------------------------------------
+
+data ExecuteClientCapabilities =
+  ExecuteClientCapabilities
+    { _dynamicRegistration :: Maybe Bool -- ^Execute command supports dynamic
+                                         -- registration.
+    } deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''ExecuteClientCapabilities)
+
+-- -------------------------------------
+
+data WorkspaceClientCapabilites =
+  WorkspaceClientCapabilites
+    { -- | The client supports applying batch edits to the workspace by supporting
+      -- the request 'workspace/applyEdit'
+      _applyEdit :: Maybe Bool
+
+      -- | Capabilities specific to `WorkspaceEdit`s
+    , _workspaceEdit :: Maybe WorkspaceClientCapabilites
+
+      -- | Capabilities specific to the `workspace/didChangeConfiguration` notification.
+    , _didChangeConfiguration :: Maybe DidChangeConfigurationClientCapabilities
+
+       -- | Capabilities specific to the `workspace/didChangeWatchedFiles` notification.
+    , _didChangeWatchedFiles :: Maybe DidChangeWatchedFilesClientCapabilities
+
+      -- | Capabilities specific to the `workspace/symbol` request.
+    , _symbol :: Maybe SymbolClientCapabilities
+
+      -- | Capabilities specific to the `workspace/executeCommand` request.
+    , _executeCommand :: Maybe ExecuteClientCapabilities
+    } deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''WorkspaceClientCapabilites)
+
+instance Default WorkspaceClientCapabilites where
+  def = WorkspaceClientCapabilites def def def def def def
+
+-- ---------------------------------------------------------------------
+{-
+New in 3.0
+----------
+
+TextDocumentClientCapabilities
+    define capabilities the editor / tool provides on text documents.
+
+/**
+ * Text document specific client capabilities.
+ */
+export interface TextDocumentClientCapabilities {
+
+	synchronization?: {
+		/**
+		 * Whether text document synchronization supports dynamic registration.
+		 */
+		dynamicRegistration?: boolean;
+
+		/**
+		 * The client supports sending will save notifications.
+		 */
+		willSave?: boolean;
+
+		/**
+		 * The client supports sending a will save request and
+		 * waits for a response providing text edits which will
+		 * be applied to the document before it is saved.
+		 */
+		willSaveWaitUntil?: boolean;
+
+		/**
+		 * The client supports did save notifications.
+		 */
+		didSave?: boolean;
+	}
+
+	/**
+	 * Capabilities specific to the `textDocument/completion`
+	 */
+	completion?: {
+		/**
+		 * Whether completion supports dynamic registration.
+		 */
+		dynamicRegistration?: boolean;
+
+		/**
+		 * The client supports the following `CompletionItem` specific
+		 * capabilities.
+		 */
+		completionItem?: {
+			/**
+			 * Client supports snippets as insert text.
+			 *
+			 * A snippet can define tab stops and placeholders with `$1`, `$2`
+			 * and `${3:foo}`. `$0` defines the final tab stop, it defaults to
+			 * the end of the snippet. Placeholders with equal identifiers are linked,
+			 * that is typing in one will update others too.
+			 */
+			snippetSupport?: boolean;
+		}
+	};
+
+	/**
+	 * Capabilities specific to the `textDocument/hover`
+	 */
+	hover?: {
+		/**
+		 * Whether hover supports dynamic registration.
+		 */
+		dynamicRegistration?: boolean;
+	};
+
+	/**
+	 * Capabilities specific to the `textDocument/signatureHelp`
+	 */
+	signatureHelp?: {
+		/**
+		 * Whether signature help supports dynamic registration.
+		 */
+		dynamicRegistration?: boolean;
+	};
+
+	/**
+	 * Capabilities specific to the `textDocument/references`
+	 */
+	references?: {
+		/**
+		 * Whether references supports dynamic registration.
+		 */
+		dynamicRegistration?: boolean;
+	};
+
+	/**
+	 * Capabilities specific to the `textDocument/documentHighlight`
+	 */
+	documentHighlight?: {
+		/**
+		 * Whether document highlight supports dynamic registration.
+		 */
+		dynamicRegistration?: boolean;
+	};
+
+	/**
+	 * Capabilities specific to the `textDocument/documentSymbol`
+	 */
+	documentSymbol?: {
+		/**
+		 * Whether document symbol supports dynamic registration.
+		 */
+		dynamicRegistration?: boolean;
+	};
+
+	/**
+	 * Capabilities specific to the `textDocument/formatting`
+	 */
+	formatting?: {
+		/**
+		 * Whether formatting supports dynamic registration.
+		 */
+		dynamicRegistration?: boolean;
+	};
+
+	/**
+	 * Capabilities specific to the `textDocument/rangeFormatting`
+	 */
+	rangeFormatting?: {
+		/**
+		 * Whether range formatting supports dynamic registration.
+		 */
+		dynamicRegistration?: boolean;
+	};
+
+	/**
+	 * Capabilities specific to the `textDocument/onTypeFormatting`
+	 */
+	onTypeFormatting?: {
+		/**
+		 * Whether on type formatting supports dynamic registration.
+		 */
+		dynamicRegistration?: boolean;
+	};
+
+	/**
+	 * Capabilities specific to the `textDocument/definition`
+	 */
+	definition?: {
+		/**
+		 * Whether definition supports dynamic registration.
+		 */
+		dynamicRegistration?: boolean;
+	};
+
+	/**
+	 * Capabilities specific to the `textDocument/codeAction`
+	 */
+	codeAction?: {
+		/**
+		 * Whether code action supports dynamic registration.
+		 */
+		dynamicRegistration?: boolean;
+	};
+
+	/**
+	 * Capabilities specific to the `textDocument/codeLens`
+	 */
+	codeLens?: {
+		/**
+		 * Whether code lens supports dynamic registration.
+		 */
+		dynamicRegistration?: boolean;
+	};
+
+	/**
+	 * Capabilities specific to the `textDocument/documentLink`
+	 */
+	documentLink?: {
+		/**
+		 * Whether document link supports dynamic registration.
+		 */
+		dynamicRegistration?: boolean;
+	};
+
+	/**
+	 * Capabilities specific to the `textDocument/rename`
+	 */
+	rename?: {
+		/**
+		 * Whether rename supports dynamic registration.
+		 */
+		dynamicRegistration?: boolean;
+	};
+}
+
+-}
+
+-- -------------------------------------
+
+-- TODO:AZ: this name is Java-ridiculously long
+data SynchronizationTextDocumentClientCapabilities =
+  SynchronizationTextDocumentClientCapabilities
+    { -- | Whether text document synchronization supports dynamic registration.
+      _dynamicRegistration :: Maybe Bool
+
+      -- | The client supports sending will save notifications.
+    , _willSave :: Maybe Bool
+
+      -- | The client supports sending a will save request and waits for a
+      -- response providing text edits which will be applied to the document
+      -- before it is saved.
+    , _willSaveWaitUntil :: Maybe Bool
+
+      -- | The client supports did save notifications.
+    , _didSave :: Maybe Bool
+    } deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''SynchronizationTextDocumentClientCapabilities)
+
+instance Default SynchronizationTextDocumentClientCapabilities where
+  def = SynchronizationTextDocumentClientCapabilities def def def def
+
+-- -------------------------------------
+
+data CompletionItemClientCapabilities =
+  CompletionItemClientCapabilities
+    {
+      -- | Client supports snippets as insert text.
+      --
+      -- A snippet can define tab stops and placeholders with `$1`, `$2` and
+      -- `${3:foo}`. `$0` defines the final tab stop, it defaults to the end of
+      -- the snippet. Placeholders with equal identifiers are linked, that is
+      -- typing in one will update others too.
+      _snippetSupport :: Maybe Bool
+    } deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''CompletionItemClientCapabilities)
+
+data CompletionClientCapabilities =
+  CompletionClientCapabilities
+    { _dynamicRegistration :: Maybe Bool -- ^Whether completion supports dynamic
+                                         -- registration.
+    , _completionItem :: Maybe CompletionItemClientCapabilities
+    } deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''CompletionClientCapabilities)
+
+-- -------------------------------------
+
+data HoverClientCapabilities =
+  HoverClientCapabilities
+    { _dynamicRegistration :: Maybe Bool
+    } deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''HoverClientCapabilities)
+
+-- -------------------------------------
+
+data SignatureHelpClientCapabilities =
+  SignatureHelpClientCapabilities
+    { _dynamicRegistration :: Maybe Bool
+    } deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''SignatureHelpClientCapabilities)
+
+-- -------------------------------------
+
+data ReferencesClientCapabilities =
+  ReferencesClientCapabilities
+    { _dynamicRegistration :: Maybe Bool
+    } deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''ReferencesClientCapabilities)
+
+-- -------------------------------------
+
+data DocumentHighlightClientCapabilities =
+  DocumentHighlightClientCapabilities
+    { _dynamicRegistration :: Maybe Bool
+    } deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''DocumentHighlightClientCapabilities)
+
+-- -------------------------------------
+
+data DocumentSymbolClientCapabilities =
+  DocumentSymbolClientCapabilities
+    { _dynamicRegistration :: Maybe Bool
+    } deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''DocumentSymbolClientCapabilities)
+
+-- -------------------------------------
+
+data FormattingClientCapabilities =
+  FormattingClientCapabilities
+    { _dynamicRegistration :: Maybe Bool
+    } deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''FormattingClientCapabilities)
+
+-- -------------------------------------
+
+data RangeFormattingClientCapabilities =
+  RangeFormattingClientCapabilities
+    { _dynamicRegistration :: Maybe Bool
+    } deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''RangeFormattingClientCapabilities)
+
+-- -------------------------------------
+
+data OnTypeFormattingClientCapabilities =
+  OnTypeFormattingClientCapabilities
+    { _dynamicRegistration :: Maybe Bool
+    } deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''OnTypeFormattingClientCapabilities)
+
+-- -------------------------------------
+
+data DefinitionClientCapabilities =
+  DefinitionClientCapabilities
+    { _dynamicRegistration :: Maybe Bool
+    } deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''DefinitionClientCapabilities)
+
+-- -------------------------------------
+
+data CodeActionClientCapabilities =
+  CodeActionClientCapabilities
+    { _dynamicRegistration :: Maybe Bool
+    } deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''CodeActionClientCapabilities)
+
+-- -------------------------------------
+
+data CodeLensClientCapabilities =
+  CodeLensClientCapabilities
+    { _dynamicRegistration :: Maybe Bool
+    } deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''CodeLensClientCapabilities)
+
+-- -------------------------------------
+
+data DocumentLinkClientCapabilities =
+  DocumentLinkClientCapabilities
+    { _dynamicRegistration :: Maybe Bool
+    } deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''DocumentLinkClientCapabilities)
+
+-- -------------------------------------
+
+data RenameClientCapabilities =
+  RenameClientCapabilities
+    { _dynamicRegistration :: Maybe Bool
+    } deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''RenameClientCapabilities)
+
+-- -------------------------------------
+
+data TextDocumentClientCapabilities =
+  TextDocumentClientCapabilities
+    { _synchronization :: Maybe SynchronizationTextDocumentClientCapabilities
+
+      -- | Capabilities specific to the `textDocument/completion`
+    , _completion :: Maybe CompletionClientCapabilities
+
+      -- | Capabilities specific to the `textDocument/hover`
+    , _hover :: Maybe HoverClientCapabilities
+
+      -- | Capabilities specific to the `textDocument/signatureHelp`
+    , _signatureHelp :: Maybe SignatureHelpClientCapabilities
+
+      -- | Capabilities specific to the `textDocument/references`
+    , _references :: Maybe ReferencesClientCapabilities
+
+      -- | Capabilities specific to the `textDocument/documentHighlight`
+    , _documentHighlight :: Maybe DocumentHighlightClientCapabilities
+
+      -- | Capabilities specific to the `textDocument/documentSymbol`
+    , _documentSymbol :: Maybe DocumentSymbolClientCapabilities
+
+      -- | Capabilities specific to the `textDocument/formatting`
+    , _formatting :: Maybe FormattingClientCapabilities
+
+      -- | Capabilities specific to the `textDocument/rangeFormatting`
+    , _rangeFormatting :: Maybe RangeFormattingClientCapabilities
+
+      -- | Capabilities specific to the `textDocument/onTypeFormatting`
+    , _onTypeFormatting :: Maybe OnTypeFormattingClientCapabilities
+
+      -- | Capabilities specific to the `textDocument/definition`
+    , _definition :: Maybe DefinitionClientCapabilities
+
+      -- | Capabilities specific to the `textDocument/codeAction`
+    , _codeAction :: Maybe CodeActionClientCapabilities
+
+      -- | Capabilities specific to the `textDocument/codeLens`
+    , _codeLens :: Maybe CodeLensClientCapabilities
+
+      -- | Capabilities specific to the `textDocument/documentLink`
+    , _documentLink :: Maybe DocumentLinkClientCapabilities
+
+      -- | Capabilities specific to the `textDocument/rename`
+    , _rename :: Maybe RenameClientCapabilities
+    } deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''TextDocumentClientCapabilities)
+
+instance Default TextDocumentClientCapabilities where
+  def = TextDocumentClientCapabilities def def def def def def def
+                                       def def def def def def def def
+
+-- ---------------------------------------------------------------------
+{-
+New in 3.0
+
+-----------
+
+ClientCapabilities
+
+now define capabilities for dynamic registration, workspace and text document
+features the client supports. The experimental can be used to pass experimential
+capabilities under development. For future compatibility a ClientCapabilities
+object literal can have more properties set than currently defined. Servers
+receiving a ClientCapabilities object literal with unknown properties should
+ignore these properties. A missing property should be interpreted as an absence
+of the capability. If a property is missing that defines sub properties all sub
+properties should be interpreted as an absence of the capability.
+
+Client capabilities got introduced with the version 3.0 of the protocol. They
+therefore only describe capabilities that got introduced in 3.x or later.
+Capabilities that existed in the 2.x version of the protocol are still mandatory
+for clients. Clients cannot opt out of providing them. So even if a client omits
+the ClientCapabilities.textDocument.synchronization it is still required that
+the client provides text document synchronization (e.g. open, changed and close
+notifications).
+
+interface ClientCapabilities {
+	/**
+	 * Workspace specific client capabilities.
+	 */
+	workspace?: WorkspaceClientCapabilites;
+
+	/**
+	 * Text document specific client capabilities.
+	 */
+	textDocument?: TextDocumentClientCapabilities;
+
+	/**
+	 * Experimental client capabilities.
+	 */
+	experimental?: any;
+}
+-}
+
+data ClientCapabilities =
+  ClientCapabilities
+    { _workspace :: Maybe WorkspaceClientCapabilites
+    , _textDocument :: Maybe TextDocumentClientCapabilities
+    , _experimental :: Maybe A.Object
+    } deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''ClientCapabilities)
+
+instance Default ClientCapabilities where
+  def = ClientCapabilities def def def
 
 -- =====================================================================
 -- ACTUAL PROTOCOL -----------------------------------------------------
@@ -647,59 +1449,81 @@ Request
     params: InitializeParams defined as follows:
 
 interface InitializeParams {
-    /**
-     * The process Id of the parent process that started
-     * the server.
-     */
-    processId: number;
+	/**
+	 * The process Id of the parent process that started
+	 * the server. Is null if the process has not been started by another process.
+	 * If the parent process is not alive then the server should exit (see exit notification) its process.
+	 */
+	processId: number | null;
 
-    /**
-     * The rootPath of the workspace. Is null
-     * if no folder is open.
-     */
-    rootPath: string;
+	/**
+	 * The rootPath of the workspace. Is null
+	 * if no folder is open.
+	 *
+	 * @deprecated in favour of rootUri.
+	 */
+	rootPath?: string | null;
 
-    /**
-     * User provided initialization options.
-     */
-    initializationOptions?: any;
+	/**
+	 * The rootUri of the workspace. Is null if no
+	 * folder is open. If both `rootPath` and `rootUri` are set
+	 * `rootUri` wins.
+	 */
+	rootUri: DocumentUri | null;
 
-    /**
-     * The capabilities provided by the client (editor)
-     */
-    capabilities: ClientCapabilities;
+	/**
+	 * User provided initialization options.
+	 */
+	initializationOptions?: any;
+
+	/**
+	 * The capabilities provided by the client (editor or tool)
+	 */
+	capabilities: ClientCapabilities;
+
+	/**
+	 * The initial trace setting. If omitted trace is disabled ('off').
+	 */
+	trace?: 'off' | 'messages' | 'verbose';
 }
 -}
 
+data Trace = TraceOff | TraceMessages | TraceVerbose
+           deriving (Show, Read, Eq)
+
+instance A.ToJSON Trace where
+  toJSON TraceOff      = A.String (T.pack "off")
+  toJSON TraceMessages = A.String (T.pack "messages")
+  toJSON TraceVerbose  = A.String (T.pack "verbose")
+
+instance A.FromJSON Trace where
+  parseJSON (A.String s) = case T.unpack s of
+    "off"      -> return TraceOff
+    "messages" -> return TraceMessages
+    "verbose"  -> return TraceVerbose
+    _          -> mempty
+  parseJSON _                               = mempty
+
+instance Default Trace where
+  def = TraceOff
+
 data InitializeRequestArguments =
   InitializeRequestArguments {
-    _processId             :: Int
-  , _rootPath              :: Maybe String
-  , _capabilities          :: A.Object -- None currently defined, but empty object sent
+    _processId             :: Maybe Int
+  , _rootPath              :: Maybe String -- ^ Deprecated in favour of _rootUri
+  , _rootUri               :: Maybe String
   , _initializationOptions :: Maybe A.Object
-  -- , traceInitializeRequestArguments        :: String -- observed to be present in the wild
+  , _capabilities          :: ClientCapabilities
+  , _trace                 :: Maybe Trace
   } deriving (Show, Read, Eq)
 
 
 $(deriveJSON lspOptions { omitNothingFields = True } ''InitializeRequestArguments)
 
 instance Default InitializeRequestArguments where
-  def = InitializeRequestArguments 0 mempty mempty mempty
+  def = InitializeRequestArguments def def def def def def
 
 -- ---------------------------------------------------------------------
-
--- {"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":1749,"capabilities":{},"trace":"off"}}
--- {"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":17554,"rootPath":"/home/alanz/mysrc/github/alanz/haskell-lsp","capabilities":{},"trace":"off"}}
--- data InitializeRequest =
---   InitializeRequest {
---     idInitializeRequest       :: Int                         -- Sequence number
---   , paramsInitializeRequest   :: InitializeRequestArguments  -- Object containing arguments for the command
---   } deriving (Show, Read, Eq)
-
--- $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "InitializeRequest") } ''InitializeRequest)
-
--- instance Default InitializeRequest where
---   def = InitializeRequest 0 def
 
 type InitializeRequest = RequestMessage InitializeRequestArguments
 
