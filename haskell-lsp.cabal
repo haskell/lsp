@@ -1,6 +1,6 @@
 name:                haskell-lsp
 version:             0.1.0.0
-synopsis:            Haskell library for the Microsoft Language Server Protocol          
+synopsis:            Haskell library for the Microsoft Language Server Protocol
 
 description:         An implementation of the types, and basic message server to
                      allow language implementors to support the Language Server
@@ -8,7 +8,7 @@ description:         An implementation of the types, and basic message server to
                      .
                      An example of this is for Haskell via the Haskell IDE
                      Engine, at https://github.com/alanz/haskell-ide-engine/tree/lsp
-                     
+
 homepage:            https://github.com/alanz/haskell-lsp
 license:             MIT
 license-file:        LICENSE
@@ -25,10 +25,11 @@ library
   exposed-modules:     Language.Haskell.LSP.Core
                      , Language.Haskell.LSP.Constant
                      , Language.Haskell.LSP.Control
-                     , Language.Haskell.LSP.TH.DataTypesJSON 
+                     , Language.Haskell.LSP.TH.Constants
+                     , Language.Haskell.LSP.TH.DataTypesJSON
                      , Language.Haskell.LSP.Utility
-  -- other-modules:       
- -- other-extensions:    
+  -- other-modules:
+ -- other-extensions:
   ghc-options:         -Wall
   -- ghc-options:         -Werror
   build-depends:       base >=4.9 && <4.10
@@ -62,6 +63,7 @@ executable hie-vscode
   other-modules:       Language.Haskell.LSP.Constant
                      , Language.Haskell.LSP.Control
                      , Language.Haskell.LSP.Core
+                     , Language.Haskell.LSP.Constant
                      , Language.Haskell.LSP.TH.DataTypesJSON
                      , Language.Haskell.LSP.Utility
 
@@ -88,4 +90,3 @@ executable hie-vscode
 source-repository head
   type:     git
   location: https://github.com/alanz/haskell-lsp
-

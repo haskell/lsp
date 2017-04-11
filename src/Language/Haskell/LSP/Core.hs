@@ -414,8 +414,8 @@ initializeRequestHandler dispatcherProc mvarCtx req@(J.RequestMessage _ origId _
     case mp of
       Nothing -> return ()
       Just params -> do
-        modifyMVar_ mvarCtx (\c -> return c { resRootPath = J.rootPathInitializeRequestArguments params})
-        case J.rootPathInitializeRequestArguments params of
+        modifyMVar_ mvarCtx (\c -> return c { resRootPath = J._rootPath params})
+        case J._rootPath params of
           Nothing -> return ()
           Just dir -> do
             logs $ "initializeRequestHandler: setting current dir to project root:" ++ dir
@@ -434,21 +434,21 @@ initializeRequestHandler dispatcherProc mvarCtx req@(J.RequestMessage _ origId _
 
       capa =
         J.InitializeResponseCapabilitiesInner
-          { J.textDocumentSync                 = textDocumentSync o
-          , J.hoverProvider                    = supported (hoverHandler h)
-          , J.completionProvider               = completionProvider o
-          , J.signatureHelpProvider            = signatureHelpProvider o
-          , J.definitionProvider               = supported (definitionHandler h)
-          , J.referencesProvider               = supported (referencesHandler h)
-          , J.documentHighlightProvider        = supported (documentHighlightHandler h)
-          , J.documentSymbolProvider           = supported (documentSymbolHandler h)
-          , J.workspaceSymbolProvider          = supported (workspaceSymbolHandler h)
-          , J.codeActionProvider               = supported (codeActionHandler h)
-          , J.codeLensProvider                 = codeLensProvider o
-          , J.documentFormattingProvider       = supported (documentFormattingHandler h)
-          , J.documentRangeFormattingProvider  = supported (documentRangeFormattingHandler h)
-          , J.documentOnTypeFormattingProvider = documentOnTypeFormattingProvider o
-          , J.renameProvider                   = supported (renameHandler h)
+          { J._textDocumentSync                 = textDocumentSync o
+          , J._hoverProvider                    = supported (hoverHandler h)
+          , J._completionProvider               = completionProvider o
+          , J._signatureHelpProvider            = signatureHelpProvider o
+          , J._definitionProvider               = supported (definitionHandler h)
+          , J._referencesProvider               = supported (referencesHandler h)
+          , J._documentHighlightProvider        = supported (documentHighlightHandler h)
+          , J._documentSymbolProvider           = supported (documentSymbolHandler h)
+          , J._workspaceSymbolProvider          = supported (workspaceSymbolHandler h)
+          , J._codeActionProvider               = supported (codeActionHandler h)
+          , J._codeLensProvider                 = codeLensProvider o
+          , J._documentFormattingProvider       = supported (documentFormattingHandler h)
+          , J._documentRangeFormattingProvider  = supported (documentRangeFormattingHandler h)
+          , J._documentOnTypeFormattingProvider = documentOnTypeFormattingProvider o
+          , J._renameProvider                   = supported (renameHandler h)
           }
 
       -- TODO: wrap this up into a fn to create a response message

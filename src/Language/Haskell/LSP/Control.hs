@@ -22,7 +22,6 @@ import qualified Language.Haskell.LSP.Core as GUI
 import qualified Language.Haskell.LSP.TH.DataTypesJSON as J
 import           Language.Haskell.LSP.Utility
 import           System.IO
-import           System.Log.Logger
 import           Text.Parsec
 
 -- ---------------------------------------------------------------------
