@@ -25,6 +25,7 @@ library
   exposed-modules:     Language.Haskell.LSP.Core
                      , Language.Haskell.LSP.Constant
                      , Language.Haskell.LSP.Control
+                     , Language.Haskell.LSP.TH.ClientCapabilities
                      , Language.Haskell.LSP.TH.Constants
                      , Language.Haskell.LSP.TH.DataTypesJSON
                      , Language.Haskell.LSP.Utility

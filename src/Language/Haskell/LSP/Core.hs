@@ -75,10 +75,12 @@ data Options =
     , signatureHelpProvider            :: Maybe J.SignatureHelpOptions
     , codeLensProvider                 :: Maybe J.CodeLensOptions
     , documentOnTypeFormattingProvider :: Maybe J.DocumentOnTypeFormattingOptions
+    , documentLinkProvider             :: Maybe J.DocumentLinkOptions
+    , executeCommandProvider           :: Maybe J.ExecuteCommandOptions
     }
 
 instance Default Options where
-  def = Options Nothing Nothing Nothing Nothing Nothing
+  def = Options Nothing Nothing Nothing Nothing Nothing Nothing Nothing
 
 -- | The Handler type captures a function that receives local read-only state
 -- 'a', a function to send a reply message once encoded as a ByteString, and a
@@ -106,6 +108,13 @@ data Handlers =
     , documentRangeFormattingHandler :: !(Maybe (Handler J.DocumentRangeFormattingRequest))
     , documentTypeFormattingHandler  :: !(Maybe (Handler J.DocumentOnTypeFormattingRequest))
     , renameHandler                  :: !(Maybe (Handler J.RenameRequest))
+    -- new in 3.0
+    , documentLinkHandler            :: !(Maybe (Handler J.DocumentLinkRequest))
+    , documentLinkResolveHandler     :: !(Maybe (Handler J.DocumentLinkResolveRequest))
+    , executeCommandHandler          :: !(Maybe (Handler J.ExecuteCommandRequest))
+    , registerCapabilityHandler      :: !(Maybe (Handler J.RegisterCapabilityRequest))
+    , unregisterCapabilityHandler    :: !(Maybe (Handler J.UnregisterCapabilityRequest))
+    , willSaveWaitUntilTextDocHandler:: !(Maybe (Handler J.WillSaveWaitUntilTextDocumentResponse))
 
     -- Notifications from the client
     , didChangeConfigurationParamsHandler      :: !(Maybe (Handler J.DidChangeConfigurationParamsNotification))
@@ -114,6 +123,9 @@ data Handlers =
     , didCloseTextDocumentNotificationHandler  :: !(Maybe (Handler J.DidCloseTextDocumentNotification))
     , didSaveTextDocumentNotificationHandler   :: !(Maybe (Handler J.DidSaveTextDocumentNotification))
     , didChangeWatchedFilesNotificationHandler :: !(Maybe (Handler J.DidChangeWatchedFilesNotification))
+    -- new in 3.0
+    , initializedHandler                       :: !(Maybe (Handler J.InitializedNotification))
+    , willSaveTextDocumentNotificationHandler  :: !(Maybe (Handler J.WillSaveTextDocumentNotification))
 
     , cancelNotificationHandler                :: !(Maybe (Handler J.CancelNotification))
 
@@ -124,7 +136,8 @@ data Handlers =
 instance Default Handlers where
   def = Handlers Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
                  Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
-                 Nothing Nothing Nothing Nothing Nothing Nothing
+                 Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+                 Nothing Nothing Nothing Nothing Nothing
 
 -- ---------------------------------------------------------------------
 
@@ -339,7 +352,7 @@ handleRequest dispatcherProc mvarDat contLenStr' jsonStr' = do
 
 -- ---------------------------------------------------------------------
 
-makeResponseMessage :: Int -> a -> J.ResponseMessage a
+makeResponseMessage :: J.LspIdRsp -> a -> J.ResponseMessage a
 makeResponseMessage origId result = J.ResponseMessage "2.0" origId (Just result) Nothing
 
 makeResponseError :: Int -> J.ResponseError -> J.ResponseMessage ()
@@ -371,10 +384,10 @@ sendResponseInternal str = do
 -- |
 --
 --
-sendErrorResponse :: Int -> String -> IO ()
+sendErrorResponse :: J.LspIdRsp -> String -> IO ()
 sendErrorResponse origId msg = sendErrorResponseS sendEvent origId J.InternalError msg
 
-sendErrorResponseS :: (B.ByteString -> IO ()) -> Int -> J.ErrorCode -> String -> IO ()
+sendErrorResponseS :: (B.ByteString -> IO ()) -> J.LspIdRsp -> J.ErrorCode -> String -> IO ()
 sendErrorResponseS sf origId err msg = do
   sf $ J.encode (J.ResponseMessage "2.0" origId Nothing
                          (Just $ J.ResponseError err msg Nothing) :: J.ErrorResponse)
@@ -395,7 +408,7 @@ sendErrorShowS sf msg =
 
 -- ---------------------------------------------------------------------
 
-defaultErrorHandlers :: (Show a) => Int -> a -> [E.Handler ()]
+defaultErrorHandlers :: (Show a) => J.LspIdRsp -> a -> [E.Handler ()]
 defaultErrorHandlers origId req = [ E.Handler someExcept ]
   where
     someExcept (e :: E.SomeException) = do
@@ -411,7 +424,7 @@ defaultErrorHandlers origId req = [ E.Handler someExcept ]
 --
 initializeRequestHandler :: IO (Maybe J.ResponseError) -> MVar LanguageContextData -> J.InitializeRequest -> IO ()
 initializeRequestHandler dispatcherProc mvarCtx req@(J.RequestMessage _ origId _ mp) =
-  flip E.catches (defaultErrorHandlers origId req) $ do
+  flip E.catches (defaultErrorHandlers (J.responseId origId) req) $ do
 
     ctx <- readMVar mvarCtx
 
@@ -460,6 +473,10 @@ initializeRequestHandler dispatcherProc mvarCtx req@(J.RequestMessage _ origId _
               , J._documentRangeFormattingProvider  = supported (documentRangeFormattingHandler h)
               , J._documentOnTypeFormattingProvider = documentOnTypeFormattingProvider o
               , J._renameProvider                   = supported (renameHandler h)
+              , J._documentLinkProvider             = documentLinkProvider o
+              , J._executeCommandProvider           = executeCommandProvider o
+              -- TODO: Add something for experimental
+              , J._experimental                     = (Nothing :: Maybe J.Object)
               }
 
           -- TODO: wrap this up into a fn to create a response message
@@ -479,8 +496,8 @@ initializeRequestHandler dispatcherProc mvarCtx req@(J.RequestMessage _ origId _
 --
 shutdownRequestHandler :: MVar LanguageContextData -> J.ShutdownRequest -> IO ()
 shutdownRequestHandler mvarCtx req@(J.RequestMessage _ origId _ _) =
-  flip E.catches (defaultErrorHandlers origId req) $ do
-  let res  = makeResponseMessage origId ("ok"::String)
+  flip E.catches (defaultErrorHandlers (J.responseId origId) req) $ do
+  let res  = makeResponseMessage (J.responseId origId) ("ok"::String)
 
   sendResponse2 mvarCtx $ J.encode res
 
