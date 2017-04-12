@@ -1698,67 +1698,207 @@ instance Default DocumentOnTypeFormattingOptions where
 
 -- ---------------------------------------------------------------------
 {-
+New in 3.0
+----------
+
+/**
+ * Document link options
+ */
+export interface DocumentLinkOptions {
+	/**
+	 * Document links have a resolve provider as well.
+	 */
+	resolveProvider?: boolean;
+}
+-}
+
+data DocumentLinkOptions =
+  DocumentLinkOptions
+    { -- |Document links have a resolve provider as well.
+      _resolveProvider :: Maybe Bool
+    } deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''DocumentLinkOptions)
+
+-- ---------------------------------------------------------------------
+
+{-
+New in 3.0
+-----------
+
+/**
+ * Execute command options.
+ */
+export interface ExecuteCommandOptions {
+	/**
+	 * The commands to be executed on the server
+	 */
+	commands: string[]
+}
+-}
+
+data ExecuteCommandOptions =
+  ExecuteCommandOptions
+    { -- | The commands to be executed on the server
+      _commands :: List String
+    } deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''ExecuteCommandOptions)
+
+-- ---------------------------------------------------------------------
+{-
+New in 3.0
+----------
+/**
+ * Save options.
+ */
+export interface SaveOptions {
+	/**
+	 * The client is supposed to include the content on save.
+	 */
+	includeText?: boolean;
+}
+-}
+data SaveOptions =
+  SaveOptions
+    { -- |The client is supposed to include the content on save.
+      _includeText :: Maybe Bool
+    } deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''SaveOptions)
+
+-- ---------------------------------------------------------------------
+{-
+New in 3.0
+----------
+
+export interface TextDocumentSyncOptions {
+	/**
+	 * Open and close notifications are sent to the server.
+	 */
+	openClose?: boolean;
+	/**
+	 * Change notificatins are sent to the server. See TextDocumentSyncKind.None, TextDocumentSyncKind.Full
+	 * and TextDocumentSyncKindIncremental.
+	 */
+	change?: number;
+	/**
+	 * Will save notifications are sent to the server.
+	 */
+	willSave?: boolean;
+	/**
+	 * Will save wait until requests are sent to the server.
+	 */
+	willSaveWaitUntil?: boolean;
+	/**
+	 * Save notifications are sent to the server.
+	 */
+	save?: SaveOptions;
+}
+-}
+
+data TextDocumentSyncOptions =
+  TextDocumentSyncOptions
+    { -- | Open and close notifications are sent to the server.
+      _openClose :: Maybe Bool
+
+      -- | Change notificatins are sent to the server. See
+      -- TextDocumentSyncKind.None, TextDocumentSyncKind.Full and
+      -- TextDocumentSyncKindIncremental.
+    , _change :: Maybe TextDocumentSyncKind
+
+      -- | Will save notifications are sent to the server.
+    , _willSave :: Maybe Bool
+
+      -- | Will save wait until requests are sent to the server.
+    , _willSaveWaitUntil :: Maybe Bool
+
+      __ |Save notifications are sent to the server.
+    , _save :: Maybe SaveOptions
+    } deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''TextDocumentSyncOptions)
+
+-- ---------------------------------------------------------------------
+{-
+
+Extended in 3.0
+---------------
+
 interface ServerCapabilities {
-    /**
-     * Defines how text documents are synced.
-     */
-    textDocumentSync?: number;
-    /**
-     * The server provides hover support.
-     */
-    hoverProvider?: boolean;
-    /**
-     * The server provides completion support.
-     */
-    completionProvider?: CompletionOptions;
-    /**
-     * The server provides signature help support.
-     */
-    signatureHelpProvider?: SignatureHelpOptions;
-    /**
-     * The server provides goto definition support.
-     */
-    definitionProvider?: boolean;
-    /**
-     * The server provides find references support.
-     */
-    referencesProvider?: boolean;
-    /**
-     * The server provides document highlight support.
-     */
-    documentHighlightProvider?: boolean;
-    /**
-     * The server provides document symbol support.
-     */
-    documentSymbolProvider?: boolean;
-    /**
-     * The server provides workspace symbol support.
-     */
-    workspaceSymbolProvider?: boolean;
-    /**
-     * The server provides code actions.
-     */
-    codeActionProvider?: boolean;
-    /**
-     * The server provides code lens.
-     */
-    codeLensProvider?: CodeLensOptions;
-    /**
-     * The server provides document formatting.
-     */
-    documentFormattingProvider?: boolean;
-    /**
-     * The server provides document range formatting.
-     */
-    documentRangeFormattingProvider?: boolean;
-    /**
-     * The server provides document formatting on typing.
-     */
-    documentOnTypeFormattingProvider?: DocumentOnTypeFormattingOptions;
-    /**
-     * The server provides rename support.
-     */
-    renameProvider?: boolean
+	/**
+	 * Defines how text documents are synced. Is either a detailed structure defining each notification or
+	 * for backwards compatibility the TextDocumentSyncKind number.
+	 */
+	textDocumentSync?: TextDocumentSyncOptions | number;
+	/**
+	 * The server provides hover support.
+	 */
+	hoverProvider?: boolean;
+	/**
+	 * The server provides completion support.
+	 */
+	completionProvider?: CompletionOptions;
+	/**
+	 * The server provides signature help support.
+	 */
+	signatureHelpProvider?: SignatureHelpOptions;
+	/**
+	 * The server provides goto definition support.
+	 */
+	definitionProvider?: boolean;
+	/**
+	 * The server provides find references support.
+	 */
+	referencesProvider?: boolean;
+	/**
+	 * The server provides document highlight support.
+	 */
+	documentHighlightProvider?: boolean;
+	/**
+	 * The server provides document symbol support.
+	 */
+	documentSymbolProvider?: boolean;
+	/**
+	 * The server provides workspace symbol support.
+	 */
+	workspaceSymbolProvider?: boolean;
+	/**
+	 * The server provides code actions.
+	 */
+	codeActionProvider?: boolean;
+	/**
+	 * The server provides code lens.
+	 */
+	codeLensProvider?: CodeLensOptions;
+	/**
+	 * The server provides document formatting.
+	 */
+	documentFormattingProvider?: boolean;
+	/**
+	 * The server provides document range formatting.
+	 */
+	documentRangeFormattingProvider?: boolean;
+	/**
+	 * The server provides document formatting on typing.
+	 */
+	documentOnTypeFormattingProvider?: DocumentOnTypeFormattingOptions;
+	/**
+	 * The server provides rename support.
+	 */
+	renameProvider?: boolean;
+	/**
+	 * The server provides document link support.
+	 */
+	documentLinkProvider?: DocumentLinkOptions;
+	/**
+	 * The server provides execute command support.
+	 */
+	executeCommandProvider?: ExecuteCommandOptions;
+	/**
+	 * Experimental server capabilities.
+	 */
+	experimental?: any;
 }
 -}
 
@@ -1779,12 +1919,17 @@ data InitializeResponseCapabilitiesInner =
     , _documentRangeFormattingProvider  :: Maybe Bool
     , _documentOnTypeFormattingProvider :: Maybe DocumentOnTypeFormattingOptions
     , _renameProvider                   :: Maybe Bool
+    -- Following are new in 3.0
+    , _documentLinkProvider             :: Maybe DocumentLinkOptions
+    , _executeCommandProvider           :: Maybe ExecuteCommandOptions
+    , _experimental                     :: Maybe A.Object
     } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''InitializeResponseCapabilitiesInner)
 
 instance Default InitializeResponseCapabilitiesInner where
   def = InitializeResponseCapabilitiesInner def def def def def def def def def def def def def def def
+                                            def def def
 
 -- ---------------------------------------------------------------------
 -- |
@@ -1803,6 +1948,62 @@ instance Default InitializeResponseCapabilities where
 -- ---------------------------------------------------------------------
 
 type InitializeResponse = ResponseMessage InitializeResponseCapabilities
+
+{-
+    error.code:
+
+/**
+ * Known error codes for an `InitializeError`;
+ */
+export namespace InitializeError {
+	/**
+	 * If the protocol version provided by the client can't be handled by the server.
+	 * @deprecated This initialize error got replaced by client capabilities. There is
+	 * no version handshake in version 3.0x
+	 */
+	export const unknownProtocolVersion: number = 1;
+}
+
+    error.data:
+
+interface InitializeError {
+	/**
+	 * Indicates whether the client execute the following retry logic:
+	 * (1) show the message provided by the ResponseError to the user
+	 * (2) user selects retry or cancel
+	 * (3) if user selected retry the initialize method is sent again.
+	 */
+	retry: boolean;
+}
+-}
+
+-- ---------------------------------------------------------------------
+
+{-
+New in 3.0
+----------
+Initialized Notification
+
+The initialized notification is sent from the client to the server after the
+client is fully initialized and is able to listen to arbritary requests and
+notifications sent from the server.
+
+Notification:
+
+    method: 'initialized'
+    params: void
+
+-}
+
+data InitializedNotification =
+  InitializedNotification
+    {
+    } deriving (Show, Read, Eq)
+
+$(deriveJSON defaultOptions ''InitializedNotification)
+
+instance Default InitializedNotification where
+  def = InitializedNotification
 
 -- ---------------------------------------------------------------------
 {-
@@ -2088,6 +2289,154 @@ type TelemetryNotification = NotificationMessage A.Object
 
 -- ---------------------------------------------------------------------
 {-
+New in 3.0
+----------
+
+Register Capability
+
+The client/registerCapability request is sent from the server to the client to
+register for a new capability on the client side. Not all clients need to
+support dynamic capability registration. A client opts in via the
+ClientCapabilities.dynamicRegistration property.
+
+Request:
+
+    method: 'client/registerCapability'
+    params: RegistrationParams
+
+Where RegistrationParams are defined as follows:
+
+/**
+ * General paramters to to regsiter for a capability.
+ */
+export interface Registration {
+	/**
+	 * The id used to register the request. The id can be used to deregister
+	 * the request again.
+	 */
+	id: string;
+
+	/**
+	 * The method / capability to register for.
+	 */
+	method: string;
+
+	/**
+	 * Options necessary for the registration.
+	 */
+	registerOptions?: any;
+}
+
+export interface RegistrationParams {
+	registrations: Registration[];
+}
+-}
+
+data Registration =
+  Registration
+    { -- |The id used to register the request. The id can be used to deregister
+      -- the request again.
+      _id :: String
+
+       -- | The method / capability to register for.
+    , _method :: String
+
+      -- | Options necessary for the registration.
+    , _registerOptions :: Maybe A.Object
+    } deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''Registration)
+
+data RegistrationParams =
+  RegistrationParams
+    { _registrations :: List Registration
+    } deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''RegistrationParams)
+
+type RegisterCapabilityRequest = RequestMessage RegistrationParams
+-- -------------------------------------
+
+{-
+Since most of the registration options require to specify a document selector
+there is a base interface that can be used.
+
+export interface TextDocumentRegistrationOptions {
+	/**
+	 * A document selector to identify the scope of the registration. If set to null
+	 * the document selector provided on the client side will be used.
+	 */
+	documentSelector: DocumentSelector | null;
+}
+-}
+
+data TextDocumentRegistrationOptions =
+  { _documentSelector :: Maybe DocumentSelector
+  } deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''TextDocumentRegistrationOptions)
+
+-- ---------------------------------------------------------------------
+{-
+New in 3.0
+----------
+
+Unregister Capability
+
+The client/unregisterCapability request is sent from the server to the client to
+unregister a previously register capability.
+
+Request:
+
+    method: 'client/unregisterCapability'
+    params: UnregistrationParams
+
+Where UnregistrationParams are defined as follows:
+
+/**
+ * General parameters to unregister a capability.
+ */
+export interface Unregistration {
+	/**
+	 * The id used to unregister the request or notification. Usually an id
+	 * provided during the register request.
+	 */
+	id: string;
+
+	/**
+	 * The method / capability to unregister for.
+	 */
+	method: string;
+}
+
+export interface UnregistrationParams {
+	unregisterations: Unregistration[];
+}
+-}
+
+data Unregistration =
+  Unregistration
+    { -- | The id used to unregister the request or notification. Usually an id
+      -- provided during the register request.
+      _id :: String
+
+       -- |The method / capability to unregister for.
+    , _method :: String
+    } deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''Unregistration)
+
+data UnregistrationParams =
+  UnregistrationParams
+    { _unregistrations :: List Unregistration
+    } deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''UnregistrationParams)
+
+type UnregisterCapabilityRequest = RequestMessage UnregistrationParams
+
+-- ---------------------------------------------------------------------
+{-
 DidChangeConfiguration Notification
 
 https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#didchangeconfiguration-notification
@@ -2142,8 +2491,9 @@ interface DidOpenTextDocumentParams {
      */
     textDocument: TextDocumentItem;
 }
+
+Registration Options: TextDocumentRegistrationOptions
 -}
--- ---------------------------------------------------------------------
 
 data DidOpenTextDocumentNotificationParams =
   DidOpenTextDocumentNotificationParams {
@@ -2227,6 +2577,175 @@ data DidChangeTextDocumentParams =
 $(deriveJSON lspOptions ''DidChangeTextDocumentParams)
 
 type DidChangeTextDocumentNotification = NotificationMessage DidChangeTextDocumentParams
+{-
+New in 3.0
+----------
+
+Registration Options: TextDocumentChangeRegistrationOptions defined as follows:
+
+/**
+ * Descibe options to be used when registered for text document change events.
+ */
+export interface TextDocumentChangeRegistrationOptions extends TextDocumentRegistrationOptions {
+	/**
+	 * How documents are synced to the server. See TextDocumentSyncKind.Full
+	 * and TextDocumentSyncKindIncremental.
+	 */
+	syncKind: number;
+}
+-}
+
+data TextDocumentChangeRegistrationOptions =
+  TextDocumentChangeRegistrationOptions
+    { _documentSelector :: Maybe DocumentSelector
+    , _syncKind         :: TextDocumentSyncKind
+    } deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''TextDocumentChangeRegistrationOptions)
+
+-- ---------------------------------------------------------------------
+{-
+
+New in 3.0
+----------
+
+WillSaveTextDocument Notification
+
+The document will save notification is sent from the client to the server before
+the document is actually saved.
+
+Notification:
+
+    method: 'textDocument/willSave'
+    params: WillSaveTextDocumentParams defined as follows:
+
+/**
+ * The parameters send in a will save text document notification.
+ */
+export interface WillSaveTextDocumentParams {
+	/**
+	 * The document that will be saved.
+	 */
+	textDocument: TextDocumentIdentifier;
+
+	/**
+	 * The 'TextDocumentSaveReason'.
+	 */
+	reason: number;
+}
+
+/**
+ * Represents reasons why a text document is saved.
+ */
+export namespace TextDocumentSaveReason {
+
+	/**
+	 * Manually triggered, e.g. by the user pressing save, by starting debugging,
+	 * or by an API call.
+	 */
+	export const Manual = 1;
+
+	/**
+	 * Automatic after a delay.
+	 */
+	export const AfterDelay = 2;
+
+	/**
+	 * When the editor lost focus.
+	 */
+	export const FocusOut = 3;
+}
+Registration Options: TextDocumentRegistrationOptions
+-}
+
+data TextDocumentSaveReason
+  = SaveManual
+	 -- ^ Manually triggered, e.g. by the user pressing save, by starting
+	 -- debugging, or by an API call.
+  | SaveAfterDelay -- ^ Automatic after a delay
+  | SaveFocusOut   -- ^ When the editor lost focus
+  deriving (Show, Read, Eq)
+
+instance A.ToJSON TextDocumentSaveReason where
+  toJSON SaveManual     = A.Number 1
+  toJSON SaveAfterDelay = A.Number 2
+  toJSON SaveFocusOut   = A.Number 3
+
+instance A.FromJSON TextDocumentSaveReason where
+  parseJSON (A.Number 1) = pure SaveManual
+  parseJSON (A.Number 2) = pure SaveAfterDelay
+  parseJSON (A.Number 3) = pure SaveFocusOut
+  parseJSON _            = mempty
+
+data WillSaveTextDocumentParams =
+  WillSaveTextDocumentParams
+    { _textDocument :: TextDocumentIdentifier
+    , _reason       :: TextDocumentSaveReason
+    } deriving (Show, Read, Eq)
+
+type WillSaveTextDocumentNotification = NotificationMessage WillSaveTextDocumentParams
+
+-- ---------------------------------------------------------------------
+{-
+New in 3.0
+----------
+
+WillSaveWaitUntilTextDocument Request
+
+The document will save request is sent from the client to the server before the
+document is actually saved. The request can return an array of TextEdits which
+will be applied to the text document before it is saved. Please note that
+clients might drop results if computing the text edits took too long or if a
+server constantly fails on this request. This is done to keep the save fast and
+reliable.
+
+Request:
+
+    method: 'textDocument/willSaveWaitUntil'
+    params: WillSaveTextDocumentParams
+
+Response:
+
+    result: TextEdit[]
+    error: code and message set in case an exception happens during the willSaveWaitUntil request.
+
+Registration Options: TextDocumentRegistrationOptions
+-}
+
+type WillSaveWaitUntilTextDocumentRequest = RequestMessage WillSaveTextDocumentParams
+
+type WillSaveWaitUntilTextDocumentResponse = ResponseMessage (List TextEdit)
+
+-- ---------------------------------------------------------------------
+{-
+DidSaveTextDocument Notification
+
+https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#didsavetextdocument-notification
+
+    New: The document save notification is sent from the client to the server
+    when the document was saved in the client.
+
+    method: 'textDocument/didSave'
+    params: DidSaveTextDocumentParams defined as follows:
+
+interface DidSaveTextDocumentParams {
+    /**
+     * The document that was saved.
+     */
+    textDocument: TextDocumentIdentifier;
+}
+-}
+data DidSaveTextDocumentParams =
+  DidSaveTextDocumentParams
+    { _textDocument :: TextDocumentIdentifier
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON lspOptions ''DidSaveTextDocumentParams)
+
+instance Default DidSaveTextDocumentParams where
+  def = DidSaveTextDocumentParams def
+
+type DidSaveTextDocumentNotification = NotificationMessage DidSaveTextDocumentParams
 
 -- ---------------------------------------------------------------------
 {-
@@ -2265,37 +2784,6 @@ instance Default DidCloseTextDocumentParams where
   def = DidCloseTextDocumentParams def
 
 type DidCloseTextDocumentNotification = NotificationMessage DidCloseTextDocumentParams
-
--- ---------------------------------------------------------------------
-{-
-DidSaveTextDocument Notification
-
-https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#didsavetextdocument-notification
-
-    New: The document save notification is sent from the client to the server
-    when the document was saved in the client.
-
-    method: 'textDocument/didSave'
-    params: DidSaveTextDocumentParams defined as follows:
-
-interface DidSaveTextDocumentParams {
-    /**
-     * The document that was saved.
-     */
-    textDocument: TextDocumentIdentifier;
-}
--}
-data DidSaveTextDocumentParams =
-  DidSaveTextDocumentParams
-    { _textDocument :: TextDocumentIdentifier
-    } deriving (Read,Show,Eq)
-
-$(deriveJSON lspOptions ''DidSaveTextDocumentParams)
-
-instance Default DidSaveTextDocumentParams where
-  def = DidSaveTextDocumentParams def
-
-type DidSaveTextDocumentNotification = NotificationMessage DidSaveTextDocumentParams
 
 -- ---------------------------------------------------------------------
 {-
@@ -2422,7 +2910,7 @@ interface PublishDiagnosticsParams {
 data PublishDiagnosticsParams =
   PublishDiagnosticsParams
     { _uri         :: String
-    , _diagnostics :: [Diagnostic]
+    , _diagnostics :: List Diagnostic
     } deriving (Read,Show,Eq)
 
 $(deriveJSON lspOptions ''PublishDiagnosticsParams)
@@ -2458,14 +2946,6 @@ Request
     params: TextDocumentPositionParams
 -}
 
--- data CompletionRequest =
---   CompletionRequest
---     { idCompletionRequest     :: Int
---     , paramsCompletionRequest :: TextDocumentPositionParams
---     } deriving (Read,Show,Eq)
-
--- $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "CompletionRequest") } ''CompletionRequest)
-
 type CompletionRequest = RequestMessage TextDocumentPositionParams
 
 -- -------------------------------------
@@ -2491,6 +2971,34 @@ interface CompletionList {
      */
     items: CompletionItem[];
 }
+
+
+New in 3.0 : InsertTextFormat
+
+/**
+ * Defines whether the insert text in a completion item should be interpreted as
+ * plain text or a snippet.
+ */
+namespace InsertTextFormat {
+	/**
+	 * The primary text to be inserted is treated as a plain string.
+	 */
+	export const PlainText = 1;
+
+	/**
+	 * The primary text to be inserted is treated as a snippet.
+	 *
+	 * A snippet can define tab stops and placeholders with `$1`, `$2`
+	 * and `${3:foo}`. `$0` defines the final tab stop, it defaults to
+	 * the end of the snippet. Placeholders with equal identifiers are linked,
+	 * that is typing in one will update others too.
+	 *
+	 * See also: https://github.com/Microsoft/vscode/blob/master/src/vs/editor/contrib/snippet/common/snippet.md
+	 */
+	export const Snippet = 2;
+}
+
+
 
 interface CompletionItem {
     /**
@@ -2528,16 +3036,42 @@ interface CompletionItem {
      * this completion. When `falsy` the label is used.
      */
     insertText?: string;
-    /**
-     * An edit which is applied to a document when selecting
-     * this completion. When an edit is provided the value of
-     * insertText is ignored.
-     */
+    -- Following field is new in 3.0
+        /**
+	 * The format of the insert text. The format applies to both the `insertText` property
+	 * and the `newText` property of a provided `textEdit`.
+         */
+    insertTextFormat?: InsertTextFormat;
+	/**
+	 * An edit which is applied to a document when selecting this completion. When an edit is provided the value of
+	 * `insertText` is ignored.
+	 *
+	 * *Note:* The range of the edit must be a single line range and it must contain the position at which completion
+	 * has been requested.
+	 */
+
     textEdit?: TextEdit;
-    /**
-     * An data entry field that is preserved on a completion item between
-     * a completion and a completion resolve request.
-     */
+
+    -- Following field is new in 3.0
+        /**
+	 * An optional array of additional text edits that are applied when
+	 * selecting this completion. Edits must not overlap with the main edit
+	 * nor with themselves.
+         */
+    additionalTextEdits?: TextEdit[];
+    -- Following field is new in 3.0
+	/**
+	 * An optional command that is executed *after* inserting this completion. *Note* that
+	 * additional modifications to the current document should be described with the
+	 * additionalTextEdits-property.
+	 */
+
+    command?: Command;
+	/**
+	 * An data entry field that is preserved on a completion item between
+	 * a completion and a completion resolve request.
+	 */
+
     data?: any
 }
 
@@ -2569,6 +3103,31 @@ enum CompletionItemKind {
 
     error: code and message set in case an exception happens during the completion request.
 -}
+
+-- -------------------------------------
+
+data InsertTextFormat
+  = PlainText -- ^The primary text to be inserted is treated as a plain string.
+  | Snippet
+      -- ^ The primary text to be inserted is treated as a snippet.
+      --
+      -- A snippet can define tab stops and placeholders with `$1`, `$2`
+      -- and `${3:foo}`. `$0` defines the final tab stop, it defaults to
+      -- the end of the snippet. Placeholders with equal identifiers are linked,
+      -- that is typing in one will update others too.
+      --
+      -- See also: https://github.com/Microsoft/vscode/blob/master/src/vs/editor/contrib/snippet/common/snippet.md
+
+instance A.ToJSON InsertTextFormat where
+  toJSON PlainText    = A.Number 1
+  toJSON Snippet      = A.Number 2
+
+instance A.FromJSON CompletionItemKind where
+  parseJSON (A.Number  1) = pure PlainText
+  parseJSON (A.Number  2) = pure Snippet
+  parseJSON _            = mempty
+
+-- -------------------------------------
 
 data CompletionItemKind = CiText
                         | CiMethod
@@ -2656,10 +3215,25 @@ data CompletionItem =
     , _insertText :: Maybe String -- ^ A string that should be inserted a
                                   -- document when selecting this completion.
                                   -- When `falsy` the label is used.
-    , _textEdit :: Maybe TextEdit -- ^ An edit which is applied to a document
-                                  -- when selecting this completion. When an
-                                  -- edit is provided the value of insertText is
-                                  -- ignored.
+    , _insertTextFormat :: Maybe InsertTextFormat
+	 -- ^ The format of the insert text. The format applies to both the
+	 -- `insertText` property and the `newText` property of a provided
+	 -- `textEdit`.
+    , _textEdit :: Maybe TextEdit
+         -- ^ An edit which is applied to a document when selecting this
+         -- completion. When an edit is provided the value of `insertText` is
+         -- ignored.
+         --
+         -- *Note:* The range of the edit must be a single line range and it
+         -- must contain the position at which completion has been requested.
+    , _additionalTextEdits :: Maybe (List TextEdit)
+	 -- ^ An optional array of additional text edits that are applied when
+	 -- selecting this completion. Edits must not overlap with the main edit
+	 -- nor with themselves.
+    , _command :: Maybe Command
+        -- ^ An optional command that is executed *after* inserting this
+        -- completion. *Note* that additional modifications to the current
+        -- document should be described with the additionalTextEdits-property.
     , _data :: Maybe A.Object -- ^ An data entry field that is preserved on a
                               -- completion item between a completion and a
                               -- completion resolve request.
@@ -2686,6 +3260,35 @@ data CompletionResponseResult
 $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "CompletionResponseResult"), sumEncoding = UntaggedValue } ''CompletionResponseResult)
 
 type CompletionResponse = ResponseMessage CompletionResponseResult
+
+-- -------------------------------------
+{-
+New in 3.0
+-----------
+Registration Options: CompletionRegistrationOptions options defined as follows:
+
+export interface CompletionRegistrationOptions extends TextDocumentRegistrationOptions {
+	/**
+	 * The characters that trigger completion automatically.
+	 */
+	triggerCharacters?: string[];
+
+	/**
+	 * The server provides support to resolve additional
+	 * information for a completion item.
+	 */
+	resolveProvider?: boolean;
+}
+-}
+
+data CompletionRegistrationOptions =
+  CompletionRegistrationOptions
+    { _documentSelector  :: Maybe DocumentSelector
+    , _triggerCharacters :: Maybe (List String)
+    , _resolveProvider   :: Maybe Bool
+    } deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''CompletionRegistrationOptions
 
 -- ---------------------------------------------------------------------
 {-
@@ -2746,11 +3349,26 @@ interface Hover {
 }
 
 Where MarkedString is defined as follows:
-
+/**
+ * MarkedString can be used to render human readable text. It is either a markdown string
+ * or a code-block that provides a language and a code snippet. The language identifier
+ * is sematically equal to the optional language identifier in fenced code blocks in GitHub
+ * issues. See https://help.github.com/articles/creating-and-highlighting-code-blocks/#syntax-highlighting
+ *
+ * The pair of a language and a value is an equivalent to markdown:
+ * ```${language}
+ * ${value}
+ * ```
+ *
+ * Note that markdown strings will be sanitized - that means html will be escaped.
+ */
 type MarkedString = string | { language: string; value: string };
 
     error: code and message set in case an exception happens during the hover
     request.
+
+Registration Options: TextDocumentRegistrationOptions
+
 -}
 
 type HoverRequest = RequestMessage TextDocumentPositionParams
@@ -2870,14 +3488,6 @@ interface ParameterInformation {
     signature help request.
 -}
 
--- data SignatureHelpRequest =
---   SignatureHelpRequest
---     { methodSignatureHelpRequest :: String
---     , paramsSignatureHelpRequest :: TextDocumentPositionParams
---     } deriving (Read,Show,Eq)
-
--- $(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "SignatureHelpRequest") } ''SignatureHelpRequest)
-
 type SignatureHelpRequest = RequestMessage TextDocumentPositionParams
 
 -- -------------------------------------
@@ -2916,6 +3526,29 @@ instance Default SignatureHelp where
   def = SignatureHelp def Nothing Nothing
 
 type SignatureHelpResponse = ResponseMessage SignatureHelp
+
+-- -------------------------------------
+{-
+New in 3.0
+----------
+Registration Options: SignatureHelpRegistrationOptions defined as follows:
+
+export interface SignatureHelpRegistrationOptions extends TextDocumentRegistrationOptions {
+	/**
+	 * The characters that trigger signature help
+	 * automatically.
+	 */
+	triggerCharacters?: string[];
+}
+-}
+
+data SignatureHelpRegistrationOptions =
+  SignatureHelpRegistrationOptions
+    { _documentSelector  :: Maybe DocumentSelector
+    , _triggerCharacters :: Maybe (List String)
+    } deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''SignatureHelpRegistrationOptions)
 
 -- ---------------------------------------------------------------------
 {-
@@ -3090,15 +3723,9 @@ enum DocumentHighlightKind {
     error: code and message set in case an exception happens during the document
            highlight request.
 
+Registration Options: TextDocumentRegistrationOptions
+
 -}
-
--- data DocumentHighlightsRequest =
---   DocumentHighlightsRequest
---     { methodDocumentHighlightsRequest :: String
---     , paramsDocumentHighlightsRequest :: TextDocumentPositionParams
---     } deriving (Read,Show,Eq)
-
--- $(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "DocumentHighlightsRequest") } ''DocumentHighlightsRequest)
 
 type DocumentHighlightsRequest = RequestMessage TextDocumentPositionParams
 
@@ -3212,6 +3839,8 @@ export enum SymbolKind {
 
     error: code and message set in case an exception happens during the document
            symbol request.
+
+Registration Options: TextDocumentRegistrationOptions
 -}
 
 data DocumentSymbolParams =
@@ -3224,15 +3853,6 @@ $(deriveJSON lspOptions ''DocumentSymbolParams)
 instance Default DocumentSymbolParams where
   def = DocumentSymbolParams def
 
--- -------------------------------------
-
--- data DocumentSymbolsRequest =
---   DocumentSymbolsRequest
---     { methodDocumentSymbolsRequest :: String
---     , paramsDocumentSymbolsRequest :: DocumentSymbolParams
---     } deriving (Read,Show,Eq)
-
--- $(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "DocumentSymbolsRequest") } ''DocumentSymbolsRequest)
 
 type DocumentSymbolsRequest = RequestMessage DocumentSymbolParams
 
@@ -3505,13 +4125,6 @@ data CodeLensParams =
 
 $(deriveJSON lspOptions ''CodeLensParams)
 
--- data CodeLensRequest =
---   CodeLensRequest
---     { methodCodeLensRequest :: String
---     , paramsCodeLensRequest :: CodeLensParams
---     } deriving (Show,Read,Eq)
-
--- $(deriveJSON defaultOptions { omitNothingFields = True, fieldLabelModifier = rdrop (length "CodeLensRequest") } ''CodeLensRequest)
 
 type CodeLensRequest = RequestMessage CodeLensParams
 
@@ -3530,6 +4143,26 @@ instance Default CodeLens where
   def = CodeLens def def def
 
 type CodeLensResponse = ResponseMessage [CodeLens]
+
+-- -------------------------------------
+{-
+Registration Options: CodeLensRegistrationOptions defined as follows:
+
+export interface CodeLensRegistrationOptions extends TextDocumentRegistrationOptions {
+	/**
+	 * Code lens has a resolve provider as well.
+	 */
+	resolveProvider?: boolean;
+}
+-}
+
+data CodeLensRegistrationOptions =
+  CodeLensRegistrationOptions
+    { _documentSelector :: Maybe DocumentSelector
+    , _resolveProvider  :: Maybe Bool
+    } deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''CodeLensRegistrationOptions)
 
 -- ---------------------------------------------------------------------
 {-
@@ -3556,6 +4189,100 @@ Response
 
 type CodeLensResolveRequest  = RequestMessage CodeLens
 type CodeLensResolveResponse = ResponseMessage [CodeLens]
+
+-- ---------------------------------------------------------------------
+{-
+New in 3.0
+----------
+
+Document Link Request
+
+The document links request is sent from the client to the server to request the
+location of links in a document.
+
+Request:
+
+    method: 'textDocument/documentLink'
+    params: DocumentLinkParams, defined as follows
+
+interface DocumentLinkParams {
+	/**
+	 * The document to provide document links for.
+	 */
+	textDocument: TextDocumentIdentifier;
+}
+
+Response:
+
+    result: An array of DocumentLink, or null.
+
+/**
+ * A document link is a range in a text document that links to an internal or external resource, like another
+ * text document or a web site.
+ */
+interface DocumentLink {
+	/**
+	 * The range this link applies to.
+	 */
+	range: Range;
+	/**
+	 * The uri this link points to. If missing a resolve request is sent later.
+	 */
+	target?: DocumentUri;
+}
+
+    error: code and message set in case an exception happens during the document link request.
+
+Registration Options: DocumentLinkRegistrationOptions defined as follows:
+
+export interface DocumentLinkRegistrationOptions extends TextDocumentRegistrationOptions {
+	/**
+	 * Document links have a resolve provider as well.
+	 */
+	resolveProvider?: boolean;
+}
+-}
+
+data DocumentLinkParams =
+  DocumentLinkParams
+    { _textDocument :: TextDocumentIdentifier
+    } deriving (Read,Show,Eq)
+
+$(deriveJSON lspOptions ''DocumentLinkParams)
+
+type DocumentLinkRequest = RequestMessage DocumentLinkParams
+
+data DocumentLink =
+  DocumentLink
+    { _range :: Range
+    , _target :: Maybe DocumentUri
+    } deriving (Show, Read, Eq)
+
+type DocumentLinkResponse = ResponseMessage (List DocumentLink)
+
+-- ---------------------------------------------------------------------
+{-
+New in 3.0
+----------
+
+Document Link Resolve Request
+
+The document link resolve request is sent from the client to the server to resolve the target of a given document link.
+
+Request:
+
+    method: 'documentLink/resolve'
+    params: DocumentLink
+
+Response:
+
+    result: DocumentLink
+    error: code and message set in case an exception happens during the document link resolve request.
+
+-}
+
+type DocumentLinkResolveRequest  = RequestMessage DocumentLink
+type DocumentLinkResolveResponse = ResponseMessage DocumentLink
 
 -- ---------------------------------------------------------------------
 {-
