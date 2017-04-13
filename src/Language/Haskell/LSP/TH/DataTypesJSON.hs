@@ -3425,7 +3425,7 @@ Response
 
 data CodeActionContext =
   CodeActionContext
-    { _diagnostics :: [Diagnostic]
+    { _diagnostics :: List Diagnostic
     } deriving (Read,Show,Eq)
 
 $(deriveJSON lspOptions ''CodeActionContext)
