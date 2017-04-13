@@ -25,7 +25,8 @@ module Language.Haskell.LSP.Core (
 
 import Language.Haskell.LSP.Constant
 import Language.Haskell.LSP.Utility
-import qualified Language.Haskell.LSP.TH.DataTypesJSON as J
+import qualified Language.Haskell.LSP.TH.ClientCapabilities as C
+import qualified Language.Haskell.LSP.TH.DataTypesJSON      as J
 
 import Data.Default
 import Data.Monoid
@@ -285,7 +286,7 @@ defaultLanguageContextData h o = LanguageContextData _INITIAL_RESPONSE_SEQUENCE 
 
 -- ---------------------------------------------------------------------
 
-handleRequest :: IO (Maybe J.ResponseError) -> MVar LanguageContextData -> BSL.ByteString -> BSL.ByteString -> IO ()
+handleRequest :: (C.ClientCapabilities -> IO (Maybe J.ResponseError)) -> MVar LanguageContextData -> BSL.ByteString -> BSL.ByteString -> IO ()
 handleRequest dispatcherProc mvarDat contLenStr' jsonStr' = do
   {-
   Message Types we must handle are the following
@@ -422,21 +423,24 @@ defaultErrorHandlers origId req = [ E.Handler someExcept ]
 
 -- |
 --
-initializeRequestHandler :: IO (Maybe J.ResponseError) -> MVar LanguageContextData -> J.InitializeRequest -> IO ()
-initializeRequestHandler dispatcherProc mvarCtx req@(J.RequestMessage _ origId _ mp) =
+initializeRequestHandler ::(C.ClientCapabilities -> IO (Maybe J.ResponseError)) -> MVar LanguageContextData -> J.InitializeRequest -> IO ()
+initializeRequestHandler _dispatcherProc _mvarCtx (J.RequestMessage _ _origId _ Nothing) = do
+  logs "initializeRequestHandler: no params in message, ignoring"
+initializeRequestHandler dispatcherProc mvarCtx req@(J.RequestMessage _ origId _ (Just params)) =
   flip E.catches (defaultErrorHandlers (J.responseId origId) req) $ do
 
     ctx <- readMVar mvarCtx
 
-    case mp of
+    modifyMVar_ mvarCtx (\c -> return c { resRootPath = J._rootPath params})
+    case J._rootPath params of
       Nothing -> return ()
-      Just params -> do
-        modifyMVar_ mvarCtx (\c -> return c { resRootPath = J._rootPath params})
-        case J._rootPath params of
-          Nothing -> return ()
-          Just dir -> do
-            logs $ "initializeRequestHandler: setting current dir to project root:" ++ dir
-            setCurrentDirectory dir
+      Just dir -> do
+        logs $ "initializeRequestHandler: setting current dir to project root:" ++ dir
+        setCurrentDirectory dir
+
+    let
+      getCapabilities :: J.InitializeParams -> C.ClientCapabilities
+      getCapabilities (J.InitializeParams _ _ _ _ c _) = c
 
     -- Launch the given process once the project root directory has been set
     logs "initializeRequestHandler: calling dispatcherProc"

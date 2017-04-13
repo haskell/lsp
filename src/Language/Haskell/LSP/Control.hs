@@ -19,14 +19,19 @@ import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as B
 import           Data.Monoid
 import qualified Language.Haskell.LSP.Core as GUI
-import qualified Language.Haskell.LSP.TH.DataTypesJSON as J
+import qualified Language.Haskell.LSP.TH.ClientCapabilities as J
+import qualified Language.Haskell.LSP.TH.DataTypesJSON      as J
 import           Language.Haskell.LSP.Utility
 import           System.IO
 import           Text.Parsec
 
 -- ---------------------------------------------------------------------
 
-run :: IO (Maybe J.ResponseError) -- ^ function to be called once initialize has been received from the client
+run :: (J.ClientCapabilities -> IO (Maybe J.ResponseError))
+                                       -- ^ function to be called once
+                                       -- initialize has been received from the
+                                       -- client. Further message processing
+                                       -- will start only after this returns.
     -> GUI.Handlers
     -> GUI.Options
     -> IO Int         -- exit code
@@ -50,7 +55,7 @@ run dp h o = do
 
 -- ---------------------------------------------------------------------
 
-ioLoop :: IO (Maybe J.ResponseError) -> MVar GUI.LanguageContextData -> IO ()
+ioLoop :: (J.ClientCapabilities -> IO (Maybe J.ResponseError)) -> MVar GUI.LanguageContextData -> IO ()
 ioLoop dispatcherProc mvarDat = go BSL.empty
   where
     go :: BSL.ByteString -> IO ()

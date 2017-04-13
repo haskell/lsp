@@ -648,7 +648,7 @@ instance Default (H.HashMap T.Text [TextEdit]) where
 
 data WorkspaceEdit =
   WorkspaceEdit
-    { _changes :: Maybe WorkspaceEditMap
+    { _changes         :: Maybe WorkspaceEditMap
     , _documentChanges :: Maybe (List TextDocumentEdit)
     } deriving (Show, Read, Eq)
 
@@ -888,8 +888,8 @@ instance A.FromJSON Trace where
 instance Default Trace where
   def = TraceOff
 
-data InitializeRequestArguments =
-  InitializeRequestArguments {
+data InitializeParams =
+  InitializeParams {
     _processId             :: Maybe Int
   , _rootPath              :: Maybe String -- ^ Deprecated in favour of _rootUri
   , _rootUri               :: Maybe String
@@ -899,14 +899,14 @@ data InitializeRequestArguments =
   } deriving (Show, Read, Eq)
 
 
-$(deriveJSON lspOptions { omitNothingFields = True } ''InitializeRequestArguments)
+$(deriveJSON lspOptions ''InitializeParams)
 
-instance Default InitializeRequestArguments where
-  def = InitializeRequestArguments def def def def def def
+instance Default InitializeParams where
+  def = InitializeParams def def def def def def
 
 -- ---------------------------------------------------------------------
 
-type InitializeRequest = RequestMessage InitializeRequestArguments
+type InitializeRequest = RequestMessage InitializeParams
 
 -- ---------------------------------------------------------------------
 -- Initialize Response

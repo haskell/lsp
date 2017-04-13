@@ -37,7 +37,7 @@ run :: IO Int
 run = flip E.catches handlers $ do
 
   flip E.finally finalProc $ do
-    CTRL.run (return Nothing) hieHandlers hieOptions
+    CTRL.run (\_ -> return Nothing) hieHandlers hieOptions
 
   where
     handlers = [ E.Handler ioExcept
