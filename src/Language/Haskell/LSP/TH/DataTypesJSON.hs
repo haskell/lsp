@@ -20,8 +20,8 @@ import Data.Default
 
 -- | This data type is used to host a FromJSON instance for the encoding used by
 -- elisp, where an empty list shows up as "null"
-data List a = List [a]
-            deriving (Show,Read,Eq)
+newtype List a = List [a]
+                deriving (Show,Read,Eq)
 
 instance (A.ToJSON a) => A.ToJSON (List a) where
   toJSON (List ls) = toJSON ls
