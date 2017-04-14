@@ -56,15 +56,25 @@ ioLoop dispatcherProc mvarDat = go BSL.empty
     go :: BSL.ByteString -> IO ()
     go buf = do
       c <- BSL.hGet stdin 1
-      -- logs $ "ioLoop: got" ++ show c
-      let newBuf = BSL.append buf c
-      case readContentLength (lbs2str newBuf) of
-        Left _ -> go newBuf
-        Right len -> do
-          cnt <- BSL.hGet stdin len
-          logm $ (B.pack "---> ") <> cnt
-          GUI.handleRequest dispatcherProc mvarDat newBuf cnt
-          ioLoop dispatcherProc mvarDat
+      if c == BSL.empty
+        then do
+          logm $ B.pack "\nGot EOF, exiting 1 ...\n"
+          return ()
+        else do
+          -- logs $ "ioLoop: got" ++ show c
+          let newBuf = BSL.append buf c
+          case readContentLength (lbs2str newBuf) of
+            Left _ -> go newBuf
+            Right len -> do
+              cnt <- BSL.hGet stdin len
+              if cnt == BSL.empty
+                then do
+                  logm $ B.pack "\nGot EOF, exiting 1 ...\n"
+                  return ()
+                else do
+                  logm $ (B.pack "---> ") <> cnt
+                  GUI.handleRequest dispatcherProc mvarDat newBuf cnt
+                  ioLoop dispatcherProc mvarDat
 
       where
         readContentLength :: String -> Either ParseError Int
