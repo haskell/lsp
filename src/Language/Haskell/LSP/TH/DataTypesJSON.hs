@@ -1410,17 +1410,7 @@ Response
 
 -}
 
--- data ShutdownRequest =
---   ShutdownRequest {
---     idShutdownRequest :: Int
---   } deriving (Show, Read, Eq)
-
--- $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "ShutdownRequest") } ''ShutdownRequest)
-
--- instance Default ShutdownRequest where
---   def = ShutdownRequest 0
-
-type ShutdownRequest  = RequestMessage ()
+type ShutdownRequest  = RequestMessage A.Object
 type ShutdownResponse = ResponseMessage String
 
 -- ---------------------------------------------------------------------

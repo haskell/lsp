@@ -161,6 +161,7 @@ handlerMap h = MAP.fromList
   , ("textDocument/rangeFormatting",   hh $ documentRangeFormattingHandler h)
   , ("textDocument/onTypeFormatting",  hh $ documentTypeFormattingHandler h)
   , ("textDocument/rename",            hh $ renameHandler h)
+  , ("textDocument/executeCommand",    hh $ executeCommandHandler h)
 
   , ("workspace/didChangeConfiguration", hh $ didChangeConfigurationParamsHandler h)
   , ("textDocument/didOpen",             hh $ didOpenTextDocumentNotificationHandler h)
@@ -212,6 +213,7 @@ data OutMessage = ReqHover                    J.HoverRequest
                 | ReqDocumentRangeFormatting  J.DocumentRangeFormattingRequest
                 | ReqDocumentOnTypeFormatting J.DocumentOnTypeFormattingRequest
                 | ReqRename                   J.RenameRequest
+                | ReqExecuteCommand           J.ExecuteCommandRequest
                 -- responses
                 | RspHover                    J.HoverResponse
                 | RspCompletion               J.CompletionResponse
@@ -229,6 +231,7 @@ data OutMessage = ReqHover                    J.HoverRequest
                 | RspDocumentRangeFormatting  J.DocumentRangeFormattingResponse
                 | RspDocumentOnTypeFormatting J.DocumentOnTypeFormattingResponse
                 | RspRename                   J.RenameResponse
+                | RspExecuteCommand           J.ExecuteCommandResponse
 
                 -- notifications
                 | NotDidChangeConfigurationParams J.DidChangeConfigurationParamsNotification
@@ -443,7 +446,7 @@ initializeRequestHandler dispatcherProc mvarCtx req@(J.RequestMessage _ origId _
       getCapabilities (J.InitializeParams _ _ _ _ c _) = c
 
     -- Launch the given process once the project root directory has been set
-    logs "initializeRequestHandler: calling dispatcherProc"
+    dispatcherProc (getCapabilities params)
 
     initializationResult <- dispatcherProc
 
