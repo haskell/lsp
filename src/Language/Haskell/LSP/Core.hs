@@ -16,6 +16,7 @@ module Language.Haskell.LSP.Core (
 , defaultLanguageContextData
 , initializeRequestHandler
 , makeResponseMessage
+, makeResponseError
 , setupLogger
 , sendErrorResponseS
 , sendErrorLogS
@@ -271,7 +272,7 @@ defaultLanguageContextData h o = LanguageContextData _INITIAL_RESPONSE_SEQUENCE 
 
 -- ---------------------------------------------------------------------
 
-handleRequest :: IO () -> MVar LanguageContextData -> BSL.ByteString -> BSL.ByteString -> IO ()
+handleRequest :: IO (Maybe J.ResponseError) -> MVar LanguageContextData -> BSL.ByteString -> BSL.ByteString -> IO ()
 handleRequest dispatcherProc mvarDat contLenStr' jsonStr' = do
   {-
   Message Types we must handle are the following
@@ -341,6 +342,9 @@ handleRequest dispatcherProc mvarDat contLenStr' jsonStr' = do
 makeResponseMessage :: Int -> a -> J.ResponseMessage a
 makeResponseMessage origId result = J.ResponseMessage "2.0" origId (Just result) Nothing
 
+makeResponseError :: Int -> J.ResponseError -> J.ResponseMessage ()
+makeResponseError origId err = J.ResponseMessage "2.0" origId Nothing (Just err)
+
 -- ---------------------------------------------------------------------
 -- |
 --
@@ -405,7 +409,7 @@ defaultErrorHandlers origId req = [ E.Handler someExcept ]
 
 -- |
 --
-initializeRequestHandler :: IO () -> MVar LanguageContextData -> J.InitializeRequest -> IO ()
+initializeRequestHandler :: IO (Maybe J.ResponseError) -> MVar LanguageContextData -> J.InitializeRequest -> IO ()
 initializeRequestHandler dispatcherProc mvarCtx req@(J.RequestMessage _ origId _ mp) =
   flip E.catches (defaultErrorHandlers origId req) $ do
 
@@ -423,45 +427,52 @@ initializeRequestHandler dispatcherProc mvarCtx req@(J.RequestMessage _ origId _
 
     -- Launch the given process once the project root directory has been set
     logs "initializeRequestHandler: calling dispatcherProc"
-    dispatcherProc
 
-    let
-      h = resHandlers ctx
-      o = resOptions  ctx
+    initializationResult <- dispatcherProc
 
-      supported (Just _) = Just True
-      supported Nothing   = Nothing
+    case initializationResult of
+      Just errResp -> do
+        sendResponse2 mvarCtx $ J.encode $ makeResponseError origId errResp
 
-      capa =
-        J.InitializeResponseCapabilitiesInner
-          { J._textDocumentSync                 = textDocumentSync o
-          , J._hoverProvider                    = supported (hoverHandler h)
-          , J._completionProvider               = completionProvider o
-          , J._signatureHelpProvider            = signatureHelpProvider o
-          , J._definitionProvider               = supported (definitionHandler h)
-          , J._referencesProvider               = supported (referencesHandler h)
-          , J._documentHighlightProvider        = supported (documentHighlightHandler h)
-          , J._documentSymbolProvider           = supported (documentSymbolHandler h)
-          , J._workspaceSymbolProvider          = supported (workspaceSymbolHandler h)
-          , J._codeActionProvider               = supported (codeActionHandler h)
-          , J._codeLensProvider                 = codeLensProvider o
-          , J._documentFormattingProvider       = supported (documentFormattingHandler h)
-          , J._documentRangeFormattingProvider  = supported (documentRangeFormattingHandler h)
-          , J._documentOnTypeFormattingProvider = documentOnTypeFormattingProvider o
-          , J._renameProvider                   = supported (renameHandler h)
-          }
+      Nothing -> do
 
-      -- TODO: wrap this up into a fn to create a response message
-      res  = J.ResponseMessage "2.0" origId (Just $ J.InitializeResponseCapabilities capa) Nothing
+        let
+          h = resHandlers ctx
+          o = resOptions  ctx
 
-    sendResponse2 mvarCtx $ J.encode res
+          supported (Just _) = Just True
+          supported Nothing   = Nothing
 
-    -- ++AZ++ experimenting
-    -- let
-    --   ais = Just [J.MessageActionItem "action item 1", J.MessageActionItem "action item 2"]
-    --   p   = J.ShowMessageRequestParams J.MtWarning "playing with ShowMessageRequest" ais
-    --   smr = J.RequestMessage "2.0" 1 "window/showMessageRequest" (Just p)
-    -- sendEvent $ J.encode smr
+          capa =
+            J.InitializeResponseCapabilitiesInner
+              { J._textDocumentSync                 = textDocumentSync o
+              , J._hoverProvider                    = supported (hoverHandler h)
+              , J._completionProvider               = completionProvider o
+              , J._signatureHelpProvider            = signatureHelpProvider o
+              , J._definitionProvider               = supported (definitionHandler h)
+              , J._referencesProvider               = supported (referencesHandler h)
+              , J._documentHighlightProvider        = supported (documentHighlightHandler h)
+              , J._documentSymbolProvider           = supported (documentSymbolHandler h)
+              , J._workspaceSymbolProvider          = supported (workspaceSymbolHandler h)
+              , J._codeActionProvider               = supported (codeActionHandler h)
+              , J._codeLensProvider                 = codeLensProvider o
+              , J._documentFormattingProvider       = supported (documentFormattingHandler h)
+              , J._documentRangeFormattingProvider  = supported (documentRangeFormattingHandler h)
+              , J._documentOnTypeFormattingProvider = documentOnTypeFormattingProvider o
+              , J._renameProvider                   = supported (renameHandler h)
+              }
+
+          -- TODO: wrap this up into a fn to create a response message
+          res  = J.ResponseMessage "2.0" origId (Just $ J.InitializeResponseCapabilities capa) Nothing
+
+        sendResponse2 mvarCtx $ J.encode res
+
+          -- ++AZ++ experimenting
+          -- let
+          --   ais = Just [J.MessageActionItem "action item 1", J.MessageActionItem "action item 2"]
+          --   p   = J.ShowMessageRequestParams J.MtWarning "playing with ShowMessageRequest" ais
+          --   smr = J.RequestMessage "2.0" 1 "window/showMessageRequest" (Just p)
+          -- sendEvent $ J.encode smr
 
 
 -- |
