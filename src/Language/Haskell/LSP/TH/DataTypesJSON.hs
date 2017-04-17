@@ -3975,7 +3975,7 @@ export interface ExecuteCommandRegistrationOptions {
 data ExecuteCommandParams =
   ExecuteCommandParams
     { _command :: String
-    , _arguments :: Maybe (List A.Object)
+    , _arguments :: Maybe (List A.Value)
     } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''ExecuteCommandParams)
