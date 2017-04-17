@@ -207,7 +207,7 @@ data BareResponseMessage =
   BareResponseMessage
     { _jsonrpc :: String
     , _id      :: LspIdRsp
-    , _result  :: Maybe A.Object
+    , _result  :: Maybe A.Value
     , _error   :: Maybe ResponseError
     } deriving (Read,Show,Eq)
 
@@ -503,7 +503,7 @@ data Command =
   Command
     { _title     :: String
     , _command   :: String
-    , _arguments :: Maybe A.Object
+    , _arguments :: Maybe A.Value
     } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''Command)
@@ -893,7 +893,7 @@ data InitializeParams =
     _processId             :: Maybe Int
   , _rootPath              :: Maybe String -- ^ Deprecated in favour of _rootUri
   , _rootUri               :: Maybe String
-  , _initializationOptions :: Maybe A.Object
+  , _initializationOptions :: Maybe A.Value
   , _capabilities          :: ClientCapabilities
   , _trace                 :: Maybe Trace
   } deriving (Show, Read, Eq)
@@ -1303,7 +1303,7 @@ data InitializeResponseCapabilitiesInner =
     -- Following are new in 3.0
     , _documentLinkProvider             :: Maybe DocumentLinkOptions
     , _executeCommandProvider           :: Maybe ExecuteCommandOptions
-    , _experimental                     :: Maybe A.Object
+    , _experimental                     :: Maybe A.Value
     } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''InitializeResponseCapabilitiesInner)
@@ -1410,7 +1410,7 @@ Response
 
 -}
 
-type ShutdownRequest  = RequestMessage A.Object
+type ShutdownRequest  = RequestMessage A.Value
 type ShutdownResponse = ResponseMessage String
 
 -- ---------------------------------------------------------------------
@@ -1656,7 +1656,7 @@ Notification:
 -}
 
 
-type TelemetryNotification = NotificationMessage A.Object
+type TelemetryNotification = NotificationMessage A.Value
 
 -- ---------------------------------------------------------------------
 {-
@@ -1713,7 +1713,7 @@ data Registration =
     , _method :: String
 
       -- | Options necessary for the registration.
-    , _registerOptions :: Maybe A.Object
+    , _registerOptions :: Maybe A.Value
     } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''Registration)
@@ -1832,13 +1832,13 @@ interface DidChangeConfigurationParams {
 
 data DidChangeConfigurationParamsNotificationParams =
   DidChangeConfigurationParamsNotificationParams {
-    _settings :: A.Object
+    _settings :: A.Value
   } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''DidChangeConfigurationParamsNotificationParams)
 
 instance Default DidChangeConfigurationParamsNotificationParams where
-  def = DidChangeConfigurationParamsNotificationParams mempty
+  def = DidChangeConfigurationParamsNotificationParams (A.Object mempty)
 
 type DidChangeConfigurationParamsNotification = NotificationMessage DidChangeConfigurationParamsNotificationParams
 
@@ -2608,7 +2608,7 @@ data CompletionItem =
         -- ^ An optional command that is executed *after* inserting this
         -- completion. *Note* that additional modifications to the current
         -- document should be described with the additionalTextEdits-property.
-    , _data :: Maybe A.Object -- ^ An data entry field that is preserved on a
+    , _data :: Maybe A.Value -- ^ An data entry field that is preserved on a
                               -- completion item between a completion and a
                               -- completion resolve request.
     } deriving (Read,Show,Eq)
@@ -3508,7 +3508,7 @@ data CodeLens =
   CodeLens
     { _range   :: Range
     , _command :: Maybe Command
-    , _data    :: Maybe A.Object
+    , _data    :: Maybe A.Value
     } deriving (Read,Show,Eq)
 
 $(deriveJSON lspOptions ''CodeLens)
@@ -3982,7 +3982,7 @@ $(deriveJSON lspOptions ''ExecuteCommandParams)
 
 type ExecuteCommandRequest = RequestMessage ExecuteCommandParams
 
-type ExecuteCommandResponse = ResponseMessage A.Object
+type ExecuteCommandResponse = ResponseMessage A.Value
 
 data ExecuteCommandRegistrationOptions =
   ExecuteCommandRegistrationOptions

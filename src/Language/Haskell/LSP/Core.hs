@@ -481,7 +481,7 @@ initializeRequestHandler dispatcherProc mvarCtx req@(J.RequestMessage _ origId _
               , J._documentLinkProvider             = documentLinkProvider o
               , J._executeCommandProvider           = executeCommandProvider o
               -- TODO: Add something for experimental
-              , J._experimental                     = (Nothing :: Maybe J.Object)
+              , J._experimental                     = (Nothing :: Maybe J.Value)
               }
 
           -- TODO: wrap this up into a fn to create a response message
