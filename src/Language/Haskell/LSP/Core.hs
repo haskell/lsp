@@ -359,7 +359,7 @@ handleRequest dispatcherProc mvarDat contLenStr' jsonStr' = do
 makeResponseMessage :: J.LspIdRsp -> a -> J.ResponseMessage a
 makeResponseMessage origId result = J.ResponseMessage "2.0" origId (Just result) Nothing
 
-makeResponseError :: Int -> J.ResponseError -> J.ResponseMessage ()
+makeResponseError :: J.LspIdRsp -> J.ResponseError -> J.ResponseMessage ()
 makeResponseError origId err = J.ResponseMessage "2.0" origId Nothing (Just err)
 
 -- ---------------------------------------------------------------------
@@ -446,13 +446,11 @@ initializeRequestHandler dispatcherProc mvarCtx req@(J.RequestMessage _ origId _
       getCapabilities (J.InitializeParams _ _ _ _ c _) = c
 
     -- Launch the given process once the project root directory has been set
-    dispatcherProc (getCapabilities params)
-
-    initializationResult <- dispatcherProc
+    initializationResult <- dispatcherProc (getCapabilities params)
 
     case initializationResult of
       Just errResp -> do
-        sendResponse2 mvarCtx $ J.encode $ makeResponseError origId errResp
+        sendResponse2 mvarCtx $ J.encode $ makeResponseError (J.responseId origId) errResp
 
       Nothing -> do
 
@@ -487,7 +485,7 @@ initializeRequestHandler dispatcherProc mvarCtx req@(J.RequestMessage _ origId _
               }
 
           -- TODO: wrap this up into a fn to create a response message
-          res  = J.ResponseMessage "2.0" origId (Just $ J.InitializeResponseCapabilities capa) Nothing
+          res  = J.ResponseMessage "2.0" (J.responseId origId) (Just $ J.InitializeResponseCapabilities capa) Nothing
 
         sendResponse2 mvarCtx $ J.encode res
 
