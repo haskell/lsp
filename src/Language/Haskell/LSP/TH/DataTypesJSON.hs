@@ -1376,15 +1376,22 @@ Notification:
 
 -}
 
-data InitializedNotification =
-  InitializedNotification
+data InitializedParams =
+  InitializedParams
     {
     } deriving (Show, Read, Eq)
 
-$(deriveJSON defaultOptions ''InitializedNotification)
+instance A.FromJSON InitializedParams where
+  parseJSON (A.Object _) = pure InitializedParams
+  parseJSON _            = mempty
+
+instance A.ToJSON InitializedParams where
+  toJSON InitializedParams = A.Object mempty
+
+type InitializedNotification = NotificationMessage InitializedParams
 
 instance Default InitializedNotification where
-  def = InitializedNotification
+  def = NotificationMessage "2.0" "initialized" Nothing
 
 -- ---------------------------------------------------------------------
 {-
@@ -1725,6 +1732,7 @@ data RegistrationParams =
 
 $(deriveJSON lspOptions ''RegistrationParams)
 
+-- |Note: originates at the server
 type RegisterCapabilityRequest = RequestMessage RegistrationParams
 
 -- -------------------------------------

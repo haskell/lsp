@@ -7,21 +7,23 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Language.Haskell.LSP.Core (
-  handleRequest
-, LanguageContextData(..)
-, Handler
-, Handlers(..)
-, Options(..)
-, OutMessage(..)
-, defaultLanguageContextData
-, initializeRequestHandler
-, makeResponseMessage
-, makeResponseError
-, setupLogger
-, sendErrorResponseS
-, sendErrorLogS
-, sendErrorShowS
-) where
+    handleRequest
+  , LanguageContextData(..)
+  , Handler
+  , Handlers(..)
+  , Options(..)
+  , OutMessage(..)
+  , defaultLanguageContextData
+  , initializeRequestHandler
+  , makeResponseMessage
+  , makeResponseError
+  , setupLogger
+  , sendResponse
+  , sendErrorResponseS
+  , sendErrorLogS
+  , sendErrorShowS
+  , _TWO_CRLF
+  ) where
 
 import Language.Haskell.LSP.Constant
 import Language.Haskell.LSP.Utility
@@ -113,8 +115,9 @@ data Handlers =
     , documentLinkHandler            :: !(Maybe (Handler J.DocumentLinkRequest))
     , documentLinkResolveHandler     :: !(Maybe (Handler J.DocumentLinkResolveRequest))
     , executeCommandHandler          :: !(Maybe (Handler J.ExecuteCommandRequest))
-    , registerCapabilityHandler      :: !(Maybe (Handler J.RegisterCapabilityRequest))
-    , unregisterCapabilityHandler    :: !(Maybe (Handler J.UnregisterCapabilityRequest))
+    -- Next 2 go from server -> client
+    -- , registerCapabilityHandler      :: !(Maybe (Handler J.RegisterCapabilityRequest))
+    -- , unregisterCapabilityHandler    :: !(Maybe (Handler J.UnregisterCapabilityRequest))
     , willSaveWaitUntilTextDocHandler:: !(Maybe (Handler J.WillSaveWaitUntilTextDocumentResponse))
 
     -- Notifications from the client
@@ -138,11 +141,11 @@ instance Default Handlers where
   def = Handlers Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
                  Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
                  Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
-                 Nothing Nothing Nothing Nothing Nothing
+                 Nothing Nothing Nothing
 
 -- ---------------------------------------------------------------------
 
-handlerMap :: Handlers 
+handlerMap :: Handlers
            -> MAP.Map String (MVar LanguageContextData -> String -> B.ByteString -> IO ())
 handlerMap h = MAP.fromList
   [ ("textDocument/completion",        hh $ completionHandler h)
@@ -163,6 +166,7 @@ handlerMap h = MAP.fromList
   , ("textDocument/rename",            hh $ renameHandler h)
   , ("textDocument/executeCommand",    hh $ executeCommandHandler h)
 
+  , ("initialized",                      hh $ initializedHandler h)
   , ("workspace/didChangeConfiguration", hh $ didChangeConfigurationParamsHandler h)
   , ("textDocument/didOpen",             hh $ didOpenTextDocumentNotificationHandler h)
   , ("textDocument/didChange",           hh $ didChangeTextDocumentNotificationHandler h )
@@ -234,6 +238,7 @@ data OutMessage = ReqHover                    J.HoverRequest
                 | RspExecuteCommand           J.ExecuteCommandResponse
 
                 -- notifications
+                | NotInitialized                  J.InitializedNotification
                 | NotDidChangeConfigurationParams J.DidChangeConfigurationParamsNotification
                 | NotDidOpenTextDocument          J.DidOpenTextDocumentNotification
                 | NotDidChangeTextDocument        J.DidChangeTextDocumentNotification
@@ -285,7 +290,7 @@ _ERR_MSG_URL = [ "`stack update` and install new haskell-lsp."
 --
 --
 defaultLanguageContextData :: Handlers -> Options -> LanguageContextData
-defaultLanguageContextData h o = LanguageContextData _INITIAL_RESPONSE_SEQUENCE Nothing h o BSL.putStr 
+defaultLanguageContextData h o = LanguageContextData _INITIAL_RESPONSE_SEQUENCE Nothing h o BSL.putStr
 
 -- ---------------------------------------------------------------------
 
@@ -351,7 +356,7 @@ handleRequest dispatcherProc mvarDat contLenStr' jsonStr' = do
       case MAP.lookup cmd (handlerMap h) of
         Just f -> f mvarDat cmd jsonStr
         Nothing -> do
-          let msg = unwords ["unknown request command.", cmd, lbs2str contLenStr', lbs2str jsonStr]
+          let msg = unwords ["unknown message received:method='" ++ cmd ++ "',", lbs2str contLenStr', lbs2str jsonStr]
           sendErrorLog msg
 
 -- ---------------------------------------------------------------------
@@ -366,7 +371,7 @@ makeResponseError origId err = J.ResponseMessage "2.0" origId Nothing (Just err)
 -- |
 --
 sendEvent :: BSL.ByteString -> IO ()
-sendEvent str = sendResponseInternal str
+sendEvent str = sendResponse str
 
 -- |
 --
@@ -377,13 +382,24 @@ sendResponse2 mvarCtx str = do
 
 -- |
 --
-sendResponseInternal :: BSL.ByteString -> IO ()
-sendResponseInternal str = do
+-- sendResponseInternal :: BSL.ByteString -> IO ()
+-- sendResponseInternal str = do
+--   BSL.hPut stdout $ BSL.append "Content-Length: " $ str2lbs $ show (BSL.length str)
+--   BSL.hPut stdout $ str2lbs _TWO_CRLF
+--   BSL.hPut stdout str
+--   hFlush stdout
+--   logm $ B.pack "<---" <> str
+
+-- ---------------------------------------------------------------------
+
+-- | Send a message with the required JSON 2.0 Content-Length header
+sendResponse :: BSL.ByteString -> IO ()
+sendResponse str = do
   BSL.hPut stdout $ BSL.append "Content-Length: " $ str2lbs $ show (BSL.length str)
   BSL.hPut stdout $ str2lbs _TWO_CRLF
   BSL.hPut stdout str
   hFlush stdout
-  logm $ B.pack "<---" <> str
+  logm $ B.pack "<--2--" <> str
 
 -- |
 --

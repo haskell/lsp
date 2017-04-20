@@ -46,7 +46,7 @@ run dp h o = do
 
 
   mvarDat <- newMVar ((GUI.defaultLanguageContextData h o :: GUI.LanguageContextData)
-                         { GUI.resSendResponse = sendResponse
+                         { GUI.resSendResponse = GUI.sendResponse
                          } )
 
   ioLoop dp mvarDat
@@ -86,37 +86,23 @@ ioLoop dispatcherProc mvarDat = go BSL.empty
 
         parser = do
           _ <- string "Content-Length: "
-          len <- manyTill digit (string _TWO_CRLF)
+          len <- manyTill digit (string GUI._TWO_CRLF)
           return . read $ len
 
 -- ---------------------------------------------------------------------
 
 sendNotificationMessage :: (J.ToJSON a) => J.NotificationMessage a -> IO ()
-sendNotificationMessage res = sendResponse (J.encode res)
+sendNotificationMessage res = GUI.sendResponse (J.encode res)
 
 -- ---------------------------------------------------------------------
 
 sendRequestMessage :: (J.ToJSON a) => J.RequestMessage a -> IO ()
-sendRequestMessage res = sendResponse (J.encode res)
+sendRequestMessage res = GUI.sendResponse (J.encode res)
 
 -- ---------------------------------------------------------------------
 
 sendResponseMessage :: (J.ToJSON a) => J.ResponseMessage a -> IO ()
-sendResponseMessage res = sendResponse (J.encode res)
-
--- ---------------------------------------------------------------------
-
--- | Send a message with the required JSON 2.0 Content-Length header
-sendResponse :: BSL.ByteString -> IO ()
-sendResponse str = do
-  BSL.hPut stdout $ BSL.append "Content-Length: " $ str2lbs $ show (BSL.length str)
-  BSL.hPut stdout $ str2lbs _TWO_CRLF
-  BSL.hPut stdout str
-  hFlush stdout
-  logm $ B.pack "<--2--" <> str
-
-_TWO_CRLF :: String
-_TWO_CRLF = "\r\n\r\n"
+sendResponseMessage res = GUI.sendResponse (J.encode res)
 
 
 
