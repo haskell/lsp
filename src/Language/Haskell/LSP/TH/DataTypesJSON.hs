@@ -4049,6 +4049,7 @@ data ApplyWorkspaceEditResponseBody =
 
 $(deriveJSON lspOptions ''ApplyWorkspaceEditResponseBody)
 
+-- | Sent from the server to the client
 type ApplyWorkspaceEditRequest  = RequestMessage ApplyWorkspaceEditParams
 type ApplyWorkspaceEditResponse = ResponseMessage ApplyWorkspaceEditResponseBody
 
