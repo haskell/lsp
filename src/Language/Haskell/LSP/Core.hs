@@ -164,7 +164,7 @@ handlerMap h = MAP.fromList
   , ("textDocument/rangeFormatting",   hh $ documentRangeFormattingHandler h)
   , ("textDocument/onTypeFormatting",  hh $ documentTypeFormattingHandler h)
   , ("textDocument/rename",            hh $ renameHandler h)
-  , ("textDocument/executeCommand",    hh $ executeCommandHandler h)
+  , ("workspace/executeCommand",       hh $ executeCommandHandler h)
 
   , ("initialized",                      hh $ initializedHandler h)
   , ("workspace/didChangeConfiguration", hh $ didChangeConfigurationParamsHandler h)
@@ -380,24 +380,23 @@ sendResponse2 mvarCtx str = do
   ctx <- readMVar mvarCtx
   resSendResponse ctx str
 
--- |
---
--- sendResponseInternal :: BSL.ByteString -> IO ()
--- sendResponseInternal str = do
---   BSL.hPut stdout $ BSL.append "Content-Length: " $ str2lbs $ show (BSL.length str)
---   BSL.hPut stdout $ str2lbs _TWO_CRLF
---   BSL.hPut stdout str
---   hFlush stdout
---   logm $ B.pack "<---" <> str
 
 -- ---------------------------------------------------------------------
 
 -- | Send a message with the required JSON 2.0 Content-Length header
 sendResponse :: BSL.ByteString -> IO ()
 sendResponse str = do
-  BSL.hPut stdout $ BSL.append "Content-Length: " $ str2lbs $ show (BSL.length str)
-  BSL.hPut stdout $ str2lbs _TWO_CRLF
-  BSL.hPut stdout str
+  -- NOTE: this function may be called in multiple thread contexts. Make sure it
+  -- sends a single message at a time by constructing a single output string
+  -- first
+  -- May need to be managed, see http://www.snoyman.com/blog/2016/11/haskells-missing-concurrency-basics
+
+  let out = BSL.concat
+               [ str2lbs $ "Content-Length: " ++ show (BSL.length str)
+               , str2lbs _TWO_CRLF
+               , str ]
+
+  BSL.hPut stdout out
   hFlush stdout
   logm $ B.pack "<--2--" <> str
 

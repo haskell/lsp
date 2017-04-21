@@ -39,9 +39,11 @@ run dp h o = do
 
   logm $ B.pack "\n\n\n\n\nStarting up server ..."
   hSetBuffering stdin NoBuffering
+  -- hSetBuffering stdin LineBuffering
   hSetEncoding  stdin utf8
 
   hSetBuffering stdout NoBuffering
+  -- hSetBuffering stdout LineBuffering
   hSetEncoding  stdout utf8
 
 
