@@ -641,9 +641,9 @@ export interface WorkspaceEdit {
 }
 -}
 
-type WorkspaceEditMap = H.HashMap T.Text [TextEdit]
+type WorkspaceEditMap = H.HashMap T.Text (List TextEdit)
 
-instance Default (H.HashMap T.Text [TextEdit]) where
+instance Default (H.HashMap T.Text (List TextEdit)) where
   def = mempty
 
 data WorkspaceEdit =
