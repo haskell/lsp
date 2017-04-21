@@ -18,37 +18,35 @@ module Language.Haskell.LSP.Core (
   , makeResponseMessage
   , makeResponseError
   , setupLogger
-  , sendResponse
+  -- , sendResponse
   , sendErrorResponseS
   , sendErrorLogS
   , sendErrorShowS
-  , _TWO_CRLF
   ) where
 
-import Language.Haskell.LSP.Constant
-import Language.Haskell.LSP.Utility
-import qualified Language.Haskell.LSP.TH.ClientCapabilities as C
-import qualified Language.Haskell.LSP.TH.DataTypesJSON      as J
-
-import Data.Default
-import Data.Monoid
-import System.IO
-import System.Directory
-import System.Exit
-import System.Log.Logger
+import           Control.Concurrent
+import qualified Control.Exception as E
 import qualified Data.Aeson as J
 import qualified Data.ByteString.Lazy as BSL
+import qualified Data.ByteString.Lazy.Char8 as B
+import           Data.Default
+import qualified Data.HashMap.Strict as HM
 import qualified Data.List as L
-import qualified Control.Exception as E
 import qualified Data.Map as MAP
-import Control.Concurrent
-import qualified System.Log.Logger as L
+-- import           Data.Monoid
+import qualified Data.Text as T
+import           Language.Haskell.LSP.Constant
+import qualified Language.Haskell.LSP.TH.ClientCapabilities as C
+import qualified Language.Haskell.LSP.TH.DataTypesJSON      as J
+import           Language.Haskell.LSP.Utility
+import           System.Directory
+import           System.Exit
+import           System.IO
 import qualified System.Log.Formatter as L
 import qualified System.Log.Handler as LH
 import qualified System.Log.Handler.Simple as LHS
-import qualified Data.ByteString.Lazy.Char8 as B
-import qualified Data.HashMap.Strict as HM
-import qualified Data.Text as T
+import           System.Log.Logger
+import qualified System.Log.Logger as L
 
 -- ---------------------------------------------------------------------
 {-# ANN module ("HLint: ignore Eta reduce"         :: String) #-}
@@ -64,6 +62,7 @@ data LanguageContextData =
   , resHandlers            :: !Handlers
   , resOptions             :: !Options
   , resSendResponse        :: !(BSL.ByteString -> IO ())
+  -- , resChanOut             :: !(TChan BSL.ByteString)
   }
 
 -- ---------------------------------------------------------------------
@@ -185,9 +184,9 @@ handlerMap h = MAP.fromList
 -- | Adapter from the handlers exposed to the library users and the internal message loop
 hh :: forall b. (J.FromJSON b)
    => Maybe (Handler b) -> MVar LanguageContextData -> String -> B.ByteString -> IO ()
-hh Nothing = \_mvarDat cmd jsonStr -> do
+hh Nothing = \mvarDat cmd jsonStr -> do
       let msg = unwords ["haskell-lsp:no handler for.", cmd, lbs2str jsonStr]
-      sendErrorLog msg
+      sendErrorLog mvarDat msg
 hh (Just h) = \mvarDat _cmd jsonStr -> do
       case J.eitherDecode jsonStr of
         Right req -> do
@@ -195,7 +194,7 @@ hh (Just h) = \mvarDat _cmd jsonStr -> do
           h (resSendResponse ctx) req
         Left  err -> do
           let msg = unwords $ ["haskell-lsp:parse error.", lbs2str jsonStr, show err] ++ _ERR_MSG_URL
-          sendErrorLog msg
+          sendErrorLog mvarDat msg
 
 -- ---------------------------------------------------------------------
 
@@ -262,12 +261,6 @@ _INITIAL_RESPONSE_SEQUENCE = 0
 -- |
 --
 --
-_TWO_CRLF :: String
-_TWO_CRLF = "\r\n\r\n"
-
--- |
---
---
 _SEP_WIN :: Char
 _SEP_WIN = '\\'
 
@@ -294,7 +287,8 @@ defaultLanguageContextData h o = LanguageContextData _INITIAL_RESPONSE_SEQUENCE 
 
 -- ---------------------------------------------------------------------
 
-handleRequest :: (C.ClientCapabilities -> IO (Maybe J.ResponseError)) -> MVar LanguageContextData -> BSL.ByteString -> BSL.ByteString -> IO ()
+handleRequest :: (C.ClientCapabilities -> IO (Maybe J.ResponseError))
+              -> MVar LanguageContextData -> BSL.ByteString -> BSL.ByteString -> IO ()
 handleRequest dispatcherProc mvarDat contLenStr' jsonStr' = do
   {-
   Message Types we must handle are the following
@@ -310,7 +304,7 @@ handleRequest dispatcherProc mvarDat contLenStr' jsonStr' = do
       let msg =  unwords [ "request request parse error.", lbs2str contLenStr', lbs2str jsonStr', show err]
               ++ L.intercalate "\n" ("" : "" : _ERR_MSG_URL)
               ++ "\n"
-      sendErrorLog msg
+      sendErrorLog mvarDat msg
 
     Right o -> do
       case HM.lookup "method" o of
@@ -328,7 +322,7 @@ handleRequest dispatcherProc mvarDat contLenStr' jsonStr' = do
         requestHandler mvarDat req
       Left  err -> do
         let msg = unwords $ ["haskell-lsp:parse error.", lbs2str contLenStr', lbs2str jsonStr', show err] ++ _ERR_MSG_URL
-        sendErrorLog msg
+        sendErrorLog mvarDat msg
 
     -- ---------------------------------
 
@@ -347,7 +341,7 @@ handleRequest dispatcherProc mvarDat contLenStr' jsonStr' = do
         h :: MVar LanguageContextData -> J.TraceNotification -> IO ()
         h _ _ = do
           logm "Got setTraceNotification, ignoring"
-          sendErrorLog "Got setTraceNotification, ignoring"
+          sendErrorLog mvarDat "Got setTraceNotification, ignoring"
 
     -- capability based handlers
     handle jsonStr cmd = do
@@ -357,7 +351,7 @@ handleRequest dispatcherProc mvarDat contLenStr' jsonStr' = do
         Just f -> f mvarDat cmd jsonStr
         Nothing -> do
           let msg = unwords ["unknown message received:method='" ++ cmd ++ "',", lbs2str contLenStr', lbs2str jsonStr]
-          sendErrorLog msg
+          sendErrorLog mvarDat msg
 
 -- ---------------------------------------------------------------------
 
@@ -370,49 +364,31 @@ makeResponseError origId err = J.ResponseMessage "2.0" origId Nothing (Just err)
 -- ---------------------------------------------------------------------
 -- |
 --
-sendEvent :: BSL.ByteString -> IO ()
-sendEvent str = sendResponse str
+sendEvent :: MVar LanguageContextData -> BSL.ByteString -> IO ()
+sendEvent mvarCtx str = sendResponse mvarCtx str
 
 -- |
 --
-sendResponse2 :: MVar LanguageContextData -> BSL.ByteString -> IO ()
-sendResponse2 mvarCtx str = do
+sendResponse :: MVar LanguageContextData -> BSL.ByteString -> IO ()
+sendResponse mvarCtx str = do
   ctx <- readMVar mvarCtx
   resSendResponse ctx str
 
 
 -- ---------------------------------------------------------------------
-
--- | Send a message with the required JSON 2.0 Content-Length header
-sendResponse :: BSL.ByteString -> IO ()
-sendResponse str = do
-  -- NOTE: this function may be called in multiple thread contexts. Make sure it
-  -- sends a single message at a time by constructing a single output string
-  -- first
-  -- May need to be managed, see http://www.snoyman.com/blog/2016/11/haskells-missing-concurrency-basics
-
-  let out = BSL.concat
-               [ str2lbs $ "Content-Length: " ++ show (BSL.length str)
-               , str2lbs _TWO_CRLF
-               , str ]
-
-  BSL.hPut stdout out
-  hFlush stdout
-  logm $ B.pack "<--2--" <> str
-
 -- |
 --
 --
-sendErrorResponse :: J.LspIdRsp -> String -> IO ()
-sendErrorResponse origId msg = sendErrorResponseS sendEvent origId J.InternalError msg
+sendErrorResponse :: MVar LanguageContextData -> J.LspIdRsp -> String -> IO ()
+sendErrorResponse mv origId msg = sendErrorResponseS (sendEvent mv) origId J.InternalError msg
 
 sendErrorResponseS :: (B.ByteString -> IO ()) -> J.LspIdRsp -> J.ErrorCode -> String -> IO ()
 sendErrorResponseS sf origId err msg = do
   sf $ J.encode (J.ResponseMessage "2.0" origId Nothing
                          (Just $ J.ResponseError err msg Nothing) :: J.ErrorResponse)
 
-sendErrorLog :: String -> IO ()
-sendErrorLog msg = sendErrorLogS sendEvent msg
+sendErrorLog :: MVar LanguageContextData -> String -> IO ()
+sendErrorLog mv msg = sendErrorLogS (sendEvent mv) msg
 
 sendErrorLogS :: (B.ByteString -> IO ()) -> String -> IO ()
 sendErrorLogS sf msg =
@@ -427,13 +403,13 @@ sendErrorShowS sf msg =
 
 -- ---------------------------------------------------------------------
 
-defaultErrorHandlers :: (Show a) => J.LspIdRsp -> a -> [E.Handler ()]
-defaultErrorHandlers origId req = [ E.Handler someExcept ]
+defaultErrorHandlers :: (Show a) => MVar LanguageContextData -> J.LspIdRsp -> a -> [E.Handler ()]
+defaultErrorHandlers mvarDat origId req = [ E.Handler someExcept ]
   where
     someExcept (e :: E.SomeException) = do
       let msg = unwords ["request error.", show req, show e]
-      sendErrorResponse origId msg
-      sendErrorLog msg
+      sendErrorResponse mvarDat origId msg
+      sendErrorLog mvarDat msg
 
 -- |=====================================================================
 --
@@ -441,11 +417,13 @@ defaultErrorHandlers origId req = [ E.Handler someExcept ]
 
 -- |
 --
-initializeRequestHandler ::(C.ClientCapabilities -> IO (Maybe J.ResponseError)) -> MVar LanguageContextData -> J.InitializeRequest -> IO ()
+initializeRequestHandler :: (C.ClientCapabilities -> IO (Maybe J.ResponseError))
+                         -> MVar LanguageContextData
+                         -> J.InitializeRequest -> IO ()
 initializeRequestHandler _dispatcherProc _mvarCtx (J.RequestMessage _ _origId _ Nothing) = do
   logs "initializeRequestHandler: no params in message, ignoring"
 initializeRequestHandler dispatcherProc mvarCtx req@(J.RequestMessage _ origId _ (Just params)) =
-  flip E.catches (defaultErrorHandlers (J.responseId origId) req) $ do
+  flip E.catches (defaultErrorHandlers mvarCtx (J.responseId origId) req) $ do
 
     ctx <- readMVar mvarCtx
 
@@ -465,7 +443,7 @@ initializeRequestHandler dispatcherProc mvarCtx req@(J.RequestMessage _ origId _
 
     case initializationResult of
       Just errResp -> do
-        sendResponse2 mvarCtx $ J.encode $ makeResponseError (J.responseId origId) errResp
+        sendResponse mvarCtx $ J.encode $ makeResponseError (J.responseId origId) errResp
 
       Nothing -> do
 
@@ -502,7 +480,7 @@ initializeRequestHandler dispatcherProc mvarCtx req@(J.RequestMessage _ origId _
           -- TODO: wrap this up into a fn to create a response message
           res  = J.ResponseMessage "2.0" (J.responseId origId) (Just $ J.InitializeResponseCapabilities capa) Nothing
 
-        sendResponse2 mvarCtx $ J.encode res
+        sendResponse mvarCtx $ J.encode res
 
           -- ++AZ++ experimenting
           -- let
@@ -516,10 +494,10 @@ initializeRequestHandler dispatcherProc mvarCtx req@(J.RequestMessage _ origId _
 --
 shutdownRequestHandler :: MVar LanguageContextData -> J.ShutdownRequest -> IO ()
 shutdownRequestHandler mvarCtx req@(J.RequestMessage _ origId _ _) =
-  flip E.catches (defaultErrorHandlers (J.responseId origId) req) $ do
+  flip E.catches (defaultErrorHandlers mvarCtx (J.responseId origId) req) $ do
   let res  = makeResponseMessage (J.responseId origId) ("ok"::String)
 
-  sendResponse2 mvarCtx $ J.encode res
+  sendResponse mvarCtx $ J.encode res
 
 
 

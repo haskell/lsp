@@ -49,6 +49,7 @@ library
                      , parsec
                      , safe
                      , split
+                     , stm
                      , text
                      , time
                      , unordered-containers
@@ -84,6 +85,7 @@ executable hie-vscode
                      , parsec
                      , safe
                      , split
+                     , stm
                      , text
                      , time
                      , unordered-containers
