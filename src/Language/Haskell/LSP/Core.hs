@@ -7,45 +7,46 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Language.Haskell.LSP.Core (
-  handleRequest
-, LanguageContextData(..)
-, Handler
-, Handlers(..)
-, Options(..)
-, OutMessage(..)
-, defaultLanguageContextData
-, initializeRequestHandler
-, makeResponseMessage
-, makeResponseError
-, setupLogger
-, sendErrorResponseS
-, sendErrorLogS
-, sendErrorShowS
-) where
+    handleRequest
+  , LanguageContextData(..)
+  , Handler
+  , InitializeCallback
+  , SendFunc
+  , Handlers(..)
+  , Options(..)
+  , OutMessage(..)
+  , defaultLanguageContextData
+  , initializeRequestHandler
+  , makeResponseMessage
+  , makeResponseError
+  , setupLogger
+  , sendErrorResponseS
+  , sendErrorLogS
+  , sendErrorShowS
+  ) where
 
-import Language.Haskell.LSP.Constant
-import Language.Haskell.LSP.Utility
-import qualified Language.Haskell.LSP.TH.DataTypesJSON as J
-
-import Data.Default
-import Data.Monoid
-import System.IO
-import System.Directory
-import System.Exit
-import System.Log.Logger
+import           Control.Concurrent
+import qualified Control.Exception as E
 import qualified Data.Aeson as J
 import qualified Data.ByteString.Lazy as BSL
+import qualified Data.ByteString.Lazy.Char8 as B
+import           Data.Default
+import qualified Data.HashMap.Strict as HM
 import qualified Data.List as L
-import qualified Control.Exception as E
 import qualified Data.Map as MAP
-import Control.Concurrent
-import qualified System.Log.Logger as L
+import qualified Data.Text as T
+import           Language.Haskell.LSP.Constant
+import qualified Language.Haskell.LSP.TH.ClientCapabilities as C
+import qualified Language.Haskell.LSP.TH.DataTypesJSON      as J
+import           Language.Haskell.LSP.Utility
+import           System.Directory
+import           System.Exit
+import           System.IO
 import qualified System.Log.Formatter as L
 import qualified System.Log.Handler as LH
 import qualified System.Log.Handler.Simple as LHS
-import qualified Data.ByteString.Lazy.Char8 as B
-import qualified Data.HashMap.Strict as HM
-import qualified Data.Text as T
+import           System.Log.Logger
+import qualified System.Log.Logger as L
 
 -- ---------------------------------------------------------------------
 {-# ANN module ("HLint: ignore Eta reduce"         :: String) #-}
@@ -61,6 +62,7 @@ data LanguageContextData =
   , resHandlers            :: !Handlers
   , resOptions             :: !Options
   , resSendResponse        :: !(BSL.ByteString -> IO ())
+  -- , resChanOut             :: !(TChan BSL.ByteString)
   }
 
 -- ---------------------------------------------------------------------
@@ -75,10 +77,20 @@ data Options =
     , signatureHelpProvider            :: Maybe J.SignatureHelpOptions
     , codeLensProvider                 :: Maybe J.CodeLensOptions
     , documentOnTypeFormattingProvider :: Maybe J.DocumentOnTypeFormattingOptions
+    , documentLinkProvider             :: Maybe J.DocumentLinkOptions
+    , executeCommandProvider           :: Maybe J.ExecuteCommandOptions
     }
 
 instance Default Options where
-  def = Options Nothing Nothing Nothing Nothing Nothing
+  def = Options Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+
+-- | A function to send a message to the client
+type SendFunc = (BSL.ByteString -> IO ())
+
+-- | The function in the LSP process that is called once the 'initialize'
+-- message is received. Message processing will only continue once this returns,
+-- so it should create whatever processes are needed.
+type InitializeCallback = C.ClientCapabilities -> SendFunc -> IO (Maybe J.ResponseError)
 
 -- | The Handler type captures a function that receives local read-only state
 -- 'a', a function to send a reply message once encoded as a ByteString, and a
@@ -106,6 +118,14 @@ data Handlers =
     , documentRangeFormattingHandler :: !(Maybe (Handler J.DocumentRangeFormattingRequest))
     , documentTypeFormattingHandler  :: !(Maybe (Handler J.DocumentOnTypeFormattingRequest))
     , renameHandler                  :: !(Maybe (Handler J.RenameRequest))
+    -- new in 3.0
+    , documentLinkHandler            :: !(Maybe (Handler J.DocumentLinkRequest))
+    , documentLinkResolveHandler     :: !(Maybe (Handler J.DocumentLinkResolveRequest))
+    , executeCommandHandler          :: !(Maybe (Handler J.ExecuteCommandRequest))
+    -- Next 2 go from server -> client
+    -- , registerCapabilityHandler      :: !(Maybe (Handler J.RegisterCapabilityRequest))
+    -- , unregisterCapabilityHandler    :: !(Maybe (Handler J.UnregisterCapabilityRequest))
+    , willSaveWaitUntilTextDocHandler:: !(Maybe (Handler J.WillSaveWaitUntilTextDocumentResponse))
 
     -- Notifications from the client
     , didChangeConfigurationParamsHandler      :: !(Maybe (Handler J.DidChangeConfigurationParamsNotification))
@@ -114,6 +134,9 @@ data Handlers =
     , didCloseTextDocumentNotificationHandler  :: !(Maybe (Handler J.DidCloseTextDocumentNotification))
     , didSaveTextDocumentNotificationHandler   :: !(Maybe (Handler J.DidSaveTextDocumentNotification))
     , didChangeWatchedFilesNotificationHandler :: !(Maybe (Handler J.DidChangeWatchedFilesNotification))
+    -- new in 3.0
+    , initializedHandler                       :: !(Maybe (Handler J.InitializedNotification))
+    , willSaveTextDocumentNotificationHandler  :: !(Maybe (Handler J.WillSaveTextDocumentNotification))
 
     , cancelNotificationHandler                :: !(Maybe (Handler J.CancelNotification))
 
@@ -124,11 +147,12 @@ data Handlers =
 instance Default Handlers where
   def = Handlers Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
                  Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
-                 Nothing Nothing Nothing Nothing Nothing Nothing
+                 Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+                 Nothing Nothing Nothing
 
 -- ---------------------------------------------------------------------
 
-handlerMap :: Handlers 
+handlerMap :: Handlers
            -> MAP.Map String (MVar LanguageContextData -> String -> B.ByteString -> IO ())
 handlerMap h = MAP.fromList
   [ ("textDocument/completion",        hh $ completionHandler h)
@@ -147,7 +171,9 @@ handlerMap h = MAP.fromList
   , ("textDocument/rangeFormatting",   hh $ documentRangeFormattingHandler h)
   , ("textDocument/onTypeFormatting",  hh $ documentTypeFormattingHandler h)
   , ("textDocument/rename",            hh $ renameHandler h)
+  , ("workspace/executeCommand",       hh $ executeCommandHandler h)
 
+  , ("initialized",                      hh $ initializedHandler h)
   , ("workspace/didChangeConfiguration", hh $ didChangeConfigurationParamsHandler h)
   , ("textDocument/didOpen",             hh $ didOpenTextDocumentNotificationHandler h)
   , ("textDocument/didChange",           hh $ didChangeTextDocumentNotificationHandler h )
@@ -166,9 +192,9 @@ handlerMap h = MAP.fromList
 -- | Adapter from the handlers exposed to the library users and the internal message loop
 hh :: forall b. (J.FromJSON b)
    => Maybe (Handler b) -> MVar LanguageContextData -> String -> B.ByteString -> IO ()
-hh Nothing = \_mvarDat cmd jsonStr -> do
+hh Nothing = \mvarDat cmd jsonStr -> do
       let msg = unwords ["haskell-lsp:no handler for.", cmd, lbs2str jsonStr]
-      sendErrorLog msg
+      sendErrorLog mvarDat msg
 hh (Just h) = \mvarDat _cmd jsonStr -> do
       case J.eitherDecode jsonStr of
         Right req -> do
@@ -176,7 +202,7 @@ hh (Just h) = \mvarDat _cmd jsonStr -> do
           h (resSendResponse ctx) req
         Left  err -> do
           let msg = unwords $ ["haskell-lsp:parse error.", lbs2str jsonStr, show err] ++ _ERR_MSG_URL
-          sendErrorLog msg
+          sendErrorLog mvarDat msg
 
 -- ---------------------------------------------------------------------
 
@@ -198,6 +224,7 @@ data OutMessage = ReqHover                    J.HoverRequest
                 | ReqDocumentRangeFormatting  J.DocumentRangeFormattingRequest
                 | ReqDocumentOnTypeFormatting J.DocumentOnTypeFormattingRequest
                 | ReqRename                   J.RenameRequest
+                | ReqExecuteCommand           J.ExecuteCommandRequest
                 -- responses
                 | RspHover                    J.HoverResponse
                 | RspCompletion               J.CompletionResponse
@@ -215,8 +242,10 @@ data OutMessage = ReqHover                    J.HoverRequest
                 | RspDocumentRangeFormatting  J.DocumentRangeFormattingResponse
                 | RspDocumentOnTypeFormatting J.DocumentOnTypeFormattingResponse
                 | RspRename                   J.RenameResponse
+                | RspExecuteCommand           J.ExecuteCommandResponse
 
                 -- notifications
+                | NotInitialized                  J.InitializedNotification
                 | NotDidChangeConfigurationParams J.DidChangeConfigurationParamsNotification
                 | NotDidOpenTextDocument          J.DidOpenTextDocumentNotification
                 | NotDidChangeTextDocument        J.DidChangeTextDocumentNotification
@@ -236,12 +265,6 @@ data OutMessage = ReqHover                    J.HoverRequest
 _INITIAL_RESPONSE_SEQUENCE :: Int
 _INITIAL_RESPONSE_SEQUENCE = 0
 
-
--- |
---
---
-_TWO_CRLF :: String
-_TWO_CRLF = "\r\n\r\n"
 
 -- |
 --
@@ -268,11 +291,12 @@ _ERR_MSG_URL = [ "`stack update` and install new haskell-lsp."
 --
 --
 defaultLanguageContextData :: Handlers -> Options -> LanguageContextData
-defaultLanguageContextData h o = LanguageContextData _INITIAL_RESPONSE_SEQUENCE Nothing h o BSL.putStr 
+defaultLanguageContextData h o = LanguageContextData _INITIAL_RESPONSE_SEQUENCE Nothing h o BSL.putStr
 
 -- ---------------------------------------------------------------------
 
-handleRequest :: IO (Maybe J.ResponseError) -> MVar LanguageContextData -> BSL.ByteString -> BSL.ByteString -> IO ()
+handleRequest :: InitializeCallback
+              -> MVar LanguageContextData -> BSL.ByteString -> BSL.ByteString -> IO ()
 handleRequest dispatcherProc mvarDat contLenStr' jsonStr' = do
   {-
   Message Types we must handle are the following
@@ -288,7 +312,7 @@ handleRequest dispatcherProc mvarDat contLenStr' jsonStr' = do
       let msg =  unwords [ "request request parse error.", lbs2str contLenStr', lbs2str jsonStr', show err]
               ++ L.intercalate "\n" ("" : "" : _ERR_MSG_URL)
               ++ "\n"
-      sendErrorLog msg
+      sendErrorLog mvarDat msg
 
     Right o -> do
       case HM.lookup "method" o of
@@ -306,7 +330,7 @@ handleRequest dispatcherProc mvarDat contLenStr' jsonStr' = do
         requestHandler mvarDat req
       Left  err -> do
         let msg = unwords $ ["haskell-lsp:parse error.", lbs2str contLenStr', lbs2str jsonStr', show err] ++ _ERR_MSG_URL
-        sendErrorLog msg
+        sendErrorLog mvarDat msg
 
     -- ---------------------------------
 
@@ -325,7 +349,7 @@ handleRequest dispatcherProc mvarDat contLenStr' jsonStr' = do
         h :: MVar LanguageContextData -> J.TraceNotification -> IO ()
         h _ _ = do
           logm "Got setTraceNotification, ignoring"
-          sendErrorLog "Got setTraceNotification, ignoring"
+          sendErrorLog mvarDat "Got setTraceNotification, ignoring"
 
     -- capability based handlers
     handle jsonStr cmd = do
@@ -334,53 +358,45 @@ handleRequest dispatcherProc mvarDat contLenStr' jsonStr' = do
       case MAP.lookup cmd (handlerMap h) of
         Just f -> f mvarDat cmd jsonStr
         Nothing -> do
-          let msg = unwords ["unknown request command.", cmd, lbs2str contLenStr', lbs2str jsonStr]
-          sendErrorLog msg
+          let msg = unwords ["unknown message received:method='" ++ cmd ++ "',", lbs2str contLenStr', lbs2str jsonStr]
+          sendErrorLog mvarDat msg
 
 -- ---------------------------------------------------------------------
 
-makeResponseMessage :: Int -> a -> J.ResponseMessage a
+makeResponseMessage :: J.LspIdRsp -> a -> J.ResponseMessage a
 makeResponseMessage origId result = J.ResponseMessage "2.0" origId (Just result) Nothing
 
-makeResponseError :: Int -> J.ResponseError -> J.ResponseMessage ()
+makeResponseError :: J.LspIdRsp -> J.ResponseError -> J.ResponseMessage ()
 makeResponseError origId err = J.ResponseMessage "2.0" origId Nothing (Just err)
 
 -- ---------------------------------------------------------------------
 -- |
 --
-sendEvent :: BSL.ByteString -> IO ()
-sendEvent str = sendResponseInternal str
+sendEvent :: MVar LanguageContextData -> BSL.ByteString -> IO ()
+sendEvent mvarCtx str = sendResponse mvarCtx str
 
 -- |
 --
-sendResponse2 :: MVar LanguageContextData -> BSL.ByteString -> IO ()
-sendResponse2 mvarCtx str = do
+sendResponse :: MVar LanguageContextData -> BSL.ByteString -> IO ()
+sendResponse mvarCtx str = do
   ctx <- readMVar mvarCtx
   resSendResponse ctx str
 
--- |
---
-sendResponseInternal :: BSL.ByteString -> IO ()
-sendResponseInternal str = do
-  BSL.hPut stdout $ BSL.append "Content-Length: " $ str2lbs $ show (BSL.length str)
-  BSL.hPut stdout $ str2lbs _TWO_CRLF
-  BSL.hPut stdout str
-  hFlush stdout
-  logm $ B.pack "<---" <> str
 
+-- ---------------------------------------------------------------------
 -- |
 --
 --
-sendErrorResponse :: Int -> String -> IO ()
-sendErrorResponse origId msg = sendErrorResponseS sendEvent origId J.InternalError msg
+sendErrorResponse :: MVar LanguageContextData -> J.LspIdRsp -> String -> IO ()
+sendErrorResponse mv origId msg = sendErrorResponseS (sendEvent mv) origId J.InternalError msg
 
-sendErrorResponseS :: (B.ByteString -> IO ()) -> Int -> J.ErrorCode -> String -> IO ()
+sendErrorResponseS :: (B.ByteString -> IO ()) -> J.LspIdRsp -> J.ErrorCode -> String -> IO ()
 sendErrorResponseS sf origId err msg = do
   sf $ J.encode (J.ResponseMessage "2.0" origId Nothing
                          (Just $ J.ResponseError err msg Nothing) :: J.ErrorResponse)
 
-sendErrorLog :: String -> IO ()
-sendErrorLog msg = sendErrorLogS sendEvent msg
+sendErrorLog :: MVar LanguageContextData -> String -> IO ()
+sendErrorLog mv msg = sendErrorLogS (sendEvent mv) msg
 
 sendErrorLogS :: (B.ByteString -> IO ()) -> String -> IO ()
 sendErrorLogS sf msg =
@@ -395,13 +411,13 @@ sendErrorShowS sf msg =
 
 -- ---------------------------------------------------------------------
 
-defaultErrorHandlers :: (Show a) => Int -> a -> [E.Handler ()]
-defaultErrorHandlers origId req = [ E.Handler someExcept ]
+defaultErrorHandlers :: (Show a) => MVar LanguageContextData -> J.LspIdRsp -> a -> [E.Handler ()]
+defaultErrorHandlers mvarDat origId req = [ E.Handler someExcept ]
   where
     someExcept (e :: E.SomeException) = do
       let msg = unwords ["request error.", show req, show e]
-      sendErrorResponse origId msg
-      sendErrorLog msg
+      sendErrorResponse mvarDat origId msg
+      sendErrorLog mvarDat msg
 
 -- |=====================================================================
 --
@@ -409,30 +425,33 @@ defaultErrorHandlers origId req = [ E.Handler someExcept ]
 
 -- |
 --
-initializeRequestHandler :: IO (Maybe J.ResponseError) -> MVar LanguageContextData -> J.InitializeRequest -> IO ()
-initializeRequestHandler dispatcherProc mvarCtx req@(J.RequestMessage _ origId _ mp) =
-  flip E.catches (defaultErrorHandlers origId req) $ do
+initializeRequestHandler :: InitializeCallback
+                         -> MVar LanguageContextData
+                         -> J.InitializeRequest -> IO ()
+initializeRequestHandler _dispatcherProc _mvarCtx (J.RequestMessage _ _origId _ Nothing) = do
+  logs "initializeRequestHandler: no params in message, ignoring"
+initializeRequestHandler dispatcherProc mvarCtx req@(J.RequestMessage _ origId _ (Just params)) =
+  flip E.catches (defaultErrorHandlers mvarCtx (J.responseId origId) req) $ do
 
     ctx <- readMVar mvarCtx
 
-    case mp of
+    modifyMVar_ mvarCtx (\c -> return c { resRootPath = J._rootPath params})
+    case J._rootPath params of
       Nothing -> return ()
-      Just params -> do
-        modifyMVar_ mvarCtx (\c -> return c { resRootPath = J._rootPath params})
-        case J._rootPath params of
-          Nothing -> return ()
-          Just dir -> do
-            logs $ "initializeRequestHandler: setting current dir to project root:" ++ dir
-            setCurrentDirectory dir
+      Just dir -> do
+        logs $ "initializeRequestHandler: setting current dir to project root:" ++ dir
+        setCurrentDirectory dir
+
+    let
+      getCapabilities :: J.InitializeParams -> C.ClientCapabilities
+      getCapabilities (J.InitializeParams _ _ _ _ c _) = c
 
     -- Launch the given process once the project root directory has been set
-    logs "initializeRequestHandler: calling dispatcherProc"
-
-    initializationResult <- dispatcherProc
+    initializationResult <- dispatcherProc (getCapabilities params) (resSendResponse ctx)
 
     case initializationResult of
       Just errResp -> do
-        sendResponse2 mvarCtx $ J.encode $ makeResponseError origId errResp
+        sendResponse mvarCtx $ J.encode $ makeResponseError (J.responseId origId) errResp
 
       Nothing -> do
 
@@ -460,29 +479,25 @@ initializeRequestHandler dispatcherProc mvarCtx req@(J.RequestMessage _ origId _
               , J._documentRangeFormattingProvider  = supported (documentRangeFormattingHandler h)
               , J._documentOnTypeFormattingProvider = documentOnTypeFormattingProvider o
               , J._renameProvider                   = supported (renameHandler h)
+              , J._documentLinkProvider             = documentLinkProvider o
+              , J._executeCommandProvider           = executeCommandProvider o
+              -- TODO: Add something for experimental
+              , J._experimental                     = (Nothing :: Maybe J.Value)
               }
 
           -- TODO: wrap this up into a fn to create a response message
-          res  = J.ResponseMessage "2.0" origId (Just $ J.InitializeResponseCapabilities capa) Nothing
+          res  = J.ResponseMessage "2.0" (J.responseId origId) (Just $ J.InitializeResponseCapabilities capa) Nothing
 
-        sendResponse2 mvarCtx $ J.encode res
-
-          -- ++AZ++ experimenting
-          -- let
-          --   ais = Just [J.MessageActionItem "action item 1", J.MessageActionItem "action item 2"]
-          --   p   = J.ShowMessageRequestParams J.MtWarning "playing with ShowMessageRequest" ais
-          --   smr = J.RequestMessage "2.0" 1 "window/showMessageRequest" (Just p)
-          -- sendEvent $ J.encode smr
-
+        sendResponse mvarCtx $ J.encode res
 
 -- |
 --
 shutdownRequestHandler :: MVar LanguageContextData -> J.ShutdownRequest -> IO ()
 shutdownRequestHandler mvarCtx req@(J.RequestMessage _ origId _ _) =
-  flip E.catches (defaultErrorHandlers origId req) $ do
-  let res  = makeResponseMessage origId ("ok"::String)
+  flip E.catches (defaultErrorHandlers mvarCtx (J.responseId origId) req) $ do
+  let res  = makeResponseMessage (J.responseId origId) ("ok"::String)
 
-  sendResponse2 mvarCtx $ J.encode res
+  sendResponse mvarCtx $ J.encode res
 
 
 

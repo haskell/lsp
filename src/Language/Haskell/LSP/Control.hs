@@ -8,27 +8,27 @@
 module Language.Haskell.LSP.Control
   (
     run
-  , sendNotificationMessage
-  , sendRequestMessage
-  , sendResponseMessage
   ) where
 
 import           Control.Concurrent
-import qualified Data.Aeson as J
+import           Control.Concurrent.STM.TChan
+import           Control.Monad
+import           Control.Monad.STM
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as B
 import           Data.Monoid
-import qualified Language.Haskell.LSP.Core as GUI
-import qualified Language.Haskell.LSP.TH.DataTypesJSON as J
+import qualified Language.Haskell.LSP.Core as Core
 import           Language.Haskell.LSP.Utility
 import           System.IO
 import           Text.Parsec
 
 -- ---------------------------------------------------------------------
 
-run :: IO (Maybe J.ResponseError) -- ^ function to be called once initialize has been received from the client
-    -> GUI.Handlers
-    -> GUI.Options
+run :: Core.InitializeCallback -- ^ function to be called once initialize has
+                               -- been received from the client. Further message
+                               -- processing will start only after this returns.
+    -> Core.Handlers
+    -> Core.Options
     -> IO Int         -- exit code
 run dp h o = do
 
@@ -39,9 +39,13 @@ run dp h o = do
   hSetBuffering stdout NoBuffering
   hSetEncoding  stdout utf8
 
+  cout <- atomically newTChan :: IO (TChan BSL.ByteString)
+  _rhpid <- forkIO $ sendServer cout
 
-  mvarDat <- newMVar ((GUI.defaultLanguageContextData h o :: GUI.LanguageContextData)
-                         { GUI.resSendResponse = sendResponse
+  let sendFunc str = atomically $ writeTChan cout str
+
+  mvarDat <- newMVar ((Core.defaultLanguageContextData h o :: Core.LanguageContextData)
+                         { Core.resSendResponse = sendFunc
                          } )
 
   ioLoop dp mvarDat
@@ -50,7 +54,7 @@ run dp h o = do
 
 -- ---------------------------------------------------------------------
 
-ioLoop :: IO (Maybe J.ResponseError) -> MVar GUI.LanguageContextData -> IO ()
+ioLoop :: Core.InitializeCallback -> MVar Core.LanguageContextData -> IO ()
 ioLoop dispatcherProc mvarDat = go BSL.empty
   where
     go :: BSL.ByteString -> IO ()
@@ -73,7 +77,7 @@ ioLoop dispatcherProc mvarDat = go BSL.empty
                   return ()
                 else do
                   logm $ (B.pack "---> ") <> cnt
-                  GUI.handleRequest dispatcherProc mvarDat newBuf cnt
+                  Core.handleRequest dispatcherProc mvarDat newBuf cnt
                   ioLoop dispatcherProc mvarDat
       where
         readContentLength :: String -> Either ParseError Int
@@ -86,32 +90,24 @@ ioLoop dispatcherProc mvarDat = go BSL.empty
 
 -- ---------------------------------------------------------------------
 
-sendNotificationMessage :: (J.ToJSON a) => J.NotificationMessage a -> IO ()
-sendNotificationMessage res = sendResponse (J.encode res)
+-- | Simple server to make sure all stdout is serialised
+sendServer :: TChan BSL.ByteString -> IO ()
+sendServer cstdout = do
+  forever $ do
+    str <- atomically $ readTChan cstdout
+    let out = BSL.concat
+                 [ str2lbs $ "Content-Length: " ++ show (BSL.length str)
+                 , str2lbs _TWO_CRLF
+                 , str ]
 
--- ---------------------------------------------------------------------
+    BSL.hPut stdout out
+    hFlush stdout
+    logm $ B.pack "<--2--" <> str
 
-sendRequestMessage :: (J.ToJSON a) => J.RequestMessage a -> IO ()
-sendRequestMessage res = sendResponse (J.encode res)
-
--- ---------------------------------------------------------------------
-
-sendResponseMessage :: (J.ToJSON a) => J.ResponseMessage a -> IO ()
-sendResponseMessage res = sendResponse (J.encode res)
-
--- ---------------------------------------------------------------------
-
--- | Send a message with the required JSON 2.0 Content-Length header
-sendResponse :: BSL.ByteString -> IO ()
-sendResponse str = do
-  BSL.hPut stdout $ BSL.append "Content-Length: " $ str2lbs $ show (BSL.length str)
-  BSL.hPut stdout $ str2lbs _TWO_CRLF
-  BSL.hPut stdout str
-  hFlush stdout
-  logm $ B.pack "<--2--" <> str
-
+-- |
+--
+--
 _TWO_CRLF :: String
 _TWO_CRLF = "\r\n\r\n"
-
 
 

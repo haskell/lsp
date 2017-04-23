@@ -25,6 +25,7 @@ library
   exposed-modules:     Language.Haskell.LSP.Core
                      , Language.Haskell.LSP.Constant
                      , Language.Haskell.LSP.Control
+                     , Language.Haskell.LSP.TH.ClientCapabilities
                      , Language.Haskell.LSP.TH.Constants
                      , Language.Haskell.LSP.TH.DataTypesJSON
                      , Language.Haskell.LSP.Utility
@@ -48,44 +49,12 @@ library
                      , parsec
                      , safe
                      , split
+                     , stm
                      , text
                      , time
                      , unordered-containers
   hs-source-dirs:      src
   default-language:    Haskell2010
-
-
-executable hie-vscode
-  main-is:             HieVscode.hs
-  hs-source-dirs:      src
-  default-language:    Haskell2010
-  ghc-options:         -Wall
-  other-modules:       Language.Haskell.LSP.Constant
-                     , Language.Haskell.LSP.Control
-                     , Language.Haskell.LSP.Core
-                     , Language.Haskell.LSP.Constant
-                     , Language.Haskell.LSP.TH.DataTypesJSON
-                     , Language.Haskell.LSP.Utility
-
-  build-depends:       base >=4.9 && <4.10
-                     , aeson
-                     , ansi-terminal
-                     , bytestring
-                     , cmdargs
-                     , containers
-                     , directory
-                     , data-default
-                     , filepath
-                     , fsnotify
-                     , hslogger
-                     , MissingH
-                     , mtl
-                     , parsec
-                     , safe
-                     , split
-                     , text
-                     , time
-                     , unordered-containers
 
 source-repository head
   type:     git
