@@ -10,6 +10,8 @@ module Language.Haskell.LSP.Core (
     handleRequest
   , LanguageContextData(..)
   , Handler
+  , InitializeCallback
+  , SendFunc
   , Handlers(..)
   , Options(..)
   , OutMessage(..)
@@ -18,7 +20,6 @@ module Language.Haskell.LSP.Core (
   , makeResponseMessage
   , makeResponseError
   , setupLogger
-  -- , sendResponse
   , sendErrorResponseS
   , sendErrorLogS
   , sendErrorShowS
@@ -33,7 +34,6 @@ import           Data.Default
 import qualified Data.HashMap.Strict as HM
 import qualified Data.List as L
 import qualified Data.Map as MAP
--- import           Data.Monoid
 import qualified Data.Text as T
 import           Language.Haskell.LSP.Constant
 import qualified Language.Haskell.LSP.TH.ClientCapabilities as C
@@ -83,6 +83,14 @@ data Options =
 
 instance Default Options where
   def = Options Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+
+-- | A function to send a message to the client
+type SendFunc = (BSL.ByteString -> IO ())
+
+-- | The function in the LSP process that is called once the 'initialize'
+-- message is received. Message processing will only continue once this returns,
+-- so it should create whatever processes are needed.
+type InitializeCallback = C.ClientCapabilities -> SendFunc -> IO (Maybe J.ResponseError)
 
 -- | The Handler type captures a function that receives local read-only state
 -- 'a', a function to send a reply message once encoded as a ByteString, and a
@@ -287,7 +295,7 @@ defaultLanguageContextData h o = LanguageContextData _INITIAL_RESPONSE_SEQUENCE 
 
 -- ---------------------------------------------------------------------
 
-handleRequest :: (C.ClientCapabilities -> IO (Maybe J.ResponseError))
+handleRequest :: InitializeCallback
               -> MVar LanguageContextData -> BSL.ByteString -> BSL.ByteString -> IO ()
 handleRequest dispatcherProc mvarDat contLenStr' jsonStr' = do
   {-
@@ -417,7 +425,7 @@ defaultErrorHandlers mvarDat origId req = [ E.Handler someExcept ]
 
 -- |
 --
-initializeRequestHandler :: (C.ClientCapabilities -> IO (Maybe J.ResponseError))
+initializeRequestHandler :: InitializeCallback
                          -> MVar LanguageContextData
                          -> J.InitializeRequest -> IO ()
 initializeRequestHandler _dispatcherProc _mvarCtx (J.RequestMessage _ _origId _ Nothing) = do
@@ -439,7 +447,7 @@ initializeRequestHandler dispatcherProc mvarCtx req@(J.RequestMessage _ origId _
       getCapabilities (J.InitializeParams _ _ _ _ c _) = c
 
     -- Launch the given process once the project root directory has been set
-    initializationResult <- dispatcherProc (getCapabilities params)
+    initializationResult <- dispatcherProc (getCapabilities params) (resSendResponse ctx)
 
     case initializationResult of
       Just errResp -> do
@@ -481,14 +489,6 @@ initializeRequestHandler dispatcherProc mvarCtx req@(J.RequestMessage _ origId _
           res  = J.ResponseMessage "2.0" (J.responseId origId) (Just $ J.InitializeResponseCapabilities capa) Nothing
 
         sendResponse mvarCtx $ J.encode res
-
-          -- ++AZ++ experimenting
-          -- let
-          --   ais = Just [J.MessageActionItem "action item 1", J.MessageActionItem "action item 2"]
-          --   p   = J.ShowMessageRequestParams J.MtWarning "playing with ShowMessageRequest" ais
-          --   smr = J.RequestMessage "2.0" 1 "window/showMessageRequest" (Just p)
-          -- sendEvent $ J.encode smr
-
 
 -- |
 --
