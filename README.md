@@ -33,6 +33,17 @@ and show events.
 
 It can also be used with emacs, see https://github.com/emacs-lsp/lsp-haskell
 
+## Using the example server
+
+    stack install
+
+will generate a `lsp-hello` executable.
+
+Changing the server to be called in the [`vscode-hie-server`](https://github.com/alanz/vscode-hie-server/blob/master/hie-vscode.sh#L21) plugin from `hie` to
+`lsp-hello` will run the example server instead of hie.
+
+Likewise, changing the executable in `lsp-haskell` for emacs.
+
 ## Useful links
 
 - https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md

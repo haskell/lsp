@@ -207,7 +207,7 @@ reactor st inp = do
             doc     = J._uri (textDoc :: J.TextDocumentItem)
             fileName = drop (length ("file://"::String)) doc
         liftIO $ U.logs $ "********* doc=" ++ show doc
-        sendDiagnostics fileName
+        sendDiagnostics doc
 
       -- -------------------------------
 
@@ -219,7 +219,7 @@ reactor st inp = do
             J.TextDocumentIdentifier doc = J._textDocument (params :: J.DidSaveTextDocumentParams)
             fileName = drop (length ("file://"::String)) doc
         liftIO $ U.logs $ "********* doc=" ++ show doc
-        sendDiagnostics fileName
+        sendDiagnostics doc
 
       HandlerRequest sf (Core.NotDidChangeTextDocument _notification) -> do
         setSendFunc sf
@@ -306,7 +306,6 @@ reactor st inp = do
             reply (J.Object mempty)
             lid <- nextLspReqId
             reactorSend $ J.RequestMessage "2.0" lid "workspace/applyEdit" (Just we)
-            -- reply r
           Nothing ->
             reply r
 
@@ -331,8 +330,8 @@ sendDiagnostics fileUri = do
     r = J.PublishDiagnosticsParams
           fileUri
           (J.List [J.Diagnostic
-                    (J.Range (J.Position 1 1) (J.Position 10 0))
-                    Nothing  -- severity
+                    (J.Range (J.Position 0 1) (J.Position 0 5))
+                    (Just J.DsWarning)  -- severity
                     Nothing  -- code
                     (Just "lsp-hello") -- source
                     "Example diagnostic message"
