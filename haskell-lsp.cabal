@@ -56,6 +56,43 @@ library
   hs-source-dirs:      src
   default-language:    Haskell2010
 
+executable lsp-hello
+  main-is:             Main.hs
+  hs-source-dirs:      example src
+  default-language:    Haskell2010
+  ghc-options:         -Wall
+  other-modules:       Language.Haskell.LSP.Constant
+                     , Language.Haskell.LSP.Control
+                     , Language.Haskell.LSP.Core
+                     , Language.Haskell.LSP.Constant
+                     , Language.Haskell.LSP.TH.DataTypesJSON
+                     , Language.Haskell.LSP.Utility
+
+  build-depends:       base >=4.9 && <4.10
+                     , aeson
+                     , ansi-terminal
+                     , bytestring
+                     , cmdargs
+                     , containers
+                     , directory
+                     , data-default
+                     , filepath
+                     , fsnotify
+                     , hslogger
+                     , MissingH
+                     , mtl
+                     , parsec
+                     , safe
+                     , split
+                     , stm
+                     , text
+                     , time
+                     , transformers
+                     , unordered-containers
+                     , vector
+                     -- the package library. Comment this out if you want repl changes to propagate
+                     , haskell-lsp
+
 source-repository head
   type:     git
   location: https://github.com/alanz/haskell-lsp
