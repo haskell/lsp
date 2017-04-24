@@ -268,7 +268,8 @@ reactor st inp = do
             J.CodeActionContext (J.List diags) = J._context (params :: J.CodeActionParams)
 
         let
-          makeCommand (J.Diagnostic (J.Range start _) _s _c (Just "hlint") _m  ) = [J.Command title cmd cmdparams]
+          -- makeCommand only generates commands for diagnostics whose source is us
+          makeCommand (J.Diagnostic (J.Range start _) _s _c (Just "lsp-hello") _m  ) = [J.Command title cmd cmdparams]
             where
               title = "Apply LSP hello command:" ++ head (lines _m)
               -- NOTE: the cmd needs to be registered via the InitializeResponse message. See lspOptions above
@@ -281,42 +282,44 @@ reactor st inp = do
               cmdparams = Just args
           makeCommand (J.Diagnostic _r _s _c _source _m  ) = []
         let body = concatMap makeCommand diags
-        let rspMsg = Core.makeResponseMessage (J.responseId $ J._id (req :: J.CodeActionRequest)) body
-        reactorSend rspMsg
+        reactorSend $ Core.makeResponseMessage (J.responseId $ J._id (req :: J.CodeActionRequest)) body
 
       -- -------------------------------
-{-
-      HandlerRequest sf r@(Core.ReqExecuteCommand req) -> do
+
+      HandlerRequest sf (Core.ReqExecuteCommand req) -> do
         setSendFunc sf
         liftIO $ U.logs $ "reactor:got ExecuteCommandRequest:" -- ++ show req
-        cwd <- liftIO getCurrentDirectory
-        -- liftIO $ U.logs $ "reactor:cwd:" ++ cwd
         let params = fromJust $ J._params (req :: J.ExecuteCommandRequest)
             command = J._command (params :: J.ExecuteCommandParams)
             margs = J._arguments (params :: J.ExecuteCommandParams)
 
-        -- liftIO $ U.logs $ "reactor:ExecuteCommandRequest:margs=" ++ show margs
-        cmdparams <- case margs of
-              Nothing -> return []
-              Just (J.List os) -> do
-                let (lts,rts) = partitionEithers $ map convertParam os
-                -- TODO:AZ: return an error if any parse errors found.
-                when (not $ null lts) $
-                  liftIO $ U.logs $ "\n\n****reactor:ExecuteCommandRequest:error converting params=" ++ show lts ++ "\n\n"
-                return rts
+        liftIO $ U.logs $ "reactor:ExecuteCommandRequest:margs=" ++ show margs
 
-        rid <- nextReqId
-        let (plugin,cmd) = break (==':') command
-        let hreq = CReq (T.pack plugin) rid (IdeRequest (T.pack $ tail cmd) (Map.fromList
-                                                    cmdparams)) cout
-        liftIO $ atomically $ writeTChan cin hreq
-        keepOriginal rid r
--}
+        let
+          reply v = reactorSend $ Core.makeResponseMessage (J.responseId $ J._id (req :: J.ExecuteCommandRequest)) v
+        -- When we get a RefactorResult or HieDiff, we need to send a
+        -- separate WorkspaceEdit Notification
+          r = J.List [] :: J.List Int
+        liftIO $ U.logs $ "ExecuteCommand response got:r=" ++ show r
+        case toWorkspaceEdit r of
+          Just we -> do
+            reply (J.Object mempty)
+            lid <- nextLspReqId
+            reactorSend $ J.RequestMessage "2.0" lid "workspace/applyEdit" (Just we)
+            -- reply r
+          Nothing ->
+            reply r
+
       -- -------------------------------
 
       HandlerRequest sf om -> do
         setSendFunc sf
         liftIO $ U.logs $ "reactor:got HandlerRequest:" ++ show om
+
+-- ---------------------------------------------------------------------
+
+toWorkspaceEdit :: t -> Maybe J.WorkspaceEdit
+toWorkspaceEdit _ = Nothing
 
 -- ---------------------------------------------------------------------
 
@@ -328,10 +331,10 @@ sendDiagnostics fileUri = do
     r = J.PublishDiagnosticsParams
           fileUri
           (J.List [J.Diagnostic
-                    (J.Range (J.Position 0 0) (J.Position 10 0))
+                    (J.Range (J.Position 1 1) (J.Position 10 0))
                     Nothing  -- severity
                     Nothing  -- code
-                    (Just "lsp-hello")
+                    (Just "lsp-hello") -- source
                     "Example diagnostic message"
                   ])
   reactorSend $ J.NotificationMessage "2.0" "textDocument/publishDiagnostics" (Just r)
