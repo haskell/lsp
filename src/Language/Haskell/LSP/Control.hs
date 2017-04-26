@@ -32,7 +32,7 @@ run :: Core.InitializeCallback -- ^ function to be called once initialize has
     -> IO Int         -- exit code
 run dp h o = do
 
-  logm $ B.pack "\n\n\n\n\nStarting up server ..."
+  logm $ B.pack "\n\n\n\n\nhaskell-lsp:Starting up server ..."
   hSetBuffering stdin NoBuffering
   hSetEncoding  stdin utf8
 
@@ -62,7 +62,7 @@ ioLoop dispatcherProc mvarDat = go BSL.empty
       c <- BSL.hGet stdin 1
       if c == BSL.empty
         then do
-          logm $ B.pack "\nGot EOF, exiting 1 ...\n"
+          logm $ B.pack "\nhaskell-lsp:Got EOF, exiting 1 ...\n"
           return ()
         else do
           -- logs $ "ioLoop: got" ++ show c
@@ -73,7 +73,7 @@ ioLoop dispatcherProc mvarDat = go BSL.empty
               cnt <- BSL.hGet stdin len
               if cnt == BSL.empty
                 then do
-                  logm $ B.pack "\nGot EOF, exiting 1 ...\n"
+                  logm $ B.pack "\nhaskell-lsp:Got EOF, exiting 1 ...\n"
                   return ()
                 else do
                   logm $ (B.pack "---> ") <> cnt

@@ -309,7 +309,7 @@ handleRequest dispatcherProc mvarDat contLenStr' jsonStr' = do
 
   case J.eitherDecode jsonStr' :: Either String J.Object of
     Left  err -> do
-      let msg =  unwords [ "request request parse error.", lbs2str contLenStr', lbs2str jsonStr', show err]
+      let msg =  unwords [ "haskell-lsp:incoming message parse error.", lbs2str contLenStr', lbs2str jsonStr', show err]
               ++ L.intercalate "\n" ("" : "" : _ERR_MSG_URL)
               ++ "\n"
       sendErrorLog mvarDat msg
@@ -317,9 +317,9 @@ handleRequest dispatcherProc mvarDat contLenStr' jsonStr' = do
     Right o -> do
       case HM.lookup "method" o of
         Just (J.String cmd) -> handle jsonStr' (T.unpack cmd)
-        Just oops -> logs $ "got strange method param, ignoring:" ++ show oops
+        Just oops -> logs $ "haskell-lsp:got strange method param, ignoring:" ++ show oops
         Nothing -> do
-          logs $ "Got reply message:" ++ show jsonStr'
+          logs $ "haskell-lsp:Got reply message:" ++ show jsonStr'
           handle jsonStr' "response"
 
   where
@@ -338,7 +338,7 @@ handleRequest dispatcherProc mvarDat contLenStr' jsonStr' = do
     handle jsonStr "initialize" = helper jsonStr (initializeRequestHandler dispatcherProc)
     handle jsonStr "shutdown"   = helper jsonStr shutdownRequestHandler
     handle _jsonStr "exit" = do
-      logm $ B.pack "Got exit, exiting"
+      logm $ B.pack "haskell-lsp:Got exit, exiting"
       exitSuccess
 
     -- ---------------------------------
@@ -348,8 +348,8 @@ handleRequest dispatcherProc mvarDat contLenStr' jsonStr' = do
       where
         h :: MVar LanguageContextData -> J.TraceNotification -> IO ()
         h _ _ = do
-          logm "Got setTraceNotification, ignoring"
-          sendErrorLog mvarDat "Got setTraceNotification, ignoring"
+          logm "haskell-lsp:Got setTraceNotification, ignoring"
+          sendErrorLog mvarDat "haskell-lsp:Got setTraceNotification, ignoring"
 
     -- capability based handlers
     handle jsonStr cmd = do
@@ -358,7 +358,7 @@ handleRequest dispatcherProc mvarDat contLenStr' jsonStr' = do
       case MAP.lookup cmd (handlerMap h) of
         Just f -> f mvarDat cmd jsonStr
         Nothing -> do
-          let msg = unwords ["unknown message received:method='" ++ cmd ++ "',", lbs2str contLenStr', lbs2str jsonStr]
+          let msg = unwords ["haskell-lsp:unknown message received:method='" ++ cmd ++ "',", lbs2str contLenStr', lbs2str jsonStr]
           sendErrorLog mvarDat msg
 
 -- ---------------------------------------------------------------------
@@ -429,7 +429,7 @@ initializeRequestHandler :: InitializeCallback
                          -> MVar LanguageContextData
                          -> J.InitializeRequest -> IO ()
 initializeRequestHandler _dispatcherProc _mvarCtx (J.RequestMessage _ _origId _ Nothing) = do
-  logs "initializeRequestHandler: no params in message, ignoring"
+  logs "haskell-lsp:initializeRequestHandler: no params in message, ignoring"
 initializeRequestHandler dispatcherProc mvarCtx req@(J.RequestMessage _ origId _ (Just params)) =
   flip E.catches (defaultErrorHandlers mvarCtx (J.responseId origId) req) $ do
 
@@ -439,7 +439,7 @@ initializeRequestHandler dispatcherProc mvarCtx req@(J.RequestMessage _ origId _
     case J._rootPath params of
       Nothing -> return ()
       Just dir -> do
-        logs $ "initializeRequestHandler: setting current dir to project root:" ++ dir
+        logs $ "haskell-lsp:initializeRequestHandler: setting current dir to project root:" ++ dir
         setCurrentDirectory dir
 
     let
