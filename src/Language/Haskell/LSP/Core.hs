@@ -10,7 +10,6 @@ module Language.Haskell.LSP.Core (
     handleRequest
   , LanguageContextData(..)
   , Handler
-  , VfsHandler
   , InitializeCallback
   , SendFunc
   , Handlers(..)
@@ -97,8 +96,8 @@ type InitializeCallback = C.ClientCapabilities -> SendFunc -> IO (Maybe J.Respon
 -- | The Handler type captures a function that receives local read-only state
 -- 'a', a function to send a reply message once encoded as a ByteString, and a
 -- received message of type 'b'
-type Handler b = (BSL.ByteString -> IO ()) -> b -> IO ()
-type VfsHandler b = VirtualFile -> (BSL.ByteString -> IO ()) -> b -> IO ()
+type Handler b = (J.Uri -> IO (Maybe VirtualFile)) -> (BSL.ByteString -> IO ()) -> b -> IO ()
+-- TODO: change the sendFunc to take a ToJSON type instead
 
 -- | Callbacks from the language server to the language handler
 data Handlers =
@@ -132,7 +131,7 @@ data Handlers =
 
     -- Notifications from the client
     , didChangeConfigurationParamsHandler      :: !(Maybe (Handler J.DidChangeConfigurationParamsNotification))
-    , didOpenTextDocumentNotificationHandler   :: !(Maybe (VfsHandler J.DidOpenTextDocumentNotification))
+    , didOpenTextDocumentNotificationHandler   :: !(Maybe (Handler J.DidOpenTextDocumentNotification))
     , didChangeTextDocumentNotificationHandler :: !(Maybe (Handler J.DidChangeTextDocumentNotification))
     , didCloseTextDocumentNotificationHandler  :: !(Maybe (Handler J.DidCloseTextDocumentNotification))
     , didSaveTextDocumentNotificationHandler   :: !(Maybe (Handler J.DidSaveTextDocumentNotification))
@@ -178,7 +177,7 @@ handlerMap h = Map.fromList
 
   , ("initialized",                      hh $ initializedHandler h)
   , ("workspace/didChangeConfiguration", hh $ didChangeConfigurationParamsHandler h)
-  , ("textDocument/didOpen",             hv $ didOpenTextDocumentNotificationHandler h)
+  , ("textDocument/didOpen",             hh $ didOpenTextDocumentNotificationHandler h)
   , ("textDocument/didChange",           hh $ didChangeTextDocumentNotificationHandler h )
   , ("textDocument/didClose",            hh $ didCloseTextDocumentNotificationHandler h )
   , ("textDocument/didSave",             hh $ didSaveTextDocumentNotificationHandler h)
@@ -199,34 +198,23 @@ hh :: forall b. (J.FromJSON b)
 hh Nothing = \mvarDat cmd jsonStr -> do
       let msg = unwords ["haskell-lsp:no handler for.", cmd, lbs2str jsonStr]
       sendErrorLog mvarDat msg
-hh (Just h) = \mvarDat _cmd jsonStr -> do
+hh (Just h) = \mvarDat cmd jsonStr -> do
       case J.eitherDecode jsonStr of
         Right req -> do
           ctx <- readMVar mvarDat
-          h (resSendResponse ctx) req
+          vfs' <- getVfs (resVFS ctx) cmd jsonStr
+          modifyMVar_ mvarDat (\c -> return c {resVFS = vfs'})
+          h (getVirtualFile mvarDat) (resSendResponse ctx) req
         Left  err -> do
           let msg = unwords $ ["haskell-lsp:parse error.", lbs2str jsonStr, show err] ++ _ERR_MSG_URL
           sendErrorLog mvarDat msg
+
 -- ---------------------------------------------------------------------
 
--- TODO: harvest commonality between hh and hv
--- | Adapter from the vfs handlers exposed to the library users and the internal
--- message loop
-hv :: forall b. (J.FromJSON b)
-   => Maybe (VfsHandler b) -> MVar LanguageContextData -> String -> B.ByteString -> IO ()
-hv Nothing = \mvarDat cmd jsonStr -> do
-      let msg = unwords ["haskell-lsp:no handler for.", cmd, lbs2str jsonStr]
-      sendErrorLog mvarDat msg
-hv (Just h) = \mvarDat _cmd jsonStr -> do
-      case J.eitherDecode jsonStr of
-        Right req -> do
-          ctx <- readMVar mvarDat
-          (v,vfs') <- getVfs (resVFS ctx) req
-          modifyMVar_ mvarDat (\c -> return c {resVFS = vfs'})
-          h v (resSendResponse ctx) req
-        Left  err -> do
-          let msg = unwords $ ["haskell-lsp:parse error.", lbs2str jsonStr, show err] ++ _ERR_MSG_URL
-          sendErrorLog mvarDat msg
+getVirtualFile :: MVar LanguageContextData -> J.Uri -> IO (Maybe (VirtualFile))
+getVirtualFile mvarDat uri = do
+  ctx <- readMVar mvarDat
+  return $ Map.lookup uri (resVFS ctx)
 
 -- ---------------------------------------------------------------------
 

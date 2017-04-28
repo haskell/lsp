@@ -315,7 +315,7 @@ data Position =
   Position
     { _line       :: Int
     , _character  :: Int
-    } deriving (Show, Read, Eq)
+    } deriving (Show, Read, Eq, Ord)
 
 $(deriveJSON lspOptions ''Position)
 
@@ -347,7 +347,7 @@ data Range =
   Range
     { _start :: Position
     , _end   :: Position
-    } deriving (Show, Read, Eq)
+    } deriving (Show, Read, Eq, Ord)
 
 $(deriveJSON lspOptions ''Range)
 

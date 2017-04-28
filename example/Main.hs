@@ -79,9 +79,10 @@ data ReactorInput
   = InitializeCallBack C.ClientCapabilities Core.SendFunc
       -- ^ called when the LSP ioLoop receives the `initialize` message from the
       -- client, providing the client capabilities (for LSP 3.0 and later)
-  | HandlerRequest (BSL.ByteString -> IO ()) Core.OutMessage
-      -- ^ injected into the reactor input by each of the individual callback handlers
-  | VfsHandlerRequest VirtualFile (BSL.ByteString -> IO ()) Core.OutMessage
+  | HandlerRequest
+      (J.Uri -> IO (Maybe VirtualFile))
+      (BSL.ByteString -> IO ())
+      Core.OutMessage
       -- ^ injected into the reactor input by each of the individual callback handlers
 
 data ReactorState =
@@ -150,13 +151,13 @@ reactor st inp = do
 
       -- Handle any response from a message originating at the server, such as
       -- "workspace/applyEdit"
-      HandlerRequest sf (Core.RspFromClient rm) -> do
+      HandlerRequest _vf sf (Core.RspFromClient rm) -> do
         setSendFunc sf
         liftIO $ U.logs $ "reactor:got RspFromClient:" ++ show rm
 
       -- -------------------------------
 
-      HandlerRequest sf (Core.NotInitialized _notification) -> do
+      HandlerRequest _vf sf (Core.NotInitialized _notification) -> do
         setSendFunc sf
         liftIO $ U.logm $ "****** reactor: processing Initialized Notification"
         -- Server is ready, register any specific capabilities we need
@@ -194,7 +195,7 @@ reactor st inp = do
 
       -- -------------------------------
 
-      HandlerRequest sf (Core.NotDidOpenTextDocument notification) -> do
+      HandlerRequest _vf sf (Core.NotDidOpenTextDocument notification) -> do
         setSendFunc sf
         liftIO $ U.logm $ "****** reactor: processing NotDidOpenTextDocument"
         let
@@ -207,7 +208,7 @@ reactor st inp = do
 
       -- -------------------------------
 
-      HandlerRequest sf (Core.NotDidSaveTextDocument notification) -> do
+      HandlerRequest _vf sf (Core.NotDidSaveTextDocument notification) -> do
         setSendFunc sf
         liftIO $ U.logm "****** reactor: processing NotDidSaveTextDocument"
         let
@@ -217,13 +218,13 @@ reactor st inp = do
         liftIO $ U.logs $ "********* doc=" ++ show doc
         sendDiagnostics doc
 
-      HandlerRequest sf (Core.NotDidChangeTextDocument _notification) -> do
+      HandlerRequest _vf sf (Core.NotDidChangeTextDocument _notification) -> do
         setSendFunc sf
         liftIO $ U.logm "****** reactor: NOT processing NotDidChangeTextDocument"
 
       -- -------------------------------
 
-      HandlerRequest sf (Core.ReqRename req) -> do
+      HandlerRequest _vf sf (Core.ReqRename req) -> do
         setSendFunc sf
         liftIO $ U.logs $ "reactor:got RenameRequest:" ++ show req
         let params = fromJust $ J._params (req :: J.RenameRequest)
@@ -240,7 +241,7 @@ reactor st inp = do
 
       -- -------------------------------
 
-      HandlerRequest sf r@(Core.ReqHover req) -> do
+      HandlerRequest _vf sf r@(Core.ReqHover req) -> do
         setSendFunc sf
         liftIO $ U.logs $ "reactor:got HoverRequest:" ++ show req
         let J.TextDocumentPositionParams doc pos = fromJust $ J._params (req :: J.HoverRequest)
@@ -255,7 +256,7 @@ reactor st inp = do
 
       -- -------------------------------
 
-      HandlerRequest sf (Core.ReqCodeAction req) -> do
+      HandlerRequest _vf sf (Core.ReqCodeAction req) -> do
         setSendFunc sf
         liftIO $ U.logs $ "reactor:got CodeActionRequest:" ++ show req
         let params = fromJust $ J._params (req :: J.CodeActionRequest)
@@ -283,7 +284,7 @@ reactor st inp = do
 
       -- -------------------------------
 
-      HandlerRequest sf (Core.ReqExecuteCommand req) -> do
+      HandlerRequest _vf sf (Core.ReqExecuteCommand req) -> do
         setSendFunc sf
         liftIO $ U.logs $ "reactor:got ExecuteCommandRequest:" -- ++ show req
         let params = fromJust $ J._params (req :: J.ExecuteCommandRequest)
@@ -308,7 +309,7 @@ reactor st inp = do
 
       -- -------------------------------
 
-      HandlerRequest sf om -> do
+      HandlerRequest _vf sf om -> do
         setSendFunc sf
         liftIO $ U.logs $ "reactor:got HandlerRequest:" ++ show om
 
@@ -347,35 +348,29 @@ lspOptions = def { Core.textDocumentSync = Just syncMethod
 
 lspHandlers :: TChan ReactorInput -> Core.Handlers
 lspHandlers rin
-  = def { Core.initializedHandler                       = Just $ passHandler    rin Core.NotInitialized
-        , Core.renameHandler                            = Just $ passHandler    rin Core.ReqRename
-        , Core.hoverHandler                             = Just $ passHandler    rin Core.ReqHover
-        , Core.didOpenTextDocumentNotificationHandler   = Just $ passVfsHandler rin Core.NotDidOpenTextDocument
-        , Core.didSaveTextDocumentNotificationHandler   = Just $ passHandler    rin Core.NotDidSaveTextDocument
-        , Core.didChangeTextDocumentNotificationHandler = Just $ passHandler    rin Core.NotDidChangeTextDocument
-        , Core.didCloseTextDocumentNotificationHandler  = Just $ passHandler    rin Core.NotDidCloseTextDocument
-        , Core.cancelNotificationHandler                = Just $ passHandler    rin Core.NotCancelRequest
+  = def { Core.initializedHandler                       = Just $ passHandler rin Core.NotInitialized
+        , Core.renameHandler                            = Just $ passHandler rin Core.ReqRename
+        , Core.hoverHandler                             = Just $ passHandler rin Core.ReqHover
+        , Core.didOpenTextDocumentNotificationHandler   = Just $ passHandler rin Core.NotDidOpenTextDocument
+        , Core.didSaveTextDocumentNotificationHandler   = Just $ passHandler rin Core.NotDidSaveTextDocument
+        , Core.didChangeTextDocumentNotificationHandler = Just $ passHandler rin Core.NotDidChangeTextDocument
+        , Core.didCloseTextDocumentNotificationHandler  = Just $ passHandler rin Core.NotDidCloseTextDocument
+        , Core.cancelNotificationHandler                = Just $ passHandler rin Core.NotCancelRequest
         , Core.responseHandler                          = Just $ responseHandlerCb rin
-        , Core.codeActionHandler                        = Just $ passHandler    rin Core.ReqCodeAction
-        , Core.executeCommandHandler                    = Just $ passHandler    rin Core.ReqExecuteCommand
+        , Core.codeActionHandler                        = Just $ passHandler rin Core.ReqCodeAction
+        , Core.executeCommandHandler                    = Just $ passHandler rin Core.ReqExecuteCommand
         }
 
 -- ---------------------------------------------------------------------
 
 passHandler :: TChan ReactorInput -> (a -> Core.OutMessage) -> Core.Handler a
-passHandler rin c sf notification = do
-  atomically $ writeTChan rin (HandlerRequest sf (c notification))
-
--- ---------------------------------------------------------------------
-
-passVfsHandler :: TChan ReactorInput -> (a -> Core.OutMessage) -> Core.VfsHandler a
-passVfsHandler rin c vf sf notification = do
-  atomically $ writeTChan rin (VfsHandlerRequest vf sf (c notification))
+passHandler rin c vf sf notification = do
+  atomically $ writeTChan rin (HandlerRequest vf sf (c notification))
 
 -- ---------------------------------------------------------------------
 
 responseHandlerCb :: TChan ReactorInput -> Core.Handler J.BareResponseMessage
-responseHandlerCb _rin _sf resp = do
+responseHandlerCb _rin _vf _sf resp = do
   U.logs $ "******** got ResponseMessage, ignoring:" ++ show resp
 
 -- ---------------------------------------------------------------------
