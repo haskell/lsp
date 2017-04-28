@@ -15,6 +15,8 @@ module Language.Haskell.LSP.VFS
   , openVFS
   , changeVFS
   , closeVFS
+  -- * for tests
+  , sortChanges
   ) where
 
 import qualified Data.Aeson as J
@@ -124,8 +126,13 @@ applyChanges :: Yi.YiString -> [J.TextDocumentContentChangeEvent] -> Yi.YiString
 applyChanges str changes' = r
   where
     r = undefined
+    changes = sortChanges changes'
+
+sortChanges :: [J.TextDocumentContentChangeEvent] -> [J.TextDocumentContentChangeEvent]
+sortChanges changes = changes'
+  where
     myComp (J.TextDocumentContentChangeEvent (Just r1) _ _)
            (J.TextDocumentContentChangeEvent (Just r2) _ _)
-      = compare r1 r2
+      = compare r2 r1 -- want descending order
     myComp _ _ = EQ
-    changes = sortBy myComp changes'
+    changes' = sortBy myComp changes
