@@ -15,23 +15,17 @@ import           Control.Monad.IO.Class
 import           Control.Monad.STM
 import           Control.Monad.Trans.State.Lazy
 import qualified Data.Aeson as J
--- import qualified Data.Aeson.Types as J
--- import           Data.Algorithm.DiffOutput
 import qualified Data.ByteString.Lazy as BSL
 import           Data.Default
--- import           Data.Either
 import qualified Data.HashMap.Strict as H
--- import           Data.List
--- import qualified Data.Map as Map
 import           Data.Maybe
--- import qualified Data.Text as T
 import qualified Data.Vector as V
 import qualified Language.Haskell.LSP.Control  as CTRL
 import qualified Language.Haskell.LSP.Core     as Core
 import qualified Language.Haskell.LSP.TH.ClientCapabilities as C
 import qualified Language.Haskell.LSP.TH.DataTypesJSON as J
 import qualified Language.Haskell.LSP.Utility  as U
--- import           System.Directory
+import           Language.Haskell.LSP.VFS
 import           System.Exit
 import qualified System.Log.Logger as L
 
@@ -86,6 +80,8 @@ data ReactorInput
       -- ^ called when the LSP ioLoop receives the `initialize` message from the
       -- client, providing the client capabilities (for LSP 3.0 and later)
   | HandlerRequest (BSL.ByteString -> IO ()) Core.OutMessage
+      -- ^ injected into the reactor input by each of the individual callback handlers
+  | VfsHandlerRequest VirtualFile (BSL.ByteString -> IO ()) Core.OutMessage
       -- ^ injected into the reactor input by each of the individual callback handlers
 
 data ReactorState =
@@ -226,6 +222,7 @@ reactor st inp = do
         liftIO $ U.logm "****** reactor: NOT processing NotDidChangeTextDocument"
 
       -- -------------------------------
+
       HandlerRequest sf (Core.ReqRename req) -> do
         setSendFunc sf
         liftIO $ U.logs $ "reactor:got RenameRequest:" ++ show req
@@ -350,17 +347,17 @@ lspOptions = def { Core.textDocumentSync = Just syncMethod
 
 lspHandlers :: TChan ReactorInput -> Core.Handlers
 lspHandlers rin
-  = def { Core.initializedHandler                       = Just $ passHandler rin Core.NotInitialized
-        , Core.renameHandler                            = Just $ passHandler rin Core.ReqRename
-        , Core.hoverHandler                             = Just $ passHandler rin Core.ReqHover
-        , Core.didOpenTextDocumentNotificationHandler   = Just $ passHandler rin Core.NotDidOpenTextDocument
-        , Core.didSaveTextDocumentNotificationHandler   = Just $ passHandler rin Core.NotDidSaveTextDocument
-        , Core.didChangeTextDocumentNotificationHandler = Just $ passHandler rin Core.NotDidChangeTextDocument
-        , Core.didCloseTextDocumentNotificationHandler  = Just $ passHandler rin Core.NotDidCloseTextDocument
-        , Core.cancelNotificationHandler                = Just $ passHandler rin Core.NotCancelRequest
+  = def { Core.initializedHandler                       = Just $ passHandler    rin Core.NotInitialized
+        , Core.renameHandler                            = Just $ passHandler    rin Core.ReqRename
+        , Core.hoverHandler                             = Just $ passHandler    rin Core.ReqHover
+        , Core.didOpenTextDocumentNotificationHandler   = Just $ passVfsHandler rin Core.NotDidOpenTextDocument
+        , Core.didSaveTextDocumentNotificationHandler   = Just $ passHandler    rin Core.NotDidSaveTextDocument
+        , Core.didChangeTextDocumentNotificationHandler = Just $ passHandler    rin Core.NotDidChangeTextDocument
+        , Core.didCloseTextDocumentNotificationHandler  = Just $ passHandler    rin Core.NotDidCloseTextDocument
+        , Core.cancelNotificationHandler                = Just $ passHandler    rin Core.NotCancelRequest
         , Core.responseHandler                          = Just $ responseHandlerCb rin
-        , Core.codeActionHandler                        = Just $ passHandler rin Core.ReqCodeAction
-        , Core.executeCommandHandler                    = Just $ passHandler rin Core.ReqExecuteCommand
+        , Core.codeActionHandler                        = Just $ passHandler    rin Core.ReqCodeAction
+        , Core.executeCommandHandler                    = Just $ passHandler    rin Core.ReqExecuteCommand
         }
 
 -- ---------------------------------------------------------------------
@@ -368,6 +365,12 @@ lspHandlers rin
 passHandler :: TChan ReactorInput -> (a -> Core.OutMessage) -> Core.Handler a
 passHandler rin c sf notification = do
   atomically $ writeTChan rin (HandlerRequest sf (c notification))
+
+-- ---------------------------------------------------------------------
+
+passVfsHandler :: TChan ReactorInput -> (a -> Core.OutMessage) -> Core.VfsHandler a
+passVfsHandler rin c vf sf notification = do
+  atomically $ writeTChan rin (VfsHandlerRequest vf sf (c notification))
 
 -- ---------------------------------------------------------------------
 

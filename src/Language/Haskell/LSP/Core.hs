@@ -10,6 +10,7 @@ module Language.Haskell.LSP.Core (
     handleRequest
   , LanguageContextData(..)
   , Handler
+  , VfsHandler
   , InitializeCallback
   , SendFunc
   , Handlers(..)
@@ -33,12 +34,13 @@ import qualified Data.ByteString.Lazy.Char8 as B
 import           Data.Default
 import qualified Data.HashMap.Strict as HM
 import qualified Data.List as L
-import qualified Data.Map as MAP
+import qualified Data.Map as Map
 import qualified Data.Text as T
 import           Language.Haskell.LSP.Constant
 import qualified Language.Haskell.LSP.TH.ClientCapabilities as C
 import qualified Language.Haskell.LSP.TH.DataTypesJSON      as J
 import           Language.Haskell.LSP.Utility
+import           Language.Haskell.LSP.VFS
 import           System.Directory
 import           System.Exit
 import           System.IO
@@ -62,7 +64,7 @@ data LanguageContextData =
   , resHandlers            :: !Handlers
   , resOptions             :: !Options
   , resSendResponse        :: !(BSL.ByteString -> IO ())
-  -- , resChanOut             :: !(TChan BSL.ByteString)
+  , resVFS                 :: !VFS
   }
 
 -- ---------------------------------------------------------------------
@@ -96,6 +98,7 @@ type InitializeCallback = C.ClientCapabilities -> SendFunc -> IO (Maybe J.Respon
 -- 'a', a function to send a reply message once encoded as a ByteString, and a
 -- received message of type 'b'
 type Handler b = (BSL.ByteString -> IO ()) -> b -> IO ()
+type VfsHandler b = VirtualFile -> (BSL.ByteString -> IO ()) -> b -> IO ()
 
 -- | Callbacks from the language server to the language handler
 data Handlers =
@@ -129,7 +132,7 @@ data Handlers =
 
     -- Notifications from the client
     , didChangeConfigurationParamsHandler      :: !(Maybe (Handler J.DidChangeConfigurationParamsNotification))
-    , didOpenTextDocumentNotificationHandler   :: !(Maybe (Handler J.DidOpenTextDocumentNotification))
+    , didOpenTextDocumentNotificationHandler   :: !(Maybe (VfsHandler J.DidOpenTextDocumentNotification))
     , didChangeTextDocumentNotificationHandler :: !(Maybe (Handler J.DidChangeTextDocumentNotification))
     , didCloseTextDocumentNotificationHandler  :: !(Maybe (Handler J.DidCloseTextDocumentNotification))
     , didSaveTextDocumentNotificationHandler   :: !(Maybe (Handler J.DidSaveTextDocumentNotification))
@@ -153,8 +156,8 @@ instance Default Handlers where
 -- ---------------------------------------------------------------------
 
 handlerMap :: Handlers
-           -> MAP.Map String (MVar LanguageContextData -> String -> B.ByteString -> IO ())
-handlerMap h = MAP.fromList
+           -> Map.Map String (MVar LanguageContextData -> String -> B.ByteString -> IO ())
+handlerMap h = Map.fromList
   [ ("textDocument/completion",        hh $ completionHandler h)
   , ("completionItem/resolve",         hh $ completionResolveHandler h)
   , ("textDocument/hover",             hh $ hoverHandler h)
@@ -175,7 +178,7 @@ handlerMap h = MAP.fromList
 
   , ("initialized",                      hh $ initializedHandler h)
   , ("workspace/didChangeConfiguration", hh $ didChangeConfigurationParamsHandler h)
-  , ("textDocument/didOpen",             hh $ didOpenTextDocumentNotificationHandler h)
+  , ("textDocument/didOpen",             hv $ didOpenTextDocumentNotificationHandler h)
   , ("textDocument/didChange",           hh $ didChangeTextDocumentNotificationHandler h )
   , ("textDocument/didClose",            hh $ didCloseTextDocumentNotificationHandler h )
   , ("textDocument/didSave",             hh $ didSaveTextDocumentNotificationHandler h)
@@ -189,7 +192,8 @@ handlerMap h = MAP.fromList
 
 -- ---------------------------------------------------------------------
 
--- | Adapter from the handlers exposed to the library users and the internal message loop
+-- | Adapter from the normal handlers exposed to the library users and the
+-- internal message loop
 hh :: forall b. (J.FromJSON b)
    => Maybe (Handler b) -> MVar LanguageContextData -> String -> B.ByteString -> IO ()
 hh Nothing = \mvarDat cmd jsonStr -> do
@@ -200,6 +204,26 @@ hh (Just h) = \mvarDat _cmd jsonStr -> do
         Right req -> do
           ctx <- readMVar mvarDat
           h (resSendResponse ctx) req
+        Left  err -> do
+          let msg = unwords $ ["haskell-lsp:parse error.", lbs2str jsonStr, show err] ++ _ERR_MSG_URL
+          sendErrorLog mvarDat msg
+-- ---------------------------------------------------------------------
+
+-- TODO: harvest commonality between hh and hv
+-- | Adapter from the vfs handlers exposed to the library users and the internal
+-- message loop
+hv :: forall b. (J.FromJSON b)
+   => Maybe (VfsHandler b) -> MVar LanguageContextData -> String -> B.ByteString -> IO ()
+hv Nothing = \mvarDat cmd jsonStr -> do
+      let msg = unwords ["haskell-lsp:no handler for.", cmd, lbs2str jsonStr]
+      sendErrorLog mvarDat msg
+hv (Just h) = \mvarDat _cmd jsonStr -> do
+      case J.eitherDecode jsonStr of
+        Right req -> do
+          ctx <- readMVar mvarDat
+          (v,vfs') <- getVfs (resVFS ctx) req
+          modifyMVar_ mvarDat (\c -> return c {resVFS = vfs'})
+          h v (resSendResponse ctx) req
         Left  err -> do
           let msg = unwords $ ["haskell-lsp:parse error.", lbs2str jsonStr, show err] ++ _ERR_MSG_URL
           sendErrorLog mvarDat msg
@@ -291,7 +315,7 @@ _ERR_MSG_URL = [ "`stack update` and install new haskell-lsp."
 --
 --
 defaultLanguageContextData :: Handlers -> Options -> LanguageContextData
-defaultLanguageContextData h o = LanguageContextData _INITIAL_RESPONSE_SEQUENCE Nothing h o BSL.putStr
+defaultLanguageContextData h o = LanguageContextData _INITIAL_RESPONSE_SEQUENCE Nothing h o BSL.putStr mempty
 
 -- ---------------------------------------------------------------------
 
@@ -355,7 +379,7 @@ handleRequest dispatcherProc mvarDat contLenStr' jsonStr' = do
     handle jsonStr cmd = do
       ctx <- readMVar mvarDat
       let h = resHandlers ctx
-      case MAP.lookup cmd (handlerMap h) of
+      case Map.lookup cmd (handlerMap h) of
         Just f -> f mvarDat cmd jsonStr
         Nothing -> do
           let msg = unwords ["haskell-lsp:unknown message received:method='" ++ cmd ++ "',", lbs2str contLenStr', lbs2str jsonStr]
