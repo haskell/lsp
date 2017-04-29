@@ -17,14 +17,17 @@ module Language.Haskell.LSP.VFS
   , closeVFS
   -- * for tests
   , sortChanges
+  , deleteChars
+  , addChars
+  , changeChars
+  , yiSplitAt
   ) where
 
 import qualified Data.Aeson as J
 import qualified Data.ByteString.Lazy.Char8 as B
 import           Data.List
 import qualified Data.Map as Map
-import           Language.Haskell.LSP.Constant
-import qualified Language.Haskell.LSP.TH.ClientCapabilities as C
+-- import qualified Language.Haskell.LSP.TH.ClientCapabilities as C
 import qualified Language.Haskell.LSP.TH.DataTypesJSON      as J
 import           Language.Haskell.LSP.Utility
 import qualified Yi.Rope as Yi
@@ -125,8 +128,86 @@ data TextDocumentContentChangeEvent =
 applyChanges :: Yi.YiString -> [J.TextDocumentContentChangeEvent] -> Yi.YiString
 applyChanges str changes' = r
   where
-    r = undefined
     changes = sortChanges changes'
+    r = foldl' applyChange str changes
+
+-- ---------------------------------------------------------------------
+
+applyChange :: Yi.YiString -> J.TextDocumentContentChangeEvent -> Yi.YiString
+applyChange _ (J.TextDocumentContentChangeEvent Nothing Nothing str)
+  = Yi.fromString str
+applyChange str (J.TextDocumentContentChangeEvent (Just (J.Range fm _to)) (Just len) txt) =
+  if txt == ""
+    then -- delete len chars from fm
+      deleteChars str fm len
+    else -- add or change, based on length
+      if len == 0
+        then addChars str fm txt
+             -- Note: changChars comes from applyEdit, emacs will split it into a
+             -- delete and an add
+        else changeChars str fm len txt
+applyChange str (J.TextDocumentContentChangeEvent (Just (J.Range _fm _to)) Nothing _txt)
+  -- TODO: This case may occur in the wild, need to convert to-fm into a length.
+  -- Or encode a specific addChar function
+  = str
+applyChange str (J.TextDocumentContentChangeEvent Nothing (Just _) _txt)
+  = str
+
+-- ---------------------------------------------------------------------
+
+deleteChars :: Yi.YiString -> J.Position -> Int -> Yi.YiString
+deleteChars str (J.Position l c) len = str'
+  where
+    (before,after) = Yi.splitAtLine l str
+    -- after contains the area we care about, starting with the selected line.
+    -- Due to LSP zero-based coordinates
+    beforeOnLine = Yi.take c after
+    after' = Yi.drop (c + len) after
+    str' = Yi.append before (Yi.append beforeOnLine after')
+
+-- ---------------------------------------------------------------------
+
+addChars :: Yi.YiString -> J.Position -> String -> Yi.YiString
+addChars str (J.Position l c) new = str'
+  where
+    (before,after) = Yi.splitAtLine l str
+    -- after contains the area we care about, starting with the selected line.
+    -- Due to LSP zero-based coordinates
+    beforeOnLine = Yi.take c after
+    after' = Yi.drop c after
+    str' = Yi.concat [before, beforeOnLine, (Yi.fromString new), after']
+
+-- ---------------------------------------------------------------------
+
+changeChars :: Yi.YiString -> J.Position -> Int -> String -> Yi.YiString
+changeChars str (J.Position ls cs) len new = str'
+  where
+    (before,after) = yiSplitAt ls cs str
+    after' = Yi.drop len after
+
+    str' = Yi.concat [before, (Yi.fromString new), after']
+
+-- changeChars :: Yi.YiString -> J.Position -> J.Position -> String -> Yi.YiString
+-- changeChars str (J.Position ls cs) (J.Position le ce) new = str'
+--   where
+--     (before,_after) = yiSplitAt ls cs str
+--     (_before,after) = yiSplitAt le ce str
+
+--     str' = Yi.concat [before, (Yi.fromString new), after]
+--     -- str' = Yi.concat [before]
+--     -- str' = Yi.concat [_before]
+
+-- ---------------------------------------------------------------------
+
+yiSplitAt :: Int -> Int -> Yi.YiString -> (Yi.YiString, Yi.YiString)
+yiSplitAt l c str = (before,after)
+  where
+    (b,a) = Yi.splitAtLine l str
+    before = Yi.concat [b,Yi.take c a]
+    after = Yi.drop c a
+
+
+-- ---------------------------------------------------------------------
 
 sortChanges :: [J.TextDocumentContentChangeEvent] -> [J.TextDocumentContentChangeEvent]
 sortChanges changes = changes'
@@ -136,3 +217,5 @@ sortChanges changes = changes'
       = compare r2 r1 -- want descending order
     myComp _ _ = EQ
     changes' = sortBy myComp changes
+
+-- ---------------------------------------------------------------------
