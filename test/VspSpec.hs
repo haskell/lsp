@@ -81,6 +81,22 @@ vspSpec = do
           , "module Foo where"
           , "foo :: Int"
           ]
+    -- ---------------------------------
+
+    it "deletes two lines" $ do
+      -- based on vscode log
+      let
+        orig = unlines
+          [ "module Foo where"
+          , "-- fooo"
+          , "foo :: Int"
+          , "foo = bb"
+          ]
+        new = deleteChars (Yi.fromString orig) (J.Position 1 0) 19
+      lines (Yi.toString new) `shouldBe`
+          [ "module Foo where"
+          , "foo = bb"
+          ]
 
     -- ---------------------------------
 
@@ -97,6 +113,23 @@ vspSpec = do
       lines (Yi.toString new) `shouldBe`
           [ "abcdg"
           , "module Foo where"
+          , "-- fooo"
+          , "foo :: Int"
+          ]
+
+    -- ---------------------------------
+
+    it "adds two lines" $ do
+      -- based on vscode log
+      let
+        orig = unlines
+          [ "module Foo where"
+          , "foo = bb"
+          ]
+        new = addChars (Yi.fromString orig) (J.Position 1 8) "\n-- fooo\nfoo :: Int"
+      lines (Yi.toString new) `shouldBe`
+          [ "module Foo where"
+          , "foo = bb"
           , "-- fooo"
           , "foo :: Int"
           ]
