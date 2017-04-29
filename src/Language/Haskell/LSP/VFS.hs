@@ -15,6 +15,7 @@ module Language.Haskell.LSP.VFS
   , openVFS
   , changeVFS
   , closeVFS
+
   -- * for tests
   , sortChanges
   , deleteChars

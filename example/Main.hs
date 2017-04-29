@@ -28,6 +28,7 @@ import qualified Language.Haskell.LSP.Utility  as U
 import           Language.Haskell.LSP.VFS
 import           System.Exit
 import qualified System.Log.Logger as L
+import qualified Yi.Rope as Yi
 
 
 -- ---------------------------------------------------------------------
@@ -208,6 +209,23 @@ reactor st inp = do
 
       -- -------------------------------
 
+      HandlerRequest vf sf (Core.NotDidChangeTextDocument notification) -> do
+        setSendFunc sf
+        let
+            params  = fromJust $ J._params (notification :: J.DidChangeTextDocumentNotification)
+            textDoc = J._textDocument (params :: J.DidChangeTextDocumentParams)
+            doc     = J._uri (textDoc :: J.VersionedTextDocumentIdentifier)
+        mdoc <- liftIO $ vf doc
+        case mdoc of
+          Just (VirtualFile version str) -> do
+            liftIO $ U.logs $ "reactor:processing NotDidChangeTextDocument: vf got:" ++ (show $ Yi.toString str)
+          Nothing -> do
+            liftIO $ U.logs $ "reactor:processing NotDidChangeTextDocument: vf returned Nothing"
+
+        liftIO $ U.logs $ "reactor:processing NotDidChangeTextDocument: uri=" ++ (show doc)
+
+      -- -------------------------------
+
       HandlerRequest _vf sf (Core.NotDidSaveTextDocument notification) -> do
         setSendFunc sf
         liftIO $ U.logm "****** reactor: processing NotDidSaveTextDocument"
@@ -217,10 +235,6 @@ reactor st inp = do
             fileName = drop (length ("file://"::String)) doc
         liftIO $ U.logs $ "********* doc=" ++ show doc
         sendDiagnostics doc
-
-      HandlerRequest _vf sf (Core.NotDidChangeTextDocument _notification) -> do
-        setSendFunc sf
-        liftIO $ U.logm "****** reactor: NOT processing NotDidChangeTextDocument"
 
       -- -------------------------------
 
