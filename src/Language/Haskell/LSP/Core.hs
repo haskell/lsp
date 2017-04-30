@@ -27,6 +27,7 @@ module Language.Haskell.LSP.Core (
 
 import           Control.Concurrent
 import qualified Control.Exception as E
+import           Control.Monad
 import qualified Data.Aeson as J
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as B
@@ -452,7 +453,7 @@ initializeRequestHandler dispatcherProc mvarCtx req@(J.RequestMessage _ origId _
       Nothing -> return ()
       Just dir -> do
         logs $ "haskell-lsp:initializeRequestHandler: setting current dir to project root:" ++ dir
-        setCurrentDirectory dir
+        unless (null dir) $ setCurrentDirectory dir
 
     let
       getCapabilities :: J.InitializeParams -> C.ClientCapabilities
