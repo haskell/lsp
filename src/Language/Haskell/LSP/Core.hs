@@ -42,6 +42,7 @@ import qualified Language.Haskell.LSP.TH.ClientCapabilities as C
 import qualified Language.Haskell.LSP.TH.DataTypesJSON      as J
 import           Language.Haskell.LSP.Utility
 import           Language.Haskell.LSP.VFS
+import           Language.Haskell.LSP.Diagnostics
 import           System.Directory
 import           System.Exit
 import           System.IO
@@ -66,6 +67,7 @@ data LanguageContextData =
   , resOptions             :: !Options
   , resSendResponse        :: !(BSL.ByteString -> IO ())
   , resVFS                 :: !VFS
+  , resDiagnostics         :: DiagnosticStore
   , resLspFuncs            :: !LspFuncs
   }
 
@@ -321,7 +323,7 @@ _ERR_MSG_URL = [ "`stack update` and install new haskell-lsp."
 --
 --
 defaultLanguageContextData :: Handlers -> Options -> LspFuncs -> LanguageContextData
-defaultLanguageContextData h o lf = LanguageContextData _INITIAL_RESPONSE_SEQUENCE Nothing h o BSL.putStr mempty lf
+defaultLanguageContextData h o lf = LanguageContextData _INITIAL_RESPONSE_SEQUENCE Nothing h o BSL.putStr mempty mempty lf
 
 -- ---------------------------------------------------------------------
 
@@ -535,8 +537,13 @@ shutdownRequestHandler mvarCtx req@(J.RequestMessage _ origId _ _) =
 
 -- ---------------------------------------------------------------------
 
+-- | Take the new diagnostics, update the stored diagnostics for the given file
+-- and version, and publist the total to the client.
 publishDiagnostics :: MVar LanguageContextData -> PublishDiagnosticsFunc
-publishDiagnostics ctx uri mversion diags = do
+publishDiagnostics mvarDat uri mversion diags = do
+  ctx <- readMVar mvarDat
+  let ds = updateDiagnostics (resDiagnostics ctx) uri mversion diags
+  modifyMVar_ mvarDat (\c -> return c {resDiagnostics = ds})
   return ()
 
 -- |=====================================================================

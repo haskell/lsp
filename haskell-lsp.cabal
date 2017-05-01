@@ -22,9 +22,10 @@ cabal-version:       >=1.10
 
 
 library
-  exposed-modules:     Language.Haskell.LSP.Core
-                     , Language.Haskell.LSP.Constant
+  exposed-modules:     Language.Haskell.LSP.Constant
+                     , Language.Haskell.LSP.Core
                      , Language.Haskell.LSP.Control
+                     , Language.Haskell.LSP.Diagnostics
                      , Language.Haskell.LSP.TH.ClientCapabilities
                      , Language.Haskell.LSP.TH.Constants
                      , Language.Haskell.LSP.TH.DataTypesJSON
@@ -103,6 +104,7 @@ test-suite haskell-lsp-test
   main-is:             Main.hs
   other-modules:       Spec
                        VspSpec
+                       DiagnosticsSpec
   build-depends:       base
                      , aeson
                      , containers
