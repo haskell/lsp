@@ -11,6 +11,7 @@ module Language.Haskell.LSP.Core (
   , LanguageContextData(..)
   , Handler
   , InitializeCallback
+  , LspFuncs(..)
   , SendFunc
   , Handlers(..)
   , Options(..)
@@ -65,6 +66,7 @@ data LanguageContextData =
   , resOptions             :: !Options
   , resSendResponse        :: !(BSL.ByteString -> IO ())
   , resVFS                 :: !VFS
+  , resLspFuncs            :: !LspFuncs
   }
 
 -- ---------------------------------------------------------------------
@@ -89,15 +91,30 @@ instance Default Options where
 -- | A function to send a message to the client
 type SendFunc = (BSL.ByteString -> IO ())
 
+-- | A function to publish diagnostics. It aggregates all diagnostics pertaining
+-- to a particular version of a document, by source, and sends a
+-- 'textDocument/publishDiagnostics' notification with the total whenever it is
+-- updated.
+type PublishDiagnosticsFunc = J.Uri -> Maybe J.TextDocumentVersion -> [J.Diagnostic] -> IO ()
+
+-- | Returned to the server on startup, providing ways to interact with the client.
+data LspFuncs =
+  LspFuncs
+    { clientCapabilities    :: !C.ClientCapabilities
+    , sendFunc              :: !SendFunc
+    , getVirtualFileFunc    :: !(J.Uri -> IO (Maybe VirtualFile))
+    , publishDiagnoticsFunc :: !PublishDiagnosticsFunc
+    }
+
 -- | The function in the LSP process that is called once the 'initialize'
 -- message is received. Message processing will only continue once this returns,
 -- so it should create whatever processes are needed.
-type InitializeCallback = C.ClientCapabilities -> SendFunc -> IO (Maybe J.ResponseError)
+type InitializeCallback = LspFuncs -> IO (Maybe J.ResponseError)
 
 -- | The Handler type captures a function that receives local read-only state
 -- 'a', a function to send a reply message once encoded as a ByteString, and a
 -- received message of type 'b'
-type Handler b = (J.Uri -> IO (Maybe VirtualFile)) -> (BSL.ByteString -> IO ()) -> b -> IO ()
+type Handler b = LspFuncs -> b -> IO ()
 -- TODO: change the sendFunc to take a ToJSON type instead
 
 -- | Callbacks from the language server to the language handler
@@ -205,14 +222,14 @@ hh (Just h) = \mvarDat cmd jsonStr -> do
           ctx <- readMVar mvarDat
           vfs' <- getVfs (resVFS ctx) cmd jsonStr
           modifyMVar_ mvarDat (\c -> return c {resVFS = vfs'})
-          h (getVirtualFile mvarDat) (resSendResponse ctx) req
+          h  (resLspFuncs ctx) req
         Left  err -> do
           let msg = unwords $ ["haskell-lsp:parse error.", lbs2str jsonStr, show err] ++ _ERR_MSG_URL
           sendErrorLog mvarDat msg
 
 -- ---------------------------------------------------------------------
 
-getVirtualFile :: MVar LanguageContextData -> J.Uri -> IO (Maybe (VirtualFile))
+getVirtualFile :: MVar LanguageContextData -> J.Uri -> IO (Maybe VirtualFile)
 getVirtualFile mvarDat uri = do
   ctx <- readMVar mvarDat
   return $ Map.lookup uri (resVFS ctx)
@@ -303,8 +320,8 @@ _ERR_MSG_URL = [ "`stack update` and install new haskell-lsp."
 -- |
 --
 --
-defaultLanguageContextData :: Handlers -> Options -> LanguageContextData
-defaultLanguageContextData h o = LanguageContextData _INITIAL_RESPONSE_SEQUENCE Nothing h o BSL.putStr mempty
+defaultLanguageContextData :: Handlers -> Options -> LspFuncs -> LanguageContextData
+defaultLanguageContextData h o lf = LanguageContextData _INITIAL_RESPONSE_SEQUENCE Nothing h o BSL.putStr mempty lf
 
 -- ---------------------------------------------------------------------
 
@@ -460,7 +477,11 @@ initializeRequestHandler dispatcherProc mvarCtx req@(J.RequestMessage _ origId _
       getCapabilities (J.InitializeParams _ _ _ _ c _) = c
 
     -- Launch the given process once the project root directory has been set
-    initializationResult <- dispatcherProc (getCapabilities params) (resSendResponse ctx)
+    let lspFuncs = LspFuncs (getCapabilities params)
+                            (resSendResponse ctx)
+                            (getVirtualFile mvarCtx)
+                            (publishDiagnostics mvarCtx)
+    initializationResult <- dispatcherProc lspFuncs
 
     case initializationResult of
       Just errResp -> do
@@ -512,7 +533,11 @@ shutdownRequestHandler mvarCtx req@(J.RequestMessage _ origId _ _) =
 
   sendResponse mvarCtx $ J.encode res
 
+-- ---------------------------------------------------------------------
 
+publishDiagnostics :: MVar LanguageContextData -> PublishDiagnosticsFunc
+publishDiagnostics ctx uri mversion diags = do
+  return ()
 
 -- |=====================================================================
 --
