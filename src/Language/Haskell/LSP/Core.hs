@@ -67,8 +67,8 @@ data LanguageContextData =
   , resOptions             :: !Options
   , resSendResponse        :: !(BSL.ByteString -> IO ())
   , resVFS                 :: !VFS
-  , resDiagnostics         :: DiagnosticStore
-  , resLspFuncs            :: !LspFuncs
+  , resDiagnostics         :: !DiagnosticStore
+  , resLspFuncs            :: LspFuncs -- NOTE: Cannot be strict, lazy initialization
   }
 
 -- ---------------------------------------------------------------------
@@ -102,10 +102,10 @@ type PublishDiagnosticsFunc = J.Uri -> Maybe J.TextDocumentVersion -> [J.Diagnos
 -- | Returned to the server on startup, providing ways to interact with the client.
 data LspFuncs =
   LspFuncs
-    { clientCapabilities    :: !C.ClientCapabilities
-    , sendFunc              :: !SendFunc
-    , getVirtualFileFunc    :: !(J.Uri -> IO (Maybe VirtualFile))
-    , publishDiagnoticsFunc :: !PublishDiagnosticsFunc
+    { clientCapabilities     :: !C.ClientCapabilities
+    , sendFunc               :: !SendFunc
+    , getVirtualFileFunc     :: !(J.Uri -> IO (Maybe VirtualFile))
+    , publishDiagnosticsFunc :: !PublishDiagnosticsFunc
     }
 
 -- | The function in the LSP process that is called once the 'initialize'
@@ -465,7 +465,7 @@ initializeRequestHandler _dispatcherProc _mvarCtx (J.RequestMessage _ _origId _ 
 initializeRequestHandler dispatcherProc mvarCtx req@(J.RequestMessage _ origId _ (Just params)) =
   flip E.catches (defaultErrorHandlers mvarCtx (J.responseId origId) req) $ do
 
-    ctx <- readMVar mvarCtx
+    ctx0 <- readMVar mvarCtx
 
     modifyMVar_ mvarCtx (\c -> return c { resRootPath = J._rootPath params})
     case J._rootPath params of
@@ -480,9 +480,12 @@ initializeRequestHandler dispatcherProc mvarCtx req@(J.RequestMessage _ origId _
 
     -- Launch the given process once the project root directory has been set
     let lspFuncs = LspFuncs (getCapabilities params)
-                            (resSendResponse ctx)
+                            (resSendResponse ctx0)
                             (getVirtualFile mvarCtx)
                             (publishDiagnostics mvarCtx)
+    let ctx = ctx0 { resLspFuncs = lspFuncs }
+    modifyMVar_ mvarCtx (\_ -> return ctx)
+
     initializationResult <- dispatcherProc lspFuncs
 
     case initializationResult of
@@ -544,7 +547,11 @@ publishDiagnostics mvarDat uri mversion diags = do
   ctx <- readMVar mvarDat
   let ds = updateDiagnostics (resDiagnostics ctx) uri mversion diags
   modifyMVar_ mvarDat (\c -> return c {resDiagnostics = ds})
-  return ()
+  let mdp = getDiagnosticParamsFor ds uri
+  case mdp of
+    Nothing -> return ()
+    Just params -> do
+      (resSendResponse ctx) $ J.encode $ J.NotificationMessage "2.0" "textDocument/publishDiagnostics" (Just params)
 
 -- |=====================================================================
 --

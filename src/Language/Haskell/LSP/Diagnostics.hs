@@ -13,6 +13,7 @@ module Language.Haskell.LSP.Diagnostics
   , DiagnosticsBySource
   , StoreItem(..)
   , updateDiagnostics
+  , getDiagnosticParamsFor
 
   -- * for tests
   ) where
@@ -69,5 +70,14 @@ updateDiagnostics store uri mv diags = r
         if mvs /= mv
           then newStore
           else updateDbs dbs
+
+-- ---------------------------------------------------------------------
+
+getDiagnosticParamsFor :: DiagnosticStore -> J.Uri -> Maybe J.PublishDiagnosticsParams
+getDiagnosticParamsFor ds uri =
+  case Map.lookup uri ds of
+    Nothing -> Nothing
+    Just (StoreItem _ diags) ->
+      Just $ J.PublishDiagnosticsParams uri (J.List (concat $ Map.elems diags))
 
 -- ---------------------------------------------------------------------

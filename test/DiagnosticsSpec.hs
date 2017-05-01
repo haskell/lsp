@@ -149,3 +149,19 @@ diagnosticsSpec = do
                 [(Just "hlint",  [mkDiagnostic (Just "hlint")  "a2"])
               ] )
           ]
+
+    -- ---------------------------------
+
+  describe "retrieves all the diagnostics for a given uri" $ do
+
+    it "gets diagnostics for multiple sources" $ do
+      let
+        diags =
+          [ mkDiagnostic (Just "hlint") "a"
+          , mkDiagnostic (Just "ghcmod") "b"
+          ]
+      let ds = updateDiagnostics Map.empty "uri" (Just 1) diags
+      (getDiagnosticParamsFor ds "uri") `shouldBe`
+        Just (J.PublishDiagnosticsParams "uri" (J.List $ reverse diags))
+
+    -- ---------------------------------

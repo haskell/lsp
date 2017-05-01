@@ -54,8 +54,11 @@ run dispatcherProc = flip E.catches handlers $ do
 
   let
     dp lf = do
+      liftIO $ U.logs $ "main.run:dp entered"
       atomically $ writeTChan rin (InitializeCallBack lf)
+      liftIO $ U.logs $ "main.run:dp tchan"
       dispatcherProc
+      liftIO $ U.logs $ "main.run:dp after dispatcherProc"
       return Nothing
 
   flip E.finally finalProc $ do
@@ -116,6 +119,15 @@ reactorSend msg = do
 
 -- ---------------------------------------------------------------------
 
+publishDiagnostics :: J.Uri -> Maybe J.TextDocumentVersion -> [J.Diagnostic] -> R ()
+publishDiagnostics uri mv diags = do
+  s <- get
+  case lspFuncs s of
+    Nothing -> error "publishDiagnostics: send function not initialised yet"
+    Just lf -> liftIO $ (Core.publishDiagnosticsFunc lf) uri mv diags
+
+-- ---------------------------------------------------------------------
+
 nextLspReqId :: R J.LspId
 nextLspReqId = do
   s <- get
@@ -130,6 +142,7 @@ nextLspReqId = do
 -- server and backend compiler
 reactor :: ReactorState -> TChan ReactorInput -> IO ()
 reactor st inp = do
+  liftIO $ U.logs $ "reactor:entered"
   flip evalStateT st $ forever $ do
     inval <- liftIO $ atomically $ readTChan inp
     case inval of
@@ -191,7 +204,7 @@ reactor st inp = do
             doc     = J._uri (textDoc :: J.TextDocumentItem)
             fileName = drop (length ("file://"::String)) doc
         liftIO $ U.logs $ "********* fileName=" ++ show fileName
-        sendDiagnostics doc
+        sendDiagnostics doc (Just 0)
 
       -- -------------------------------
 
@@ -218,7 +231,7 @@ reactor st inp = do
             J.TextDocumentIdentifier doc = J._textDocument (params :: J.DidSaveTextDocumentParams)
             fileName = drop (length ("file://"::String)) doc
         liftIO $ U.logs $ "********* fileName=" ++ show fileName
-        sendDiagnostics doc
+        sendDiagnostics doc Nothing
 
       -- -------------------------------
 
@@ -315,19 +328,18 @@ toWorkspaceEdit _ = Nothing
 
 -- | Analyze the file and send any diagnostics to the client in a
 -- "textDocument/publishDiagnostics" notification
-sendDiagnostics :: String -> R ()
-sendDiagnostics fileUri = do
+sendDiagnostics :: J.Uri -> Maybe Int -> R ()
+sendDiagnostics fileUri mversion = do
   let
-    r = J.PublishDiagnosticsParams
-          fileUri
-          (J.List [J.Diagnostic
-                    (J.Range (J.Position 0 1) (J.Position 0 5))
-                    (Just J.DsWarning)  -- severity
-                    Nothing  -- code
-                    (Just "lsp-hello") -- source
-                    "Example diagnostic message"
-                  ])
-  reactorSend $ J.NotificationMessage "2.0" "textDocument/publishDiagnostics" (Just r)
+    diags = [J.Diagnostic
+              (J.Range (J.Position 0 1) (J.Position 0 5))
+              (Just J.DsWarning)  -- severity
+              Nothing  -- code
+              (Just "lsp-hello") -- source
+              "Example diagnostic message"
+            ]
+  -- reactorSend $ J.NotificationMessage "2.0" "textDocument/publishDiagnostics" (Just r)
+  publishDiagnostics fileUri mversion diags
 
 -- ---------------------------------------------------------------------
 
