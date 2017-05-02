@@ -29,6 +29,7 @@ library
                      , Language.Haskell.LSP.TH.Constants
                      , Language.Haskell.LSP.TH.DataTypesJSON
                      , Language.Haskell.LSP.Utility
+                     , Language.Haskell.LSP.VFS
   -- other-modules:
  -- other-extensions:
   ghc-options:         -Wall
@@ -53,6 +54,7 @@ library
                      , text
                      , time
                      , unordered-containers
+                     , yi-rope
   hs-source-dirs:      src
   default-language:    Haskell2010
 
@@ -67,6 +69,7 @@ executable lsp-hello
                      , Language.Haskell.LSP.Constant
                      , Language.Haskell.LSP.TH.DataTypesJSON
                      , Language.Haskell.LSP.Utility
+                     , Language.Haskell.LSP.VFS
 
   build-depends:       base >=4.9 && <4.10
                      , aeson
@@ -90,8 +93,31 @@ executable lsp-hello
                      , transformers
                      , unordered-containers
                      , vector
+                     , yi-rope
                      -- the package library. Comment this out if you want repl changes to propagate
                      , haskell-lsp
+
+test-suite haskell-lsp-test
+  type:                exitcode-stdio-1.0
+  hs-source-dirs:      test src
+  main-is:             Main.hs
+  other-modules:       Spec
+                       VspSpec
+  build-depends:       base
+                     , aeson
+                     , containers
+                     , directory
+                     , hspec
+                     -- , hspec-jenkins
+                     , yi-rope
+                     -- , haskell-lsp
+                     , data-default
+                     , bytestring
+                     , hslogger
+                     , text
+                     , unordered-containers
+  ghc-options:         -threaded -rtsopts -with-rtsopts=-N -Wall
+  default-language:    Haskell2010
 
 source-repository head
   type:     git

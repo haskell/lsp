@@ -36,6 +36,10 @@ instance (Default a) => Default (List a) where
 
 -- ---------------------------------------------------------------------
 
+type Uri = String
+
+-- ---------------------------------------------------------------------
+
 -- | Id used for a request, Can be either a String or an Int
 data LspId = IdInt Int | IdString String
             deriving (Show,Read,Eq)
@@ -311,7 +315,7 @@ data Position =
   Position
     { _line       :: Int
     , _character  :: Int
-    } deriving (Show, Read, Eq)
+    } deriving (Show, Read, Eq, Ord)
 
 $(deriveJSON lspOptions ''Position)
 
@@ -343,7 +347,7 @@ data Range =
   Range
     { _start :: Position
     , _end   :: Position
-    } deriving (Show, Read, Eq)
+    } deriving (Show, Read, Eq, Ord)
 
 $(deriveJSON lspOptions ''Range)
 
@@ -364,7 +368,7 @@ interface Location {
 
 data Location =
   Location
-    { _uri   :: String
+    { _uri   :: Uri
     , _range :: Range
     } deriving (Show, Read, Eq)
 
@@ -564,7 +568,7 @@ interface VersionedTextDocumentIdentifier extends TextDocumentIdentifier {
 -}
 data VersionedTextDocumentIdentifier =
   VersionedTextDocumentIdentifier
-    { _uri     :: String
+    { _uri     :: Uri
     , _version :: Int
     } deriving (Show, Read, Eq)
 
@@ -675,7 +679,7 @@ interface TextDocumentIdentifier {
 -}
 data TextDocumentIdentifier =
   TextDocumentIdentifier
-    { _uri :: String
+    { _uri :: Uri
     } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''TextDocumentIdentifier)
@@ -718,7 +722,7 @@ interface TextDocumentItem {
 
 data TextDocumentItem =
   TextDocumentItem {
-    _uri        :: String
+    _uri        :: Uri
   , _languageId :: String
   , _version    :: Int
   , _text       :: String
@@ -2243,7 +2247,7 @@ instance Default FileChangeType where
 
 data FileEvent =
   FileEvent
-    { _uri  :: String
+    { _uri  :: Uri
     , _type :: FileChangeType
     } deriving (Read,Show,Eq)
 
@@ -2290,7 +2294,7 @@ interface PublishDiagnosticsParams {
 
 data PublishDiagnosticsParams =
   PublishDiagnosticsParams
-    { _uri         :: String
+    { _uri         :: Uri
     , _diagnostics :: List Diagnostic
     } deriving (Read,Show,Eq)
 

@@ -27,18 +27,20 @@ module Language.Haskell.LSP.Core (
 
 import           Control.Concurrent
 import qualified Control.Exception as E
+import           Control.Monad
 import qualified Data.Aeson as J
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as B
 import           Data.Default
 import qualified Data.HashMap.Strict as HM
 import qualified Data.List as L
-import qualified Data.Map as MAP
+import qualified Data.Map as Map
 import qualified Data.Text as T
 import           Language.Haskell.LSP.Constant
 import qualified Language.Haskell.LSP.TH.ClientCapabilities as C
 import qualified Language.Haskell.LSP.TH.DataTypesJSON      as J
 import           Language.Haskell.LSP.Utility
+import           Language.Haskell.LSP.VFS
 import           System.Directory
 import           System.Exit
 import           System.IO
@@ -62,7 +64,7 @@ data LanguageContextData =
   , resHandlers            :: !Handlers
   , resOptions             :: !Options
   , resSendResponse        :: !(BSL.ByteString -> IO ())
-  -- , resChanOut             :: !(TChan BSL.ByteString)
+  , resVFS                 :: !VFS
   }
 
 -- ---------------------------------------------------------------------
@@ -95,7 +97,8 @@ type InitializeCallback = C.ClientCapabilities -> SendFunc -> IO (Maybe J.Respon
 -- | The Handler type captures a function that receives local read-only state
 -- 'a', a function to send a reply message once encoded as a ByteString, and a
 -- received message of type 'b'
-type Handler b = (BSL.ByteString -> IO ()) -> b -> IO ()
+type Handler b = (J.Uri -> IO (Maybe VirtualFile)) -> (BSL.ByteString -> IO ()) -> b -> IO ()
+-- TODO: change the sendFunc to take a ToJSON type instead
 
 -- | Callbacks from the language server to the language handler
 data Handlers =
@@ -153,8 +156,8 @@ instance Default Handlers where
 -- ---------------------------------------------------------------------
 
 handlerMap :: Handlers
-           -> MAP.Map String (MVar LanguageContextData -> String -> B.ByteString -> IO ())
-handlerMap h = MAP.fromList
+           -> Map.Map String (MVar LanguageContextData -> String -> B.ByteString -> IO ())
+handlerMap h = Map.fromList
   [ ("textDocument/completion",        hh $ completionHandler h)
   , ("completionItem/resolve",         hh $ completionResolveHandler h)
   , ("textDocument/hover",             hh $ hoverHandler h)
@@ -189,20 +192,30 @@ handlerMap h = MAP.fromList
 
 -- ---------------------------------------------------------------------
 
--- | Adapter from the handlers exposed to the library users and the internal message loop
+-- | Adapter from the normal handlers exposed to the library users and the
+-- internal message loop
 hh :: forall b. (J.FromJSON b)
    => Maybe (Handler b) -> MVar LanguageContextData -> String -> B.ByteString -> IO ()
 hh Nothing = \mvarDat cmd jsonStr -> do
       let msg = unwords ["haskell-lsp:no handler for.", cmd, lbs2str jsonStr]
       sendErrorLog mvarDat msg
-hh (Just h) = \mvarDat _cmd jsonStr -> do
+hh (Just h) = \mvarDat cmd jsonStr -> do
       case J.eitherDecode jsonStr of
         Right req -> do
           ctx <- readMVar mvarDat
-          h (resSendResponse ctx) req
+          vfs' <- getVfs (resVFS ctx) cmd jsonStr
+          modifyMVar_ mvarDat (\c -> return c {resVFS = vfs'})
+          h (getVirtualFile mvarDat) (resSendResponse ctx) req
         Left  err -> do
           let msg = unwords $ ["haskell-lsp:parse error.", lbs2str jsonStr, show err] ++ _ERR_MSG_URL
           sendErrorLog mvarDat msg
+
+-- ---------------------------------------------------------------------
+
+getVirtualFile :: MVar LanguageContextData -> J.Uri -> IO (Maybe (VirtualFile))
+getVirtualFile mvarDat uri = do
+  ctx <- readMVar mvarDat
+  return $ Map.lookup uri (resVFS ctx)
 
 -- ---------------------------------------------------------------------
 
@@ -291,7 +304,7 @@ _ERR_MSG_URL = [ "`stack update` and install new haskell-lsp."
 --
 --
 defaultLanguageContextData :: Handlers -> Options -> LanguageContextData
-defaultLanguageContextData h o = LanguageContextData _INITIAL_RESPONSE_SEQUENCE Nothing h o BSL.putStr
+defaultLanguageContextData h o = LanguageContextData _INITIAL_RESPONSE_SEQUENCE Nothing h o BSL.putStr mempty
 
 -- ---------------------------------------------------------------------
 
@@ -355,7 +368,7 @@ handleRequest dispatcherProc mvarDat contLenStr' jsonStr' = do
     handle jsonStr cmd = do
       ctx <- readMVar mvarDat
       let h = resHandlers ctx
-      case MAP.lookup cmd (handlerMap h) of
+      case Map.lookup cmd (handlerMap h) of
         Just f -> f mvarDat cmd jsonStr
         Nothing -> do
           let msg = unwords ["haskell-lsp:unknown message received:method='" ++ cmd ++ "',", lbs2str contLenStr', lbs2str jsonStr]
@@ -440,7 +453,7 @@ initializeRequestHandler dispatcherProc mvarCtx req@(J.RequestMessage _ origId _
       Nothing -> return ()
       Just dir -> do
         logs $ "haskell-lsp:initializeRequestHandler: setting current dir to project root:" ++ dir
-        setCurrentDirectory dir
+        unless (null dir) $ setCurrentDirectory dir
 
     let
       getCapabilities :: J.InitializeParams -> C.ClientCapabilities

@@ -15,25 +15,20 @@ import           Control.Monad.IO.Class
 import           Control.Monad.STM
 import           Control.Monad.Trans.State.Lazy
 import qualified Data.Aeson as J
--- import qualified Data.Aeson.Types as J
--- import           Data.Algorithm.DiffOutput
 import qualified Data.ByteString.Lazy as BSL
 import           Data.Default
--- import           Data.Either
 import qualified Data.HashMap.Strict as H
--- import           Data.List
--- import qualified Data.Map as Map
 import           Data.Maybe
--- import qualified Data.Text as T
 import qualified Data.Vector as V
 import qualified Language.Haskell.LSP.Control  as CTRL
 import qualified Language.Haskell.LSP.Core     as Core
 import qualified Language.Haskell.LSP.TH.ClientCapabilities as C
 import qualified Language.Haskell.LSP.TH.DataTypesJSON as J
 import qualified Language.Haskell.LSP.Utility  as U
--- import           System.Directory
+import           Language.Haskell.LSP.VFS
 import           System.Exit
 import qualified System.Log.Logger as L
+import qualified Yi.Rope as Yi
 
 
 -- ---------------------------------------------------------------------
@@ -85,7 +80,10 @@ data ReactorInput
   = InitializeCallBack C.ClientCapabilities Core.SendFunc
       -- ^ called when the LSP ioLoop receives the `initialize` message from the
       -- client, providing the client capabilities (for LSP 3.0 and later)
-  | HandlerRequest (BSL.ByteString -> IO ()) Core.OutMessage
+  | HandlerRequest
+      (J.Uri -> IO (Maybe VirtualFile))
+      (BSL.ByteString -> IO ())
+      Core.OutMessage
       -- ^ injected into the reactor input by each of the individual callback handlers
 
 data ReactorState =
@@ -154,13 +152,13 @@ reactor st inp = do
 
       -- Handle any response from a message originating at the server, such as
       -- "workspace/applyEdit"
-      HandlerRequest sf (Core.RspFromClient rm) -> do
+      HandlerRequest _vf sf (Core.RspFromClient rm) -> do
         setSendFunc sf
         liftIO $ U.logs $ "reactor:got RspFromClient:" ++ show rm
 
       -- -------------------------------
 
-      HandlerRequest sf (Core.NotInitialized _notification) -> do
+      HandlerRequest _vf sf (Core.NotInitialized _notification) -> do
         setSendFunc sf
         liftIO $ U.logm $ "****** reactor: processing Initialized Notification"
         -- Server is ready, register any specific capabilities we need
@@ -198,7 +196,7 @@ reactor st inp = do
 
       -- -------------------------------
 
-      HandlerRequest sf (Core.NotDidOpenTextDocument notification) -> do
+      HandlerRequest _vf sf (Core.NotDidOpenTextDocument notification) -> do
         setSendFunc sf
         liftIO $ U.logm $ "****** reactor: processing NotDidOpenTextDocument"
         let
@@ -211,7 +209,24 @@ reactor st inp = do
 
       -- -------------------------------
 
-      HandlerRequest sf (Core.NotDidSaveTextDocument notification) -> do
+      HandlerRequest vf sf (Core.NotDidChangeTextDocument notification) -> do
+        setSendFunc sf
+        let
+            params  = fromJust $ J._params (notification :: J.DidChangeTextDocumentNotification)
+            textDoc = J._textDocument (params :: J.DidChangeTextDocumentParams)
+            doc     = J._uri (textDoc :: J.VersionedTextDocumentIdentifier)
+        mdoc <- liftIO $ vf doc
+        case mdoc of
+          Just (VirtualFile version str) -> do
+            liftIO $ U.logs $ "reactor:processing NotDidChangeTextDocument: vf got:" ++ (show $ Yi.toString str)
+          Nothing -> do
+            liftIO $ U.logs $ "reactor:processing NotDidChangeTextDocument: vf returned Nothing"
+
+        liftIO $ U.logs $ "reactor:processing NotDidChangeTextDocument: uri=" ++ (show doc)
+
+      -- -------------------------------
+
+      HandlerRequest _vf sf (Core.NotDidSaveTextDocument notification) -> do
         setSendFunc sf
         liftIO $ U.logm "****** reactor: processing NotDidSaveTextDocument"
         let
@@ -221,12 +236,9 @@ reactor st inp = do
         liftIO $ U.logs $ "********* doc=" ++ show doc
         sendDiagnostics doc
 
-      HandlerRequest sf (Core.NotDidChangeTextDocument _notification) -> do
-        setSendFunc sf
-        liftIO $ U.logm "****** reactor: NOT processing NotDidChangeTextDocument"
-
       -- -------------------------------
-      HandlerRequest sf (Core.ReqRename req) -> do
+
+      HandlerRequest _vf sf (Core.ReqRename req) -> do
         setSendFunc sf
         liftIO $ U.logs $ "reactor:got RenameRequest:" ++ show req
         let params = fromJust $ J._params (req :: J.RenameRequest)
@@ -243,7 +255,7 @@ reactor st inp = do
 
       -- -------------------------------
 
-      HandlerRequest sf r@(Core.ReqHover req) -> do
+      HandlerRequest _vf sf r@(Core.ReqHover req) -> do
         setSendFunc sf
         liftIO $ U.logs $ "reactor:got HoverRequest:" ++ show req
         let J.TextDocumentPositionParams doc pos = fromJust $ J._params (req :: J.HoverRequest)
@@ -258,7 +270,7 @@ reactor st inp = do
 
       -- -------------------------------
 
-      HandlerRequest sf (Core.ReqCodeAction req) -> do
+      HandlerRequest _vf sf (Core.ReqCodeAction req) -> do
         setSendFunc sf
         liftIO $ U.logs $ "reactor:got CodeActionRequest:" ++ show req
         let params = fromJust $ J._params (req :: J.CodeActionRequest)
@@ -286,7 +298,7 @@ reactor st inp = do
 
       -- -------------------------------
 
-      HandlerRequest sf (Core.ReqExecuteCommand req) -> do
+      HandlerRequest _vf sf (Core.ReqExecuteCommand req) -> do
         setSendFunc sf
         liftIO $ U.logs $ "reactor:got ExecuteCommandRequest:" -- ++ show req
         let params = fromJust $ J._params (req :: J.ExecuteCommandRequest)
@@ -311,7 +323,7 @@ reactor st inp = do
 
       -- -------------------------------
 
-      HandlerRequest sf om -> do
+      HandlerRequest _vf sf om -> do
         setSendFunc sf
         liftIO $ U.logs $ "reactor:got HandlerRequest:" ++ show om
 
@@ -366,13 +378,13 @@ lspHandlers rin
 -- ---------------------------------------------------------------------
 
 passHandler :: TChan ReactorInput -> (a -> Core.OutMessage) -> Core.Handler a
-passHandler rin c sf notification = do
-  atomically $ writeTChan rin (HandlerRequest sf (c notification))
+passHandler rin c vf sf notification = do
+  atomically $ writeTChan rin (HandlerRequest vf sf (c notification))
 
 -- ---------------------------------------------------------------------
 
 responseHandlerCb :: TChan ReactorInput -> Core.Handler J.BareResponseMessage
-responseHandlerCb _rin _sf resp = do
+responseHandlerCb _rin _vf _sf resp = do
   U.logs $ "******** got ResponseMessage, ignoring:" ++ show resp
 
 -- ---------------------------------------------------------------------
