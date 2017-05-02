@@ -461,12 +461,14 @@ interface Diagnostic {
     message: string;
 }
 -}
+
+type DiagnosticSource = String
 data Diagnostic =
   Diagnostic
     { _range    :: Range
     , _severity :: Maybe DiagnosticSeverity
     , _code     :: Maybe String -- Note: Protocol allows Int too.
-    , _source   :: Maybe String
+    , _source   :: Maybe DiagnosticSource
     , _message  :: String
     } deriving (Show, Read, Eq)
 
@@ -566,10 +568,13 @@ interface VersionedTextDocumentIdentifier extends TextDocumentIdentifier {
      */
     version: number;
 -}
+
+type TextDocumentVersion = Int
+
 data VersionedTextDocumentIdentifier =
   VersionedTextDocumentIdentifier
     { _uri     :: Uri
-    , _version :: Int
+    , _version :: TextDocumentVersion
     } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''VersionedTextDocumentIdentifier)

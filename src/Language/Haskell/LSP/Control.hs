@@ -42,9 +42,11 @@ run dp h o = do
   cout <- atomically newTChan :: IO (TChan BSL.ByteString)
   _rhpid <- forkIO $ sendServer cout
 
-  let sendFunc str = atomically $ writeTChan cout str
 
-  mvarDat <- newMVar ((Core.defaultLanguageContextData h o :: Core.LanguageContextData)
+  let sendFunc str = atomically $ writeTChan cout str
+  let lf = error "LifeCycle error, ClientCapabilites not set yet via initialize maessage"
+
+  mvarDat <- newMVar ((Core.defaultLanguageContextData h o lf :: Core.LanguageContextData)
                          { Core.resSendResponse = sendFunc
                          } )
 

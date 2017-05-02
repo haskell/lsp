@@ -28,7 +28,6 @@ import qualified Data.Aeson as J
 import qualified Data.ByteString.Lazy.Char8 as B
 import           Data.List
 import qualified Data.Map as Map
--- import qualified Language.Haskell.LSP.TH.ClientCapabilities as C
 import qualified Language.Haskell.LSP.TH.DataTypesJSON      as J
 import           Language.Haskell.LSP.Utility
 import qualified Yi.Rope as Yi
@@ -48,7 +47,6 @@ type VFS = Map.Map J.Uri VirtualFile
 
 -- ---------------------------------------------------------------------
 
--- getVfs :: forall a.(J.FromJSON a) => VFS -> String -> B.ByteString -> IO VFS
 getVfs :: VFS -> String -> B.ByteString -> IO VFS
 getVfs vfs cmd jsonStr = do
   -- TODO: this approach is horrible, as we have already deserialised the
