@@ -3146,7 +3146,7 @@ data DocumentHighlight =
 
 $(deriveJSON lspOptions ''DocumentHighlight)
 
-type DocumentHighlightsResponse = ResponseMessage [DocumentHighlight]
+type DocumentHighlightsResponse = ResponseMessage (List [DocumentHighlight])
 
 -- ---------------------------------------------------------------------
 {-
