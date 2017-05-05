@@ -76,7 +76,7 @@ getVfs vfs cmd jsonStr = do
           return vfs
 
     _ -> do
-      logs $ "haskell-lsp:getVfs:not processing" ++ show cmd
+      -- logs $ "haskell-lsp:getVfs:not processing" ++ show cmd
       return vfs
 
 -- ---------------------------------------------------------------------
