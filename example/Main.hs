@@ -187,12 +187,16 @@ reactor st inp = do
         let registrations = J.RegistrationParams (J.List [registration])
         rid <- nextLspReqId
 
-        -- Current vscode implementation has the wrong name in it:
-        -- https://github.com/Microsoft/vscode-languageserver-node/issues/199
-        let smr = J.RequestMessage "2.0" rid "client/registerFeature"  (Just registrations)
-        -- let smr = J.RequestMessage "2.0" rid "client/registerCapability"  (Just registrations)
-
+        let smr = J.RequestMessage "2.0" rid "client/registerCapability"  (Just registrations)
         reactorSend smr
+
+        -- example of showMessageRequest
+        let
+          params = J.ShowMessageRequestParams J.MtWarning "choose an option for XXX"
+                           (Just [J.MessageActionItem "option a", J.MessageActionItem "option b"])
+        rid1 <- nextLspReqId
+
+        reactorSend $ J.RequestMessage "2.0" rid1 "window/showMessageRequest"  (Just params)
 
       -- -------------------------------
 
