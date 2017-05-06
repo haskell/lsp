@@ -180,7 +180,7 @@ fmClientExecuteCommandRequest rid params
 -- | From 3.0
 fmServerApplyWorkspaceEditRequest :: J.LspId -> J.ApplyWorkspaceEditParams -> J.ApplyWorkspaceEditRequest
 fmServerApplyWorkspaceEditRequest rid params
-  = J.RequestMessage  "2.0" rid "workspace/executeCommand" (Just params)
+  = J.RequestMessage  "2.0" rid "workspace/applyEdit" (Just params)
 
 -- ----------------------------------------------------------------------
  -- Document
@@ -199,7 +199,7 @@ fmClientDidOpenTextDocumentNotification params
 -- * :arrow_right: [textDocument/didChange](#textDocument_didChange)
 fmClientDidChangeTextDocumentNotification :: J.DidChangeTextDocumentParams -> J.DidChangeTextDocumentNotification
 fmClientDidChangeTextDocumentNotification params
-  = J.NotificationMessage "2.0" "textDocument/didOpen" (Just params)
+  = J.NotificationMessage "2.0" "textDocument/didChange" (Just params)
 
 -- * :arrow_right: [textDocument/willSave](#textDocument_willSave)
 fmClientWillSaveTextDocumentNotification :: J.WillSaveTextDocumentParams -> J.WillSaveTextDocumentNotification
@@ -261,7 +261,7 @@ fmClientDocumentSymbolRequest rid params
 -- * :leftwards_arrow_with_hook: [textDocument/formatting](#textDocument_formatting)
 fmClientDocumentFormattingRequest :: J.LspId -> J.DocumentFormattingParams -> J.DocumentFormattingRequest
 fmClientDocumentFormattingRequest rid params
-  = J.RequestMessage "2.0" rid "textDocument/documentFormatting" (Just params)
+  = J.RequestMessage "2.0" rid "textDocument/formatting" (Just params)
 
 -- * :leftwards_arrow_with_hook: [textDocument/rangeFormatting](#textDocument_rangeFormatting)
 fmClientDocumentRangeFormattingRequest :: J.LspId -> J.DocumentRangeFormattingParams -> J.DocumentRangeFormattingRequest
