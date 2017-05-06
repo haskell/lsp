@@ -21,8 +21,8 @@ module Language.Haskell.LSP.Messages (
   , fmServerTelemetryNotification
 
   -- * Client
-  , fmClientRegisterCapabilityRequest
-  , fmClientUnregisterCapabilityRequest
+  , fmServerRegisterCapabilityRequest
+  , fmServerUnregisterCapabilityRequest
 
   -- * Workspace
   , fmServerDidChangeConfigurationNotification
@@ -58,31 +58,8 @@ module Language.Haskell.LSP.Messages (
   , fmClientRenameRequest
   ) where
 
--- import           Control.Concurrent
--- import qualified Control.Exception as E
--- import           Control.Monad
 import qualified Data.Aeson as J
--- import qualified Data.ByteString.Lazy as BSL
--- import qualified Data.ByteString.Lazy.Char8 as B
--- import           Data.Default
--- import qualified Data.HashMap.Strict as HM
--- import qualified Data.List as L
--- import qualified Data.Map as Map
--- import qualified Data.Text as T
--- import           Language.Haskell.LSP.Constant
--- import qualified Language.Haskell.LSP.TH.ClientCapabilities as C
 import qualified Language.Haskell.LSP.TH.DataTypesJSON      as J
--- import           Language.Haskell.LSP.Utility
--- import           Language.Haskell.LSP.VFS
--- import           Language.Haskell.LSP.Diagnostics
--- import           System.Directory
--- import           System.Exit
--- import           System.IO
--- import qualified System.Log.Formatter as L
--- import qualified System.Log.Handler as LH
--- import qualified System.Log.Handler.Simple as LHS
--- import           System.Log.Logger
--- import qualified System.Log.Logger as L
 
 -- ---------------------------------------------------------------------
 {-# ANN module ("HLint: ignore Eta reduce"         :: String) #-}
@@ -164,14 +141,14 @@ fmServerTelemetryNotification params
 
 -- * :arrow_right_hook: [client/registerCapability](#client_registerCapability)
 -- | from 3.0
-fmClientRegisterCapabilityRequest :: J.LspId -> J.RegistrationParams -> J.RegisterCapabilityRequest
-fmClientRegisterCapabilityRequest rid params
+fmServerRegisterCapabilityRequest :: J.LspId -> J.RegistrationParams -> J.RegisterCapabilityRequest
+fmServerRegisterCapabilityRequest rid params
   = J.RequestMessage  "2.0" rid "client/registerCapability" (Just params)
 
 -- * :arrow_right_hook: [client/unregisterCapability](#client_unregisterCapability)
 -- | from 3.0
-fmClientUnregisterCapabilityRequest :: J.LspId -> J.UnregistrationParams -> J.UnregisterCapabilityRequest
-fmClientUnregisterCapabilityRequest rid params
+fmServerUnregisterCapabilityRequest :: J.LspId -> J.UnregistrationParams -> J.UnregisterCapabilityRequest
+fmServerUnregisterCapabilityRequest rid params
   = J.RequestMessage  "2.0" rid "client/unregisterCapability" (Just params)
 
 -- ----------------------------------------------------------------------

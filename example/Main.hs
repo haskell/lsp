@@ -15,14 +15,13 @@ import           Control.Monad.IO.Class
 import           Control.Monad.STM
 import           Control.Monad.Trans.State.Lazy
 import qualified Data.Aeson as J
--- import qualified Data.ByteString.Lazy as BSL
 import           Data.Default
 import qualified Data.HashMap.Strict as H
 import           Data.Maybe
 import qualified Data.Vector as V
 import qualified Language.Haskell.LSP.Control  as CTRL
 import qualified Language.Haskell.LSP.Core     as Core
--- import qualified Language.Haskell.LSP.TH.ClientCapabilities as C
+import           Language.Haskell.LSP.Messages
 import qualified Language.Haskell.LSP.TH.DataTypesJSON as J
 import qualified Language.Haskell.LSP.Utility  as U
 import           Language.Haskell.LSP.VFS
@@ -187,8 +186,7 @@ reactor st inp = do
         let registrations = J.RegistrationParams (J.List [registration])
         rid <- nextLspReqId
 
-        let smr = J.RequestMessage "2.0" rid "client/registerCapability"  (Just registrations)
-        reactorSend smr
+        reactorSend $ fmServerRegisterCapabilityRequest rid registrations
 
         -- example of showMessageRequest
         let
@@ -196,7 +194,7 @@ reactor st inp = do
                            (Just [J.MessageActionItem "option a", J.MessageActionItem "option b"])
         rid1 <- nextLspReqId
 
-        reactorSend $ J.RequestMessage "2.0" rid1 "window/showMessageRequest"  (Just params)
+        reactorSend $ fmServerShowMessageRequest rid1 params
 
       -- -------------------------------
 
@@ -314,7 +312,8 @@ reactor st inp = do
           Just we -> do
             reply (J.Object mempty)
             lid <- nextLspReqId
-            reactorSend $ J.RequestMessage "2.0" lid "workspace/applyEdit" (Just we)
+            -- reactorSend $ J.RequestMessage "2.0" lid "workspace/applyEdit" (Just we)
+            reactorSend $ fmServerApplyWorkspaceEditRequest lid we
           Nothing ->
             reply r
 
@@ -325,7 +324,7 @@ reactor st inp = do
 
 -- ---------------------------------------------------------------------
 
-toWorkspaceEdit :: t -> Maybe J.WorkspaceEdit
+toWorkspaceEdit :: t -> Maybe J.ApplyWorkspaceEditParams
 toWorkspaceEdit _ = Nothing
 
 -- ---------------------------------------------------------------------
