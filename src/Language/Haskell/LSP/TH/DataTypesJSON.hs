@@ -109,7 +109,7 @@ data RequestMessage a =
 $(deriveJSON lspOptions ''RequestMessage)
 
 instance Default (RequestMessage a) where
-  def = RequestMessage "3.0" def def def
+  def = RequestMessage "2.0" def def def
 
 -- ---------------------------------------------------------------------
 {-
@@ -1399,9 +1399,6 @@ instance A.ToJSON InitializedParams where
 
 type InitializedNotification = NotificationMessage InitializedParams
 
-instance Default InitializedNotification where
-  def = NotificationMessage "2.0" "initialized" Nothing
-
 -- ---------------------------------------------------------------------
 {-
 Shutdown Request
@@ -1446,15 +1443,17 @@ Notification
 -- |
 --   Notification from the server to actually exit now, after shutdown acked
 --
-data ExitNotification =
-  ExitNotification
+data ExitNotificationParams =
+  ExitNotificationParams
     {
     } deriving (Show, Read, Eq)
 
-$(deriveJSON defaultOptions ''ExitNotification)
+$(deriveJSON defaultOptions ''ExitNotificationParams)
 
-instance Default ExitNotification where
-  def = ExitNotification
+instance Default ExitNotificationParams where
+  def = ExitNotificationParams
+
+type ExitNotification = NotificationMessage ExitNotificationParams
 
 -- ---------------------------------------------------------------------
 {-
@@ -1527,30 +1526,18 @@ instance Default MessageType where
 
 -- ---------------------------------------
 
-data MessageNotificationParams =
-  MessageNotificationParams {
+data ShowMessageParams =
+  ShowMessageParams {
     _type    :: MessageType
   , _message :: String
   } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''MessageNotificationParams)
+$(deriveJSON lspOptions ''ShowMessageParams)
 
-instance Default MessageNotificationParams where
-  def = MessageNotificationParams MtWarning ""
+instance Default ShowMessageParams where
+  def = ShowMessageParams MtWarning ""
 
--- ---------------------------------------
-
-data MessageNotification =
-  MessageNotification {
-    _jsonrpc :: String
-  , _method  :: String
-  , _params  :: MessageNotificationParams
-  } deriving (Show, Read, Eq)
-
-$(deriveJSON lspOptions ''MessageNotification)
-
-defShowMessage :: MessageType -> String -> MessageNotification
-defShowMessage mt msg = MessageNotification "2.0" "window/showMessage" (MessageNotificationParams mt msg)
+type ShowMessageNotification = NotificationMessage ShowMessageParams
 
 -- ---------------------------------------------------------------------
 {-
@@ -1653,8 +1640,19 @@ interface LogMessageParams {
 
 Where type is defined as above.
 -}
-defLogMessage :: MessageType -> String -> MessageNotification
-defLogMessage mt msg = MessageNotification "2.0" "window/logMessage"   (MessageNotificationParams mt msg)
+
+data LogMessageParams =
+  LogMessageParams {
+    _type    :: MessageType
+  , _message :: String
+  } deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''LogMessageParams)
+
+instance Default LogMessageParams where
+  def = LogMessageParams MtWarning ""
+
+type LogMessageNotification = NotificationMessage LogMessageParams
 
 -- ---------------------------------------------------------------------
 {-
@@ -1716,6 +1714,7 @@ export interface Registration {
 
 export interface RegistrationParams {
         registrations: Registration[];
+
 }
 -}
 
@@ -1847,17 +1846,17 @@ interface DidChangeConfigurationParams {
 }
 -}
 
-data DidChangeConfigurationParamsNotificationParams =
-  DidChangeConfigurationParamsNotificationParams {
+data DidChangeConfigurationParams =
+  DidChangeConfigurationParams {
     _settings :: A.Value
   } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''DidChangeConfigurationParamsNotificationParams)
+$(deriveJSON lspOptions ''DidChangeConfigurationParams)
 
-instance Default DidChangeConfigurationParamsNotificationParams where
-  def = DidChangeConfigurationParamsNotificationParams (A.Object mempty)
+instance Default DidChangeConfigurationParams where
+  def = DidChangeConfigurationParams (A.Object mempty)
 
-type DidChangeConfigurationParamsNotification = NotificationMessage DidChangeConfigurationParamsNotificationParams
+type DidChangeConfigurationNotification = NotificationMessage DidChangeConfigurationParams
 
 -- ---------------------------------------------------------------------
 {-
@@ -1885,14 +1884,14 @@ interface DidOpenTextDocumentParams {
 Registration Options: TextDocumentRegistrationOptions
 -}
 
-data DidOpenTextDocumentNotificationParams =
-  DidOpenTextDocumentNotificationParams {
+data DidOpenTextDocumentParams =
+  DidOpenTextDocumentParams {
     _textDocument :: TextDocumentItem
   } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''DidOpenTextDocumentNotificationParams)
+$(deriveJSON lspOptions ''DidOpenTextDocumentParams)
 
-type DidOpenTextDocumentNotification = NotificationMessage DidOpenTextDocumentNotificationParams
+type DidOpenTextDocumentNotification = NotificationMessage DidOpenTextDocumentParams
 
 -- ---------------------------------------------------------------------
 {-
@@ -2103,7 +2102,6 @@ Registration Options: TextDocumentRegistrationOptions
 -}
 
 type WillSaveWaitUntilTextDocumentRequest = RequestMessage WillSaveTextDocumentParams
-
 type WillSaveWaitUntilTextDocumentResponse = ResponseMessage (List TextEdit)
 
 -- ---------------------------------------------------------------------
@@ -2260,13 +2258,13 @@ $(deriveJSON lspOptions ''FileEvent)
 
 data DidChangeWatchedFilesParams =
   DidChangeWatchedFilesParams
-    { _params :: [FileEvent]
+    { _params :: List FileEvent
     } deriving (Read,Show,Eq)
 
 $(deriveJSON lspOptions ''DidChangeWatchedFilesParams)
 
 instance Default DidChangeWatchedFilesParams where
-  def = DidChangeWatchedFilesParams def
+  def = DidChangeWatchedFilesParams (List def)
 
 type DidChangeWatchedFilesNotification = NotificationMessage DidChangeWatchedFilesParams
 
@@ -2635,17 +2633,17 @@ $(deriveJSON lspOptions ''CompletionItem)
 data CompletionListType =
   CompletionListType
     { _isIncomplete :: Bool
-    , _items :: [CompletionItem]
+    , _items :: List CompletionItem
     } deriving (Read,Show,Eq)
 
 $(deriveJSON lspOptions ''CompletionListType)
 
 instance Default CompletionListType where
-  def = CompletionListType False []
+  def = CompletionListType False (List [])
 
 data CompletionResponseResult
   = CompletionList CompletionListType
-  | Completions [CompletionItem]
+  | Completions (List CompletionItem)
   deriving (Read,Show,Eq)
 
 $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "CompletionResponseResult"), sumEncoding = UntaggedValue } ''CompletionResponseResult)
@@ -2778,7 +2776,7 @@ instance Default MarkedString where
 
 data Hover =
   Hover
-    { _contents :: [MarkedString]
+    { _contents :: List MarkedString
     , _range    :: Maybe Range
     } deriving (Read,Show,Eq)
 
@@ -2881,6 +2879,7 @@ interface ParameterInformation {
 
 type SignatureHelpRequest = RequestMessage TextDocumentPositionParams
 
+
 -- -------------------------------------
 
 data ParameterInformation =
@@ -2906,7 +2905,7 @@ $(deriveJSON lspOptions ''SignatureInformation)
 
 data SignatureHelp =
   SignatureHelp
-    { _signatures      :: [SignatureInformation]
+    { _signatures      :: List SignatureInformation
     , _activeSignature :: Maybe Int -- ^ The active signature
     , _activeParameter :: Maybe Int -- ^ The active parameter of the active signature
     } deriving (Read,Show,Eq)
@@ -2914,7 +2913,7 @@ data SignatureHelp =
 $(deriveJSON lspOptions ''SignatureHelp)
 
 instance Default SignatureHelp where
-  def = SignatureHelp def Nothing Nothing
+  def = SignatureHelp (List def) Nothing Nothing
 
 type SignatureHelpResponse = ResponseMessage SignatureHelp
 
@@ -2967,20 +2966,9 @@ Response:
 
 -}
 
-data DefinitionRequestParams =
-  DefinitionRequestParams
-    { _textDocument :: TextDocumentIdentifier
-    , _position     :: Position
-    } deriving (Show, Read, Eq)
-
-$(deriveJSON lspOptions ''DefinitionRequestParams)
-
-instance Default DefinitionRequestParams where
-  def = DefinitionRequestParams def def
-
 -- {"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{"textDocument":{"uri":"file:///tmp/Foo.hs"},"position":{"line":1,"character":8}}}
 
-type DefinitionRequest  = RequestMessage DefinitionRequestParams
+type DefinitionRequest  = RequestMessage TextDocumentPositionParams
 type DefinitionResponse = ResponseMessage Location
 
 -- ---------------------------------------------------------------------
@@ -3043,8 +3031,8 @@ $(deriveJSON lspOptions ''ReferenceParams)
 instance Default ReferenceParams where
   def = ReferenceParams def def def
 
-type FindReferencesRequest  = RequestMessage ReferenceParams
-type FindReferencesResponse = ResponseMessage [Location]
+type ReferencesRequest  = RequestMessage ReferenceParams
+type ReferencesResponse = ResponseMessage (List Location)
 
 -- ---------------------------------------------------------------------
 {-
@@ -3118,7 +3106,7 @@ Registration Options: TextDocumentRegistrationOptions
 
 -}
 
-type DocumentHighlightsRequest = RequestMessage TextDocumentPositionParams
+type DocumentHighlightRequest = RequestMessage TextDocumentPositionParams
 
 -- -------------------------------------
 
@@ -3146,7 +3134,7 @@ data DocumentHighlight =
 
 $(deriveJSON lspOptions ''DocumentHighlight)
 
-type DocumentHighlightsResponse = ResponseMessage (List [DocumentHighlight])
+type DocumentHighlightsResponse = ResponseMessage (List DocumentHighlight)
 
 -- ---------------------------------------------------------------------
 {-
@@ -3245,7 +3233,7 @@ instance Default DocumentSymbolParams where
   def = DocumentSymbolParams def
 
 
-type DocumentSymbolsRequest = RequestMessage DocumentSymbolParams
+type DocumentSymbolRequest = RequestMessage DocumentSymbolParams
 
 -- -------------------------------------
 
@@ -3332,7 +3320,7 @@ instance Default SymbolInformation where
 
 -- -------------------------------------
 
-type DocumentSymbolsResponse = ResponseMessage [SymbolInformation]
+type DocumentSymbolsResponse = ResponseMessage (List SymbolInformation)
 
 -- ---------------------------------------------------------------------
 {-
@@ -3372,8 +3360,8 @@ data WorkspaceSymbolParams =
 
 $(deriveJSON lspOptions ''WorkspaceSymbolParams)
 
-type WorkspaceSymbolsRequest  = RequestMessage WorkspaceSymbolParams
-type WorkspaceSymbolsResponse = ResponseMessage [SymbolInformation]
+type WorkspaceSymbolRequest  = RequestMessage WorkspaceSymbolParams
+type WorkspaceSymbolsResponse = ResponseMessage (List SymbolInformation)
 
 -- ---------------------------------------------------------------------
 {-
@@ -3453,7 +3441,7 @@ instance Default CodeActionParams where
   def = CodeActionParams def def def
 
 type CodeActionRequest  = RequestMessage CodeActionParams
-type CodeActionResponse = ResponseMessage [Command]
+type CodeActionResponse = ResponseMessage (List Command)
 
 -- ---------------------------------------------------------------------
 {-
@@ -3533,7 +3521,7 @@ $(deriveJSON lspOptions ''CodeLens)
 instance Default CodeLens where
   def = CodeLens def def def
 
-type CodeLensResponse = ResponseMessage [CodeLens]
+type CodeLensResponse = ResponseMessage (List CodeLens)
 
 -- -------------------------------------
 {-
@@ -3579,7 +3567,7 @@ Response
 -}
 
 type CodeLensResolveRequest  = RequestMessage CodeLens
-type CodeLensResolveResponse = ResponseMessage [CodeLens]
+type CodeLensResolveResponse = ResponseMessage (List CodeLens)
 
 -- ---------------------------------------------------------------------
 {-
@@ -3749,7 +3737,7 @@ data DocumentFormattingParams =
 $(deriveJSON lspOptions ''DocumentFormattingParams)
 
 type DocumentFormattingRequest  = RequestMessage DocumentFormattingParams
-type DocumentFormattingResponse = ResponseMessage [TextEdit]
+type DocumentFormattingResponse = ResponseMessage (List TextEdit)
 
 -- ---------------------------------------------------------------------
 {-
@@ -3800,7 +3788,7 @@ data DocumentRangeFormattingParams =
 $(deriveJSON lspOptions ''DocumentRangeFormattingParams)
 
 type DocumentRangeFormattingRequest  = RequestMessage DocumentRangeFormattingParams
-type DocumentRangeFormattingResponse = ResponseMessage [TextEdit]
+type DocumentRangeFormattingResponse = ResponseMessage (List TextEdit)
 
 -- ---------------------------------------------------------------------
 {-
@@ -3869,7 +3857,7 @@ data DocumentOnTypeFormattingParams =
 $(deriveJSON lspOptions ''DocumentOnTypeFormattingParams)
 
 type DocumentOnTypeFormattingRequest  = RequestMessage DocumentOnTypeFormattingParams
-type DocumentOnTypeFormattingResponse = ResponseMessage [TextEdit]
+type DocumentOnTypeFormattingResponse = ResponseMessage (List TextEdit)
 
 data DocumentOnTypeFormattingRegistrationOptions =
   DocumentOnTypeFormattingRegistrationOptions
@@ -3921,21 +3909,21 @@ Response
 Registration Options: TextDocumentRegistrationOptions
 
 -}
-data RenameRequestParams =
-  RenameRequestParams
+data RenameParams =
+  RenameParams
     { _textDocument :: TextDocumentIdentifier
     , _position     :: Position
     , _newName      :: String
     } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''RenameRequestParams)
+$(deriveJSON lspOptions ''RenameParams)
 
-instance Default RenameRequestParams where
-  def = RenameRequestParams def def def
+instance Default RenameParams where
+  def = RenameParams def def def
 
 -- {\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"textDocument/rename\",\"params\":{\"textDocument\":{\"uri\":\"file:///home/alanz/mysrc/github/alanz/haskell-lsp/src/HieVscode.hs\"},\"position\":{\"line\":37,\"character\":17},\"newName\":\"getArgs'\"}}
 
-type RenameRequest  = RequestMessage RenameRequestParams
+type RenameRequest  = RequestMessage RenameParams
 type RenameResponse = ResponseMessage WorkspaceEdit
 
 -- ---------------------------------------------------------------------
@@ -3998,7 +3986,6 @@ data ExecuteCommandParams =
 $(deriveJSON lspOptions ''ExecuteCommandParams)
 
 type ExecuteCommandRequest = RequestMessage ExecuteCommandParams
-
 type ExecuteCommandResponse = ResponseMessage A.Value
 
 data ExecuteCommandRegistrationOptions =

@@ -204,7 +204,7 @@ reactor st inp = do
         liftIO $ U.logm $ "****** reactor: processing NotDidOpenTextDocument"
         let
             params  = fromJust $ J._params (notification :: J.DidOpenTextDocumentNotification)
-            textDoc = J._textDocument (params :: J.DidOpenTextDocumentNotificationParams)
+            textDoc = J._textDocument (params :: J.DidOpenTextDocumentParams)
             doc     = J._uri (textDoc :: J.TextDocumentItem)
             fileName = drop (length ("file://"::String)) doc
         liftIO $ U.logs $ "********* fileName=" ++ show fileName
@@ -242,9 +242,9 @@ reactor st inp = do
       HandlerRequest (Core.LspFuncs _c _sf _vf _pd) (Core.ReqRename req) -> do
         liftIO $ U.logs $ "reactor:got RenameRequest:" ++ show req
         let params = fromJust $ J._params (req :: J.RenameRequest)
-            J.TextDocumentIdentifier doc = J._textDocument (params :: J.RenameRequestParams)
+            J.TextDocumentIdentifier doc = J._textDocument (params :: J.RenameParams)
             fileName = drop (length ("file://"::String)) doc
-            J.Position l c = J._position (params :: J.RenameRequestParams)
+            J.Position l c = J._position (params :: J.RenameParams)
             newName  = J._newName params
 
         let we = J.WorkspaceEdit
@@ -263,7 +263,7 @@ reactor st inp = do
 
         let
           ht = J.Hover ms (Just range)
-          ms = [J.MarkedString "lsp-hello" "TYPE INFO" ]
+          ms = J.List [J.MarkedString "lsp-hello" "TYPE INFO" ]
           range = J.Range pos pos
         reactorSend $ Core.makeResponseMessage (J.responseId $ J._id (req :: J.HoverRequest) ) ht
 
