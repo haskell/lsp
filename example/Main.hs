@@ -15,14 +15,13 @@ import           Control.Monad.IO.Class
 import           Control.Monad.STM
 import           Control.Monad.Trans.State.Lazy
 import qualified Data.Aeson as J
--- import qualified Data.ByteString.Lazy as BSL
 import           Data.Default
 import qualified Data.HashMap.Strict as H
 import           Data.Maybe
 import qualified Data.Vector as V
 import qualified Language.Haskell.LSP.Control  as CTRL
 import qualified Language.Haskell.LSP.Core     as Core
--- import qualified Language.Haskell.LSP.TH.ClientCapabilities as C
+import           Language.Haskell.LSP.Messages
 import qualified Language.Haskell.LSP.TH.DataTypesJSON as J
 import qualified Language.Haskell.LSP.Utility  as U
 import           Language.Haskell.LSP.VFS
@@ -187,8 +186,7 @@ reactor st inp = do
         let registrations = J.RegistrationParams (J.List [registration])
         rid <- nextLspReqId
 
-        let smr = J.RequestMessage "2.0" rid "client/registerCapability"  (Just registrations)
-        reactorSend smr
+        reactorSend $ fmServerRegisterCapabilityRequest rid registrations
 
         -- example of showMessageRequest
         let
@@ -196,7 +194,7 @@ reactor st inp = do
                            (Just [J.MessageActionItem "option a", J.MessageActionItem "option b"])
         rid1 <- nextLspReqId
 
-        reactorSend $ J.RequestMessage "2.0" rid1 "window/showMessageRequest"  (Just params)
+        reactorSend $ fmServerShowMessageRequest rid1 params
 
       -- -------------------------------
 
@@ -204,7 +202,7 @@ reactor st inp = do
         liftIO $ U.logm $ "****** reactor: processing NotDidOpenTextDocument"
         let
             params  = fromJust $ J._params (notification :: J.DidOpenTextDocumentNotification)
-            textDoc = J._textDocument (params :: J.DidOpenTextDocumentNotificationParams)
+            textDoc = J._textDocument (params :: J.DidOpenTextDocumentParams)
             doc     = J._uri (textDoc :: J.TextDocumentItem)
             fileName = drop (length ("file://"::String)) doc
         liftIO $ U.logs $ "********* fileName=" ++ show fileName
@@ -242,9 +240,9 @@ reactor st inp = do
       HandlerRequest (Core.LspFuncs _c _sf _vf _pd) (Core.ReqRename req) -> do
         liftIO $ U.logs $ "reactor:got RenameRequest:" ++ show req
         let params = fromJust $ J._params (req :: J.RenameRequest)
-            J.TextDocumentIdentifier doc = J._textDocument (params :: J.RenameRequestParams)
+            J.TextDocumentIdentifier doc = J._textDocument (params :: J.RenameParams)
             fileName = drop (length ("file://"::String)) doc
-            J.Position l c = J._position (params :: J.RenameRequestParams)
+            J.Position l c = J._position (params :: J.RenameParams)
             newName  = J._newName params
 
         let we = J.WorkspaceEdit
@@ -263,7 +261,7 @@ reactor st inp = do
 
         let
           ht = J.Hover ms (Just range)
-          ms = [J.MarkedString "lsp-hello" "TYPE INFO" ]
+          ms = J.List [J.MarkedString "lsp-hello" "TYPE INFO" ]
           range = J.Range pos pos
         reactorSend $ Core.makeResponseMessage (J.responseId $ J._id (req :: J.HoverRequest) ) ht
 
@@ -314,7 +312,8 @@ reactor st inp = do
           Just we -> do
             reply (J.Object mempty)
             lid <- nextLspReqId
-            reactorSend $ J.RequestMessage "2.0" lid "workspace/applyEdit" (Just we)
+            -- reactorSend $ J.RequestMessage "2.0" lid "workspace/applyEdit" (Just we)
+            reactorSend $ fmServerApplyWorkspaceEditRequest lid we
           Nothing ->
             reply r
 
@@ -325,7 +324,7 @@ reactor st inp = do
 
 -- ---------------------------------------------------------------------
 
-toWorkspaceEdit :: t -> Maybe J.WorkspaceEdit
+toWorkspaceEdit :: t -> Maybe J.ApplyWorkspaceEditParams
 toWorkspaceEdit _ = Nothing
 
 -- ---------------------------------------------------------------------
