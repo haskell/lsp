@@ -9,3 +9,9 @@ import           Data.Aeson.TH
 lspOptions :: Options
 lspOptions = defaultOptions { omitNothingFields = True, fieldLabelModifier = drop 1 }
  -- NOTE: This needs to be in a separate file because of the TH stage restriction
+
+customModifier :: String -> String
+customModifier "_xdata" = "data"
+customModifier "_xtype" = "type"
+customModifier xs = drop 1 xs
+

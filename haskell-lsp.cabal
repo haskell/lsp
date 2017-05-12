@@ -46,6 +46,7 @@ library
                      , filepath
                      , fsnotify
                      , hslogger
+                     , lens >= 4.15.2
                      , MissingH
                      , mtl
                      , parsec
@@ -83,6 +84,7 @@ executable lsp-hello
                      , filepath
                      , fsnotify
                      , hslogger
+                     , lens >= 4.15.2
                      , MissingH
                      , mtl
                      , parsec

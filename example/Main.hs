@@ -29,6 +29,7 @@ import           Language.Haskell.LSP.VFS
 import           System.Exit
 import qualified System.Log.Logger as L
 import qualified Yi.Rope as Yi
+import Control.Lens
 
 
 -- ---------------------------------------------------------------------
@@ -203,9 +204,10 @@ reactor st inp = do
       HandlerRequest _lf (Core.NotDidOpenTextDocument notification) -> do
         liftIO $ U.logm $ "****** reactor: processing NotDidOpenTextDocument"
         let
-            params  = fromJust $ J._params (notification :: J.DidOpenTextDocumentNotification)
-            textDoc = J._textDocument (params :: J.DidOpenTextDocumentNotificationParams)
-            doc     = J._uri (textDoc :: J.TextDocumentItem)
+            doc  = notification ^. J.params
+                                 . non (error "impossible")
+                                 . J.textDocument
+                                 . J.uri
             fileName = drop (length ("file://"::String)) doc
         liftIO $ U.logs $ "********* fileName=" ++ show fileName
         sendDiagnostics doc (Just 0)
@@ -214,9 +216,10 @@ reactor st inp = do
 
       HandlerRequest (Core.LspFuncs _c _sf vf _pd) (Core.NotDidChangeTextDocument notification) -> do
         let
-            params  = fromJust $ J._params (notification :: J.DidChangeTextDocumentNotification)
-            textDoc = J._textDocument (params :: J.DidChangeTextDocumentParams)
-            doc     = J._uri (textDoc :: J.VersionedTextDocumentIdentifier)
+            doc  = notification ^. J.params
+                                 . non (error "impossible")
+                                 . J.textDocument
+                                 . J.uri
         mdoc <- liftIO $ vf doc
         case mdoc of
           Just (VirtualFile _version str) -> do
@@ -231,8 +234,10 @@ reactor st inp = do
       HandlerRequest (Core.LspFuncs _c _sf _vf _pd) (Core.NotDidSaveTextDocument notification) -> do
         liftIO $ U.logm "****** reactor: processing NotDidSaveTextDocument"
         let
-            params = fromJust $ J._params (notification :: J.NotificationMessage J.DidSaveTextDocumentParams)
-            J.TextDocumentIdentifier doc = J._textDocument (params :: J.DidSaveTextDocumentParams)
+            doc  = notification ^. J.params
+                                 . non (error "impossible")
+                                 . J.textDocument
+                                 . J.uri
             fileName = drop (length ("file://"::String)) doc
         liftIO $ U.logs $ "********* fileName=" ++ show fileName
         sendDiagnostics doc Nothing
@@ -241,41 +246,42 @@ reactor st inp = do
 
       HandlerRequest (Core.LspFuncs _c _sf _vf _pd) (Core.ReqRename req) -> do
         liftIO $ U.logs $ "reactor:got RenameRequest:" ++ show req
-        let params = fromJust $ J._params (req :: J.RenameRequest)
-            J.TextDocumentIdentifier doc = J._textDocument (params :: J.RenameRequestParams)
+        let
+            params = req ^. J.params . non (error "impossible")
+            doc  = params ^. J.textDocument . J.uri
             fileName = drop (length ("file://"::String)) doc
-            J.Position l c = J._position (params :: J.RenameRequestParams)
-            newName  = J._newName params
+            J.Position l c = params ^. J.position
+            newName  = params ^. J.newName
 
         let we = J.WorkspaceEdit
                     Nothing -- "changes" field is deprecated
                     (Just (J.List [])) -- populate with actual changes from the rename
-        let rspMsg = Core.makeResponseMessage (J.responseId $ J._id (req :: J.RenameRequest)) we
+        let rspMsg = Core.makeResponseMessage (J.responseId $ req ^. J.id) we
         reactorSend rspMsg
 
       -- -------------------------------
 
       HandlerRequest (Core.LspFuncs _c _sf _vf _pd) (Core.ReqHover req) -> do
         liftIO $ U.logs $ "reactor:got HoverRequest:" ++ show req
-        let J.TextDocumentPositionParams doc pos = fromJust $ J._params (req :: J.HoverRequest)
-            fileName = drop (length ("file://"::String)) $ J._uri (doc :: J.TextDocumentIdentifier)
+        let J.TextDocumentPositionParams doc pos = req ^. J.params . non (error "impossible")
+            fileName = drop (length ("file://"::String)) $ doc ^. J.uri
             J.Position l c = pos
 
         let
           ht = J.Hover ms (Just range)
           ms = [J.MarkedString "lsp-hello" "TYPE INFO" ]
           range = J.Range pos pos
-        reactorSend $ Core.makeResponseMessage (J.responseId $ J._id (req :: J.HoverRequest) ) ht
+        reactorSend $ Core.makeResponseMessage (J.responseId $ req ^. J.id) ht
 
       -- -------------------------------
 
       HandlerRequest (Core.LspFuncs _c _sf _vf _pd) (Core.ReqCodeAction req) -> do
         liftIO $ U.logs $ "reactor:got CodeActionRequest:" ++ show req
-        let params = fromJust $ J._params (req :: J.CodeActionRequest)
-            doc = J._textDocument (params :: J.CodeActionParams)
+        let params = req ^. J.params . non (error "impossible")
+            doc = params ^. J.textDocument
             -- fileName = drop (length ("file://"::String)) doc
             -- J.Range from to = J._range (params :: J.CodeActionParams)
-            J.CodeActionContext (J.List diags) = J._context (params :: J.CodeActionParams)
+            (J.List diags) = params ^. J.context . J.diagnostics
 
         let
           -- makeCommand only generates commands for diagnostics whose source is us
@@ -292,20 +298,20 @@ reactor st inp = do
               cmdparams = Just args
           makeCommand (J.Diagnostic _r _s _c _source _m  ) = []
         let body = concatMap makeCommand diags
-        reactorSend $ Core.makeResponseMessage (J.responseId $ J._id (req :: J.CodeActionRequest)) body
+        reactorSend $ Core.makeResponseMessage (J.responseId $ req ^. J.id) body
 
       -- -------------------------------
 
       HandlerRequest (Core.LspFuncs _c _sf _vf _pd) (Core.ReqExecuteCommand req) -> do
         liftIO $ U.logs $ "reactor:got ExecuteCommandRequest:" -- ++ show req
-        let params = fromJust $ J._params (req :: J.ExecuteCommandRequest)
-            command = J._command (params :: J.ExecuteCommandParams)
-            margs = J._arguments (params :: J.ExecuteCommandParams)
+        let params = req ^. J.params . non (error "impossible")
+            command = params ^. J.command
+            margs = params ^. J.arguments
 
         liftIO $ U.logs $ "reactor:ExecuteCommandRequest:margs=" ++ show margs
 
         let
-          reply v = reactorSend $ Core.makeResponseMessage (J.responseId $ J._id (req :: J.ExecuteCommandRequest)) v
+          reply v = reactorSend $ Core.makeResponseMessage (J.responseId $ req ^. J.id) v
         -- When we get a RefactorResult or HieDiff, we need to send a
         -- separate WorkspaceEdit Notification
           r = J.List [] :: J.List Int
