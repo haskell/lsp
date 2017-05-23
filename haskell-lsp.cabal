@@ -113,6 +113,7 @@ test-suite haskell-lsp-test
                      , directory
                      , hspec
                      -- , hspec-jenkins
+                     , lens >= 4.15.2
                      , yi-rope
                      -- , haskell-lsp
                      , data-default
