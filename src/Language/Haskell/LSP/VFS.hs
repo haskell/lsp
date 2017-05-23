@@ -84,7 +84,7 @@ getVfs vfs cmd jsonStr = do
 openVFS :: VFS -> J.DidOpenTextDocumentNotification -> IO VFS
 openVFS vfs (J.NotificationMessage _ _ Nothing) = return vfs
 openVFS vfs (J.NotificationMessage _ _ (Just params)) = do
-  let J.DidOpenTextDocumentNotificationParams
+  let J.DidOpenTextDocumentParams
          (J.TextDocumentItem uri _ version text) = params
   return $ Map.insert uri (VirtualFile version (Yi.fromString text)) vfs
 
