@@ -38,6 +38,7 @@ import qualified Data.List as L
 import qualified Data.Map as Map
 import qualified Data.Text as T
 import           Language.Haskell.LSP.Constant
+import           Language.Haskell.LSP.Messages
 import qualified Language.Haskell.LSP.TH.ClientCapabilities as C
 import qualified Language.Haskell.LSP.TH.DataTypesJSON      as J
 import           Language.Haskell.LSP.Utility
@@ -129,10 +130,10 @@ data Handlers =
     , completionResolveHandler       :: !(Maybe (Handler J.CompletionItemResolveRequest))
     , signatureHelpHandler           :: !(Maybe (Handler J.SignatureHelpRequest))
     , definitionHandler              :: !(Maybe (Handler J.DefinitionRequest))
-    , referencesHandler              :: !(Maybe (Handler J.FindReferencesRequest))
-    , documentHighlightHandler       :: !(Maybe (Handler J.DocumentHighlightsRequest))
-    , documentSymbolHandler          :: !(Maybe (Handler J.DocumentSymbolsRequest))
-    , workspaceSymbolHandler         :: !(Maybe (Handler J.WorkspaceSymbolsRequest))
+    , referencesHandler              :: !(Maybe (Handler J.ReferencesRequest))
+    , documentHighlightHandler       :: !(Maybe (Handler J.DocumentHighlightRequest))
+    , documentSymbolHandler          :: !(Maybe (Handler J.DocumentSymbolRequest))
+    , workspaceSymbolHandler         :: !(Maybe (Handler J.WorkspaceSymbolRequest))
     , codeActionHandler              :: !(Maybe (Handler J.CodeActionRequest))
     , codeLensHandler                :: !(Maybe (Handler J.CodeLensRequest))
     , codeLensResolveHandler         :: !(Maybe (Handler J.CodeLensResolveRequest))
@@ -150,7 +151,7 @@ data Handlers =
     , willSaveWaitUntilTextDocHandler:: !(Maybe (Handler J.WillSaveWaitUntilTextDocumentResponse))
 
     -- Notifications from the client
-    , didChangeConfigurationParamsHandler      :: !(Maybe (Handler J.DidChangeConfigurationParamsNotification))
+    , didChangeConfigurationParamsHandler      :: !(Maybe (Handler J.DidChangeConfigurationNotification))
     , didOpenTextDocumentNotificationHandler   :: !(Maybe (Handler J.DidOpenTextDocumentNotification))
     , didChangeTextDocumentNotificationHandler :: !(Maybe (Handler J.DidChangeTextDocumentNotification))
     , didCloseTextDocumentNotificationHandler  :: !(Maybe (Handler J.DidCloseTextDocumentNotification))
@@ -245,10 +246,10 @@ data OutMessage = ReqHover                    J.HoverRequest
                 | ReqCompletionItemResolve    J.CompletionItemResolveRequest
                 | ReqSignatureHelp            J.SignatureHelpRequest
                 | ReqDefinition               J.DefinitionRequest
-                | ReqFindReferences           J.FindReferencesRequest
-                | ReqDocumentHighlights       J.DocumentHighlightsRequest
-                | ReqDocumentSymbols          J.DocumentSymbolsRequest
-                | ReqWorkspaceSymbols         J.WorkspaceSymbolsRequest
+                | ReqFindReferences           J.ReferencesRequest
+                | ReqDocumentHighlights       J.DocumentHighlightRequest
+                | ReqDocumentSymbols          J.DocumentSymbolRequest
+                | ReqWorkspaceSymbols         J.WorkspaceSymbolRequest
                 | ReqCodeAction               J.CodeActionRequest
                 | ReqCodeLens                 J.CodeLensRequest
                 | ReqCodeLensResolve          J.CodeLensResolveRequest
@@ -263,7 +264,7 @@ data OutMessage = ReqHover                    J.HoverRequest
                 | RspCompletionItemResolve    J.CompletionItemResolveResponse
                 | RspSignatureHelp            J.SignatureHelpResponse
                 | RspDefinition               J.DefinitionResponse
-                | RspFindReferences           J.FindReferencesResponse
+                | RspFindReferences           J.ReferencesResponse
                 | RspDocumentHighlights       J.DocumentHighlightsResponse
                 | RspDocumentSymbols          J.DocumentSymbolsResponse
                 | RspWorkspaceSymbols         J.WorkspaceSymbolsResponse
@@ -278,7 +279,7 @@ data OutMessage = ReqHover                    J.HoverRequest
 
                 -- notifications
                 | NotInitialized                  J.InitializedNotification
-                | NotDidChangeConfigurationParams J.DidChangeConfigurationParamsNotification
+                | NotDidChangeConfigurationParams J.DidChangeConfigurationNotification
                 | NotDidOpenTextDocument          J.DidOpenTextDocumentNotification
                 | NotDidChangeTextDocument        J.DidChangeTextDocumentNotification
                 | NotDidCloseTextDocument         J.DidCloseTextDocumentNotification
@@ -432,14 +433,14 @@ sendErrorLog mv msg = sendErrorLogS (sendEvent mv) msg
 
 sendErrorLogS :: (B.ByteString -> IO ()) -> String -> IO ()
 sendErrorLogS sf msg =
-  sf $ J.encode (J.defLogMessage J.MtError msg)
+  sf $ J.encode (fmServerLogMessageNotification J.MtError msg)
 
 -- sendErrorShow :: String -> IO ()
 -- sendErrorShow msg = sendErrorShowS sendEvent msg
 
 sendErrorShowS :: (B.ByteString -> IO ()) -> String -> IO ()
 sendErrorShowS sf msg =
-  sf $ J.encode (J.defShowMessage J.MtError msg)
+  sf $ J.encode (fmServerShowMessageNotification J.MtError msg)
 
 -- ---------------------------------------------------------------------
 
