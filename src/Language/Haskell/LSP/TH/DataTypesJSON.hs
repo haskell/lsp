@@ -107,13 +107,13 @@ data RequestMessage a =
     { _jsonrpc :: String
     , _id      :: LspId
     , _method  :: String
-    , _params  :: Maybe a
+    , _params  :: a
     } deriving (Read,Show,Eq)
 
 $(deriveJSON lspOptions ''RequestMessage)
 makeFieldsNoPrefix ''RequestMessage
 
-instance Default (RequestMessage a) where
+instance Default a => Default (RequestMessage a) where
   def = RequestMessage "2.0" def def def
 
 -- ---------------------------------------------------------------------
@@ -244,14 +244,14 @@ data NotificationMessage a =
   NotificationMessage
     { _jsonrpc :: String
     , _method  :: String
-    , _params  :: Maybe a
+    , _params  :: a
     } deriving (Read,Show,Eq)
 
 $(deriveJSON lspOptions ''NotificationMessage)
 makeFieldsNoPrefix ''NotificationMessage
 
-instance Default (NotificationMessage a) where
-  def = NotificationMessage "2.0" def Nothing
+instance Default a => Default (NotificationMessage a) where
+  def = NotificationMessage "2.0" def def
 
 -- ---------------------------------------------------------------------
 {-
@@ -1432,7 +1432,7 @@ instance A.FromJSON InitializedParams where
 instance A.ToJSON InitializedParams where
   toJSON InitializedParams = A.Object mempty
 
-type InitializedNotification = NotificationMessage InitializedParams
+type InitializedNotification = NotificationMessage (Maybe InitializedParams)
 
 -- ---------------------------------------------------------------------
 {-
@@ -1458,7 +1458,7 @@ Response
 
 -}
 
-type ShutdownRequest  = RequestMessage A.Value
+type ShutdownRequest  = RequestMessage (Maybe A.Value)
 type ShutdownResponse = ResponseMessage String
 
 -- ---------------------------------------------------------------------
@@ -1488,7 +1488,7 @@ $(deriveJSON defaultOptions ''ExitNotificationParams)
 instance Default ExitNotificationParams where
   def = ExitNotificationParams
 
-type ExitNotification = NotificationMessage ExitNotificationParams
+type ExitNotification = NotificationMessage (Maybe ExitNotificationParams)
 
 -- ---------------------------------------------------------------------
 {-

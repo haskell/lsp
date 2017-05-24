@@ -82,8 +82,7 @@ getVfs vfs cmd jsonStr = do
 -- ---------------------------------------------------------------------
 
 openVFS :: VFS -> J.DidOpenTextDocumentNotification -> IO VFS
-openVFS vfs (J.NotificationMessage _ _ Nothing) = return vfs
-openVFS vfs (J.NotificationMessage _ _ (Just params)) = do
+openVFS vfs (J.NotificationMessage _ _ params) = do
   let J.DidOpenTextDocumentParams
          (J.TextDocumentItem uri _ version text) = params
   return $ Map.insert uri (VirtualFile version (Yi.fromString text)) vfs
@@ -91,8 +90,7 @@ openVFS vfs (J.NotificationMessage _ _ (Just params)) = do
 -- ---------------------------------------------------------------------
 
 changeVFS :: VFS -> J.DidChangeTextDocumentNotification -> IO VFS
-changeVFS vfs (J.NotificationMessage _ _ Nothing) = return vfs
-changeVFS vfs (J.NotificationMessage _ _ (Just params)) = do
+changeVFS vfs (J.NotificationMessage _ _ params) = do
   let
     J.DidChangeTextDocumentParams vid (J.List changes) = params
     J.VersionedTextDocumentIdentifier uri version = vid
@@ -107,8 +105,7 @@ changeVFS vfs (J.NotificationMessage _ _ (Just params)) = do
 -- ---------------------------------------------------------------------
 
 closeVFS :: VFS -> J.DidCloseTextDocumentNotification -> IO VFS
-closeVFS vfs (J.NotificationMessage _ _ Nothing) = return vfs
-closeVFS vfs (J.NotificationMessage _ _ (Just params)) = do
+closeVFS vfs (J.NotificationMessage _ _ params) = do
   let J.DidCloseTextDocumentParams (J.TextDocumentIdentifier uri) = params
   return $ Map.delete uri vfs
 
