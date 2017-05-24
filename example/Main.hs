@@ -203,7 +203,6 @@ reactor st inp = do
         liftIO $ U.logm $ "****** reactor: processing NotDidOpenTextDocument"
         let
             doc  = notification ^. J.params
-                                 . non (error "impossible")
                                  . J.textDocument
                                  . J.uri
             fileName = drop (length ("file://"::String)) doc
@@ -215,7 +214,6 @@ reactor st inp = do
       HandlerRequest (Core.LspFuncs _c _sf vf _pd) (Core.NotDidChangeTextDocument notification) -> do
         let
             doc  = notification ^. J.params
-                                 . non (error "impossible")
                                  . J.textDocument
                                  . J.uri
         mdoc <- liftIO $ vf doc
@@ -233,7 +231,6 @@ reactor st inp = do
         liftIO $ U.logm "****** reactor: processing NotDidSaveTextDocument"
         let
             doc  = notification ^. J.params
-                                 . non (error "impossible")
                                  . J.textDocument
                                  . J.uri
             fileName = drop (length ("file://"::String)) doc
@@ -245,7 +242,7 @@ reactor st inp = do
       HandlerRequest (Core.LspFuncs _c _sf _vf _pd) (Core.ReqRename req) -> do
         liftIO $ U.logs $ "reactor:got RenameRequest:" ++ show req
         let
-            params = req ^. J.params . non (error "impossible")
+            params = req ^. J.params
             doc  = params ^. J.textDocument . J.uri
             fileName = drop (length ("file://"::String)) doc
             J.Position l c = params ^. J.position
@@ -261,7 +258,7 @@ reactor st inp = do
 
       HandlerRequest (Core.LspFuncs _c _sf _vf _pd) (Core.ReqHover req) -> do
         liftIO $ U.logs $ "reactor:got HoverRequest:" ++ show req
-        let J.TextDocumentPositionParams doc pos = req ^. J.params . non (error "impossible")
+        let J.TextDocumentPositionParams doc pos = req ^. J.params
             fileName = drop (length ("file://"::String)) $ doc ^. J.uri
             J.Position l c = pos
 
@@ -275,7 +272,7 @@ reactor st inp = do
 
       HandlerRequest (Core.LspFuncs _c _sf _vf _pd) (Core.ReqCodeAction req) -> do
         liftIO $ U.logs $ "reactor:got CodeActionRequest:" ++ show req
-        let params = req ^. J.params . non (error "impossible")
+        let params = req ^. J.params
             doc = params ^. J.textDocument
             -- fileName = drop (length ("file://"::String)) doc
             -- J.Range from to = J._range (params :: J.CodeActionParams)
@@ -302,7 +299,7 @@ reactor st inp = do
 
       HandlerRequest (Core.LspFuncs _c _sf _vf _pd) (Core.ReqExecuteCommand req) -> do
         liftIO $ U.logs $ "reactor:got ExecuteCommandRequest:" -- ++ show req
-        let params = req ^. J.params . non (error "impossible")
+        let params = req ^. J.params
             command = params ^. J.command
             margs = params ^. J.arguments
 

@@ -461,9 +461,7 @@ defaultErrorHandlers mvarDat origId req = [ E.Handler someExcept ]
 initializeRequestHandler :: InitializeCallback
                          -> MVar LanguageContextData
                          -> J.InitializeRequest -> IO ()
-initializeRequestHandler _dispatcherProc _mvarCtx (J.RequestMessage _ _origId _ Nothing) = do
-  logs "haskell-lsp:initializeRequestHandler: no params in message, ignoring"
-initializeRequestHandler dispatcherProc mvarCtx req@(J.RequestMessage _ origId _ (Just params)) =
+initializeRequestHandler dispatcherProc mvarCtx req@(J.RequestMessage _ origId _ params) =
   flip E.catches (defaultErrorHandlers mvarCtx (J.responseId origId) req) $ do
 
     ctx0 <- readMVar mvarCtx
