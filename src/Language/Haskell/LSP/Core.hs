@@ -59,6 +59,9 @@ import qualified System.Log.Logger as L
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
 -- ---------------------------------------------------------------------
 
+-- | A function to send a message to the client
+type SendFunc = forall a. (J.ToJSON a => a -> IO ())
+
 -- | state used by the LSP dispatcher to manage the message loop
 data LanguageContextData =
   LanguageContextData {
@@ -66,7 +69,7 @@ data LanguageContextData =
   , resRootPath            :: !(Maybe FilePath)
   , resHandlers            :: !Handlers
   , resOptions             :: !Options
-  , resSendResponse        :: !(BSL.ByteString -> IO ())
+  , resSendResponse        :: !SendFunc
   , resVFS                 :: !VFS
   , resDiagnostics         :: !DiagnosticStore
   , resLspFuncs            :: LspFuncs -- NOTE: Cannot be strict, lazy initialization
@@ -90,9 +93,6 @@ data Options =
 
 instance Default Options where
   def = Options Nothing Nothing Nothing Nothing Nothing Nothing Nothing
-
--- | A function to send a message to the client
-type SendFunc = (BSL.ByteString -> IO ())
 
 -- | A function to publish diagnostics. It aggregates all diagnostics pertaining
 -- to a particular version of a document, by source, and sends a
@@ -324,7 +324,7 @@ _ERR_MSG_URL = [ "`stack update` and install new haskell-lsp."
 --
 --
 defaultLanguageContextData :: Handlers -> Options -> LspFuncs -> LanguageContextData
-defaultLanguageContextData h o lf = LanguageContextData _INITIAL_RESPONSE_SEQUENCE Nothing h o BSL.putStr mempty mempty lf
+defaultLanguageContextData h o lf = LanguageContextData _INITIAL_RESPONSE_SEQUENCE Nothing h o (BSL.putStr . J.encode) mempty mempty lf
 
 -- ---------------------------------------------------------------------
 
@@ -405,12 +405,12 @@ makeResponseError origId err = J.ResponseMessage "2.0" origId Nothing (Just err)
 -- ---------------------------------------------------------------------
 -- |
 --
-sendEvent :: MVar LanguageContextData -> BSL.ByteString -> IO ()
+sendEvent :: J.ToJSON a => MVar LanguageContextData -> a -> IO ()
 sendEvent mvarCtx str = sendResponse mvarCtx str
 
 -- |
 --
-sendResponse :: MVar LanguageContextData -> BSL.ByteString -> IO ()
+sendResponse :: J.ToJSON a => MVar LanguageContextData -> a -> IO ()
 sendResponse mvarCtx str = do
   ctx <- readMVar mvarCtx
   resSendResponse ctx str
@@ -423,24 +423,24 @@ sendResponse mvarCtx str = do
 sendErrorResponse :: MVar LanguageContextData -> J.LspIdRsp -> String -> IO ()
 sendErrorResponse mv origId msg = sendErrorResponseS (sendEvent mv) origId J.InternalError msg
 
-sendErrorResponseS :: (B.ByteString -> IO ()) -> J.LspIdRsp -> J.ErrorCode -> String -> IO ()
+sendErrorResponseS ::  SendFunc -> J.LspIdRsp -> J.ErrorCode -> String -> IO ()
 sendErrorResponseS sf origId err msg = do
-  sf $ J.encode (J.ResponseMessage "2.0" origId Nothing
-                         (Just $ J.ResponseError err msg Nothing) :: J.ErrorResponse)
+  sf $ (J.ResponseMessage "2.0" origId Nothing
+                (Just $ J.ResponseError err msg Nothing) :: J.ErrorResponse)
 
 sendErrorLog :: MVar LanguageContextData -> String -> IO ()
 sendErrorLog mv msg = sendErrorLogS (sendEvent mv) msg
 
-sendErrorLogS :: (B.ByteString -> IO ()) -> String -> IO ()
+sendErrorLogS :: SendFunc -> String -> IO ()
 sendErrorLogS sf msg =
-  sf $ J.encode (fmServerLogMessageNotification J.MtError msg)
+  sf $ fmServerLogMessageNotification J.MtError msg
 
 -- sendErrorShow :: String -> IO ()
 -- sendErrorShow msg = sendErrorShowS sendEvent msg
 
-sendErrorShowS :: (B.ByteString -> IO ()) -> String -> IO ()
+sendErrorShowS :: SendFunc -> String -> IO ()
 sendErrorShowS sf msg =
-  sf $ J.encode (fmServerShowMessageNotification J.MtError msg)
+  sf $ fmServerShowMessageNotification J.MtError msg
 
 -- ---------------------------------------------------------------------
 
@@ -489,7 +489,7 @@ initializeRequestHandler dispatcherProc mvarCtx req@(J.RequestMessage _ origId _
 
     case initializationResult of
       Just errResp -> do
-        sendResponse mvarCtx $ J.encode $ makeResponseError (J.responseId origId) errResp
+        sendResponse mvarCtx $ makeResponseError (J.responseId origId) errResp
 
       Nothing -> do
 
@@ -526,7 +526,7 @@ initializeRequestHandler dispatcherProc mvarCtx req@(J.RequestMessage _ origId _
           -- TODO: wrap this up into a fn to create a response message
           res  = J.ResponseMessage "2.0" (J.responseId origId) (Just $ J.InitializeResponseCapabilities capa) Nothing
 
-        sendResponse mvarCtx $ J.encode res
+        sendResponse mvarCtx res
 
 -- |
 --
@@ -535,7 +535,7 @@ shutdownRequestHandler mvarCtx req@(J.RequestMessage _ origId _ _) =
   flip E.catches (defaultErrorHandlers mvarCtx (J.responseId origId) req) $ do
   let res  = makeResponseMessage (J.responseId origId) ("ok"::String)
 
-  sendResponse mvarCtx $ J.encode res
+  sendResponse mvarCtx res
 
 -- ---------------------------------------------------------------------
 
@@ -550,7 +550,7 @@ publishDiagnostics mvarDat uri mversion diags = do
   case mdp of
     Nothing -> return ()
     Just params -> do
-      (resSendResponse ctx) $ J.encode $ J.NotificationMessage "2.0" "textDocument/publishDiagnostics" (Just params)
+      (resSendResponse ctx) $ J.NotificationMessage "2.0" "textDocument/publishDiagnostics" (Just params)
 
 -- |=====================================================================
 --

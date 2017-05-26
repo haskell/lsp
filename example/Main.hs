@@ -115,7 +115,7 @@ reactorSend msg = do
   s <- get
   case lspFuncs s of
     Nothing -> error "reactorSend: send function not initialised yet"
-    Just lf -> liftIO $ (Core.sendFunc lf) (J.encode msg)
+    Just lf -> liftIO $ Core.sendFunc lf msg
 
 -- ---------------------------------------------------------------------
 
