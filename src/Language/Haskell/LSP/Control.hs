@@ -14,6 +14,7 @@ import           Control.Concurrent
 import           Control.Concurrent.STM.TChan
 import           Control.Monad
 import           Control.Monad.STM
+import qualified Data.Aeson as J
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as B
 import           Data.Monoid
@@ -43,7 +44,8 @@ run dp h o = do
   _rhpid <- forkIO $ sendServer cout
 
 
-  let sendFunc str = atomically $ writeTChan cout str
+  let sendFunc :: Core.SendFunc
+      sendFunc str = atomically $ writeTChan cout (J.encode str)
   let lf = error "LifeCycle error, ClientCapabilites not set yet via initialize maessage"
 
   mvarDat <- newMVar ((Core.defaultLanguageContextData h o lf :: Core.LanguageContextData)
