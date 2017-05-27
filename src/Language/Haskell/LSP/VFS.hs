@@ -4,7 +4,7 @@
 
 {-
 
-Manage the "textDocument/didChange" messages to keep a local copy of the files
+Manage the J.TextDocumentDidChange messages to keep a local copy of the files
 in the client workspace, so that tools at the server can operate on them.
 -}
 module Language.Haskell.LSP.VFS
@@ -18,8 +18,7 @@ module Language.Haskell.LSP.VFS
 
   -- * for tests
   , sortChanges
-  , deleteChars
-  , addChars
+  , deleteChars , addChars
   , changeChars
   , yiSplitAt
   ) where
@@ -47,31 +46,27 @@ type VFS = Map.Map J.Uri VirtualFile
 
 -- ---------------------------------------------------------------------
 
-getVfs :: VFS -> String -> B.ByteString -> IO VFS
-getVfs vfs cmd jsonStr = do
-  -- TODO: this approach is horrible, as we have already deserialised the
-  -- message by the time we get here. Need to sort out the types so the call
-  -- works cleanly.
-  -- Even just pass in the existing JSON Value, rather than the ByteString.
+getVfs :: VFS -> J.ClientMethod -> J.Value -> IO VFS
+getVfs vfs cmd json = do
   case cmd of
-    "textDocument/didOpen" -> do
-      case J.eitherDecode jsonStr of
-        Right (m::J.DidOpenTextDocumentNotification) -> openVFS vfs m
-        Left _ -> do
+    J.TextDocumentDidOpen -> do
+      case J.fromJSON json of
+        J.Success (m::J.DidOpenTextDocumentNotification) -> openVFS vfs m
+        J.Error _ -> do
           logs $ "haskell-lsp:getVfs:wrong type processing" ++ show cmd
           return vfs
 
-    "textDocument/didChange" -> do
-      case J.eitherDecode jsonStr of
-        Right (m::J.DidChangeTextDocumentNotification) -> changeVFS vfs m
-        Left _ -> do
+    J.TextDocumentDidChange -> do
+      case J.fromJSON json of
+        J.Success (m::J.DidChangeTextDocumentNotification) -> changeVFS vfs m
+        J.Error _ -> do
           logs $ "haskell-lsp:getVfs:wrong type processing" ++ show cmd
           return vfs
 
-    "textDocument/didClose" -> do
-      case J.eitherDecode jsonStr of
-        Right (m::J.DidCloseTextDocumentNotification) -> closeVFS vfs m
-        Left _ -> do
+    J.TextDocumentDidClose -> do
+      case J.fromJSON json of
+        J.Success (m::J.DidCloseTextDocumentNotification) -> closeVFS vfs m
+        J.Error _ -> do
           logs $ "haskell-lsp:getVfs:wrong type processing" ++ show cmd
           return vfs
 
