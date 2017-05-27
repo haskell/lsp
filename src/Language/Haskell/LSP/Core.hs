@@ -118,7 +118,6 @@ type InitializeCallback = LspFuncs -> IO (Maybe J.ResponseError)
 -- 'a', a function to send a reply message once encoded as a ByteString, and a
 -- received message of type 'b'
 type Handler b = LspFuncs -> b -> IO ()
--- TODO: change the sendFunc to take a ToJSON type instead
 
 -- | Callbacks from the language server to the language handler
 data Handlers =
@@ -176,51 +175,52 @@ instance Default Handlers where
 -- ---------------------------------------------------------------------
 
 handlerMap :: Handlers
-           -> Map.Map J.ClientMethod (MVar LanguageContextData -> J.ClientMethod -> J.Value -> IO ())
+           -> Map.Map J.ClientMethod (MVar LanguageContextData -> J.Value -> IO ())
 handlerMap h = Map.fromList
-  [ (J.TextDocumentCompletion,        hh $ completionHandler h)
-  , (J.CompletionItemResolve,         hh $ completionResolveHandler h)
-  , (J.TextDocumentHover,             hh $ hoverHandler h)
-  , (J.TextDocumentSignatureHelp,     hh $ signatureHelpHandler h)
-  , (J.TextDocumentDefinition,        hh $ definitionHandler h)
-  , (J.TextDocumentReferences,        hh $ referencesHandler h)
-  , (J.TextDocumentDocumentHighlight, hh $ documentHighlightHandler h)
-  , (J.TextDocumentDocumentSymbol,    hh $ documentSymbolHandler h)
-  , (J.WorkspaceSymbol,               hh $ workspaceSymbolHandler h)
-  , (J.TextDocumentCodeAction,        hh $ codeActionHandler h)
-  , (J.TextDocumentCodeLens,          hh $ codeLensHandler h)
-  , (J.CodeLensResolve,               hh $ codeLensResolveHandler h)
-  , (J.TextDocumentFormatting,        hh $ documentFormattingHandler h)
-  , (J.TextDocumentRangeFormatting,   hh $ documentRangeFormattingHandler h)
-  , (J.TextDocumentOnTypeFormatting,  hh $ documentTypeFormattingHandler h)
-  , (J.TextDocumentRename,            hh $ renameHandler h)
-  , (J.WorkspaceExecuteCommand,       hh $ executeCommandHandler h)
+  [ (J.TextDocumentCompletion,          hh nop $ completionHandler h)
+  , (J.CompletionItemResolve,           hh nop $ completionResolveHandler h)
+  , (J.TextDocumentHover,               hh nop $ hoverHandler h)
+  , (J.TextDocumentSignatureHelp,       hh nop $ signatureHelpHandler h)
+  , (J.TextDocumentDefinition,          hh nop $ definitionHandler h)
+  , (J.TextDocumentReferences,          hh nop $ referencesHandler h)
+  , (J.TextDocumentDocumentHighlight,   hh nop $ documentHighlightHandler h)
+  , (J.TextDocumentDocumentSymbol,      hh nop $ documentSymbolHandler h)
+  , (J.WorkspaceSymbol,                 hh nop $ workspaceSymbolHandler h)
+  , (J.TextDocumentCodeAction,          hh nop $ codeActionHandler h)
+  , (J.TextDocumentCodeLens,            hh nop $ codeLensHandler h)
+  , (J.CodeLensResolve,                 hh nop $ codeLensResolveHandler h)
+  , (J.TextDocumentFormatting,          hh nop $ documentFormattingHandler h)
+  , (J.TextDocumentRangeFormatting,     hh nop $ documentRangeFormattingHandler h)
+  , (J.TextDocumentOnTypeFormatting,    hh nop $ documentTypeFormattingHandler h)
+  , (J.TextDocumentRename,              hh nop $ renameHandler h)
+  , (J.WorkspaceExecuteCommand,         hh nop $ executeCommandHandler h)
 
-  , (J.Initialized,                      hh $ initializedHandler h)
-  , (J.WorkspaceDidChangeConfiguration, hh $ didChangeConfigurationParamsHandler h)
-  , (J.TextDocumentDidOpen,             hh $ didOpenTextDocumentNotificationHandler h)
-  , (J.TextDocumentDidChange,           hh $ didChangeTextDocumentNotificationHandler h )
-  , (J.TextDocumentDidClose,            hh $ didCloseTextDocumentNotificationHandler h )
-  , (J.TextDocumentDidSave,             hh $ didSaveTextDocumentNotificationHandler h)
-  , (J.WorkspaceDidChangeWatchedFiles,  hh $ didChangeWatchedFilesNotificationHandler h)
+  , (J.Initialized,                     hh nop $ initializedHandler h)
+  , (J.WorkspaceDidChangeConfiguration, hh nop $ didChangeConfigurationParamsHandler h)
+  , (J.TextDocumentDidOpen,             hh openVFS $ didOpenTextDocumentNotificationHandler h)
+  , (J.TextDocumentDidChange,           hh changeVFS $ didChangeTextDocumentNotificationHandler h )
+  , (J.TextDocumentDidClose,            hh closeVFS $ didCloseTextDocumentNotificationHandler h )
+  , (J.TextDocumentDidSave,             hh nop $ didSaveTextDocumentNotificationHandler h)
+  , (J.WorkspaceDidChangeWatchedFiles,  hh nop $ didChangeWatchedFilesNotificationHandler h)
 
-  , (J.CancelRequest,                  hh $ cancelNotificationHandler h)
+  , (J.CancelRequest,                   hh nop $ cancelNotificationHandler h)
   ]
+  where nop = const . return
 
 -- ---------------------------------------------------------------------
 
 -- | Adapter from the normal handlers exposed to the library users and the
 -- internal message loop
 hh :: forall b. (J.FromJSON b)
-   => Maybe (Handler b) -> MVar LanguageContextData -> J.ClientMethod -> J.Value -> IO ()
-hh Nothing = \mvarDat cmd json -> do
-      let msg = unwords ["haskell-lsp:no handler for.", B.unpack (J.encode cmd), show json]
+   => (VFS -> b -> IO VFS) -> Maybe (Handler b) -> MVar LanguageContextData -> J.Value -> IO ()
+hh _ Nothing = \mvarDat json -> do
+      let msg = unwords ["haskell-lsp:no handler for.", show json]
       sendErrorLog mvarDat msg
-hh (Just h) = \mvarDat cmd json -> do
+hh getVfs (Just h) = \mvarDat json -> do
       case J.fromJSON json of
         J.Success req -> do
           ctx <- readMVar mvarDat
-          vfs' <- getVfs (resVFS ctx) cmd json
+          vfs' <- getVfs (resVFS ctx) req
           modifyMVar_ mvarDat (\c -> return c {resVFS = vfs'})
           h  (resLspFuncs ctx) req
         J.Error  err -> do
@@ -398,9 +398,9 @@ handleRequest dispatcherProc mvarDat contLenStr' jsonStr' = do
       ctx <- readMVar mvarDat
       let h = resHandlers ctx
       case Map.lookup cmd (handlerMap h) of
-        Just f -> f mvarDat cmd json
+        Just f -> f mvarDat json
         Nothing -> do
-          let msg = unwords ["haskell-lsp:unknown message received:method='" ++ (B.unpack $ J.encode cmd) ++ "',", lbs2str contLenStr', show json]
+          let msg = unwords ["haskell-lsp:unknown message received:method='" ++ B.unpack (J.encode cmd) ++ "',", lbs2str contLenStr', show json]
           sendErrorLog mvarDat msg
 
 -- ---------------------------------------------------------------------

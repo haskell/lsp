@@ -11,7 +11,6 @@ module Language.Haskell.LSP.VFS
   (
     VFS
   , VirtualFile(..)
-  , getVfs
   , openVFS
   , changeVFS
   , closeVFS
@@ -43,36 +42,6 @@ data VirtualFile =
     } deriving (Show)
 
 type VFS = Map.Map J.Uri VirtualFile
-
--- ---------------------------------------------------------------------
-
-getVfs :: VFS -> J.ClientMethod -> J.Value -> IO VFS
-getVfs vfs cmd json = do
-  case cmd of
-    J.TextDocumentDidOpen -> do
-      case J.fromJSON json of
-        J.Success (m::J.DidOpenTextDocumentNotification) -> openVFS vfs m
-        J.Error _ -> do
-          logs $ "haskell-lsp:getVfs:wrong type processing" ++ show cmd
-          return vfs
-
-    J.TextDocumentDidChange -> do
-      case J.fromJSON json of
-        J.Success (m::J.DidChangeTextDocumentNotification) -> changeVFS vfs m
-        J.Error _ -> do
-          logs $ "haskell-lsp:getVfs:wrong type processing" ++ show cmd
-          return vfs
-
-    J.TextDocumentDidClose -> do
-      case J.fromJSON json of
-        J.Success (m::J.DidCloseTextDocumentNotification) -> closeVFS vfs m
-        J.Error _ -> do
-          logs $ "haskell-lsp:getVfs:wrong type processing" ++ show cmd
-          return vfs
-
-    _ -> do
-      -- logs $ "haskell-lsp:getVfs:not processing" ++ show cmd
-      return vfs
 
 -- ---------------------------------------------------------------------
 
