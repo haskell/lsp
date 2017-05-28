@@ -327,7 +327,7 @@ defaultLanguageContextData h o lf = LanguageContextData _INITIAL_RESPONSE_SEQUEN
 
 handleRequest :: InitializeCallback
               -> MVar LanguageContextData -> BSL.ByteString -> BSL.ByteString -> IO ()
-handleRequest dispatcherProc mvarDat contLenStr' jsonStr' = do
+handleRequest dispatcherProc mvarDat contLenStr jsonStr = do
   {-
   Message Types we must handle are the following
 
@@ -337,9 +337,9 @@ handleRequest dispatcherProc mvarDat contLenStr' jsonStr' = do
 
   -}
 
-  case J.eitherDecode jsonStr' :: Either String J.Object of
+  case J.eitherDecode jsonStr :: Either String J.Object of
     Left  err -> do
-      let msg =  unwords [ "haskell-lsp:incoming message parse error.", lbs2str contLenStr', lbs2str jsonStr', show err]
+      let msg =  unwords [ "haskell-lsp:incoming message parse error.", lbs2str contLenStr, lbs2str jsonStr, show err]
               ++ L.intercalate "\n" ("" : "" : _ERR_MSG_URL)
               ++ "\n"
       sendErrorLog mvarDat msg
@@ -349,21 +349,21 @@ handleRequest dispatcherProc mvarDat contLenStr' jsonStr' = do
         Just cmd@(J.String s) -> case J.fromJSON cmd of
                                    J.Success m -> handle (J.Object o) m
                                    J.Error _ -> do
-                                     let msg = unwords ["haskell-lsp:unknown message received:method='" ++ T.unpack s ++ "',", lbs2str contLenStr', lbs2str jsonStr']
+                                     let msg = unwords ["haskell-lsp:unknown message received:method='" ++ T.unpack s ++ "',", lbs2str contLenStr, lbs2str jsonStr]
                                      sendErrorLog mvarDat msg
         Just oops -> logs $ "haskell-lsp:got strange method param, ignoring:" ++ show oops
         Nothing -> do
-          logs $ "haskell-lsp:Got reply message:" ++ show jsonStr'
+          logs $ "haskell-lsp:Got reply message:" ++ show jsonStr
           handleResponse (J.Object o)
 
   where
     handleResponse json = do
       ctx <- readMVar mvarDat
       case responseHandler $ resHandlers ctx of
-        Nothing -> error "fatal error: responseHandler is not defined"
+        Nothing -> sendErrorLog mvarDat $ "haskell-lsp: responseHandler is not defined, ignoring response " ++ lbs2str jsonStr
         Just h -> case J.fromJSON json of
           J.Success res -> h (resLspFuncs ctx) res
-          J.Error err -> let msg = unwords $ ["haskell-lsp:parse error.", show json, show err] ++ _ERR_MSG_URL
+          J.Error err -> let msg = unwords $ ["haskell-lsp:response parse error.", lbs2str jsonStr, show err] ++ _ERR_MSG_URL
                            in sendErrorLog mvarDat msg
     helper :: J.FromJSON b => J.Value -> (MVar LanguageContextData -> b -> IO ())
            -> IO ()
@@ -371,7 +371,7 @@ handleRequest dispatcherProc mvarDat contLenStr' jsonStr' = do
       J.Success req -> do
         requestHandler mvarDat req
       J.Error  err -> do
-        let msg = unwords $ ["haskell-lsp:parse error.", lbs2str contLenStr', lbs2str jsonStr', show err] ++ _ERR_MSG_URL
+        let msg = unwords $ ["haskell-lsp:parse error.", lbs2str contLenStr, lbs2str jsonStr, show err] ++ _ERR_MSG_URL
         sendErrorLog mvarDat msg
 
     -- ---------------------------------
@@ -400,7 +400,7 @@ handleRequest dispatcherProc mvarDat contLenStr' jsonStr' = do
       case Map.lookup cmd (handlerMap h) of
         Just f -> f mvarDat json
         Nothing -> do
-          let msg = unwords ["haskell-lsp:unknown message received:method='" ++ B.unpack (J.encode cmd) ++ "',", lbs2str contLenStr', show json]
+          let msg = unwords ["haskell-lsp:unknown message received:method='" ++ B.unpack (J.encode cmd) ++ "',", lbs2str contLenStr, lbs2str jsonStr]
           sendErrorLog mvarDat msg
 
 -- ---------------------------------------------------------------------

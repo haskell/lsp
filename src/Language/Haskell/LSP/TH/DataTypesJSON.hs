@@ -94,152 +94,169 @@ makeFieldsNoPrefix ''Request
 
 -- ---------------------------------------------------------------------
 
+-- Client Methods
 data ClientMethod =
-  -- Client Methods
-   TextDocumentCompletion
+ -- General
+   Initialize
+ | Initialized
+ | Shutdown
+ | Exit
+ | CancelRequest
+ -- Workspace
+ | WorkspaceDidChangeConfiguration
+ | WorkspaceDidChangeWatchedFiles
+ | WorkspaceSymbol
+ | WorkspaceExecuteCommand
+ -- Document
+ | TextDocumentDidOpen
+ | TextDocumentDidChange
+ | TextDocumentWillSave
+ | TextDocumentWillSaveWaitUntil
+ | TextDocumentDidSave
+ | TextDocumentDidClose
+ | TextDocumentCompletion
  | CompletionItemResolve
  | TextDocumentHover
  | TextDocumentSignatureHelp
- | TextDocumentDefinition
  | TextDocumentReferences
  | TextDocumentDocumentHighlight
  | TextDocumentDocumentSymbol
- | WorkspaceSymbol
- | TextDocumentCodeAction
- | TextDocumentCodeLens
- | CodeLensResolve
  | TextDocumentFormatting
  | TextDocumentRangeFormatting
  | TextDocumentOnTypeFormatting
- | TextDocumentRename
- | WorkspaceExecuteCommand
- | Initialized
- | WorkspaceDidChangeConfiguration
- | TextDocumentDidOpen
- | TextDocumentDidChange
- | TextDocumentDidClose
- | TextDocumentDidSave
- | TextDocumentWillSave
- | TextDocumentWillSaveWaitUntil
+ | TextDocumentDefinition
+ | TextDocumentCodeAction
+ | TextDocumentCodeLens
+ | CodeLensResolve
  | TextDocumentDocumentLink
  | DocumentLinkResolve
- | WorkspaceDidChangeWatchedFiles
- | CancelRequest
- -- Server life cycle handlers
- | Initialize
- | Shutdown
- | Exit
+ | TextDocumentRename
  -- $/xxx messages
  -- Implementation Dependent, can be ignored
- | SetTraceNotification
  | Misc T.Text
    deriving (Eq,Ord,Read,Show)
 
 instance A.FromJSON ClientMethod where
+  -- General
+  parseJSON (A.String "initialize")                       = return Initialize
+  parseJSON (A.String "initialized")                      = return Initialized
+  parseJSON (A.String "shutdown")                         = return Shutdown
+  parseJSON (A.String "exit")                             = return Exit
+  parseJSON (A.String "$/cancelRequest")                  = return CancelRequest
+ -- Workspace
+  parseJSON (A.String "workspace/didChangeConfiguration") = return WorkspaceDidChangeConfiguration
+  parseJSON (A.String "workspace/didChangeWatchedFiles")  = return WorkspaceDidChangeWatchedFiles
+  parseJSON (A.String "workspace/symbol")                 = return WorkspaceSymbol
+  parseJSON (A.String "workspace/executeCommand")         = return WorkspaceExecuteCommand
+ -- Document
+  parseJSON (A.String "textDocument/didOpen")             = return TextDocumentDidOpen
+  parseJSON (A.String "textDocument/didChange")           = return TextDocumentDidChange
+  parseJSON (A.String "textDocument/willSave")            = return TextDocumentWillSave
+  parseJSON (A.String "textDocument/willSaveWaitUntil")   = return TextDocumentWillSaveWaitUntil
+  parseJSON (A.String "textDocument/didSave")             = return TextDocumentDidSave
+  parseJSON (A.String "textDocument/didClose")            = return TextDocumentDidClose
   parseJSON (A.String "textDocument/completion")          = return TextDocumentCompletion
   parseJSON (A.String "completionItem/resolve")           = return CompletionItemResolve
   parseJSON (A.String "textDocument/hover")               = return TextDocumentHover
   parseJSON (A.String "textDocument/signatureHelp")       = return TextDocumentSignatureHelp
-  parseJSON (A.String "textDocument/definition")          = return TextDocumentDefinition
   parseJSON (A.String "textDocument/references")          = return TextDocumentReferences
   parseJSON (A.String "textDocument/documentHighlight")   = return TextDocumentDocumentHighlight
   parseJSON (A.String "textDocument/documentSymbol")      = return TextDocumentDocumentSymbol
-  parseJSON (A.String "workspace/symbol")                 = return WorkspaceSymbol
-  parseJSON (A.String "textDocument/codeAction")          = return TextDocumentCodeAction
-  parseJSON (A.String "textDocument/codeLens")            = return TextDocumentCodeLens
-  parseJSON (A.String "codeLens/resolve")                 = return CodeLensResolve
   parseJSON (A.String "textDocument/formatting")          = return TextDocumentFormatting
   parseJSON (A.String "textDocument/rangeFormatting")     = return TextDocumentRangeFormatting
   parseJSON (A.String "textDocument/onTypeFormatting")    = return TextDocumentOnTypeFormatting
-  parseJSON (A.String "textDocument/rename")              = return TextDocumentRename
-  parseJSON (A.String "workspace/executeCommand")         = return WorkspaceExecuteCommand
-  parseJSON (A.String "initialized")                      = return Initialized
-  parseJSON (A.String "workspace/didChangeConfiguration") = return WorkspaceDidChangeConfiguration
-  parseJSON (A.String "textDocument/didOpen")             = return TextDocumentDidOpen
-  parseJSON (A.String "textDocument/didChange")           = return TextDocumentDidChange
-  parseJSON (A.String "textDocument/didClose")            = return TextDocumentDidClose
-  parseJSON (A.String "textDocument/didSave")             = return TextDocumentDidSave
-  parseJSON (A.String "textDocument/WillSave")            = return TextDocumentWillSave
-  parseJSON (A.String "textDocument/WillSaveWaitUntil")   = return TextDocumentWillSaveWaitUntil
-  parseJSON (A.String "workspace/didChangeWatchedFiles")  = return WorkspaceDidChangeWatchedFiles
-  parseJSON (A.String "textDocument/DocumentLink")        = return TextDocumentDocumentLink
+  parseJSON (A.String "textDocument/definition")          = return TextDocumentDefinition
+  parseJSON (A.String "textDocument/codeAction")          = return TextDocumentCodeAction
+  parseJSON (A.String "textDocument/codeLens")            = return TextDocumentCodeLens
+  parseJSON (A.String "codeLens/resolve")                 = return CodeLensResolve
+  parseJSON (A.String "textDocument/documentLink")        = return TextDocumentDocumentLink
   parseJSON (A.String "documentLink/resolve")             = return DocumentLinkResolve
-  parseJSON (A.String "$/cancelRequest")                  = return CancelRequest
-  parseJSON (A.String "$/setTraceNotification")           = return SetTraceNotification
-  parseJSON (A.String "initialize")                       = return Initialize
-  parseJSON (A.String "shutdown")                         = return Shutdown
-  parseJSON (A.String "exit")                             = return Exit
+  parseJSON (A.String "textDocument/rename")              = return TextDocumentRename
   parseJSON (A.String x)                                  = if T.isPrefixOf "$/" x
                                                                then return $ Misc (T.drop 2 x)
                                                             else mempty
   parseJSON _                                             = mempty
 
 instance A.ToJSON ClientMethod where
+  -- General
+  toJSON Initialize                      = A.String "initialize"
+  toJSON Initialized                     = A.String "initialized"
+  toJSON Shutdown                        = A.String "shutdown"
+  toJSON Exit                            = A.String "exit"
+  toJSON CancelRequest                   = A.String "$/cancelRequest"
+  -- Workspace
+  toJSON WorkspaceDidChangeConfiguration = A.String "workspace/didChangeConfiguration"
+  toJSON WorkspaceDidChangeWatchedFiles  = A.String "workspace/didChangeWatchedFiles"
+  toJSON WorkspaceSymbol                 = A.String "workspace/symbol"
+  toJSON WorkspaceExecuteCommand         = A.String "workspace/executeCommand"
+  -- Document
+  toJSON TextDocumentDidOpen             = A.String "textDocument/didOpen"
+  toJSON TextDocumentDidChange           = A.String "textDocument/didChange"
+  toJSON TextDocumentWillSave            = A.String "textDocument/willSave"
+  toJSON TextDocumentWillSaveWaitUntil   = A.String "textDocument/willSaveWaitUntil"
+  toJSON TextDocumentDidSave             = A.String "textDocument/didSave"
+  toJSON TextDocumentDidClose            = A.String "textDocument/didClose"
   toJSON TextDocumentCompletion          = A.String "textDocument/completion"
   toJSON CompletionItemResolve           = A.String "completionItem/resolve"
   toJSON TextDocumentHover               = A.String "textDocument/hover"
   toJSON TextDocumentSignatureHelp       = A.String "textDocument/signatureHelp"
-  toJSON TextDocumentDefinition          = A.String "textDocument/definition"
   toJSON TextDocumentReferences          = A.String "textDocument/references"
   toJSON TextDocumentDocumentHighlight   = A.String "textDocument/documentHighlight"
   toJSON TextDocumentDocumentSymbol      = A.String "textDocument/documentSymbol"
-  toJSON WorkspaceSymbol                 = A.String "workspace/symbol"
-  toJSON TextDocumentCodeAction          = A.String "textDocument/codeAction"
-  toJSON TextDocumentCodeLens            = A.String "textDocument/codeLens"
-  toJSON CodeLensResolve                 = A.String "codeLens/resolve"
   toJSON TextDocumentFormatting          = A.String "textDocument/formatting"
   toJSON TextDocumentRangeFormatting     = A.String "textDocument/rangeFormatting"
   toJSON TextDocumentOnTypeFormatting    = A.String "textDocument/onTypeFormatting"
+  toJSON TextDocumentDefinition          = A.String "textDocument/definition"
+  toJSON TextDocumentCodeAction          = A.String "textDocument/codeAction"
+  toJSON TextDocumentCodeLens            = A.String "textDocument/codeLens"
+  toJSON CodeLensResolve                 = A.String "codeLens/resolve"
   toJSON TextDocumentRename              = A.String "textDocument/rename"
-  toJSON WorkspaceExecuteCommand         = A.String "workspace/executeCommand"
-  toJSON Initialized                     = A.String "initialized"
-  toJSON WorkspaceDidChangeConfiguration = A.String "workspace/didChangeConfiguration"
-  toJSON TextDocumentDidOpen             = A.String "textDocument/didOpen"
-  toJSON TextDocumentDidChange           = A.String "textDocument/didChange"
-  toJSON TextDocumentDidClose            = A.String "textDocument/didClose"
-  toJSON TextDocumentDidSave             = A.String "textDocument/didSave"
-  toJSON TextDocumentWillSave            = A.String "textDocument/WillSave"
-  toJSON TextDocumentWillSaveWaitUntil   = A.String "textDocument/WillSaveWaitUntil"
-  toJSON TextDocumentDocumentLink        = A.String "textDocument/DocumentLink"
+  toJSON TextDocumentDocumentLink        = A.String "textDocument/documentLink"
   toJSON DocumentLinkResolve             = A.String "documentLink/resolve"
-  toJSON WorkspaceDidChangeWatchedFiles  = A.String "workspace/didChangeWatchedFiles"
-  toJSON CancelRequest                   = A.String "$/cancelRequest"
-  toJSON SetTraceNotification            = A.String "$/setTraceNotification"
   toJSON (Misc xs)                       = A.String $ "$/" <> xs
-  toJSON Initialize                      = A.String "initialize"
-  toJSON Shutdown                        = A.String "shutdown"
-  toJSON Exit                            = A.String "exit"
 
 data ServerMethod =
+  -- Window
     WindowShowMessage
   | WindowShowMessageRequest
   | WindowLogMessage
   | TelemetryEvent
+  -- Client
   | ClientRegisterCapability
   | ClientUnregisterCapability
+  -- Workspace
   | WorkspaceApplyEdit
+  -- Document
   | TextDocumentPublishDiagnostics
    deriving (Eq,Ord,Read,Show)
 
 instance A.FromJSON ServerMethod where
+  -- Window
   parseJSON (A.String "window/showMessage")              = return WindowShowMessage
   parseJSON (A.String "window/showMessageRequest")       = return WindowShowMessageRequest
   parseJSON (A.String "window/logMessage")               = return WindowLogMessage
   parseJSON (A.String "telemetry/event")                 = return TelemetryEvent
+  -- Client
   parseJSON (A.String "client/registerCapability")       = return ClientRegisterCapability
   parseJSON (A.String "client/unregisterCapability")     = return ClientUnregisterCapability
+  -- Workspace
   parseJSON (A.String "workspace/applyEdit")             = return WorkspaceApplyEdit
+  -- Document
   parseJSON (A.String "textDocument/publishDiagnostics") = return TextDocumentPublishDiagnostics
   parseJSON _                                            = mempty
 
 instance A.ToJSON ServerMethod where
+  -- Window
   toJSON WindowShowMessage = A.String "window/showMessage"
   toJSON WindowShowMessageRequest = A.String "window/showMessageRequest"
   toJSON WindowLogMessage = A.String "window/logMessage"
   toJSON TelemetryEvent = A.String "telemetry/event"
+  -- Client
   toJSON ClientRegisterCapability = A.String "client/registerCapability"
   toJSON ClientUnregisterCapability = A.String "client/unregisterCapability"
+  -- Workspace
   toJSON WorkspaceApplyEdit = A.String "workspace/applyEdit"
+  -- Document
   toJSON TextDocumentPublishDiagnostics = A.String "textDocument/publishDiagnostics"
 
 data RequestMessage m a =
