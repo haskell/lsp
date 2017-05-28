@@ -118,7 +118,6 @@ type InitializeCallback = LspFuncs -> IO (Maybe J.ResponseError)
 -- 'a', a function to send a reply message once encoded as a ByteString, and a
 -- received message of type 'b'
 type Handler b = LspFuncs -> b -> IO ()
--- TODO: change the sendFunc to take a ToJSON type instead
 
 -- | Callbacks from the language server to the language handler
 data Handlers =
@@ -176,58 +175,56 @@ instance Default Handlers where
 -- ---------------------------------------------------------------------
 
 handlerMap :: Handlers
-           -> Map.Map String (MVar LanguageContextData -> String -> B.ByteString -> IO ())
+           -> Map.Map J.ClientMethod (MVar LanguageContextData -> J.Value -> IO ())
 handlerMap h = Map.fromList
-  [ ("textDocument/completion",        hh $ completionHandler h)
-  , ("completionItem/resolve",         hh $ completionResolveHandler h)
-  , ("textDocument/hover",             hh $ hoverHandler h)
-  , ("textDocument/signatureHelp",     hh $ signatureHelpHandler h)
-  , ("textDocument/definition",        hh $ definitionHandler h)
-  , ("textDocument/references",        hh $ referencesHandler h)
-  , ("textDocument/documentHighlight", hh $ documentHighlightHandler h)
-  , ("textDocument/documentSymbol",    hh $ documentSymbolHandler h)
-  , ("workspace/symbol",               hh $ workspaceSymbolHandler h)
-  , ("textDocument/codeAction",        hh $ codeActionHandler h)
-  , ("textDocument/codeLens",          hh $ codeLensHandler h)
-  , ("codeLens/resolve",               hh $ codeLensResolveHandler h)
-  , ("textDocument/formatting",        hh $ documentFormattingHandler h)
-  , ("textDocument/rangeFormatting",   hh $ documentRangeFormattingHandler h)
-  , ("textDocument/onTypeFormatting",  hh $ documentTypeFormattingHandler h)
-  , ("textDocument/rename",            hh $ renameHandler h)
-  , ("workspace/executeCommand",       hh $ executeCommandHandler h)
+  [ (J.TextDocumentCompletion,          hh nop $ completionHandler h)
+  , (J.CompletionItemResolve,           hh nop $ completionResolveHandler h)
+  , (J.TextDocumentHover,               hh nop $ hoverHandler h)
+  , (J.TextDocumentSignatureHelp,       hh nop $ signatureHelpHandler h)
+  , (J.TextDocumentDefinition,          hh nop $ definitionHandler h)
+  , (J.TextDocumentReferences,          hh nop $ referencesHandler h)
+  , (J.TextDocumentDocumentHighlight,   hh nop $ documentHighlightHandler h)
+  , (J.TextDocumentDocumentSymbol,      hh nop $ documentSymbolHandler h)
+  , (J.WorkspaceSymbol,                 hh nop $ workspaceSymbolHandler h)
+  , (J.TextDocumentCodeAction,          hh nop $ codeActionHandler h)
+  , (J.TextDocumentCodeLens,            hh nop $ codeLensHandler h)
+  , (J.CodeLensResolve,                 hh nop $ codeLensResolveHandler h)
+  , (J.TextDocumentFormatting,          hh nop $ documentFormattingHandler h)
+  , (J.TextDocumentRangeFormatting,     hh nop $ documentRangeFormattingHandler h)
+  , (J.TextDocumentOnTypeFormatting,    hh nop $ documentTypeFormattingHandler h)
+  , (J.TextDocumentRename,              hh nop $ renameHandler h)
+  , (J.WorkspaceExecuteCommand,         hh nop $ executeCommandHandler h)
 
-  , ("initialized",                      hh $ initializedHandler h)
-  , ("workspace/didChangeConfiguration", hh $ didChangeConfigurationParamsHandler h)
-  , ("textDocument/didOpen",             hh $ didOpenTextDocumentNotificationHandler h)
-  , ("textDocument/didChange",           hh $ didChangeTextDocumentNotificationHandler h )
-  , ("textDocument/didClose",            hh $ didCloseTextDocumentNotificationHandler h )
-  , ("textDocument/didSave",             hh $ didSaveTextDocumentNotificationHandler h)
-  , ("workspace/didChangeWatchedFiles",  hh $ didChangeWatchedFilesNotificationHandler h)
+  , (J.Initialized,                     hh nop $ initializedHandler h)
+  , (J.WorkspaceDidChangeConfiguration, hh nop $ didChangeConfigurationParamsHandler h)
+  , (J.TextDocumentDidOpen,             hh openVFS $ didOpenTextDocumentNotificationHandler h)
+  , (J.TextDocumentDidChange,           hh changeVFS $ didChangeTextDocumentNotificationHandler h )
+  , (J.TextDocumentDidClose,            hh closeVFS $ didCloseTextDocumentNotificationHandler h )
+  , (J.TextDocumentDidSave,             hh nop $ didSaveTextDocumentNotificationHandler h)
+  , (J.WorkspaceDidChangeWatchedFiles,  hh nop $ didChangeWatchedFilesNotificationHandler h)
 
-  , ("$/cancelRequest",                  hh $ cancelNotificationHandler h)
-
-  -- Next is not actually a method value, just a proxy for ResponseMessage
-  , ("response",                         hh $ responseHandler h)
+  , (J.CancelRequest,                   hh nop $ cancelNotificationHandler h)
   ]
+  where nop = const . return
 
 -- ---------------------------------------------------------------------
 
 -- | Adapter from the normal handlers exposed to the library users and the
 -- internal message loop
 hh :: forall b. (J.FromJSON b)
-   => Maybe (Handler b) -> MVar LanguageContextData -> String -> B.ByteString -> IO ()
-hh Nothing = \mvarDat cmd jsonStr -> do
-      let msg = unwords ["haskell-lsp:no handler for.", cmd, lbs2str jsonStr]
+   => (VFS -> b -> IO VFS) -> Maybe (Handler b) -> MVar LanguageContextData -> J.Value -> IO ()
+hh _ Nothing = \mvarDat json -> do
+      let msg = unwords ["haskell-lsp:no handler for.", show json]
       sendErrorLog mvarDat msg
-hh (Just h) = \mvarDat cmd jsonStr -> do
-      case J.eitherDecode jsonStr of
-        Right req -> do
+hh getVfs (Just h) = \mvarDat json -> do
+      case J.fromJSON json of
+        J.Success req -> do
           ctx <- readMVar mvarDat
-          vfs' <- getVfs (resVFS ctx) cmd jsonStr
+          vfs' <- getVfs (resVFS ctx) req
           modifyMVar_ mvarDat (\c -> return c {resVFS = vfs'})
           h  (resLspFuncs ctx) req
-        Left  err -> do
-          let msg = unwords $ ["haskell-lsp:parse error.", lbs2str jsonStr, show err] ++ _ERR_MSG_URL
+        J.Error  err -> do
+          let msg = unwords $ ["haskell-lsp:parse error.", show json, show err] ++ _ERR_MSG_URL
           sendErrorLog mvarDat msg
 
 -- ---------------------------------------------------------------------
@@ -330,7 +327,7 @@ defaultLanguageContextData h o lf = LanguageContextData _INITIAL_RESPONSE_SEQUEN
 
 handleRequest :: InitializeCallback
               -> MVar LanguageContextData -> BSL.ByteString -> BSL.ByteString -> IO ()
-handleRequest dispatcherProc mvarDat contLenStr' jsonStr' = do
+handleRequest dispatcherProc mvarDat contLenStr jsonStr = do
   {-
   Message Types we must handle are the following
 
@@ -340,44 +337,56 @@ handleRequest dispatcherProc mvarDat contLenStr' jsonStr' = do
 
   -}
 
-  case J.eitherDecode jsonStr' :: Either String J.Object of
+  case J.eitherDecode jsonStr :: Either String J.Object of
     Left  err -> do
-      let msg =  unwords [ "haskell-lsp:incoming message parse error.", lbs2str contLenStr', lbs2str jsonStr', show err]
+      let msg =  unwords [ "haskell-lsp:incoming message parse error.", lbs2str contLenStr, lbs2str jsonStr, show err]
               ++ L.intercalate "\n" ("" : "" : _ERR_MSG_URL)
               ++ "\n"
       sendErrorLog mvarDat msg
 
     Right o -> do
       case HM.lookup "method" o of
-        Just (J.String cmd) -> handle jsonStr' (T.unpack cmd)
+        Just cmd@(J.String s) -> case J.fromJSON cmd of
+                                   J.Success m -> handle (J.Object o) m
+                                   J.Error _ -> do
+                                     let msg = unwords ["haskell-lsp:unknown message received:method='" ++ T.unpack s ++ "',", lbs2str contLenStr, lbs2str jsonStr]
+                                     sendErrorLog mvarDat msg
         Just oops -> logs $ "haskell-lsp:got strange method param, ignoring:" ++ show oops
         Nothing -> do
-          logs $ "haskell-lsp:Got reply message:" ++ show jsonStr'
-          handle jsonStr' "response"
+          logs $ "haskell-lsp:Got reply message:" ++ show jsonStr
+          handleResponse (J.Object o)
 
   where
-    helper :: J.FromJSON b => B.ByteString -> (MVar LanguageContextData -> b -> IO ())
+    handleResponse json = do
+      ctx <- readMVar mvarDat
+      case responseHandler $ resHandlers ctx of
+        Nothing -> sendErrorLog mvarDat $ "haskell-lsp: responseHandler is not defined, ignoring response " ++ lbs2str jsonStr
+        Just h -> case J.fromJSON json of
+          J.Success res -> h (resLspFuncs ctx) res
+          J.Error err -> let msg = unwords $ ["haskell-lsp:response parse error.", lbs2str jsonStr, show err] ++ _ERR_MSG_URL
+                           in sendErrorLog mvarDat msg
+    helper :: J.FromJSON b => J.Value -> (MVar LanguageContextData -> b -> IO ())
            -> IO ()
-    helper jsonStr requestHandler = case J.eitherDecode jsonStr of
-      Right req -> do
+    helper json requestHandler = case J.fromJSON json of
+      J.Success req -> do
         requestHandler mvarDat req
-      Left  err -> do
-        let msg = unwords $ ["haskell-lsp:parse error.", lbs2str contLenStr', lbs2str jsonStr', show err] ++ _ERR_MSG_URL
+      J.Error  err -> do
+        let msg = unwords $ ["haskell-lsp:parse error.", lbs2str contLenStr, lbs2str jsonStr, show err] ++ _ERR_MSG_URL
         sendErrorLog mvarDat msg
 
     -- ---------------------------------
 
     -- Server life cycle handlers
-    handle jsonStr "initialize" = helper jsonStr (initializeRequestHandler dispatcherProc)
-    handle jsonStr "shutdown"   = helper jsonStr shutdownRequestHandler
-    handle _jsonStr "exit" = do
+    handle json J.Initialize = helper json (initializeRequestHandler dispatcherProc)
+    handle json J.Shutdown   = helper json shutdownRequestHandler
+    handle _json J.Exit = do
       logm $ B.pack "haskell-lsp:Got exit, exiting"
       exitSuccess
 
     -- ---------------------------------
 
     -- {"jsonrpc":"2.0","method":"$/setTraceNotification","params":{"value":"off"}}
-    handle jsonStr "$/setTraceNotification" = helper jsonStr h
+    handle json (J.Misc "setTraceNotification") = helper json h
       where
         h :: MVar LanguageContextData -> J.TraceNotification -> IO ()
         h _ _ = do
@@ -385,13 +394,13 @@ handleRequest dispatcherProc mvarDat contLenStr' jsonStr' = do
           sendErrorLog mvarDat "haskell-lsp:Got setTraceNotification, ignoring"
 
     -- capability based handlers
-    handle jsonStr cmd = do
+    handle json cmd = do
       ctx <- readMVar mvarDat
       let h = resHandlers ctx
       case Map.lookup cmd (handlerMap h) of
-        Just f -> f mvarDat cmd jsonStr
+        Just f -> f mvarDat json
         Nothing -> do
-          let msg = unwords ["haskell-lsp:unknown message received:method='" ++ cmd ++ "',", lbs2str contLenStr', lbs2str jsonStr]
+          let msg = unwords ["haskell-lsp:unknown message received:method='" ++ B.unpack (J.encode cmd) ++ "',", lbs2str contLenStr, lbs2str jsonStr]
           sendErrorLog mvarDat msg
 
 -- ---------------------------------------------------------------------
@@ -550,7 +559,7 @@ publishDiagnostics mvarDat uri mversion diags = do
   case mdp of
     Nothing -> return ()
     Just params -> do
-      (resSendResponse ctx) $ J.NotificationMessage "2.0" "textDocument/publishDiagnostics" (Just params)
+      (resSendResponse ctx) $ J.NotificationMessage "2.0" J.TextDocumentPublishDiagnostics (Just params)
 
 -- |=====================================================================
 --

@@ -5,6 +5,7 @@
 {-# LANGUAGE TypeSynonymInstances  #-}
 {-# LANGUAGE MultiParamTypeClasses  #-}
 {-# LANGUAGE FunctionalDependencies  #-}
+{-# LANGUAGE OverloadedStrings  #-}
 
 module Language.Haskell.LSP.TH.DataTypesJSON where
 
@@ -13,11 +14,11 @@ import           Data.Aeson.Types
 import qualified Data.Aeson as A
 import qualified Data.HashMap.Strict as H
 import qualified Data.Text as T
+import Data.Monoid ( (<>) )
 
 import Language.Haskell.LSP.TH.ClientCapabilities
 import Language.Haskell.LSP.TH.Constants
 import Language.Haskell.LSP.Utility
-import Data.Default
 import Control.Lens.TH ( makeFieldsNoPrefix )
 
 -- ---------------------------------------------------------------------
@@ -33,9 +34,6 @@ instance (A.ToJSON a) => A.ToJSON (List a) where
 instance (A.FromJSON a) => A.FromJSON (List a) where
   parseJSON A.Null = return (List [])
   parseJSON v      = List <$> parseJSON v
-
-instance (Default a) => Default (List a) where
-  def = List def
 
 -- ---------------------------------------------------------------------
 
@@ -55,9 +53,6 @@ instance A.FromJSON LspId where
   parseJSON v@(A.Number _) = IdInt <$> parseJSON v
   parseJSON  (A.String  s) = return (IdString (T.unpack s))
   parseJSON _              = mempty
-
-instance Default LspId where
-  def = IdInt def
 
 -- ---------------------------------------------------------------------
 
@@ -80,9 +75,6 @@ instance A.FromJSON LspIdRsp where
   parseJSON  A.Null        = return IdRspNull
   parseJSON _              = mempty
 
-instance Default LspIdRsp where
-  def = IdRspInt def
-
 responseId :: LspId -> LspIdRsp
 responseId (IdInt    i) = (IdRspInt i)
 responseId (IdString s) = (IdRspString s)
@@ -102,19 +94,181 @@ makeFieldsNoPrefix ''Request
 
 -- ---------------------------------------------------------------------
 
-data RequestMessage a =
+-- Client Methods
+data ClientMethod =
+ -- General
+   Initialize
+ | Initialized
+ | Shutdown
+ | Exit
+ | CancelRequest
+ -- Workspace
+ | WorkspaceDidChangeConfiguration
+ | WorkspaceDidChangeWatchedFiles
+ | WorkspaceSymbol
+ | WorkspaceExecuteCommand
+ -- Document
+ | TextDocumentDidOpen
+ | TextDocumentDidChange
+ | TextDocumentWillSave
+ | TextDocumentWillSaveWaitUntil
+ | TextDocumentDidSave
+ | TextDocumentDidClose
+ | TextDocumentCompletion
+ | CompletionItemResolve
+ | TextDocumentHover
+ | TextDocumentSignatureHelp
+ | TextDocumentReferences
+ | TextDocumentDocumentHighlight
+ | TextDocumentDocumentSymbol
+ | TextDocumentFormatting
+ | TextDocumentRangeFormatting
+ | TextDocumentOnTypeFormatting
+ | TextDocumentDefinition
+ | TextDocumentCodeAction
+ | TextDocumentCodeLens
+ | CodeLensResolve
+ | TextDocumentDocumentLink
+ | DocumentLinkResolve
+ | TextDocumentRename
+ -- $/xxx messages
+ -- Implementation Dependent, can be ignored
+ | Misc T.Text
+   deriving (Eq,Ord,Read,Show)
+
+instance A.FromJSON ClientMethod where
+  -- General
+  parseJSON (A.String "initialize")                       = return Initialize
+  parseJSON (A.String "initialized")                      = return Initialized
+  parseJSON (A.String "shutdown")                         = return Shutdown
+  parseJSON (A.String "exit")                             = return Exit
+  parseJSON (A.String "$/cancelRequest")                  = return CancelRequest
+ -- Workspace
+  parseJSON (A.String "workspace/didChangeConfiguration") = return WorkspaceDidChangeConfiguration
+  parseJSON (A.String "workspace/didChangeWatchedFiles")  = return WorkspaceDidChangeWatchedFiles
+  parseJSON (A.String "workspace/symbol")                 = return WorkspaceSymbol
+  parseJSON (A.String "workspace/executeCommand")         = return WorkspaceExecuteCommand
+ -- Document
+  parseJSON (A.String "textDocument/didOpen")             = return TextDocumentDidOpen
+  parseJSON (A.String "textDocument/didChange")           = return TextDocumentDidChange
+  parseJSON (A.String "textDocument/willSave")            = return TextDocumentWillSave
+  parseJSON (A.String "textDocument/willSaveWaitUntil")   = return TextDocumentWillSaveWaitUntil
+  parseJSON (A.String "textDocument/didSave")             = return TextDocumentDidSave
+  parseJSON (A.String "textDocument/didClose")            = return TextDocumentDidClose
+  parseJSON (A.String "textDocument/completion")          = return TextDocumentCompletion
+  parseJSON (A.String "completionItem/resolve")           = return CompletionItemResolve
+  parseJSON (A.String "textDocument/hover")               = return TextDocumentHover
+  parseJSON (A.String "textDocument/signatureHelp")       = return TextDocumentSignatureHelp
+  parseJSON (A.String "textDocument/references")          = return TextDocumentReferences
+  parseJSON (A.String "textDocument/documentHighlight")   = return TextDocumentDocumentHighlight
+  parseJSON (A.String "textDocument/documentSymbol")      = return TextDocumentDocumentSymbol
+  parseJSON (A.String "textDocument/formatting")          = return TextDocumentFormatting
+  parseJSON (A.String "textDocument/rangeFormatting")     = return TextDocumentRangeFormatting
+  parseJSON (A.String "textDocument/onTypeFormatting")    = return TextDocumentOnTypeFormatting
+  parseJSON (A.String "textDocument/definition")          = return TextDocumentDefinition
+  parseJSON (A.String "textDocument/codeAction")          = return TextDocumentCodeAction
+  parseJSON (A.String "textDocument/codeLens")            = return TextDocumentCodeLens
+  parseJSON (A.String "codeLens/resolve")                 = return CodeLensResolve
+  parseJSON (A.String "textDocument/documentLink")        = return TextDocumentDocumentLink
+  parseJSON (A.String "documentLink/resolve")             = return DocumentLinkResolve
+  parseJSON (A.String "textDocument/rename")              = return TextDocumentRename
+  parseJSON (A.String x)                                  = if T.isPrefixOf "$/" x
+                                                               then return $ Misc (T.drop 2 x)
+                                                            else mempty
+  parseJSON _                                             = mempty
+
+instance A.ToJSON ClientMethod where
+  -- General
+  toJSON Initialize                      = A.String "initialize"
+  toJSON Initialized                     = A.String "initialized"
+  toJSON Shutdown                        = A.String "shutdown"
+  toJSON Exit                            = A.String "exit"
+  toJSON CancelRequest                   = A.String "$/cancelRequest"
+  -- Workspace
+  toJSON WorkspaceDidChangeConfiguration = A.String "workspace/didChangeConfiguration"
+  toJSON WorkspaceDidChangeWatchedFiles  = A.String "workspace/didChangeWatchedFiles"
+  toJSON WorkspaceSymbol                 = A.String "workspace/symbol"
+  toJSON WorkspaceExecuteCommand         = A.String "workspace/executeCommand"
+  -- Document
+  toJSON TextDocumentDidOpen             = A.String "textDocument/didOpen"
+  toJSON TextDocumentDidChange           = A.String "textDocument/didChange"
+  toJSON TextDocumentWillSave            = A.String "textDocument/willSave"
+  toJSON TextDocumentWillSaveWaitUntil   = A.String "textDocument/willSaveWaitUntil"
+  toJSON TextDocumentDidSave             = A.String "textDocument/didSave"
+  toJSON TextDocumentDidClose            = A.String "textDocument/didClose"
+  toJSON TextDocumentCompletion          = A.String "textDocument/completion"
+  toJSON CompletionItemResolve           = A.String "completionItem/resolve"
+  toJSON TextDocumentHover               = A.String "textDocument/hover"
+  toJSON TextDocumentSignatureHelp       = A.String "textDocument/signatureHelp"
+  toJSON TextDocumentReferences          = A.String "textDocument/references"
+  toJSON TextDocumentDocumentHighlight   = A.String "textDocument/documentHighlight"
+  toJSON TextDocumentDocumentSymbol      = A.String "textDocument/documentSymbol"
+  toJSON TextDocumentFormatting          = A.String "textDocument/formatting"
+  toJSON TextDocumentRangeFormatting     = A.String "textDocument/rangeFormatting"
+  toJSON TextDocumentOnTypeFormatting    = A.String "textDocument/onTypeFormatting"
+  toJSON TextDocumentDefinition          = A.String "textDocument/definition"
+  toJSON TextDocumentCodeAction          = A.String "textDocument/codeAction"
+  toJSON TextDocumentCodeLens            = A.String "textDocument/codeLens"
+  toJSON CodeLensResolve                 = A.String "codeLens/resolve"
+  toJSON TextDocumentRename              = A.String "textDocument/rename"
+  toJSON TextDocumentDocumentLink        = A.String "textDocument/documentLink"
+  toJSON DocumentLinkResolve             = A.String "documentLink/resolve"
+  toJSON (Misc xs)                       = A.String $ "$/" <> xs
+
+data ServerMethod =
+  -- Window
+    WindowShowMessage
+  | WindowShowMessageRequest
+  | WindowLogMessage
+  | TelemetryEvent
+  -- Client
+  | ClientRegisterCapability
+  | ClientUnregisterCapability
+  -- Workspace
+  | WorkspaceApplyEdit
+  -- Document
+  | TextDocumentPublishDiagnostics
+   deriving (Eq,Ord,Read,Show)
+
+instance A.FromJSON ServerMethod where
+  -- Window
+  parseJSON (A.String "window/showMessage")              = return WindowShowMessage
+  parseJSON (A.String "window/showMessageRequest")       = return WindowShowMessageRequest
+  parseJSON (A.String "window/logMessage")               = return WindowLogMessage
+  parseJSON (A.String "telemetry/event")                 = return TelemetryEvent
+  -- Client
+  parseJSON (A.String "client/registerCapability")       = return ClientRegisterCapability
+  parseJSON (A.String "client/unregisterCapability")     = return ClientUnregisterCapability
+  -- Workspace
+  parseJSON (A.String "workspace/applyEdit")             = return WorkspaceApplyEdit
+  -- Document
+  parseJSON (A.String "textDocument/publishDiagnostics") = return TextDocumentPublishDiagnostics
+  parseJSON _                                            = mempty
+
+instance A.ToJSON ServerMethod where
+  -- Window
+  toJSON WindowShowMessage = A.String "window/showMessage"
+  toJSON WindowShowMessageRequest = A.String "window/showMessageRequest"
+  toJSON WindowLogMessage = A.String "window/logMessage"
+  toJSON TelemetryEvent = A.String "telemetry/event"
+  -- Client
+  toJSON ClientRegisterCapability = A.String "client/registerCapability"
+  toJSON ClientUnregisterCapability = A.String "client/unregisterCapability"
+  -- Workspace
+  toJSON WorkspaceApplyEdit = A.String "workspace/applyEdit"
+  -- Document
+  toJSON TextDocumentPublishDiagnostics = A.String "textDocument/publishDiagnostics"
+
+data RequestMessage m a =
   RequestMessage
     { _jsonrpc :: String
     , _id      :: LspId
-    , _method  :: String
+    , _method  :: m
     , _params  :: a
     } deriving (Read,Show,Eq)
 
 $(deriveJSON lspOptions ''RequestMessage)
 makeFieldsNoPrefix ''RequestMessage
-
-instance Default a => Default (RequestMessage a) where
-  def = RequestMessage "2.0" def def def
 
 -- ---------------------------------------------------------------------
 {-
@@ -176,9 +330,6 @@ instance A.FromJSON ErrorCode where
   parseJSON (A.Number (-32603)) = pure InternalError
   parseJSON _                   = mempty
 
-instance Default ErrorCode where
-  def = InternalError -- Choose something random
-
 -- -------------------------------------
 
 data ResponseError =
@@ -190,9 +341,6 @@ data ResponseError =
 
 $(deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''ResponseError)
 makeFieldsNoPrefix ''ResponseError
-
-instance Default ResponseError where
-  def = ResponseError def def Nothing
 
 -- ---------------------------------------------------------------------
 
@@ -207,26 +355,11 @@ data ResponseMessage a =
 $(deriveJSON lspOptions ''ResponseMessage)
 makeFieldsNoPrefix ''ResponseMessage
 
-instance Default (ResponseMessage a) where
-  def = ResponseMessage "2.0" def def Nothing
-
 type ErrorResponse = ResponseMessage ()
 
 -- ---------------------------------------------------------------------
 
-data BareResponseMessage =
-  BareResponseMessage
-    { _jsonrpc :: String
-    , _id      :: LspIdRsp
-    , _result  :: Maybe A.Value
-    , _error   :: Maybe ResponseError
-    } deriving (Read,Show,Eq)
-
-$(deriveJSON lspOptions ''BareResponseMessage)
-makeFieldsNoPrefix ''BareResponseMessage
-
-instance Default BareResponseMessage where
-  def = BareResponseMessage "2.0" def def Nothing
+type BareResponseMessage = ResponseMessage A.Value
 
 -- ---------------------------------------------------------------------
 {-
@@ -240,18 +373,15 @@ to a '$/cancelRequest'. If a server or client receives notifications or requests
 starting with '$/' it is free to ignore them if they are unknown.
 -}
 
-data NotificationMessage a =
+data NotificationMessage m a =
   NotificationMessage
     { _jsonrpc :: String
-    , _method  :: String
+    , _method  :: m
     , _params  :: a
     } deriving (Read,Show,Eq)
 
 $(deriveJSON lspOptions ''NotificationMessage)
 makeFieldsNoPrefix ''NotificationMessage
-
-instance Default a => Default (NotificationMessage a) where
-  def = NotificationMessage "2.0" def def
 
 -- ---------------------------------------------------------------------
 {-
@@ -289,7 +419,7 @@ data CancelParams =
 $(deriveJSON lspOptions ''CancelParams)
 makeFieldsNoPrefix ''CancelParams
 
-type CancelNotification = NotificationMessage CancelParams
+type CancelNotification = NotificationMessage ClientMethod CancelParams
 
 -- ---------------------------------------------------------------------
 
@@ -330,9 +460,6 @@ data Position =
 $(deriveJSON lspOptions ''Position)
 makeFieldsNoPrefix ''Position
 
-instance Default Position where
-  def = Position def def
-
 -- ---------------------------------------------------------------------
 {-
 https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#range
@@ -363,9 +490,6 @@ data Range =
 $(deriveJSON lspOptions ''Range)
 makeFieldsNoPrefix ''Range
 
-instance Default Range where
-  def = Range def def
-
 -- ---------------------------------------------------------------------
 {-
 https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#location
@@ -386,9 +510,6 @@ data Location =
 
 $(deriveJSON lspOptions ''Location)
 makeFieldsNoPrefix ''Location
-
-instance Default Location where
-  def = Location def def
 
 -- ---------------------------------------------------------------------
 {-
@@ -432,9 +553,6 @@ instance A.FromJSON DiagnosticSeverity where
   parseJSON (A.Number 3) = pure DsInfo
   parseJSON (A.Number 4) = pure DsHint
   parseJSON _            = mempty
-
-instance Default DiagnosticSeverity where
-  def = DsError
 
 -- ---------------------------------------------------------------------
 {-
@@ -488,9 +606,6 @@ data Diagnostic =
 $(deriveJSON lspOptions ''Diagnostic)
 makeFieldsNoPrefix ''Diagnostic
 
-instance Default Diagnostic where
-  def = Diagnostic def def Nothing Nothing ""
-
 -- ---------------------------------------------------------------------
 {-
 Command
@@ -529,9 +644,6 @@ data Command =
 $(deriveJSON lspOptions ''Command)
 makeFieldsNoPrefix ''Command
 
-instance Default Command where
-  def = Command "" "" Nothing
-
 -- ---------------------------------------------------------------------
 {-
 TextEdit
@@ -566,10 +678,6 @@ data TextEdit =
 $(deriveJSON lspOptions ''TextEdit)
 makeFieldsNoPrefix ''TextEdit
 
-instance Default TextEdit where
-  def = TextEdit def def
-
-
 -- ---------------------------------------------------------------------
 {-
 VersionedTextDocumentIdentifier
@@ -595,9 +703,6 @@ data VersionedTextDocumentIdentifier =
 
 $(deriveJSON lspOptions ''VersionedTextDocumentIdentifier)
 makeFieldsNoPrefix ''VersionedTextDocumentIdentifier
-
-instance Default VersionedTextDocumentIdentifier where
-  def = VersionedTextDocumentIdentifier def def
 
 -- ---------------------------------------------------------------------
 {-
@@ -635,9 +740,6 @@ data TextDocumentEdit =
 $(deriveJSON lspOptions ''TextDocumentEdit)
 makeFieldsNoPrefix ''TextDocumentEdit
 
-instance Default TextDocumentEdit where
-  def = TextDocumentEdit def def
-
 -- ---------------------------------------------------------------------
 {-
 Changed in 3.0
@@ -670,9 +772,6 @@ export interface WorkspaceEdit {
 
 type WorkspaceEditMap = H.HashMap T.Text (List TextEdit)
 
-instance Default (H.HashMap T.Text (List TextEdit)) where
-  def = mempty
-
 data WorkspaceEdit =
   WorkspaceEdit
     { _changes         :: Maybe WorkspaceEditMap
@@ -681,9 +780,6 @@ data WorkspaceEdit =
 
 $(deriveJSON lspOptions ''WorkspaceEdit)
 makeFieldsNoPrefix ''WorkspaceEdit
-
-instance Default WorkspaceEdit where
-  def = WorkspaceEdit def def
 
 -- ---------------------------------------------------------------------
 {-
@@ -708,9 +804,6 @@ data TextDocumentIdentifier =
 
 $(deriveJSON lspOptions ''TextDocumentIdentifier)
 makeFieldsNoPrefix ''TextDocumentIdentifier
-
-instance Default TextDocumentIdentifier where
-  def = TextDocumentIdentifier def
 
 -- ---------------------------------------------------------------------
 
@@ -787,9 +880,6 @@ data TextDocumentPositionParams =
 $(deriveJSON lspOptions ''TextDocumentPositionParams)
 makeFieldsNoPrefix ''TextDocumentPositionParams
 
-instance Default TextDocumentPositionParams where
-  def = TextDocumentPositionParams def def
-
 -- ---------------------------------------------------------------------
 {-
 New in 3.0
@@ -831,9 +921,6 @@ data DocumentFilter =
 
 $(deriveJSON lspOptions ''DocumentFilter)
 makeFieldsNoPrefix ''DocumentFilter
-
-instance Default DocumentFilter where
-  def = DocumentFilter def def def
 
 {-
 A document selector is the combination of one or many document filters.
@@ -917,9 +1004,6 @@ instance A.FromJSON Trace where
     _          -> mempty
   parseJSON _                               = mempty
 
-instance Default Trace where
-  def = TraceOff
-
 data InitializeParams =
   InitializeParams {
     _processId             :: Maybe Int
@@ -934,12 +1018,9 @@ data InitializeParams =
 $(deriveJSON lspOptions ''InitializeParams)
 makeFieldsNoPrefix ''InitializeParams
 
-instance Default InitializeParams where
-  def = InitializeParams def def def def def def
-
 -- ---------------------------------------------------------------------
 
-type InitializeRequest = RequestMessage InitializeParams
+type InitializeRequest = RequestMessage ClientMethod InitializeParams
 
 -- ---------------------------------------------------------------------
 -- Initialize Response
@@ -964,9 +1045,6 @@ data InitializeError =
 
 $(deriveJSON lspOptions ''InitializeError)
 makeFieldsNoPrefix ''InitializeError
-
-instance Default InitializeError where
-  def = InitializeError False
 
 -- ---------------------------------------------------------------------
 {-
@@ -1037,9 +1115,6 @@ data CompletionOptions =
 $(deriveJSON lspOptions {omitNothingFields = True } ''CompletionOptions)
 makeFieldsNoPrefix ''CompletionOptions
 
-instance Default CompletionOptions where
-  def = CompletionOptions Nothing mempty
-
 -- ---------------------------------------------------------------------
 {-
 /**
@@ -1059,9 +1134,6 @@ data SignatureHelpOptions =
 
 $(deriveJSON lspOptions ''SignatureHelpOptions)
 makeFieldsNoPrefix ''SignatureHelpOptions
-
-instance Default SignatureHelpOptions where
-  def = SignatureHelpOptions mempty
 
 -- ---------------------------------------------------------------------
 {-
@@ -1083,9 +1155,6 @@ data CodeLensOptions =
 
 $(deriveJSON lspOptions ''CodeLensOptions)
 makeFieldsNoPrefix ''CodeLensOptions
-
-instance Default CodeLensOptions where
-  def = CodeLensOptions Nothing
 
 -- ---------------------------------------------------------------------
 {-
@@ -1111,9 +1180,6 @@ data DocumentOnTypeFormattingOptions =
 
 $(deriveJSON lspOptions ''DocumentOnTypeFormattingOptions)
 makeFieldsNoPrefix ''DocumentOnTypeFormattingOptions
-
-instance Default DocumentOnTypeFormattingOptions where
-  def = DocumentOnTypeFormattingOptions mempty mempty
 
 -- ---------------------------------------------------------------------
 {-
@@ -1351,9 +1417,6 @@ data InitializeResponseCapabilitiesInner =
 $(deriveJSON lspOptions ''InitializeResponseCapabilitiesInner)
 makeFieldsNoPrefix ''InitializeResponseCapabilitiesInner
 
-instance Default InitializeResponseCapabilitiesInner where
-  def = InitializeResponseCapabilitiesInner def def def def def def def def def def def def def def def
-                                            def def def
 
 -- ---------------------------------------------------------------------
 -- |
@@ -1366,9 +1429,6 @@ data InitializeResponseCapabilities =
 
 $(deriveJSON lspOptions ''InitializeResponseCapabilities)
 makeFieldsNoPrefix ''InitializeResponseCapabilities
-
-instance Default InitializeResponseCapabilities where
-  def = InitializeResponseCapabilities def
 
 -- ---------------------------------------------------------------------
 
@@ -1432,7 +1492,7 @@ instance A.FromJSON InitializedParams where
 instance A.ToJSON InitializedParams where
   toJSON InitializedParams = A.Object mempty
 
-type InitializedNotification = NotificationMessage (Maybe InitializedParams)
+type InitializedNotification = NotificationMessage ClientMethod (Maybe InitializedParams)
 
 -- ---------------------------------------------------------------------
 {-
@@ -1458,7 +1518,7 @@ Response
 
 -}
 
-type ShutdownRequest  = RequestMessage (Maybe A.Value)
+type ShutdownRequest  = RequestMessage ClientMethod (Maybe A.Value)
 type ShutdownResponse = ResponseMessage String
 
 -- ---------------------------------------------------------------------
@@ -1485,10 +1545,7 @@ data ExitNotificationParams =
 
 $(deriveJSON defaultOptions ''ExitNotificationParams)
 
-instance Default ExitNotificationParams where
-  def = ExitNotificationParams
-
-type ExitNotification = NotificationMessage (Maybe ExitNotificationParams)
+type ExitNotification = NotificationMessage ClientMethod (Maybe ExitNotificationParams)
 
 -- ---------------------------------------------------------------------
 {-
@@ -1556,9 +1613,6 @@ instance A.FromJSON MessageType where
   parseJSON (A.Number 4) = pure MtLog
   parseJSON _            = mempty
 
-instance Default MessageType where
-  def = MtWarning -- Pick something arbitrary
-
 -- ---------------------------------------
 
 
@@ -1571,10 +1625,7 @@ data ShowMessageParams =
 $(deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''ShowMessageParams)
 makeFieldsNoPrefix ''ShowMessageParams
 
-instance Default ShowMessageParams where
-  def = ShowMessageParams MtWarning ""
-
-type ShowMessageNotification = NotificationMessage ShowMessageParams
+type ShowMessageNotification = NotificationMessage ServerMethod ShowMessageParams
 
 -- ---------------------------------------------------------------------
 {-
@@ -1632,8 +1683,6 @@ data MessageActionItem =
 $(deriveJSON lspOptions ''MessageActionItem)
 makeFieldsNoPrefix ''MessageActionItem
 
-instance Default MessageActionItem where
-  def = MessageActionItem def
 
 data ShowMessageRequestParams =
   ShowMessageRequestParams
@@ -1645,10 +1694,7 @@ data ShowMessageRequestParams =
 $(deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''ShowMessageRequestParams)
 makeFieldsNoPrefix ''ShowMessageRequestParams
 
-instance Default ShowMessageRequestParams where
-  def = ShowMessageRequestParams def def def
-
-type ShowMessageRequest = RequestMessage ShowMessageRequestParams
+type ShowMessageRequest = RequestMessage ServerMethod ShowMessageRequestParams
 type ShowMessageResponse = ResponseMessage String
 
 -- ---------------------------------------------------------------------
@@ -1689,10 +1735,8 @@ data LogMessageParams =
 $(deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''LogMessageParams)
 makeFieldsNoPrefix ''LogMessageParams
 
-instance Default LogMessageParams where
-  def = LogMessageParams MtWarning ""
 
-type LogMessageNotification = NotificationMessage LogMessageParams
+type LogMessageNotification = NotificationMessage ServerMethod LogMessageParams
 
 -- ---------------------------------------------------------------------
 {-
@@ -1710,7 +1754,7 @@ Notification:
 -}
 
 
-type TelemetryNotification = NotificationMessage A.Value
+type TelemetryNotification = NotificationMessage ServerMethod A.Value
 
 -- ---------------------------------------------------------------------
 {-
@@ -1782,7 +1826,7 @@ $(deriveJSON lspOptions ''RegistrationParams)
 makeFieldsNoPrefix ''RegistrationParams
 
 -- |Note: originates at the server
-type RegisterCapabilityRequest = RequestMessage RegistrationParams
+type RegisterCapabilityRequest = RequestMessage ServerMethod RegistrationParams
 
 -- -------------------------------------
 
@@ -1866,7 +1910,7 @@ data UnregistrationParams =
 $(deriveJSON lspOptions ''UnregistrationParams)
 makeFieldsNoPrefix ''UnregistrationParams
 
-type UnregisterCapabilityRequest = RequestMessage UnregistrationParams
+type UnregisterCapabilityRequest = RequestMessage ServerMethod UnregistrationParams
 
 -- ---------------------------------------------------------------------
 {-
@@ -1898,10 +1942,8 @@ data DidChangeConfigurationParams =
 $(deriveJSON lspOptions ''DidChangeConfigurationParams)
 makeFieldsNoPrefix ''DidChangeConfigurationParams
 
-instance Default DidChangeConfigurationParams where
-  def = DidChangeConfigurationParams (A.Object mempty)
 
-type DidChangeConfigurationNotification = NotificationMessage DidChangeConfigurationParams
+type DidChangeConfigurationNotification = NotificationMessage ClientMethod DidChangeConfigurationParams
 
 -- ---------------------------------------------------------------------
 {-
@@ -1937,7 +1979,7 @@ data DidOpenTextDocumentParams =
 $(deriveJSON lspOptions ''DidOpenTextDocumentParams)
 makeFieldsNoPrefix ''DidOpenTextDocumentParams
 
-type DidOpenTextDocumentNotification = NotificationMessage DidOpenTextDocumentParams
+type DidOpenTextDocumentNotification = NotificationMessage ClientMethod DidOpenTextDocumentParams
 
 -- ---------------------------------------------------------------------
 {-
@@ -1999,9 +2041,6 @@ data TextDocumentContentChangeEvent =
 $(deriveJSON lspOptions { omitNothingFields = True } ''TextDocumentContentChangeEvent)
 makeFieldsNoPrefix ''TextDocumentContentChangeEvent
 
-instance Default TextDocumentContentChangeEvent where
-  def = TextDocumentContentChangeEvent Nothing Nothing def
-
 -- -------------------------------------
 
 data DidChangeTextDocumentParams =
@@ -2013,7 +2052,7 @@ data DidChangeTextDocumentParams =
 $(deriveJSON lspOptions ''DidChangeTextDocumentParams)
 makeFieldsNoPrefix ''DidChangeTextDocumentParams
 
-type DidChangeTextDocumentNotification = NotificationMessage DidChangeTextDocumentParams
+type DidChangeTextDocumentNotification = NotificationMessage ClientMethod DidChangeTextDocumentParams
 {-
 New in 3.0
 ----------
@@ -2121,7 +2160,7 @@ data WillSaveTextDocumentParams =
     , _reason       :: TextDocumentSaveReason
     } deriving (Show, Read, Eq)
 
-type WillSaveTextDocumentNotification = NotificationMessage WillSaveTextDocumentParams
+type WillSaveTextDocumentNotification = NotificationMessage ClientMethod WillSaveTextDocumentParams
 
 -- ---------------------------------------------------------------------
 {-
@@ -2150,7 +2189,7 @@ Response:
 Registration Options: TextDocumentRegistrationOptions
 -}
 
-type WillSaveWaitUntilTextDocumentRequest = RequestMessage WillSaveTextDocumentParams
+type WillSaveWaitUntilTextDocumentRequest = RequestMessage ClientMethod WillSaveTextDocumentParams
 type WillSaveWaitUntilTextDocumentResponse = ResponseMessage (List TextEdit)
 
 -- ---------------------------------------------------------------------
@@ -2180,10 +2219,9 @@ data DidSaveTextDocumentParams =
 $(deriveJSON lspOptions ''DidSaveTextDocumentParams)
 makeFieldsNoPrefix ''DidSaveTextDocumentParams
 
-instance Default DidSaveTextDocumentParams where
-  def = DidSaveTextDocumentParams def
+type DidSaveTextDocumentNotification = NotificationMessage ClientMethod DidSaveTextDocumentParams
 
-type DidSaveTextDocumentNotification = NotificationMessage DidSaveTextDocumentParams
+
 
 -- ---------------------------------------------------------------------
 {-
@@ -2219,10 +2257,8 @@ data DidCloseTextDocumentParams =
 $(deriveJSON lspOptions ''DidCloseTextDocumentParams)
 makeFieldsNoPrefix ''DidCloseTextDocumentParams
 
-instance Default DidCloseTextDocumentParams where
-  def = DidCloseTextDocumentParams def
 
-type DidCloseTextDocumentNotification = NotificationMessage DidCloseTextDocumentParams
+type DidCloseTextDocumentNotification = NotificationMessage ClientMethod DidCloseTextDocumentParams
 
 -- ---------------------------------------------------------------------
 {-
@@ -2294,8 +2330,6 @@ instance A.FromJSON FileChangeType where
   parseJSON (A.Number 3) = pure FcDeleted
   parseJSON _            = mempty
 
-instance Default FileChangeType where
-  def = FcChanged -- Choose something random
 
 -- -------------------------------------
 
@@ -2316,10 +2350,8 @@ data DidChangeWatchedFilesParams =
 $(deriveJSON lspOptions ''DidChangeWatchedFilesParams)
 makeFieldsNoPrefix ''DidChangeWatchedFilesParams
 
-instance Default DidChangeWatchedFilesParams where
-  def = DidChangeWatchedFilesParams (List def)
 
-type DidChangeWatchedFilesNotification = NotificationMessage DidChangeWatchedFilesParams
+type DidChangeWatchedFilesNotification = NotificationMessage ClientMethod DidChangeWatchedFilesParams
 
 -- ---------------------------------------------------------------------
 {-
@@ -2357,10 +2389,8 @@ data PublishDiagnosticsParams =
 $(deriveJSON lspOptions ''PublishDiagnosticsParams)
 makeFieldsNoPrefix ''PublishDiagnosticsParams
 
-instance Default PublishDiagnosticsParams where
-  def = PublishDiagnosticsParams def def
 
-type PublishDiagnosticsNotification = NotificationMessage PublishDiagnosticsParams
+type PublishDiagnosticsNotification = NotificationMessage ServerMethod PublishDiagnosticsParams
 
 -- ---------------------------------------------------------------------
 {-
@@ -2388,7 +2418,7 @@ Request
     params: TextDocumentPositionParams
 -}
 
-type CompletionRequest = RequestMessage TextDocumentPositionParams
+type CompletionRequest = RequestMessage ClientMethod TextDocumentPositionParams
 
 -- -------------------------------------
 
@@ -2633,8 +2663,6 @@ instance A.FromJSON CompletionItemKind where
   parseJSON (A.Number 18) = pure CiReference
   parseJSON _            = mempty
 
-instance Default CompletionItemKind where
-  def = CiText
 
 -- -------------------------------------
 
@@ -2694,15 +2722,13 @@ data CompletionListType =
 $(deriveJSON lspOptions ''CompletionListType)
 makeFieldsNoPrefix ''CompletionListType
 
-instance Default CompletionListType where
-  def = CompletionListType False (List [])
 
 data CompletionResponseResult
   = CompletionList CompletionListType
   | Completions (List CompletionItem)
   deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length "CompletionResponseResult"), sumEncoding = UntaggedValue } ''CompletionResponseResult)
+$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length ("CompletionResponseResult"::String)), sumEncoding = UntaggedValue } ''CompletionResponseResult)
 
 type CompletionResponse = ResponseMessage CompletionResponseResult
 
@@ -2756,7 +2782,7 @@ Response
     error: code and message set in case an exception happens during the completion resolve request.
 -}
 
-type CompletionItemResolveRequest  = RequestMessage CompletionItem
+type CompletionItemResolveRequest  = RequestMessage ClientMethod CompletionItem
 type CompletionItemResolveResponse = ResponseMessage CompletionItem
 
 -- ---------------------------------------------------------------------
@@ -2817,7 +2843,7 @@ Registration Options: TextDocumentRegistrationOptions
 
 -}
 
-type HoverRequest = RequestMessage TextDocumentPositionParams
+type HoverRequest = RequestMessage ClientMethod TextDocumentPositionParams
 
 data MarkedString =
   -- TODO: Add the plain string variant too
@@ -2829,8 +2855,6 @@ data MarkedString =
 $(deriveJSON lspOptions ''MarkedString)
 makeFieldsNoPrefix ''MarkedString
 
-instance Default MarkedString where
-  def = MarkedString def def
 
 data Hover =
   Hover
@@ -2841,8 +2865,6 @@ data Hover =
 $(deriveJSON lspOptions ''Hover)
 makeFieldsNoPrefix ''Hover
 
-instance Default Hover where
-  def = Hover def Nothing
 
 type HoverResponse = ResponseMessage Hover
 
@@ -2936,7 +2958,7 @@ interface ParameterInformation {
     signature help request.
 -}
 
-type SignatureHelpRequest = RequestMessage TextDocumentPositionParams
+type SignatureHelpRequest = RequestMessage ClientMethod TextDocumentPositionParams
 
 
 -- -------------------------------------
@@ -2949,8 +2971,6 @@ data ParameterInformation =
 $(deriveJSON lspOptions ''ParameterInformation)
 makeFieldsNoPrefix ''ParameterInformation
 
-instance Default ParameterInformation where
-  def = ParameterInformation def def
 
 -- -------------------------------------
 
@@ -2974,8 +2994,6 @@ data SignatureHelp =
 $(deriveJSON lspOptions ''SignatureHelp)
 makeFieldsNoPrefix ''SignatureHelp
 
-instance Default SignatureHelp where
-  def = SignatureHelp (List def) Nothing Nothing
 
 type SignatureHelpResponse = ResponseMessage SignatureHelp
 
@@ -3031,7 +3049,7 @@ Response:
 
 -- {"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{"textDocument":{"uri":"file:///tmp/Foo.hs"},"position":{"line":1,"character":8}}}
 
-type DefinitionRequest  = RequestMessage TextDocumentPositionParams
+type DefinitionRequest  = RequestMessage ClientMethod TextDocumentPositionParams
 type DefinitionResponse = ResponseMessage Location
 
 -- ---------------------------------------------------------------------
@@ -3080,8 +3098,6 @@ data ReferenceContext =
 $(deriveJSON lspOptions ''ReferenceContext)
 makeFieldsNoPrefix ''ReferenceContext
 
-instance Default ReferenceContext where
-  def = ReferenceContext False
 
 data ReferenceParams =
   ReferenceParams
@@ -3093,10 +3109,8 @@ data ReferenceParams =
 $(deriveJSON lspOptions ''ReferenceParams)
 makeFieldsNoPrefix ''ReferenceParams
 
-instance Default ReferenceParams where
-  def = ReferenceParams def def def
 
-type ReferencesRequest  = RequestMessage ReferenceParams
+type ReferencesRequest  = RequestMessage ClientMethod ReferenceParams
 type ReferencesResponse = ResponseMessage (List Location)
 
 -- ---------------------------------------------------------------------
@@ -3171,7 +3185,7 @@ Registration Options: TextDocumentRegistrationOptions
 
 -}
 
-type DocumentHighlightRequest = RequestMessage TextDocumentPositionParams
+type DocumentHighlightRequest = RequestMessage ClientMethod TextDocumentPositionParams
 
 -- -------------------------------------
 
@@ -3296,11 +3310,9 @@ data DocumentSymbolParams =
 $(deriveJSON lspOptions ''DocumentSymbolParams)
 makeFieldsNoPrefix ''DocumentSymbolParams
 
-instance Default DocumentSymbolParams where
-  def = DocumentSymbolParams def
 
 
-type DocumentSymbolRequest = RequestMessage DocumentSymbolParams
+type DocumentSymbolRequest = RequestMessage ClientMethod DocumentSymbolParams
 
 -- -------------------------------------
 
@@ -3366,8 +3378,6 @@ instance A.FromJSON SymbolKind where
   parseJSON (A.Number 18) = pure SkArray
   parseJSON _             = mempty
 
-instance Default SymbolKind where
-  def = SkFile -- Choose something random
 
 -- ---------------------------------------------------------------------
 
@@ -3383,8 +3393,6 @@ data SymbolInformation =
 $(deriveJSON lspOptions ''SymbolInformation)
 makeFieldsNoPrefix ''SymbolInformation
 
-instance Default SymbolInformation where
-  def = SymbolInformation def def def def
 
 -- -------------------------------------
 
@@ -3429,7 +3437,7 @@ data WorkspaceSymbolParams =
 $(deriveJSON lspOptions ''WorkspaceSymbolParams)
 makeFieldsNoPrefix ''WorkspaceSymbolParams
 
-type WorkspaceSymbolRequest  = RequestMessage WorkspaceSymbolParams
+type WorkspaceSymbolRequest  = RequestMessage ClientMethod WorkspaceSymbolParams
 type WorkspaceSymbolsResponse = ResponseMessage (List SymbolInformation)
 
 -- ---------------------------------------------------------------------
@@ -3495,8 +3503,6 @@ data CodeActionContext =
 $(deriveJSON lspOptions ''CodeActionContext)
 makeFieldsNoPrefix ''CodeActionContext
 
-instance Default CodeActionContext where
-  def = CodeActionContext def
 
 data CodeActionParams =
   CodeActionParams
@@ -3508,10 +3514,8 @@ data CodeActionParams =
 $(deriveJSON lspOptions ''CodeActionParams)
 makeFieldsNoPrefix ''CodeActionParams
 
-instance Default CodeActionParams where
-  def = CodeActionParams def def def
 
-type CodeActionRequest  = RequestMessage CodeActionParams
+type CodeActionRequest  = RequestMessage ClientMethod CodeActionParams
 type CodeActionResponse = ResponseMessage (List Command)
 
 -- ---------------------------------------------------------------------
@@ -3577,7 +3581,7 @@ $(deriveJSON lspOptions ''CodeLensParams)
 makeFieldsNoPrefix ''CodeLensParams
 
 
-type CodeLensRequest = RequestMessage CodeLensParams
+type CodeLensRequest = RequestMessage ClientMethod CodeLensParams
 
 -- -------------------------------------
 
@@ -3591,8 +3595,6 @@ data CodeLens =
 $(deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''CodeLens)
 makeFieldsNoPrefix ''CodeLens
 
-instance Default CodeLens where
-  def = CodeLens def def def
 
 type CodeLensResponse = ResponseMessage (List CodeLens)
 
@@ -3640,7 +3642,7 @@ Response
 
 -}
 
-type CodeLensResolveRequest  = RequestMessage CodeLens
+type CodeLensResolveRequest  = RequestMessage ClientMethod CodeLens
 type CodeLensResolveResponse = ResponseMessage (List CodeLens)
 
 -- ---------------------------------------------------------------------
@@ -3704,7 +3706,7 @@ data DocumentLinkParams =
 $(deriveJSON lspOptions ''DocumentLinkParams)
 makeFieldsNoPrefix ''DocumentLinkParams
 
-type DocumentLinkRequest = RequestMessage DocumentLinkParams
+type DocumentLinkRequest = RequestMessage ClientMethod DocumentLinkParams
 
 data DocumentLink =
   DocumentLink
@@ -3735,7 +3737,7 @@ Response:
 
 -}
 
-type DocumentLinkResolveRequest  = RequestMessage DocumentLink
+type DocumentLinkResolveRequest  = RequestMessage ClientMethod DocumentLink
 type DocumentLinkResolveResponse = ResponseMessage DocumentLink
 
 -- ---------------------------------------------------------------------
@@ -3813,7 +3815,7 @@ data DocumentFormattingParams =
 $(deriveJSON lspOptions ''DocumentFormattingParams)
 makeFieldsNoPrefix ''DocumentFormattingParams
 
-type DocumentFormattingRequest  = RequestMessage DocumentFormattingParams
+type DocumentFormattingRequest  = RequestMessage ClientMethod DocumentFormattingParams
 type DocumentFormattingResponse = ResponseMessage (List TextEdit)
 
 -- ---------------------------------------------------------------------
@@ -3865,7 +3867,7 @@ data DocumentRangeFormattingParams =
 $(deriveJSON lspOptions ''DocumentRangeFormattingParams)
 makeFieldsNoPrefix ''DocumentRangeFormattingParams
 
-type DocumentRangeFormattingRequest  = RequestMessage DocumentRangeFormattingParams
+type DocumentRangeFormattingRequest  = RequestMessage ClientMethod DocumentRangeFormattingParams
 type DocumentRangeFormattingResponse = ResponseMessage (List TextEdit)
 
 -- ---------------------------------------------------------------------
@@ -3935,7 +3937,7 @@ data DocumentOnTypeFormattingParams =
 $(deriveJSON lspOptions ''DocumentOnTypeFormattingParams)
 makeFieldsNoPrefix ''DocumentOnTypeFormattingParams
 
-type DocumentOnTypeFormattingRequest  = RequestMessage DocumentOnTypeFormattingParams
+type DocumentOnTypeFormattingRequest  = RequestMessage ClientMethod DocumentOnTypeFormattingParams
 type DocumentOnTypeFormattingResponse = ResponseMessage (List TextEdit)
 
 data DocumentOnTypeFormattingRegistrationOptions =
@@ -3998,12 +4000,10 @@ data RenameParams =
 $(deriveJSON lspOptions ''RenameParams)
 makeFieldsNoPrefix ''RenameParams
 
-instance Default RenameParams where
-  def = RenameParams def def def
 
 -- {\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"textDocument/rename\",\"params\":{\"textDocument\":{\"uri\":\"file:///home/alanz/mysrc/github/alanz/haskell-lsp/src/HieVscode.hs\"},\"position\":{\"line\":37,\"character\":17},\"newName\":\"getArgs'\"}}
 
-type RenameRequest  = RequestMessage RenameParams
+type RenameRequest  = RequestMessage ClientMethod RenameParams
 type RenameResponse = ResponseMessage WorkspaceEdit
 
 -- ---------------------------------------------------------------------
@@ -4066,7 +4066,7 @@ data ExecuteCommandParams =
 $(deriveJSON lspOptions ''ExecuteCommandParams)
 makeFieldsNoPrefix ''ExecuteCommandParams
 
-type ExecuteCommandRequest = RequestMessage ExecuteCommandParams
+type ExecuteCommandRequest = RequestMessage ClientMethod ExecuteCommandParams
 type ExecuteCommandResponse = ResponseMessage A.Value
 
 data ExecuteCommandRegistrationOptions =
@@ -4130,7 +4130,7 @@ $(deriveJSON lspOptions ''ApplyWorkspaceEditResponseBody)
 makeFieldsNoPrefix ''ApplyWorkspaceEditResponseBody
 
 -- | Sent from the server to the client
-type ApplyWorkspaceEditRequest  = RequestMessage ApplyWorkspaceEditParams
+type ApplyWorkspaceEditRequest  = RequestMessage ServerMethod ApplyWorkspaceEditParams
 type ApplyWorkspaceEditResponse = ResponseMessage ApplyWorkspaceEditResponseBody
 
 -- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -4145,8 +4145,6 @@ data TraceNotificationParams =
 $(deriveJSON lspOptions ''TraceNotificationParams)
 makeFieldsNoPrefix ''TraceNotificationParams
 
-instance Default TraceNotificationParams where
-  def = TraceNotificationParams mempty
 
 data TraceNotification =
   TraceNotification {
@@ -4156,8 +4154,6 @@ data TraceNotification =
 $(deriveJSON lspOptions ''TraceNotification)
 makeFieldsNoPrefix ''TraceNotification
 
-instance Default TraceNotification where
-  def = TraceNotification def
 
 
 -- ---------------------------------------------------------------------

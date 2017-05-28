@@ -110,6 +110,7 @@ test-suite haskell-lsp-test
   other-modules:       Spec
                        VspSpec
                        DiagnosticsSpec
+                       MethodSpec
   build-depends:       base
                      , aeson
                      , containers
