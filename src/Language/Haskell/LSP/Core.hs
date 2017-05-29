@@ -159,7 +159,6 @@ data Handlers =
     -- new in 3.0
     , initializedHandler                       :: !(Maybe (Handler J.InitializedNotification))
     , willSaveTextDocumentNotificationHandler  :: !(Maybe (Handler J.WillSaveTextDocumentNotification))
-
     , cancelNotificationHandler                :: !(Maybe (Handler J.CancelNotification))
 
     -- Responses to Request messages originated from the server
@@ -173,39 +172,64 @@ instance Default Handlers where
                  Nothing Nothing Nothing
 
 -- ---------------------------------------------------------------------
+nop :: a -> b -> IO a
+nop = const . return
 
-handlerMap :: Handlers
-           -> Map.Map J.ClientMethod (MVar LanguageContextData -> J.Value -> IO ())
-handlerMap h = Map.fromList
-  [ (J.TextDocumentCompletion,          hh nop $ completionHandler h)
-  , (J.CompletionItemResolve,           hh nop $ completionResolveHandler h)
-  , (J.TextDocumentHover,               hh nop $ hoverHandler h)
-  , (J.TextDocumentSignatureHelp,       hh nop $ signatureHelpHandler h)
-  , (J.TextDocumentDefinition,          hh nop $ definitionHandler h)
-  , (J.TextDocumentReferences,          hh nop $ referencesHandler h)
-  , (J.TextDocumentDocumentHighlight,   hh nop $ documentHighlightHandler h)
-  , (J.TextDocumentDocumentSymbol,      hh nop $ documentSymbolHandler h)
-  , (J.WorkspaceSymbol,                 hh nop $ workspaceSymbolHandler h)
-  , (J.TextDocumentCodeAction,          hh nop $ codeActionHandler h)
-  , (J.TextDocumentCodeLens,            hh nop $ codeLensHandler h)
-  , (J.CodeLensResolve,                 hh nop $ codeLensResolveHandler h)
-  , (J.TextDocumentFormatting,          hh nop $ documentFormattingHandler h)
-  , (J.TextDocumentRangeFormatting,     hh nop $ documentRangeFormattingHandler h)
-  , (J.TextDocumentOnTypeFormatting,    hh nop $ documentTypeFormattingHandler h)
-  , (J.TextDocumentRename,              hh nop $ renameHandler h)
-  , (J.WorkspaceExecuteCommand,         hh nop $ executeCommandHandler h)
+helper :: J.FromJSON a
+       => (MVar LanguageContextData -> a       -> IO ())
+       -> (MVar LanguageContextData -> J.Value -> IO ())
+helper requestHandler mvarDat json =
+  case J.fromJSON json of
+    J.Success req -> requestHandler mvarDat req
+    J.Error err -> do
+      let msg = unwords $ ["haskell-lsp:parse error.", show json, show err] ++ _ERR_MSG_URL
+      sendErrorLog mvarDat msg
 
-  , (J.Initialized,                     hh nop $ initializedHandler h)
-  , (J.WorkspaceDidChangeConfiguration, hh nop $ didChangeConfigurationParamsHandler h)
-  , (J.TextDocumentDidOpen,             hh openVFS $ didOpenTextDocumentNotificationHandler h)
-  , (J.TextDocumentDidChange,           hh changeVFS $ didChangeTextDocumentNotificationHandler h )
-  , (J.TextDocumentDidClose,            hh closeVFS $ didCloseTextDocumentNotificationHandler h )
-  , (J.TextDocumentDidSave,             hh nop $ didSaveTextDocumentNotificationHandler h)
-  , (J.WorkspaceDidChangeWatchedFiles,  hh nop $ didChangeWatchedFilesNotificationHandler h)
-
-  , (J.CancelRequest,                   hh nop $ cancelNotificationHandler h)
-  ]
-  where nop = const . return
+handlerMap :: InitializeCallback
+           -> Handlers -> J.ClientMethod -> (MVar LanguageContextData -> J.Value -> IO ())
+-- General
+handlerMap i _ J.Initialize                      = helper (initializeRequestHandler i)
+handlerMap _ h J.Initialized                     = hh nop $ initializedHandler h
+handlerMap _ _ J.Shutdown                        = helper shutdownRequestHandler
+handlerMap _ _ J.Exit                            = \_ _ -> do
+  logm $ B.pack "haskell-lsp:Got exit, exiting"
+  exitSuccess
+handlerMap _ h J.CancelRequest                   = hh nop $ cancelNotificationHandler h
+-- Workspace
+handlerMap _ h J.WorkspaceDidChangeConfiguration = hh nop $ didChangeConfigurationParamsHandler h
+handlerMap _ h J.WorkspaceDidChangeWatchedFiles  = hh nop $ didChangeWatchedFilesNotificationHandler h
+handlerMap _ h J.WorkspaceSymbol                 = hh nop $ workspaceSymbolHandler h
+handlerMap _ h J.WorkspaceExecuteCommand         = hh nop $ executeCommandHandler h
+-- Document
+handlerMap _ h J.TextDocumentDidOpen             = hh openVFS $ didOpenTextDocumentNotificationHandler h
+handlerMap _ h J.TextDocumentDidChange           = hh changeVFS $ didChangeTextDocumentNotificationHandler h
+handlerMap _ h J.TextDocumentWillSave            = hh nop $ willSaveTextDocumentNotificationHandler h
+handlerMap _ h J.TextDocumentWillSaveWaitUntil   = hh nop $ willSaveWaitUntilTextDocHandler h
+handlerMap _ h J.TextDocumentDidSave             = hh nop $ didSaveTextDocumentNotificationHandler h
+handlerMap _ h J.TextDocumentDidClose            = hh closeVFS $ didCloseTextDocumentNotificationHandler h
+handlerMap _ h J.TextDocumentCompletion          = hh nop $ completionHandler h
+handlerMap _ h J.CompletionItemResolve           = hh nop $ completionResolveHandler h
+handlerMap _ h J.TextDocumentHover               = hh nop $ hoverHandler h
+handlerMap _ h J.TextDocumentSignatureHelp       = hh nop $ signatureHelpHandler h
+handlerMap _ h J.TextDocumentReferences          = hh nop $ referencesHandler h
+handlerMap _ h J.TextDocumentDocumentHighlight   = hh nop $ documentHighlightHandler h
+handlerMap _ h J.TextDocumentDocumentSymbol      = hh nop $ documentSymbolHandler h
+handlerMap _ h J.TextDocumentFormatting          = hh nop $ documentFormattingHandler h
+handlerMap _ h J.TextDocumentRangeFormatting     = hh nop $ documentRangeFormattingHandler h
+handlerMap _ h J.TextDocumentOnTypeFormatting    = hh nop $ documentTypeFormattingHandler h
+handlerMap _ h J.TextDocumentDefinition          = hh nop $ definitionHandler h
+handlerMap _ h J.TextDocumentCodeAction          = hh nop $ codeActionHandler h
+handlerMap _ h J.TextDocumentCodeLens            = hh nop $ codeLensHandler h
+handlerMap _ h J.CodeLensResolve                 = hh nop $ codeLensResolveHandler h
+handlerMap _ h J.TextDocumentDocumentLink        = hh nop $ documentLinkHandler h
+handlerMap _ h J.DocumentLinkResolve             = hh nop $ documentLinkResolveHandler h
+handlerMap _ h J.TextDocumentRename              = hh nop $ renameHandler h
+handlerMap _ _ (J.Misc x)   = helper f
+  where f ::  MVar LanguageContextData -> J.TraceNotification -> IO ()
+        f mvarDat _ = do
+          let msg = "haskell-lsp:Got " ++ T.unpack x ++ " ignoring"
+          logm (B.pack msg)
+          sendErrorLog mvarDat msg
 
 -- ---------------------------------------------------------------------
 
@@ -365,43 +389,11 @@ handleRequest dispatcherProc mvarDat contLenStr jsonStr = do
           J.Success res -> h (resLspFuncs ctx) res
           J.Error err -> let msg = unwords $ ["haskell-lsp:response parse error.", lbs2str jsonStr, show err] ++ _ERR_MSG_URL
                            in sendErrorLog mvarDat msg
-    helper :: J.FromJSON b => J.Value -> (MVar LanguageContextData -> b -> IO ())
-           -> IO ()
-    helper json requestHandler = case J.fromJSON json of
-      J.Success req -> do
-        requestHandler mvarDat req
-      J.Error  err -> do
-        let msg = unwords $ ["haskell-lsp:parse error.", lbs2str contLenStr, lbs2str jsonStr, show err] ++ _ERR_MSG_URL
-        sendErrorLog mvarDat msg
-
-    -- ---------------------------------
-
-    -- Server life cycle handlers
-    handle json J.Initialize = helper json (initializeRequestHandler dispatcherProc)
-    handle json J.Shutdown   = helper json shutdownRequestHandler
-    handle _json J.Exit = do
-      logm $ B.pack "haskell-lsp:Got exit, exiting"
-      exitSuccess
-
-    -- ---------------------------------
-
-    -- {"jsonrpc":"2.0","method":"$/setTraceNotification","params":{"value":"off"}}
-    handle json (J.Misc "setTraceNotification") = helper json h
-      where
-        h :: MVar LanguageContextData -> J.TraceNotification -> IO ()
-        h _ _ = do
-          logm "haskell-lsp:Got setTraceNotification, ignoring"
-          sendErrorLog mvarDat "haskell-lsp:Got setTraceNotification, ignoring"
-
     -- capability based handlers
     handle json cmd = do
       ctx <- readMVar mvarDat
       let h = resHandlers ctx
-      case Map.lookup cmd (handlerMap h) of
-        Just f -> f mvarDat json
-        Nothing -> do
-          let msg = unwords ["haskell-lsp:unknown message received:method='" ++ B.unpack (J.encode cmd) ++ "',", lbs2str contLenStr, lbs2str jsonStr]
-          sendErrorLog mvarDat msg
+      handlerMap dispatcherProc h cmd mvarDat json
 
 -- ---------------------------------------------------------------------
 
@@ -518,6 +510,7 @@ initializeRequestHandler dispatcherProc mvarCtx req@(J.RequestMessage _ origId _
               , J._definitionProvider               = supported (definitionHandler h)
               , J._referencesProvider               = supported (referencesHandler h)
               , J._documentHighlightProvider        = supported (documentHighlightHandler h)
+
               , J._documentSymbolProvider           = supported (documentSymbolHandler h)
               , J._workspaceSymbolProvider          = supported (workspaceSymbolHandler h)
               , J._codeActionProvider               = supported (codeActionHandler h)
