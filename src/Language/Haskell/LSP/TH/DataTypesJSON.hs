@@ -2160,6 +2160,9 @@ data WillSaveTextDocumentParams =
     , _reason       :: TextDocumentSaveReason
     } deriving (Show, Read, Eq)
 
+$(deriveJSON lspOptions ''WillSaveTextDocumentParams)
+makeFieldsNoPrefix ''WillSaveTextDocumentParams
+
 type WillSaveTextDocumentNotification = NotificationMessage ClientMethod WillSaveTextDocumentParams
 
 -- ---------------------------------------------------------------------
@@ -3714,6 +3717,8 @@ data DocumentLink =
     , _target :: Maybe String
     } deriving (Show, Read, Eq)
 
+$(deriveJSON lspOptions ''DocumentLink)
+makeFieldsNoPrefix ''DocumentLink
 type DocumentLinkResponse = ResponseMessage (List DocumentLink)
 
 -- ---------------------------------------------------------------------
