@@ -59,6 +59,7 @@ module Language.Haskell.LSP.Messages (
   ) where
 
 import qualified Data.Aeson as J
+import           Data.Text ( Text )
 import qualified Language.Haskell.LSP.TH.DataTypesJSON      as J
 
 -- ---------------------------------------------------------------------
@@ -110,7 +111,7 @@ fmClientCancelNotification idToCancel
 
 -- * :arrow_left: [window/showMessage](#window_showMessage)
 
-fmServerShowMessageNotification :: J.MessageType -> String -> J.ShowMessageNotification
+fmServerShowMessageNotification :: J.MessageType -> Text -> J.ShowMessageNotification
 fmServerShowMessageNotification mt msg
   = J.NotificationMessage "2.0" J.WindowShowMessage (J.ShowMessageParams mt msg)
 
@@ -124,7 +125,7 @@ fmServerShowMessageRequest rid params
 -- ----------------------------------------------------------------------
 -- * :arrow_left: [window/logMessage](#window_logMessage)
 
-fmServerLogMessageNotification :: J.MessageType -> String -> J.LogMessageNotification
+fmServerLogMessageNotification :: J.MessageType -> Text -> J.LogMessageNotification
 fmServerLogMessageNotification mt msg
   = J.NotificationMessage "2.0" J.WindowLogMessage (J.LogMessageParams mt msg)
 

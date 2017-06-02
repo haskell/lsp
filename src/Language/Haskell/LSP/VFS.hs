@@ -1,4 +1,5 @@
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -22,8 +23,7 @@ module Language.Haskell.LSP.VFS
   , yiSplitAt
   ) where
 
-import qualified Data.Aeson as J
-import qualified Data.ByteString.Lazy.Char8 as B
+import           Data.Text ( Text )
 import           Data.List
 import qualified Data.Map as Map
 import qualified Language.Haskell.LSP.TH.DataTypesJSON      as J
@@ -49,7 +49,7 @@ openVFS :: VFS -> J.DidOpenTextDocumentNotification -> IO VFS
 openVFS vfs (J.NotificationMessage _ _ params) = do
   let J.DidOpenTextDocumentParams
          (J.TextDocumentItem uri _ version text) = params
-  return $ Map.insert uri (VirtualFile version (Yi.fromString text)) vfs
+  return $ Map.insert uri (VirtualFile version (Yi.fromText text)) vfs
 
 -- ---------------------------------------------------------------------
 
@@ -95,7 +95,7 @@ applyChanges str changes' = r
 
 applyChange :: Yi.YiString -> J.TextDocumentContentChangeEvent -> Yi.YiString
 applyChange _ (J.TextDocumentContentChangeEvent Nothing Nothing str)
-  = Yi.fromString str
+  = Yi.fromText str
 applyChange str (J.TextDocumentContentChangeEvent (Just (J.Range fm _to)) (Just len) txt) =
   if txt == ""
     then -- delete len chars from fm
@@ -127,7 +127,7 @@ deleteChars str (J.Position l c) len = str'
 
 -- ---------------------------------------------------------------------
 
-addChars :: Yi.YiString -> J.Position -> String -> Yi.YiString
+addChars :: Yi.YiString -> J.Position -> Text -> Yi.YiString
 addChars str (J.Position l c) new = str'
   where
     (before,after) = Yi.splitAtLine l str
@@ -135,17 +135,17 @@ addChars str (J.Position l c) new = str'
     -- Due to LSP zero-based coordinates
     beforeOnLine = Yi.take c after
     after' = Yi.drop c after
-    str' = Yi.concat [before, beforeOnLine, (Yi.fromString new), after']
+    str' = Yi.concat [before, beforeOnLine, (Yi.fromText new), after']
 
 -- ---------------------------------------------------------------------
 
-changeChars :: Yi.YiString -> J.Position -> Int -> String -> Yi.YiString
+changeChars :: Yi.YiString -> J.Position -> Int -> Text -> Yi.YiString
 changeChars str (J.Position ls cs) len new = str'
   where
     (before,after) = yiSplitAt ls cs str
     after' = Yi.drop len after
 
-    str' = Yi.concat [before, (Yi.fromString new), after']
+    str' = Yi.concat [before, (Yi.fromText new), after']
 
 -- changeChars :: Yi.YiString -> J.Position -> J.Position -> String -> Yi.YiString
 -- changeChars str (J.Position ls cs) (J.Position le ce) new = str'

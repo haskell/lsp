@@ -3,6 +3,8 @@ module DiagnosticsSpec where
 
 
 import qualified Data.Map as Map
+import qualified Data.Text as T
+import           Data.Text ( Text )
 import           Language.Haskell.LSP.Diagnostics
 import qualified Language.Haskell.LSP.TH.DataTypesJSON as J
 
@@ -24,7 +26,7 @@ spec = describe "Diagnostics functions" diagnosticsSpec
 
 -- ---------------------------------------------------------------------
 
-mkDiagnostic :: Maybe J.DiagnosticSource -> String -> J.Diagnostic
+mkDiagnostic :: Maybe J.DiagnosticSource -> Text -> J.Diagnostic
 mkDiagnostic ms str = J.Diagnostic (J.Range (J.Position 0 1) (J.Position 3 0)) Nothing Nothing ms str
 
 -- ---------------------------------------------------------------------

@@ -29,6 +29,7 @@ module Language.Haskell.LSP.Core (
 import           Control.Concurrent
 import qualified Control.Exception as E
 import           Control.Monad
+import           Control.Lens ( (<&>), (^.) )
 import qualified Data.Aeson as J
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as B
@@ -36,7 +37,10 @@ import           Data.Default
 import qualified Data.HashMap.Strict as HM
 import qualified Data.List as L
 import qualified Data.Map as Map
+import           Data.Monoid
+import           Data.Foldable
 import qualified Data.Text as T
+import           Data.Text ( Text )
 import           Language.Haskell.LSP.Constant
 import           Language.Haskell.LSP.Messages
 import qualified Language.Haskell.LSP.TH.ClientCapabilities as C
@@ -182,7 +186,7 @@ helper requestHandler mvarDat json =
   case J.fromJSON json of
     J.Success req -> requestHandler mvarDat req
     J.Error err -> do
-      let msg = unwords $ ["haskell-lsp:parse error.", show json, show err] ++ _ERR_MSG_URL
+      let msg = T.pack . unwords $ ["haskell-lsp:parse error.", show json, show err] ++ _ERR_MSG_URL
       sendErrorLog mvarDat msg
 
 handlerMap :: InitializeCallback
@@ -229,7 +233,7 @@ handlerMap _ _ (J.Misc x)   = helper f
         f mvarDat _ = do
           let msg = "haskell-lsp:Got " ++ T.unpack x ++ " ignoring"
           logm (B.pack msg)
-          sendErrorLog mvarDat msg
+          sendErrorLog mvarDat (T.pack msg)
 
 -- ---------------------------------------------------------------------
 
@@ -238,7 +242,7 @@ handlerMap _ _ (J.Misc x)   = helper f
 hh :: forall b. (J.FromJSON b)
    => (VFS -> b -> IO VFS) -> Maybe (Handler b) -> MVar LanguageContextData -> J.Value -> IO ()
 hh _ Nothing = \mvarDat json -> do
-      let msg = unwords ["haskell-lsp:no handler for.", show json]
+      let msg = T.pack $ unwords ["haskell-lsp:no handler for.", show json]
       sendErrorLog mvarDat msg
 hh getVfs (Just h) = \mvarDat json -> do
       case J.fromJSON json of
@@ -248,7 +252,7 @@ hh getVfs (Just h) = \mvarDat json -> do
           modifyMVar_ mvarDat (\c -> return c {resVFS = vfs'})
           h  (resLspFuncs ctx) req
         J.Error  err -> do
-          let msg = unwords $ ["haskell-lsp:parse error.", show json, show err] ++ _ERR_MSG_URL
+          let msg = T.pack $ unwords $ ["haskell-lsp:parse error.", show json, show err] ++ _ERR_MSG_URL
           sendErrorLog mvarDat msg
 
 -- ---------------------------------------------------------------------
@@ -363,7 +367,7 @@ handleRequest dispatcherProc mvarDat contLenStr jsonStr = do
 
   case J.eitherDecode jsonStr :: Either String J.Object of
     Left  err -> do
-      let msg =  unwords [ "haskell-lsp:incoming message parse error.", lbs2str contLenStr, lbs2str jsonStr, show err]
+      let msg =  T.pack $ unwords [ "haskell-lsp:incoming message parse error.", lbs2str contLenStr, lbs2str jsonStr, show err]
               ++ L.intercalate "\n" ("" : "" : _ERR_MSG_URL)
               ++ "\n"
       sendErrorLog mvarDat msg
@@ -373,7 +377,7 @@ handleRequest dispatcherProc mvarDat contLenStr jsonStr = do
         Just cmd@(J.String s) -> case J.fromJSON cmd of
                                    J.Success m -> handle (J.Object o) m
                                    J.Error _ -> do
-                                     let msg = unwords ["haskell-lsp:unknown message received:method='" ++ T.unpack s ++ "',", lbs2str contLenStr, lbs2str jsonStr]
+                                     let msg = T.pack $ unwords ["haskell-lsp:unknown message received:method='" ++ T.unpack s ++ "',", lbs2str contLenStr, lbs2str jsonStr]
                                      sendErrorLog mvarDat msg
         Just oops -> logs $ "haskell-lsp:got strange method param, ignoring:" ++ show oops
         Nothing -> do
@@ -384,10 +388,10 @@ handleRequest dispatcherProc mvarDat contLenStr jsonStr = do
     handleResponse json = do
       ctx <- readMVar mvarDat
       case responseHandler $ resHandlers ctx of
-        Nothing -> sendErrorLog mvarDat $ "haskell-lsp: responseHandler is not defined, ignoring response " ++ lbs2str jsonStr
+        Nothing -> sendErrorLog mvarDat $ T.pack $ "haskell-lsp: responseHandler is not defined, ignoring response " ++ lbs2str jsonStr
         Just h -> case J.fromJSON json of
           J.Success res -> h (resLspFuncs ctx) res
-          J.Error err -> let msg = unwords $ ["haskell-lsp:response parse error.", lbs2str jsonStr, show err] ++ _ERR_MSG_URL
+          J.Error err -> let msg = T.pack $ unwords $ ["haskell-lsp:response parse error.", lbs2str jsonStr, show err] ++ _ERR_MSG_URL
                            in sendErrorLog mvarDat msg
     -- capability based handlers
     handle json cmd = do
@@ -421,25 +425,25 @@ sendResponse mvarCtx str = do
 -- |
 --
 --
-sendErrorResponse :: MVar LanguageContextData -> J.LspIdRsp -> String -> IO ()
+sendErrorResponse :: MVar LanguageContextData -> J.LspIdRsp -> Text -> IO ()
 sendErrorResponse mv origId msg = sendErrorResponseS (sendEvent mv) origId J.InternalError msg
 
-sendErrorResponseS ::  SendFunc -> J.LspIdRsp -> J.ErrorCode -> String -> IO ()
+sendErrorResponseS ::  SendFunc -> J.LspIdRsp -> J.ErrorCode -> Text -> IO ()
 sendErrorResponseS sf origId err msg = do
   sf $ (J.ResponseMessage "2.0" origId Nothing
                 (Just $ J.ResponseError err msg Nothing) :: J.ErrorResponse)
 
-sendErrorLog :: MVar LanguageContextData -> String -> IO ()
+sendErrorLog :: MVar LanguageContextData -> Text -> IO ()
 sendErrorLog mv msg = sendErrorLogS (sendEvent mv) msg
 
-sendErrorLogS :: SendFunc -> String -> IO ()
+sendErrorLogS :: SendFunc -> Text -> IO ()
 sendErrorLogS sf msg =
   sf $ fmServerLogMessageNotification J.MtError msg
 
 -- sendErrorShow :: String -> IO ()
 -- sendErrorShow msg = sendErrorShowS sendEvent msg
 
-sendErrorShowS :: SendFunc -> String -> IO ()
+sendErrorShowS :: SendFunc -> Text -> IO ()
 sendErrorShowS sf msg =
   sf $ fmServerShowMessageNotification J.MtError msg
 
@@ -449,9 +453,10 @@ defaultErrorHandlers :: (Show a) => MVar LanguageContextData -> J.LspIdRsp -> a 
 defaultErrorHandlers mvarDat origId req = [ E.Handler someExcept ]
   where
     someExcept (e :: E.SomeException) = do
-      let msg = unwords ["request error.", show req, show e]
+      let msg = T.pack $ unwords ["request error.", show req, show e]
       sendErrorResponse mvarDat origId msg
       sendErrorLog mvarDat msg
+
 
 -- |=====================================================================
 --
@@ -467,8 +472,11 @@ initializeRequestHandler dispatcherProc mvarCtx req@(J.RequestMessage _ origId _
 
     ctx0 <- readMVar mvarCtx
 
-    modifyMVar_ mvarCtx (\c -> return c { resRootPath = J._rootPath params})
-    case J._rootPath params of
+    let rootDir = getFirst $ foldMap First [ params ^. J.rootUri  >>= J.uriToFilePath
+                                           , params ^. J.rootPath <&> T.unpack ]
+
+    modifyMVar_ mvarCtx (\c -> return c { resRootPath = rootDir })
+    case rootDir of
       Nothing -> return ()
       Just dir -> do
         logs $ "haskell-lsp:initializeRequestHandler: setting current dir to project root:" ++ dir
