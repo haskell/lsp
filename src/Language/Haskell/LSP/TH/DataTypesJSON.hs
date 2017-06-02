@@ -81,19 +81,6 @@ responseId (IdString s) = (IdRspString s)
 
 -- ---------------------------------------------------------------------
 
--- |
---   Client-initiated request. only pull out the method, for routing
---
-data Request =
-  Request {
-    _method   :: String    -- The command to execute
-  } deriving (Show, Read, Eq)
-
-$(deriveJSON lspOptions ''Request)
-makeFieldsNoPrefix ''Request
-
--- ---------------------------------------------------------------------
-
 -- Client Methods
 data ClientMethod =
  -- General
