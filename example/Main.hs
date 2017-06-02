@@ -17,7 +17,8 @@ import           Control.Monad.Trans.State.Lazy
 import qualified Data.Aeson as J
 import           Data.Default
 import qualified Data.HashMap.Strict as H
-import           Data.Maybe
+import           Data.Monoid
+import qualified Data.Text as T
 import qualified Data.Vector as V
 import qualified Language.Haskell.LSP.Control  as CTRL
 import qualified Language.Haskell.LSP.Core     as Core
@@ -205,7 +206,7 @@ reactor st inp = do
             doc  = notification ^. J.params
                                  . J.textDocument
                                  . J.uri
-            fileName = drop (length ("file://"::String)) doc
+            fileName =  J.uriToFilePath doc
         liftIO $ U.logs $ "********* fileName=" ++ show fileName
         sendDiagnostics doc (Just 0)
 
@@ -233,7 +234,7 @@ reactor st inp = do
             doc  = notification ^. J.params
                                  . J.textDocument
                                  . J.uri
-            fileName = drop (length ("file://"::String)) doc
+            fileName = J.uriToFilePath doc
         liftIO $ U.logs $ "********* fileName=" ++ show fileName
         sendDiagnostics doc Nothing
 
@@ -244,7 +245,6 @@ reactor st inp = do
         let
             params = req ^. J.params
             doc  = params ^. J.textDocument . J.uri
-            fileName = drop (length ("file://"::String)) doc
             J.Position l c = params ^. J.position
             newName  = params ^. J.newName
 
@@ -259,7 +259,6 @@ reactor st inp = do
       HandlerRequest (Core.LspFuncs _c _sf _vf _pd) (Core.ReqHover req) -> do
         liftIO $ U.logs $ "reactor:got HoverRequest:" ++ show req
         let J.TextDocumentPositionParams doc pos = req ^. J.params
-            fileName = drop (length ("file://"::String)) $ doc ^. J.uri
             J.Position l c = pos
 
         let
@@ -282,7 +281,7 @@ reactor st inp = do
           -- makeCommand only generates commands for diagnostics whose source is us
           makeCommand (J.Diagnostic (J.Range start _) _s _c (Just "lsp-hello") _m  ) = [J.Command title cmd cmdparams]
             where
-              title = "Apply LSP hello command:" ++ head (lines _m)
+              title = "Apply LSP hello command:" <> head (T.lines _m)
               -- NOTE: the cmd needs to be registered via the InitializeResponse message. See lspOptions above
               cmd = "lsp-hello-command"
               -- need 'file' and 'start_pos'
@@ -300,7 +299,6 @@ reactor st inp = do
       HandlerRequest (Core.LspFuncs _c _sf _vf _pd) (Core.ReqExecuteCommand req) -> do
         liftIO $ U.logs $ "reactor:got ExecuteCommandRequest:" -- ++ show req
         let params = req ^. J.params
-            command = params ^. J.command
             margs = params ^. J.arguments
 
         liftIO $ U.logs $ "reactor:ExecuteCommandRequest:margs=" ++ show margs

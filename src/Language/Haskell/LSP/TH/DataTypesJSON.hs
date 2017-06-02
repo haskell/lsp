@@ -9,17 +9,19 @@
 
 module Language.Haskell.LSP.TH.DataTypesJSON where
 
+import Control.Lens.TH ( makeFieldsNoPrefix )
 import           Data.Aeson.TH
 import           Data.Aeson.Types
 import qualified Data.Aeson as A
 import qualified Data.HashMap.Strict as H
 import qualified Data.Text as T
-import Data.Monoid ( (<>) )
+import           Data.Text ( Text )
+import           Data.Monoid ( (<>) )
+import           System.IO ( FilePath )
 
 import Language.Haskell.LSP.TH.ClientCapabilities
 import Language.Haskell.LSP.TH.Constants
 import Language.Haskell.LSP.Utility
-import Control.Lens.TH ( makeFieldsNoPrefix )
 
 -- ---------------------------------------------------------------------
 
@@ -37,12 +39,18 @@ instance (A.FromJSON a) => A.FromJSON (List a) where
 
 -- ---------------------------------------------------------------------
 
-type Uri = String
+type Uri = Text
+
+uriToFilePath :: Uri -> Maybe FilePath
+uriToFilePath uri
+  | "file://" `T.isPrefixOf` uri = Just $ T.unpack $ T.drop n uri
+  | otherwise = Nothing
+      where n = T.length "file://"
 
 -- ---------------------------------------------------------------------
 
 -- | Id used for a request, Can be either a String or an Int
-data LspId = IdInt Int | IdString String
+data LspId = IdInt Int | IdString Text
             deriving (Show,Read,Eq)
 
 instance A.ToJSON LspId where
@@ -51,7 +59,7 @@ instance A.ToJSON LspId where
 
 instance A.FromJSON LspId where
   parseJSON v@(A.Number _) = IdInt <$> parseJSON v
-  parseJSON  (A.String  s) = return (IdString (T.unpack s))
+  parseJSON  (A.String  s) = return (IdString s)
   parseJSON _              = mempty
 
 -- ---------------------------------------------------------------------
@@ -61,7 +69,7 @@ instance A.FromJSON LspId where
 -- to return a response message to conform to the JSON RPC specification. The
 -- result property of the ResponseMessage should be set to null in this case to
 -- signal a successful request.
-data LspIdRsp = IdRspInt Int | IdRspString String | IdRspNull
+data LspIdRsp = IdRspInt Int | IdRspString Text | IdRspNull
             deriving (Show,Read,Eq)
 
 instance A.ToJSON LspIdRsp where
@@ -71,26 +79,13 @@ instance A.ToJSON LspIdRsp where
 
 instance A.FromJSON LspIdRsp where
   parseJSON v@(A.Number _) = IdRspInt <$> parseJSON v
-  parseJSON  (A.String  s) = return (IdRspString (T.unpack s))
+  parseJSON  (A.String  s) = return $ IdRspString s
   parseJSON  A.Null        = return IdRspNull
   parseJSON _              = mempty
 
 responseId :: LspId -> LspIdRsp
 responseId (IdInt    i) = (IdRspInt i)
 responseId (IdString s) = (IdRspString s)
-
--- ---------------------------------------------------------------------
-
--- |
---   Client-initiated request. only pull out the method, for routing
---
-data Request =
-  Request {
-    _method   :: String    -- The command to execute
-  } deriving (Show, Read, Eq)
-
-$(deriveJSON lspOptions ''Request)
-makeFieldsNoPrefix ''Request
 
 -- ---------------------------------------------------------------------
 
@@ -133,7 +128,7 @@ data ClientMethod =
  | TextDocumentRename
  -- $/xxx messages
  -- Implementation Dependent, can be ignored
- | Misc T.Text
+ | Misc Text
    deriving (Eq,Ord,Read,Show)
 
 instance A.FromJSON ClientMethod where
@@ -261,7 +256,7 @@ instance A.ToJSON ServerMethod where
 
 data RequestMessage m a =
   RequestMessage
-    { _jsonrpc :: String
+    { _jsonrpc :: Text
     , _id      :: LspId
     , _method  :: m
     , _params  :: a
@@ -335,7 +330,7 @@ instance A.FromJSON ErrorCode where
 data ResponseError =
   ResponseError
     { _code    :: ErrorCode
-    , _message :: String
+    , _message :: Text
     , _xdata    :: Maybe A.Value
     } deriving (Read,Show,Eq)
 
@@ -346,7 +341,7 @@ makeFieldsNoPrefix ''ResponseError
 
 data ResponseMessage a =
   ResponseMessage
-    { _jsonrpc :: String
+    { _jsonrpc :: Text
     , _id      :: LspIdRsp
     , _result  :: Maybe a
     , _error   :: Maybe ResponseError
@@ -375,7 +370,7 @@ starting with '$/' it is free to ignore them if they are unknown.
 
 data NotificationMessage m a =
   NotificationMessage
-    { _jsonrpc :: String
+    { _jsonrpc :: Text
     , _method  :: m
     , _params  :: a
     } deriving (Read,Show,Eq)
@@ -593,14 +588,14 @@ interface Diagnostic {
 }
 -}
 
-type DiagnosticSource = String
+type DiagnosticSource = Text
 data Diagnostic =
   Diagnostic
     { _range    :: Range
     , _severity :: Maybe DiagnosticSeverity
-    , _code     :: Maybe String -- Note: Protocol allows Int too.
+    , _code     :: Maybe Text -- Note: Protocol allows Int too.
     , _source   :: Maybe DiagnosticSource
-    , _message  :: String
+    , _message  :: Text
     } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''Diagnostic)
@@ -636,8 +631,8 @@ interface Command {
 
 data Command =
   Command
-    { _title     :: String
-    , _command   :: String
+    { _title     :: Text
+    , _command   :: Text
     , _arguments :: Maybe A.Value
     } deriving (Show, Read, Eq)
 
@@ -672,7 +667,7 @@ interface TextEdit {
 data TextEdit =
   TextEdit
     { _range   :: Range
-    , _newText :: String
+    , _newText :: Text
     } deriving (Show,Read,Eq)
 
 $(deriveJSON lspOptions ''TextEdit)
@@ -770,7 +765,7 @@ export interface WorkspaceEdit {
 }
 -}
 
-type WorkspaceEditMap = H.HashMap T.Text (List TextEdit)
+type WorkspaceEditMap = H.HashMap Text (List TextEdit)
 
 data WorkspaceEdit =
   WorkspaceEdit
@@ -841,9 +836,9 @@ interface TextDocumentItem {
 data TextDocumentItem =
   TextDocumentItem {
     _uri        :: Uri
-  , _languageId :: String
+  , _languageId :: Text
   , _version    :: Int
-  , _text       :: String
+  , _text       :: Text
   } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''TextDocumentItem)
@@ -914,9 +909,9 @@ export interface DocumentFilter {
 -}
 data DocumentFilter =
   DocumentFilter
-    { _language :: String
-    , _scheme   :: String
-    , _pattern  :: Maybe String
+    { _language :: Text
+    , _scheme   :: Text
+    , _pattern  :: Maybe Text
     } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''DocumentFilter)
@@ -1007,8 +1002,8 @@ instance A.FromJSON Trace where
 data InitializeParams =
   InitializeParams {
     _processId             :: Maybe Int
-  , _rootPath              :: Maybe String -- ^ Deprecated in favour of _rootUri
-  , _rootUri               :: Maybe String
+  , _rootPath              :: Maybe Text -- ^ Deprecated in favour of _rootUri
+  , _rootUri               :: Maybe Uri
   , _initializationOptions :: Maybe A.Value
   , _capabilities          :: ClientCapabilities
   , _trace                 :: Maybe Trace
@@ -1174,7 +1169,7 @@ interface DocumentOnTypeFormattingOptions {
 -}
 data DocumentOnTypeFormattingOptions =
   DocumentOnTypeFormattingOptions
-    { _firstTriggerCharacter :: String
+    { _firstTriggerCharacter :: Text
     , _moreTriggerCharacter  :: Maybe [String]
     } deriving (Read,Show,Eq)
 
@@ -1226,7 +1221,7 @@ export interface ExecuteCommandOptions {
 data ExecuteCommandOptions =
   ExecuteCommandOptions
     { -- | The commands to be executed on the server
-      _commands :: List String
+      _commands :: List Text
     } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''ExecuteCommandOptions)
@@ -1519,7 +1514,7 @@ Response
 -}
 
 type ShutdownRequest  = RequestMessage ClientMethod (Maybe A.Value)
-type ShutdownResponse = ResponseMessage String
+type ShutdownResponse = ResponseMessage Text
 
 -- ---------------------------------------------------------------------
 {-
@@ -1619,7 +1614,7 @@ instance A.FromJSON MessageType where
 data ShowMessageParams =
   ShowMessageParams {
     _xtype    :: MessageType
-  , _message :: String
+  , _message :: Text
   } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''ShowMessageParams)
@@ -1677,7 +1672,7 @@ interface MessageActionItem {
 
 data MessageActionItem =
   MessageActionItem
-    { _title :: String
+    { _title :: Text
     } deriving (Show,Read,Eq)
 
 $(deriveJSON lspOptions ''MessageActionItem)
@@ -1687,7 +1682,7 @@ makeFieldsNoPrefix ''MessageActionItem
 data ShowMessageRequestParams =
   ShowMessageRequestParams
     { _xtype    :: MessageType
-    , _message :: String
+    , _message :: Text
     , _actions :: Maybe [MessageActionItem]
     } deriving (Show,Read,Eq)
 
@@ -1695,7 +1690,7 @@ $(deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''ShowMessageRequ
 makeFieldsNoPrefix ''ShowMessageRequestParams
 
 type ShowMessageRequest = RequestMessage ServerMethod ShowMessageRequestParams
-type ShowMessageResponse = ResponseMessage String
+type ShowMessageResponse = ResponseMessage Text
 
 -- ---------------------------------------------------------------------
 {-
@@ -1729,7 +1724,7 @@ Where type is defined as above.
 data LogMessageParams =
   LogMessageParams {
     _xtype    :: MessageType
-  , _message :: String
+  , _message :: Text
   } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''LogMessageParams)
@@ -1805,10 +1800,10 @@ data Registration =
   Registration
     { -- |The id used to register the request. The id can be used to deregister
       -- the request again.
-      _id :: String
+      _id :: Text
 
        -- | The method / capability to register for.
-    , _method :: String
+    , _method :: Text
 
       -- | Options necessary for the registration.
     , _registerOptions :: Maybe A.Value
@@ -1893,10 +1888,10 @@ data Unregistration =
   Unregistration
     { -- | The id used to unregister the request or notification. Usually an id
       -- provided during the register request.
-      _id :: String
+      _id :: Text
 
        -- |The method / capability to unregister for.
-    , _method :: String
+    , _method :: Text
     } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''Unregistration)
@@ -2035,7 +2030,7 @@ data TextDocumentContentChangeEvent =
   TextDocumentContentChangeEvent
     { _range       :: Maybe Range
     , _rangeLength :: Maybe Int
-    , _text        :: String
+    , _text        :: Text
     } deriving (Read,Show,Eq)
 
 $(deriveJSON lspOptions { omitNothingFields = True } ''TextDocumentContentChangeEvent)
@@ -2671,22 +2666,22 @@ instance A.FromJSON CompletionItemKind where
 
 data CompletionItem =
   CompletionItem
-    { _label :: String -- ^ The label of this completion item. By default also
+    { _label :: Text -- ^ The label of this completion item. By default also
                        -- the text that is inserted when selecting this
                        -- completion.
     , _kind :: Maybe CompletionItemKind
-    , _detail :: Maybe String -- ^ A human-readable string with additional
+    , _detail :: Maybe Text -- ^ A human-readable string with additional
                               -- information about this item, like type or
                               -- symbol information.
     , _documentation :: Maybe String-- ^ A human-readable string that represents
                                     -- a doc-comment.
-    , _sortText :: Maybe String -- ^ A string that should be used when filtering
+    , _sortText :: Maybe Text -- ^ A string that should be used when filtering
                                 -- a set of completion items. When `falsy` the
                                 -- label is used.
-    , _filterText :: Maybe String -- ^ A string that should be used when
+    , _filterText :: Maybe Text -- ^ A string that should be used when
                                   -- filtering a set of completion items. When
                                   -- `falsy` the label is used.
-    , _insertText :: Maybe String -- ^ A string that should be inserted a
+    , _insertText :: Maybe Text -- ^ A string that should be inserted a
                                   -- document when selecting this completion.
                                   -- When `falsy` the label is used.
     , _insertTextFormat :: Maybe InsertTextFormat
@@ -2851,8 +2846,8 @@ type HoverRequest = RequestMessage ClientMethod TextDocumentPositionParams
 data MarkedString =
   -- TODO: Add the plain string variant too
   MarkedString
-    { _language :: String
-    , _value    :: String
+    { _language :: Text
+    , _value    :: Text
     } deriving (Read,Show,Eq)
 
 $(deriveJSON lspOptions ''MarkedString)
@@ -2968,8 +2963,8 @@ type SignatureHelpRequest = RequestMessage ClientMethod TextDocumentPositionPara
 
 data ParameterInformation =
   ParameterInformation
-    { _label         :: String
-    , _documentation :: Maybe String
+    { _label         :: Text
+    , _documentation :: Maybe Text
     } deriving (Read,Show,Eq)
 $(deriveJSON lspOptions ''ParameterInformation)
 makeFieldsNoPrefix ''ParameterInformation
@@ -2979,8 +2974,8 @@ makeFieldsNoPrefix ''ParameterInformation
 
 data SignatureInformation =
   SignatureInformation
-    { _label         :: String
-    , _documentation :: Maybe String
+    { _label         :: Text
+    , _documentation :: Maybe Text
     , _parameters    :: Maybe [ParameterInformation]
     } deriving (Read,Show,Eq)
 
@@ -3293,7 +3288,7 @@ export enum SymbolKind {
     Function = 12,
     Variable = 13,
     Constant = 14,
-    String = 15,
+    Text = 15,
     Number = 16,
     Boolean = 17,
     Array = 18,
@@ -3386,10 +3381,10 @@ instance A.FromJSON SymbolKind where
 
 data SymbolInformation =
   SymbolInformation
-    { _name          :: String
+    { _name          :: Text
     , _kind          :: SymbolKind
     , _location      :: Location
-    , _containerName :: Maybe String -- ^The name of the symbol containing this
+    , _containerName :: Maybe Text -- ^The name of the symbol containing this
                                      -- symbol.
     } deriving (Read,Show,Eq)
 
@@ -3434,7 +3429,7 @@ Response
 
 data WorkspaceSymbolParams =
   WorkspaceSymbolParams
-    { _query :: String
+    { _query :: Text
     } deriving (Read,Show,Eq)
 
 $(deriveJSON lspOptions ''WorkspaceSymbolParams)
@@ -3714,7 +3709,7 @@ type DocumentLinkRequest = RequestMessage ClientMethod DocumentLinkParams
 data DocumentLink =
   DocumentLink
     { _range :: Range
-    , _target :: Maybe String
+    , _target :: Maybe Text
     } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''DocumentLink)
@@ -3935,7 +3930,7 @@ data DocumentOnTypeFormattingParams =
   DocumentOnTypeFormattingParams
     { _textDocument :: TextDocumentIdentifier
     , _position     :: Position
-    , _ch           :: String
+    , _ch           :: Text
     , _options      :: FormattingOptions
     } deriving (Read,Show,Eq)
 
@@ -3947,7 +3942,7 @@ type DocumentOnTypeFormattingResponse = ResponseMessage (List TextEdit)
 
 data DocumentOnTypeFormattingRegistrationOptions =
   DocumentOnTypeFormattingRegistrationOptions
-    { _firstTriggerCharacter :: String
+    { _firstTriggerCharacter :: Text
     , _moreTriggerCharacter  :: Maybe (List String)
     } deriving (Show, Read, Eq)
 
@@ -3999,7 +3994,7 @@ data RenameParams =
   RenameParams
     { _textDocument :: TextDocumentIdentifier
     , _position     :: Position
-    , _newName      :: String
+    , _newName      :: Text
     } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''RenameParams)
@@ -4064,7 +4059,7 @@ export interface ExecuteCommandRegistrationOptions {
 
 data ExecuteCommandParams =
   ExecuteCommandParams
-    { _command :: String
+    { _command :: Text
     , _arguments :: Maybe (List A.Value)
     } deriving (Show, Read, Eq)
 
@@ -4076,7 +4071,7 @@ type ExecuteCommandResponse = ResponseMessage A.Value
 
 data ExecuteCommandRegistrationOptions =
   ExecuteCommandRegistrationOptions
-    { _commands :: List String
+    { _commands :: List Text
     } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''ExecuteCommandRegistrationOptions)
@@ -4144,7 +4139,7 @@ type ApplyWorkspaceEditResponse = ResponseMessage ApplyWorkspaceEditResponseBody
 
 data TraceNotificationParams =
   TraceNotificationParams {
-    _value :: String
+    _value :: Text
   } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''TraceNotificationParams)
