@@ -38,7 +38,6 @@ import qualified Data.HashMap.Strict as HM
 import qualified Data.List as L
 import qualified Data.Map as Map
 import           Data.Monoid
-import           Data.Foldable
 import qualified Data.Text as T
 import           Data.Text ( Text )
 import           Language.Haskell.LSP.Constant
@@ -102,7 +101,7 @@ instance Default Options where
 -- to a particular version of a document, by source, and sends a
 -- 'textDocument/publishDiagnostics' notification with the total whenever it is
 -- updated.
-type PublishDiagnosticsFunc = J.Uri -> Maybe J.TextDocumentVersion -> [J.Diagnostic] -> IO ()
+type PublishDiagnosticsFunc = J.Uri -> Maybe J.TextDocumentVersion -> DiagnosticsBySource -> IO ()
 
 -- | Returned to the server on startup, providing ways to interact with the client.
 data LspFuncs =
@@ -550,7 +549,7 @@ shutdownRequestHandler mvarCtx req@(J.RequestMessage _ origId _ _) =
 -- ---------------------------------------------------------------------
 
 -- | Take the new diagnostics, update the stored diagnostics for the given file
--- and version, and publist the total to the client.
+-- and version, and publish the total to the client.
 publishDiagnostics :: MVar LanguageContextData -> PublishDiagnosticsFunc
 publishDiagnostics mvarDat uri mversion diags = do
   ctx <- readMVar mvarDat

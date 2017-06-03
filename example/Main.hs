@@ -22,6 +22,7 @@ import qualified Data.Text as T
 import qualified Data.Vector as V
 import qualified Language.Haskell.LSP.Control  as CTRL
 import qualified Language.Haskell.LSP.Core     as Core
+import           Language.Haskell.LSP.Diagnostics
 import           Language.Haskell.LSP.Messages
 import qualified Language.Haskell.LSP.TH.DataTypesJSON as J
 import qualified Language.Haskell.LSP.Utility  as U
@@ -120,7 +121,7 @@ reactorSend msg = do
 
 -- ---------------------------------------------------------------------
 
-publishDiagnostics :: J.Uri -> Maybe J.TextDocumentVersion -> [J.Diagnostic] -> R ()
+publishDiagnostics :: J.Uri -> Maybe J.TextDocumentVersion -> DiagnosticsBySource -> R ()
 publishDiagnostics uri mv diags = do
   s <- get
   case lspFuncs s of
@@ -343,7 +344,7 @@ sendDiagnostics fileUri mversion = do
               "Example diagnostic message"
             ]
   -- reactorSend $ J.NotificationMessage "2.0" "textDocument/publishDiagnostics" (Just r)
-  publishDiagnostics fileUri mversion diags
+  publishDiagnostics fileUri mversion (partitionBySource diags)
 
 -- ---------------------------------------------------------------------
 
