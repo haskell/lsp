@@ -6,6 +6,7 @@
 {-# LANGUAGE MultiParamTypeClasses  #-}
 {-# LANGUAGE FunctionalDependencies  #-}
 {-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving  #-}
 
 module Language.Haskell.LSP.TH.DataTypesJSON where
 
@@ -17,6 +18,7 @@ import qualified Data.HashMap.Strict as H
 import qualified Data.Text as T
 import           Data.Text ( Text )
 import           Data.Monoid ( (<>) )
+import           Data.String
 import           System.IO ( FilePath )
 
 import Language.Haskell.LSP.TH.ClientCapabilities
@@ -39,13 +41,17 @@ instance (A.FromJSON a) => A.FromJSON (List a) where
 
 -- ---------------------------------------------------------------------
 
-type Uri = Text
+newtype Uri = Uri { getUri :: Text }
+  deriving (Eq,Ord,Read,Show,A.FromJSON,A.ToJSON)
 
 uriToFilePath :: Uri -> Maybe FilePath
-uriToFilePath uri
+uriToFilePath (Uri uri)
   | "file://" `T.isPrefixOf` uri = Just $ T.unpack $ T.drop n uri
   | otherwise = Nothing
       where n = T.length "file://"
+
+filePathToUri :: FilePath -> Uri
+filePathToUri file = Uri $ T.pack $ "file://" ++ file
 
 -- ---------------------------------------------------------------------
 
