@@ -12,6 +12,7 @@ module Language.Haskell.LSP.Diagnostics
     DiagnosticStore
   , DiagnosticsBySource
   , StoreItem(..)
+  , partitionBySource
   , updateDiagnostics
   , getDiagnosticParamsFor
 
@@ -46,16 +47,21 @@ type DiagnosticsBySource = Map.Map (Maybe J.DiagnosticSource) [J.Diagnostic]
 
 -- ---------------------------------------------------------------------
 
+partitionBySource :: [J.Diagnostic] -> DiagnosticsBySource
+partitionBySource diags = Map.fromListWith (++) $ map (\d -> (J._source d, [d])) diags
+
+-- ---------------------------------------------------------------------
+
 updateDiagnostics :: DiagnosticStore
-                  -> J.Uri -> Maybe J.TextDocumentVersion -> [J.Diagnostic]
+                  -> J.Uri -> Maybe J.TextDocumentVersion -> DiagnosticsBySource
                   -> DiagnosticStore
-updateDiagnostics store uri mv diags = r
+updateDiagnostics store uri mv newDiagsBySource = r
   where
     newStore :: DiagnosticStore
     newStore = Map.insert uri (StoreItem mv newDiagsBySource) store
 
-    newDiagsBySource :: DiagnosticsBySource
-    newDiagsBySource = Map.fromListWith (++) $ map (\d -> (J._source d, [d])) diags
+    -- newDiagsBySource :: DiagnosticsBySource
+    -- newDiagsBySource = Map.fromListWith (++) $ map (\d -> (J._source d, [d])) diags
 
     updateDbs dbs = Map.insert uri new store
       where
