@@ -40,9 +40,9 @@ diagnosticsSpec = do
           [ mkDiagnostic (Just "hlint") "a"
           , mkDiagnostic (Just "hlint") "b"
           ]
-      (updateDiagnostics Map.empty "uri" Nothing (partitionBySource diags)) `shouldBe`
+      (updateDiagnostics Map.empty (J.Uri "uri") Nothing (partitionBySource diags)) `shouldBe`
         Map.fromList
-          [ ("uri",StoreItem Nothing $ Map.fromList [(Just "hlint", reverse diags) ] )
+          [ ((J.Uri "uri"),StoreItem Nothing $ Map.fromList [(Just "hlint", reverse diags) ] )
           ]
 
     -- ---------------------------------
@@ -53,9 +53,9 @@ diagnosticsSpec = do
           [ mkDiagnostic (Just "hlint") "a"
           , mkDiagnostic (Just "ghcmod") "b"
           ]
-      (updateDiagnostics Map.empty "uri" Nothing (partitionBySource diags)) `shouldBe`
+      (updateDiagnostics Map.empty (J.Uri "uri") Nothing (partitionBySource diags)) `shouldBe`
         Map.fromList
-          [ ("uri",StoreItem Nothing $ Map.fromList
+          [ ((J.Uri "uri"),StoreItem Nothing $ Map.fromList
                 [(Just "hlint",  [mkDiagnostic (Just "hlint")  "a"])
                 ,(Just "ghcmod", [mkDiagnostic (Just "ghcmod") "b"])
                 ])
@@ -69,9 +69,9 @@ diagnosticsSpec = do
           [ mkDiagnostic (Just "hlint") "a"
           , mkDiagnostic (Just "ghcmod") "b"
           ]
-      (updateDiagnostics Map.empty "uri" (Just 1) (partitionBySource diags)) `shouldBe`
+      (updateDiagnostics Map.empty (J.Uri "uri") (Just 1) (partitionBySource diags)) `shouldBe`
         Map.fromList
-          [ ("uri",StoreItem (Just 1) $ Map.fromList
+          [ ((J.Uri "uri"),StoreItem (Just 1) $ Map.fromList
                 [(Just "hlint",  [mkDiagnostic (Just "hlint")  "a"])
                 ,(Just "ghcmod", [mkDiagnostic (Just "ghcmod") "b"])
                 ])
@@ -89,10 +89,10 @@ diagnosticsSpec = do
         diags2 =
           [ mkDiagnostic (Just "hlint") "a2"
           ]
-      let origStore = updateDiagnostics Map.empty "uri" Nothing (partitionBySource diags1)
-      (updateDiagnostics origStore "uri" Nothing (partitionBySource diags2)) `shouldBe`
+      let origStore = updateDiagnostics Map.empty (J.Uri "uri") Nothing (partitionBySource diags1)
+      (updateDiagnostics origStore (J.Uri "uri") Nothing (partitionBySource diags2)) `shouldBe`
         Map.fromList
-          [ ("uri",StoreItem Nothing $ Map.fromList [(Just "hlint", diags2) ] )
+          [ ((J.Uri "uri"),StoreItem Nothing $ Map.fromList [(Just "hlint", diags2) ] )
           ]
 
     -- ---------------------------------
@@ -106,10 +106,10 @@ diagnosticsSpec = do
         diags2 =
           [ mkDiagnostic (Just "hlint") "a2"
           ]
-      let origStore = updateDiagnostics Map.empty "uri" Nothing (partitionBySource diags1)
-      (updateDiagnostics origStore "uri" Nothing (partitionBySource diags2)) `shouldBe`
+      let origStore = updateDiagnostics Map.empty (J.Uri "uri") Nothing (partitionBySource diags1)
+      (updateDiagnostics origStore (J.Uri "uri") Nothing (partitionBySource diags2)) `shouldBe`
         Map.fromList
-          [ ("uri",StoreItem Nothing $ Map.fromList
+          [ ((J.Uri "uri"),StoreItem Nothing $ Map.fromList
                 [(Just "hlint",  [mkDiagnostic (Just "hlint")  "a2"])
                 ,(Just "ghcmod", [mkDiagnostic (Just "ghcmod") "b1"])
               ] )
@@ -123,10 +123,10 @@ diagnosticsSpec = do
           [ mkDiagnostic (Just "hlint") "a1"
           , mkDiagnostic (Just "ghcmod") "b1"
           ]
-      let origStore = updateDiagnostics Map.empty "uri" Nothing (partitionBySource diags1)
-      (updateDiagnostics origStore "uri" Nothing (Map.fromList [(Just "ghcmod", [])])) `shouldBe`
+      let origStore = updateDiagnostics Map.empty (J.Uri "uri") Nothing (partitionBySource diags1)
+      (updateDiagnostics origStore (J.Uri "uri") Nothing (Map.fromList [(Just "ghcmod", [])])) `shouldBe`
         Map.fromList
-          [ ("uri",StoreItem Nothing $ Map.fromList
+          [ ((J.Uri "uri"),StoreItem Nothing $ Map.fromList
                 [(Just "ghcmod", [])
                 ,(Just "hlint",  [mkDiagnostic (Just "hlint")  "a1"])
                 ] )
@@ -145,10 +145,10 @@ diagnosticsSpec = do
         diags2 =
           [ mkDiagnostic (Just "hlint") "a2"
           ]
-      let origStore = updateDiagnostics Map.empty "uri" (Just 1) (partitionBySource diags1)
-      (updateDiagnostics origStore "uri" (Just 2) (partitionBySource diags2)) `shouldBe`
+      let origStore = updateDiagnostics Map.empty (J.Uri "uri") (Just 1) (partitionBySource diags1)
+      (updateDiagnostics origStore (J.Uri "uri") (Just 2) (partitionBySource diags2)) `shouldBe`
         Map.fromList
-          [ ("uri",StoreItem (Just 2) $ Map.fromList [(Just "hlint", diags2) ] )
+          [ ((J.Uri "uri"),StoreItem (Just 2) $ Map.fromList [(Just "hlint", diags2) ] )
           ]
 
     -- ---------------------------------
@@ -162,10 +162,10 @@ diagnosticsSpec = do
         diags2 =
           [ mkDiagnostic (Just "hlint") "a2"
           ]
-      let origStore = updateDiagnostics Map.empty "uri" (Just 1) (partitionBySource diags1)
-      (updateDiagnostics origStore "uri" (Just 2) (partitionBySource diags2)) `shouldBe`
+      let origStore = updateDiagnostics Map.empty (J.Uri "uri") (Just 1) (partitionBySource diags1)
+      (updateDiagnostics origStore (J.Uri "uri") (Just 2) (partitionBySource diags2)) `shouldBe`
         Map.fromList
-          [ ("uri",StoreItem (Just 2) $ Map.fromList
+          [ ((J.Uri "uri"),StoreItem (Just 2) $ Map.fromList
                 [(Just "hlint",  [mkDiagnostic (Just "hlint")  "a2"])
               ] )
           ]
@@ -180,8 +180,8 @@ diagnosticsSpec = do
           [ mkDiagnostic (Just "hlint") "a"
           , mkDiagnostic (Just "ghcmod") "b"
           ]
-      let ds = updateDiagnostics Map.empty "uri" (Just 1) (partitionBySource diags)
-      (getDiagnosticParamsFor ds "uri") `shouldBe`
-        Just (J.PublishDiagnosticsParams "uri" (J.List $ reverse diags))
+      let ds = updateDiagnostics Map.empty (J.Uri "uri") (Just 1) (partitionBySource diags)
+      (getDiagnosticParamsFor ds (J.Uri "uri")) `shouldBe`
+        Just (J.PublishDiagnosticsParams (J.Uri "uri") (J.List $ reverse diags))
 
     -- ---------------------------------
