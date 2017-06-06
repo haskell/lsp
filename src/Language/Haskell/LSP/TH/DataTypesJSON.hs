@@ -15,6 +15,7 @@ import           Data.Aeson.TH
 import           Data.Aeson.Types
 import qualified Data.Aeson as A
 import qualified Data.HashMap.Strict as H
+import           Data.Hashable
 import qualified Data.Text as T
 import           Data.Text ( Text )
 import           Data.Monoid ( (<>) )
@@ -30,7 +31,7 @@ import Language.Haskell.LSP.Utility
 -- | This data type is used to host a FromJSON instance for the encoding used by
 -- elisp, where an empty list shows up as "null"
 newtype List a = List [a]
-                deriving (Show,Read,Eq)
+                deriving (Show,Read,Eq,Monoid)
 
 instance (A.ToJSON a) => A.ToJSON (List a) where
   toJSON (List ls) = toJSON ls
@@ -42,7 +43,7 @@ instance (A.FromJSON a) => A.FromJSON (List a) where
 -- ---------------------------------------------------------------------
 
 newtype Uri = Uri { getUri :: Text }
-  deriving (Eq,Ord,Read,Show,A.FromJSON,A.ToJSON)
+  deriving (Eq,Ord,Read,Show,A.FromJSON,A.ToJSON,Hashable,A.ToJSONKey,A.FromJSONKey)
 
 uriToFilePath :: Uri -> Maybe FilePath
 uriToFilePath (Uri uri)
@@ -771,13 +772,17 @@ export interface WorkspaceEdit {
 }
 -}
 
-type WorkspaceEditMap = H.HashMap Text (List TextEdit)
+type WorkspaceEditMap = H.HashMap Uri (List TextEdit)
 
 data WorkspaceEdit =
   WorkspaceEdit
     { _changes         :: Maybe WorkspaceEditMap
     , _documentChanges :: Maybe (List TextDocumentEdit)
     } deriving (Show, Read, Eq)
+
+instance Monoid WorkspaceEdit where
+  mempty = WorkspaceEdit Nothing Nothing
+  mappend (WorkspaceEdit a b) (WorkspaceEdit c d) = WorkspaceEdit (a <> c) (b <> d)
 
 $(deriveJSON lspOptions ''WorkspaceEdit)
 makeFieldsNoPrefix ''WorkspaceEdit

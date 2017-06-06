@@ -47,6 +47,7 @@ library
                      , filepath
                      , fsnotify
                      , hslogger
+                     , hashable
                      , lens >= 4.15.2
                      , MissingH
                      , mtl
@@ -116,6 +117,7 @@ test-suite haskell-lsp-test
                      , containers
                      , directory
                      , hspec
+                     , hashable
                      -- , hspec-jenkins
                      , lens >= 4.15.2
                      , yi-rope
