@@ -19,7 +19,6 @@ import           Data.Hashable
 import qualified Data.Text as T
 import           Data.Text ( Text )
 import           Data.Monoid ( (<>) )
-import           Data.String
 import           System.IO ( FilePath )
 
 import Language.Haskell.LSP.TH.ClientCapabilities
