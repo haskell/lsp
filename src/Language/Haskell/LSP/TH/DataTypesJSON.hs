@@ -19,7 +19,6 @@ import           Data.Hashable
 import qualified Data.Text as T
 import           Data.Text ( Text )
 import           Data.Monoid ( (<>) )
-import           Data.String
 import           System.IO ( FilePath )
 
 import Language.Haskell.LSP.TH.ClientCapabilities
@@ -58,7 +57,7 @@ filePathToUri file = Uri $ T.pack $ "file://" ++ file
 
 -- | Id used for a request, Can be either a String or an Int
 data LspId = IdInt Int | IdString Text
-            deriving (Show,Read,Eq)
+            deriving (Show,Read,Eq,Ord)
 
 instance A.ToJSON LspId where
   toJSON (IdInt i)    = toJSON i
