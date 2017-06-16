@@ -120,7 +120,7 @@ type InitializeCallback = LspFuncs -> IO (Maybe J.ResponseError)
 -- | The Handler type captures a function that receives local read-only state
 -- 'a', a function to send a reply message once encoded as a ByteString, and a
 -- received message of type 'b'
-type Handler b = LspFuncs -> b -> IO ()
+type Handler b =  b -> IO ()
 
 -- | Callbacks from the language server to the language handler
 data Handlers =
@@ -249,7 +249,7 @@ hh getVfs (Just h) = \mvarDat json -> do
           ctx <- readMVar mvarDat
           vfs' <- getVfs (resVFS ctx) req
           modifyMVar_ mvarDat (\c -> return c {resVFS = vfs'})
-          h  (resLspFuncs ctx) req
+          h req
         J.Error  err -> do
           let msg = T.pack $ unwords $ ["haskell-lsp:parse error.", show json, show err] ++ _ERR_MSG_URL
           sendErrorLog mvarDat msg
@@ -389,7 +389,7 @@ handleRequest dispatcherProc mvarDat contLenStr jsonStr = do
       case responseHandler $ resHandlers ctx of
         Nothing -> sendErrorLog mvarDat $ T.pack $ "haskell-lsp: responseHandler is not defined, ignoring response " ++ lbs2str jsonStr
         Just h -> case J.fromJSON json of
-          J.Success res -> h (resLspFuncs ctx) res
+          J.Success res -> h res
           J.Error err -> let msg = T.pack $ unwords $ ["haskell-lsp:response parse error.", lbs2str jsonStr, show err] ++ _ERR_MSG_URL
                            in sendErrorLog mvarDat msg
     -- capability based handlers
