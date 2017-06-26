@@ -6,12 +6,10 @@ moment. So do not have high expectations, it is not ready for casual use.
 
 ## Hacking
 
-To see this library in use you need to install the [haskell-ide-engine](https://github.com/alanz/haskell-ide-engine/tree/lsp)
-(Note: this is not the master from the haskell repo, it is the work in progress one)
+To see this library in use you need to install the [haskell-ide-engine](https://github.com/alanz/haskell-ide-engine/)
 
     git clone https://github.com/alanz/haskell-ide-engine
     cd haskell-ide-engine
-    git checkout lsp
     stack install
 
 This will put the `hie` executable in your path.
