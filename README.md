@@ -6,7 +6,7 @@ moment. So do not have high expectations, it is not ready for casual use.
 
 ## Hacking
 
-To see this library in use you need to install the [haskell-ide-engine](https://github.com/alanz/haskell-ide-engine/tree/lsp)
+To see this library in use you need to install the [haskell-ide-engine](https://github.com/alanz/haskell-ide-engine/)
 
     git clone https://github.com/alanz/haskell-ide-engine
     cd haskell-ide-engine
