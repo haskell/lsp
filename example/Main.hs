@@ -226,10 +226,10 @@ reactor lf st inp = do
       HandlerRequest (Core.ReqRename req) -> do
         liftIO $ U.logs $ "reactor:got RenameRequest:" ++ show req
         let
-            params = req ^. J.params
-            doc  = params ^. J.textDocument . J.uri
-            J.Position l c = params ^. J.position
-            newName  = params ^. J.newName
+            _params = req ^. J.params
+            _doc  = _params ^. J.textDocument . J.uri
+            J.Position _l _c' = _params ^. J.position
+            _newName  = _params ^. J.newName
 
         let we = J.WorkspaceEdit
                     Nothing -- "changes" field is deprecated
@@ -241,8 +241,8 @@ reactor lf st inp = do
 
       HandlerRequest (Core.ReqHover req) -> do
         liftIO $ U.logs $ "reactor:got HoverRequest:" ++ show req
-        let J.TextDocumentPositionParams doc pos = req ^. J.params
-            J.Position l c = pos
+        let J.TextDocumentPositionParams _doc pos = req ^. J.params
+            J.Position _l _c' = pos
 
         let
           ht = J.Hover ms (Just range)

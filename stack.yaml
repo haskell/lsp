@@ -64,3 +64,6 @@ extra-package-dbs: []
 #
 # Allow a newer minor version of GHC than the snapshot specifies
 # compiler-check: newer-minor
+
+nix:
+  packages: [icu]
