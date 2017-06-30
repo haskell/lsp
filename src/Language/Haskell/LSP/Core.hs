@@ -569,8 +569,8 @@ publishDiagnostics mvarDat uri mversion diags = do
 -- |
 --  Logger
 --
-setupLogger :: FilePath -> Priority -> IO ()
-setupLogger logFile level = do
+setupLogger :: FilePath -> [String] -> Priority -> IO ()
+setupLogger logFile extraLogNames level = do
 
   logStream <- openFile logFile AppendMode
   hSetEncoding logStream utf8
@@ -584,4 +584,9 @@ setupLogger logFile level = do
   L.updateGlobalLogger L.rootLoggerName $ L.setHandlers ([] :: [LHS.GenericHandler Handle])
   L.updateGlobalLogger _LOG_NAME $ L.setHandlers [logHandler]
   L.updateGlobalLogger _LOG_NAME $ L.setLevel level
+
+  -- Also route the additional log names to the same log
+  forM_ extraLogNames $ \logName -> do
+    L.updateGlobalLogger logName $ L.setHandlers [logHandler]
+    L.updateGlobalLogger logName $ L.setLevel level
 
