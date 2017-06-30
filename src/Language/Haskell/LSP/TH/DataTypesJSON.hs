@@ -260,12 +260,12 @@ instance A.ToJSON ServerMethod where
   -- Document
   toJSON TextDocumentPublishDiagnostics = A.String "textDocument/publishDiagnostics"
 
-data RequestMessage m a =
+data RequestMessage m req resp =
   RequestMessage
     { _jsonrpc :: Text
     , _id      :: LspId
     , _method  :: m
-    , _params  :: a
+    , _params  :: req
     } deriving (Read,Show,Eq)
 
 $(deriveJSON lspOptions ''RequestMessage)
@@ -1024,10 +1024,6 @@ $(deriveJSON lspOptions ''InitializeParams)
 makeFieldsNoPrefix ''InitializeParams
 
 -- ---------------------------------------------------------------------
-
-type InitializeRequest = RequestMessage ClientMethod InitializeParams
-
--- ---------------------------------------------------------------------
 -- Initialize Response
 -- ---------------------------------------------------------------------
 {-
@@ -1439,6 +1435,8 @@ makeFieldsNoPrefix ''InitializeResponseCapabilities
 
 type InitializeResponse = ResponseMessage InitializeResponseCapabilities
 
+type InitializeRequest = RequestMessage ClientMethod InitializeParams InitializeResponseCapabilities
+
 {-
     error.code:
 
@@ -1523,7 +1521,7 @@ Response
 
 -}
 
-type ShutdownRequest  = RequestMessage ClientMethod (Maybe A.Value)
+type ShutdownRequest  = RequestMessage ClientMethod (Maybe A.Value) Text
 type ShutdownResponse = ResponseMessage Text
 
 -- ---------------------------------------------------------------------
@@ -1699,7 +1697,7 @@ data ShowMessageRequestParams =
 $(deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''ShowMessageRequestParams)
 makeFieldsNoPrefix ''ShowMessageRequestParams
 
-type ShowMessageRequest = RequestMessage ServerMethod ShowMessageRequestParams
+type ShowMessageRequest = RequestMessage ServerMethod ShowMessageRequestParams Text
 type ShowMessageResponse = ResponseMessage Text
 
 -- ---------------------------------------------------------------------
@@ -1831,7 +1829,7 @@ $(deriveJSON lspOptions ''RegistrationParams)
 makeFieldsNoPrefix ''RegistrationParams
 
 -- |Note: originates at the server
-type RegisterCapabilityRequest = RequestMessage ServerMethod RegistrationParams
+type RegisterCapabilityRequest = RequestMessage ServerMethod RegistrationParams ()
 
 -- -------------------------------------
 
@@ -1915,7 +1913,7 @@ data UnregistrationParams =
 $(deriveJSON lspOptions ''UnregistrationParams)
 makeFieldsNoPrefix ''UnregistrationParams
 
-type UnregisterCapabilityRequest = RequestMessage ServerMethod UnregistrationParams
+type UnregisterCapabilityRequest = RequestMessage ServerMethod UnregistrationParams ()
 
 -- ---------------------------------------------------------------------
 {-
@@ -2197,7 +2195,7 @@ Response:
 Registration Options: TextDocumentRegistrationOptions
 -}
 
-type WillSaveWaitUntilTextDocumentRequest = RequestMessage ClientMethod WillSaveTextDocumentParams
+type WillSaveWaitUntilTextDocumentRequest = RequestMessage ClientMethod WillSaveTextDocumentParams (List TextEdit)
 type WillSaveWaitUntilTextDocumentResponse = ResponseMessage (List TextEdit)
 
 -- ---------------------------------------------------------------------
@@ -2425,8 +2423,6 @@ Request
     method: 'textDocument/completion'
     params: TextDocumentPositionParams
 -}
-
-type CompletionRequest = RequestMessage ClientMethod TextDocumentPositionParams
 
 -- -------------------------------------
 
@@ -2739,6 +2735,7 @@ data CompletionResponseResult
 $(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length ("CompletionResponseResult"::String)), sumEncoding = UntaggedValue } ''CompletionResponseResult)
 
 type CompletionResponse = ResponseMessage CompletionResponseResult
+type CompletionRequest = RequestMessage ClientMethod TextDocumentPositionParams CompletionResponseResult
 
 -- -------------------------------------
 {-
@@ -2790,7 +2787,7 @@ Response
     error: code and message set in case an exception happens during the completion resolve request.
 -}
 
-type CompletionItemResolveRequest  = RequestMessage ClientMethod CompletionItem
+type CompletionItemResolveRequest  = RequestMessage ClientMethod CompletionItem CompletionItem
 type CompletionItemResolveResponse = ResponseMessage CompletionItem
 
 -- ---------------------------------------------------------------------
@@ -2851,8 +2848,6 @@ Registration Options: TextDocumentRegistrationOptions
 
 -}
 
-type HoverRequest = RequestMessage ClientMethod TextDocumentPositionParams
-
 data MarkedString =
   -- TODO: Add the plain string variant too
   MarkedString
@@ -2874,6 +2869,7 @@ $(deriveJSON lspOptions ''Hover)
 makeFieldsNoPrefix ''Hover
 
 
+type HoverRequest = RequestMessage ClientMethod TextDocumentPositionParams Hover
 type HoverResponse = ResponseMessage Hover
 
 -- ---------------------------------------------------------------------
@@ -2966,10 +2962,6 @@ interface ParameterInformation {
     signature help request.
 -}
 
-type SignatureHelpRequest = RequestMessage ClientMethod TextDocumentPositionParams
-
-
--- -------------------------------------
 
 data ParameterInformation =
   ParameterInformation
@@ -3002,7 +2994,7 @@ data SignatureHelp =
 $(deriveJSON lspOptions ''SignatureHelp)
 makeFieldsNoPrefix ''SignatureHelp
 
-
+type SignatureHelpRequest = RequestMessage ClientMethod TextDocumentPositionParams SignatureHelp
 type SignatureHelpResponse = ResponseMessage SignatureHelp
 
 -- -------------------------------------
@@ -3057,7 +3049,7 @@ Response:
 
 -- {"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{"textDocument":{"uri":"file:///tmp/Foo.hs"},"position":{"line":1,"character":8}}}
 
-type DefinitionRequest  = RequestMessage ClientMethod TextDocumentPositionParams
+type DefinitionRequest  = RequestMessage ClientMethod TextDocumentPositionParams Location
 type DefinitionResponse = ResponseMessage Location
 
 -- ---------------------------------------------------------------------
@@ -3118,7 +3110,7 @@ $(deriveJSON lspOptions ''ReferenceParams)
 makeFieldsNoPrefix ''ReferenceParams
 
 
-type ReferencesRequest  = RequestMessage ClientMethod ReferenceParams
+type ReferencesRequest  = RequestMessage ClientMethod ReferenceParams (List Location)
 type ReferencesResponse = ResponseMessage (List Location)
 
 -- ---------------------------------------------------------------------
@@ -3193,10 +3185,6 @@ Registration Options: TextDocumentRegistrationOptions
 
 -}
 
-type DocumentHighlightRequest = RequestMessage ClientMethod TextDocumentPositionParams
-
--- -------------------------------------
-
 data DocumentHighlightKind = HkText | HkRead | HkWrite
   deriving (Read,Show,Eq)
 
@@ -3222,6 +3210,7 @@ data DocumentHighlight =
 $(deriveJSON lspOptions ''DocumentHighlight)
 makeFieldsNoPrefix ''DocumentHighlight
 
+type DocumentHighlightRequest = RequestMessage ClientMethod TextDocumentPositionParams (List DocumentHighlight)
 type DocumentHighlightsResponse = ResponseMessage (List DocumentHighlight)
 
 -- ---------------------------------------------------------------------
@@ -3318,10 +3307,6 @@ data DocumentSymbolParams =
 $(deriveJSON lspOptions ''DocumentSymbolParams)
 makeFieldsNoPrefix ''DocumentSymbolParams
 
-
-
-type DocumentSymbolRequest = RequestMessage ClientMethod DocumentSymbolParams
-
 -- -------------------------------------
 
 data SymbolKind
@@ -3404,6 +3389,7 @@ makeFieldsNoPrefix ''SymbolInformation
 
 -- -------------------------------------
 
+type DocumentSymbolRequest = RequestMessage ClientMethod DocumentSymbolParams (List SymbolInformation)
 type DocumentSymbolsResponse = ResponseMessage (List SymbolInformation)
 
 -- ---------------------------------------------------------------------
@@ -3445,7 +3431,7 @@ data WorkspaceSymbolParams =
 $(deriveJSON lspOptions ''WorkspaceSymbolParams)
 makeFieldsNoPrefix ''WorkspaceSymbolParams
 
-type WorkspaceSymbolRequest  = RequestMessage ClientMethod WorkspaceSymbolParams
+type WorkspaceSymbolRequest  = RequestMessage ClientMethod WorkspaceSymbolParams (List SymbolInformation)
 type WorkspaceSymbolsResponse = ResponseMessage (List SymbolInformation)
 
 -- ---------------------------------------------------------------------
@@ -3523,7 +3509,7 @@ $(deriveJSON lspOptions ''CodeActionParams)
 makeFieldsNoPrefix ''CodeActionParams
 
 
-type CodeActionRequest  = RequestMessage ClientMethod CodeActionParams
+type CodeActionRequest  = RequestMessage ClientMethod CodeActionParams (List Command)
 type CodeActionResponse = ResponseMessage (List Command)
 
 -- ---------------------------------------------------------------------
@@ -3589,8 +3575,6 @@ $(deriveJSON lspOptions ''CodeLensParams)
 makeFieldsNoPrefix ''CodeLensParams
 
 
-type CodeLensRequest = RequestMessage ClientMethod CodeLensParams
-
 -- -------------------------------------
 
 data CodeLens =
@@ -3604,6 +3588,7 @@ $(deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''CodeLens)
 makeFieldsNoPrefix ''CodeLens
 
 
+type CodeLensRequest = RequestMessage ClientMethod CodeLensParams (List CodeLens)
 type CodeLensResponse = ResponseMessage (List CodeLens)
 
 -- -------------------------------------
@@ -3650,7 +3635,7 @@ Response
 
 -}
 
-type CodeLensResolveRequest  = RequestMessage ClientMethod CodeLens
+type CodeLensResolveRequest  = RequestMessage ClientMethod CodeLens (List CodeLens)
 type CodeLensResolveResponse = ResponseMessage (List CodeLens)
 
 -- ---------------------------------------------------------------------
@@ -3714,8 +3699,6 @@ data DocumentLinkParams =
 $(deriveJSON lspOptions ''DocumentLinkParams)
 makeFieldsNoPrefix ''DocumentLinkParams
 
-type DocumentLinkRequest = RequestMessage ClientMethod DocumentLinkParams
-
 data DocumentLink =
   DocumentLink
     { _range :: Range
@@ -3724,6 +3707,8 @@ data DocumentLink =
 
 $(deriveJSON lspOptions ''DocumentLink)
 makeFieldsNoPrefix ''DocumentLink
+
+type DocumentLinkRequest = RequestMessage ClientMethod DocumentLinkParams (List DocumentLink)
 type DocumentLinkResponse = ResponseMessage (List DocumentLink)
 
 -- ---------------------------------------------------------------------
@@ -3747,7 +3732,7 @@ Response:
 
 -}
 
-type DocumentLinkResolveRequest  = RequestMessage ClientMethod DocumentLink
+type DocumentLinkResolveRequest  = RequestMessage ClientMethod DocumentLink DocumentLink
 type DocumentLinkResolveResponse = ResponseMessage DocumentLink
 
 -- ---------------------------------------------------------------------
@@ -3825,7 +3810,7 @@ data DocumentFormattingParams =
 $(deriveJSON lspOptions ''DocumentFormattingParams)
 makeFieldsNoPrefix ''DocumentFormattingParams
 
-type DocumentFormattingRequest  = RequestMessage ClientMethod DocumentFormattingParams
+type DocumentFormattingRequest  = RequestMessage ClientMethod DocumentFormattingParams (List TextEdit)
 type DocumentFormattingResponse = ResponseMessage (List TextEdit)
 
 -- ---------------------------------------------------------------------
@@ -3877,7 +3862,7 @@ data DocumentRangeFormattingParams =
 $(deriveJSON lspOptions ''DocumentRangeFormattingParams)
 makeFieldsNoPrefix ''DocumentRangeFormattingParams
 
-type DocumentRangeFormattingRequest  = RequestMessage ClientMethod DocumentRangeFormattingParams
+type DocumentRangeFormattingRequest  = RequestMessage ClientMethod DocumentRangeFormattingParams (List TextEdit)
 type DocumentRangeFormattingResponse = ResponseMessage (List TextEdit)
 
 -- ---------------------------------------------------------------------
@@ -3947,7 +3932,7 @@ data DocumentOnTypeFormattingParams =
 $(deriveJSON lspOptions ''DocumentOnTypeFormattingParams)
 makeFieldsNoPrefix ''DocumentOnTypeFormattingParams
 
-type DocumentOnTypeFormattingRequest  = RequestMessage ClientMethod DocumentOnTypeFormattingParams
+type DocumentOnTypeFormattingRequest  = RequestMessage ClientMethod DocumentOnTypeFormattingParams (List TextEdit)
 type DocumentOnTypeFormattingResponse = ResponseMessage (List TextEdit)
 
 data DocumentOnTypeFormattingRegistrationOptions =
@@ -4013,7 +3998,7 @@ makeFieldsNoPrefix ''RenameParams
 
 -- {\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"textDocument/rename\",\"params\":{\"textDocument\":{\"uri\":\"file:///home/alanz/mysrc/github/alanz/haskell-lsp/src/HieVscode.hs\"},\"position\":{\"line\":37,\"character\":17},\"newName\":\"getArgs'\"}}
 
-type RenameRequest  = RequestMessage ClientMethod RenameParams
+type RenameRequest  = RequestMessage ClientMethod RenameParams WorkspaceEdit
 type RenameResponse = ResponseMessage WorkspaceEdit
 
 -- ---------------------------------------------------------------------
@@ -4076,7 +4061,7 @@ data ExecuteCommandParams =
 $(deriveJSON lspOptions ''ExecuteCommandParams)
 makeFieldsNoPrefix ''ExecuteCommandParams
 
-type ExecuteCommandRequest = RequestMessage ClientMethod ExecuteCommandParams
+type ExecuteCommandRequest = RequestMessage ClientMethod ExecuteCommandParams A.Value
 type ExecuteCommandResponse = ResponseMessage A.Value
 
 data ExecuteCommandRegistrationOptions =
@@ -4140,7 +4125,7 @@ $(deriveJSON lspOptions ''ApplyWorkspaceEditResponseBody)
 makeFieldsNoPrefix ''ApplyWorkspaceEditResponseBody
 
 -- | Sent from the server to the client
-type ApplyWorkspaceEditRequest  = RequestMessage ServerMethod ApplyWorkspaceEditParams
+type ApplyWorkspaceEditRequest  = RequestMessage ServerMethod ApplyWorkspaceEditParams ApplyWorkspaceEditResponseBody
 type ApplyWorkspaceEditResponse = ResponseMessage ApplyWorkspaceEditResponseBody
 
 -- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

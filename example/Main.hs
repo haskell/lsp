@@ -63,7 +63,7 @@ run dispatcherProc = flip E.catches handlers $ do
       return Nothing
 
   flip E.finally finalProc $ do
-    Core.setupLogger "/tmp/lsp-hello.log" L.DEBUG
+    Core.setupLogger "/tmp/lsp-hello.log" [] L.DEBUG
     CTRL.run dp (lspHandlers rin) lspOptions
 
   where
@@ -234,7 +234,7 @@ reactor lf st inp = do
         let we = J.WorkspaceEdit
                     Nothing -- "changes" field is deprecated
                     (Just (J.List [])) -- populate with actual changes from the rename
-        let rspMsg = Core.makeResponseMessage (J.responseId $ req ^. J.id) we
+        let rspMsg = Core.makeResponseMessage req we
         reactorSend rspMsg
 
       -- -------------------------------
@@ -248,7 +248,7 @@ reactor lf st inp = do
           ht = J.Hover ms (Just range)
           ms = J.List [J.MarkedString "lsp-hello" "TYPE INFO" ]
           range = J.Range pos pos
-        reactorSend $ Core.makeResponseMessage (J.responseId $ req ^. J.id) ht
+        reactorSend $ Core.makeResponseMessage req ht
 
       -- -------------------------------
 
@@ -274,8 +274,8 @@ reactor lf st inp = do
                       ]
               cmdparams = Just args
           makeCommand (J.Diagnostic _r _s _c _source _m  ) = []
-        let body = concatMap makeCommand diags
-        reactorSend $ Core.makeResponseMessage (J.responseId $ req ^. J.id) body
+        let body = J.List $ concatMap makeCommand diags
+        reactorSend $ Core.makeResponseMessage req body
 
       -- -------------------------------
 
@@ -287,7 +287,7 @@ reactor lf st inp = do
         liftIO $ U.logs $ "reactor:ExecuteCommandRequest:margs=" ++ show margs
 
         let
-          reply v = reactorSend $ Core.makeResponseMessage (J.responseId $ req ^. J.id) v
+          reply v = reactorSend $ Core.makeResponseMessage req v
         -- When we get a RefactorResult or HieDiff, we need to send a
         -- separate WorkspaceEdit Notification
           r = J.List [] :: J.List Int
@@ -299,7 +299,7 @@ reactor lf st inp = do
             -- reactorSend $ J.RequestMessage "2.0" lid "workspace/applyEdit" (Just we)
             reactorSend $ fmServerApplyWorkspaceEditRequest lid we
           Nothing ->
-            reply r
+            reply (J.Object mempty)
 
       -- -------------------------------
 

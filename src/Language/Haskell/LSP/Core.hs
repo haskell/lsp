@@ -400,8 +400,8 @@ handleRequest dispatcherProc mvarDat contLenStr jsonStr = do
 
 -- ---------------------------------------------------------------------
 
-makeResponseMessage :: J.LspIdRsp -> a -> J.ResponseMessage a
-makeResponseMessage origId result = J.ResponseMessage "2.0" origId (Just result) Nothing
+makeResponseMessage :: J.RequestMessage J.ClientMethod req resp -> resp -> J.ResponseMessage resp
+makeResponseMessage req result = J.ResponseMessage "2.0" (J.responseId $ req ^. J.id) (Just result) Nothing
 
 makeResponseError :: J.LspIdRsp -> J.ResponseError -> J.ResponseMessage ()
 makeResponseError origId err = J.ResponseMessage "2.0" origId Nothing (Just err)
@@ -542,7 +542,7 @@ initializeRequestHandler dispatcherProc mvarCtx req@(J.RequestMessage _ origId _
 shutdownRequestHandler :: MVar LanguageContextData -> J.ShutdownRequest -> IO ()
 shutdownRequestHandler mvarCtx req@(J.RequestMessage _ origId _ _) =
   flip E.catches (defaultErrorHandlers mvarCtx (J.responseId origId) req) $ do
-  let res  = makeResponseMessage (J.responseId origId) ("ok"::String)
+  let res  = makeResponseMessage req "ok"
 
   sendResponse mvarCtx res
 
@@ -569,8 +569,8 @@ publishDiagnostics mvarDat uri mversion diags = do
 -- |
 --  Logger
 --
-setupLogger :: FilePath -> Priority -> IO ()
-setupLogger logFile level = do
+setupLogger :: FilePath -> [String] -> Priority -> IO ()
+setupLogger logFile extraLogNames level = do
 
   logStream <- openFile logFile AppendMode
   hSetEncoding logStream utf8
@@ -584,4 +584,9 @@ setupLogger logFile level = do
   L.updateGlobalLogger L.rootLoggerName $ L.setHandlers ([] :: [LHS.GenericHandler Handle])
   L.updateGlobalLogger _LOG_NAME $ L.setHandlers [logHandler]
   L.updateGlobalLogger _LOG_NAME $ L.setLevel level
+
+  -- Also route the additional log names to the same log
+  forM_ extraLogNames $ \logName -> do
+    L.updateGlobalLogger logName $ L.setHandlers [logHandler]
+    L.updateGlobalLogger logName $ L.setLevel level
 
