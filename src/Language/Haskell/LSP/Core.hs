@@ -400,8 +400,8 @@ handleRequest dispatcherProc mvarDat contLenStr jsonStr = do
 
 -- ---------------------------------------------------------------------
 
-makeResponseMessage :: J.LspIdRsp -> a -> J.ResponseMessage a
-makeResponseMessage origId result = J.ResponseMessage "2.0" origId (Just result) Nothing
+makeResponseMessage :: J.RequestMessage J.ClientMethod req resp -> resp -> J.ResponseMessage resp
+makeResponseMessage req result = J.ResponseMessage "2.0" (J.responseId $ req ^. J.id) (Just result) Nothing
 
 makeResponseError :: J.LspIdRsp -> J.ResponseError -> J.ResponseMessage ()
 makeResponseError origId err = J.ResponseMessage "2.0" origId Nothing (Just err)
@@ -542,7 +542,7 @@ initializeRequestHandler dispatcherProc mvarCtx req@(J.RequestMessage _ origId _
 shutdownRequestHandler :: MVar LanguageContextData -> J.ShutdownRequest -> IO ()
 shutdownRequestHandler mvarCtx req@(J.RequestMessage _ origId _ _) =
   flip E.catches (defaultErrorHandlers mvarCtx (J.responseId origId) req) $ do
-  let res  = makeResponseMessage (J.responseId origId) ("ok"::String)
+  let res  = makeResponseMessage req "ok"
 
   sendResponse mvarCtx res
 
