@@ -132,7 +132,7 @@ data ClientMethod =
  | TextDocumentDocumentLink
  | DocumentLinkResolve
  | TextDocumentRename
- -- $/xxx messages
+ -- Messages of the form $/message
  -- Implementation Dependent, can be ignored
  | Misc Text
    deriving (Eq,Ord,Read,Show)
