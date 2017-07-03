@@ -246,7 +246,7 @@ reactor lf st inp = do
 
         let
           ht = J.Hover ms (Just range)
-          ms = J.List [J.MarkedString "lsp-hello" "TYPE INFO" ]
+          ms = J.List [Right $ J.LanguageString "lsp-hello" "TYPE INFO" ]
           range = J.Range pos pos
         reactorSend $ Core.makeResponseMessage req ht
 
