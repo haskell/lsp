@@ -2848,16 +2848,16 @@ Registration Options: TextDocumentRegistrationOptions
 
 -}
 
-data MarkedString =
-  -- TODO: Add the plain string variant too
-  MarkedString
+data LanguageString =
+  LanguageString
     { _language :: Text
     , _value    :: Text
     } deriving (Read,Show,Eq)
 
-$(deriveJSON lspOptions ''MarkedString)
-makeFieldsNoPrefix ''MarkedString
+$(deriveJSON lspOptions ''LanguageString)
+makeFieldsNoPrefix ''LanguageString
 
+type MarkedString = Either Text LanguageString
 
 data Hover =
   Hover
