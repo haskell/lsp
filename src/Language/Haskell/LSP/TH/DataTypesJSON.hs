@@ -602,7 +602,7 @@ data Diagnostic =
     , _code     :: Maybe Text -- Note: Protocol allows Int too.
     , _source   :: Maybe DiagnosticSource
     , _message  :: Text
-    } deriving (Show, Read, Eq)
+    } deriving (Show, Read, Eq, Ord)
 
 $(deriveJSON lspOptions ''Diagnostic)
 makeFieldsNoPrefix ''Diagnostic
