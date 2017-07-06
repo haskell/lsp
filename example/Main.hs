@@ -167,7 +167,7 @@ reactor lf st inp = do
          }
         -}
         let
-          registration = J.Registration "lsp-hello-registered" "workspace/executeCommand" Nothing
+          registration = J.Registration "lsp-hello-registered" J.WorkspaceExecuteCommand Nothing
         let registrations = J.RegistrationParams (J.List [registration])
         rid <- nextLspReqId
 
@@ -246,7 +246,7 @@ reactor lf st inp = do
 
         let
           ht = J.Hover ms (Just range)
-          ms = J.List [Right $ J.LanguageString "lsp-hello" "TYPE INFO" ]
+          ms = J.List [J.CodeString $ J.LanguageString "lsp-hello" "TYPE INFO" ]
           range = J.Range pos pos
         reactorSend $ Core.makeResponseMessage req ht
 

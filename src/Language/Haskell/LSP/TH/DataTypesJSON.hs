@@ -1811,7 +1811,7 @@ data Registration =
       _id :: Text
 
        -- | The method / capability to register for.
-    , _method :: Text
+    , _method :: ClientMethod
 
       -- | Options necessary for the registration.
     , _registerOptions :: Maybe A.Value
@@ -2857,7 +2857,17 @@ data LanguageString =
 $(deriveJSON lspOptions ''LanguageString)
 makeFieldsNoPrefix ''LanguageString
 
-type MarkedString = Either Text LanguageString
+data MarkedString =
+    PlainString T.Text
+  | CodeString LanguageString
+    deriving (Eq,Read,Show)
+
+instance ToJSON MarkedString where
+  toJSON (PlainString x) = toJSON x
+  toJSON (CodeString  x) = toJSON x
+instance FromJSON MarkedString where
+  parseJSON (A.String t) = pure $ PlainString t
+  parseJSON o = CodeString <$> parseJSON o
 
 data Hover =
   Hover
