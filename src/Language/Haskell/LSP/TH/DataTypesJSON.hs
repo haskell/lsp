@@ -2624,7 +2624,7 @@ data CompletionItemKind = CiText
                         | CiColor
                         | CiFile
                         | CiReference
-         deriving (Read,Show,Eq)
+         deriving (Read,Show,Eq,Ord)
 
 instance A.ToJSON CompletionItemKind where
   toJSON CiText        = A.Number 1
@@ -2679,7 +2679,7 @@ data CompletionItem =
     , _detail :: Maybe Text -- ^ A human-readable string with additional
                               -- information about this item, like type or
                               -- symbol information.
-    , _documentation :: Maybe String-- ^ A human-readable string that represents
+    , _documentation :: Maybe Text -- ^ A human-readable string that represents
                                     -- a doc-comment.
     , _sortText :: Maybe Text -- ^ A string that should be used when filtering
                                 -- a set of completion items. When `falsy` the
