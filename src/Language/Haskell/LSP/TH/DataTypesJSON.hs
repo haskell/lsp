@@ -602,7 +602,7 @@ data Diagnostic =
     , _code     :: Maybe Text -- Note: Protocol allows Int too.
     , _source   :: Maybe DiagnosticSource
     , _message  :: Text
-    } deriving (Show, Read, Eq)
+    } deriving (Show, Read, Eq, Ord)
 
 $(deriveJSON lspOptions ''Diagnostic)
 makeFieldsNoPrefix ''Diagnostic
@@ -1811,7 +1811,7 @@ data Registration =
       _id :: Text
 
        -- | The method / capability to register for.
-    , _method :: Text
+    , _method :: ClientMethod
 
       -- | Options necessary for the registration.
     , _registerOptions :: Maybe A.Value
@@ -2624,7 +2624,7 @@ data CompletionItemKind = CiText
                         | CiColor
                         | CiFile
                         | CiReference
-         deriving (Read,Show,Eq)
+         deriving (Read,Show,Eq,Ord)
 
 instance A.ToJSON CompletionItemKind where
   toJSON CiText        = A.Number 1
@@ -2679,7 +2679,7 @@ data CompletionItem =
     , _detail :: Maybe Text -- ^ A human-readable string with additional
                               -- information about this item, like type or
                               -- symbol information.
-    , _documentation :: Maybe String-- ^ A human-readable string that represents
+    , _documentation :: Maybe Text -- ^ A human-readable string that represents
                                     -- a doc-comment.
     , _sortText :: Maybe Text -- ^ A string that should be used when filtering
                                 -- a set of completion items. When `falsy` the
@@ -2857,7 +2857,17 @@ data LanguageString =
 $(deriveJSON lspOptions ''LanguageString)
 makeFieldsNoPrefix ''LanguageString
 
-type MarkedString = Either Text LanguageString
+data MarkedString =
+    PlainString T.Text
+  | CodeString LanguageString
+    deriving (Eq,Read,Show)
+
+instance ToJSON MarkedString where
+  toJSON (PlainString x) = toJSON x
+  toJSON (CodeString  x) = toJSON x
+instance FromJSON MarkedString where
+  parseJSON (A.String t) = pure $ PlainString t
+  parseJSON o = CodeString <$> parseJSON o
 
 data Hover =
   Hover
