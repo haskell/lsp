@@ -3,7 +3,6 @@ module MethodSpec where
 
 
 import           Control.Monad
-import qualified Data.Map as Map
 import qualified Data.Aeson as J
 import qualified Language.Haskell.LSP.TH.DataTypesJSON as J
 import           Test.Hspec
