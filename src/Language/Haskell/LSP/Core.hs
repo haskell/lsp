@@ -85,7 +85,7 @@ data LanguageContextData =
 -- during initialization.
 data Options =
   Options
-    { textDocumentSync                 :: Maybe J.TextDocumentSyncKind
+    { textDocumentSync                 :: Maybe J.TextDocumentSyncOptions
     , completionProvider               :: Maybe J.CompletionOptions
     , signatureHelpProvider            :: Maybe J.SignatureHelpOptions
     , codeLensProvider                 :: Maybe J.CodeLensOptions

@@ -330,11 +330,17 @@ sendDiagnostics fileUri mversion = do
 
 -- ---------------------------------------------------------------------
 
-syncMethod :: J.TextDocumentSyncKind
-syncMethod = J.TdSyncIncremental
+syncOptions :: J.TextDocumentSyncOptions
+syncOptions = J.TextDocumentSyncOptions
+  { J._openClose         = Just True
+  , J._change            = Just J.TdSyncIncremental
+  , J._willSave          = Just False
+  , J._willSaveWaitUntil = Just False
+  , J._save              = Just $ J.SaveOptions $ Just False
+  }
 
 lspOptions :: Core.Options
-lspOptions = def { Core.textDocumentSync = Just syncMethod
+lspOptions = def { Core.textDocumentSync = Just syncOptions
                  , Core.executeCommandProvider = Just (J.ExecuteCommandOptions (J.List ["lsp-hello-command"]))
                  }
 
