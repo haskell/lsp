@@ -12,6 +12,7 @@ module Language.Haskell.LSP.Control
 
 import           Control.Concurrent
 import           Control.Concurrent.STM.TChan
+import           Control.Concurrent.STM.TVar
 import           Control.Monad
 import           Control.Monad.STM
 import qualified Data.Aeson as J
@@ -48,18 +49,16 @@ run dp h o = do
       sendFunc str = atomically $ writeTChan cout (J.encode str)
   let lf = error "LifeCycle error, ClientCapabilites not set yet via initialize maessage"
 
-  mvarDat <- newMVar ((Core.defaultLanguageContextData h o lf :: Core.LanguageContextData)
-                         { Core.resSendResponse = sendFunc
-                         } )
+  tvarDat <- atomically $ newTVar $ Core.defaultLanguageContextData h o lf sendFunc
 
-  ioLoop dp mvarDat
+  ioLoop dp tvarDat
 
   return 1
 
 -- ---------------------------------------------------------------------
 
-ioLoop :: Core.InitializeCallback -> MVar Core.LanguageContextData -> IO ()
-ioLoop dispatcherProc mvarDat = go BSL.empty
+ioLoop :: Core.InitializeCallback -> TVar Core.LanguageContextData -> IO ()
+ioLoop dispatcherProc tvarDat = go BSL.empty
   where
     go :: BSL.ByteString -> IO ()
     go buf = do
@@ -81,8 +80,8 @@ ioLoop dispatcherProc mvarDat = go BSL.empty
                   return ()
                 else do
                   logm $ (B.pack "---> ") <> cnt
-                  Core.handleRequest dispatcherProc mvarDat newBuf cnt
-                  ioLoop dispatcherProc mvarDat
+                  Core.handleRequest dispatcherProc tvarDat newBuf cnt
+                  ioLoop dispatcherProc tvarDat
       where
         readContentLength :: String -> Either ParseError Int
         readContentLength = parse parser "readContentLength"
