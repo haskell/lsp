@@ -20,6 +20,7 @@ import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as B
 import           Data.Monoid
 import qualified Language.Haskell.LSP.Core as Core
+import qualified Language.Haskell.LSP.TH.DataTypesJSON as J
 import           Language.Haskell.LSP.Utility
 import           System.IO
 import           Text.Parsec
@@ -49,7 +50,9 @@ run dp h o = do
       sendFunc str = atomically $ writeTChan cout (J.encode str)
   let lf = error "LifeCycle error, ClientCapabilites not set yet via initialize maessage"
 
-  tvarDat <- atomically $ newTVar $ Core.defaultLanguageContextData h o lf sendFunc
+  tvarId <- atomically $ newTVar 0
+
+  tvarDat <- atomically $ newTVar $ Core.defaultLanguageContextData h o lf tvarId sendFunc
 
   ioLoop dp tvarDat
 

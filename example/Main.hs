@@ -12,7 +12,6 @@ import qualified Control.Exception as E
 import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.STM
-import           Control.Monad.State
 import           Control.Monad.Reader
 import qualified Data.Aeson as J
 import           Data.Default
@@ -56,7 +55,7 @@ run dispatcherProc = flip E.catches handlers $ do
   let
     dp lf = do
       liftIO $ U.logs $ "main.run:dp entered"
-      _rpid  <- forkIO $ reactor lf def rin
+      _rpid  <- forkIO $ reactor lf rin
       liftIO $ U.logs $ "main.run:dp tchan"
       dispatcherProc
       liftIO $ U.logs $ "main.run:dp after dispatcherProc"
@@ -84,18 +83,10 @@ data ReactorInput
   = HandlerRequest Core.OutMessage
       -- ^ injected into the reactor input by each of the individual callback handlers
 
-data ReactorState =
-  ReactorState
-    { lspReqId           :: !J.LspId -- ^ unique ids for requests to the client
-    }
-
-instance Default ReactorState where
-  def = ReactorState (J.IdInt 0)
-
 -- ---------------------------------------------------------------------
 
 -- | The monad used in the reactor
-type R a = ReaderT Core.LspFuncs (StateT ReactorState IO) a
+type R a = ReaderT Core.LspFuncs IO a
 
 -- ---------------------------------------------------------------------
 -- reactor monad functions
@@ -119,20 +110,18 @@ publishDiagnostics uri mv diags = do
 
 nextLspReqId :: R J.LspId
 nextLspReqId = do
-  s <- get
-  let i@(J.IdInt r) = lspReqId s
-  put s { lspReqId = J.IdInt (r + 1) }
-  return i
+  f <- asks Core.getNextReqId
+  liftIO $ f
 
 -- ---------------------------------------------------------------------
 
 -- | The single point that all events flow through, allowing management of state
 -- to stitch replies and requests together from the two asynchronous sides: lsp
 -- server and backend compiler
-reactor :: Core.LspFuncs -> ReactorState -> TChan ReactorInput -> IO ()
-reactor lf st inp = do
+reactor :: Core.LspFuncs -> TChan ReactorInput -> IO ()
+reactor lf inp = do
   liftIO $ U.logs $ "reactor:entered"
-  flip evalStateT st $ flip runReaderT lf $ forever $ do
+  flip runReaderT lf $ forever $ do
     inval <- liftIO $ atomically $ readTChan inp
     case inval of
 

@@ -75,6 +75,7 @@ data LanguageContextData =
   , resSendResponse        :: !SendFunc
   , resVFS                 :: !VFS
   , resDiagnostics         :: !DiagnosticStore
+  , resLspId               :: !(TVar Int)
   , resLspFuncs            :: LspFuncs -- NOTE: Cannot be strict, lazy initialization
   }
 
@@ -110,6 +111,7 @@ data LspFuncs =
     , sendFunc               :: !SendFunc
     , getVirtualFileFunc     :: !(J.Uri -> IO (Maybe VirtualFile))
     , publishDiagnosticsFunc :: !PublishDiagnosticsFunc
+    , getNextReqId           :: !(IO J.LspId)
     }
 
 -- | The function in the LSP process that is called once the 'initialize'
@@ -347,9 +349,9 @@ _ERR_MSG_URL = [ "`stack update` and install new haskell-lsp."
 -- |
 --
 --
-defaultLanguageContextData :: Handlers -> Options -> LspFuncs -> SendFunc -> LanguageContextData
-defaultLanguageContextData h o lf sf =
-  LanguageContextData _INITIAL_RESPONSE_SEQUENCE Nothing h o sf mempty mempty lf
+defaultLanguageContextData :: Handlers -> Options -> LspFuncs -> TVar Int -> SendFunc -> LanguageContextData
+defaultLanguageContextData h o lf tv sf =
+  LanguageContextData _INITIAL_RESPONSE_SEQUENCE Nothing h o sf mempty mempty tv lf
 
 -- ---------------------------------------------------------------------
 
@@ -485,12 +487,17 @@ initializeRequestHandler dispatcherProc tvarCtx req@(J.RequestMessage _ origId _
     let
       getCapabilities :: J.InitializeParams -> C.ClientCapabilities
       getCapabilities (J.InitializeParams _ _ _ _ c _) = c
+      getLspId tvId = atomically $ do
+        cid <- readTVar tvId
+        modifyTVar' tvId (+1)
+        return $ J.IdInt cid
 
     -- Launch the given process once the project root directory has been set
     let lspFuncs = LspFuncs (getCapabilities params)
                             (resSendResponse ctx0)
                             (getVirtualFile tvarCtx)
                             (publishDiagnostics tvarCtx)
+                            (getLspId $ resLspId ctx0)
     let ctx = ctx0 { resLspFuncs = lspFuncs }
     atomically $ writeTVar tvarCtx ctx
 
