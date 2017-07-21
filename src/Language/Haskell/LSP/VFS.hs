@@ -109,8 +109,6 @@ applyChange str (J.TextDocumentContentChangeEvent (Just (J.Range fm _to)) (Just 
              -- delete and an add
         else changeChars str fm len txt
 applyChange str (J.TextDocumentContentChangeEvent (Just r@(J.Range (J.Position sl sc) (J.Position el ec))) Nothing txt)
-  -- TODO: This case may occur in the wild, need to convert to-fm into a length.
-  -- Or encode a specific addChar function
   = applyChange str (J.TextDocumentContentChangeEvent (Just r) (Just len) txt)
     where len = Yi.length region
           (beforeEnd, afterEnd) = Yi.splitAtLine el str

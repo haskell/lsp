@@ -1,3 +1,6 @@
+[![CircleCI](https://img.shields.io/circleci/project/github/alanz/haskell-lsp.svg)]()
+[![Hackage](https://img.shields.io/hackage/v/haskell-lsp.svg)](https://hackage.haskell.org/package/haskell-lsp)
+
 # haskell-lsp
 Haskell library for the Microsoft Language Server Protocol
 
