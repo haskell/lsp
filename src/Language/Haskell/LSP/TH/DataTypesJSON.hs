@@ -1394,7 +1394,7 @@ interface ServerCapabilities {
 
 data InitializeResponseCapabilitiesInner =
   InitializeResponseCapabilitiesInner
-    { _textDocumentSync                 :: Maybe TextDocumentSyncKind
+    { _textDocumentSync                 :: Maybe TextDocumentSyncOptions
     , _hoverProvider                    :: Maybe Bool
     , _completionProvider               :: Maybe CompletionOptions
     , _signatureHelpProvider            :: Maybe SignatureHelpOptions

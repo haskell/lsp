@@ -1,3 +1,6 @@
+[![CircleCI](https://img.shields.io/circleci/project/github/alanz/haskell-lsp.svg)](https://circleci.com/gh/alanz/haskell-lsp)
+[![Hackage](https://img.shields.io/hackage/v/haskell-lsp.svg)](https://hackage.haskell.org/package/haskell-lsp)
+
 # haskell-lsp
 Haskell library for the Microsoft Language Server Protocol
 
@@ -8,7 +11,7 @@ moment. So do not have high expectations, it is not ready for casual use.
 
 To see this library in use you need to install the [haskell-ide-engine](https://github.com/alanz/haskell-ide-engine/)
 
-    git clone https://github.com/alanz/haskell-ide-engine
+    git clone https://github.com/haskell/haskell-ide-engine
     cd haskell-ide-engine
     stack install
 

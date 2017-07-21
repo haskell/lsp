@@ -17,6 +17,7 @@ module Language.Haskell.LSP.VFS
   , closeVFS
 
   -- * for tests
+  , applyChange
   , sortChanges
   , deleteChars , addChars
   , changeChars
@@ -25,6 +26,7 @@ module Language.Haskell.LSP.VFS
 
 import           Data.Text ( Text )
 import           Data.List
+import           Data.Monoid
 import qualified Data.Map as Map
 import qualified Language.Haskell.LSP.TH.DataTypesJSON      as J
 import           Language.Haskell.LSP.Utility
@@ -103,13 +105,18 @@ applyChange str (J.TextDocumentContentChangeEvent (Just (J.Range fm _to)) (Just 
     else -- add or change, based on length
       if len == 0
         then addChars str fm txt
-             -- Note: changChars comes from applyEdit, emacs will split it into a
+             -- Note: changeChars comes from applyEdit, emacs will split it into a
              -- delete and an add
         else changeChars str fm len txt
-applyChange str (J.TextDocumentContentChangeEvent (Just (J.Range _fm _to)) Nothing _txt)
-  -- TODO: This case may occur in the wild, need to convert to-fm into a length.
-  -- Or encode a specific addChar function
-  = str
+applyChange str (J.TextDocumentContentChangeEvent (Just r@(J.Range (J.Position sl sc) (J.Position el ec))) Nothing txt)
+  = applyChange str (J.TextDocumentContentChangeEvent (Just r) (Just len) txt)
+    where len = Yi.length region
+          (beforeEnd, afterEnd) = Yi.splitAtLine el str
+          lastLine = Yi.take ec afterEnd
+          lastLine' | sl == el = Yi.drop sc lastLine
+                    | otherwise = lastLine
+          (_beforeStart, afterStartBeforeEnd) = Yi.splitAtLine sl beforeEnd
+          region = Yi.drop sc afterStartBeforeEnd <> lastLine'
 applyChange str (J.TextDocumentContentChangeEvent Nothing (Just _) _txt)
   = str
 

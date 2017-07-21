@@ -26,7 +26,7 @@ module Language.Haskell.LSP.Core (
   , sendErrorShowS
   ) where
 
-import           Control.Concurrent
+import           Control.Concurrent.STM
 import qualified Control.Exception as E
 import           Control.Monad
 import           Control.Lens ( (<&>), (^.) )
@@ -75,6 +75,7 @@ data LanguageContextData =
   , resSendResponse        :: !SendFunc
   , resVFS                 :: !VFS
   , resDiagnostics         :: !DiagnosticStore
+  , resLspId               :: !(TVar Int)
   , resLspFuncs            :: LspFuncs -- NOTE: Cannot be strict, lazy initialization
   }
 
@@ -85,7 +86,7 @@ data LanguageContextData =
 -- during initialization.
 data Options =
   Options
-    { textDocumentSync                 :: Maybe J.TextDocumentSyncKind
+    { textDocumentSync                 :: Maybe J.TextDocumentSyncOptions
     , completionProvider               :: Maybe J.CompletionOptions
     , signatureHelpProvider            :: Maybe J.SignatureHelpOptions
     , codeLensProvider                 :: Maybe J.CodeLensOptions
@@ -110,6 +111,7 @@ data LspFuncs =
     , sendFunc               :: !SendFunc
     , getVirtualFileFunc     :: !(J.Uri -> IO (Maybe VirtualFile))
     , publishDiagnosticsFunc :: !PublishDiagnosticsFunc
+    , getNextReqId           :: !(IO J.LspId)
     }
 
 -- | The function in the LSP process that is called once the 'initialize'
@@ -179,17 +181,17 @@ nop :: a -> b -> IO a
 nop = const . return
 
 helper :: J.FromJSON a
-       => (MVar LanguageContextData -> a       -> IO ())
-       -> (MVar LanguageContextData -> J.Value -> IO ())
-helper requestHandler mvarDat json =
+       => (TVar LanguageContextData -> a       -> IO ())
+       -> (TVar LanguageContextData -> J.Value -> IO ())
+helper requestHandler tvarDat json =
   case J.fromJSON json of
-    J.Success req -> requestHandler mvarDat req
+    J.Success req -> requestHandler tvarDat req
     J.Error err -> do
       let msg = T.pack . unwords $ ["haskell-lsp:parse error.", show json, show err] ++ _ERR_MSG_URL
-      sendErrorLog mvarDat msg
+      sendErrorLog tvarDat msg
 
 handlerMap :: InitializeCallback
-           -> Handlers -> J.ClientMethod -> (MVar LanguageContextData -> J.Value -> IO ())
+           -> Handlers -> J.ClientMethod -> (TVar LanguageContextData -> J.Value -> IO ())
 -- General
 handlerMap i _ J.Initialize                      = helper (initializeRequestHandler i)
 handlerMap _ h J.Initialized                     = hh nop $ initializedHandler h
@@ -228,37 +230,37 @@ handlerMap _ h J.TextDocumentDocumentLink        = hh nop $ documentLinkHandler 
 handlerMap _ h J.DocumentLinkResolve             = hh nop $ documentLinkResolveHandler h
 handlerMap _ h J.TextDocumentRename              = hh nop $ renameHandler h
 handlerMap _ _ (J.Misc x)   = helper f
-  where f ::  MVar LanguageContextData -> J.TraceNotification -> IO ()
-        f mvarDat _ = do
+  where f ::  TVar LanguageContextData -> J.TraceNotification -> IO ()
+        f tvarDat _ = do
           let msg = "haskell-lsp:Got " ++ T.unpack x ++ " ignoring"
           logm (B.pack msg)
-          sendErrorLog mvarDat (T.pack msg)
+          sendErrorLog tvarDat (T.pack msg)
 
 -- ---------------------------------------------------------------------
 
 -- | Adapter from the normal handlers exposed to the library users and the
 -- internal message loop
 hh :: forall b. (J.FromJSON b)
-   => (VFS -> b -> IO VFS) -> Maybe (Handler b) -> MVar LanguageContextData -> J.Value -> IO ()
-hh _ Nothing = \mvarDat json -> do
+   => (VFS -> b -> IO VFS) -> Maybe (Handler b) -> TVar LanguageContextData -> J.Value -> IO ()
+hh _ Nothing = \tvarDat json -> do
       let msg = T.pack $ unwords ["haskell-lsp:no handler for.", show json]
-      sendErrorLog mvarDat msg
-hh getVfs (Just h) = \mvarDat json -> do
+      sendErrorLog tvarDat msg
+hh getVfs (Just h) = \tvarDat json -> do
       case J.fromJSON json of
         J.Success req -> do
-          ctx <- readMVar mvarDat
+          ctx <- readTVarIO tvarDat
           vfs' <- getVfs (resVFS ctx) req
-          modifyMVar_ mvarDat (\c -> return c {resVFS = vfs'})
+          atomically $ modifyTVar' tvarDat (\c -> c {resVFS = vfs'})
           h req
         J.Error  err -> do
           let msg = T.pack $ unwords $ ["haskell-lsp:parse error.", show json, show err] ++ _ERR_MSG_URL
-          sendErrorLog mvarDat msg
+          sendErrorLog tvarDat msg
 
 -- ---------------------------------------------------------------------
 
-getVirtualFile :: MVar LanguageContextData -> J.Uri -> IO (Maybe VirtualFile)
-getVirtualFile mvarDat uri = do
-  ctx <- readMVar mvarDat
+getVirtualFile :: TVar LanguageContextData -> J.Uri -> IO (Maybe VirtualFile)
+getVirtualFile tvarDat uri = do
+  ctx <- readTVarIO tvarDat
   return $ Map.lookup uri (resVFS ctx)
 
 -- ---------------------------------------------------------------------
@@ -347,14 +349,15 @@ _ERR_MSG_URL = [ "`stack update` and install new haskell-lsp."
 -- |
 --
 --
-defaultLanguageContextData :: Handlers -> Options -> LspFuncs -> LanguageContextData
-defaultLanguageContextData h o lf = LanguageContextData _INITIAL_RESPONSE_SEQUENCE Nothing h o (BSL.putStr . J.encode) mempty mempty lf
+defaultLanguageContextData :: Handlers -> Options -> LspFuncs -> TVar Int -> SendFunc -> LanguageContextData
+defaultLanguageContextData h o lf tv sf =
+  LanguageContextData _INITIAL_RESPONSE_SEQUENCE Nothing h o sf mempty mempty tv lf
 
 -- ---------------------------------------------------------------------
 
 handleRequest :: InitializeCallback
-              -> MVar LanguageContextData -> BSL.ByteString -> BSL.ByteString -> IO ()
-handleRequest dispatcherProc mvarDat contLenStr jsonStr = do
+              -> TVar LanguageContextData -> BSL.ByteString -> BSL.ByteString -> IO ()
+handleRequest dispatcherProc tvarDat contLenStr jsonStr = do
   {-
   Message Types we must handle are the following
 
@@ -369,7 +372,7 @@ handleRequest dispatcherProc mvarDat contLenStr jsonStr = do
       let msg =  T.pack $ unwords [ "haskell-lsp:incoming message parse error.", lbs2str contLenStr, lbs2str jsonStr, show err]
               ++ L.intercalate "\n" ("" : "" : _ERR_MSG_URL)
               ++ "\n"
-      sendErrorLog mvarDat msg
+      sendErrorLog tvarDat msg
 
     Right o -> do
       case HM.lookup "method" o of
@@ -377,7 +380,7 @@ handleRequest dispatcherProc mvarDat contLenStr jsonStr = do
                                    J.Success m -> handle (J.Object o) m
                                    J.Error _ -> do
                                      let msg = T.pack $ unwords ["haskell-lsp:unknown message received:method='" ++ T.unpack s ++ "',", lbs2str contLenStr, lbs2str jsonStr]
-                                     sendErrorLog mvarDat msg
+                                     sendErrorLog tvarDat msg
         Just oops -> logs $ "haskell-lsp:got strange method param, ignoring:" ++ show oops
         Nothing -> do
           logs $ "haskell-lsp:Got reply message:" ++ show jsonStr
@@ -385,18 +388,18 @@ handleRequest dispatcherProc mvarDat contLenStr jsonStr = do
 
   where
     handleResponse json = do
-      ctx <- readMVar mvarDat
+      ctx <- readTVarIO tvarDat
       case responseHandler $ resHandlers ctx of
-        Nothing -> sendErrorLog mvarDat $ T.pack $ "haskell-lsp: responseHandler is not defined, ignoring response " ++ lbs2str jsonStr
+        Nothing -> sendErrorLog tvarDat $ T.pack $ "haskell-lsp: responseHandler is not defined, ignoring response " ++ lbs2str jsonStr
         Just h -> case J.fromJSON json of
           J.Success res -> h res
           J.Error err -> let msg = T.pack $ unwords $ ["haskell-lsp:response parse error.", lbs2str jsonStr, show err] ++ _ERR_MSG_URL
-                           in sendErrorLog mvarDat msg
+                           in sendErrorLog tvarDat msg
     -- capability based handlers
     handle json cmd = do
-      ctx <- readMVar mvarDat
+      ctx <- readTVarIO tvarDat
       let h = resHandlers ctx
-      handlerMap dispatcherProc h cmd mvarDat json
+      handlerMap dispatcherProc h cmd tvarDat json
 
 -- ---------------------------------------------------------------------
 
@@ -409,14 +412,14 @@ makeResponseError origId err = J.ResponseMessage "2.0" origId Nothing (Just err)
 -- ---------------------------------------------------------------------
 -- |
 --
-sendEvent :: J.ToJSON a => MVar LanguageContextData -> a -> IO ()
-sendEvent mvarCtx str = sendResponse mvarCtx str
+sendEvent :: J.ToJSON a => TVar LanguageContextData -> a -> IO ()
+sendEvent tvarCtx str = sendResponse tvarCtx str
 
 -- |
 --
-sendResponse :: J.ToJSON a => MVar LanguageContextData -> a -> IO ()
-sendResponse mvarCtx str = do
-  ctx <- readMVar mvarCtx
+sendResponse :: J.ToJSON a => TVar LanguageContextData -> a -> IO ()
+sendResponse tvarCtx str = do
+  ctx <- readTVarIO tvarCtx
   resSendResponse ctx str
 
 
@@ -424,16 +427,16 @@ sendResponse mvarCtx str = do
 -- |
 --
 --
-sendErrorResponse :: MVar LanguageContextData -> J.LspIdRsp -> Text -> IO ()
-sendErrorResponse mv origId msg = sendErrorResponseS (sendEvent mv) origId J.InternalError msg
+sendErrorResponse :: TVar LanguageContextData -> J.LspIdRsp -> Text -> IO ()
+sendErrorResponse tv origId msg = sendErrorResponseS (sendEvent tv) origId J.InternalError msg
 
 sendErrorResponseS ::  SendFunc -> J.LspIdRsp -> J.ErrorCode -> Text -> IO ()
 sendErrorResponseS sf origId err msg = do
   sf $ (J.ResponseMessage "2.0" origId Nothing
                 (Just $ J.ResponseError err msg Nothing) :: J.ErrorResponse)
 
-sendErrorLog :: MVar LanguageContextData -> Text -> IO ()
-sendErrorLog mv msg = sendErrorLogS (sendEvent mv) msg
+sendErrorLog :: TVar LanguageContextData -> Text -> IO ()
+sendErrorLog tv msg = sendErrorLogS (sendEvent tv) msg
 
 sendErrorLogS :: SendFunc -> Text -> IO ()
 sendErrorLogS sf msg =
@@ -448,13 +451,13 @@ sendErrorShowS sf msg =
 
 -- ---------------------------------------------------------------------
 
-defaultErrorHandlers :: (Show a) => MVar LanguageContextData -> J.LspIdRsp -> a -> [E.Handler ()]
-defaultErrorHandlers mvarDat origId req = [ E.Handler someExcept ]
+defaultErrorHandlers :: (Show a) => TVar LanguageContextData -> J.LspIdRsp -> a -> [E.Handler ()]
+defaultErrorHandlers tvarDat origId req = [ E.Handler someExcept ]
   where
     someExcept (e :: E.SomeException) = do
       let msg = T.pack $ unwords ["request error.", show req, show e]
-      sendErrorResponse mvarDat origId msg
-      sendErrorLog mvarDat msg
+      sendErrorResponse tvarDat origId msg
+      sendErrorLog tvarDat msg
 
 
 -- |=====================================================================
@@ -464,17 +467,17 @@ defaultErrorHandlers mvarDat origId req = [ E.Handler someExcept ]
 -- |
 --
 initializeRequestHandler :: InitializeCallback
-                         -> MVar LanguageContextData
+                         -> TVar LanguageContextData
                          -> J.InitializeRequest -> IO ()
-initializeRequestHandler dispatcherProc mvarCtx req@(J.RequestMessage _ origId _ params) =
-  flip E.catches (defaultErrorHandlers mvarCtx (J.responseId origId) req) $ do
+initializeRequestHandler dispatcherProc tvarCtx req@(J.RequestMessage _ origId _ params) =
+  flip E.catches (defaultErrorHandlers tvarCtx (J.responseId origId) req) $ do
 
-    ctx0 <- readMVar mvarCtx
+    ctx0 <- readTVarIO tvarCtx
 
     let rootDir = getFirst $ foldMap First [ params ^. J.rootUri  >>= J.uriToFilePath
                                            , params ^. J.rootPath <&> T.unpack ]
 
-    modifyMVar_ mvarCtx (\c -> return c { resRootPath = rootDir })
+    atomically $ modifyTVar' tvarCtx (\c -> c { resRootPath = rootDir })
     case rootDir of
       Nothing -> return ()
       Just dir -> do
@@ -484,20 +487,25 @@ initializeRequestHandler dispatcherProc mvarCtx req@(J.RequestMessage _ origId _
     let
       getCapabilities :: J.InitializeParams -> C.ClientCapabilities
       getCapabilities (J.InitializeParams _ _ _ _ c _) = c
+      getLspId tvId = atomically $ do
+        cid <- readTVar tvId
+        modifyTVar' tvId (+1)
+        return $ J.IdInt cid
 
     -- Launch the given process once the project root directory has been set
     let lspFuncs = LspFuncs (getCapabilities params)
                             (resSendResponse ctx0)
-                            (getVirtualFile mvarCtx)
-                            (publishDiagnostics mvarCtx)
+                            (getVirtualFile tvarCtx)
+                            (publishDiagnostics tvarCtx)
+                            (getLspId $ resLspId ctx0)
     let ctx = ctx0 { resLspFuncs = lspFuncs }
-    modifyMVar_ mvarCtx (\_ -> return ctx)
+    atomically $ writeTVar tvarCtx ctx
 
     initializationResult <- dispatcherProc lspFuncs
 
     case initializationResult of
       Just errResp -> do
-        sendResponse mvarCtx $ makeResponseError (J.responseId origId) errResp
+        sendResponse tvarCtx $ makeResponseError (J.responseId origId) errResp
 
       Nothing -> do
 
@@ -535,31 +543,32 @@ initializeRequestHandler dispatcherProc mvarCtx req@(J.RequestMessage _ origId _
           -- TODO: wrap this up into a fn to create a response message
           res  = J.ResponseMessage "2.0" (J.responseId origId) (Just $ J.InitializeResponseCapabilities capa) Nothing
 
-        sendResponse mvarCtx res
+        sendResponse tvarCtx res
 
 -- |
 --
-shutdownRequestHandler :: MVar LanguageContextData -> J.ShutdownRequest -> IO ()
-shutdownRequestHandler mvarCtx req@(J.RequestMessage _ origId _ _) =
-  flip E.catches (defaultErrorHandlers mvarCtx (J.responseId origId) req) $ do
+shutdownRequestHandler :: TVar LanguageContextData -> J.ShutdownRequest -> IO ()
+shutdownRequestHandler tvarCtx req@(J.RequestMessage _ origId _ _) =
+  flip E.catches (defaultErrorHandlers tvarCtx (J.responseId origId) req) $ do
   let res  = makeResponseMessage req "ok"
 
-  sendResponse mvarCtx res
+  sendResponse tvarCtx res
 
 -- ---------------------------------------------------------------------
 
 -- | Take the new diagnostics, update the stored diagnostics for the given file
 -- and version, and publish the total to the client.
-publishDiagnostics :: MVar LanguageContextData -> PublishDiagnosticsFunc
-publishDiagnostics mvarDat uri mversion diags = do
-  ctx <- readMVar mvarDat
+publishDiagnostics :: TVar LanguageContextData -> PublishDiagnosticsFunc
+publishDiagnostics tvarDat uri mversion diags = do
+  ctx <- readTVarIO tvarDat
   let ds = updateDiagnostics (resDiagnostics ctx) uri mversion diags
-  modifyMVar_ mvarDat (\c -> return c {resDiagnostics = ds})
+  atomically $ writeTVar tvarDat $ ctx{resDiagnostics = ds}
   let mdp = getDiagnosticParamsFor ds uri
   case mdp of
     Nothing -> return ()
     Just params -> do
-      (resSendResponse ctx) $ J.NotificationMessage "2.0" J.TextDocumentPublishDiagnostics (Just params)
+      resSendResponse ctx
+        $ J.NotificationMessage "2.0" J.TextDocumentPublishDiagnostics (Just params)
 
 -- |=====================================================================
 --
