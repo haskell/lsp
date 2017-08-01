@@ -20,7 +20,6 @@ import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as B
 import           Data.Monoid
 import qualified Language.Haskell.LSP.Core as Core
-import qualified Language.Haskell.LSP.TH.DataTypesJSON as J
 import           Language.Haskell.LSP.Utility
 import           System.IO
 import           Text.Parsec
