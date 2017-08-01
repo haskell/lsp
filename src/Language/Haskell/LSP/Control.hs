@@ -48,7 +48,7 @@ run dp h o = do
 
   let sendFunc :: Core.SendFunc
       sendFunc str = atomically $ writeTChan cout (J.encode str)
-  let lf = error "LifeCycle error, ClientCapabilites not set yet via initialize maessage"
+  let lf = error "LifeCycle error, ClientCapabilities not set yet via initialize maessage"
 
   tvarId <- atomically $ newTVar 0
 
