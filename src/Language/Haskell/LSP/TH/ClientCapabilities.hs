@@ -21,13 +21,13 @@ import Data.Default
 New in 3.0
 ----------
 
-WorkspaceClientCapabilites
+WorkspaceClientCapabilities
 
 define capabilities the editor / tool provides on the workspace:
 /**
  * Workspace specific client capabilities.
  */
-export interface WorkspaceClientCapabilites {
+export interface WorkspaceClientCapabilities {
         /**
          * The client supports applying batch edits to the workspace by supporting
          * the request 'workspace/applyEdit'
@@ -140,14 +140,14 @@ $(deriveJSON lspOptions ''ExecuteClientCapabilities)
 
 -- -------------------------------------
 
-data WorkspaceClientCapabilites =
-  WorkspaceClientCapabilites
+data WorkspaceClientCapabilities =
+  WorkspaceClientCapabilities
     { -- | The client supports applying batch edits to the workspace by supporting
       -- the request 'workspace/applyEdit'
       _applyEdit :: Maybe Bool
 
       -- | Capabilities specific to `WorkspaceEdit`s
-    , _workspaceEdit :: Maybe WorkspaceClientCapabilites
+    , _workspaceEdit :: Maybe WorkspaceClientCapabilities
 
       -- | Capabilities specific to the `workspace/didChangeConfiguration` notification.
     , _didChangeConfiguration :: Maybe DidChangeConfigurationClientCapabilities
@@ -162,10 +162,10 @@ data WorkspaceClientCapabilites =
     , _executeCommand :: Maybe ExecuteClientCapabilities
     } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''WorkspaceClientCapabilites)
+$(deriveJSON lspOptions ''WorkspaceClientCapabilities)
 
-instance Default WorkspaceClientCapabilites where
-  def = WorkspaceClientCapabilites def def def def def def
+instance Default WorkspaceClientCapabilities where
+  def = WorkspaceClientCapabilities def def def def def def
 
 -- ---------------------------------------------------------------------
 {-
@@ -614,7 +614,7 @@ interface ClientCapabilities {
         /**
          * Workspace specific client capabilities.
          */
-        workspace?: WorkspaceClientCapabilites;
+        workspace?: WorkspaceClientCapabilities;
 
         /**
          * Text document specific client capabilities.
@@ -630,7 +630,7 @@ interface ClientCapabilities {
 
 data ClientCapabilities =
   ClientCapabilities
-    { _workspace    :: Maybe WorkspaceClientCapabilites
+    { _workspace    :: Maybe WorkspaceClientCapabilities
     , _textDocument :: Maybe TextDocumentClientCapabilities
     , _experimental :: Maybe A.Object
     } deriving (Show, Read, Eq)

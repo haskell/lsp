@@ -765,7 +765,7 @@ export interface WorkspaceEdit {
         /**
          * An array of `TextDocumentEdit`s to express changes to specific a specific
          * version of a text document. Whether a client supports versioned document
-         * edits is expressed via `WorkspaceClientCapabilites.versionedWorkspaceEdit`.
+         * edits is expressed via `WorkspaceClientCapabilities.versionedWorkspaceEdit`.
          */
         documentChanges?: TextDocumentEdit[];
 }
