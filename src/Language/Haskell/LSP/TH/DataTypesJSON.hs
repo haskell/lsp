@@ -1541,14 +1541,14 @@ Notification
 -- |
 --   Notification from the server to actually exit now, after shutdown acked
 --
-data ExitNotificationParams =
-  ExitNotificationParams
+data ExitParams =
+  ExitParams
     {
     } deriving (Show, Read, Eq)
 
-$(deriveJSON defaultOptions ''ExitNotificationParams)
+$(deriveJSON defaultOptions ''ExitParams)
 
-type ExitNotification = NotificationMessage ClientMethod (Maybe ExitNotificationParams)
+type ExitNotification = NotificationMessage ClientMethod (Maybe ExitParams)
 
 -- ---------------------------------------------------------------------
 {-
@@ -4142,18 +4142,18 @@ type ApplyWorkspaceEditResponse = ResponseMessage ApplyWorkspaceEditResponseBody
 
 -- ---------------------------------------------------------------------
 
-data TraceNotificationParams =
-  TraceNotificationParams {
+data TraceParams =
+  TraceParams {
     _value :: Text
   } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''TraceNotificationParams)
-makeFieldsNoPrefix ''TraceNotificationParams
+$(deriveJSON lspOptions ''TraceParams)
+makeFieldsNoPrefix ''TraceParams
 
 
 data TraceNotification =
   TraceNotification {
-    _params :: TraceNotificationParams
+    _params :: TraceParams
   } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''TraceNotification)
