@@ -147,7 +147,7 @@ data WorkspaceClientCapabilities =
       _applyEdit :: Maybe Bool
 
       -- | Capabilities specific to `WorkspaceEdit`s
-    , _workspaceEdit :: Maybe WorkspaceClientCapabilities
+    , _workspaceEdit :: Maybe WorkspaceEditClientCapabilities
 
       -- | Capabilities specific to the `workspace/didChangeConfiguration` notification.
     , _didChangeConfiguration :: Maybe DidChangeConfigurationClientCapabilities
