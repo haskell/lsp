@@ -578,10 +578,12 @@ publishDiagnostics tvarDat uri mversion diags = do
 -- |
 --  Logger
 --
-setupLogger :: FilePath -> [String] -> Priority -> IO ()
-setupLogger logFile extraLogNames level = do
+setupLogger :: Maybe FilePath -> [String] -> Priority -> IO ()
+setupLogger mLogFile extraLogNames level = do
 
-  logStream <- openFile logFile AppendMode
+  logStream <- case mLogFile of
+    Just logFile -> openFile logFile AppendMode
+    Nothing      -> return stderr
   hSetEncoding logStream utf8
 
   logH <- LHS.streamHandler logStream level
