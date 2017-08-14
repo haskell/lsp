@@ -8,5 +8,6 @@ _LOG_FORMAT :: String
 _LOG_FORMAT = "$time [$tid] - $msg"
 
 _LOG_FORMAT_DATE :: String
-_LOG_FORMAT_DATE = "%Y-%m-%d %H:%M:%S"
+-- _LOG_FORMAT_DATE = "%Y-%m-%d %H:%M:%S"
+_LOG_FORMAT_DATE = "%Y-%m-%d %H:%M:%S%Q"
 
