@@ -101,10 +101,10 @@ reactorSend msg = do
 
 -- ---------------------------------------------------------------------
 
-publishDiagnostics :: J.Uri -> Maybe J.TextDocumentVersion -> DiagnosticsBySource -> R ()
-publishDiagnostics uri mv diags = do
+publishDiagnostics :: Int -> J.Uri -> Maybe J.TextDocumentVersion -> DiagnosticsBySource -> R ()
+publishDiagnostics maxToPublish uri mv diags = do
   lf <- ask
-  liftIO $ (Core.publishDiagnosticsFunc lf) uri mv diags
+  liftIO $ (Core.publishDiagnosticsFunc lf) maxToPublish uri mv diags
 
 -- ---------------------------------------------------------------------
 
@@ -315,7 +315,7 @@ sendDiagnostics fileUri mversion = do
               "Example diagnostic message"
             ]
   -- reactorSend $ J.NotificationMessage "2.0" "textDocument/publishDiagnostics" (Just r)
-  publishDiagnostics fileUri mversion (partitionBySource diags)
+  publishDiagnostics 100 fileUri mversion (partitionBySource diags)
 
 -- ---------------------------------------------------------------------
 

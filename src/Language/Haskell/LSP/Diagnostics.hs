@@ -19,6 +19,7 @@ module Language.Haskell.LSP.Diagnostics
   -- * for tests
   ) where
 
+import qualified Data.SortedList as SL
 import qualified Data.Map as Map
 import qualified Language.Haskell.LSP.TH.DataTypesJSON      as J
 
@@ -43,12 +44,12 @@ data StoreItem
   = StoreItem (Maybe J.TextDocumentVersion) DiagnosticsBySource
   deriving (Show,Eq)
 
-type DiagnosticsBySource = Map.Map (Maybe J.DiagnosticSource) [J.Diagnostic]
+type DiagnosticsBySource = Map.Map (Maybe J.DiagnosticSource) (SL.SortedList J.Diagnostic)
 
 -- ---------------------------------------------------------------------
 
 partitionBySource :: [J.Diagnostic] -> DiagnosticsBySource
-partitionBySource diags = Map.fromListWith (++) $ map (\d -> (J._source d, [d])) diags
+partitionBySource diags = Map.fromListWith mappend $ map (\d -> (J._source d, (SL.singleton d))) diags
 
 -- ---------------------------------------------------------------------
 
@@ -79,11 +80,11 @@ updateDiagnostics store uri mv newDiagsBySource = r
 
 -- ---------------------------------------------------------------------
 
-getDiagnosticParamsFor :: DiagnosticStore -> J.Uri -> Maybe J.PublishDiagnosticsParams
-getDiagnosticParamsFor ds uri =
+getDiagnosticParamsFor :: Int -> DiagnosticStore -> J.Uri -> Maybe J.PublishDiagnosticsParams
+getDiagnosticParamsFor maxDiagnostics ds uri =
   case Map.lookup uri ds of
     Nothing -> Nothing
     Just (StoreItem _ diags) ->
-      Just $ J.PublishDiagnosticsParams uri (J.List (concat $ Map.elems diags))
+      Just $ J.PublishDiagnosticsParams uri (J.List (take maxDiagnostics $ SL.fromSortedList $ mconcat $ Map.elems diags))
 
 -- ---------------------------------------------------------------------

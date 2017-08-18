@@ -100,9 +100,10 @@ instance Default Options where
 
 -- | A function to publish diagnostics. It aggregates all diagnostics pertaining
 -- to a particular version of a document, by source, and sends a
--- 'textDocument/publishDiagnostics' notification with the total whenever it is
--- updated.
-type PublishDiagnosticsFunc = J.Uri -> Maybe J.TextDocumentVersion -> DiagnosticsBySource -> IO ()
+-- 'textDocument/publishDiagnostics' notification with the total (limited by the
+-- first parameter) whenever it is updated.
+type PublishDiagnosticsFunc = Int -- Max number of diagnostics to send
+                            -> J.Uri -> Maybe J.TextDocumentVersion -> DiagnosticsBySource -> IO ()
 
 -- | Returned to the server on startup, providing ways to interact with the client.
 data LspFuncs =
@@ -559,11 +560,11 @@ shutdownRequestHandler tvarCtx req@(J.RequestMessage _ origId _ _) =
 -- | Take the new diagnostics, update the stored diagnostics for the given file
 -- and version, and publish the total to the client.
 publishDiagnostics :: TVar LanguageContextData -> PublishDiagnosticsFunc
-publishDiagnostics tvarDat uri mversion diags = do
+publishDiagnostics tvarDat maxDiagnosticCount uri mversion diags = do
   ctx <- readTVarIO tvarDat
   let ds = updateDiagnostics (resDiagnostics ctx) uri mversion diags
   atomically $ writeTVar tvarDat $ ctx{resDiagnostics = ds}
-  let mdp = getDiagnosticParamsFor ds uri
+  let mdp = getDiagnosticParamsFor maxDiagnosticCount ds uri
   case mdp of
     Nothing -> return ()
     Just params -> do
