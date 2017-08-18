@@ -20,6 +20,7 @@ import           Data.Monoid                                ((<>))
 import           Data.Text                                  (Text)
 import qualified Data.Text                                  as T
 import           System.IO                                  (FilePath)
+import           Data.Char
 
 import           Language.Haskell.LSP.TH.ClientCapabilities
 import           Language.Haskell.LSP.TH.Constants
@@ -46,11 +47,21 @@ newtype Uri = Uri { getUri :: Text }
 
 uriToFilePath :: Uri -> Maybe FilePath
 uriToFilePath (Uri uri)
-  | "file://" `T.isPrefixOf` uri = Just $ T.unpack $ T.drop n uri
+  | "file://" `T.isPrefixOf` uri = Just $ platformAdjust . uriDecode . T.unpack $ T.drop n uri
   | otherwise = Nothing
-      where n = T.length "file://"
+      where
+        n = T.length "file://"
+
+        uriDecode ('%':x:y:rest) = toEnum (16 * digitToInt x + digitToInt y) : uriDecode rest
+        uriDecode (x:xs) = x : uriDecode xs
+        uriDecode [] = []
+
+        -- Drop leading '/' for absolute Windows paths
+        platformAdjust path@('/':drive:':':rest) = tail path
+        platformAdjust path = path
 
 filePathToUri :: FilePath -> Uri
+filePathToUri file@(drive:':':rest) = Uri $ T.pack $ "file:///" ++ file
 filePathToUri file = Uri $ T.pack $ "file://" ++ file
 
 -- ---------------------------------------------------------------------
