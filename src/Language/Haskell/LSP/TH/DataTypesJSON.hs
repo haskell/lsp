@@ -1,30 +1,30 @@
-{-# LANGUAGE DeriveGeneric         #-}
-{-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE TemplateHaskell       #-}
-{-# LANGUAGE TypeSynonymInstances  #-}
-{-# LANGUAGE MultiParamTypeClasses  #-}
-{-# LANGUAGE FunctionalDependencies  #-}
-{-# LANGUAGE OverloadedStrings  #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving  #-}
+{-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE DuplicateRecordFields      #-}
+{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE FunctionalDependencies     #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE TemplateHaskell            #-}
+{-# LANGUAGE TypeSynonymInstances       #-}
 
 module Language.Haskell.LSP.TH.DataTypesJSON where
 
-import Control.Lens.TH ( makeFieldsNoPrefix )
+import           Control.Lens.TH                            (makeFieldsNoPrefix)
+import qualified Data.Aeson                                 as A
 import           Data.Aeson.TH
 import           Data.Aeson.Types
-import qualified Data.Aeson as A
-import qualified Data.HashMap.Strict as H
 import           Data.Hashable
-import qualified Data.Text as T
-import           Data.Text ( Text )
-import           Data.Monoid ( (<>) )
-import           System.IO ( FilePath )
+import qualified Data.HashMap.Strict                        as H
+import           Data.Monoid                                ((<>))
+import           Data.Text                                  (Text)
+import qualified Data.Text                                  as T
+import           System.IO                                  (FilePath)
 import           Data.Char
 
-import Language.Haskell.LSP.TH.ClientCapabilities
-import Language.Haskell.LSP.TH.Constants
-import Language.Haskell.LSP.Utility
+import           Language.Haskell.LSP.TH.ClientCapabilities
+import           Language.Haskell.LSP.TH.Constants
+import           Language.Haskell.LSP.Utility
 
 -- ---------------------------------------------------------------------
 
@@ -279,7 +279,7 @@ data RequestMessage m req resp =
     , _params  :: req
     } deriving (Read,Show,Eq)
 
-$(deriveJSON lspOptions ''RequestMessage)
+deriveJSON lspOptions ''RequestMessage
 makeFieldsNoPrefix ''RequestMessage
 
 -- ---------------------------------------------------------------------
@@ -348,10 +348,10 @@ data ResponseError =
   ResponseError
     { _code    :: ErrorCode
     , _message :: Text
-    , _xdata    :: Maybe A.Value
+    , _xdata   :: Maybe A.Value
     } deriving (Read,Show,Eq)
 
-$(deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''ResponseError)
+deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''ResponseError
 makeFieldsNoPrefix ''ResponseError
 
 -- ---------------------------------------------------------------------
@@ -364,7 +364,7 @@ data ResponseMessage a =
     , _error   :: Maybe ResponseError
     } deriving (Read,Show,Eq)
 
-$(deriveJSON lspOptions ''ResponseMessage)
+deriveJSON lspOptions ''ResponseMessage
 makeFieldsNoPrefix ''ResponseMessage
 
 type ErrorResponse = ResponseMessage ()
@@ -392,7 +392,7 @@ data NotificationMessage m a =
     , _params  :: a
     } deriving (Read,Show,Eq)
 
-$(deriveJSON lspOptions ''NotificationMessage)
+deriveJSON lspOptions ''NotificationMessage
 makeFieldsNoPrefix ''NotificationMessage
 
 -- ---------------------------------------------------------------------
@@ -428,7 +428,7 @@ data CancelParams =
     { _id :: LspId
     } deriving (Read,Show,Eq)
 
-$(deriveJSON lspOptions ''CancelParams)
+deriveJSON lspOptions ''CancelParams
 makeFieldsNoPrefix ''CancelParams
 
 type CancelNotification = NotificationMessage ClientMethod CancelParams
@@ -465,11 +465,11 @@ interface Position {
 -}
 data Position =
   Position
-    { _line       :: Int
-    , _character  :: Int
+    { _line      :: Int
+    , _character :: Int
     } deriving (Show, Read, Eq, Ord)
 
-$(deriveJSON lspOptions ''Position)
+deriveJSON lspOptions ''Position
 makeFieldsNoPrefix ''Position
 
 -- ---------------------------------------------------------------------
@@ -499,7 +499,7 @@ data Range =
     , _end   :: Position
     } deriving (Show, Read, Eq, Ord)
 
-$(deriveJSON lspOptions ''Range)
+deriveJSON lspOptions ''Range
 makeFieldsNoPrefix ''Range
 
 -- ---------------------------------------------------------------------
@@ -520,7 +520,7 @@ data Location =
     , _range :: Range
     } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''Location)
+deriveJSON lspOptions ''Location
 makeFieldsNoPrefix ''Location
 
 -- ---------------------------------------------------------------------
@@ -615,7 +615,7 @@ data Diagnostic =
     , _message  :: Text
     } deriving (Show, Read, Eq, Ord)
 
-$(deriveJSON lspOptions ''Diagnostic)
+deriveJSON lspOptions ''Diagnostic
 makeFieldsNoPrefix ''Diagnostic
 
 -- ---------------------------------------------------------------------
@@ -653,7 +653,7 @@ data Command =
     , _arguments :: Maybe A.Value
     } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''Command)
+deriveJSON lspOptions ''Command
 makeFieldsNoPrefix ''Command
 
 -- ---------------------------------------------------------------------
@@ -687,7 +687,7 @@ data TextEdit =
     , _newText :: Text
     } deriving (Show,Read,Eq)
 
-$(deriveJSON lspOptions ''TextEdit)
+deriveJSON lspOptions ''TextEdit
 makeFieldsNoPrefix ''TextEdit
 
 -- ---------------------------------------------------------------------
@@ -713,7 +713,7 @@ data VersionedTextDocumentIdentifier =
     , _version :: TextDocumentVersion
     } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''VersionedTextDocumentIdentifier)
+deriveJSON lspOptions ''VersionedTextDocumentIdentifier
 makeFieldsNoPrefix ''VersionedTextDocumentIdentifier
 
 -- ---------------------------------------------------------------------
@@ -749,7 +749,7 @@ data TextDocumentEdit =
     , _edits        :: List TextEdit
     } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''TextDocumentEdit)
+deriveJSON lspOptions ''TextDocumentEdit
 makeFieldsNoPrefix ''TextDocumentEdit
 
 -- ---------------------------------------------------------------------
@@ -794,7 +794,7 @@ instance Monoid WorkspaceEdit where
   mempty = WorkspaceEdit Nothing Nothing
   mappend (WorkspaceEdit a b) (WorkspaceEdit c d) = WorkspaceEdit (a <> c) (b <> d)
 
-$(deriveJSON lspOptions ''WorkspaceEdit)
+deriveJSON lspOptions ''WorkspaceEdit
 makeFieldsNoPrefix ''WorkspaceEdit
 
 -- ---------------------------------------------------------------------
@@ -818,7 +818,7 @@ data TextDocumentIdentifier =
     { _uri :: Uri
     } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''TextDocumentIdentifier)
+deriveJSON lspOptions ''TextDocumentIdentifier
 makeFieldsNoPrefix ''TextDocumentIdentifier
 
 -- ---------------------------------------------------------------------
@@ -862,7 +862,7 @@ data TextDocumentItem =
   , _text       :: Text
   } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''TextDocumentItem)
+deriveJSON lspOptions ''TextDocumentItem
 makeFieldsNoPrefix ''TextDocumentItem
 
 -- ---------------------------------------------------------------------
@@ -893,7 +893,7 @@ data TextDocumentPositionParams =
     , _position     :: Position
     } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''TextDocumentPositionParams)
+deriveJSON lspOptions ''TextDocumentPositionParams
 makeFieldsNoPrefix ''TextDocumentPositionParams
 
 -- ---------------------------------------------------------------------
@@ -935,7 +935,7 @@ data DocumentFilter =
     , _pattern  :: Maybe Text
     } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''DocumentFilter)
+deriveJSON lspOptions ''DocumentFilter
 makeFieldsNoPrefix ''DocumentFilter
 
 {-
@@ -1031,7 +1031,7 @@ data InitializeParams =
   } deriving (Show, Read, Eq)
 
 
-$(deriveJSON lspOptions ''InitializeParams)
+deriveJSON lspOptions ''InitializeParams
 makeFieldsNoPrefix ''InitializeParams
 
 -- ---------------------------------------------------------------------
@@ -1055,7 +1055,7 @@ data InitializeError =
     { _retry :: Bool
     } deriving (Read, Show, Eq)
 
-$(deriveJSON lspOptions ''InitializeError)
+deriveJSON lspOptions ''InitializeError
 makeFieldsNoPrefix ''InitializeError
 
 -- ---------------------------------------------------------------------
@@ -1124,7 +1124,7 @@ data CompletionOptions =
     , _triggerCharacters :: Maybe [String]
     } deriving (Read,Show,Eq)
 
-$(deriveJSON lspOptions {omitNothingFields = True } ''CompletionOptions)
+deriveJSON lspOptions {omitNothingFields = True } ''CompletionOptions
 makeFieldsNoPrefix ''CompletionOptions
 
 -- ---------------------------------------------------------------------
@@ -1144,7 +1144,7 @@ data SignatureHelpOptions =
     { _triggerCharacters :: Maybe [String]
     } deriving (Read,Show,Eq)
 
-$(deriveJSON lspOptions ''SignatureHelpOptions)
+deriveJSON lspOptions ''SignatureHelpOptions
 makeFieldsNoPrefix ''SignatureHelpOptions
 
 -- ---------------------------------------------------------------------
@@ -1165,7 +1165,7 @@ data CodeLensOptions =
     { _resolveProvider :: Maybe Bool
     } deriving (Read,Show,Eq)
 
-$(deriveJSON lspOptions ''CodeLensOptions)
+deriveJSON lspOptions ''CodeLensOptions
 makeFieldsNoPrefix ''CodeLensOptions
 
 -- ---------------------------------------------------------------------
@@ -1190,7 +1190,7 @@ data DocumentOnTypeFormattingOptions =
     , _moreTriggerCharacter  :: Maybe [String]
     } deriving (Read,Show,Eq)
 
-$(deriveJSON lspOptions ''DocumentOnTypeFormattingOptions)
+deriveJSON lspOptions ''DocumentOnTypeFormattingOptions
 makeFieldsNoPrefix ''DocumentOnTypeFormattingOptions
 
 -- ---------------------------------------------------------------------
@@ -1215,7 +1215,7 @@ data DocumentLinkOptions =
       _resolveProvider :: Maybe Bool
     } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''DocumentLinkOptions)
+deriveJSON lspOptions ''DocumentLinkOptions
 makeFieldsNoPrefix ''DocumentLinkOptions
 
 -- ---------------------------------------------------------------------
@@ -1241,7 +1241,7 @@ data ExecuteCommandOptions =
       _commands :: List Text
     } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''ExecuteCommandOptions)
+deriveJSON lspOptions ''ExecuteCommandOptions
 makeFieldsNoPrefix ''ExecuteCommandOptions
 
 -- ---------------------------------------------------------------------
@@ -1264,7 +1264,7 @@ data SaveOptions =
       _includeText :: Maybe Bool
     } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''SaveOptions)
+deriveJSON lspOptions ''SaveOptions
 makeFieldsNoPrefix ''SaveOptions
 
 -- ---------------------------------------------------------------------
@@ -1300,24 +1300,24 @@ export interface TextDocumentSyncOptions {
 data TextDocumentSyncOptions =
   TextDocumentSyncOptions
     { -- | Open and close notifications are sent to the server.
-      _openClose :: Maybe Bool
+      _openClose         :: Maybe Bool
 
       -- | Change notificatins are sent to the server. See
       -- TextDocumentSyncKind.None, TextDocumentSyncKind.Full and
       -- TextDocumentSyncKindIncremental.
-    , _change :: Maybe TextDocumentSyncKind
+    , _change            :: Maybe TextDocumentSyncKind
 
       -- | Will save notifications are sent to the server.
-    , _willSave :: Maybe Bool
+    , _willSave          :: Maybe Bool
 
       -- | Will save wait until requests are sent to the server.
     , _willSaveWaitUntil :: Maybe Bool
 
       -- |Save notifications are sent to the server.
-    , _save :: Maybe SaveOptions
+    , _save              :: Maybe SaveOptions
     } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''TextDocumentSyncOptions)
+deriveJSON lspOptions ''TextDocumentSyncOptions
 makeFieldsNoPrefix ''TextDocumentSyncOptions
 
 -- ---------------------------------------------------------------------
@@ -1426,7 +1426,7 @@ data InitializeResponseCapabilitiesInner =
     , _experimental                     :: Maybe A.Value
     } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''InitializeResponseCapabilitiesInner)
+deriveJSON lspOptions ''InitializeResponseCapabilitiesInner
 makeFieldsNoPrefix ''InitializeResponseCapabilitiesInner
 
 
@@ -1439,7 +1439,7 @@ data InitializeResponseCapabilities =
     _capabilities :: InitializeResponseCapabilitiesInner
   } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''InitializeResponseCapabilities)
+deriveJSON lspOptions ''InitializeResponseCapabilities
 makeFieldsNoPrefix ''InitializeResponseCapabilities
 
 -- ---------------------------------------------------------------------
@@ -1557,7 +1557,7 @@ data ExitParams =
     {
     } deriving (Show, Read, Eq)
 
-$(deriveJSON defaultOptions ''ExitParams)
+deriveJSON defaultOptions ''ExitParams
 
 type ExitNotification = NotificationMessage ClientMethod (Maybe ExitParams)
 
@@ -1632,11 +1632,11 @@ instance A.FromJSON MessageType where
 
 data ShowMessageParams =
   ShowMessageParams {
-    _xtype    :: MessageType
+    _xtype   :: MessageType
   , _message :: Text
   } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''ShowMessageParams)
+deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''ShowMessageParams
 makeFieldsNoPrefix ''ShowMessageParams
 
 type ShowMessageNotification = NotificationMessage ServerMethod ShowMessageParams
@@ -1694,18 +1694,18 @@ data MessageActionItem =
     { _title :: Text
     } deriving (Show,Read,Eq)
 
-$(deriveJSON lspOptions ''MessageActionItem)
+deriveJSON lspOptions ''MessageActionItem
 makeFieldsNoPrefix ''MessageActionItem
 
 
 data ShowMessageRequestParams =
   ShowMessageRequestParams
-    { _xtype    :: MessageType
+    { _xtype   :: MessageType
     , _message :: Text
     , _actions :: Maybe [MessageActionItem]
     } deriving (Show,Read,Eq)
 
-$(deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''ShowMessageRequestParams)
+deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''ShowMessageRequestParams
 makeFieldsNoPrefix ''ShowMessageRequestParams
 
 type ShowMessageRequest = RequestMessage ServerMethod ShowMessageRequestParams Text
@@ -1742,11 +1742,11 @@ Where type is defined as above.
 
 data LogMessageParams =
   LogMessageParams {
-    _xtype    :: MessageType
+    _xtype   :: MessageType
   , _message :: Text
   } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''LogMessageParams)
+deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''LogMessageParams
 makeFieldsNoPrefix ''LogMessageParams
 
 
@@ -1819,16 +1819,16 @@ data Registration =
   Registration
     { -- |The id used to register the request. The id can be used to deregister
       -- the request again.
-      _id :: Text
+      _id              :: Text
 
        -- | The method / capability to register for.
-    , _method :: ClientMethod
+    , _method          :: ClientMethod
 
       -- | Options necessary for the registration.
     , _registerOptions :: Maybe A.Value
     } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''Registration)
+deriveJSON lspOptions ''Registration
 makeFieldsNoPrefix ''Registration
 
 data RegistrationParams =
@@ -1836,7 +1836,7 @@ data RegistrationParams =
     { _registrations :: List Registration
     } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''RegistrationParams)
+deriveJSON lspOptions ''RegistrationParams
 makeFieldsNoPrefix ''RegistrationParams
 
 -- |Note: originates at the server
@@ -1862,7 +1862,7 @@ data TextDocumentRegistrationOptions =
     { _documentSelector :: Maybe DocumentSelector
     } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''TextDocumentRegistrationOptions)
+deriveJSON lspOptions ''TextDocumentRegistrationOptions
 makeFieldsNoPrefix ''TextDocumentRegistrationOptions
 
 -- ---------------------------------------------------------------------
@@ -1907,13 +1907,13 @@ data Unregistration =
   Unregistration
     { -- | The id used to unregister the request or notification. Usually an id
       -- provided during the register request.
-      _id :: Text
+      _id     :: Text
 
        -- |The method / capability to unregister for.
     , _method :: Text
     } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''Unregistration)
+deriveJSON lspOptions ''Unregistration
 makeFieldsNoPrefix ''Unregistration
 
 data UnregistrationParams =
@@ -1921,7 +1921,7 @@ data UnregistrationParams =
     { _unregistrations :: List Unregistration
     } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''UnregistrationParams)
+deriveJSON lspOptions ''UnregistrationParams
 makeFieldsNoPrefix ''UnregistrationParams
 
 type UnregisterCapabilityRequest = RequestMessage ServerMethod UnregistrationParams ()
@@ -1953,7 +1953,7 @@ data DidChangeConfigurationParams =
     _settings :: A.Value
   } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''DidChangeConfigurationParams)
+deriveJSON lspOptions ''DidChangeConfigurationParams
 makeFieldsNoPrefix ''DidChangeConfigurationParams
 
 
@@ -1990,7 +1990,7 @@ data DidOpenTextDocumentParams =
     _textDocument :: TextDocumentItem
   } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''DidOpenTextDocumentParams)
+deriveJSON lspOptions ''DidOpenTextDocumentParams
 makeFieldsNoPrefix ''DidOpenTextDocumentParams
 
 type DidOpenTextDocumentNotification = NotificationMessage ClientMethod DidOpenTextDocumentParams
@@ -2052,7 +2052,7 @@ data TextDocumentContentChangeEvent =
     , _text        :: Text
     } deriving (Read,Show,Eq)
 
-$(deriveJSON lspOptions { omitNothingFields = True } ''TextDocumentContentChangeEvent)
+deriveJSON lspOptions { omitNothingFields = True } ''TextDocumentContentChangeEvent
 makeFieldsNoPrefix ''TextDocumentContentChangeEvent
 
 -- -------------------------------------
@@ -2063,7 +2063,7 @@ data DidChangeTextDocumentParams =
     , _contentChanges :: List TextDocumentContentChangeEvent
     } deriving (Show,Read,Eq)
 
-$(deriveJSON lspOptions ''DidChangeTextDocumentParams)
+deriveJSON lspOptions ''DidChangeTextDocumentParams
 makeFieldsNoPrefix ''DidChangeTextDocumentParams
 
 type DidChangeTextDocumentNotification = NotificationMessage ClientMethod DidChangeTextDocumentParams
@@ -2091,7 +2091,7 @@ data TextDocumentChangeRegistrationOptions =
     , _syncKind         :: TextDocumentSyncKind
     } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''TextDocumentChangeRegistrationOptions)
+deriveJSON lspOptions ''TextDocumentChangeRegistrationOptions
 makeFieldsNoPrefix ''TextDocumentChangeRegistrationOptions
 
 -- ---------------------------------------------------------------------
@@ -2174,7 +2174,7 @@ data WillSaveTextDocumentParams =
     , _reason       :: TextDocumentSaveReason
     } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''WillSaveTextDocumentParams)
+deriveJSON lspOptions ''WillSaveTextDocumentParams
 makeFieldsNoPrefix ''WillSaveTextDocumentParams
 
 type WillSaveTextDocumentNotification = NotificationMessage ClientMethod WillSaveTextDocumentParams
@@ -2233,7 +2233,7 @@ data DidSaveTextDocumentParams =
     { _textDocument :: TextDocumentIdentifier
     } deriving (Read,Show,Eq)
 
-$(deriveJSON lspOptions ''DidSaveTextDocumentParams)
+deriveJSON lspOptions ''DidSaveTextDocumentParams
 makeFieldsNoPrefix ''DidSaveTextDocumentParams
 
 type DidSaveTextDocumentNotification = NotificationMessage ClientMethod DidSaveTextDocumentParams
@@ -2271,7 +2271,7 @@ data DidCloseTextDocumentParams =
     { _textDocument :: TextDocumentIdentifier
     } deriving (Read,Show,Eq)
 
-$(deriveJSON lspOptions ''DidCloseTextDocumentParams)
+deriveJSON lspOptions ''DidCloseTextDocumentParams
 makeFieldsNoPrefix ''DidCloseTextDocumentParams
 
 
@@ -2352,11 +2352,11 @@ instance A.FromJSON FileChangeType where
 
 data FileEvent =
   FileEvent
-    { _uri  :: Uri
+    { _uri   :: Uri
     , _xtype :: FileChangeType
     } deriving (Read,Show,Eq)
 
-$(deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''FileEvent)
+deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''FileEvent
 makeFieldsNoPrefix ''FileEvent
 
 data DidChangeWatchedFilesParams =
@@ -2364,7 +2364,7 @@ data DidChangeWatchedFilesParams =
     { _params :: List FileEvent
     } deriving (Read,Show,Eq)
 
-$(deriveJSON lspOptions ''DidChangeWatchedFilesParams)
+deriveJSON lspOptions ''DidChangeWatchedFilesParams
 makeFieldsNoPrefix ''DidChangeWatchedFilesParams
 
 
@@ -2403,7 +2403,7 @@ data PublishDiagnosticsParams =
     , _diagnostics :: List Diagnostic
     } deriving (Read,Show,Eq)
 
-$(deriveJSON lspOptions ''PublishDiagnosticsParams)
+deriveJSON lspOptions ''PublishDiagnosticsParams
 makeFieldsNoPrefix ''PublishDiagnosticsParams
 
 
@@ -2607,13 +2607,13 @@ data InsertTextFormat
     deriving (Show, Read, Eq)
 
 instance A.ToJSON InsertTextFormat where
-  toJSON PlainText    = A.Number 1
-  toJSON Snippet      = A.Number 2
+  toJSON PlainText = A.Number 1
+  toJSON Snippet   = A.Number 2
 
 instance A.FromJSON InsertTextFormat where
   parseJSON (A.Number  1) = pure PlainText
   parseJSON (A.Number  2) = pure Snippet
-  parseJSON _            = mempty
+  parseJSON _             = mempty
 
 -- -------------------------------------
 
@@ -2676,36 +2676,36 @@ instance A.FromJSON CompletionItemKind where
   parseJSON (A.Number 16) = pure CiColor
   parseJSON (A.Number 17) = pure CiFile
   parseJSON (A.Number 18) = pure CiReference
-  parseJSON _            = mempty
+  parseJSON _             = mempty
 
 
 -- -------------------------------------
 
 data CompletionItem =
   CompletionItem
-    { _label :: Text -- ^ The label of this completion item. By default also
+    { _label               :: Text -- ^ The label of this completion item. By default also
                        -- the text that is inserted when selecting this
                        -- completion.
-    , _kind :: Maybe CompletionItemKind
-    , _detail :: Maybe Text -- ^ A human-readable string with additional
+    , _kind                :: Maybe CompletionItemKind
+    , _detail              :: Maybe Text -- ^ A human-readable string with additional
                               -- information about this item, like type or
                               -- symbol information.
-    , _documentation :: Maybe Text -- ^ A human-readable string that represents
+    , _documentation       :: Maybe Text -- ^ A human-readable string that represents
                                     -- a doc-comment.
-    , _sortText :: Maybe Text -- ^ A string that should be used when filtering
+    , _sortText            :: Maybe Text -- ^ A string that should be used when filtering
                                 -- a set of completion items. When `falsy` the
                                 -- label is used.
-    , _filterText :: Maybe Text -- ^ A string that should be used when
+    , _filterText          :: Maybe Text -- ^ A string that should be used when
                                   -- filtering a set of completion items. When
                                   -- `falsy` the label is used.
-    , _insertText :: Maybe Text -- ^ A string that should be inserted a
+    , _insertText          :: Maybe Text -- ^ A string that should be inserted a
                                   -- document when selecting this completion.
                                   -- When `falsy` the label is used.
-    , _insertTextFormat :: Maybe InsertTextFormat
+    , _insertTextFormat    :: Maybe InsertTextFormat
          -- ^ The format of the insert text. The format applies to both the
          -- `insertText` property and the `newText` property of a provided
          -- `textEdit`.
-    , _textEdit :: Maybe TextEdit
+    , _textEdit            :: Maybe TextEdit
          -- ^ An edit which is applied to a document when selecting this
          -- completion. When an edit is provided the value of `insertText` is
          -- ignored.
@@ -2716,25 +2716,25 @@ data CompletionItem =
          -- ^ An optional array of additional text edits that are applied when
          -- selecting this completion. Edits must not overlap with the main edit
          -- nor with themselves.
-    , _command :: Maybe Command
+    , _command             :: Maybe Command
         -- ^ An optional command that is executed *after* inserting this
         -- completion. *Note* that additional modifications to the current
         -- document should be described with the additionalTextEdits-property.
-    , _xdata :: Maybe A.Value -- ^ An data entry field that is preserved on a
+    , _xdata               :: Maybe A.Value -- ^ An data entry field that is preserved on a
                               -- completion item between a completion and a
                               -- completion resolve request.
     } deriving (Read,Show,Eq)
 
-$(deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''CompletionItem)
+deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''CompletionItem
 makeFieldsNoPrefix ''CompletionItem
 
 data CompletionListType =
   CompletionListType
     { _isIncomplete :: Bool
-    , _items :: List CompletionItem
+    , _items        :: List CompletionItem
     } deriving (Read,Show,Eq)
 
-$(deriveJSON lspOptions ''CompletionListType)
+deriveJSON lspOptions ''CompletionListType
 makeFieldsNoPrefix ''CompletionListType
 
 
@@ -2743,7 +2743,7 @@ data CompletionResponseResult
   | Completions (List CompletionItem)
   deriving (Read,Show,Eq)
 
-$(deriveJSON defaultOptions { fieldLabelModifier = rdrop (length ("CompletionResponseResult"::String)), sumEncoding = UntaggedValue } ''CompletionResponseResult)
+deriveJSON defaultOptions { fieldLabelModifier = rdrop (length ("CompletionResponseResult"::String)), sumEncoding = UntaggedValue } ''CompletionResponseResult
 
 type CompletionResponse = ResponseMessage CompletionResponseResult
 type CompletionRequest = RequestMessage ClientMethod TextDocumentPositionParams CompletionResponseResult
@@ -2775,7 +2775,7 @@ data CompletionRegistrationOptions =
     , _resolveProvider   :: Maybe Bool
     } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''CompletionRegistrationOptions)
+deriveJSON lspOptions ''CompletionRegistrationOptions
 makeFieldsNoPrefix ''CompletionRegistrationOptions
 
 -- ---------------------------------------------------------------------
@@ -2865,7 +2865,7 @@ data LanguageString =
     , _value    :: Text
     } deriving (Read,Show,Eq)
 
-$(deriveJSON lspOptions ''LanguageString)
+deriveJSON lspOptions ''LanguageString
 makeFieldsNoPrefix ''LanguageString
 
 data MarkedString =
@@ -2878,7 +2878,7 @@ instance ToJSON MarkedString where
   toJSON (CodeString  x) = toJSON x
 instance FromJSON MarkedString where
   parseJSON (A.String t) = pure $ PlainString t
-  parseJSON o = CodeString <$> parseJSON o
+  parseJSON o            = CodeString <$> parseJSON o
 
 data Hover =
   Hover
@@ -2886,7 +2886,7 @@ data Hover =
     , _range    :: Maybe Range
     } deriving (Read,Show,Eq)
 
-$(deriveJSON lspOptions ''Hover)
+deriveJSON lspOptions ''Hover
 makeFieldsNoPrefix ''Hover
 
 
@@ -2989,7 +2989,7 @@ data ParameterInformation =
     { _label         :: Text
     , _documentation :: Maybe Text
     } deriving (Read,Show,Eq)
-$(deriveJSON lspOptions ''ParameterInformation)
+deriveJSON lspOptions ''ParameterInformation
 makeFieldsNoPrefix ''ParameterInformation
 
 
@@ -3002,7 +3002,7 @@ data SignatureInformation =
     , _parameters    :: Maybe [ParameterInformation]
     } deriving (Read,Show,Eq)
 
-$(deriveJSON lspOptions ''SignatureInformation)
+deriveJSON lspOptions ''SignatureInformation
 makeFieldsNoPrefix ''SignatureInformation
 
 data SignatureHelp =
@@ -3012,7 +3012,7 @@ data SignatureHelp =
     , _activeParameter :: Maybe Int -- ^ The active parameter of the active signature
     } deriving (Read,Show,Eq)
 
-$(deriveJSON lspOptions ''SignatureHelp)
+deriveJSON lspOptions ''SignatureHelp
 makeFieldsNoPrefix ''SignatureHelp
 
 type SignatureHelpRequest = RequestMessage ClientMethod TextDocumentPositionParams SignatureHelp
@@ -3039,7 +3039,7 @@ data SignatureHelpRegistrationOptions =
     , _triggerCharacters :: Maybe (List String)
     } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''SignatureHelpRegistrationOptions)
+deriveJSON lspOptions ''SignatureHelpRegistrationOptions
 makeFieldsNoPrefix ''SignatureHelpRegistrationOptions
 
 -- ---------------------------------------------------------------------
@@ -3070,8 +3070,19 @@ Response:
 
 -- {"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{"textDocument":{"uri":"file:///tmp/Foo.hs"},"position":{"line":1,"character":8}}}
 
-type DefinitionRequest  = RequestMessage ClientMethod TextDocumentPositionParams Location
-type DefinitionResponse = ResponseMessage Location
+data DefinitionResponseParams = SingleLoc Location | MultiLoc [Location]
+  deriving (Eq,Read,Show)
+
+instance A.ToJSON DefinitionResponseParams where
+  toJSON (SingleLoc x) = toJSON x
+  toJSON (MultiLoc xs) = toJSON xs
+
+instance A.FromJSON DefinitionResponseParams where
+  parseJSON xs@(A.Array _) = MultiLoc <$> parseJSON xs
+  parseJSON x              = SingleLoc <$> parseJSON x
+
+type DefinitionRequest  = RequestMessage ClientMethod TextDocumentPositionParams DefinitionResponseParams
+type DefinitionResponse = ResponseMessage DefinitionResponseParams
 
 -- ---------------------------------------------------------------------
 
@@ -3116,7 +3127,7 @@ data ReferenceContext =
     { _includeDeclaration :: Bool
     } deriving (Read,Show,Eq)
 
-$(deriveJSON lspOptions ''ReferenceContext)
+deriveJSON lspOptions ''ReferenceContext
 makeFieldsNoPrefix ''ReferenceContext
 
 
@@ -3127,7 +3138,7 @@ data ReferenceParams =
     , _context      :: ReferenceContext
     } deriving (Read,Show,Eq)
 
-$(deriveJSON lspOptions ''ReferenceParams)
+deriveJSON lspOptions ''ReferenceParams
 makeFieldsNoPrefix ''ReferenceParams
 
 
@@ -3228,7 +3239,7 @@ data DocumentHighlight =
     , _kind  :: Maybe DocumentHighlightKind
     } deriving (Read,Show,Eq)
 
-$(deriveJSON lspOptions ''DocumentHighlight)
+deriveJSON lspOptions ''DocumentHighlight
 makeFieldsNoPrefix ''DocumentHighlight
 
 type DocumentHighlightRequest = RequestMessage ClientMethod TextDocumentPositionParams (List DocumentHighlight)
@@ -3325,7 +3336,7 @@ data DocumentSymbolParams =
     { _textDocument :: TextDocumentIdentifier
     } deriving (Read,Show,Eq)
 
-$(deriveJSON lspOptions ''DocumentSymbolParams)
+deriveJSON lspOptions ''DocumentSymbolParams
 makeFieldsNoPrefix ''DocumentSymbolParams
 
 -- -------------------------------------
@@ -3404,7 +3415,7 @@ data SymbolInformation =
                                      -- symbol.
     } deriving (Read,Show,Eq)
 
-$(deriveJSON lspOptions ''SymbolInformation)
+deriveJSON lspOptions ''SymbolInformation
 makeFieldsNoPrefix ''SymbolInformation
 
 
@@ -3449,7 +3460,7 @@ data WorkspaceSymbolParams =
     { _query :: Text
     } deriving (Read,Show,Eq)
 
-$(deriveJSON lspOptions ''WorkspaceSymbolParams)
+deriveJSON lspOptions ''WorkspaceSymbolParams
 makeFieldsNoPrefix ''WorkspaceSymbolParams
 
 type WorkspaceSymbolRequest  = RequestMessage ClientMethod WorkspaceSymbolParams (List SymbolInformation)
@@ -3515,7 +3526,7 @@ data CodeActionContext =
     { _diagnostics :: List Diagnostic
     } deriving (Read,Show,Eq)
 
-$(deriveJSON lspOptions ''CodeActionContext)
+deriveJSON lspOptions ''CodeActionContext
 makeFieldsNoPrefix ''CodeActionContext
 
 
@@ -3526,7 +3537,7 @@ data CodeActionParams =
     , _context      :: CodeActionContext
     } deriving (Read,Show,Eq)
 
-$(deriveJSON lspOptions ''CodeActionParams)
+deriveJSON lspOptions ''CodeActionParams
 makeFieldsNoPrefix ''CodeActionParams
 
 
@@ -3592,7 +3603,7 @@ data CodeLensParams =
     { _textDocument :: TextDocumentIdentifier
     } deriving (Read,Show,Eq)
 
-$(deriveJSON lspOptions ''CodeLensParams)
+deriveJSON lspOptions ''CodeLensParams
 makeFieldsNoPrefix ''CodeLensParams
 
 
@@ -3602,10 +3613,10 @@ data CodeLens =
   CodeLens
     { _range   :: Range
     , _command :: Maybe Command
-    , _xdata    :: Maybe A.Value
+    , _xdata   :: Maybe A.Value
     } deriving (Read,Show,Eq)
 
-$(deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''CodeLens)
+deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''CodeLens
 makeFieldsNoPrefix ''CodeLens
 
 
@@ -3630,7 +3641,7 @@ data CodeLensRegistrationOptions =
     , _resolveProvider  :: Maybe Bool
     } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''CodeLensRegistrationOptions)
+deriveJSON lspOptions ''CodeLensRegistrationOptions
 makeFieldsNoPrefix ''CodeLensRegistrationOptions
 
 -- ---------------------------------------------------------------------
@@ -3717,16 +3728,16 @@ data DocumentLinkParams =
     { _textDocument :: TextDocumentIdentifier
     } deriving (Read,Show,Eq)
 
-$(deriveJSON lspOptions ''DocumentLinkParams)
+deriveJSON lspOptions ''DocumentLinkParams
 makeFieldsNoPrefix ''DocumentLinkParams
 
 data DocumentLink =
   DocumentLink
-    { _range :: Range
+    { _range  :: Range
     , _target :: Maybe Text
     } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''DocumentLink)
+deriveJSON lspOptions ''DocumentLink
 makeFieldsNoPrefix ''DocumentLink
 
 type DocumentLinkRequest = RequestMessage ClientMethod DocumentLinkParams (List DocumentLink)
@@ -3819,7 +3830,7 @@ data FormattingOptions =
     -- Note: May be more properties
     } deriving (Read,Show,Eq)
 
-$(deriveJSON lspOptions ''FormattingOptions)
+deriveJSON lspOptions ''FormattingOptions
 makeFieldsNoPrefix ''FormattingOptions
 
 data DocumentFormattingParams =
@@ -3828,7 +3839,7 @@ data DocumentFormattingParams =
     , _options      :: FormattingOptions
     } deriving (Show,Read,Eq)
 
-$(deriveJSON lspOptions ''DocumentFormattingParams)
+deriveJSON lspOptions ''DocumentFormattingParams
 makeFieldsNoPrefix ''DocumentFormattingParams
 
 type DocumentFormattingRequest  = RequestMessage ClientMethod DocumentFormattingParams (List TextEdit)
@@ -3880,7 +3891,7 @@ data DocumentRangeFormattingParams =
     , _options      :: FormattingOptions
     } deriving (Read,Show,Eq)
 
-$(deriveJSON lspOptions ''DocumentRangeFormattingParams)
+deriveJSON lspOptions ''DocumentRangeFormattingParams
 makeFieldsNoPrefix ''DocumentRangeFormattingParams
 
 type DocumentRangeFormattingRequest  = RequestMessage ClientMethod DocumentRangeFormattingParams (List TextEdit)
@@ -3950,7 +3961,7 @@ data DocumentOnTypeFormattingParams =
     , _options      :: FormattingOptions
     } deriving (Read,Show,Eq)
 
-$(deriveJSON lspOptions ''DocumentOnTypeFormattingParams)
+deriveJSON lspOptions ''DocumentOnTypeFormattingParams
 makeFieldsNoPrefix ''DocumentOnTypeFormattingParams
 
 type DocumentOnTypeFormattingRequest  = RequestMessage ClientMethod DocumentOnTypeFormattingParams (List TextEdit)
@@ -3962,7 +3973,7 @@ data DocumentOnTypeFormattingRegistrationOptions =
     , _moreTriggerCharacter  :: Maybe (List String)
     } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''DocumentOnTypeFormattingRegistrationOptions)
+deriveJSON lspOptions ''DocumentOnTypeFormattingRegistrationOptions
 
 -- ---------------------------------------------------------------------
 {-
@@ -4013,7 +4024,7 @@ data RenameParams =
     , _newName      :: Text
     } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''RenameParams)
+deriveJSON lspOptions ''RenameParams
 makeFieldsNoPrefix ''RenameParams
 
 
@@ -4075,11 +4086,11 @@ export interface ExecuteCommandRegistrationOptions {
 
 data ExecuteCommandParams =
   ExecuteCommandParams
-    { _command :: Text
+    { _command   :: Text
     , _arguments :: Maybe (List A.Value)
     } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''ExecuteCommandParams)
+deriveJSON lspOptions ''ExecuteCommandParams
 makeFieldsNoPrefix ''ExecuteCommandParams
 
 type ExecuteCommandRequest = RequestMessage ClientMethod ExecuteCommandParams A.Value
@@ -4090,7 +4101,7 @@ data ExecuteCommandRegistrationOptions =
     { _commands :: List Text
     } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''ExecuteCommandRegistrationOptions)
+deriveJSON lspOptions ''ExecuteCommandRegistrationOptions
 makeFieldsNoPrefix ''ExecuteCommandRegistrationOptions
 
 -- ---------------------------------------------------------------------
@@ -4134,7 +4145,7 @@ data ApplyWorkspaceEditParams =
     { _edit :: WorkspaceEdit
     } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''ApplyWorkspaceEditParams)
+deriveJSON lspOptions ''ApplyWorkspaceEditParams
 makeFieldsNoPrefix ''ApplyWorkspaceEditParams
 
 data ApplyWorkspaceEditResponseBody =
@@ -4142,7 +4153,7 @@ data ApplyWorkspaceEditResponseBody =
     { _applied :: Bool
     } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''ApplyWorkspaceEditResponseBody)
+deriveJSON lspOptions ''ApplyWorkspaceEditResponseBody
 makeFieldsNoPrefix ''ApplyWorkspaceEditResponseBody
 
 -- | Sent from the server to the client
@@ -4158,7 +4169,7 @@ data TraceParams =
     _value :: Text
   } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''TraceParams)
+deriveJSON lspOptions ''TraceParams
 makeFieldsNoPrefix ''TraceParams
 
 
@@ -4167,7 +4178,7 @@ data TraceNotification =
     _params :: TraceParams
   } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''TraceNotification)
+deriveJSON lspOptions ''TraceNotification
 makeFieldsNoPrefix ''TraceNotification
 
 
