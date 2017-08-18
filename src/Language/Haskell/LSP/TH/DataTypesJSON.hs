@@ -3059,8 +3059,19 @@ Response:
 
 -- {"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{"textDocument":{"uri":"file:///tmp/Foo.hs"},"position":{"line":1,"character":8}}}
 
-type DefinitionRequest  = RequestMessage ClientMethod TextDocumentPositionParams Location
-type DefinitionResponse = ResponseMessage Location
+data DefinitionResponseParams = SingleLoc Location | MultiLoc [Location]
+  deriving (Eq,Read,Show)
+
+instance A.ToJSON DefinitionResponseParams where
+  toJSON (SingleLoc x) = toJSON x
+  toJSON (MultiLoc xs) = toJSON xs
+
+instance A.FromJSON DefinitionResponseParams where
+  parseJSON xs@(A.Array _) = MultiLoc <$> parseJSON xs
+  parseJSON x = SingleLoc <$> parseJSON x
+
+type DefinitionRequest  = RequestMessage ClientMethod TextDocumentPositionParams DefinitionResponseParams
+type DefinitionResponse = ResponseMessage DefinitionResponseParams
 
 -- ---------------------------------------------------------------------
 
