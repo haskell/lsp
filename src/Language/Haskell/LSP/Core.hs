@@ -24,6 +24,7 @@ module Language.Haskell.LSP.Core (
   , sendErrorResponseS
   , sendErrorLogS
   , sendErrorShowS
+  , reverseSortEdit
   ) where
 
 import           Control.Concurrent.STM
@@ -602,3 +603,26 @@ setupLogger mLogFile extraLogNames level = do
     L.updateGlobalLogger logName $ L.setHandlers [logHandler]
     L.updateGlobalLogger logName $ L.setLevel level
 
+
+-- ---------------------------------------------------------------------
+
+-- | The changes in a workspace edit should be applied from the end of the file
+-- toward the start. Sort them into this order.
+reverseSortEdit :: J.WorkspaceEdit -> J.WorkspaceEdit
+reverseSortEdit (J.WorkspaceEdit cs dcs) = J.WorkspaceEdit cs' dcs'
+  where
+    cs' :: Maybe J.WorkspaceEditMap
+    cs' = (fmap . fmap ) sortTextEdits cs
+
+    dcs' :: Maybe (J.List J.TextDocumentEdit)
+    dcs' = (fmap . fmap ) sortTextDocumentEdits dcs
+
+    sortTextEdits :: J.List J.TextEdit -> J.List J.TextEdit
+    sortTextEdits (J.List edits) = J.List (L.sortBy down edits)
+
+    sortTextDocumentEdits :: J.TextDocumentEdit -> J.TextDocumentEdit
+    sortTextDocumentEdits (J.TextDocumentEdit td (J.List edits)) = J.TextDocumentEdit td (J.List edits')
+      where
+        edits' = L.sortBy down edits
+
+    down (J.TextEdit r1 _) (J.TextEdit r2 _) = r2 `compare` r1
