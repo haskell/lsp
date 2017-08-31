@@ -190,7 +190,14 @@ helper requestHandler tvarDat json =
     J.Success req -> requestHandler tvarDat req
     J.Error err -> do
       let msg = T.pack . unwords $ ["haskell-lsp:parse error.", show json, show err] ++ _ERR_MSG_URL
-      sendErrorLog tvarDat msg
+          failLog = sendErrorLog tvarDat msg
+      case json of
+        (J.Object o) -> case HM.lookup "id" o of
+          Just olid -> case J.fromJSON olid of
+            J.Success lid -> sendErrorResponse tvarDat lid msg
+            _ -> failLog
+          _ -> failLog
+        _ -> failLog
 
 handlerMap :: InitializeCallback
            -> Handlers -> J.ClientMethod -> (TVar LanguageContextData -> J.Value -> IO ())
