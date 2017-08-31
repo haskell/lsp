@@ -57,11 +57,15 @@ uriToFilePath (Uri uri)
         uriDecode [] = []
 
         -- Drop leading '/' for absolute Windows paths
-        platformAdjust path@('/':drive:':':rest) = tail path
+        platformAdjust path@('/':_drive:':':_rest) = tail path
         platformAdjust path = path
 
 filePathToUri :: FilePath -> Uri
-filePathToUri file@(drive:':':rest) = Uri $ T.pack $ "file:///" ++ file
+filePathToUri (drive:':':rest) =
+  Uri $ T.pack $ concat ["file:///", [toLower drive], "%3A", fmap convertDelim rest]
+  where
+    convertDelim '\\' = '/'
+    convertDelim c = c
 filePathToUri file = Uri $ T.pack $ "file://" ++ file
 
 -- ---------------------------------------------------------------------
