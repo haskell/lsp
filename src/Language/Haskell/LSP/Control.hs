@@ -26,9 +26,9 @@ import           Text.Parsec
 
 -- ---------------------------------------------------------------------
 
-run :: Core.InitializeCallback -- ^ function to be called once initialize has
-                               -- been received from the client. Further message
-                               -- processing will start only after this returns.
+run :: Core.InitializeCallback c -- ^ function to be called once initialize has
+                                 -- been received from the client. Further message
+                                 -- processing will start only after this returns.
     -> Core.Handlers
     -> Core.Options
     -> IO Int         -- exit code
@@ -59,7 +59,7 @@ run dp h o = do
 
 -- ---------------------------------------------------------------------
 
-ioLoop :: Core.InitializeCallback -> TVar Core.LanguageContextData -> IO ()
+ioLoop :: Core.InitializeCallback c -> TVar (Core.LanguageContextData c) -> IO ()
 ioLoop dispatcherProc tvarDat = go BSL.empty
   where
     go :: BSL.ByteString -> IO ()

@@ -63,7 +63,7 @@ run dispatcherProc = flip E.catches handlers $ do
 
   flip E.finally finalProc $ do
     Core.setupLogger (Just "/tmp/lsp-hello.log") [] L.DEBUG
-    CTRL.run dp (lspHandlers rin) lspOptions
+    CTRL.run (return (), dp) (lspHandlers rin) lspOptions
 
   where
     handlers = [ E.Handler ioExcept
@@ -86,7 +86,7 @@ data ReactorInput
 -- ---------------------------------------------------------------------
 
 -- | The monad used in the reactor
-type R a = ReaderT Core.LspFuncs IO a
+type R c a = ReaderT (Core.LspFuncs c) IO a
 
 -- ---------------------------------------------------------------------
 -- reactor monad functions
@@ -94,21 +94,21 @@ type R a = ReaderT Core.LspFuncs IO a
 
 -- ---------------------------------------------------------------------
 
-reactorSend :: (J.ToJSON a) => a -> R ()
+reactorSend :: (J.ToJSON a) => a -> R () ()
 reactorSend msg = do
   lf <- ask
   liftIO $ Core.sendFunc lf msg
 
 -- ---------------------------------------------------------------------
 
-publishDiagnostics :: Int -> J.Uri -> Maybe J.TextDocumentVersion -> DiagnosticsBySource -> R ()
+publishDiagnostics :: Int -> J.Uri -> Maybe J.TextDocumentVersion -> DiagnosticsBySource -> R () ()
 publishDiagnostics maxToPublish uri mv diags = do
   lf <- ask
   liftIO $ (Core.publishDiagnosticsFunc lf) maxToPublish uri mv diags
 
 -- ---------------------------------------------------------------------
 
-nextLspReqId :: R J.LspId
+nextLspReqId :: R () J.LspId
 nextLspReqId = do
   f <- asks Core.getNextReqId
   liftIO $ f
@@ -118,7 +118,7 @@ nextLspReqId = do
 -- | The single point that all events flow through, allowing management of state
 -- to stitch replies and requests together from the two asynchronous sides: lsp
 -- server and backend compiler
-reactor :: Core.LspFuncs -> TChan ReactorInput -> IO ()
+reactor :: Core.LspFuncs () -> TChan ReactorInput -> IO ()
 reactor lf inp = do
   liftIO $ U.logs $ "reactor:entered"
   flip runReaderT lf $ forever $ do
@@ -304,7 +304,7 @@ toWorkspaceEdit _ = Nothing
 
 -- | Analyze the file and send any diagnostics to the client in a
 -- "textDocument/publishDiagnostics" notification
-sendDiagnostics :: J.Uri -> Maybe Int -> R ()
+sendDiagnostics :: J.Uri -> Maybe Int -> R () ()
 sendDiagnostics fileUri mversion = do
   let
     diags = [J.Diagnostic

@@ -67,7 +67,7 @@ import qualified System.Log.Logger as L
 type SendFunc = forall a. (J.ToJSON a => a -> IO ())
 
 -- | state used by the LSP dispatcher to manage the message loop
-data LanguageContextData =
+data LanguageContextData a =
   LanguageContextData {
     resSeqDebugContextData :: !Int
   , resRootPath            :: !(Maybe FilePath)
@@ -77,7 +77,7 @@ data LanguageContextData =
   , resVFS                 :: !VFS
   , resDiagnostics         :: !DiagnosticStore
   , resLspId               :: !(TVar Int)
-  , resLspFuncs            :: LspFuncs -- NOTE: Cannot be strict, lazy initialization
+  , resLspFuncs            :: LspFuncs a -- NOTE: Cannot be strict, lazy initialization
   }
 
 -- ---------------------------------------------------------------------
@@ -107,9 +107,12 @@ type PublishDiagnosticsFunc = Int -- Max number of diagnostics to send
                             -> J.Uri -> Maybe J.TextDocumentVersion -> DiagnosticsBySource -> IO ()
 
 -- | Returned to the server on startup, providing ways to interact with the client.
-data LspFuncs =
+data LspFuncs c =
   LspFuncs
     { clientCapabilities     :: !C.ClientCapabilities
+    , config                 :: !(Maybe c)
+      -- ^ Derived from the DidChangeConfigurationNotification message via a
+      -- server-provided function.
     , sendFunc               :: !SendFunc
     , getVirtualFileFunc     :: !(J.Uri -> IO (Maybe VirtualFile))
     , publishDiagnosticsFunc :: !PublishDiagnosticsFunc
@@ -119,7 +122,8 @@ data LspFuncs =
 -- | The function in the LSP process that is called once the 'initialize'
 -- message is received. Message processing will only continue once this returns,
 -- so it should create whatever processes are needed.
-type InitializeCallback = LspFuncs -> IO (Maybe J.ResponseError)
+type InitializeCallback c = ( J.DidChangeConfigurationNotification-> c
+                            , LspFuncs c -> IO (Maybe J.ResponseError))
 
 -- | The Handler type captures a function that receives local read-only state
 -- 'a', a function to send a reply message once encoded as a ByteString, and a
@@ -183,8 +187,8 @@ nop :: a -> b -> IO a
 nop = const . return
 
 helper :: J.FromJSON a
-       => (TVar LanguageContextData -> a       -> IO ())
-       -> (TVar LanguageContextData -> J.Value -> IO ())
+       => (TVar (LanguageContextData c) -> a       -> IO ())
+       -> (TVar (LanguageContextData c) -> J.Value -> IO ())
 helper requestHandler tvarDat json =
   case J.fromJSON json of
     J.Success req -> requestHandler tvarDat req
@@ -199,8 +203,8 @@ helper requestHandler tvarDat json =
           _ -> failLog
         _ -> failLog
 
-handlerMap :: InitializeCallback
-           -> Handlers -> J.ClientMethod -> (TVar LanguageContextData -> J.Value -> IO ())
+handlerMap :: InitializeCallback c
+           -> Handlers -> J.ClientMethod -> (TVar (LanguageContextData c) -> J.Value -> IO ())
 -- General
 handlerMap i _ J.Initialize                      = helper (initializeRequestHandler i)
 handlerMap _ h J.Initialized                     = hh nop $ initializedHandler h
@@ -210,7 +214,7 @@ handlerMap _ _ J.Exit                            = \_ _ -> do
   exitSuccess
 handlerMap _ h J.CancelRequest                   = hh nop $ cancelNotificationHandler h
 -- Workspace
-handlerMap _ h J.WorkspaceDidChangeConfiguration = hh nop $ didChangeConfigurationParamsHandler h
+handlerMap i h J.WorkspaceDidChangeConfiguration = hc i $ didChangeConfigurationParamsHandler h
 handlerMap _ h J.WorkspaceDidChangeWatchedFiles  = hh nop $ didChangeWatchedFilesNotificationHandler h
 handlerMap _ h J.WorkspaceSymbol                 = hh nop $ workspaceSymbolHandler h
 handlerMap _ h J.WorkspaceExecuteCommand         = hh nop $ executeCommandHandler h
@@ -239,7 +243,7 @@ handlerMap _ h J.TextDocumentDocumentLink        = hh nop $ documentLinkHandler 
 handlerMap _ h J.DocumentLinkResolve             = hh nop $ documentLinkResolveHandler h
 handlerMap _ h J.TextDocumentRename              = hh nop $ renameHandler h
 handlerMap _ _ (J.Misc x)   = helper f
-  where f ::  TVar LanguageContextData -> J.TraceNotification -> IO ()
+  where f ::  TVar (LanguageContextData c) -> J.TraceNotification -> IO ()
         f tvarDat _ = do
           let msg = "haskell-lsp:Got " ++ T.unpack x ++ " ignoring"
           logm (B.pack msg)
@@ -249,25 +253,42 @@ handlerMap _ _ (J.Misc x)   = helper f
 
 -- | Adapter from the normal handlers exposed to the library users and the
 -- internal message loop
-hh :: forall b. (J.FromJSON b)
-   => (VFS -> b -> IO VFS) -> Maybe (Handler b) -> TVar LanguageContextData -> J.Value -> IO ()
-hh _ Nothing = \tvarDat json -> do
-      let msg = T.pack $ unwords ["haskell-lsp:no handler for.", show json]
-      sendErrorLog tvarDat msg
-hh getVfs (Just h) = \tvarDat json -> do
+hh :: forall b c. (J.FromJSON b)
+   => (VFS -> b -> IO VFS) -> Maybe (Handler b) -> TVar (LanguageContextData c) -> J.Value -> IO ()
+hh getVfs mh tvarDat json = do
       case J.fromJSON json of
         J.Success req -> do
           ctx <- readTVarIO tvarDat
           vfs' <- getVfs (resVFS ctx) req
           atomically $ modifyTVar' tvarDat (\c -> c {resVFS = vfs'})
-          h req
+          case mh of
+            Just h -> h req
+            Nothing -> do
+              let msg = T.pack $ unwords ["haskell-lsp:no handler for.", show json]
+              sendErrorLog tvarDat msg
         J.Error  err -> do
           let msg = T.pack $ unwords $ ["haskell-lsp:parse error.", show json, show err] ++ _ERR_MSG_URL
           sendErrorLog tvarDat msg
 
+hc :: InitializeCallback c -> Maybe (Handler J.DidChangeConfigurationNotification)
+   -> TVar (LanguageContextData c) -> J.Value -> IO ()
+hc (c,_) mh  tvarDat json = do
+      case J.fromJSON json of
+        J.Success req -> do
+          ctx <- readTVarIO tvarDat
+          let lf = (resLspFuncs ctx) { config = Just $ c req }
+          atomically $ modifyTVar' tvarDat (\l -> l {resLspFuncs = lf})
+          case mh of
+            Just h -> h req
+            Nothing -> return ()
+        J.Error  err -> do
+          let msg = T.pack $ unwords $ ["haskell-lsp:parse error.", show json, show err] ++ _ERR_MSG_URL
+          sendErrorLog tvarDat msg
+
+
 -- ---------------------------------------------------------------------
 
-getVirtualFile :: TVar LanguageContextData -> J.Uri -> IO (Maybe VirtualFile)
+getVirtualFile :: TVar (LanguageContextData c) -> J.Uri -> IO (Maybe VirtualFile)
 getVirtualFile tvarDat uri = do
   ctx <- readTVarIO tvarDat
   return $ Map.lookup uri (resVFS ctx)
@@ -358,14 +379,14 @@ _ERR_MSG_URL = [ "`stack update` and install new haskell-lsp."
 -- |
 --
 --
-defaultLanguageContextData :: Handlers -> Options -> LspFuncs -> TVar Int -> SendFunc -> LanguageContextData
+defaultLanguageContextData :: Handlers -> Options -> LspFuncs c -> TVar Int -> SendFunc -> LanguageContextData c
 defaultLanguageContextData h o lf tv sf =
   LanguageContextData _INITIAL_RESPONSE_SEQUENCE Nothing h o sf mempty mempty tv lf
 
 -- ---------------------------------------------------------------------
 
-handleRequest :: InitializeCallback
-              -> TVar LanguageContextData -> BSL.ByteString -> BSL.ByteString -> IO ()
+handleRequest :: InitializeCallback c
+              -> TVar (LanguageContextData c) -> BSL.ByteString -> BSL.ByteString -> IO ()
 handleRequest dispatcherProc tvarDat contLenStr jsonStr = do
   {-
   Message Types we must handle are the following
@@ -388,7 +409,8 @@ handleRequest dispatcherProc tvarDat contLenStr jsonStr = do
         Just cmd@(J.String s) -> case J.fromJSON cmd of
                                    J.Success m -> handle (J.Object o) m
                                    J.Error _ -> do
-                                     let msg = T.pack $ unwords ["haskell-lsp:unknown message received:method='" ++ T.unpack s ++ "',", lbs2str contLenStr, lbs2str jsonStr]
+                                     let msg = T.pack $ unwords ["haskell-lsp:unknown message received:method='"
+                                                                 ++ T.unpack s ++ "',", lbs2str contLenStr, lbs2str jsonStr]
                                      sendErrorLog tvarDat msg
         Just oops -> logs $ "haskell-lsp:got strange method param, ignoring:" ++ show oops
         Nothing -> do
@@ -421,12 +443,12 @@ makeResponseError origId err = J.ResponseMessage "2.0" origId Nothing (Just err)
 -- ---------------------------------------------------------------------
 -- |
 --
-sendEvent :: J.ToJSON a => TVar LanguageContextData -> a -> IO ()
+sendEvent :: J.ToJSON a => TVar (LanguageContextData c) -> a -> IO ()
 sendEvent tvarCtx str = sendResponse tvarCtx str
 
 -- |
 --
-sendResponse :: J.ToJSON a => TVar LanguageContextData -> a -> IO ()
+sendResponse :: J.ToJSON a => TVar (LanguageContextData c) -> a -> IO ()
 sendResponse tvarCtx str = do
   ctx <- readTVarIO tvarCtx
   resSendResponse ctx str
@@ -436,7 +458,7 @@ sendResponse tvarCtx str = do
 -- |
 --
 --
-sendErrorResponse :: TVar LanguageContextData -> J.LspIdRsp -> Text -> IO ()
+sendErrorResponse :: TVar (LanguageContextData c) -> J.LspIdRsp -> Text -> IO ()
 sendErrorResponse tv origId msg = sendErrorResponseS (sendEvent tv) origId J.InternalError msg
 
 sendErrorResponseS ::  SendFunc -> J.LspIdRsp -> J.ErrorCode -> Text -> IO ()
@@ -444,7 +466,7 @@ sendErrorResponseS sf origId err msg = do
   sf $ (J.ResponseMessage "2.0" origId Nothing
                 (Just $ J.ResponseError err msg Nothing) :: J.ErrorResponse)
 
-sendErrorLog :: TVar LanguageContextData -> Text -> IO ()
+sendErrorLog :: TVar (LanguageContextData c) -> Text -> IO ()
 sendErrorLog tv msg = sendErrorLogS (sendEvent tv) msg
 
 sendErrorLogS :: SendFunc -> Text -> IO ()
@@ -460,7 +482,7 @@ sendErrorShowS sf msg =
 
 -- ---------------------------------------------------------------------
 
-defaultErrorHandlers :: (Show a) => TVar LanguageContextData -> J.LspIdRsp -> a -> [E.Handler ()]
+defaultErrorHandlers :: (Show a) => TVar (LanguageContextData c) -> J.LspIdRsp -> a -> [E.Handler ()]
 defaultErrorHandlers tvarDat origId req = [ E.Handler someExcept ]
   where
     someExcept (e :: E.SomeException) = do
@@ -475,10 +497,10 @@ defaultErrorHandlers tvarDat origId req = [ E.Handler someExcept ]
 
 -- |
 --
-initializeRequestHandler :: InitializeCallback
-                         -> TVar LanguageContextData
+initializeRequestHandler :: InitializeCallback c
+                         -> TVar (LanguageContextData c)
                          -> J.InitializeRequest -> IO ()
-initializeRequestHandler dispatcherProc tvarCtx req@(J.RequestMessage _ origId _ params) =
+initializeRequestHandler (_configHandler,dispatcherProc) tvarCtx req@(J.RequestMessage _ origId _ params) =
   flip E.catches (defaultErrorHandlers tvarCtx (J.responseId origId) req) $ do
 
     ctx0 <- readTVarIO tvarCtx
@@ -503,6 +525,7 @@ initializeRequestHandler dispatcherProc tvarCtx req@(J.RequestMessage _ origId _
 
     -- Launch the given process once the project root directory has been set
     let lspFuncs = LspFuncs (getCapabilities params)
+                            Nothing
                             (resSendResponse ctx0)
                             (getVirtualFile tvarCtx)
                             (publishDiagnostics tvarCtx)
@@ -556,7 +579,7 @@ initializeRequestHandler dispatcherProc tvarCtx req@(J.RequestMessage _ origId _
 
 -- |
 --
-shutdownRequestHandler :: TVar LanguageContextData -> J.ShutdownRequest -> IO ()
+shutdownRequestHandler :: TVar (LanguageContextData c) -> J.ShutdownRequest -> IO ()
 shutdownRequestHandler tvarCtx req@(J.RequestMessage _ origId _ _) =
   flip E.catches (defaultErrorHandlers tvarCtx (J.responseId origId) req) $ do
   let res  = makeResponseMessage req "ok"
@@ -567,7 +590,7 @@ shutdownRequestHandler tvarCtx req@(J.RequestMessage _ origId _ _) =
 
 -- | Take the new diagnostics, update the stored diagnostics for the given file
 -- and version, and publish the total to the client.
-publishDiagnostics :: TVar LanguageContextData -> PublishDiagnosticsFunc
+publishDiagnostics :: TVar (LanguageContextData c) -> PublishDiagnosticsFunc
 publishDiagnostics tvarDat maxDiagnosticCount uri mversion diags = do
   ctx <- readTVarIO tvarDat
   let ds = updateDiagnostics (resDiagnostics ctx) uri mversion diags
