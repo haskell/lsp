@@ -122,7 +122,7 @@ data LspFuncs c =
 -- | The function in the LSP process that is called once the 'initialize'
 -- message is received. Message processing will only continue once this returns,
 -- so it should create whatever processes are needed.
-type InitializeCallback c = ( J.DidChangeConfigurationNotification-> c
+type InitializeCallback c = ( J.DidChangeConfigurationNotification-> Either T.Text c
                             , LspFuncs c -> IO (Maybe J.ResponseError))
 
 -- | The Handler type captures a function that receives local read-only state
@@ -276,8 +276,13 @@ hc (c,_) mh  tvarDat json = do
       case J.fromJSON json of
         J.Success req -> do
           ctx <- readTVarIO tvarDat
-          let lf = (resLspFuncs ctx) { config = Just $ c req }
-          atomically $ modifyTVar' tvarDat (\l -> l {resLspFuncs = lf})
+          case c req of
+            Left err -> do
+              let msg = T.pack $ unwords $ ["haskell-lsp:didChangeConfiguration error.", show req, show err]
+              sendErrorLog tvarDat msg
+            Right newConfig -> do
+              let lf = (resLspFuncs ctx) { config = Just newConfig }
+              atomically $ modifyTVar' tvarDat (\l -> l {resLspFuncs = lf})
           case mh of
             Just h -> h req
             Nothing -> return ()
