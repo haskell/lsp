@@ -235,7 +235,7 @@ diagnosticsSpec = do
                   , mkDiagnostic2 (Just "hlint") "a"
                   ]))
 
-      let ds' = flushBySource ds "hlint"
+      let ds' = flushBySource ds (Just "hlint")
       (getDiagnosticParamsFor 100 ds' (J.Uri "uri")) `shouldBe`
         Just (J.PublishDiagnosticsParams (J.Uri "uri")
               (J.List [

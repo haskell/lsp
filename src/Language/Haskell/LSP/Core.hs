@@ -109,7 +109,7 @@ type PublishDiagnosticsFunc = Int -- Max number of diagnostics to send
 
 -- | A function to remove all diagnostics from a particular source, and send the updates to the client.
 type FlushDiagnosticsBySourceFunc = Int -- Max number of diagnostics to send
-                                  -> J.DiagnosticSource -> IO ()
+                                  -> Maybe J.DiagnosticSource -> IO ()
 
 -- | Returned to the server on startup, providing ways to interact with the client.
 data LspFuncs c =
@@ -629,10 +629,10 @@ publishDiagnostics tvarDat maxDiagnosticCount uri mversion diags = do
 -- | Take the new diagnostics, update the stored diagnostics for the given file
 -- and version, and publish the total to the client.
 flushDiagnosticsBySource :: TVar (LanguageContextData c) -> FlushDiagnosticsBySourceFunc
-flushDiagnosticsBySource tvarDat maxDiagnosticCount source = do
+flushDiagnosticsBySource tvarDat maxDiagnosticCount msource = do
   -- logs $ "haskell-lsp:flushDiagnosticsBySource:source=" ++ show source
   ctx <- readTVarIO tvarDat
-  let ds = flushBySource (resDiagnostics ctx) source
+  let ds = flushBySource (resDiagnostics ctx) msource
   atomically $ writeTVar tvarDat $ ctx {resDiagnostics = ds}
   -- Send the updated diagnostics to the client
   forM_ (Map.keys ds) $ \uri -> do

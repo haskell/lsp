@@ -54,8 +54,9 @@ partitionBySource diags = Map.fromListWith mappend $ map (\d -> (J._source d, (S
 
 -- ---------------------------------------------------------------------
 
-flushBySource :: DiagnosticStore -> J.DiagnosticSource -> DiagnosticStore
-flushBySource store source = Map.map remove store
+flushBySource :: DiagnosticStore -> Maybe J.DiagnosticSource -> DiagnosticStore
+flushBySource store Nothing       = store
+flushBySource store (Just source) = Map.map remove store
   where
     remove (StoreItem mv diags) = StoreItem mv (Map.delete (Just source) diags)
 
