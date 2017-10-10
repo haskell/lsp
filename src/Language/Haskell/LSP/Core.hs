@@ -76,6 +76,7 @@ data LanguageContextData a =
   , resSendResponse        :: !SendFunc
   , resVFS                 :: !VFS
   , resDiagnostics         :: !DiagnosticStore
+  , resConfig              :: !(Maybe a)
   , resLspId               :: !(TVar Int)
   , resLspFuncs            :: LspFuncs a -- NOTE: Cannot be strict, lazy initialization
   }
@@ -114,7 +115,7 @@ type FlushDiagnosticsBySourceFunc = Int -- Max number of diagnostics to send
 data LspFuncs c =
   LspFuncs
     { clientCapabilities           :: !C.ClientCapabilities
-    , config                       :: !(Maybe c)
+    , config                       :: !(IO (Maybe c))
       -- ^ Derived from the DidChangeConfigurationNotification message via a
       -- server-provided function.
     , sendFunc                     :: !SendFunc
@@ -208,7 +209,7 @@ helper requestHandler tvarDat json =
           _ -> failLog
         _ -> failLog
 
-handlerMap :: InitializeCallback c
+handlerMap :: (Show c) => InitializeCallback c
            -> Handlers -> J.ClientMethod -> (TVar (LanguageContextData c) -> J.Value -> IO ())
 -- General
 handlerMap i _ J.Initialize                      = helper (initializeRequestHandler i)
@@ -219,7 +220,7 @@ handlerMap _ _ J.Exit                            = \_ _ -> do
   exitSuccess
 handlerMap _ h J.CancelRequest                   = hh nop $ cancelNotificationHandler h
 -- Workspace
-handlerMap i h J.WorkspaceDidChangeConfiguration = hc i $ didChangeConfigurationParamsHandler h
+handlerMap i h J.WorkspaceDidChangeConfiguration = hc i   $ didChangeConfigurationParamsHandler h
 handlerMap _ h J.WorkspaceDidChangeWatchedFiles  = hh nop $ didChangeWatchedFilesNotificationHandler h
 handlerMap _ h J.WorkspaceSymbol                 = hh nop $ workspaceSymbolHandler h
 handlerMap _ h J.WorkspaceExecuteCommand         = hh nop $ executeCommandHandler h
@@ -275,9 +276,10 @@ hh getVfs mh tvarDat json = do
           let msg = T.pack $ unwords $ ["haskell-lsp:parse error.", show json, show err] ++ _ERR_MSG_URL
           sendErrorLog tvarDat msg
 
-hc :: InitializeCallback c -> Maybe (Handler J.DidChangeConfigurationNotification)
+hc :: (Show c) => InitializeCallback c -> Maybe (Handler J.DidChangeConfigurationNotification)
    -> TVar (LanguageContextData c) -> J.Value -> IO ()
-hc (c,_) mh  tvarDat json = do
+hc (c,_) mh tvarDat json = do
+      -- logs $ "haskell-lsp:hc DidChangeConfigurationNotification entered"
       case J.fromJSON json of
         J.Success req -> do
           ctx <- readTVarIO tvarDat
@@ -286,8 +288,9 @@ hc (c,_) mh  tvarDat json = do
               let msg = T.pack $ unwords $ ["haskell-lsp:didChangeConfiguration error.", show req, show err]
               sendErrorLog tvarDat msg
             Right newConfig -> do
-              let lf = (resLspFuncs ctx) { config = Just newConfig }
-              atomically $ modifyTVar' tvarDat (\l -> l {resLspFuncs = lf})
+              -- logs $ "haskell-lsp:hc DidChangeConfigurationNotification got newConfig:" ++ show newConfig
+              let ctx' = ctx { resConfig = Just newConfig }
+              atomically $ modifyTVar' tvarDat (\_ -> ctx')
           case mh of
             Just h -> h req
             Nothing -> return ()
@@ -302,6 +305,14 @@ getVirtualFile :: TVar (LanguageContextData c) -> J.Uri -> IO (Maybe VirtualFile
 getVirtualFile tvarDat uri = do
   ctx <- readTVarIO tvarDat
   return $ Map.lookup uri (resVFS ctx)
+
+-- ---------------------------------------------------------------------
+
+getConfig :: TVar (LanguageContextData c) -> IO (Maybe c)
+getConfig tvar = do
+  ctx <- readTVarIO tvar
+  return (resConfig ctx)
+
 
 -- ---------------------------------------------------------------------
 
@@ -391,11 +402,11 @@ _ERR_MSG_URL = [ "`stack update` and install new haskell-lsp."
 --
 defaultLanguageContextData :: Handlers -> Options -> LspFuncs c -> TVar Int -> SendFunc -> LanguageContextData c
 defaultLanguageContextData h o lf tv sf =
-  LanguageContextData _INITIAL_RESPONSE_SEQUENCE Nothing h o sf mempty mempty tv lf
+  LanguageContextData _INITIAL_RESPONSE_SEQUENCE Nothing h o sf mempty mempty Nothing tv lf
 
 -- ---------------------------------------------------------------------
 
-handleRequest :: InitializeCallback c
+handleRequest :: (Show c) => InitializeCallback c
               -> TVar (LanguageContextData c) -> BSL.ByteString -> BSL.ByteString -> IO ()
 handleRequest dispatcherProc tvarDat contLenStr jsonStr = do
   {-
@@ -507,7 +518,7 @@ defaultErrorHandlers tvarDat origId req = [ E.Handler someExcept ]
 
 -- |
 --
-initializeRequestHandler :: InitializeCallback c
+initializeRequestHandler :: (Show c) => InitializeCallback c
                          -> TVar (LanguageContextData c)
                          -> J.InitializeRequest -> IO ()
 initializeRequestHandler (_configHandler,dispatcherProc) tvarCtx req@(J.RequestMessage _ origId _ params) =
@@ -535,7 +546,7 @@ initializeRequestHandler (_configHandler,dispatcherProc) tvarCtx req@(J.RequestM
 
     -- Launch the given process once the project root directory has been set
     let lspFuncs = LspFuncs (getCapabilities params)
-                            Nothing
+                            (getConfig tvarCtx)
                             (resSendResponse ctx0)
                             (getVirtualFile tvarCtx)
                             (publishDiagnostics tvarCtx)
@@ -619,11 +630,13 @@ publishDiagnostics tvarDat maxDiagnosticCount uri mversion diags = do
 -- and version, and publish the total to the client.
 flushDiagnosticsBySource :: TVar (LanguageContextData c) -> FlushDiagnosticsBySourceFunc
 flushDiagnosticsBySource tvarDat maxDiagnosticCount source = do
+  -- logs $ "haskell-lsp:flushDiagnosticsBySource:source=" ++ show source
   ctx <- readTVarIO tvarDat
   let ds = flushBySource (resDiagnostics ctx) source
-  atomically $ writeTVar tvarDat $ ctx{resDiagnostics = ds}
+  atomically $ writeTVar tvarDat $ ctx {resDiagnostics = ds}
   -- Send the updated diagnostics to the client
   forM_ (Map.keys ds) $ \uri -> do
+    -- logs $ "haskell-lsp:flushDiagnosticsBySource:uri=" ++ show uri
     let mdp = getDiagnosticParamsFor maxDiagnosticCount ds uri
     case mdp of
       Nothing -> return ()
