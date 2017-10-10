@@ -106,17 +106,22 @@ instance Default Options where
 type PublishDiagnosticsFunc = Int -- Max number of diagnostics to send
                             -> J.Uri -> Maybe J.TextDocumentVersion -> DiagnosticsBySource -> IO ()
 
+-- | A function to remove all diagnostics from a particular source, and send the updates to the client.
+type FlushDiagnosticsBySourceFunc = Int -- Max number of diagnostics to send
+                                  -> J.DiagnosticSource -> IO ()
+
 -- | Returned to the server on startup, providing ways to interact with the client.
 data LspFuncs c =
   LspFuncs
-    { clientCapabilities     :: !C.ClientCapabilities
-    , config                 :: !(Maybe c)
+    { clientCapabilities           :: !C.ClientCapabilities
+    , config                       :: !(Maybe c)
       -- ^ Derived from the DidChangeConfigurationNotification message via a
       -- server-provided function.
-    , sendFunc               :: !SendFunc
-    , getVirtualFileFunc     :: !(J.Uri -> IO (Maybe VirtualFile))
-    , publishDiagnosticsFunc :: !PublishDiagnosticsFunc
-    , getNextReqId           :: !(IO J.LspId)
+    , sendFunc                     :: !SendFunc
+    , getVirtualFileFunc           :: !(J.Uri -> IO (Maybe VirtualFile))
+    , publishDiagnosticsFunc       :: !PublishDiagnosticsFunc
+    , flushDiagnosticsBySourceFunc :: !FlushDiagnosticsBySourceFunc
+    , getNextReqId                 :: !(IO J.LspId)
     }
 
 -- | The function in the LSP process that is called once the 'initialize'
@@ -534,6 +539,7 @@ initializeRequestHandler (_configHandler,dispatcherProc) tvarCtx req@(J.RequestM
                             (resSendResponse ctx0)
                             (getVirtualFile tvarCtx)
                             (publishDiagnostics tvarCtx)
+                            (flushDiagnosticsBySource tvarCtx)
                             (getLspId $ resLspId ctx0)
     let ctx = ctx0 { resLspFuncs = lspFuncs }
     atomically $ writeTVar tvarCtx ctx
@@ -606,6 +612,24 @@ publishDiagnostics tvarDat maxDiagnosticCount uri mversion diags = do
     Just params -> do
       resSendResponse ctx
         $ J.NotificationMessage "2.0" J.TextDocumentPublishDiagnostics (Just params)
+
+-- ---------------------------------------------------------------------
+
+-- | Take the new diagnostics, update the stored diagnostics for the given file
+-- and version, and publish the total to the client.
+flushDiagnosticsBySource :: TVar (LanguageContextData c) -> FlushDiagnosticsBySourceFunc
+flushDiagnosticsBySource tvarDat maxDiagnosticCount source = do
+  ctx <- readTVarIO tvarDat
+  let ds = flushBySource (resDiagnostics ctx) source
+  atomically $ writeTVar tvarDat $ ctx{resDiagnostics = ds}
+  -- Send the updated diagnostics to the client
+  forM_ (Map.keys ds) $ \uri -> do
+    let mdp = getDiagnosticParamsFor maxDiagnosticCount ds uri
+    case mdp of
+      Nothing -> return ()
+      Just params -> do
+        resSendResponse ctx
+          $ J.NotificationMessage "2.0" J.TextDocumentPublishDiagnostics (Just params)
 
 -- |=====================================================================
 --
