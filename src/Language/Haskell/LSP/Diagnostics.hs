@@ -13,6 +13,7 @@ module Language.Haskell.LSP.Diagnostics
   , DiagnosticsBySource
   , StoreItem(..)
   , partitionBySource
+  , flushBySource
   , updateDiagnostics
   , getDiagnosticParamsFor
 
@@ -53,6 +54,14 @@ partitionBySource diags = Map.fromListWith mappend $ map (\d -> (J._source d, (S
 
 -- ---------------------------------------------------------------------
 
+flushBySource :: DiagnosticStore -> Maybe J.DiagnosticSource -> DiagnosticStore
+flushBySource store Nothing       = store
+flushBySource store (Just source) = Map.map remove store
+  where
+    remove (StoreItem mv diags) = StoreItem mv (Map.delete (Just source) diags)
+
+-- ---------------------------------------------------------------------
+
 updateDiagnostics :: DiagnosticStore
                   -> J.Uri -> Maybe J.TextDocumentVersion -> DiagnosticsBySource
                   -> DiagnosticStore
@@ -60,9 +69,6 @@ updateDiagnostics store uri mv newDiagsBySource = r
   where
     newStore :: DiagnosticStore
     newStore = Map.insert uri (StoreItem mv newDiagsBySource) store
-
-    -- newDiagsBySource :: DiagnosticsBySource
-    -- newDiagsBySource = Map.fromListWith (++) $ map (\d -> (J._source d, [d])) diags
 
     updateDbs dbs = Map.insert uri new store
       where

@@ -214,3 +214,33 @@ diagnosticsSpec = do
                   ]))
 
     -- ---------------------------------
+
+  describe "flushes the diagnostics for a given source" $ do
+
+    it "gets diagnostics for multiple sources" $ do
+      let
+        diags =
+          [ mkDiagnostic2 (Just "hlint") "a"
+          , mkDiagnostic2 (Just "ghcmod") "b"
+          , mkDiagnostic  (Just "hlint") "c"
+          , mkDiagnostic  (Just "ghcmod") "d"
+          ]
+      let ds = updateDiagnostics Map.empty (J.Uri "uri") (Just 1) (partitionBySource diags)
+      (getDiagnosticParamsFor 100 ds (J.Uri "uri")) `shouldBe`
+        Just (J.PublishDiagnosticsParams (J.Uri "uri")
+              (J.List [
+                    mkDiagnostic  (Just "ghcmod") "d"
+                  , mkDiagnostic  (Just "hlint") "c"
+                  , mkDiagnostic2 (Just "ghcmod") "b"
+                  , mkDiagnostic2 (Just "hlint") "a"
+                  ]))
+
+      let ds' = flushBySource ds (Just "hlint")
+      (getDiagnosticParamsFor 100 ds' (J.Uri "uri")) `shouldBe`
+        Just (J.PublishDiagnosticsParams (J.Uri "uri")
+              (J.List [
+                     mkDiagnostic  (Just "ghcmod") "d"
+                  ,  mkDiagnostic2 (Just "ghcmod") "b"
+                  ]))
+
+    -- ---------------------------------
