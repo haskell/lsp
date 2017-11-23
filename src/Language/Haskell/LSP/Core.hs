@@ -360,6 +360,7 @@ data OutMessage = ReqHover                    J.HoverRequest
                 | NotDidOpenTextDocument          J.DidOpenTextDocumentNotification
                 | NotDidChangeTextDocument        J.DidChangeTextDocumentNotification
                 | NotDidCloseTextDocument         J.DidCloseTextDocumentNotification
+                | NotWillSaveTextDocument         J.WillSaveTextDocumentNotification
                 | NotDidSaveTextDocument          J.DidSaveTextDocumentNotification
                 | NotDidChangeWatchedFiles        J.DidChangeWatchedFilesNotification
 
