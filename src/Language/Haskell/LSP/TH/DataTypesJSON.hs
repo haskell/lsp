@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE DeriveTraversable          #-}
 {-# LANGUAGE DuplicateRecordFields      #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE FunctionalDependencies     #-}
@@ -31,7 +32,7 @@ import           Language.Haskell.LSP.Utility
 -- | This data type is used to host a FromJSON instance for the encoding used by
 -- elisp, where an empty list shows up as "null"
 newtype List a = List [a]
-                deriving (Show,Read,Eq,Monoid,Functor)
+                deriving (Show,Read,Eq,Monoid,Functor,Foldable,Traversable)
 
 instance (A.ToJSON a) => A.ToJSON (List a) where
   toJSON (List ls) = toJSON ls
