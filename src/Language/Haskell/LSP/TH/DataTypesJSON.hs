@@ -63,7 +63,7 @@ uriToFilePath (Uri uri)
 
 filePathToUri :: FilePath -> Uri
 filePathToUri (drive:':':rest) =
-  Uri $ T.pack $ concat ["file:///", [toLower drive], "%3A", fmap convertDelim rest]
+  Uri $ T.pack $ concat ["file:///", [toUpper drive], ":", fmap convertDelim rest]
   where
     convertDelim '\\' = '/'
     convertDelim c = c
