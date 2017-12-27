@@ -3,10 +3,12 @@ dependencies:
     - "~/.stack"
     - "~/.cabal"
   pre:
-    - wget -q -O- https://s3.amazonaws.com/download.fpcomplete.com/ubuntu/fpco.key | sudo apt-key add -
-    - echo 'deb http://download.fpcomplete.com/ubuntu/precise stable main'|sudo tee /etc/apt/sources.list.d/fpco.list
-    - sudo apt-get update && sudo apt-get install stack -y
+    # - wget -q -O- https://s3.amazonaws.com/download.fpcomplete.com/ubuntu/fpco.key | sudo apt-key add -
+    # - echo 'deb http://download.fpcomplete.com/ubuntu/precise stable main'|sudo tee /etc/apt/sources.list.d/fpco.list
+    # - sudo apt-get update && sudo apt-get install stack -y
+    - wget -qO- https://get.haskellstack.org/ | sh
   override:
+    - stack upgrade
     - stack setup
     - stack build -j 2 :
         timeout: 3600
