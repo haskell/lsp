@@ -254,3 +254,15 @@ vspSpec = do
           , "baz ="
           , "  putStrLn \"hello world\""
           ]
+    it "indexes using utf-16 code units" $ do
+      let
+        orig = unlines
+          [ "a𐐀b"
+          , "a𐐀b"
+          ]
+        new = applyChange (fromString orig)
+                $ J.TextDocumentContentChangeEvent (mkRange 1 0 1 3) (Just 3) "𐐀𐐀"
+      lines (Rope.toString new) `shouldBe`
+          [ "a𐐀b"
+          , "𐐀𐐀b"
+          ]
