@@ -2,9 +2,10 @@
 module VspSpec where
 
 
+import           Data.String
+import qualified Data.Rope.UTF16 as Rope
 import           Language.Haskell.LSP.VFS
 import qualified Language.Haskell.LSP.Types as J
-import qualified Yi.Rope as Yi
 
 import           Test.Hspec
 
@@ -62,9 +63,9 @@ vspSpec = do
           , "-- fooo"
           , "foo :: Int"
           ]
-        new = applyChange (Yi.fromString orig)
+        new = applyChange (fromString orig)
                 $ J.TextDocumentContentChangeEvent (mkRange 2 1 2 5) (Just 4) ""
-      lines (Yi.toString new) `shouldBe`
+      lines (Rope.toString new) `shouldBe`
           [ "abcdg"
           , "module Foo where"
           , "-oo"
@@ -79,9 +80,9 @@ vspSpec = do
           , "-- fooo"
           , "foo :: Int"
           ]
-        new = applyChange (Yi.fromString orig)
+        new = applyChange (fromString orig)
                 $ J.TextDocumentContentChangeEvent (mkRange 2 1 2 5) Nothing ""
-      lines (Yi.toString new) `shouldBe`
+      lines (Rope.toString new) `shouldBe`
           [ "abcdg"
           , "module Foo where"
           , "-oo"
@@ -99,9 +100,9 @@ vspSpec = do
           , "-- fooo"
           , "foo :: Int"
           ]
-        new = applyChange (Yi.fromString orig)
+        new = applyChange (fromString orig)
                 $ J.TextDocumentContentChangeEvent (mkRange 2 0 3 0) (Just 8) ""
-      lines (Yi.toString new) `shouldBe`
+      lines (Rope.toString new) `shouldBe`
           [ "abcdg"
           , "module Foo where"
           , "foo :: Int"
@@ -116,9 +117,9 @@ vspSpec = do
           , "-- fooo"
           , "foo :: Int"
           ]
-        new = applyChange (Yi.fromString orig)
+        new = applyChange (fromString orig)
                 $ J.TextDocumentContentChangeEvent (mkRange 2 0 3 0) Nothing ""
-      lines (Yi.toString new) `shouldBe`
+      lines (Rope.toString new) `shouldBe`
           [ "abcdg"
           , "module Foo where"
           , "foo :: Int"
@@ -134,9 +135,9 @@ vspSpec = do
           , "foo :: Int"
           , "foo = bb"
           ]
-        new = applyChange (Yi.fromString orig)
+        new = applyChange (fromString orig)
                 $ J.TextDocumentContentChangeEvent (mkRange 1 0 3 0) (Just 19) ""
-      lines (Yi.toString new) `shouldBe`
+      lines (Rope.toString new) `shouldBe`
           [ "module Foo where"
           , "foo = bb"
           ]
@@ -150,9 +151,9 @@ vspSpec = do
           , "foo :: Int"
           , "foo = bb"
           ]
-        new = applyChange (Yi.fromString orig)
+        new = applyChange (fromString orig)
                 $ J.TextDocumentContentChangeEvent (mkRange 1 0 3 0) Nothing ""
-      lines (Yi.toString new) `shouldBe`
+      lines (Rope.toString new) `shouldBe`
           [ "module Foo where"
           , "foo = bb"
           ]
@@ -167,8 +168,9 @@ vspSpec = do
           , "module Foo where"
           , "foo :: Int"
           ]
-        new = addChars (Yi.fromString orig) (J.Position 1 16) "\n-- fooo"
-      lines (Yi.toString new) `shouldBe`
+        new = applyChange (fromString orig)
+                $ J.TextDocumentContentChangeEvent (mkRange 1 16 1 16) (Just 0) "\n-- fooo"
+      lines (Rope.toString new) `shouldBe`
           [ "abcdg"
           , "module Foo where"
           , "-- fooo"
@@ -184,8 +186,9 @@ vspSpec = do
           [ "module Foo where"
           , "foo = bb"
           ]
-        new = addChars (Yi.fromString orig) (J.Position 1 8) "\n-- fooo\nfoo :: Int"
-      lines (Yi.toString new) `shouldBe`
+        new = applyChange (fromString orig)
+                $ J.TextDocumentContentChangeEvent (mkRange 1 8 1 8) Nothing "\n-- fooo\nfoo :: Int"
+      lines (Rope.toString new) `shouldBe`
           [ "module Foo where"
           , "foo = bb"
           , "-- fooo"
@@ -209,10 +212,10 @@ vspSpec = do
           , "baz = do"
           , "  putStrLn \"hello world\""
           ]
-        -- new = changeChars (Yi.fromString orig) (J.Position 7 0) (J.Position 7 8) "baz ="
-        new = applyChange (Yi.fromString orig)
+        -- new = changeChars (fromString orig) (J.Position 7 0) (J.Position 7 8) "baz ="
+        new = applyChange (fromString orig)
                 $ J.TextDocumentContentChangeEvent (mkRange 7 0 7 8) (Just 8) "baz ="
-      lines (Yi.toString new) `shouldBe`
+      lines (Rope.toString new) `shouldBe`
           [ "module Foo where"
           , "-- fooo"
           , "foo :: Int"
@@ -237,10 +240,10 @@ vspSpec = do
           , "baz = do"
           , "  putStrLn \"hello world\""
           ]
-        -- new = changeChars (Yi.fromString orig) (J.Position 7 0) (J.Position 7 8) "baz ="
-        new = applyChange (Yi.fromString orig)
+        -- new = changeChars (fromString orig) (J.Position 7 0) (J.Position 7 8) "baz ="
+        new = applyChange (fromString orig)
                 $ J.TextDocumentContentChangeEvent (mkRange 7 0 7 8) Nothing "baz ="
-      lines (Yi.toString new) `shouldBe`
+      lines (Rope.toString new) `shouldBe`
           [ "module Foo where"
           , "-- fooo"
           , "foo :: Int"

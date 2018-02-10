@@ -32,7 +32,7 @@ import qualified Language.Haskell.LSP.Utility          as U
 import           Language.Haskell.LSP.VFS
 import           System.Exit
 import qualified System.Log.Logger                     as L
-import qualified Yi.Rope                               as Yi
+import qualified Data.Rope.UTF16                       as Rope
 
 
 -- ---------------------------------------------------------------------
@@ -195,7 +195,7 @@ reactor lf inp = do
         mdoc <- liftIO $ Core.getVirtualFileFunc lf doc
         case mdoc of
           Just (VirtualFile _version str) -> do
-            liftIO $ U.logs $ "reactor:processing NotDidChangeTextDocument: vf got:" ++ (show $ Yi.toString str)
+            liftIO $ U.logs $ "reactor:processing NotDidChangeTextDocument: vf got:" ++ (show $ Rope.toString str)
           Nothing -> do
             liftIO $ U.logs "reactor:processing NotDidChangeTextDocument: vf returned Nothing"
 

@@ -5,6 +5,7 @@ packages:
 - ./haskell-lsp-types
 
 extra-deps:
+- rope-utf16-splay-0.2.0.0
 
 flags: {}
 extra-package-dbs: []

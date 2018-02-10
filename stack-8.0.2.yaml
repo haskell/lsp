@@ -6,6 +6,7 @@ packages:
 extra-deps:
 - sorted-list-0.2.1.0
 - aeson-1.2.4.0
+- rope-utf16-splay-0.2.0.0
 flags: {}
 extra-package-dbs: []
 nix:

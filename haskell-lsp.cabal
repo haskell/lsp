@@ -49,12 +49,12 @@ library
                      , mtl
                      , network-uri
                      , parsec
+                     , rope-utf16-splay >= 0.2
                      , sorted-list == 0.2.1.*
                      , stm
                      , text
                      , time
                      , unordered-containers
-                     , yi-rope
   hs-source-dirs:      src
   default-language:    Haskell2010
 
@@ -77,13 +77,13 @@ executable lsp-hello
                      , mtl
                      , network-uri
                      , parsec
+                     , rope-utf16-splay >= 0.2
                      , stm
                      , text
                      , time
                      , transformers
                      , unordered-containers
                      , vector
-                     , yi-rope
                      -- the package library. Comment this out if you want repl changes to propagate
                      , haskell-lsp
 
@@ -112,8 +112,8 @@ test-suite haskell-lsp-test
                      -- , hspec-jenkins
                      , lens >= 4.15.2
                      , network-uri
+                     , rope-utf16-splay >= 0.2
                      , sorted-list == 0.2.1.*
-                     , yi-rope
                      , haskell-lsp
                      , text
                      , stm
