@@ -2366,7 +2366,7 @@ makeFieldsNoPrefix ''FileEvent
 
 data DidChangeWatchedFilesParams =
   DidChangeWatchedFilesParams
-    { _params :: List FileEvent
+    { _changes :: List FileEvent
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''DidChangeWatchedFilesParams
