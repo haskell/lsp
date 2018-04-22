@@ -2,13 +2,15 @@
 module DiagnosticsSpec where
 
 
-import qualified Data.Map as Map
-import qualified Data.SortedList as SL
-import           Data.Text ( Text )
+import qualified Data.Map                              as Map
+import qualified Data.SortedList                       as SL
+import           Data.Text                             (Text)
 import           Language.Haskell.LSP.Diagnostics
 import qualified Language.Haskell.LSP.TH.DataTypesJSON as J
 
 import           Test.Hspec
+
+{-# ANN module ("HLint: ignore Redundant do"  :: String) #-}
 
 -- ---------------------------------------------------------------------
 
@@ -27,10 +29,19 @@ spec = describe "Diagnostics functions" diagnosticsSpec
 -- ---------------------------------------------------------------------
 
 mkDiagnostic :: Maybe J.DiagnosticSource -> Text -> J.Diagnostic
-mkDiagnostic ms str = J.Diagnostic (J.Range (J.Position 0 1) (J.Position 3 0)) Nothing Nothing ms str
+mkDiagnostic ms str =
+  let
+    rng = J.Range (J.Position 0 1) (J.Position 3 0)
+    loc = J.Location (J.Uri "file") rng
+  in
+    J.Diagnostic rng Nothing Nothing ms str (J.List [J.DiagnosticRelatedInformation loc str])
 
 mkDiagnostic2 :: Maybe J.DiagnosticSource -> Text -> J.Diagnostic
-mkDiagnostic2 ms str = J.Diagnostic (J.Range (J.Position 4 1) (J.Position 5 0)) Nothing Nothing ms str
+mkDiagnostic2 ms str =
+  let
+    rng = J.Range (J.Position 4 1) (J.Position 5 0)
+    loc = J.Location (J.Uri "file") rng
+  in J.Diagnostic rng Nothing Nothing ms str (J.List [J.DiagnosticRelatedInformation loc str])
 
 -- ---------------------------------------------------------------------
 

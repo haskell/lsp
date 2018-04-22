@@ -15,13 +15,13 @@ import           Control.Lens.TH                            (makeFieldsNoPrefix)
 import qualified Data.Aeson                                 as A
 import           Data.Aeson.TH
 import           Data.Aeson.Types
+import           Data.Char
 import           Data.Hashable
 import qualified Data.HashMap.Strict                        as H
 import           Data.Monoid                                ((<>))
 import           Data.Text                                  (Text)
 import qualified Data.Text                                  as T
 import           System.IO                                  (FilePath)
-import           Data.Char
 
 import           Language.Haskell.LSP.TH.ClientCapabilities
 import           Language.Haskell.LSP.TH.Constants
@@ -32,7 +32,7 @@ import           Language.Haskell.LSP.Utility
 -- | This data type is used to host a FromJSON instance for the encoding used by
 -- elisp, where an empty list shows up as "null"
 newtype List a = List [a]
-                deriving (Show,Read,Eq,Monoid,Functor,Foldable,Traversable)
+                deriving (Show,Read,Eq,Ord,Monoid,Functor,Foldable,Traversable)
 
 instance (A.ToJSON a) => A.ToJSON (List a) where
   toJSON (List ls) = toJSON ls
@@ -59,14 +59,14 @@ uriToFilePath (Uri uri)
 
         -- Drop leading '/' for absolute Windows paths
         platformAdjust path@('/':_drive:':':_rest) = tail path
-        platformAdjust path = path
+        platformAdjust path                        = path
 
 filePathToUri :: FilePath -> Uri
 filePathToUri (drive:':':rest) =
   Uri $ T.pack $ concat ["file:///", [toUpper drive], ":", fmap convertDelim rest]
   where
     convertDelim '\\' = '/'
-    convertDelim c = c
+    convertDelim c    = c
 filePathToUri file = Uri $ T.pack $ "file://" ++ file
 
 -- ---------------------------------------------------------------------
@@ -523,7 +523,7 @@ data Location =
   Location
     { _uri   :: Uri
     , _range :: Range
-    } deriving (Show, Read, Eq)
+    } deriving (Show, Read, Eq, Ord)
 
 deriveJSON lspOptions ''Location
 makeFieldsNoPrefix ''Location
@@ -573,6 +573,34 @@ instance A.FromJSON DiagnosticSeverity where
 
 -- ---------------------------------------------------------------------
 {-
+Represents a related message and source code location for a diagnostic. This should be
+used to point to code locations that cause or related to a diagnostics, e.g when duplicating
+a symbol in a scope.
+
+export interface DiagnosticRelatedInformation {
+  /**
+   * The location of this related diagnostic information.
+   */
+  location: Location;
+
+  /**
+   * The message of this related diagnostic information.
+   */
+  message: string;
+}
+-}
+
+data DiagnosticRelatedInformation =
+  DiagnosticRelatedInformation
+    { _location :: Location
+    , _message  :: Text
+    } deriving (Show, Read, Eq, Ord)
+
+deriveJSON lspOptions ''DiagnosticRelatedInformation
+makeFieldsNoPrefix ''DiagnosticRelatedInformation
+
+-- ---------------------------------------------------------------------
+{-
 Diagnostic
 
 https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#diagnostic
@@ -607,17 +635,24 @@ interface Diagnostic {
      * The diagnostic's message.
      */
     message: string;
+
+    /**
+     * An array of related diagnostic information, e.g. when symbol-names within
+     * a scope collide all definitions can be marked via this property.
+     */
+    relatedInformation?: DiagnosticRelatedInformation[];
 }
 -}
 
 type DiagnosticSource = Text
 data Diagnostic =
   Diagnostic
-    { _range    :: Range
-    , _severity :: Maybe DiagnosticSeverity
-    , _code     :: Maybe Text -- Note: Protocol allows Int too.
-    , _source   :: Maybe DiagnosticSource
-    , _message  :: Text
+    { _range              :: Range
+    , _severity           :: Maybe DiagnosticSeverity
+    , _code               :: Maybe Text -- Note: Protocol allows Int too.
+    , _source             :: Maybe DiagnosticSource
+    , _message            :: Text
+    , _relatedInformation :: List DiagnosticRelatedInformation
     } deriving (Show, Read, Eq, Ord)
 
 deriveJSON lspOptions ''Diagnostic
