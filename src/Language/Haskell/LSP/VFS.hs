@@ -26,7 +26,7 @@ module Language.Haskell.LSP.VFS
 
 import           Data.Text ( Text )
 import           Data.List
-import           Data.Monoid
+-- import           Data.Monoid
 import qualified Data.Map as Map
 import qualified Language.Haskell.LSP.TH.DataTypesJSON      as J
 import           Language.Haskell.LSP.Utility

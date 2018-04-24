@@ -17,7 +17,7 @@ import           Control.Monad.STM
 import qualified Data.Aeson                            as J
 import           Data.Default
 import qualified Data.HashMap.Strict                   as H
-import           Data.Monoid
+-- import           Data.Monoid
 import qualified Data.Text                             as T
 import qualified Data.Vector                           as V
 import qualified Language.Haskell.LSP.Control          as CTRL
