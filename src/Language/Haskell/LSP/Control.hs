@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP                 #-}
 {-# LANGUAGE GADTs               #-}
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE MultiWayIf          #-}
@@ -18,7 +19,9 @@ import           Control.Monad.STM
 import qualified Data.Aeson as J
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as B
+#if __GLASGOW_HASKELL__ < 804
 import           Data.Monoid
+#endif
 import qualified Language.Haskell.LSP.Core as Core
 import           Language.Haskell.LSP.Utility
 import           System.IO

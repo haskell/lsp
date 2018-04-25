@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
@@ -26,7 +27,9 @@ module Language.Haskell.LSP.VFS
 
 import           Data.Text ( Text )
 import           Data.List
--- import           Data.Monoid
+#if __GLASGOW_HASKELL__ < 804
+import           Data.Monoid
+#endif
 import qualified Data.Map as Map
 import qualified Language.Haskell.LSP.TH.DataTypesJSON      as J
 import           Language.Haskell.LSP.Utility
