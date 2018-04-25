@@ -2,10 +2,6 @@ resolver: nightly-2018-04-24 # GHC 8.4.2 version
 
 packages:
 - '.'
-- location:
-    git: https://github.com/Daniel-Diaz/sorted-list.git
-    commit: 114624536488bcd7d1b9fc5236574f7b44651859
-  extra-dep: true
 
 - location:
     git: https://github.com/alanz/yi-rope.git
@@ -14,6 +10,7 @@ packages:
 
 extra-deps:
 # - yi-rope-0.10
+- sorted-list-0.2.1.0
 
 flags: {}
 extra-package-dbs: []
