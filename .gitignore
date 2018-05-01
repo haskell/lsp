@@ -6,3 +6,6 @@
 .stack-work
 /.dir-locals.el
 /.vscode
+/.ghc.environment*
+/haskell-lsp-types/cabal.project.local
+/haskell-lsp-types/cabal.project.local~

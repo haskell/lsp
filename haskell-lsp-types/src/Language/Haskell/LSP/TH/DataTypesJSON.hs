@@ -29,7 +29,7 @@ import           System.IO                                  (FilePath)
 
 import           Language.Haskell.LSP.TH.ClientCapabilities
 import           Language.Haskell.LSP.TH.Constants
-import           Language.Haskell.LSP.Utility
+import           Language.Haskell.LSP.TH.Utils
 
 -- ---------------------------------------------------------------------
 

@@ -3,6 +3,7 @@ resolver: lts-11.7 # GHC 8.2.2 version
 
 packages:
 - '.'
+- ./haskell-lsp-types
 extra-deps:
 - sorted-list-0.2.1.0
 flags: {}

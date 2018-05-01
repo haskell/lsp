@@ -44,11 +44,6 @@ lbs2str :: LBS.ByteString -> String
 lbs2str = TL.unpack. TLE.decodeUtf8
 
 
--- |
---
-rdrop :: Int -> [a] -> [a]
-rdrop cnt = reverse . drop cnt . reverse
-
 -- ---------------------------------------------------------------------
 
 logs :: String -> IO ()
