@@ -1,9 +1,0 @@
-# resolver: lts-9.6 # GHC 8.0.2 version
-resolver: lts-10.1 # GHC 8.2.2 version
-
-packages:
-- '.'
-flags: {}
-extra-package-dbs: []
-nix:
-  packages: [icu]

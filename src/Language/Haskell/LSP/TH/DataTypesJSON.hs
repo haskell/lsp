@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP                        #-}
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE DeriveTraversable          #-}
 {-# LANGUAGE DuplicateRecordFields      #-}
@@ -43,6 +44,11 @@ instance (A.ToJSON a) => A.ToJSON (List a) where
 instance (A.FromJSON a) => A.FromJSON (List a) where
   parseJSON A.Null = return (List [])
   parseJSON v      = List <$> parseJSON v
+
+#if __GLASGOW_HASKELL__ >= 804
+instance Semigroup (List a) where
+  (<>) = mappend
+#endif
 
 -- ---------------------------------------------------------------------
 
@@ -864,6 +870,11 @@ instance Monoid WorkspaceEdit where
 
 deriveJSON lspOptions ''WorkspaceEdit
 makeFieldsNoPrefix ''WorkspaceEdit
+
+#if __GLASGOW_HASKELL__ >= 804
+instance Semigroup WorkspaceEdit where
+  (<>) = mappend
+#endif
 
 -- ---------------------------------------------------------------------
 {-

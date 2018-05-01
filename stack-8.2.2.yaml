@@ -1,0 +1,11 @@
+# resolver: lts-9.21 # GHC 8.0.2 version
+resolver: lts-11.7 # GHC 8.2.2 version
+
+packages:
+- '.'
+extra-deps:
+- sorted-list-0.2.1.0
+flags: {}
+extra-package-dbs: []
+nix:
+  packages: [icu]
