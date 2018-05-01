@@ -72,7 +72,7 @@ platformAwareUriToFilePath systemOS (Uri uri) = do
   if uriScheme parsedUri == fileScheme
     then return $ (platformAdjustFromUriPath systemOS . unEscapeString . uriPath) parsedUri
     else Nothing
-    
+
 platformAdjustFromUriPath :: SystemOS -> String -> FilePath
 platformAdjustFromUriPath systemOS srcPath =
   if systemOS /= windowsOS then srcPath
@@ -80,7 +80,7 @@ platformAdjustFromUriPath systemOS srcPath =
       firstSegment:rest = (FPP.splitDirectories . tail) srcPath  -- Drop leading '/' for absolute Windows paths
       drive = if FPW.isDrive firstSegment then FPW.addTrailingPathSeparator firstSegment else firstSegment
       in FPW.joinDrive drive $ FPW.joinPath rest
-      
+
 filePathToUri :: FilePath -> Uri
 filePathToUri = platformAwareFilePathToUri System.Info.os
 
