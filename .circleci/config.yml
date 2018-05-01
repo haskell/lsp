@@ -1,0 +1,93 @@
+defaults: &defaults
+  working_directory: ~/build
+  docker:
+    - image: quay.io/haskell_works/stack-build-icu
+  steps:
+    - checkout
+    - run:
+        command: git submodule sync --recursive
+    - run:
+        command: git submodule update --recursive --init
+    - run:
+        name: Write provided stack.yaml with predictable name
+        command: cp ${STACK_FILE} stack-build.txt
+
+    - run:
+        name: Figure out resolver for better caching
+        command: grep '^resolver:' stack-build.txt > resolver.txt
+
+    - run:
+        name: Create a composite cabal file for changes detection
+        command: find . -name "*.cabal" | grep -v "stack-work" | xargs cat > all-cabal.txt
+
+    - restore_cache:
+        keys:
+          - stack-cache-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ checksum "stack-build.txt" }}-{{ checksum "all-cabal.txt" }}
+          - stack-cache-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ checksum "stack-build.txt" }}
+          - stack-cache-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ checksum "resolver.txt" }}
+
+    - run:
+        name: Stack setup
+        command: stack -j 2 --stack-yaml=${STACK_FILE} setup
+
+    - run:
+        name: Compile but do not run tests
+        command: stack -j 2 --stack-yaml=${STACK_FILE} test --no-run-tests
+
+    - save_cache:
+        key: stack-cache-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ checksum "resolver.txt" }}
+        paths:
+          - ~/.stack
+          - ~/.cache
+
+    - restore_cache:
+          key: stack-work-dirs-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ checksum "stack-build.txt" }}
+
+    - run:
+        name: Compile + Test
+        command: stack -j 2 --stack-yaml=${STACK_FILE} test --dump-logs
+        no_output_timeout: 120m
+
+    - save_cache:
+        key: stack-cache-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ checksum "stack-build.txt" }}
+        paths:
+          - ~/.stack
+          - ~/.cache
+
+    - save_cache:
+        key: stack-cache-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ checksum "stack-build.txt" }}-{{ checksum "all-cabal.txt" }}
+        paths:
+          - ~/.stack
+          - ~/.cache
+
+    - save_cache:
+        key: stack-work-dirs-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ checksum "stack-build.txt" }}
+        paths:
+          - ~/build/.stack-work
+          - ~/build/hie-plugin-api/.stack-work
+
+version: 2
+jobs:
+  ghc-8.0.2:
+    environment:
+      - STACK_FILE: "stack-8.0.2.yaml"
+    <<: *defaults
+
+  ghc-8.2.2:
+    environment:
+      - STACK_FILE: "stack-8.2.2.yaml"
+    <<: *defaults
+
+  ghc-8.4.2:
+    environment:
+      - STACK_FILE: "stack-8.4.2.yaml"
+    <<: *defaults
+
+workflows:
+  version: 2
+  multiple-ghcs:
+    jobs:
+      - ghc-8.0.2
+      - ghc-8.2.2
+      - ghc-8.4.2
+
