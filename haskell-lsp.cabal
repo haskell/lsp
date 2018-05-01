@@ -25,6 +25,7 @@ library
                      , Language.Haskell.LSP.Core
                      , Language.Haskell.LSP.Control
                      , Language.Haskell.LSP.Diagnostics
+                     , Language.Haskell.LSP.Types
                      , Language.Haskell.LSP.Utility
                      , Language.Haskell.LSP.VFS
   -- other-modules:
@@ -68,7 +69,6 @@ executable lsp-hello
                      , directory
                      , data-default
                      , filepath
-                     , haskell-lsp-types
                      , hslogger
                      , lens >= 4.15.2
                      , mtl
@@ -101,7 +101,6 @@ test-suite haskell-lsp-test
                      , filepath
                      , hspec
                      , hashable
-                     , haskell-lsp-types
                      -- , hspec-jenkins
                      , lens >= 4.15.2
                      , network-uri

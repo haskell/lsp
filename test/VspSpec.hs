@@ -3,7 +3,7 @@ module VspSpec where
 
 
 import           Language.Haskell.LSP.VFS
-import qualified Language.Haskell.LSP.TH.DataTypesJSON as J
+import qualified Language.Haskell.LSP.Types as J
 import qualified Yi.Rope as Yi
 
 import           Test.Hspec

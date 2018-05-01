@@ -6,7 +6,7 @@ import qualified Data.Map                              as Map
 import qualified Data.SortedList                       as SL
 import           Data.Text                             (Text)
 import           Language.Haskell.LSP.Diagnostics
-import qualified Language.Haskell.LSP.TH.DataTypesJSON as J
+import qualified Language.Haskell.LSP.Types            as J
 
 import           Test.Hspec
 

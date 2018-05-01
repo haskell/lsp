@@ -1,7 +1,7 @@
 module URIFilePathSpec where
 
 import Data.Text                              (pack)
-import Language.Haskell.LSP.TH.DataTypesJSON
+import Language.Haskell.LSP.Types
 
 import Test.Hspec
 
