@@ -11,7 +11,7 @@ moment. So do not have high expectations, it is not ready for casual use.
 
 To see this library in use you need to install the [haskell-ide-engine](https://github.com/alanz/haskell-ide-engine/)
 
-    git clone https://github.com/haskell/haskell-ide-engine
+    git clone https://github.com/haskell/haskell-ide-engine --recursive
     cd haskell-ide-engine
     stack install
 
