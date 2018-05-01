@@ -46,6 +46,7 @@ library
                      , hashable
                      , lens >= 4.15.2
                      , mtl
+                     , network-uri
                      , parsec
                      , sorted-list == 0.2.0.*
                      , stm
@@ -73,6 +74,7 @@ executable lsp-hello
                      , hslogger
                      , lens >= 4.15.2
                      , mtl
+                     , network-uri
                      , parsec
                      , stm
                      , text
@@ -90,17 +92,20 @@ test-suite haskell-lsp-test
   hs-source-dirs:      test
   main-is:             Main.hs
   other-modules:       Spec
-                       VspSpec
                        DiagnosticsSpec
                        MethodSpec
+                       URIFilePathSpec
+                       VspSpec
   build-depends:       base
                      , aeson
                      , containers
                      , directory
+                     , filepath
                      , hspec
                      , hashable
                      -- , hspec-jenkins
                      , lens >= 4.15.2
+                     , network-uri
                      , sorted-list == 0.2.0.*
                      , yi-rope
                      , haskell-lsp

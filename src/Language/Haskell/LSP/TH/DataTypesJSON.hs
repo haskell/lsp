@@ -15,12 +15,15 @@ import           Control.Lens.TH                            (makeFieldsNoPrefix)
 import qualified Data.Aeson                                 as A
 import           Data.Aeson.TH
 import           Data.Aeson.Types
-import           Data.Char
 import           Data.Hashable
 import qualified Data.HashMap.Strict                        as H
 import           Data.Monoid                                ((<>))
 import           Data.Text                                  (Text)
 import qualified Data.Text                                  as T
+import           Network.URI
+import qualified System.FilePath.Posix                      as FPP
+import qualified System.FilePath.Windows                    as FPW
+import qualified System.Info
 import           System.IO                                  (FilePath)
 
 import           Language.Haskell.LSP.TH.ClientCapabilities
@@ -46,28 +49,53 @@ instance (A.FromJSON a) => A.FromJSON (List a) where
 newtype Uri = Uri { getUri :: Text }
   deriving (Eq,Ord,Read,Show,A.FromJSON,A.ToJSON,Hashable,A.ToJSONKey,A.FromJSONKey)
 
+fileScheme :: String
+fileScheme = "file:"
+
+windowsOS :: String
+windowsOS = "mingw32"
+
+type SystemOS = String
+
 uriToFilePath :: Uri -> Maybe FilePath
-uriToFilePath (Uri uri)
-  | "file://" `T.isPrefixOf` uri = Just $ platformAdjust . uriDecode . T.unpack $ T.drop n uri
-  | otherwise = Nothing
-      where
-        n = T.length "file://"
+uriToFilePath = platformAwareUriToFilePath System.Info.os
 
-        uriDecode ('%':x:y:rest) = toEnum (16 * digitToInt x + digitToInt y) : uriDecode rest
-        uriDecode (x:xs) = x : uriDecode xs
-        uriDecode [] = []
-
-        -- Drop leading '/' for absolute Windows paths
-        platformAdjust path@('/':_drive:':':_rest) = tail path
-        platformAdjust path                        = path
-
+platformAwareUriToFilePath :: String -> Uri -> Maybe FilePath
+platformAwareUriToFilePath systemOS (Uri uri) = do
+  parsedUri <- parseURI $ T.unpack uri
+  if uriScheme parsedUri == fileScheme
+    then return $ (platformAdjustFromUriPath systemOS . unEscapeString . uriPath) parsedUri
+    else Nothing
+    
+platformAdjustFromUriPath :: SystemOS -> String -> FilePath
+platformAdjustFromUriPath systemOS srcPath =
+  if systemOS /= windowsOS then srcPath
+    else let
+      firstSegment:rest = (FPP.splitDirectories . tail) srcPath  -- Drop leading '/' for absolute Windows paths
+      drive = if FPW.isDrive firstSegment then FPW.addTrailingPathSeparator firstSegment else firstSegment
+      in FPW.joinDrive drive $ FPW.joinPath rest
+      
 filePathToUri :: FilePath -> Uri
-filePathToUri (drive:':':rest) =
-  Uri $ T.pack $ concat ["file:///", [toUpper drive], ":", fmap convertDelim rest]
-  where
-    convertDelim '\\' = '/'
-    convertDelim c    = c
-filePathToUri file = Uri $ T.pack $ "file://" ++ file
+filePathToUri = platformAwareFilePathToUri System.Info.os
+
+platformAwareFilePathToUri :: SystemOS -> FilePath -> Uri
+platformAwareFilePathToUri systemOS fp = Uri . T.pack . show $ URI
+  { uriScheme = fileScheme
+  , uriAuthority = Just $ URIAuth "" "" ""
+  , uriPath = platformAdjustToUriPath systemOS fp
+  , uriQuery = ""
+  , uriFragment = ""
+  }
+
+platformAdjustToUriPath :: SystemOS -> FilePath -> String
+platformAdjustToUriPath systemOS srcPath =
+  if systemOS /= windowsOS then srcPath
+    else let
+      drive:rest = FPW.splitDirectories srcPath
+      leaveCharUnescaped = (/= ':')
+      removePathSeparator = filter (not . FPW.isPathSeparator)
+      escapedDrive = removePathSeparator $ escapeURIString leaveCharUnescaped drive
+      in '/' : FPP.joinPath (escapedDrive : rest)
 
 -- ---------------------------------------------------------------------
 

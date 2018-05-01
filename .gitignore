@@ -5,3 +5,4 @@
 /cabal.project.local
 .stack-work
 /.dir-locals.el
+/.vscode
