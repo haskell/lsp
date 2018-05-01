@@ -6,7 +6,7 @@
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Language.Haskell.LSP.Messages (
+module Language.Haskell.LSP.TH.Messages (
   -- * General
     fmClientInitializeRequest
   , fmClientInitializedNotification

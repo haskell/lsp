@@ -17,10 +17,10 @@ extra-source-files:  ChangeLog.md, README.md
 cabal-version:       >=1.10
 
 library
-  exposed-modules:     Language.Haskell.LSP.Messages
-                     , Language.Haskell.LSP.TH.ClientCapabilities
+  exposed-modules:     Language.Haskell.LSP.TH.ClientCapabilities
                      , Language.Haskell.LSP.TH.Constants
                      , Language.Haskell.LSP.TH.DataTypesJSON
+                     , Language.Haskell.LSP.TH.Messages
                      , Language.Haskell.LSP.TH.Utils
   -- other-modules:
  -- other-extensions:

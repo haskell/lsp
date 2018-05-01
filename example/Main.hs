@@ -26,6 +26,7 @@ import qualified Data.Vector                           as V
 import qualified Language.Haskell.LSP.Control          as CTRL
 import qualified Language.Haskell.LSP.Core             as Core
 import           Language.Haskell.LSP.Diagnostics
+import           Language.Haskell.LSP.Messages
 import qualified Language.Haskell.LSP.Types            as J
 import qualified Language.Haskell.LSP.Utility          as U
 import           Language.Haskell.LSP.VFS
@@ -162,7 +163,7 @@ reactor lf inp = do
         let registrations = J.RegistrationParams (J.List [registration])
         rid <- nextLspReqId
 
-        reactorSend $ J.fmServerRegisterCapabilityRequest rid registrations
+        reactorSend $ fmServerRegisterCapabilityRequest rid registrations
 
         -- example of showMessageRequest
         let
@@ -170,7 +171,7 @@ reactor lf inp = do
                            (Just [J.MessageActionItem "option a", J.MessageActionItem "option b"])
         rid1 <- nextLspReqId
 
-        reactorSend $ J.fmServerShowMessageRequest rid1 params
+        reactorSend $ fmServerShowMessageRequest rid1 params
 
       -- -------------------------------
 
@@ -288,7 +289,7 @@ reactor lf inp = do
             reply (J.Object mempty)
             lid <- nextLspReqId
             -- reactorSend $ J.RequestMessage "2.0" lid "workspace/applyEdit" (Just we)
-            reactorSend $ J.fmServerApplyWorkspaceEditRequest lid we
+            reactorSend $ fmServerApplyWorkspaceEditRequest lid we
           Nothing ->
             reply (J.Object mempty)
 

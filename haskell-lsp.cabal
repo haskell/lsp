@@ -25,6 +25,7 @@ library
                      , Language.Haskell.LSP.Core
                      , Language.Haskell.LSP.Control
                      , Language.Haskell.LSP.Diagnostics
+                     , Language.Haskell.LSP.Messages
                      , Language.Haskell.LSP.Types
                      , Language.Haskell.LSP.Utility
                      , Language.Haskell.LSP.VFS
