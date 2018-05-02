@@ -1,5 +1,5 @@
 name:                haskell-lsp
-version:             0.2.0.1
+version:             0.2.1.0
 synopsis:            Haskell library for the Microsoft Language Server Protocol
 
 description:         An implementation of the types, and basic message server to
@@ -26,9 +26,7 @@ library
                      , Language.Haskell.LSP.Control
                      , Language.Haskell.LSP.Diagnostics
                      , Language.Haskell.LSP.Messages
-                     , Language.Haskell.LSP.TH.ClientCapabilities
-                     , Language.Haskell.LSP.TH.Constants
-                     , Language.Haskell.LSP.TH.DataTypesJSON
+                     , Language.Haskell.LSP.Types
                      , Language.Haskell.LSP.Utility
                      , Language.Haskell.LSP.VFS
   -- other-modules:
@@ -44,6 +42,7 @@ library
                      , filepath
                      , hslogger
                      , hashable
+                     , haskell-lsp-types
                      , lens >= 4.15.2
                      , mtl
                      , network-uri

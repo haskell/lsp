@@ -1,15 +1,21 @@
+{-# LANGUAGE OverloadedStrings #-}
 module URIFilePathSpec where
 
 import Data.Text                              (pack)
-import Language.Haskell.LSP.TH.DataTypesJSON
+import Language.Haskell.LSP.Types
 
+import           Network.URI
 import Test.Hspec
+
+-- ---------------------------------------------------------------------
 
 main :: IO ()
 main = hspec spec
 
 spec :: Spec
-spec = describe "URI file path functions" uriFilePathSpec
+spec = do
+  describe "URI file path functions" uriFilePathSpec
+  describe "file path URI functions" filePathUriSpec
 
 testPosixUri :: Uri
 testPosixUri = Uri $ pack "file:///home/myself/example.hs"
@@ -40,3 +46,30 @@ uriFilePathSpec = do
   it "converts a Windows file path to a URI" $ do
     let theUri = platformAwareFilePathToUri windowsOS testWindowsFilePath
     theUri `shouldBe` testWindowsUri
+
+filePathUriSpec :: Spec
+filePathUriSpec = do
+  it "converts a POSIX file path to a URI" $ do
+    let theFilePath = platformAwareFilePathToUri "posix" "./Functional.hs"
+    theFilePath `shouldBe` (Uri "file://./Functional.hs")
+
+  it "converts a Windows file path to a URI" $ do
+    let theFilePath = platformAwareFilePathToUri windowsOS "./Functional.hs"
+    theFilePath `shouldBe` (Uri "file:///./Functional.hs")
+
+  it "converts a Windows file path to a URI" $ do
+    let theFilePath = platformAwareFilePathToUri windowsOS "c:./Functional.hs"
+    theFilePath `shouldBe` (Uri "file:///c%3A/./Functional.hs")
+
+  it "converts a POSIX file path to a URI and back" $ do
+    let theFilePath = platformAwareFilePathToUri "posix" "./Functional.hs"
+    theFilePath `shouldBe` (Uri "file://./Functional.hs")
+    let Just (URI scheme' auth' path' query' frag') =  parseURI "file://./Functional.hs"
+    (scheme',auth',path',query',frag') `shouldBe`
+      ("file:"
+      ,Just (URIAuth {uriUserInfo = "", uriRegName = ".", uriPort = ""}) -- AZ: Seems odd
+      ,"/Functional.hs"
+      ,""
+      ,"")
+    Just "/Functional.hs" `shouldBe` platformAwareUriToFilePath "posix" theFilePath
+
