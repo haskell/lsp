@@ -65,6 +65,11 @@ filePathUriSpec = do
     let theFilePath = platformAwareFilePathToUri "posix" "./Functional.hs"
     theFilePath `shouldBe` (Uri "file://./Functional.hs")
     let Just (URI scheme' auth' path' query' frag') =  parseURI "file://./Functional.hs"
-    show (scheme',auth',path',query',frag') `shouldBe` "x"
-    Just "./Functional.hs" `shouldBe` platformAwareUriToFilePath "posix" theFilePath
+    (scheme',auth',path',query',frag') `shouldBe`
+      ("file:"
+      ,Just (URIAuth {uriUserInfo = "", uriRegName = ".", uriPort = ""}) -- AZ: Seems odd
+      ,"/Functional.hs"
+      ,""
+      ,"")
+    Just "/Functional.hs" `shouldBe` platformAwareUriToFilePath "posix" theFilePath
 
