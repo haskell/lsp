@@ -686,7 +686,7 @@ data Diagnostic =
     , _code               :: Maybe Text -- Note: Protocol allows Int too.
     , _source             :: Maybe DiagnosticSource
     , _message            :: Text
-    , _relatedInformation :: List DiagnosticRelatedInformation
+    , _relatedInformation :: Maybe (List DiagnosticRelatedInformation)
     } deriving (Show, Read, Eq, Ord)
 
 deriveJSON lspOptions ''Diagnostic
