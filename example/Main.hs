@@ -316,7 +316,7 @@ sendDiagnostics fileUri mversion = do
               Nothing  -- code
               (Just "lsp-hello") -- source
               "Example diagnostic message"
-              (J.List [])
+              (Just (J.List []))
             ]
   -- reactorSend $ J.NotificationMessage "2.0" "textDocument/publishDiagnostics" (Just r)
   publishDiagnostics 100 fileUri mversion (partitionBySource diags)
