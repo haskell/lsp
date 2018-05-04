@@ -1,5 +1,9 @@
 # Revision history for haskell-lsp
 
+## 0.2.2.0  -- 2018-05-04
+
+* Make Diagnostic relatedInformation optional, as per the LSP Spec. By @Bubba.
+
 ## 0.2.1.0  -- 2018-05-02
 
 * Support GHC 8.4.2
