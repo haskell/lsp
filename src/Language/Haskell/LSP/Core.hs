@@ -657,23 +657,27 @@ setupLogger :: Maybe FilePath -> [String] -> Priority -> IO ()
 setupLogger mLogFile extraLogNames level = do
 
   logStream <- case mLogFile of
-    Just logFile -> openFile logFile AppendMode
-    Nothing      -> return stderr
-  hSetEncoding logStream utf8
-
-  logH <- LHS.streamHandler logStream level
-
-  let logHandle  = logH {LHS.closeFunc = hClose}
-      logFormat  = L.tfLogFormatter _LOG_FORMAT_DATE _LOG_FORMAT
-      logHandler = LH.setFormatter logHandle logFormat
+    Just logFile -> fmap Just $ openFile logFile AppendMode
+    Nothing      -> return Nothing
+    
+  logHandlers <- case logStream of
+    Just s -> do
+      hSetEncoding s utf8
+      logH <- LHS.streamHandler s level
+      let 
+        logHandle  = logH {LHS.closeFunc = hClose}
+        logFormat  = L.tfLogFormatter _LOG_FORMAT_DATE _LOG_FORMAT
+        logHandler = LH.setFormatter logHandle logFormat
+      return [logHandler]
+    Nothing -> return []
 
   L.updateGlobalLogger L.rootLoggerName $ L.setHandlers ([] :: [LHS.GenericHandler Handle])
-  L.updateGlobalLogger _LOG_NAME $ L.setHandlers [logHandler]
+  L.updateGlobalLogger _LOG_NAME $ L.setHandlers logHandlers
   L.updateGlobalLogger _LOG_NAME $ L.setLevel level
 
   -- Also route the additional log names to the same log
   forM_ extraLogNames $ \logName -> do
-    L.updateGlobalLogger logName $ L.setHandlers [logHandler]
+    L.updateGlobalLogger logName $ L.setHandlers logHandlers
     L.updateGlobalLogger logName $ L.setLevel level
 
 
