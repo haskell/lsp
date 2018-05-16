@@ -1,0 +1,44 @@
+name:                haskell-lsp-test
+version:             0.1.0.0
+-- synopsis:
+-- description:
+homepage:            https://github.com/Bubba/haskell-lsp-test#readme
+license:             BSD3
+license-file:        LICENSE
+author:              Luke Lau
+maintainer:          luke_lau@icloud.com
+copyright:           2018 Luke Lau
+category:            Testing
+build-type:          Simple
+cabal-version:       >=1.10
+extra-source-files:  README.md
+
+library
+  hs-source-dirs:      src
+  exposed-modules:     Language.Haskell.LSP.Test
+  default-language:    Haskell2010
+  build-depends:       base >= 4.7 && < 5
+                     , haskell-lsp-client
+                     , haskell-lsp-types
+                     , lens
+                     , text
+                     , transformers
+                     , process
+  if os(windows)
+    build-depends:     win32
+  else
+    build-depends:     unix
+  other-modules:       Compat
+                       Capabilities
+  ghc-options:         -W
+
+executable example
+  hs-source-dirs:      example
+  main-is:             Main.hs
+  default-language:    Haskell2010
+  build-depends:       base >= 4.7 && < 5
+                     , haskell-lsp-test
+                     , haskell-lsp-types
+                     , lens
+                     , text
+                     , directory

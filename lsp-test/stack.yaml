@@ -1,0 +1,8 @@
+resolver: nightly-2018-04-24
+packages:
+  - .
+
+extra-deps:
+  - github: Bubba/haskell-lsp-client
+    commit: b7cf14eb48837a73032e867dab90db1708220c66
+  - haskell-lsp-types-0.2.2.0
