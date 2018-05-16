@@ -1,2 +1,2 @@
-# haskell-lsp-test
+# haskell-lsp-test [![Build Status](https://travis-ci.com/Bubba/haskell-lsp-test.svg?branch=master)](https://travis-ci.com/Bubba/haskell-lsp-test)
 This is the functional testing framework for [haskell-ide-engine](https://github.com/haskell/haskell-ide-engine), and potentially any other Language Server Protocol server.
