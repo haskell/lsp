@@ -66,7 +66,7 @@ run dispatcherProc = flip E.catches handlers $ do
 
   flip E.finally finalProc $ do
     Core.setupLogger (Just "/tmp/lsp-hello.log") [] L.DEBUG
-    CTRL.run (return (Right ()), dp) (lspHandlers rin) lspOptions
+    CTRL.run (return (Right ()), dp) (lspHandlers rin) lspOptions Nothing
 
   where
     handlers = [ E.Handler ioExcept

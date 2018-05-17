@@ -25,6 +25,7 @@ import           Data.Monoid
 import qualified Language.Haskell.LSP.Core as Core
 import           Language.Haskell.LSP.Utility
 import           System.IO
+import           System.Directory
 import           Text.Parsec
 
 -- ---------------------------------------------------------------------
@@ -35,8 +36,10 @@ run :: (Show c) => Core.InitializeCallback c
                                  -- processing will start only after this returns.
     -> Core.Handlers
     -> Core.Options
+    -> Maybe FilePath
+    -- ^ File to record interaction with client to
     -> IO Int         -- exit code
-run dp h o = do
+run dp h o recFp = do
 
   logm $ B.pack "\n\n\n\n\nhaskell-lsp:Starting up server ..."
   hSetBuffering stdin NoBuffering
@@ -57,18 +60,23 @@ run dp h o = do
 
   tvarDat <- atomically $ newTVar $ Core.defaultLanguageContextData h o lf tvarId sendFunc
 
-  ioLoop dp tvarDat
+  maybe (return ()) removeFile recFp
+
+  ioLoop dp tvarDat recFp
 
   return 1
 
 -- ---------------------------------------------------------------------
 
-ioLoop :: (Show c) => Core.InitializeCallback c -> TVar (Core.LanguageContextData c) -> IO ()
-ioLoop dispatcherProc tvarDat = go BSL.empty
+ioLoop :: (Show c) => Core.InitializeCallback c -> TVar (Core.LanguageContextData c) -> Maybe FilePath -> IO ()
+ioLoop dispatcherProc tvarDat recFp = go BSL.empty
   where
     go :: BSL.ByteString -> IO ()
     go buf = do
       c <- BSL.hGet stdin 1
+
+      record c
+
       if c == BSL.empty
         then do
           logm $ B.pack "\nhaskell-lsp:Got EOF, exiting 1 ...\n"
@@ -80,6 +88,9 @@ ioLoop dispatcherProc tvarDat = go BSL.empty
             Left _ -> go newBuf
             Right len -> do
               cnt <- BSL.hGet stdin len
+
+              record cnt
+              
               if cnt == BSL.empty
                 then do
                   logm $ B.pack "\nhaskell-lsp:Got EOF, exiting 1 ...\n"
@@ -87,7 +98,7 @@ ioLoop dispatcherProc tvarDat = go BSL.empty
                 else do
                   logm $ (B.pack "---> ") <> cnt
                   Core.handleRequest dispatcherProc tvarDat newBuf cnt
-                  ioLoop dispatcherProc tvarDat
+                  ioLoop dispatcherProc tvarDat recFp
       where
         readContentLength :: String -> Either ParseError Int
         readContentLength = parse parser "readContentLength"
@@ -96,6 +107,8 @@ ioLoop dispatcherProc tvarDat = go BSL.empty
           _ <- string "Content-Length: "
           len <- manyTill digit (string _TWO_CRLF)
           return . read $ len
+
+        record c = maybe (return ()) (flip BSL.appendFile c) recFp
 
 -- ---------------------------------------------------------------------
 
