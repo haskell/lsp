@@ -9,6 +9,7 @@
 module Language.Haskell.LSP.Control
   (
     run
+  , runWithHandles
   ) where
 
 import           Control.Concurrent
@@ -25,28 +26,52 @@ import           Data.Monoid
 import qualified Language.Haskell.LSP.Core as Core
 import           Language.Haskell.LSP.Utility
 import           System.IO
+import           System.Directory
 import           Text.Parsec
 
 -- ---------------------------------------------------------------------
 
+-- | Convenience function for 'runWithHandles stdin stdout'.
 run :: (Show c) => Core.InitializeCallback c
-                                 -- ^ function to be called once initialize has
-                                 -- been received from the client. Further message
-                                 -- processing will start only after this returns.
+                -- ^ function to be called once initialize has
+                -- been received from the client. Further message
+                -- processing will start only after this returns.
     -> Core.Handlers
     -> Core.Options
+    -> Maybe FilePath
+    -- ^ File to record the client input to.
+    -> Maybe FilePath
+    -- ^ File to record the server output to.
+    -> IO Int
+run = runWithHandles stdin stdout
+
+-- | Starts listening and sending requests and responses
+-- at the specified handles.
+runWithHandles :: (Show c) =>
+       Handle
+    -- ^ Handle to read client input from.
+    -> Handle
+    -- ^ Handle to write output to.
+    -> Core.InitializeCallback c
+    -> Core.Handlers
+    -> Core.Options
+    -> Maybe FilePath
+    -> Maybe FilePath
     -> IO Int         -- exit code
-run dp h o = do
+runWithHandles hin hout dp h o recInFp recOutFp = do
 
   logm $ B.pack "\n\n\n\n\nhaskell-lsp:Starting up server ..."
-  hSetBuffering stdin NoBuffering
-  hSetEncoding  stdin utf8
+  hSetBuffering hin NoBuffering
+  hSetEncoding  hin utf8
 
-  hSetBuffering stdout NoBuffering
-  hSetEncoding  stdout utf8
+  hSetBuffering hout NoBuffering
+  hSetEncoding  hout utf8
+
+  -- Delete existing recordings if they exist
+  mapM_ (maybe (return ()) removeFile) [recInFp, recOutFp]
 
   cout <- atomically newTChan :: IO (TChan BSL.ByteString)
-  _rhpid <- forkIO $ sendServer cout
+  _rhpid <- forkIO $ sendServer cout hout recOutFp
 
 
   let sendFunc :: Core.SendFunc
@@ -57,18 +82,25 @@ run dp h o = do
 
   tvarDat <- atomically $ newTVar $ Core.defaultLanguageContextData h o lf tvarId sendFunc
 
-  ioLoop dp tvarDat
+  ioLoop hin dp tvarDat recInFp
 
   return 1
 
 -- ---------------------------------------------------------------------
 
-ioLoop :: (Show c) => Core.InitializeCallback c -> TVar (Core.LanguageContextData c) -> IO ()
-ioLoop dispatcherProc tvarDat = go BSL.empty
+ioLoop :: (Show c) => Handle
+                   -> Core.InitializeCallback c
+                   -> TVar (Core.LanguageContextData c)
+                   -> Maybe FilePath
+                   -> IO ()
+ioLoop hin dispatcherProc tvarDat recFp = go BSL.empty
   where
     go :: BSL.ByteString -> IO ()
     go buf = do
-      c <- BSL.hGet stdin 1
+      c <- BSL.hGet hin 1
+
+      record c
+
       if c == BSL.empty
         then do
           logm $ B.pack "\nhaskell-lsp:Got EOF, exiting 1 ...\n"
@@ -79,7 +111,10 @@ ioLoop dispatcherProc tvarDat = go BSL.empty
           case readContentLength (lbs2str newBuf) of
             Left _ -> go newBuf
             Right len -> do
-              cnt <- BSL.hGet stdin len
+              cnt <- BSL.hGet hin len
+
+              record cnt
+              
               if cnt == BSL.empty
                 then do
                   logm $ B.pack "\nhaskell-lsp:Got EOF, exiting 1 ...\n"
@@ -87,7 +122,7 @@ ioLoop dispatcherProc tvarDat = go BSL.empty
                 else do
                   logm $ (B.pack "---> ") <> cnt
                   Core.handleRequest dispatcherProc tvarDat newBuf cnt
-                  ioLoop dispatcherProc tvarDat
+                  ioLoop hin dispatcherProc tvarDat recFp
       where
         readContentLength :: String -> Either ParseError Int
         readContentLength = parse parser "readContentLength"
@@ -97,11 +132,13 @@ ioLoop dispatcherProc tvarDat = go BSL.empty
           len <- manyTill digit (string _TWO_CRLF)
           return . read $ len
 
+        record c = maybe (return ()) (flip BSL.appendFile c) recFp
+
 -- ---------------------------------------------------------------------
 
--- | Simple server to make sure all stdout is serialised
-sendServer :: TChan BSL.ByteString -> IO ()
-sendServer cstdout = do
+-- | Simple server to make sure all output is serialised
+sendServer :: TChan BSL.ByteString -> Handle -> Maybe FilePath -> IO ()
+sendServer cstdout handle recFp =
   forever $ do
     str <- atomically $ readTChan cstdout
     let out = BSL.concat
@@ -109,9 +146,11 @@ sendServer cstdout = do
                  , str2lbs _TWO_CRLF
                  , str ]
 
-    BSL.hPut stdout out
-    hFlush stdout
+    BSL.hPut handle out
+    hFlush handle
     logm $ B.pack "<--2--" <> str
+
+    maybe (return ()) (flip BSL.appendFile out) recFp
 
 -- |
 --
