@@ -9,8 +9,8 @@ import System.Environment
 
 main = do
   files <- getArgs
-  forM_ files $ \file -> session $ do
-    file <- liftIO $ canonicalizePath file
+  forM_ files $ \fp -> session $ do
+    file <- liftIO $ canonicalizePath fp
     openDocument file
     symbols <- documentSymbols file
     liftIO $ mapM_ T.putStrLn (symbols ^.. traverse . LSP.name)
