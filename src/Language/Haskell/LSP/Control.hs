@@ -39,7 +39,9 @@ run :: (Show c) => Core.InitializeCallback c
     -> Core.Handlers
     -> Core.Options
     -> Maybe FilePath
-    -- ^ File to record interaction with client to.
+    -- ^ File to record the client input to.
+    -> Maybe FilePath
+    -- ^ File to record the server output to.
     -> IO Int
 run = runWithHandles stdin stdout
 
@@ -49,13 +51,14 @@ runWithHandles :: (Show c) =>
        Handle
     -- ^ Handle to read client input from.
     -> Handle
-    -- ^ Handle to write client output to.
+    -- ^ Handle to write output to.
     -> Core.InitializeCallback c
     -> Core.Handlers
     -> Core.Options
     -> Maybe FilePath
+    -> Maybe FilePath
     -> IO Int         -- exit code
-runWithHandles hin hout dp h o recFp = do
+runWithHandles hin hout dp h o recInFp recOutFp = do
 
   logm $ B.pack "\n\n\n\n\nhaskell-lsp:Starting up server ..."
   hSetBuffering hin NoBuffering
@@ -64,8 +67,11 @@ runWithHandles hin hout dp h o recFp = do
   hSetBuffering hout NoBuffering
   hSetEncoding  hout utf8
 
+  -- Delete existing recordings if they exist
+  mapM_ (maybe (return ()) removeFile) [recInFp, recOutFp]
+
   cout <- atomically newTChan :: IO (TChan BSL.ByteString)
-  _rhpid <- forkIO $ sendServer cout hout
+  _rhpid <- forkIO $ sendServer cout hout recOutFp
 
 
   let sendFunc :: Core.SendFunc
@@ -76,9 +82,7 @@ runWithHandles hin hout dp h o recFp = do
 
   tvarDat <- atomically $ newTVar $ Core.defaultLanguageContextData h o lf tvarId sendFunc
 
-  maybe (return ()) removeFile recFp
-
-  ioLoop hin dp tvarDat recFp
+  ioLoop hin dp tvarDat recInFp
 
   return 1
 
@@ -133,8 +137,8 @@ ioLoop hin dispatcherProc tvarDat recFp = go BSL.empty
 -- ---------------------------------------------------------------------
 
 -- | Simple server to make sure all output is serialised
-sendServer :: TChan BSL.ByteString -> Handle -> IO ()
-sendServer cstdout handle = do
+sendServer :: TChan BSL.ByteString -> Handle -> Maybe FilePath -> IO ()
+sendServer cstdout handle recFp =
   forever $ do
     str <- atomically $ readTChan cstdout
     let out = BSL.concat
@@ -145,6 +149,8 @@ sendServer cstdout handle = do
     BSL.hPut handle out
     hFlush handle
     logm $ B.pack "<--2--" <> str
+
+    maybe (return ()) (flip BSL.appendFile out) recFp
 
 -- |
 --
