@@ -68,7 +68,9 @@ runWithHandles hin hout dp h o recInFp recOutFp = do
   hSetEncoding  hout utf8
 
   -- Delete existing recordings if they exist
-  mapM_ (maybe (return ()) removeFile) [recInFp, recOutFp]
+  forM_ [recInFp, recOutFp] $ maybe (return ()) $ \f -> do
+    exists <- doesFileExist f
+    when exists $ removeFile f
 
   cout <- atomically newTChan :: IO (TChan BSL.ByteString)
   _rhpid <- forkIO $ sendServer cout hout recOutFp
