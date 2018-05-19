@@ -3,5 +3,5 @@ import           System.Directory
 import           System.Environment
 
 main = do
-  file <- (head <$> getArgs) >>= canonicalizePath
-  replay file
+  [client, server] <- ((take 2) <$> getArgs) >>= mapM canonicalizePath
+  replay client server

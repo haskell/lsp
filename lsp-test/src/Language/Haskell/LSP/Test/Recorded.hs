@@ -15,8 +15,12 @@ import           Data.Aeson
 import           System.IO
 import           System.Process
 
-replay :: FilePath -> IO Int
-replay fp = do
+-- | Replays a recorded client output and 
+-- makes sure it matches up with an expected response.
+replay :: FilePath -- ^ The client output to replay to the server.
+       -> FilePath -- ^ The expected response from the server.
+       -> IO Int
+replay cfp sfp = do
 
   (Just serverIn, Just serverOut, _, _) <- createProcess
     (proc "hie" ["--lsp", "-l", "/tmp/hie.log", "-d"]) { std_in  = CreatePipe
@@ -29,20 +33,23 @@ replay fp = do
   -- whether to send the next request
   semaphore <- newEmptyMVar
 
+  -- the recorded client input to the server
+  clientRecIn <- openFile cfp ReadMode
+  serverRecIn <- openFile sfp ReadMode
+  null        <- openFile "/dev/null" WriteMode
+
   -- listen to server
   forkIO $ forever $ do
-    headers <- getHeaders serverOut
-    case read . init <$> lookup "Content-Length" headers of
-      Nothing   -> error "Couldn't read Content-Length header"
-      Just size -> do
-        message <- B.hGet serverOut size
-        case decode message :: Maybe (LSP.ResponseMessage Value) of
-          Just _  -> putMVar semaphore ()
-          Nothing -> return () -- might be a notification or something, that's ok
-
-  -- the recorded client input to the server
-  clientRecIn <- openFile fp ReadMode
-  null        <- openFile "/dev/null" WriteMode
+    msg <- getNextMessage serverOut
+    expectedMsg <- getNextMessage serverRecIn
+    putStrLn $ "received: " ++ (show msg)
+    putStrLn $ "next expected: " ++ (show expectedMsg)
+    case decode msg :: Maybe (LSP.RequestMessage Value Value Value) of
+      Just _ -> putStrLn "ignoring request" >> return ()
+      Nothing -> when (msg /= expectedMsg) $ error ("Expected " ++ show expectedMsg ++ " but got " ++ show msg) 
+    case decode msg :: Maybe (LSP.ResponseMessage Value) of
+      Just _  -> putMVar semaphore ()
+      Nothing -> return () -- might be a notification or something, that's ok
 
   -- send inialize request ourselves since haskell-lsp consumes it
   -- rest are handled via `handlers`
@@ -57,14 +64,19 @@ replay fp = do
                          Nothing
  where
   sendInitialize recH serverH = do
-    headers <- getHeaders recH
-    case read . init <$> lookup "Content-Length" headers of
-      Nothing   -> error "Failed to read the read the initialize request"
-      Just size -> do
-        message <- B.hGet recH size
-        B.hPut serverH (addHeader message)
-        -- bring the file back to the start for haskell-lsp
-        hSeek recH AbsoluteSeek 0
+    message <- getNextMessage recH
+    B.hPut serverH (addHeader message)
+    -- bring the file back to the start for haskell-lsp
+    hSeek recH AbsoluteSeek 0
+
+-- | Fetches the next message bytes based on
+-- the Content-Length header
+getNextMessage :: Handle -> IO B.ByteString
+getNextMessage h = do
+  headers <- getHeaders h
+  case read . init <$> lookup "Content-Length" headers of
+    Nothing   -> error "Couldn't read Content-Length header"
+    Just size -> B.hGet h size
 
 
 handlers :: Handle -> MVar () -> Handlers
