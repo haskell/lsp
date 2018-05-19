@@ -17,7 +17,6 @@ module Language.Haskell.LSP.Core (
   , Options(..)
   , OutMessage(..)
   , defaultLanguageContextData
-  , initializeRequestHandler
   , makeResponseMessage
   , makeResponseError
   , setupLogger
@@ -180,13 +179,18 @@ data Handlers =
 
     -- Responses to Request messages originated from the server
     , responseHandler                          :: !(Maybe (Handler J.BareResponseMessage))
+
+    -- Initialization request on startup
+    , initializeRequestHandler                        :: !(Maybe (Handler J.InitializeRequest))
+    -- Will default to terminating `exitMessage` if Nothing
+    , exitNotificationHandler                              :: !(Maybe (Handler J.ExitNotification))
     }
 
 instance Default Handlers where
   def = Handlers Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
                  Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
                  Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
-                 Nothing Nothing Nothing
+                 Nothing Nothing Nothing Nothing Nothing
 
 -- ---------------------------------------------------------------------
 nop :: a -> b -> IO a
@@ -212,12 +216,15 @@ helper requestHandler tvarDat json =
 handlerMap :: (Show c) => InitializeCallback c
            -> Handlers -> J.ClientMethod -> (TVar (LanguageContextData c) -> J.Value -> IO ())
 -- General
-handlerMap i _ J.Initialize                      = helper (initializeRequestHandler i)
+handlerMap i h J.Initialize                      = helper (initializeRequestHandler' i (initializeRequestHandler h))
 handlerMap _ h J.Initialized                     = hh nop $ initializedHandler h
 handlerMap _ _ J.Shutdown                        = helper shutdownRequestHandler
-handlerMap _ _ J.Exit                            = \_ _ -> do
-  logm $ B.pack "haskell-lsp:Got exit, exiting"
-  exitSuccess
+handlerMap _ h J.Exit                            =
+  case exitNotificationHandler h of
+    Just eh -> hh nop $ exitNotificationHandler h
+    Nothing -> \_ _ -> do
+      logm $ B.pack "haskell-lsp:Got exit, exiting"
+      exitSuccess
 handlerMap _ h J.CancelRequest                   = hh nop $ cancelNotificationHandler h
 -- Workspace
 handlerMap i h J.WorkspaceDidChangeConfiguration = hc i   $ didChangeConfigurationParamsHandler h
@@ -519,11 +526,17 @@ defaultErrorHandlers tvarDat origId req = [ E.Handler someExcept ]
 
 -- |
 --
-initializeRequestHandler :: (Show c) => InitializeCallback c
+initializeRequestHandler' :: (Show c) => InitializeCallback c
+                         -> Maybe (Handler J.InitializeRequest)
                          -> TVar (LanguageContextData c)
-                         -> J.InitializeRequest -> IO ()
-initializeRequestHandler (_configHandler,dispatcherProc) tvarCtx req@(J.RequestMessage _ origId _ params) =
+                         -> J.InitializeRequest
+                         -> IO ()
+initializeRequestHandler' (_configHandler,dispatcherProc) mHandler tvarCtx req@(J.RequestMessage _ origId _ params) =
   flip E.catches (defaultErrorHandlers tvarCtx (J.responseId origId) req) $ do
+
+    case mHandler of
+      Just handler -> handler req
+      Nothing -> return ()
 
     ctx0 <- readTVarIO tvarCtx
 
