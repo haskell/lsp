@@ -1,0 +1,23 @@
+Content-Length: 579
+
+{"result":{"capabilities":{"textDocumentSync":{"openClose":true,"change":2,"willSave":false,"willSaveWaitUntil":false,"save":{"includeText":false}},"hoverProvider":true,"completionProvider":{"resolveProvider":true,"triggerCharacters":["."]},"definitionProvider":true,"referencesProvider":true,"documentHighlightProvider":true,"documentSymbolProvider":true,"codeActionProvider":true,"documentFormattingProvider":true,"documentRangeFormattingProvider":true,"renameProvider":true,"executeCommandProvider":{"commands":["applyrefact:applyOne","hare:demote"]}}},"jsonrpc":"2.0","id":9}Content-Length: 209
+
+{"jsonrpc":"2.0","id":0,"method":"client/registerCapability","params":{"registrations":[{"registerOptions":{"documentSelector":{"language":"haskell"}},"method":"workspace/executeCommand","id":"hare:demote"}]}}Content-Length: 208
+
+{"jsonrpc":"2.0","method":"window/logMessage","params":{"type":4,"message":"Using ghc version: Version 0.2.0.0, Git revision 73fc39b23129436626232230e0f79a391120db5a (dirty) (1350 commits) x86_64 ghc-8.4.2"}}Content-Length: 145
+
+{"jsonrpc":"2.0","method":"window/logMessage","params":{"type":4,"message":"Using hoogle db at: /Users/luke/.hoogle/default-haskell-5.0.17.hoo"}}Content-Length: 156
+
+{"jsonrpc":"2.0","method":"textDocument/publishDiagnostics","params":{"uri":"file:///Users/luke/Repos/haskell-lsp-client/example/Main.hs","diagnostics":[]}}Content-Length: 156
+
+{"jsonrpc":"2.0","method":"textDocument/publishDiagnostics","params":{"uri":"file:///Users/luke/Repos/haskell-lsp-client/example/Main.hs","diagnostics":[]}}Content-Length: 156
+
+{"jsonrpc":"2.0","method":"textDocument/publishDiagnostics","params":{"uri":"file:///Users/luke/Repos/haskell-lsp-client/example/Main.hs","diagnostics":[]}}Content-Length: 366
+
+{"jsonrpc":"2.0","method":"textDocument/publishDiagnostics","params":{"uri":"file:///Users/luke/Repos/haskell-lsp-client/example/Main.hs","diagnostics":[{"severity":1,"range":{"start":{"line":36,"character":27},"end":{"line":36,"character":31}},"source":"ghcmod","message":"• Variable not in scope: patj :: FilePath\n• Perhaps you meant ‘path’ (line 30)"}]}}Content-Length: 366
+
+{"jsonrpc":"2.0","method":"textDocument/publishDiagnostics","params":{"uri":"file:///Users/luke/Repos/haskell-lsp-client/example/Main.hs","diagnostics":[{"severity":1,"range":{"start":{"line":36,"character":27},"end":{"line":36,"character":31}},"source":"ghcmod","message":"• Variable not in scope: patj :: FilePath\n• Perhaps you meant ‘path’ (line 30)"}]}}Content-Length: 156
+
+{"jsonrpc":"2.0","method":"textDocument/publishDiagnostics","params":{"uri":"file:///Users/luke/Repos/haskell-lsp-client/example/Main.hs","diagnostics":[]}}Content-Length: 628
+
+{"result":{"changes":{"file:///Users/luke/Repos/haskell-lsp-client/example/Main.hs":[{"range":{"start":{"line":36,"character":0},"end":{"line":36,"character":31}},"newText":"  file <- canonicalizePath notPath"},{"range":{"start":{"line":33,"character":0},"end":{"line":33,"character":54}},"newText":"    hPutStrLn stderr (\"File does not exist: \" ++ notPath)"},{"range":{"start":{"line":31,"character":0},"end":{"line":31,"character":30}},"newText":"  exists <- doesFileExist notPath"},{"range":{"start":{"line":29,"character":0},"end":{"line":29,"character":19}},"newText":"  let [notPath] = args"}]}},"jsonrpc":"2.0","id":45}

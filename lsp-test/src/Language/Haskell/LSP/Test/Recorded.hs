@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE FlexibleContexts #-}
 module Language.Haskell.LSP.Test.Recorded
   ( replay
   )
@@ -17,16 +16,21 @@ import           Data.Maybe
 import           Control.Lens
 import           Control.Monad
 import           System.IO
+import           System.Directory
 import           System.Process
 
 -- | Replays a recorded client output and 
 -- makes sure it matches up with an expected response.
-replay :: FilePath -- ^ The client output to replay to the server.
-       -> FilePath -- ^ The expected response from the server.
-       -> IO Int
+replay
+  :: FilePath -- ^ The client output to replay to the server.
+  -> FilePath -- ^ The expected response from the server.
+  -> IO Bool
 replay cfp sfp = do
 
-  (Just serverIn, Just serverOut, _, _) <- createProcess
+  -- need to keep hold of current directory since haskell-lsp changes it
+  prevDir <- getCurrentDirectory
+
+  (Just serverIn, Just serverOut, _, serverProc) <- createProcess
     (proc "hie" ["--lsp", "-l", "/tmp/hie.log", "-d"]) { std_in  = CreatePipe
                                                        , std_out = CreatePipe
                                                        }
@@ -41,71 +45,90 @@ replay cfp sfp = do
   rspSema <- newEmptyMVar :: IO (MVar LSP.LspId)
   let semas = (reqSema, rspSema)
 
+  didPass      <- newEmptyMVar
+
   -- the recorded client input to the server
-  clientRecIn <- openFile cfp ReadMode
-  serverRecIn <- openFile sfp ReadMode
-  null        <- openFile "/dev/null" WriteMode
+  clientRecIn  <- openFile cfp ReadMode
+  serverRecIn  <- openFile sfp ReadMode
+  null         <- openFile "/dev/null" WriteMode
 
 
   expectedMsgs <- getAllMessages serverRecIn
 
   -- listen to server
-  forkIO $ listenServer expectedMsgs serverOut semas
+  forkIO $ listenServer expectedMsgs serverOut semas didPass
 
-  -- send initialize request ourselves since haskell-lsp consumes it
-  -- rest are handled via `handlers`
-  sendInitialize clientRecIn serverIn
+  -- start client replay
+  forkIO $ do
+    Control.runWithHandles clientRecIn
+                           null
+                           (const $ Right (), const $ return Nothing)
+                           (handlers serverIn semas)
+                           def
+                           Nothing
+                           Nothing
 
-  -- wait for initialize response
-  putStrLn "Waiting for initialzie response"
-  takeMVar reqSema
-  putStrLn "Got initialize response"
+    -- todo: we shouldn't do this, we should check all notifications were delivered first
+    putMVar didPass True
 
-  Control.runWithHandles clientRecIn
-                         null
-                         (const $ Right (), const $ return Nothing)
-                         (handlers serverIn semas)
-                         def
-                         Nothing
-                         Nothing
- where
-  listenServer :: [B.ByteString] -> Handle -> (MVar LSP.LspIdRsp, MVar LSP.LspId) -> IO ()
-  listenServer expectedMsgs h semas@(reqSema, rspSema) = do
-    msg <- getNextMessage h
-    putStrLn $ "Remaining messages "  ++ show (length expectedMsgs)
-    if inRightOrder msg expectedMsgs
-      then do
+  result <- takeMVar didPass
+  terminateProcess serverProc
 
-        -- if we got a request response unblock the replay waiting for a response
-        whenResponse msg $ \res -> do
-          putStrLn ("Got response for id " ++ show (res ^. LSP.id))
-          putMVar reqSema (res ^. LSP.id)
+  -- restore directory
+  setCurrentDirectory prevDir
 
-        whenRequest msg $ \req -> do
-          putStrLn ("Got request for id " ++ show (req ^. LSP.id) ++ " " ++ show (req ^. LSP.method))
-          putMVar rspSema (req ^. LSP.id)
+  return result
 
-        listenServer (delete msg expectedMsgs) h semas
-      else error $ "Got: " ++ show msg ++ "\n Expected: " ++ show (head (filter (not . isNotification) expectedMsgs))
+-- todo: Maybe make a reader monad and a fail function for it?
+listenServer
+  :: [B.ByteString]
+  -> Handle
+  -> (MVar LSP.LspIdRsp, MVar LSP.LspId)
+  -> MVar Bool
+  -> IO ()
+listenServer [] _ _ passVar = putMVar passVar True
+listenServer expectedMsgs h semas@(reqSema, rspSema) passVar = do
+  msg <- getNextMessage h
+  putStrLn $ "Remaining messages " ++ show (length expectedMsgs)
+  if inRightOrder msg expectedMsgs
+    then do
 
-  sendInitialize recH serverH = do
-    message <- getNextMessage recH
-    B.hPut serverH (addHeader message)
-    putStrLn $ "Sent initialize response " ++ show message
-    -- bring the file back to the start for haskell-lsp
-    hSeek recH AbsoluteSeek 0
+      whenResponse msg $ \res -> do
+        putStrLn $ "Got response for id " ++ show (res ^. LSP.id)
+        putMVar reqSema (res ^. LSP.id) -- unblock the handler waiting to send a request
+
+      whenRequest msg $ \req -> do
+        putStrLn $ "Got request for id " ++ show (req ^. LSP.id) ++ " " ++ show (req ^. LSP.method)
+        putMVar rspSema (req ^. LSP.id) -- unblock the handler waiting for a response
+
+      whenNotification msg $ \n -> putStrLn $ "Got notification " ++ (show (n ^. LSP.method))
+
+      when (not (msg `elem` expectedMsgs)) $ do
+        putStrLn "Got an unexpected message"
+        putMVar passVar False
+
+      listenServer (delete msg expectedMsgs) h semas passVar
+    else do
+      putStrLn $ "Got: " ++ show msg ++ "\n Expected: " ++ show
+        (head (filter (not . isNotification) expectedMsgs))
+      putMVar passVar False
 
 isNotification :: B.ByteString -> Bool
-isNotification msg = isJust (decode msg :: Maybe (LSP.NotificationMessage Value Value))
+isNotification msg =
+  isJust (decode msg :: Maybe (LSP.NotificationMessage Value Value))
 
 whenResponse :: B.ByteString -> (LSP.ResponseMessage Value -> IO ()) -> IO ()
-whenResponse msg f =
-  case decode msg :: Maybe (LSP.ResponseMessage Value) of
-    Just msg' -> when (isJust (msg' ^. LSP.result)) (f msg')
-    _ -> return ()
+whenResponse msg f = case decode msg :: Maybe (LSP.ResponseMessage Value) of
+  Just msg' -> when (isJust (msg' ^. LSP.result)) (f msg')
+  _         -> return ()
 
-whenRequest :: B.ByteString -> (LSP.RequestMessage Value Value Value -> IO ()) -> IO ()
-whenRequest msg = forM_ (decode msg :: (Maybe (LSP.RequestMessage Value Value Value)))
+whenRequest
+  :: B.ByteString -> (LSP.RequestMessage Value Value Value -> IO ()) -> IO ()
+whenRequest msg =
+  forM_ (decode msg :: (Maybe (LSP.RequestMessage Value Value Value)))
+
+whenNotification :: B.ByteString -> (LSP.NotificationMessage Value Value -> IO ()) -> IO ()
+whenNotification msg = forM_ (decode msg :: (Maybe (LSP.NotificationMessage Value Value)))
 
 -- TODO: QuickCheck tests?
 -- | Checks wether or not the message appears in the right order
@@ -118,15 +141,15 @@ whenRequest msg = forM_ (decode msg :: (Maybe (LSP.RequestMessage Value Value Va
 -- @ N1 N3 N4 N5 XXXX RES1 @ False!
 -- Order of requests and responses matter
 inRightOrder :: B.ByteString -> [B.ByteString] -> Bool
-inRightOrder _ [] = error "why is this empty"
+inRightOrder _        []   = error "why is this empty"
 inRightOrder received msgs = received `elem` valid
-  where valid = takeWhile canSkip msgs ++ firstNonSkip
-        -- we don't care about the order of notifications
-        canSkip = isNotification
-        nonSkip = dropWhile canSkip msgs
-        firstNonSkip
-          | null nonSkip = []
-          | otherwise  = [head nonSkip]
+ where
+  valid   = takeWhile canSkip msgs ++ firstNonSkip
+  -- we don't care about the order of notifications
+  canSkip = isNotification
+  nonSkip = dropWhile canSkip msgs
+  firstNonSkip | null nonSkip = []
+               | otherwise    = [head nonSkip]
 
 getAllMessages :: Handle -> IO [B.ByteString]
 getAllMessages h = do
@@ -135,7 +158,7 @@ getAllMessages h = do
     then return []
     else do
       msg <- getNextMessage h
-      (msg:) <$> getAllMessages h
+      (msg :) <$> getAllMessages h
 
 -- | Fetches the next message bytes based on
 -- the Content-Length header
@@ -170,6 +193,7 @@ handlers serverH (reqSema, rspSema) = def
   , documentLinkHandler                      = Just request
   , documentLinkResolveHandler               = Just request
   , executeCommandHandler                    = Just request
+  , initializeRequestHandler             = Just request
     -- Notifications
   , didChangeConfigurationParamsHandler      = Just notification
   , didOpenTextDocumentNotificationHandler   = Just notification
@@ -180,23 +204,32 @@ handlers serverH (reqSema, rspSema) = def
   , initializedHandler                       = Just notification
   , willSaveTextDocumentNotificationHandler  = Just notification
   , cancelNotificationHandler                = Just notification
+  , exitNotificationHandler                  = Just notification
     -- Responses
   , responseHandler                          = Just response
   }
  where
-  notification m = do
-    B.hPut serverH $ addHeader (encode m)
-    putStrLn "Sent a notification"
+  -- TODO: May need to prevent premature exit notification being sent
+  -- notification msg@(LSP.NotificationMessage _ LSP.Exit _) = do
+  --   putStrLn "Will send exit notification soon"
+  --   threadDelay 10000000
+  --   B.hPut serverH $ addHeader (encode msg)
+  notification msg @(LSP.NotificationMessage _ m _) = do
+    B.hPut serverH $ addHeader (encode msg)
+    
+    putStrLn $ "Sent a notification " ++ show m
 
   request msg@(LSP.RequestMessage _ id m _) = do
-
     B.hPut serverH $ addHeader (encode msg)
-    putStrLn $ "Sent a request id " ++ show id ++ ": " ++ show m ++ "\nWaiting for a response"
+    putStrLn $  "Sent a request id " ++ show id ++ ": " ++ show m ++ "\nWaiting for a response"
 
     rspId <- takeMVar reqSema
-    if LSP.responseId id /= rspId
-      then error $ "Expected id " ++ show id ++ ", got " ++ show rspId
-      else putStrLn $ "Got a response for request id " ++ show id ++ ": " ++ show m
+    when (LSP.responseId id /= rspId)
+      $  error
+      $  "Expected id "
+      ++ show id
+      ++ ", got "
+      ++ show rspId
 
   response msg@(LSP.ResponseMessage _ id _ _) = do
     putStrLn $ "Waiting for request id " ++ show id ++ " from the server"

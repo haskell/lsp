@@ -1,13 +1,16 @@
 resolver: nightly-2018-04-24
 packages:
   - .
+  - location:
+      ../haskell-lsp
+    extra-dep: true
 
 extra-deps:
   - github: Bubba/haskell-lsp-client
     commit: b7cf14eb48837a73032e867dab90db1708220c66
   - haskell-lsp-types-0.2.2.0
-  - github: Bubba/haskell-lsp
-    commit: d21ebcfbe8c2c09ac92e33fa18be0a2ce098b8bb
+  # - github: Bubba/haskell-lsp
+  #   commit: 5bfaf0318e8a7700e1235cc139fdf894c052b8b0
   - sorted-list-0.2.1.0
   - github: yi-editor/yi-rope
     commit: 7867909f4f20952be051fd4252cca5bbfc80cf41

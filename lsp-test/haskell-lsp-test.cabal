@@ -29,6 +29,7 @@ library
                      , text
                      , transformers
                      , process
+                     , directory
   if os(windows)
     build-depends:     win32
   else
@@ -36,6 +37,16 @@ library
   other-modules:       Compat
                        Capabilities
   ghc-options:         -W
+
+test-suite tests
+  type:                exitcode-stdio-1.0
+  main-is:             Test.hs
+  hs-source-dirs:      test
+  ghc-options:         -W
+  build-depends:       base >= 4.7 && < 5
+                     , hspec
+                     , haskell-lsp-test
+  default-language:    Haskell2010
 
 executable example
   hs-source-dirs:      example
