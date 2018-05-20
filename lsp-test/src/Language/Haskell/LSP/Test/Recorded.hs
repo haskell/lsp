@@ -1,10 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
+-- | A testing tool for replaying recorded client logs back to a server,
+-- and validating that the server output matches up with another log.
 module Language.Haskell.LSP.Test.Recorded
   ( replay
   )
 where
 
 import           Control.Concurrent
+import           Control.Monad.Trans.Class
+import           Control.Monad.Trans.Reader
 import           Data.Default
 import           Language.Haskell.LSP.Control  as Control
 import qualified Data.ByteString.Lazy.Char8    as B
@@ -55,7 +59,7 @@ replay cfp sfp = do
   expectedMsgs <- getAllMessages serverRecIn
 
   -- listen to server
-  forkIO $ listenServer expectedMsgs serverOut semas didPass
+  forkIO $ runReaderT (listenServer expectedMsgs serverOut semas) didPass
 
   -- start client replay
   forkIO $ do
@@ -78,55 +82,63 @@ replay cfp sfp = do
 
   return result
 
--- todo: Maybe make a reader monad and a fail function for it?
-listenServer
-  :: [B.ByteString]
-  -> Handle
-  -> (MVar LSP.LspIdRsp, MVar LSP.LspId)
-  -> MVar Bool
-  -> IO ()
-listenServer [] _ _ passVar = putMVar passVar True
-listenServer expectedMsgs h semas@(reqSema, rspSema) passVar = do
-  msg <- getNextMessage h
-  putStrLn $ "Remaining messages " ++ show (length expectedMsgs)
+-- | The internal monad for tests that can fail or pass,
+-- ending execution early.
+type Session = ReaderT (MVar Bool) IO
+
+failSession :: String -> Session ()
+failSession reason = do
+  lift $ putStrLn reason
+  passVar <- ask
+  lift $ putMVar passVar False
+
+passSession :: Session ()
+passSession = do
+  passVar <- ask
+  lift $ putMVar passVar True
+
+-- | Listens to the server output, makes sure it matches the record and
+-- signals any semaphores
+listenServer :: [B.ByteString] -> Handle -> (MVar LSP.LspIdRsp, MVar LSP.LspId) -> Session ()
+listenServer [] _ _ = passSession
+listenServer expectedMsgs h semas@(reqSema, rspSema) = do
+  msg <- lift $ getNextMessage h
+  lift $ putStrLn $ "Remaining messages " ++ show (length expectedMsgs)
   if inRightOrder msg expectedMsgs
     then do
 
-      whenResponse msg $ \res -> do
+      whenResponse msg $ \res -> lift $ do
         putStrLn $ "Got response for id " ++ show (res ^. LSP.id)
         putMVar reqSema (res ^. LSP.id) -- unblock the handler waiting to send a request
 
-      whenRequest msg $ \req -> do
+      whenRequest msg $ \req -> lift $ do
         putStrLn $ "Got request for id " ++ show (req ^. LSP.id) ++ " " ++ show (req ^. LSP.method)
         putMVar rspSema (req ^. LSP.id) -- unblock the handler waiting for a response
 
-      whenNotification msg $ \n -> putStrLn $ "Got notification " ++ (show (n ^. LSP.method))
+      whenNotification msg $ \n -> lift $ putStrLn $ "Got notification " ++ show (n ^. LSP.method)
 
-      when (not (msg `elem` expectedMsgs)) $ do
-        putStrLn "Got an unexpected message"
-        putMVar passVar False
+      unless (msg `elem` expectedMsgs) $ failSession "Got an unexpected message"
 
-      listenServer (delete msg expectedMsgs) h semas passVar
-    else do
-      putStrLn $ "Got: " ++ show msg ++ "\n Expected: " ++ show
-        (head (filter (not . isNotification) expectedMsgs))
-      putMVar passVar False
+      listenServer (delete msg expectedMsgs) h semas
+    else
+      let reason = "Got: " ++ show msg ++ "\n Expected: " ++ show (head (filter (not . isNotification) expectedMsgs))
+        in failSession reason
 
 isNotification :: B.ByteString -> Bool
 isNotification msg =
   isJust (decode msg :: Maybe (LSP.NotificationMessage Value Value))
 
-whenResponse :: B.ByteString -> (LSP.ResponseMessage Value -> IO ()) -> IO ()
+whenResponse :: B.ByteString -> (LSP.ResponseMessage Value -> Session ()) -> Session ()
 whenResponse msg f = case decode msg :: Maybe (LSP.ResponseMessage Value) of
   Just msg' -> when (isJust (msg' ^. LSP.result)) (f msg')
   _         -> return ()
 
 whenRequest
-  :: B.ByteString -> (LSP.RequestMessage Value Value Value -> IO ()) -> IO ()
+  :: B.ByteString -> (LSP.RequestMessage Value Value Value -> Session ()) -> Session ()
 whenRequest msg =
   forM_ (decode msg :: (Maybe (LSP.RequestMessage Value Value Value)))
 
-whenNotification :: B.ByteString -> (LSP.NotificationMessage Value Value -> IO ()) -> IO ()
+whenNotification :: B.ByteString -> (LSP.NotificationMessage Value Value -> Session ()) -> Session ()
 whenNotification msg = forM_ (decode msg :: (Maybe (LSP.NotificationMessage Value Value)))
 
 -- TODO: QuickCheck tests?
@@ -215,7 +227,7 @@ handlers serverH (reqSema, rspSema) = def
   --   B.hPut serverH $ addHeader (encode msg)
   notification msg@(LSP.NotificationMessage _ m _) = do
     B.hPut serverH $ addHeader (encode msg)
-    
+
     putStrLn $ "Sent a notification " ++ show m
 
   request msg@(LSP.RequestMessage _ id m _) = do
