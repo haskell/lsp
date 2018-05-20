@@ -181,9 +181,9 @@ data Handlers =
     , responseHandler                          :: !(Maybe (Handler J.BareResponseMessage))
 
     -- Initialization request on startup
-    , initializeRequestHandler                        :: !(Maybe (Handler J.InitializeRequest))
+    , initializeRequestHandler                 :: !(Maybe (Handler J.InitializeRequest))
     -- Will default to terminating `exitMessage` if Nothing
-    , exitNotificationHandler                              :: !(Maybe (Handler J.ExitNotification))
+    , exitNotificationHandler                  :: !(Maybe (Handler J.ExitNotification))
     }
 
 instance Default Handlers where
@@ -221,7 +221,7 @@ handlerMap _ h J.Initialized                     = hh nop $ initializedHandler h
 handlerMap _ _ J.Shutdown                        = helper shutdownRequestHandler
 handlerMap _ h J.Exit                            =
   case exitNotificationHandler h of
-    Just eh -> hh nop $ exitNotificationHandler h
+    Just _ -> hh nop $ exitNotificationHandler h
     Nothing -> \_ _ -> do
       logm $ B.pack "haskell-lsp:Got exit, exiting"
       exitSuccess
