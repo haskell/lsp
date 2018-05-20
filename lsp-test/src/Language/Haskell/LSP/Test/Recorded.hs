@@ -52,7 +52,6 @@ replay cfp sfp = do
   serverRecIn  <- openFile sfp ReadMode
   null         <- openFile "/dev/null" WriteMode
 
-
   expectedMsgs <- getAllMessages serverRecIn
 
   -- listen to server
@@ -214,7 +213,7 @@ handlers serverH (reqSema, rspSema) = def
   --   putStrLn "Will send exit notification soon"
   --   threadDelay 10000000
   --   B.hPut serverH $ addHeader (encode msg)
-  notification msg @(LSP.NotificationMessage _ m _) = do
+  notification msg@(LSP.NotificationMessage _ m _) = do
     B.hPut serverH $ addHeader (encode msg)
     
     putStrLn $ "Sent a notification " ++ show m
