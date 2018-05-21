@@ -15,6 +15,7 @@ module Language.Haskell.LSP.Control
 import           Control.Concurrent
 import           Control.Concurrent.STM.TChan
 import           Control.Concurrent.STM.TVar
+import           Control.Exception
 import           Control.Monad
 import           Control.Monad.STM
 import qualified Data.Aeson as J
@@ -26,6 +27,7 @@ import           Data.Monoid
 import qualified Language.Haskell.LSP.Core as Core
 import           Language.Haskell.LSP.Utility
 import           System.IO
+import           System.IO.Error
 import           System.Directory
 import           Text.Parsec
 
@@ -68,7 +70,8 @@ runWithHandles hin hout dp h o recInFp recOutFp = do
   hSetEncoding  hout utf8
 
   -- Delete existing recordings if they exist
-  mapM_ (maybe (return ()) removeFile) [recInFp, recOutFp]
+  
+  mapM_ (maybe (return ()) removeFileIfExists) [recInFp, recOutFp]
 
   cout <- atomically newTChan :: IO (TChan BSL.ByteString)
   _rhpid <- forkIO $ sendServer cout hout recOutFp
@@ -85,6 +88,13 @@ runWithHandles hin hout dp h o recInFp recOutFp = do
   ioLoop hin dp tvarDat recInFp
 
   return 1
+
+  where
+    removeFileIfExists f = removeFile f `catch` handleDoesNotExist
+    handleDoesNotExist e
+      | isDoesNotExistError e = return ()
+      | otherwise = throwIO e
+
 
 -- ---------------------------------------------------------------------
 
