@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleContexts #-}
 -- | A testing tool for replaying recorded client logs back to a server,
 -- and validating that the server output matches up with another log.
 module Language.Haskell.LSP.Test.Recorded
@@ -22,6 +23,7 @@ import           Control.Monad
 import           System.IO
 import           System.Directory
 import           System.Process
+import           Language.Haskell.LSP.Test.Files
 
 -- | Replays a recorded client output and 
 -- makes sure it matches up with an expected response.
@@ -34,15 +36,12 @@ replay cfp sfp = do
   -- need to keep hold of current directory since haskell-lsp changes it
   prevDir <- getCurrentDirectory
 
-  (Just serverIn, Just serverOut, _, serverProc) <- createProcess
-    (proc "hie" ["--lsp", "-l", "/tmp/hie.log", "-d"]) { std_in  = CreatePipe
-                                                       , std_out = CreatePipe
-                                                       }
+  (Just serverIn, Just serverOut, _, serverProc) <- createProcess 
+    (proc "hie" ["--lsp", "-l", "/tmp/hie.log"]) { std_in  = CreatePipe , std_out = CreatePipe }
 
   hSetBuffering serverIn  NoBuffering
   hSetBuffering serverOut NoBuffering
 
-  -- todo: use qsem
   -- whether to send the next request
   reqSema <- newEmptyMVar :: IO (MVar LSP.LspIdRsp)
   -- whether to send the next response
@@ -56,14 +55,23 @@ replay cfp sfp = do
   serverRecIn  <- openFile sfp ReadMode
   null         <- openFile "/dev/null" WriteMode
 
-  expectedMsgs <- getAllMessages serverRecIn
+
+  (clientMsgs, fileMap) <- loadSwappedFiles emptyFileMap clientRecIn
+
+  tmpDir <- getTemporaryDirectory
+  (_, mappedClientRecIn) <- openTempFile tmpDir "clientRecInMapped"
+  mapM_ (B.hPut mappedClientRecIn) $ map addHeader clientMsgs
+  hSeek mappedClientRecIn AbsoluteSeek 0
+
+  
+  (expectedMsgs, _) <- loadSwappedFiles fileMap serverRecIn
 
   -- listen to server
   forkIO $ runReaderT (listenServer expectedMsgs serverOut semas) didPass
 
   -- start client replay
   forkIO $ do
-    Control.runWithHandles clientRecIn
+    Control.runWithHandles mappedClientRecIn
                            null
                            (const $ Right (), const $ return Nothing)
                            (handlers serverIn semas)
@@ -169,6 +177,7 @@ getAllMessages h = do
     then return []
     else do
       msg <- getNextMessage h
+     
       (msg :) <$> getAllMessages h
 
 -- | Fetches the next message bytes based on
@@ -179,7 +188,6 @@ getNextMessage h = do
   case read . init <$> lookup "Content-Length" headers of
     Nothing   -> error "Couldn't read Content-Length header"
     Just size -> B.hGet h size
-
 
 handlers :: Handle -> (MVar LSP.LspIdRsp, MVar LSP.LspId) -> Handlers
 handlers serverH (reqSema, rspSema) = def
@@ -204,7 +212,7 @@ handlers serverH (reqSema, rspSema) = def
   , documentLinkHandler                      = Just request
   , documentLinkResolveHandler               = Just request
   , executeCommandHandler                    = Just request
-  , initializeRequestHandler             = Just request
+  , initializeRequestHandler                 = Just request
     -- Notifications
   , didChangeConfigurationParamsHandler      = Just notification
   , didOpenTextDocumentNotificationHandler   = Just notification
@@ -220,6 +228,7 @@ handlers serverH (reqSema, rspSema) = def
   , responseHandler                          = Just response
   }
  where
+
   -- TODO: May need to prevent premature exit notification being sent
   -- notification msg@(LSP.NotificationMessage _ LSP.Exit _) = do
   --   putStrLn "Will send exit notification soon"
@@ -231,6 +240,9 @@ handlers serverH (reqSema, rspSema) = def
     putStrLn $ "Sent a notification " ++ show m
 
   request msg@(LSP.RequestMessage _ id m _) = do
+
+    when (m == LSP.TextDocumentDocumentSymbol) $ threadDelay 5000000
+
     B.hPut serverH $ addHeader (encode msg)
     putStrLn $  "Sent a request id " ++ show id ++ ": " ++ show m ++ "\nWaiting for a response"
 

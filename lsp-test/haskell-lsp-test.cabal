@@ -30,12 +30,14 @@ library
                      , transformers
                      , process
                      , directory
+                     , containers
   if os(windows)
     build-depends:     win32
   else
     build-depends:     unix
   other-modules:       Compat
                        Capabilities
+                       Language.Haskell.LSP.Test.Files
   ghc-options:         -W
 
 test-suite tests
