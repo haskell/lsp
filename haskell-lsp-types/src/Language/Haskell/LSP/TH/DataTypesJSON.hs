@@ -363,15 +363,25 @@ data ErrorCode = ParseError
                | MethodNotFound
                | InvalidParams
                | InternalError
+               | ServerErrorStart
+               | ServerErrorEnd
+               | ServerNotInitialized
+               | UnknownErrorCode
+               | RequestCancelled
                -- ^ Note: server error codes are reserved from -32099 to -32000
                deriving (Read,Show,Eq)
 
 instance A.ToJSON ErrorCode where
-  toJSON ParseError     = A.Number (-32700)
-  toJSON InvalidRequest = A.Number (-32600)
-  toJSON MethodNotFound = A.Number (-32601)
-  toJSON InvalidParams  = A.Number (-32602)
-  toJSON InternalError  = A.Number (-32603)
+  toJSON ParseError           = A.Number (-32700)
+  toJSON InvalidRequest       = A.Number (-32600)
+  toJSON MethodNotFound       = A.Number (-32601)
+  toJSON InvalidParams        = A.Number (-32602)
+  toJSON InternalError        = A.Number (-32603)
+  toJSON ServerErrorStart     = A.Number (-32099)
+  toJSON ServerErrorEnd       = A.Number (-32000)
+  toJSON ServerNotInitialized = A.Number (-32002)
+  toJSON UnknownErrorCode     = A.Number (-32001)
+  toJSON RequestCancelled     = A.Number (-32800)
 
 instance A.FromJSON ErrorCode where
   parseJSON (A.Number (-32700)) = pure ParseError
@@ -379,6 +389,11 @@ instance A.FromJSON ErrorCode where
   parseJSON (A.Number (-32601)) = pure MethodNotFound
   parseJSON (A.Number (-32602)) = pure InvalidParams
   parseJSON (A.Number (-32603)) = pure InternalError
+  parseJSON (A.Number (-32099)) = pure ServerErrorStart
+  parseJSON (A.Number (-32000)) = pure ServerErrorEnd
+  parseJSON (A.Number (-32002)) = pure ServerNotInitialized
+  parseJSON (A.Number (-32001)) = pure UnknownErrorCode
+  parseJSON (A.Number (-32800)) = pure RequestCancelled
   parseJSON _                   = mempty
 
 -- -------------------------------------
