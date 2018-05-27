@@ -3,11 +3,7 @@ resolver: nightly-2018-04-24 # GHC 8.4.2 version
 packages:
 - '.'
 - ./haskell-lsp-types
-
-- location:
-    git: https://github.com/alanz/yi-rope.git
-    commit:  017e1bd2b8b343dd2c17500865c3c8f5570ebf73
-  extra-dep: true
+- ./submodules/yi-rope
 
 extra-deps:
 # - yi-rope-0.10

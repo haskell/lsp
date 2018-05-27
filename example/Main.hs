@@ -310,13 +310,14 @@ toWorkspaceEdit _ = Nothing
 sendDiagnostics :: J.Uri -> Maybe Int -> R () ()
 sendDiagnostics fileUri mversion = do
   let
-    diags = [J.Diagnostic
-              (J.Range (J.Position 0 1) (J.Position 0 5))
-              (Just J.DsWarning)  -- severity
-              Nothing  -- code
-              (Just "lsp-hello") -- source
-              "Example diagnostic message"
-              (Just (J.List []))
+    diags = [SD NoCodeAction
+                (J.Diagnostic
+                (J.Range (J.Position 0 1) (J.Position 0 5))
+                (Just J.DsWarning)  -- severity
+                Nothing  -- code
+                (Just "lsp-hello") -- source
+                "Example diagnostic message"
+                (Just (J.List [])))
             ]
   -- reactorSend $ J.NotificationMessage "2.0" "textDocument/publishDiagnostics" (Just r)
   publishDiagnostics 100 fileUri mversion (partitionBySource diags)

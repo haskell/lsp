@@ -51,8 +51,8 @@ diagnosticsSpec = do
     it "constructs a store with no doc version and a single source" $ do
       let
         diags =
-          [ mkDiagnostic (Just "hlint") "a"
-          , mkDiagnostic (Just "hlint") "b"
+          [ SD NoCodeAction (mkDiagnostic (Just "hlint") "a")
+          , SD NoCodeAction (mkDiagnostic (Just "hlint") "b")
           ]
       (updateDiagnostics Map.empty (J.Uri "uri") Nothing (partitionBySource diags)) `shouldBe`
         Map.fromList
@@ -64,14 +64,14 @@ diagnosticsSpec = do
     it "constructs a store with no doc version and multiple sources" $ do
       let
         diags =
-          [ mkDiagnostic (Just "hlint") "a"
-          , mkDiagnostic (Just "ghcmod") "b"
+          [ SD NoCodeAction (mkDiagnostic (Just "hlint") "a")
+          , SD NoCodeAction (mkDiagnostic (Just "ghcmod") "b")
           ]
       (updateDiagnostics Map.empty (J.Uri "uri") Nothing (partitionBySource diags)) `shouldBe`
         Map.fromList
           [ ((J.Uri "uri"),StoreItem Nothing $ Map.fromList
-                [(Just "hlint",  SL.singleton (mkDiagnostic (Just "hlint")  "a"))
-                ,(Just "ghcmod", SL.singleton (mkDiagnostic (Just "ghcmod") "b"))
+                [(Just "hlint",  SL.singleton (SD NoCodeAction (mkDiagnostic (Just "hlint")  "a")))
+                ,(Just "ghcmod", SL.singleton (SD NoCodeAction (mkDiagnostic (Just "ghcmod") "b")))
                 ])
           ]
 
@@ -80,14 +80,14 @@ diagnosticsSpec = do
     it "constructs a store with doc version and multiple sources" $ do
       let
         diags =
-          [ mkDiagnostic (Just "hlint") "a"
-          , mkDiagnostic (Just "ghcmod") "b"
+          [ SD NoCodeAction (mkDiagnostic (Just "hlint") "a")
+          , SD NoCodeAction (mkDiagnostic (Just "ghcmod") "b")
           ]
       (updateDiagnostics Map.empty (J.Uri "uri") (Just 1) (partitionBySource diags)) `shouldBe`
         Map.fromList
           [ ((J.Uri "uri"),StoreItem (Just 1) $ Map.fromList
-                [(Just "hlint",  SL.singleton (mkDiagnostic (Just "hlint")  "a"))
-                ,(Just "ghcmod", SL.singleton (mkDiagnostic (Just "ghcmod") "b"))
+                [(Just "hlint",  SL.singleton (SD NoCodeAction (mkDiagnostic (Just "hlint")  "a")))
+                ,(Just "ghcmod", SL.singleton (SD NoCodeAction (mkDiagnostic (Just "ghcmod") "b")))
                 ])
           ]
 
@@ -97,11 +97,11 @@ diagnosticsSpec = do
     it "updates a store without a document version, single source only" $ do
       let
         diags1 =
-          [ mkDiagnostic (Just "hlint") "a1"
-          , mkDiagnostic (Just "hlint") "b1"
+          [ SD NoCodeAction (mkDiagnostic (Just "hlint") "a1")
+          , SD NoCodeAction (mkDiagnostic (Just "hlint") "b1")
           ]
         diags2 =
-          [ mkDiagnostic (Just "hlint") "a2"
+          [ SD NoCodeAction (mkDiagnostic (Just "hlint") "a2")
           ]
       let origStore = updateDiagnostics Map.empty (J.Uri "uri") Nothing (partitionBySource diags1)
       (updateDiagnostics origStore (J.Uri "uri") Nothing (partitionBySource diags2)) `shouldBe`
@@ -114,18 +114,18 @@ diagnosticsSpec = do
     it "updates just one source of a 2 source store" $ do
       let
         diags1 =
-          [ mkDiagnostic (Just "hlint") "a1"
-          , mkDiagnostic (Just "ghcmod") "b1"
+          [ SD NoCodeAction (mkDiagnostic (Just "hlint") "a1")
+          , SD NoCodeAction (mkDiagnostic (Just "ghcmod") "b1")
           ]
         diags2 =
-          [ mkDiagnostic (Just "hlint") "a2"
+          [ SD NoCodeAction (mkDiagnostic (Just "hlint") "a2")
           ]
       let origStore = updateDiagnostics Map.empty (J.Uri "uri") Nothing (partitionBySource diags1)
       (updateDiagnostics origStore (J.Uri "uri") Nothing (partitionBySource diags2)) `shouldBe`
         Map.fromList
           [ ((J.Uri "uri"),StoreItem Nothing $ Map.fromList
-                [(Just "hlint",  SL.singleton (mkDiagnostic (Just "hlint")  "a2"))
-                ,(Just "ghcmod", SL.singleton (mkDiagnostic (Just "ghcmod") "b1"))
+                [(Just "hlint",  SL.singleton (SD NoCodeAction (mkDiagnostic (Just "hlint")  "a2")))
+                ,(Just "ghcmod", SL.singleton (SD NoCodeAction (mkDiagnostic (Just "ghcmod") "b1")))
               ] )
           ]
 
@@ -134,15 +134,15 @@ diagnosticsSpec = do
     it "updates just one source of a 2 source store, with empty diags" $ do
       let
         diags1 =
-          [ mkDiagnostic (Just "hlint") "a1"
-          , mkDiagnostic (Just "ghcmod") "b1"
+          [ SD NoCodeAction (mkDiagnostic (Just "hlint") "a1")
+          , SD NoCodeAction (mkDiagnostic (Just "ghcmod") "b1")
           ]
       let origStore = updateDiagnostics Map.empty (J.Uri "uri") Nothing (partitionBySource diags1)
       (updateDiagnostics origStore (J.Uri "uri") Nothing (Map.fromList [(Just "ghcmod",SL.toSortedList [])])) `shouldBe`
         Map.fromList
           [ ((J.Uri "uri"),StoreItem Nothing $ Map.fromList
                 [(Just "ghcmod", SL.toSortedList [])
-                ,(Just "hlint",  SL.singleton (mkDiagnostic (Just "hlint")  "a1"))
+                ,(Just "hlint",  SL.singleton (SD NoCodeAction (mkDiagnostic (Just "hlint")  "a1")))
                 ] )
           ]
 
@@ -153,11 +153,11 @@ diagnosticsSpec = do
     it "updates a store without a document version, single source only" $ do
       let
         diags1 =
-          [ mkDiagnostic (Just "hlint") "a1"
-          , mkDiagnostic (Just "hlint") "b1"
+          [ SD NoCodeAction (mkDiagnostic (Just "hlint") "a1")
+          , SD NoCodeAction (mkDiagnostic (Just "hlint") "b1")
           ]
         diags2 =
-          [ mkDiagnostic (Just "hlint") "a2"
+          [ SD NoCodeAction (mkDiagnostic (Just "hlint") "a2")
           ]
       let origStore = updateDiagnostics Map.empty (J.Uri "uri") (Just 1) (partitionBySource diags1)
       (updateDiagnostics origStore (J.Uri "uri") (Just 2) (partitionBySource diags2)) `shouldBe`
@@ -170,17 +170,17 @@ diagnosticsSpec = do
     it "updates a store for a new doc version, removing all priot sources" $ do
       let
         diags1 =
-          [ mkDiagnostic (Just "hlint") "a1"
-          , mkDiagnostic (Just "ghcmod") "b1"
+          [ SD NoCodeAction (mkDiagnostic (Just "hlint") "a1")
+          , SD NoCodeAction (mkDiagnostic (Just "ghcmod") "b1")
           ]
         diags2 =
-          [ mkDiagnostic (Just "hlint") "a2"
+          [ SD NoCodeAction (mkDiagnostic (Just "hlint") "a2")
           ]
       let origStore = updateDiagnostics Map.empty (J.Uri "uri") (Just 1) (partitionBySource diags1)
       (updateDiagnostics origStore (J.Uri "uri") (Just 2) (partitionBySource diags2)) `shouldBe`
         Map.fromList
           [ ((J.Uri "uri"),StoreItem (Just 2) $ Map.fromList
-                [(Just "hlint", SL.singleton (mkDiagnostic (Just "hlint")  "a2"))
+                [(Just "hlint", SL.singleton (SD NoCodeAction (mkDiagnostic (Just "hlint")  "a2")))
               ] )
           ]
 
@@ -191,12 +191,12 @@ diagnosticsSpec = do
     it "gets diagnostics for multiple sources" $ do
       let
         diags =
-          [ mkDiagnostic (Just "hlint") "a"
-          , mkDiagnostic (Just "ghcmod") "b"
+          [ SD NoCodeAction (mkDiagnostic (Just "hlint") "a")
+          , SD NoCodeAction (mkDiagnostic (Just "ghcmod") "b")
           ]
       let ds = updateDiagnostics Map.empty (J.Uri "uri") (Just 1) (partitionBySource diags)
       (getDiagnosticParamsFor 10 ds (J.Uri "uri")) `shouldBe`
-        Just (J.PublishDiagnosticsParams (J.Uri "uri") (J.List $ reverse diags))
+        Just (J.PublishDiagnosticsParams (J.Uri "uri") (J.List $ map sdDiagnostic $ reverse diags))
 
     -- ---------------------------------
 
@@ -205,10 +205,10 @@ diagnosticsSpec = do
     it "gets diagnostics for multiple sources" $ do
       let
         diags =
-          [ mkDiagnostic2 (Just "hlint") "a"
-          , mkDiagnostic2 (Just "ghcmod") "b"
-          , mkDiagnostic  (Just "hlint") "c"
-          , mkDiagnostic  (Just "ghcmod") "d"
+          [ SD NoCodeAction (mkDiagnostic2 (Just "hlint") "a")
+          , SD NoCodeAction (mkDiagnostic2 (Just "ghcmod") "b")
+          , SD NoCodeAction (mkDiagnostic  (Just "hlint") "c")
+          , SD NoCodeAction (mkDiagnostic  (Just "ghcmod") "d")
           ]
       let ds = updateDiagnostics Map.empty (J.Uri "uri") (Just 1) (partitionBySource diags)
       (getDiagnosticParamsFor 2 ds (J.Uri "uri")) `shouldBe`
@@ -231,10 +231,10 @@ diagnosticsSpec = do
     it "gets diagnostics for multiple sources" $ do
       let
         diags =
-          [ mkDiagnostic2 (Just "hlint") "a"
-          , mkDiagnostic2 (Just "ghcmod") "b"
-          , mkDiagnostic  (Just "hlint") "c"
-          , mkDiagnostic  (Just "ghcmod") "d"
+          [ SD NoCodeAction (mkDiagnostic2 (Just "hlint") "a")
+          , SD NoCodeAction (mkDiagnostic2 (Just "ghcmod") "b")
+          , SD NoCodeAction (mkDiagnostic  (Just "hlint") "c")
+          , SD NoCodeAction (mkDiagnostic  (Just "ghcmod") "d")
           ]
       let ds = updateDiagnostics Map.empty (J.Uri "uri") (Just 1) (partitionBySource diags)
       (getDiagnosticParamsFor 100 ds (J.Uri "uri")) `shouldBe`

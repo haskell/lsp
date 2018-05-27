@@ -12,6 +12,8 @@ module Language.Haskell.LSP.Diagnostics
     DiagnosticStore
   , DiagnosticsBySource
   , StoreItem(..)
+  , HasCodeAction(..)
+  , StoredDiagnostic(..)
   , partitionBySource
   , flushBySource
   , updateDiagnostics
@@ -45,12 +47,28 @@ data StoreItem
   = StoreItem (Maybe J.TextDocumentVersion) DiagnosticsBySource
   deriving (Show,Eq)
 
-type DiagnosticsBySource = Map.Map (Maybe J.DiagnosticSource) (SL.SortedList J.Diagnostic)
+-- | Keeps track of whether the associated diagnostic has a code
+-- action.  This is to allow rapid filtering when processing a
+-- codeAction request.
+data HasCodeAction = HasCodeAction | NoCodeAction
+  deriving (Eq,Show)
+
+data StoredDiagnostic = SD { sdCodeAction :: HasCodeAction
+                           , sdDiagnostic :: J.Diagnostic
+                           }
+  deriving (Eq,Show)
+
+instance Ord StoredDiagnostic where
+  compare (SD _ l) (SD _ r) = compare l r
+
+
+type DiagnosticsBySource
+  = Map.Map (Maybe J.DiagnosticSource) (SL.SortedList StoredDiagnostic)
 
 -- ---------------------------------------------------------------------
 
-partitionBySource :: [J.Diagnostic] -> DiagnosticsBySource
-partitionBySource diags = Map.fromListWith mappend $ map (\d -> (J._source d, (SL.singleton d))) diags
+partitionBySource :: [StoredDiagnostic] -> DiagnosticsBySource
+partitionBySource diags = Map.fromListWith mappend $ map (\sd@(SD _ d) -> (J._source d, (SL.singleton sd))) diags
 
 -- ---------------------------------------------------------------------
 
@@ -91,6 +109,6 @@ getDiagnosticParamsFor maxDiagnostics ds uri =
   case Map.lookup uri ds of
     Nothing -> Nothing
     Just (StoreItem _ diags) ->
-      Just $ J.PublishDiagnosticsParams uri (J.List (take maxDiagnostics $ SL.fromSortedList $ mconcat $ Map.elems diags))
+      Just $ J.PublishDiagnosticsParams uri (J.List (map sdDiagnostic $ take maxDiagnostics $ SL.fromSortedList $ mconcat $ Map.elems diags))
 
 -- ---------------------------------------------------------------------
