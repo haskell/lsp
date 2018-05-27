@@ -6,6 +6,7 @@ module Language.Haskell.LSP.Test.Files
   , FileMap
   , emptyFileMap
   , rootDir
+  , cleanupFiles
   )
 where
 
@@ -53,6 +54,9 @@ buildFileMap uris recBaseDir curBaseDir oldMap =
         tmpUri <- filePathToUri <$> canonicalizePath tmpFp
         return $ Map.insert uri tmpUri map
 
+cleanupFiles :: IO ()
+cleanupFiles = removeDirectoryRecursive =<< (</> "lsp-test") <$> getTemporaryDirectory
+
 swapFiles :: FileMap -> FilePath -> FilePath -> [B.ByteString] -> IO ([B.ByteString], FileMap)
 swapFiles fileMap recBaseDir curBaseDir msgs = do
 
@@ -62,7 +66,18 @@ swapFiles fileMap recBaseDir curBaseDir msgs = do
 
   let newMsgs = map (swapUris newMap) msgs
 
-  return (newMsgs, newMap)
+  case decode (head newMsgs) :: Maybe InitializeRequest of
+    -- If there is an initialize request we will need to swap
+    -- the rootUri and rootPath
+    Just req -> do
+      cd <- getCurrentDirectory
+      let newRoot = cd </> curBaseDir
+          newRootUri = params . rootUri .~ Just (filePathToUri newRoot) $ req
+          newRootPath = params . rootPath .~ Just (T.pack newRoot) $ newRootUri
+          newReq = encode newRootPath
+      return (newReq:(tail newMsgs), newMap)
+      
+    Nothing -> return (newMsgs, newMap)
 
 rootDir :: [B.ByteString] -> FilePath
 rootDir msgs = case decode (head msgs) :: Maybe InitializeRequest of
@@ -75,7 +90,7 @@ extractUris :: B.ByteString -> Set.Set Uri
 extractUris msgs =
   case decode msgs :: Maybe Object of
     Just obj -> HashMap.foldlWithKey' gather Set.empty obj
-    Nothing -> error "nooo"
+    Nothing -> error "Couldn't decode message"
   where gather :: Set.Set Uri -> T.Text -> Value -> Set.Set Uri
         gather uris "uri" (String s) = Set.insert (Uri s) uris
         gather uris _ (Object o) = HashMap.foldlWithKey' gather uris o

@@ -64,7 +64,7 @@ replay cfp sfp curRootDir = do
   (clientMsgs, fileMap) <- swapFiles emptyFileMap recRootDir curRootDir unswappedClientMsgs
 
   tmpDir <- getTemporaryDirectory
-  (_, mappedClientRecIn) <- openTempFile tmpDir "clientRecInMapped"
+  (mappedClientRecFp, mappedClientRecIn) <- openTempFile tmpDir "clientRecInMapped"
   mapM_ (B.hPut mappedClientRecIn . addHeader) clientMsgs
   hSeek mappedClientRecIn AbsoluteSeek 0
 
@@ -91,6 +91,10 @@ replay cfp sfp curRootDir = do
 
   -- restore directory
   setCurrentDirectory prevDir
+
+  -- cleanup temp files
+  removeFile mappedClientRecFp
+  cleanupFiles
 
   return result
 
@@ -127,18 +131,7 @@ listenServer expectedMsgs h semas@(reqSema, rspSema) = do
   listenServer newExpectedMsgs h semas
 
 
-  where jsonEqual :: (FromJSON a, Eq a) => a -> B.ByteString -> Bool
-        jsonEqual x y = Just x == decode y
-
-        deleteFirstJson _ [] = []
-        deleteFirstJson msg (x:xs)
-          | jsonEqual msg x = xs
-          | otherwise = x:deleteFirstJson msg xs
-
-        -- firstExpected :: Show a => a
-        firstExpected = head $ filter (not . isNotification) expectedMsgs
-
-        response :: LSP.ResponseMessage Value -> Session [B.ByteString]
+  where response :: LSP.ResponseMessage Value -> Session [B.ByteString]
         response res = do
           lift $ putStrLn $ "Got response for id " ++ show (res ^. LSP.id)
 
@@ -148,7 +141,7 @@ listenServer expectedMsgs h semas@(reqSema, rspSema) = do
 
           lift $ putMVar reqSema (res ^. LSP.id) -- unblock the handler waiting to send a request
 
-          return $ deleteFirstJson res expectedMsgs
+          markReceived res
 
         request :: LSP.RequestMessage LSP.ServerMethod Value Value -> Session [B.ByteString]
         request req = do
@@ -160,18 +153,37 @@ listenServer expectedMsgs h semas@(reqSema, rspSema) = do
 
           lift $ putMVar rspSema (req ^. LSP.id) -- unblock the handler waiting for a response
 
-          return $ deleteFirstJson req expectedMsgs
+          markReceived req
 
         notification :: LSP.NotificationMessage LSP.ServerMethod Value -> Session [B.ByteString]
         notification n = do
           lift $ putStrLn $ "Got notification " ++ show (n ^. LSP.method)
           lift $ print n
-          return $ deleteFirstJson n expectedMsgs
+
+          lift $ putStrLn $ (show ((length $ filter isNotification expectedMsgs) - 1)) ++ " notifications remaining"
+
+          if n ^. LSP.method == LSP.WindowLogMessage
+            then return expectedMsgs
+            else markReceived n
         
         checkOrder msg = unless (inRightOrder msg expectedMsgs) $ do
-          let expected = decode firstExpected
-              _ = expected == Just msg -- make expected type same as res
+          let (Just expected) = decode firstExpected
+              _ = expected == msg -- make expected type same as res
           failSession ("Out of order\nExpected\n" ++ show expected ++ "\nGot\n" ++ show msg ++ "\n")
+        
+        markReceived msg = do
+          let new = deleteFirstJson msg expectedMsgs
+           in if (new == expectedMsgs) 
+              then failSession ("Unexpected message: " ++ show msg) >> return new
+              else return new
+
+        deleteFirstJson _ [] = []
+        deleteFirstJson msg (x:xs)
+          | (Just msg) == (decode x) = xs
+          | otherwise = x:deleteFirstJson msg xs
+
+        firstExpected = head $ filter (not . isNotification) expectedMsgs
+
 
 
 isNotification :: B.ByteString -> Bool
@@ -240,10 +252,10 @@ handlers serverH (reqSema, rspSema) = def
  where
 
   -- TODO: May need to prevent premature exit notification being sent
-  -- notification msg@(LSP.NotificationMessage _ LSP.Exit _) = do
-  --   putStrLn "Will send exit notification soon"
-  --   threadDelay 10000000
-  --   B.hPut serverH $ addHeader (encode msg)
+  notification msg@(LSP.NotificationMessage _ LSP.Exit _) = do
+    putStrLn "Will send exit notification soon"
+    threadDelay 10000000
+    B.hPut serverH $ addHeader (encode msg)
   notification msg@(LSP.NotificationMessage _ m _) = do
     B.hPut serverH $ addHeader (encode msg)
 
