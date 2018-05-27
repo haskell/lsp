@@ -3,6 +3,6 @@ import           System.Directory
 import           System.Environment
 
 main = do
-  [client, server] <- (take 2 <$> getArgs) >>= mapM canonicalizePath
-  passed <- replay client server
+  [client, server, dir] <- (take 3 <$> getArgs) >>= mapM canonicalizePath
+  passed <- replay client server dir
   putStrLn $ if passed then "Passed" else "Failed"

@@ -30,8 +30,9 @@ import           Language.Haskell.LSP.Test.Parsing
 replay
   :: FilePath -- ^ The client output to replay to the server.
   -> FilePath -- ^ The expected response from the server.
+  -> FilePath -- ^ The root directory of the project
   -> IO Bool
-replay cfp sfp = do
+replay cfp sfp curRootDir = do
 
   -- need to keep hold of current directory since haskell-lsp changes it
   prevDir <- getCurrentDirectory
@@ -56,14 +57,18 @@ replay cfp sfp = do
   null         <- openFile "/dev/null" WriteMode
 
 
-  (clientMsgs, fileMap) <- swapFiles emptyFileMap clientRecIn
+  unswappedClientMsgs <- getAllMessages clientRecIn
+
+  let recRootDir = rootDir unswappedClientMsgs
+  
+  (clientMsgs, fileMap) <- swapFiles emptyFileMap recRootDir curRootDir unswappedClientMsgs
 
   tmpDir <- getTemporaryDirectory
   (_, mappedClientRecIn) <- openTempFile tmpDir "clientRecInMapped"
   mapM_ (B.hPut mappedClientRecIn . addHeader) clientMsgs
   hSeek mappedClientRecIn AbsoluteSeek 0
 
-  (expectedMsgs, _) <- swapFiles fileMap serverRecIn
+  (expectedMsgs, _) <- swapFiles fileMap recRootDir curRootDir =<< getAllMessages serverRecIn
 
   -- listen to server
   forkIO $ runReaderT (listenServer expectedMsgs serverOut semas) didPass

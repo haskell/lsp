@@ -5,11 +5,12 @@ module Language.Haskell.LSP.Test.Files
   ( swapFiles
   , FileMap
   , emptyFileMap
+  , rootDir
   )
 where
 
 import           Language.Haskell.LSP.Types        hiding ( error )
-import           Language.Haskell.LSP.Test.Parsing
+import           Control.Lens
 import           Control.Monad
 import           Data.Aeson
 import qualified Data.ByteString.Lazy.Char8    as B
@@ -28,38 +29,47 @@ type FileMap = Map.Map Uri Uri
 emptyFileMap :: FileMap
 emptyFileMap = Map.empty
 
-buildFileMap :: [Uri] -> FileMap -> IO FileMap
-buildFileMap uris oldMap = foldM createFile oldMap uris
- where
-  createFile map uri =
+buildFileMap :: [Uri] -> FilePath -> FilePath -> FileMap -> IO FileMap
+buildFileMap uris recBaseDir curBaseDir oldMap =
+  foldM (createFile recBaseDir curBaseDir) oldMap uris
+  where
+  createFile baseDir curDir  map uri =
     if Map.member uri map
       then return map
       else do
         let fp = fromMaybe (error "Couldn't convert file path")
                  (uriToFilePath uri)
+            relativeFp = makeRelative baseDir fp
+            actualFp = curDir </> relativeFp
 
         -- Need to store in a directory inside tmp directory
         -- otherwise ghc-mod ends up creating one for us
-        tmpDir <- (</> "lsp-test") <$> getTemporaryDirectory
-        createDirectoryIfMissing False tmpDir
+        tmpDir <- (</> "lsp-test" </> takeDirectory relativeFp) <$> getTemporaryDirectory
+        createDirectoryIfMissing True tmpDir
 
-        (tmpFp, tmpH) <- openTempFile tmpDir (takeFileName fp)
+        (tmpFp, tmpH) <- openTempFile tmpDir (takeFileName actualFp)
 
-        readFile fp >>= hPutStr tmpH
+        readFile actualFp >>= hPutStr tmpH
         tmpUri <- filePathToUri <$> canonicalizePath tmpFp
         return $ Map.insert uri tmpUri map
 
-swapFiles :: FileMap -> Handle -> IO ([B.ByteString], FileMap)
-swapFiles fileMap h = do
-  msgs <- getAllMessages h
+swapFiles :: FileMap -> FilePath -> FilePath -> [B.ByteString] -> IO ([B.ByteString], FileMap)
+swapFiles fileMap recBaseDir curBaseDir msgs = do
 
   let oldUris = Set.unions $ map extractUris msgs
 
-  newMap <- buildFileMap (Set.elems oldUris) fileMap
+  newMap <- buildFileMap (Set.elems oldUris) recBaseDir curBaseDir fileMap
 
   let newMsgs = map (swapUris newMap) msgs
 
   return (newMsgs, newMap)
+
+rootDir :: [B.ByteString] -> FilePath
+rootDir msgs = case decode (head msgs) :: Maybe InitializeRequest of
+                Just req -> fromMaybe (error "Couldn't convert root dir") $ do
+                  rootUri <- req ^. params . rootUri
+                  uriToFilePath rootUri
+                Nothing -> error "Couldn't find root dir"
 
 extractUris :: B.ByteString -> Set.Set Uri
 extractUris msgs =
