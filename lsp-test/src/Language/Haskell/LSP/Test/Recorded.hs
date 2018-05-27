@@ -16,7 +16,6 @@ import qualified Data.ByteString.Lazy.Char8    as B
 import           Language.Haskell.LSP.Core
 import qualified Language.Haskell.LSP.Types    as LSP
 import           Data.Aeson
-import           Data.List
 import           Data.Maybe
 import           Control.Lens
 import           Control.Monad
@@ -24,6 +23,7 @@ import           System.IO
 import           System.Directory
 import           System.Process
 import           Language.Haskell.LSP.Test.Files
+import           Language.Haskell.LSP.Test.Parsing
 
 -- | Replays a recorded client output and 
 -- makes sure it matches up with an expected response.
@@ -36,7 +36,7 @@ replay cfp sfp = do
   -- need to keep hold of current directory since haskell-lsp changes it
   prevDir <- getCurrentDirectory
 
-  (Just serverIn, Just serverOut, _, serverProc) <- createProcess 
+  (Just serverIn, Just serverOut, _, serverProc) <- createProcess
     (proc "hie" ["--lsp", "-l", "/tmp/hie.log"]) { std_in  = CreatePipe , std_out = CreatePipe }
 
   hSetBuffering serverIn  NoBuffering
@@ -56,15 +56,14 @@ replay cfp sfp = do
   null         <- openFile "/dev/null" WriteMode
 
 
-  (clientMsgs, fileMap) <- loadSwappedFiles emptyFileMap clientRecIn
+  (clientMsgs, fileMap) <- swapFiles emptyFileMap clientRecIn
 
   tmpDir <- getTemporaryDirectory
   (_, mappedClientRecIn) <- openTempFile tmpDir "clientRecInMapped"
-  mapM_ (B.hPut mappedClientRecIn) $ map addHeader clientMsgs
+  mapM_ (B.hPut mappedClientRecIn . addHeader) clientMsgs
   hSeek mappedClientRecIn AbsoluteSeek 0
 
-  
-  (expectedMsgs, _) <- loadSwappedFiles fileMap serverRecIn
+  (expectedMsgs, _) <- swapFiles fileMap serverRecIn
 
   -- listen to server
   forkIO $ runReaderT (listenServer expectedMsgs serverOut semas) didPass
@@ -111,43 +110,68 @@ listenServer :: [B.ByteString] -> Handle -> (MVar LSP.LspIdRsp, MVar LSP.LspId) 
 listenServer [] _ _ = passSession
 listenServer expectedMsgs h semas@(reqSema, rspSema) = do
   msg <- lift $ getNextMessage h
-  lift $ putStrLn $ "Remaining messages " ++ show (length expectedMsgs)
-  if inRightOrder msg expectedMsgs
-    then do
 
-      whenResponse msg $ \res -> lift $ do
-        putStrLn $ "Got response for id " ++ show (res ^. LSP.id)
-        putMVar reqSema (res ^. LSP.id) -- unblock the handler waiting to send a request
+  newExpectedMsgs <- case decode msg of
+    Just m -> request m
+    Nothing -> case decode msg of
+      Just m -> notification m
+      Nothing -> case decode msg of
+        Just m -> response m
+        Nothing -> failSession "Malformed message" >> return expectedMsgs
 
-      whenRequest msg $ \req -> lift $ do
-        putStrLn $ "Got request for id " ++ show (req ^. LSP.id) ++ " " ++ show (req ^. LSP.method)
-        putMVar rspSema (req ^. LSP.id) -- unblock the handler waiting for a response
+  listenServer newExpectedMsgs h semas
 
-      whenNotification msg $ \n -> lift $ putStrLn $ "Got notification " ++ show (n ^. LSP.method)
 
-      unless (msg `elem` expectedMsgs) $ failSession "Got an unexpected message"
+  where jsonEqual :: (FromJSON a, Eq a) => a -> B.ByteString -> Bool
+        jsonEqual x y = Just x == decode y
 
-      listenServer (delete msg expectedMsgs) h semas
-    else
-      let reason = "Got: " ++ show msg ++ "\n Expected: " ++ show (head (filter (not . isNotification) expectedMsgs))
-        in failSession reason
+        deleteFirstJson _ [] = []
+        deleteFirstJson msg (x:xs)
+          | jsonEqual msg x = xs
+          | otherwise = x:deleteFirstJson msg xs
+
+        -- firstExpected :: Show a => a
+        firstExpected = head $ filter (not . isNotification) expectedMsgs
+
+        response :: LSP.ResponseMessage Value -> Session [B.ByteString]
+        response res = do
+          lift $ putStrLn $ "Got response for id " ++ show (res ^. LSP.id)
+
+          lift $ print res
+
+          checkOrder res
+
+          lift $ putMVar reqSema (res ^. LSP.id) -- unblock the handler waiting to send a request
+
+          return $ deleteFirstJson res expectedMsgs
+
+        request :: LSP.RequestMessage LSP.ServerMethod Value Value -> Session [B.ByteString]
+        request req = do
+          lift $ putStrLn $ "Got request for id " ++ show (req ^. LSP.id) ++ " " ++ show (req ^. LSP.method)
+
+          lift $ print req
+
+          checkOrder req
+
+          lift $ putMVar rspSema (req ^. LSP.id) -- unblock the handler waiting for a response
+
+          return $ deleteFirstJson req expectedMsgs
+
+        notification :: LSP.NotificationMessage LSP.ServerMethod Value -> Session [B.ByteString]
+        notification n = do
+          lift $ putStrLn $ "Got notification " ++ show (n ^. LSP.method)
+          lift $ print n
+          return $ deleteFirstJson n expectedMsgs
+        
+        checkOrder msg = unless (inRightOrder msg expectedMsgs) $ do
+          let expected = decode firstExpected
+              _ = expected == Just msg -- make expected type same as res
+          failSession ("Out of order\nExpected\n" ++ show expected ++ "\nGot\n" ++ show msg ++ "\n")
+
 
 isNotification :: B.ByteString -> Bool
 isNotification msg =
   isJust (decode msg :: Maybe (LSP.NotificationMessage Value Value))
-
-whenResponse :: B.ByteString -> (LSP.ResponseMessage Value -> Session ()) -> Session ()
-whenResponse msg f = case decode msg :: Maybe (LSP.ResponseMessage Value) of
-  Just msg' -> when (isJust (msg' ^. LSP.result)) (f msg')
-  _         -> return ()
-
-whenRequest
-  :: B.ByteString -> (LSP.RequestMessage Value Value Value -> Session ()) -> Session ()
-whenRequest msg =
-  forM_ (decode msg :: (Maybe (LSP.RequestMessage Value Value Value)))
-
-whenNotification :: B.ByteString -> (LSP.NotificationMessage Value Value -> Session ()) -> Session ()
-whenNotification msg = forM_ (decode msg :: (Maybe (LSP.NotificationMessage Value Value)))
 
 -- TODO: QuickCheck tests?
 -- | Checks wether or not the message appears in the right order
@@ -159,35 +183,16 @@ whenNotification msg = forM_ (decode msg :: (Maybe (LSP.NotificationMessage Valu
 -- given RES1
 -- @ N1 N3 N4 N5 XXXX RES1 @ False!
 -- Order of requests and responses matter
-inRightOrder :: B.ByteString -> [B.ByteString] -> Bool
-inRightOrder _        []   = error "why is this empty"
-inRightOrder received msgs = received `elem` valid
- where
-  valid   = takeWhile canSkip msgs ++ firstNonSkip
-  -- we don't care about the order of notifications
-  canSkip = isNotification
-  nonSkip = dropWhile canSkip msgs
-  firstNonSkip | null nonSkip = []
-               | otherwise    = [head nonSkip]
+inRightOrder :: (FromJSON a, Eq a) => a -> [B.ByteString] -> Bool
 
-getAllMessages :: Handle -> IO [B.ByteString]
-getAllMessages h = do
-  done <- hIsEOF h
-  if done
-    then return []
-    else do
-      msg <- getNextMessage h
-     
-      (msg :) <$> getAllMessages h
+inRightOrder _ [] = error "Why is this empty"
+-- inRightOrder (LSP.NotificationMessage _ _ _) _ = True
 
--- | Fetches the next message bytes based on
--- the Content-Length header
-getNextMessage :: Handle -> IO B.ByteString
-getNextMessage h = do
-  headers <- getHeaders h
-  case read . init <$> lookup "Content-Length" headers of
-    Nothing   -> error "Couldn't read Content-Length header"
-    Just size -> B.hGet h size
+inRightOrder received (expected:msgs)
+  | Just received == decode expected = True
+  | isNotification expected = inRightOrder received msgs
+  | otherwise =  False
+
 
 handlers :: Handle -> (MVar LSP.LspIdRsp, MVar LSP.LspId) -> Handlers
 handlers serverH (reqSema, rspSema) = def
@@ -262,18 +267,3 @@ handlers serverH (reqSema, rspSema) = def
       else do
         B.hPut serverH $ addHeader (encode msg)
         putStrLn $ "Sent response to request id " ++ show id
-
-addHeader :: B.ByteString -> B.ByteString
-addHeader content = B.concat
-  [ "Content-Length: "
-  , B.pack $ show $ B.length content
-  , "\r\n"
-  , "\r\n"
-  , content
-  ]
-
-getHeaders :: Handle -> IO [(String, String)]
-getHeaders h = do
-  l <- hGetLine h
-  let (name, val) = span (/= ':') l
-  if null val then return [] else ((name, drop 2 val) :) <$> getHeaders h

@@ -26,11 +26,13 @@ library
                      , bytestring
                      , aeson
                      , lens
+                     , filepath
                      , text
                      , transformers
                      , process
                      , directory
                      , containers
+                     , unordered-containers
   if os(windows)
     build-depends:     win32
   else
@@ -38,6 +40,7 @@ library
   other-modules:       Compat
                        Capabilities
                        Language.Haskell.LSP.Test.Files
+                       Language.Haskell.LSP.Test.Parsing
   ghc-options:         -W
 
 test-suite tests

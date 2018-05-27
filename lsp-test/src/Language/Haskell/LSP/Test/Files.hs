@@ -1,116 +1,93 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Language.Haskell.LSP.Test.Files
-  ( loadSwappedFiles
+  ( swapFiles
   , FileMap
   , emptyFileMap
   )
 where
 
-import           Language.Haskell.LSP.Core
-import qualified Language.Haskell.LSP.Control  as Control
 import           Language.Haskell.LSP.Types        hiding ( error )
-import           Data.Default
-import           Control.Lens
+import           Language.Haskell.LSP.Test.Parsing
 import           Control.Monad
-import           Control.Concurrent
 import           Data.Aeson
 import qualified Data.ByteString.Lazy.Char8    as B
-import           Data.Map                      as Map
+import qualified Data.Text                     as T
+import qualified Data.Map                      as Map
+import           Data.Map ((!))
+import qualified Data.HashMap.Strict           as HashMap
+import qualified Data.Set                      as Set
 import           Data.Maybe
 import           System.Directory
 import           System.IO
+import           System.FilePath
 
-type FileMap = Map.Map FilePath FilePath
+type FileMap = Map.Map Uri Uri
 
 emptyFileMap :: FileMap
 emptyFileMap = Map.empty
 
-buildFiles
-  :: (HasParams a b, HasTextDocument b c, HasUri c Uri)
-  => [a]
-  -> FileMap
-  -> IO FileMap
-buildFiles ns oldMap = foldM createFile oldMap ns
+buildFileMap :: [Uri] -> FileMap -> IO FileMap
+buildFileMap uris oldMap = foldM createFile oldMap uris
  where
-  createFile map n = do
-    let fp = fromMaybe (error "Couldn't convert file path")
-                       (uriToFilePath $ n ^. params . textDocument . uri)
-    if Map.member fp map
+  createFile map uri =
+    if Map.member uri map
       then return map
       else do
-        tmpDir        <- getTemporaryDirectory
-        (tmpFp, tmpH) <- openTempFile tmpDir "lspTestDoc"
+        let fp = fromMaybe (error "Couldn't convert file path")
+                 (uriToFilePath uri)
+
+        -- Need to store in a directory inside tmp directory
+        -- otherwise ghc-mod ends up creating one for us
+        tmpDir <- (</> "lsp-test") <$> getTemporaryDirectory
+        createDirectoryIfMissing False tmpDir
+
+        (tmpFp, tmpH) <- openTempFile tmpDir (takeFileName fp)
+
         readFile fp >>= hPutStr tmpH
-        return $ Map.insert fp tmpFp map
+        tmpUri <- filePathToUri <$> canonicalizePath tmpFp
+        return $ Map.insert uri tmpUri map
 
-swapFile :: (HasUri a Uri) => FileMap -> a -> a
-swapFile m msg = fromMaybe msg $ do
-  let oldUri = msg ^. uri
-  oldFp <- uriToFilePath oldUri
-  newFp <- Map.lookup oldFp m
-  let newUri = filePathToUri newFp
-  return $ uri .~ newUri $ msg
+swapFiles :: FileMap -> Handle -> IO ([B.ByteString], FileMap)
+swapFiles fileMap h = do
+  msgs <- getAllMessages h
 
-loadSwappedFiles :: FileMap -> Handle -> IO ([B.ByteString], FileMap)
-loadSwappedFiles map h = do
-  fileMapVar <- newMVar map
-  msgsVar    <- newMVar []
-  nullH      <- openFile "/dev/null" WriteMode
-  Control.runWithHandles h
-                         nullH
-                         (const $ Right (), const $ return Nothing)
-                         (handlers msgsVar fileMapVar)
-                         def
-                         Nothing
-                         Nothing
-  newMap <- readMVar fileMapVar
-  msgs   <- reverse <$> readMVar msgsVar
-  return (msgs, newMap)
+  let oldUris = Set.unions $ map extractUris msgs
 
-handlers :: MVar [B.ByteString] -> MVar FileMap -> Handlers
-handlers msgs fileMap = Handlers
-  {
-    -- Requests
-    hoverHandler                             = Just put
-  , completionHandler                        = Just put
-  , completionResolveHandler                 = Just put
-  , signatureHelpHandler                     = Just put
-  , definitionHandler                        = Just put
-  , referencesHandler                        = Just put
-  , documentHighlightHandler                 = Just put
-  , documentSymbolHandler                    = Just $ swapUri (params . textDocument)
-  , workspaceSymbolHandler                   = Just put
-  , codeActionHandler                        = Just put
-  , codeLensHandler                          = Just put
-  , codeLensResolveHandler                   = Just put
-  , documentFormattingHandler                = Just put
-  , documentRangeFormattingHandler           = Just put
-  , documentTypeFormattingHandler            = Just put
-  , renameHandler                            = Just $ swapUri (params . textDocument)
-  , documentLinkHandler                      = Just $ swapUri (params . textDocument)
-  , documentLinkResolveHandler               = Just put
-  , executeCommandHandler                    = Just put
-  , initializeRequestHandler                 = Just put
-    -- Notifications
-  , didChangeConfigurationParamsHandler      = Just put
-  , didOpenTextDocumentNotificationHandler   = Just $ swapUri (params . textDocument)
-  , didChangeTextDocumentNotificationHandler = Just $ swapUri (params . textDocument)
-  , didCloseTextDocumentNotificationHandler  = Just $ swapUri (params . textDocument)
-  , didSaveTextDocumentNotificationHandler   = Just $ swapUri (params . textDocument)
-  , willSaveWaitUntilTextDocHandler          = Just put
-  , didChangeWatchedFilesNotificationHandler = Just put
-  , initializedHandler                       = Just put
-  , willSaveTextDocumentNotificationHandler  = Just $ swapUri (params . textDocument)
-  , cancelNotificationHandler                = Just put
-  , exitNotificationHandler                  = Just put
-    -- Responses
-  , responseHandler                          = Just put
-  }
- where
-  swapUri f msg = do
-    modifyMVar_ fileMap (buildFiles [msg])
-    map <- readMVar fileMap
-    put $ swapFile map $ msg ^. f
+  newMap <- buildFileMap (Set.elems oldUris) fileMap
 
-  put :: ToJSON a => a -> IO ()
-  put msg = modifyMVar_ msgs (return . (encode msg :))
+  let newMsgs = map (swapUris newMap) msgs
+
+  return (newMsgs, newMap)
+
+extractUris :: B.ByteString -> Set.Set Uri
+extractUris msgs =
+  case decode msgs :: Maybe Object of
+    Just obj -> HashMap.foldlWithKey' gather Set.empty obj
+    Nothing -> error "nooo"
+  where gather :: Set.Set Uri -> T.Text -> Value -> Set.Set Uri
+        gather uris "uri" (String s) = Set.insert (Uri s) uris
+        gather uris _ (Object o) = HashMap.foldlWithKey' gather uris o
+        gather uris _ _ = uris
+
+swapUris :: FileMap -> B.ByteString -> B.ByteString
+swapUris fileMap msg =
+  case decode msg :: Maybe Object of
+    Just obj -> encode $ HashMap.mapWithKey f obj
+    Nothing -> error "Couldn't decode message"
+
+  where f :: T.Text -> Value -> Value
+        f "uri" (String uri) = String $ swap uri
+        f "changes" (Object obj) = Object $
+          HashMap.foldlWithKey' (\acc k v -> HashMap.insert (swap k) v acc)
+                                HashMap.empty
+                                obj
+        f _ x = g x
+
+        g :: Value -> Value
+        g (Array arr) = Array $ fmap g arr
+        g (Object obj) = Object $ HashMap.mapWithKey f obj
+        g x = x
+
+        swap origUri = let (Uri newUri) = fileMap ! Uri origUri in newUri
