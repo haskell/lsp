@@ -60,7 +60,7 @@ replay cfp sfp curRootDir = do
   unswappedClientMsgs <- getAllMessages clientRecIn
 
   let recRootDir = rootDir unswappedClientMsgs
-  
+
   (clientMsgs, fileMap) <- swapFiles emptyFileMap recRootDir curRootDir unswappedClientMsgs
 
   tmpDir <- getTemporaryDirectory
@@ -159,26 +159,26 @@ listenServer expectedMsgs h semas@(reqSema, rspSema) = do
           lift $ putStrLn $ "Got notification " ++ show (n ^. LSP.method)
           lift $ print n
 
-          lift $ putStrLn $ (show ((length $ filter isNotification expectedMsgs) - 1)) ++ " notifications remaining"
+          lift $ putStrLn $ show ((length $ filter isNotification expectedMsgs) - 1) ++ " notifications remaining"
 
           if n ^. LSP.method == LSP.WindowLogMessage
             then return expectedMsgs
             else markReceived n
-        
+
         checkOrder msg = unless (inRightOrder msg expectedMsgs) $ do
           let (Just expected) = decode firstExpected
               _ = expected == msg -- make expected type same as res
           failSession ("Out of order\nExpected\n" ++ show expected ++ "\nGot\n" ++ show msg ++ "\n")
-        
-        markReceived msg = do
+
+        markReceived msg =
           let new = deleteFirstJson msg expectedMsgs
-           in if (new == expectedMsgs) 
+           in if new == expectedMsgs
               then failSession ("Unexpected message: " ++ show msg) >> return new
               else return new
 
         deleteFirstJson _ [] = []
         deleteFirstJson msg (x:xs)
-          | (Just msg) == (decode x) = xs
+          | Just msg == decode x = xs
           | otherwise = x:deleteFirstJson msg xs
 
         firstExpected = head $ filter (not . isNotification) expectedMsgs
