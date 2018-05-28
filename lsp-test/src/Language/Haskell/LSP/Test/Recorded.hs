@@ -94,7 +94,6 @@ replay cfp sfp curRootDir = do
 
   -- cleanup temp files
   removeFile mappedClientRecFp
-  cleanupFiles
 
   return result
 

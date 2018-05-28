@@ -6,7 +6,6 @@ module Language.Haskell.LSP.Test.Files
   , FileMap
   , emptyFileMap
   , rootDir
-  , cleanupFiles
   )
 where
 
@@ -30,39 +29,22 @@ type FileMap = Map.Map Uri Uri
 emptyFileMap :: FileMap
 emptyFileMap = Map.empty
 
-buildFileMap :: [Uri] -> FilePath -> FilePath -> FileMap -> IO FileMap
-buildFileMap uris recBaseDir curBaseDir oldMap =
-  foldM (createFile recBaseDir curBaseDir) oldMap uris
+buildFileMap :: Set.Set Uri -> FilePath -> FilePath -> FileMap -> IO FileMap
+buildFileMap uris oldBaseDir newBaseDir oldMap = foldM transform oldMap uris
   where
-  createFile baseDir curDir  map uri =
-    if Map.member uri map
-      then return map
-      else do
-        let fp = fromMaybe (error "Couldn't convert file path")
-                 (uriToFilePath uri)
-            relativeFp = makeRelative baseDir fp
-            actualFp = curDir </> relativeFp
-
-        -- Need to store in a directory inside tmp directory
-        -- otherwise ghc-mod ends up creating one for us
-        tmpDir <- (</> "lsp-test" </> takeDirectory relativeFp) <$> getTemporaryDirectory
-        createDirectoryIfMissing True tmpDir
-
-        (tmpFp, tmpH) <- openTempFile tmpDir (takeFileName actualFp)
-
-        readFile actualFp >>= hPutStr tmpH
-        tmpUri <- filePathToUri <$> canonicalizePath tmpFp
-        return $ Map.insert uri tmpUri map
-
-cleanupFiles :: IO ()
-cleanupFiles = removeDirectoryRecursive =<< (</> "lsp-test") <$> getTemporaryDirectory
+  transform map uri = do
+    let fp = fromMaybe (error "Couldn't convert file path") $ uriToFilePath uri
+        rel = makeRelative oldBaseDir fp
+        newFp = newBaseDir </> rel
+    newUri <- filePathToUri <$> canonicalizePath newFp
+    return $ Map.insert uri newUri map
 
 swapFiles :: FileMap -> FilePath -> FilePath -> [B.ByteString] -> IO ([B.ByteString], FileMap)
 swapFiles fileMap recBaseDir curBaseDir msgs = do
 
   let oldUris = Set.unions $ map extractUris msgs
 
-  newMap <- buildFileMap (Set.elems oldUris) recBaseDir curBaseDir fileMap
+  newMap <- buildFileMap oldUris recBaseDir curBaseDir fileMap
 
   let newMsgs = map (swapUris newMap) msgs
 
@@ -72,11 +54,11 @@ swapFiles fileMap recBaseDir curBaseDir msgs = do
     Just req -> do
       cd <- getCurrentDirectory
       let newRoot = cd </> curBaseDir
-          newRootUri = params . rootUri .~ Just (filePathToUri newRoot) $ req
-          newRootPath = params . rootPath .~ Just (T.pack newRoot) $ newRootUri
+          newRootUri = params . rootUri ?~ filePathToUri newRoot $ req
+          newRootPath = params . rootPath ?~ T.pack newRoot $ newRootUri
           newReq = encode newRootPath
-      return (newReq:(tail newMsgs), newMap)
-      
+      return (newReq:tail newMsgs, newMap)
+
     Nothing -> return (newMsgs, newMap)
 
 rootDir :: [B.ByteString] -> FilePath
@@ -116,3 +98,4 @@ swapUris fileMap msg =
         g x = x
 
         swap origUri = let (Uri newUri) = fileMap ! Uri origUri in newUri
+
