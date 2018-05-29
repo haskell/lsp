@@ -323,6 +323,7 @@ getConfig tvar = resConfig <$> readTVarIO tvar
 
 -- | Wrap all the protocol messages into a single type, for use in the language
 -- handler in storing the original message
+-- TODO: Separate these out into from client and from server
 data OutMessage = ReqHover                    J.HoverRequest
                 | ReqCompletion               J.CompletionRequest
                 | ReqCompletionItemResolve    J.CompletionItemResolveRequest
