@@ -97,7 +97,7 @@ type R c a = ReaderT (Core.LspFuncs c) IO a
 
 -- ---------------------------------------------------------------------
 
-reactorSend :: (J.ToJSON a) => a -> R () ()
+reactorSend :: Core.OutMessage -> R () ()
 reactorSend msg = do
   lf <- ask
   liftIO $ Core.sendFunc lf msg
@@ -163,7 +163,7 @@ reactor lf inp = do
         let registrations = J.RegistrationParams (J.List [registration])
         rid <- nextLspReqId
 
-        reactorSend $ fmServerRegisterCapabilityRequest rid registrations
+        reactorSend $ ReqRegisterCapability $ fmServerRegisterCapabilityRequest rid registrations
 
         -- example of showMessageRequest
         let
@@ -171,7 +171,7 @@ reactor lf inp = do
                            (Just [J.MessageActionItem "option a", J.MessageActionItem "option b"])
         rid1 <- nextLspReqId
 
-        reactorSend $ fmServerShowMessageRequest rid1 params
+        reactorSend $ ReqShowMessage $ fmServerShowMessageRequest rid1 params
 
       -- -------------------------------
 

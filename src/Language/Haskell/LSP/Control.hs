@@ -1,6 +1,5 @@
 {-# LANGUAGE CPP                 #-}
 {-# LANGUAGE GADTs               #-}
-{-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE MultiWayIf          #-}
 {-# LANGUAGE BinaryLiterals      #-}
 {-# LANGUAGE OverloadedStrings   #-}
@@ -70,15 +69,15 @@ runWithHandles hin hout dp h o recInFp recOutFp = do
   hSetEncoding  hout utf8
 
   -- Delete existing recordings if they exist
-  
+
   mapM_ (maybe (return ()) removeFileIfExists) [recInFp, recOutFp]
 
-  cout <- atomically newTChan :: IO (TChan BSL.ByteString)
+  cout <- atomically newTChan :: IO (TChan Core.OutMessage)
   _rhpid <- forkIO $ sendServer cout hout recOutFp
 
 
   let sendFunc :: Core.SendFunc
-      sendFunc str = atomically $ writeTChan cout (J.encode str)
+      sendFunc msg = atomically $ writeTChan cout msg
   let lf = error "LifeCycle error, ClientCapabilities not set yet via initialize maessage"
 
   tvarId <- atomically $ newTVar 0
@@ -124,13 +123,13 @@ ioLoop hin dispatcherProc tvarDat recFp = go BSL.empty
               cnt <- BSL.hGet hin len
 
               record cnt
-              
+
               if cnt == BSL.empty
                 then do
                   logm $ B.pack "\nhaskell-lsp:Got EOF, exiting 1 ...\n"
                   return ()
                 else do
-                  logm $ (B.pack "---> ") <> cnt
+                  logm $ B.pack "---> " <> cnt
                   Core.handleRequest dispatcherProc tvarDat newBuf cnt
                   ioLoop hin dispatcherProc tvarDat recFp
       where
@@ -142,22 +141,25 @@ ioLoop hin dispatcherProc tvarDat recFp = go BSL.empty
           len <- manyTill digit (string _TWO_CRLF)
           return . read $ len
 
-        record c = maybe (return ()) (flip BSL.appendFile c) recFp
+        record c = maybe (return ()) (`BSL.appendFile` c) recFp
 
 -- ---------------------------------------------------------------------
 
 -- | Simple server to make sure all output is serialised
-sendServer :: TChan BSL.ByteString -> Handle -> Maybe FilePath -> IO ()
-sendServer cstdout handle recFp =
+sendServer :: TChan Core.OutMessage -> Handle -> Maybe FilePath -> IO ()
+sendServer msgChan clientH recFp =
   forever $ do
-    str <- atomically $ readTChan cstdout
+    msg <- atomically $ readTChan msgChan
+
+    let str = J.encode msg
+
     let out = BSL.concat
                  [ str2lbs $ "Content-Length: " ++ show (BSL.length str)
                  , str2lbs _TWO_CRLF
                  , str ]
 
-    BSL.hPut handle out
-    hFlush handle
+    BSL.hPut clientH out
+    hFlush clientH
     logm $ B.pack "<--2--" <> str
 
     maybe (return ()) (flip BSL.appendFile out) recFp
@@ -167,5 +169,3 @@ sendServer cstdout handle recFp =
 --
 _TWO_CRLF :: String
 _TWO_CRLF = "\r\n\r\n"
-
-
