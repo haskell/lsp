@@ -61,14 +61,17 @@ replay cfp sfp curRootDir = do
 
   let recRootDir = rootDir unswappedClientMsgs
 
-  (clientMsgs, fileMap) <- swapFiles emptyFileMap recRootDir curRootDir unswappedClientMsgs
+  clientMsgs <- swapFiles recRootDir curRootDir unswappedClientMsgs
+
+  print clientMsgs
+  error "sdaf"
 
   tmpDir <- getTemporaryDirectory
   (mappedClientRecFp, mappedClientRecIn) <- openTempFile tmpDir "clientRecInMapped"
   mapM_ (B.hPut mappedClientRecIn . addHeader) clientMsgs
   hSeek mappedClientRecIn AbsoluteSeek 0
 
-  (expectedMsgs, _) <- swapFiles fileMap recRootDir curRootDir =<< getAllMessages serverRecIn
+  expectedMsgs <- swapFiles recRootDir curRootDir =<< getAllMessages serverRecIn
 
   -- listen to server
   forkIO $ runReaderT (listenServer expectedMsgs serverOut semas) didPass
@@ -159,7 +162,7 @@ listenServer expectedMsgs h semas@(reqSema, rspSema) = do
           lift $ putStrLn $ "Got notification " ++ show (n ^. LSP.method)
           lift $ print n
 
-          lift $ putStrLn $ show ((length $ filter isNotification expectedMsgs) - 1) ++ " notifications remaining"
+          lift $ putStrLn $ show (length (filter isNotification expectedMsgs) - 1) ++ " notifications remaining"
 
           if n ^. LSP.method == LSP.WindowLogMessage
             then return expectedMsgs

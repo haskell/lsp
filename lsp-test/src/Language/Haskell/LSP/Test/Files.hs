@@ -3,99 +3,72 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Language.Haskell.LSP.Test.Files
   ( swapFiles
-  , FileMap
-  , emptyFileMap
   , rootDir
   )
 where
 
 import           Language.Haskell.LSP.Types        hiding ( error )
 import           Control.Lens
-import           Control.Monad
 import           Data.Aeson
+import           Data.Aeson.Types
 import qualified Data.ByteString.Lazy.Char8    as B
 import qualified Data.Text                     as T
-import qualified Data.Map                      as Map
-import           Data.Map ((!))
 import qualified Data.HashMap.Strict           as HashMap
-import qualified Data.Set                      as Set
 import           Data.Maybe
 import           System.Directory
-import           System.IO
 import           System.FilePath
 
-type FileMap = Map.Map Uri Uri
+swapFiles :: FilePath -> FilePath -> [B.ByteString] -> IO [B.ByteString]
+swapFiles recBaseDir relCurBaseDir msgs = do
+  curBaseDir <- (</> relCurBaseDir) <$> getCurrentDirectory
+  let transform uri =
+        let fp = fromMaybe (error "Couldn't transform uri") (uriToFilePath uri)
+            newFp = curBaseDir </> makeRelative recBaseDir fp
+          in filePathToUri newFp
+      newMsgs = map (mapUris transform) msgs :: [B.ByteString]
 
-emptyFileMap :: FileMap
-emptyFileMap = Map.empty
-
-buildFileMap :: Set.Set Uri -> FilePath -> FilePath -> FileMap -> IO FileMap
-buildFileMap uris oldBaseDir newBaseDir oldMap = foldM transform oldMap uris
-  where
-  transform map uri = do
-    let fp = fromMaybe (error "Couldn't convert file path") $ uriToFilePath uri
-        rel = makeRelative oldBaseDir fp
-        newFp = newBaseDir </> rel
-    newUri <- filePathToUri <$> canonicalizePath newFp
-    return $ Map.insert uri newUri map
-
-swapFiles :: FileMap -> FilePath -> FilePath -> [B.ByteString] -> IO ([B.ByteString], FileMap)
-swapFiles fileMap recBaseDir curBaseDir msgs = do
-
-  let oldUris = Set.unions $ map extractUris msgs
-
-  newMap <- buildFileMap oldUris recBaseDir curBaseDir fileMap
-
-  let newMsgs = map (swapUris newMap) msgs
-
-  case decode (head newMsgs) :: Maybe InitializeRequest of
-    -- If there is an initialize request we will need to swap
-    -- the rootUri and rootPath
-    Just req -> do
-      cd <- getCurrentDirectory
-      let newRoot = cd </> curBaseDir
-          newRootUri = params . rootUri ?~ filePathToUri newRoot $ req
-          newRootPath = params . rootPath ?~ T.pack newRoot $ newRootUri
-          newReq = encode newRootPath
-      return (newReq:tail newMsgs, newMap)
-
-    Nothing -> return (newMsgs, newMap)
+  return newMsgs
 
 rootDir :: [B.ByteString] -> FilePath
-rootDir msgs = case decode (head msgs) :: Maybe InitializeRequest of
-                Just req -> fromMaybe (error "Couldn't convert root dir") $ do
-                  rootUri <- req ^. params . rootUri
-                  uriToFilePath rootUri
-                Nothing -> error "Couldn't find root dir"
+rootDir msgs = fromMaybe (error "Couldn't find root dir") $ do
+  req <- decode (head msgs) :: Maybe InitializeRequest
+  rootUri <- req ^. params .rootUri
+  uriToFilePath rootUri
 
-extractUris :: B.ByteString -> Set.Set Uri
-extractUris msgs =
-  case decode msgs :: Maybe Object of
-    Just obj -> HashMap.foldlWithKey' gather Set.empty obj
-    Nothing -> error "Couldn't decode message"
-  where gather :: Set.Set Uri -> T.Text -> Value -> Set.Set Uri
-        gather uris "uri" (String s) = Set.insert (Uri s) uris
-        gather uris _ (Object o) = HashMap.foldlWithKey' gather uris o
-        gather uris _ _ = uris
-
-swapUris :: FileMap -> B.ByteString -> B.ByteString
-swapUris fileMap msg =
+mapUris :: (Uri -> Uri) -> B.ByteString -> B.ByteString
+mapUris f msg =
   case decode msg :: Maybe Object of
-    Just obj -> encode $ HashMap.mapWithKey f obj
+    Just obj -> encode $ HashMap.map (mapValue f) obj
     Nothing -> error "Couldn't decode message"
 
-  where f :: T.Text -> Value -> Value
-        f "uri" (String uri) = String $ swap uri
-        f "changes" (Object obj) = Object $
-          HashMap.foldlWithKey' (\acc k v -> HashMap.insert (swap k) v acc)
-                                HashMap.empty
-                                obj
-        f _ x = g x
+  where 
+    mapValue :: (Uri -> Uri) -> Value -> Value
+    mapValue f x = case parse parseJSON x :: Result VersionedTextDocumentIdentifier of
+      Success doc -> transform doc
+      Error _ -> case parse parseJSON x :: Result TextDocumentIdentifier of
+        Success doc -> transform doc
+        Error _ -> case parse parseJSON x :: Result InitializeParams of
+          Success params -> transformInit params
+          Error _ -> case parse parseJSON x :: Result Object of
+            Success obj -> Object $ HashMap.map (mapValue f) obj
+            Error _ -> x
 
-        g :: Value -> Value
-        g (Array arr) = Array $ fmap g arr
-        g (Object obj) = Object $ HashMap.mapWithKey f obj
-        g x = x
+    -- parsing with just JSON
+    -- mapValueWithKey :: (Uri -> Uri) -> T.Text -> Value -> Value
+    -- mapValueWithKey f "uri" (String s) = fromMaybe (error "Couldn't convert uri") $ do
+    --   let uri = filePathToUri $ T.unpack s
+    --   String <$> (fmap T.pack (uriToFilePath $ f uri))
+    -- mapValueWithKey f _ (Array xs) = Array $ fmap (mapValue f) xs
+    -- mapValueWithKey f _ (Object x) = Object $ HashMap.mapWithKey (mapValueWithKey f) x
 
-        swap origUri = let (Uri newUri) = fileMap ! Uri origUri in newUri
+    transform x = toJSON $ x & uri .~ f (x ^. uri)
 
+    -- transform rootUri/rootPath
+    transformInit :: InitializeParams -> Value
+    transformInit x =
+      let newRootUri = fmap f (x ^. rootUri)
+          newRootPath = do
+            fp <- T.unpack <$> x ^. rootPath
+            let uri = filePathToUri fp
+            T.pack <$> uriToFilePath (f uri)
+        in toJSON $ (rootUri .~ newRootUri) $ (rootPath .~ newRootPath) x
