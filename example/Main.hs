@@ -57,11 +57,11 @@ run dispatcherProc = flip E.catches handlers $ do
 
   let
     dp lf = do
-      liftIO $ U.logs $ "main.run:dp entered"
+      liftIO $ U.logs "main.run:dp entered"
       _rpid  <- forkIO $ reactor lf rin
-      liftIO $ U.logs $ "main.run:dp tchan"
+      liftIO $ U.logs "main.run:dp tchan"
       dispatcherProc
-      liftIO $ U.logs $ "main.run:dp after dispatcherProc"
+      liftIO $ U.logs "main.run:dp after dispatcherProc"
       return Nothing
 
   flip E.finally finalProc $ do
@@ -114,7 +114,7 @@ publishDiagnostics maxToPublish uri mv diags = do
 nextLspReqId :: R () J.LspId
 nextLspReqId = do
   f <- asks Core.getNextReqId
-  liftIO $ f
+  liftIO f
 
 -- ---------------------------------------------------------------------
 
@@ -123,7 +123,7 @@ nextLspReqId = do
 -- server and backend compiler
 reactor :: Core.LspFuncs () -> TChan ReactorInput -> IO ()
 reactor lf inp = do
-  liftIO $ U.logs $ "reactor:entered"
+  liftIO $ U.logs "reactor:entered"
   flip runReaderT lf $ forever $ do
     inval <- liftIO $ atomically $ readTChan inp
     case inval of
@@ -136,7 +136,7 @@ reactor lf inp = do
       -- -------------------------------
 
       HandlerRequest (Core.NotInitialized _notification) -> do
-        liftIO $ U.logm $ "****** reactor: processing Initialized Notification"
+        liftIO $ U.logm "****** reactor: processing Initialized Notification"
         -- Server is ready, register any specific capabilities we need
 
          {-
@@ -163,7 +163,7 @@ reactor lf inp = do
         let registrations = J.RegistrationParams (J.List [registration])
         rid <- nextLspReqId
 
-        reactorSend $ ReqRegisterCapability $ fmServerRegisterCapabilityRequest rid registrations
+        reactorSend $ Core.ReqRegisterCapability $ fmServerRegisterCapabilityRequest rid registrations
 
         -- example of showMessageRequest
         let
@@ -171,12 +171,12 @@ reactor lf inp = do
                            (Just [J.MessageActionItem "option a", J.MessageActionItem "option b"])
         rid1 <- nextLspReqId
 
-        reactorSend $ ReqShowMessage $ fmServerShowMessageRequest rid1 params
+        reactorSend $ Core.ReqShowMessage $ fmServerShowMessageRequest rid1 params
 
       -- -------------------------------
 
       HandlerRequest (Core.NotDidOpenTextDocument notification) -> do
-        liftIO $ U.logm $ "****** reactor: processing NotDidOpenTextDocument"
+        liftIO $ U.logm "****** reactor: processing NotDidOpenTextDocument"
         let
             doc  = notification ^. J.params
                                  . J.textDocument
@@ -197,7 +197,7 @@ reactor lf inp = do
           Just (VirtualFile _version str) -> do
             liftIO $ U.logs $ "reactor:processing NotDidChangeTextDocument: vf got:" ++ (show $ Yi.toString str)
           Nothing -> do
-            liftIO $ U.logs $ "reactor:processing NotDidChangeTextDocument: vf returned Nothing"
+            liftIO $ U.logs "reactor:processing NotDidChangeTextDocument: vf returned Nothing"
 
         liftIO $ U.logs $ "reactor:processing NotDidChangeTextDocument: uri=" ++ (show doc)
 
@@ -227,7 +227,7 @@ reactor lf inp = do
                     Nothing -- "changes" field is deprecated
                     (Just (J.List [])) -- populate with actual changes from the rename
         let rspMsg = Core.makeResponseMessage req we
-        reactorSend rspMsg
+        reactorSend $ Core.RspRename rspMsg
 
       -- -------------------------------
 
@@ -240,7 +240,7 @@ reactor lf inp = do
           ht = J.Hover ms (Just range)
           ms = J.List [J.CodeString $ J.LanguageString "lsp-hello" "TYPE INFO" ]
           range = J.Range pos pos
-        reactorSend $ Core.makeResponseMessage req ht
+        reactorSend $ Core.RspHover $ Core.makeResponseMessage req ht
 
       -- -------------------------------
 
@@ -267,19 +267,19 @@ reactor lf inp = do
               cmdparams = Just args
           makeCommand (J.Diagnostic _r _s _c _source _m _l) = []
         let body = J.List $ concatMap makeCommand diags
-        reactorSend $ Core.makeResponseMessage req body
+        reactorSend $ Core.RspCodeAction $ Core.makeResponseMessage req body
 
       -- -------------------------------
 
       HandlerRequest (Core.ReqExecuteCommand req) -> do
-        liftIO $ U.logs $ "reactor:got ExecuteCommandRequest:" -- ++ show req
+        liftIO $ U.logs "reactor:got ExecuteCommandRequest:" -- ++ show req
         let params = req ^. J.params
             margs = params ^. J.arguments
 
         liftIO $ U.logs $ "reactor:ExecuteCommandRequest:margs=" ++ show margs
 
         let
-          reply v = reactorSend $ Core.makeResponseMessage req v
+          reply v = reactorSend $ Core.RspExecuteCommand $ Core.makeResponseMessage req v
         -- When we get a RefactorResult or HieDiff, we need to send a
         -- separate WorkspaceEdit Notification
           r = J.List [] :: J.List Int
@@ -289,7 +289,7 @@ reactor lf inp = do
             reply (J.Object mempty)
             lid <- nextLspReqId
             -- reactorSend $ J.RequestMessage "2.0" lid "workspace/applyEdit" (Just we)
-            reactorSend $ fmServerApplyWorkspaceEditRequest lid we
+            reactorSend $ Core.ReqApplyWorkspaceEdit $ fmServerApplyWorkspaceEditRequest lid we
           Nothing ->
             reply (J.Object mempty)
 

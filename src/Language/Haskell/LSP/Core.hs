@@ -341,6 +341,8 @@ data OutMessage = ReqHover                    J.HoverRequest
                 | ReqRename                   J.RenameRequest
                 | ReqExecuteCommand           J.ExecuteCommandRequest
                 | ReqRegisterCapability       J.RegisterCapabilityRequest
+                | ReqShowMessage              J.ShowMessageRequest
+                | ReqApplyWorkspaceEdit       J.ApplyWorkspaceEditRequest
                 -- responses
                 | RspHover                    J.HoverResponse
                 | RspCompletion               J.CompletionResponse
