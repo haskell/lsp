@@ -1936,6 +1936,8 @@ makeFieldsNoPrefix ''RegistrationParams
 -- |Note: originates at the server
 type RegisterCapabilityRequest = RequestMessage ServerMethod RegistrationParams ()
 
+type RegisterCapabilityResponse = ResponseMessage ()
+
 -- -------------------------------------
 
 {-
@@ -2019,6 +2021,8 @@ deriveJSON lspOptions ''UnregistrationParams
 makeFieldsNoPrefix ''UnregistrationParams
 
 type UnregisterCapabilityRequest = RequestMessage ServerMethod UnregistrationParams ()
+
+type UnregisterCapabilityResponse = ResponseMessage ()
 
 -- ---------------------------------------------------------------------
 {-

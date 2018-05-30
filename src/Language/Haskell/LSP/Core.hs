@@ -178,7 +178,11 @@ data Handlers =
     , cancelNotificationHandler                :: !(Maybe (Handler J.CancelNotification))
 
     -- Responses to Request messages originated from the server
-    , responseHandler                          :: !(Maybe (Handler J.BareResponseMessage))
+    -- TODO: Properly decode response types and replace them with actual handlers
+    , responseHandler                    :: !(Maybe (Handler J.BareResponseMessage))
+    -- , registerCapabilityHandler                :: !(Maybe (Handler J.RegisterCapabilityResponse))
+    -- , unregisterCapabilityHandler              :: !(Maybe (Handler J.RegisterCapabilityResponse))
+    -- , showMessageHandler                       :: !(Maybe (Handler J.ShowMessageResponse))
 
     -- Initialization request on startup
     , initializeRequestHandler                 :: !(Maybe (Handler J.InitializeRequest))

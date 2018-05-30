@@ -37,6 +37,9 @@ data FromClientMessage = ReqInitialized              InitializeRequest
                        | ReqWillSaveWaitUntil        WillSaveWaitUntilTextDocumentRequest
                        -- Responses
                        | RspApplyWorkspaceEdit       ApplyWorkspaceEditResponse
+                       -- TODO: Remove this and properly decode the type of responses
+                       -- based on the id
+                       | RspFromClient               BareResponseMessage
                        -- Notifications
                        | NotInitialized                  InitializedNotification
                        | NotExit                         ExitNotification

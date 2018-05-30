@@ -130,8 +130,8 @@ reactor lf inp = do
 
       -- Handle any response from a message originating at the server, such as
       -- "workspace/applyEdit"
-      -- HandlerRequest (RspFromClient rm) -> do
-      --   liftIO $ U.logs $ "reactor:got RspFromClient:" ++ show rm
+      HandlerRequest (RspFromClient rm) -> do
+        liftIO $ U.logs $ "reactor:got RspFromClient:" ++ show rm
 
       -- -------------------------------
 
