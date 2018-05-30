@@ -42,6 +42,7 @@ import           Data.Monoid
 import qualified Data.Text as T
 import           Data.Text ( Text )
 import           GHC.Generics
+import           Language.Haskell.LSP.Capture
 import           Language.Haskell.LSP.Constant
 import           Language.Haskell.LSP.Messages
 import qualified Language.Haskell.LSP.TH.ClientCapabilities as C
@@ -80,6 +81,7 @@ data LanguageContextData a =
   , resConfig              :: !(Maybe a)
   , resLspId               :: !(TVar Int)
   , resLspFuncs            :: LspFuncs a -- NOTE: Cannot be strict, lazy initialization
+  , resCaptureFile         :: !(Maybe FilePath)
   }
 
 -- ---------------------------------------------------------------------
@@ -416,9 +418,9 @@ _ERR_MSG_URL = [ "`stack update` and install new haskell-lsp."
 -- |
 --
 --
-defaultLanguageContextData :: Handlers -> Options -> LspFuncs c -> TVar Int -> SendFunc -> LanguageContextData c
-defaultLanguageContextData h o lf tv sf =
-  LanguageContextData _INITIAL_RESPONSE_SEQUENCE Nothing h o sf mempty mempty Nothing tv lf
+defaultLanguageContextData :: Handlers -> Options -> LspFuncs c -> TVar Int -> SendFunc -> Maybe FilePath -> LanguageContextData c
+defaultLanguageContextData h o lf tv sf cf =
+  LanguageContextData _INITIAL_RESPONSE_SEQUENCE Nothing h o sf mempty mempty Nothing tv lf cf
 
 -- ---------------------------------------------------------------------
 
@@ -442,6 +444,11 @@ handleRequest dispatcherProc tvarDat contLenStr jsonStr = do
       sendErrorLog tvarDat msg
 
     Right o -> do
+
+      -- Capture message
+      ctx <- readTVarIO tvarDat
+      mapM_ (captureFromClient o) (resCaptureFile ctx)
+
       case HM.lookup "method" o of
         Just cmd@(J.String s) -> case J.fromJSON cmd of
                                    J.Success m -> handle (J.Object o) m

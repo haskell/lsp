@@ -23,6 +23,7 @@ import qualified Data.ByteString.Lazy.Char8 as B
 #if __GLASGOW_HASKELL__ < 804
 import           Data.Monoid
 #endif
+import           Language.Haskell.LSP.Capture
 import qualified Language.Haskell.LSP.Core as Core
 import           Language.Haskell.LSP.Utility
 import           System.IO
@@ -40,9 +41,7 @@ run :: (Show c) => Core.InitializeCallback c
     -> Core.Handlers
     -> Core.Options
     -> Maybe FilePath
-    -- ^ File to record the client input to.
-    -> Maybe FilePath
-    -- ^ File to record the server output to.
+    -- ^ File to capture the session to.
     -> IO Int
 run = runWithHandles stdin stdout
 
@@ -57,9 +56,8 @@ runWithHandles :: (Show c) =>
     -> Core.Handlers
     -> Core.Options
     -> Maybe FilePath
-    -> Maybe FilePath
     -> IO Int         -- exit code
-runWithHandles hin hout dp h o recInFp recOutFp = do
+runWithHandles hin hout dp h o captureFp = do
 
   logm $ B.pack "\n\n\n\n\nhaskell-lsp:Starting up server ..."
   hSetBuffering hin NoBuffering
@@ -69,11 +67,11 @@ runWithHandles hin hout dp h o recInFp recOutFp = do
   hSetEncoding  hout utf8
 
   -- Delete existing recordings if they exist
+  maybe (return ()) removeFileIfExists captureFp
 
-  mapM_ (maybe (return ()) removeFileIfExists) [recInFp, recOutFp]
 
   cout <- atomically newTChan :: IO (TChan Core.OutMessage)
-  _rhpid <- forkIO $ sendServer cout hout recOutFp
+  _rhpid <- forkIO $ sendServer cout hout captureFp
 
 
   let sendFunc :: Core.SendFunc
@@ -82,9 +80,9 @@ runWithHandles hin hout dp h o recInFp recOutFp = do
 
   tvarId <- atomically $ newTVar 0
 
-  tvarDat <- atomically $ newTVar $ Core.defaultLanguageContextData h o lf tvarId sendFunc
+  tvarDat <- atomically $ newTVar $ Core.defaultLanguageContextData h o lf tvarId sendFunc captureFp
 
-  ioLoop hin dp tvarDat recInFp
+  ioLoop hin dp tvarDat
 
   return 1
 
@@ -100,15 +98,12 @@ runWithHandles hin hout dp h o recInFp recOutFp = do
 ioLoop :: (Show c) => Handle
                    -> Core.InitializeCallback c
                    -> TVar (Core.LanguageContextData c)
-                   -> Maybe FilePath
                    -> IO ()
-ioLoop hin dispatcherProc tvarDat recFp = go BSL.empty
+ioLoop hin dispatcherProc tvarDat = go BSL.empty
   where
     go :: BSL.ByteString -> IO ()
     go buf = do
       c <- BSL.hGet hin 1
-
-      record c
 
       if c == BSL.empty
         then do
@@ -122,8 +117,6 @@ ioLoop hin dispatcherProc tvarDat recFp = go BSL.empty
             Right len -> do
               cnt <- BSL.hGet hin len
 
-              record cnt
-
               if cnt == BSL.empty
                 then do
                   logm $ B.pack "\nhaskell-lsp:Got EOF, exiting 1 ...\n"
@@ -131,7 +124,7 @@ ioLoop hin dispatcherProc tvarDat recFp = go BSL.empty
                 else do
                   logm $ B.pack "---> " <> cnt
                   Core.handleRequest dispatcherProc tvarDat newBuf cnt
-                  ioLoop hin dispatcherProc tvarDat recFp
+                  ioLoop hin dispatcherProc tvarDat
       where
         readContentLength :: String -> Either ParseError Int
         readContentLength = parse parser "readContentLength"
@@ -141,13 +134,11 @@ ioLoop hin dispatcherProc tvarDat recFp = go BSL.empty
           len <- manyTill digit (string _TWO_CRLF)
           return . read $ len
 
-        record c = maybe (return ()) (`BSL.appendFile` c) recFp
-
 -- ---------------------------------------------------------------------
 
 -- | Simple server to make sure all output is serialised
 sendServer :: TChan Core.OutMessage -> Handle -> Maybe FilePath -> IO ()
-sendServer msgChan clientH recFp =
+sendServer msgChan clientH captureFp =
   forever $ do
     msg <- atomically $ readTChan msgChan
 
@@ -161,8 +152,8 @@ sendServer msgChan clientH recFp =
     BSL.hPut clientH out
     hFlush clientH
     logm $ B.pack "<--2--" <> str
-
-    maybe (return ()) (flip BSL.appendFile out) recFp
+    
+    mapM_ (captureFromServer msg) captureFp
 
 -- |
 --
