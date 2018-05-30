@@ -1,6 +1,5 @@
 {-# LANGUAGE CPP                 #-}
 {-# LANGUAGE GADTs               #-}
-{-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE MultiWayIf          #-}
 {-# LANGUAGE BinaryLiterals      #-}
 {-# LANGUAGE OverloadedStrings   #-}
@@ -15,6 +14,7 @@ module Language.Haskell.LSP.Control
 import           Control.Concurrent
 import           Control.Concurrent.STM.TChan
 import           Control.Concurrent.STM.TVar
+import           Control.Exception
 import           Control.Monad
 import           Control.Monad.STM
 import qualified Data.Aeson as J
@@ -26,6 +26,7 @@ import           Data.Monoid
 import qualified Language.Haskell.LSP.Core as Core
 import           Language.Haskell.LSP.Utility
 import           System.IO
+import           System.IO.Error
 import           System.Directory
 import           Text.Parsec
 
@@ -68,16 +69,15 @@ runWithHandles hin hout dp h o recInFp recOutFp = do
   hSetEncoding  hout utf8
 
   -- Delete existing recordings if they exist
-  forM_ [recInFp, recOutFp] $ maybe (return ()) $ \f -> do
-    exists <- doesFileExist f
-    when exists $ removeFile f
 
-  cout <- atomically newTChan :: IO (TChan BSL.ByteString)
+  mapM_ (maybe (return ()) removeFileIfExists) [recInFp, recOutFp]
+
+  cout <- atomically newTChan :: IO (TChan Core.OutMessage)
   _rhpid <- forkIO $ sendServer cout hout recOutFp
 
 
   let sendFunc :: Core.SendFunc
-      sendFunc str = atomically $ writeTChan cout (J.encode str)
+      sendFunc msg = atomically $ writeTChan cout msg
   let lf = error "LifeCycle error, ClientCapabilities not set yet via initialize maessage"
 
   tvarId <- atomically $ newTVar 0
@@ -87,6 +87,13 @@ runWithHandles hin hout dp h o recInFp recOutFp = do
   ioLoop hin dp tvarDat recInFp
 
   return 1
+
+  where
+    removeFileIfExists f = removeFile f `catch` handleDoesNotExist
+    handleDoesNotExist e
+      | isDoesNotExistError e = return ()
+      | otherwise = throwIO e
+
 
 -- ---------------------------------------------------------------------
 
@@ -116,13 +123,13 @@ ioLoop hin dispatcherProc tvarDat recFp = go BSL.empty
               cnt <- BSL.hGet hin len
 
               record cnt
-              
+
               if cnt == BSL.empty
                 then do
                   logm $ B.pack "\nhaskell-lsp:Got EOF, exiting 1 ...\n"
                   return ()
                 else do
-                  logm $ (B.pack "---> ") <> cnt
+                  logm $ B.pack "---> " <> cnt
                   Core.handleRequest dispatcherProc tvarDat newBuf cnt
                   ioLoop hin dispatcherProc tvarDat recFp
       where
@@ -134,22 +141,25 @@ ioLoop hin dispatcherProc tvarDat recFp = go BSL.empty
           len <- manyTill digit (string _TWO_CRLF)
           return . read $ len
 
-        record c = maybe (return ()) (flip BSL.appendFile c) recFp
+        record c = maybe (return ()) (`BSL.appendFile` c) recFp
 
 -- ---------------------------------------------------------------------
 
 -- | Simple server to make sure all output is serialised
-sendServer :: TChan BSL.ByteString -> Handle -> Maybe FilePath -> IO ()
-sendServer cstdout handle recFp =
+sendServer :: TChan Core.OutMessage -> Handle -> Maybe FilePath -> IO ()
+sendServer msgChan clientH recFp =
   forever $ do
-    str <- atomically $ readTChan cstdout
+    msg <- atomically $ readTChan msgChan
+
+    let str = J.encode msg
+
     let out = BSL.concat
                  [ str2lbs $ "Content-Length: " ++ show (BSL.length str)
                  , str2lbs _TWO_CRLF
                  , str ]
 
-    BSL.hPut handle out
-    hFlush handle
+    BSL.hPut clientH out
+    hFlush clientH
     logm $ B.pack "<--2--" <> str
 
     maybe (return ()) (flip BSL.appendFile out) recFp
@@ -159,5 +169,3 @@ sendServer cstdout handle recFp =
 --
 _TWO_CRLF :: String
 _TWO_CRLF = "\r\n\r\n"
-
-

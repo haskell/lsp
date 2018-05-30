@@ -1,10 +1,11 @@
 {-# LANGUAGE GADTs               #-}
-{-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE MultiWayIf          #-}
 {-# LANGUAGE BinaryLiterals      #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DeriveGeneric       #-}
+{-# LANGUAGE DeriveAnyClass      #-}
 
 module Language.Haskell.LSP.Core (
     handleRequest
@@ -17,7 +18,6 @@ module Language.Haskell.LSP.Core (
   , Options(..)
   , OutMessage(..)
   , defaultLanguageContextData
-  , initializeRequestHandler
   , makeResponseMessage
   , makeResponseError
   , setupLogger
@@ -41,6 +41,7 @@ import qualified Data.Map as Map
 import           Data.Monoid
 import qualified Data.Text as T
 import           Data.Text ( Text )
+import           GHC.Generics
 import           Language.Haskell.LSP.Constant
 import           Language.Haskell.LSP.Messages
 import qualified Language.Haskell.LSP.TH.ClientCapabilities as C
@@ -64,7 +65,7 @@ import qualified System.Log.Logger as L
 -- ---------------------------------------------------------------------
 
 -- | A function to send a message to the client
-type SendFunc = forall a. (J.ToJSON a => a -> IO ())
+type SendFunc = OutMessage -> IO ()
 
 -- | state used by the LSP dispatcher to manage the message loop
 data LanguageContextData a =
@@ -180,13 +181,18 @@ data Handlers =
 
     -- Responses to Request messages originated from the server
     , responseHandler                          :: !(Maybe (Handler J.BareResponseMessage))
+
+    -- Initialization request on startup
+    , initializeRequestHandler                 :: !(Maybe (Handler J.InitializeRequest))
+    -- Will default to terminating `exitMessage` if Nothing
+    , exitNotificationHandler                  :: !(Maybe (Handler J.ExitNotification))
     }
 
 instance Default Handlers where
   def = Handlers Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
                  Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
                  Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
-                 Nothing Nothing Nothing
+                 Nothing Nothing Nothing Nothing Nothing
 
 -- ---------------------------------------------------------------------
 nop :: a -> b -> IO a
@@ -212,12 +218,15 @@ helper requestHandler tvarDat json =
 handlerMap :: (Show c) => InitializeCallback c
            -> Handlers -> J.ClientMethod -> (TVar (LanguageContextData c) -> J.Value -> IO ())
 -- General
-handlerMap i _ J.Initialize                      = helper (initializeRequestHandler i)
+handlerMap i h J.Initialize                      = helper (initializeRequestHandler' i (initializeRequestHandler h))
 handlerMap _ h J.Initialized                     = hh nop $ initializedHandler h
 handlerMap _ _ J.Shutdown                        = helper shutdownRequestHandler
-handlerMap _ _ J.Exit                            = \_ _ -> do
-  logm $ B.pack "haskell-lsp:Got exit, exiting"
-  exitSuccess
+handlerMap _ h J.Exit                            =
+  case exitNotificationHandler h of
+    Just _ -> hh nop $ exitNotificationHandler h
+    Nothing -> \_ _ -> do
+      logm $ B.pack "haskell-lsp:Got exit, exiting"
+      exitSuccess
 handlerMap _ h J.CancelRequest                   = hh nop $ cancelNotificationHandler h
 -- Workspace
 handlerMap i h J.WorkspaceDidChangeConfiguration = hc i   $ didChangeConfigurationParamsHandler h
@@ -285,12 +294,12 @@ hc (c,_) mh tvarDat json = do
           ctx <- readTVarIO tvarDat
           case c req of
             Left err -> do
-              let msg = T.pack $ unwords $ ["haskell-lsp:didChangeConfiguration error.", show req, show err]
+              let msg = T.pack $ unwords ["haskell-lsp:didChangeConfiguration error.", show req, show err]
               sendErrorLog tvarDat msg
             Right newConfig -> do
               -- logs $ "haskell-lsp:hc DidChangeConfigurationNotification got newConfig:" ++ show newConfig
               let ctx' = ctx { resConfig = Just newConfig }
-              atomically $ modifyTVar' tvarDat (\_ -> ctx')
+              atomically $ modifyTVar' tvarDat (const ctx')
           case mh of
             Just h -> h req
             Nothing -> return ()
@@ -302,22 +311,19 @@ hc (c,_) mh tvarDat json = do
 -- ---------------------------------------------------------------------
 
 getVirtualFile :: TVar (LanguageContextData c) -> J.Uri -> IO (Maybe VirtualFile)
-getVirtualFile tvarDat uri = do
-  ctx <- readTVarIO tvarDat
-  return $ Map.lookup uri (resVFS ctx)
+getVirtualFile tvarDat uri = Map.lookup uri . resVFS <$> readTVarIO tvarDat
 
 -- ---------------------------------------------------------------------
 
 getConfig :: TVar (LanguageContextData c) -> IO (Maybe c)
-getConfig tvar = do
-  ctx <- readTVarIO tvar
-  return (resConfig ctx)
+getConfig tvar = resConfig <$> readTVarIO tvar
 
 
 -- ---------------------------------------------------------------------
 
 -- | Wrap all the protocol messages into a single type, for use in the language
 -- handler in storing the original message
+-- TODO: Separate these out into from client and from server
 data OutMessage = ReqHover                    J.HoverRequest
                 | ReqCompletion               J.CompletionRequest
                 | ReqCompletionItemResolve    J.CompletionItemResolveRequest
@@ -335,6 +341,9 @@ data OutMessage = ReqHover                    J.HoverRequest
                 | ReqDocumentOnTypeFormatting J.DocumentOnTypeFormattingRequest
                 | ReqRename                   J.RenameRequest
                 | ReqExecuteCommand           J.ExecuteCommandRequest
+                | ReqRegisterCapability       J.RegisterCapabilityRequest
+                | ReqShowMessage              J.ShowMessageRequest
+                | ReqApplyWorkspaceEdit       J.ApplyWorkspaceEditRequest
                 -- responses
                 | RspHover                    J.HoverResponse
                 | RspCompletion               J.CompletionResponse
@@ -353,6 +362,9 @@ data OutMessage = ReqHover                    J.HoverRequest
                 | RspDocumentOnTypeFormatting J.DocumentOnTypeFormattingResponse
                 | RspRename                   J.RenameResponse
                 | RspExecuteCommand           J.ExecuteCommandResponse
+                | RspError                    J.ErrorResponse
+                | RspInitialize               J.InitializeResponse
+                | RspShutdown                 J.ShutdownResponse
 
                 -- notifications
                 | NotInitialized                  J.InitializedNotification
@@ -363,11 +375,14 @@ data OutMessage = ReqHover                    J.HoverRequest
                 | NotWillSaveTextDocument         J.WillSaveTextDocumentNotification
                 | NotDidSaveTextDocument          J.DidSaveTextDocumentNotification
                 | NotDidChangeWatchedFiles        J.DidChangeWatchedFilesNotification
+                | NotLogMessage                   J.LogMessageNotification
+                | NotShowMessage                  J.ShowMessageNotification
+                | NotPublishDiagnostics           J.PublishDiagnosticsNotification
 
                 | NotCancelRequest                J.CancelNotification
 
                 | RspFromClient                   J.BareResponseMessage
-                deriving (Eq,Read,Show)
+                deriving (Eq,Read,Show,Generic,J.ToJSON)
 
 -- ---------------------------------------------------------------------
 -- |
@@ -465,15 +480,15 @@ makeResponseError origId err = J.ResponseMessage "2.0" origId Nothing (Just err)
 -- ---------------------------------------------------------------------
 -- |
 --
-sendEvent :: J.ToJSON a => TVar (LanguageContextData c) -> a -> IO ()
-sendEvent tvarCtx str = sendResponse tvarCtx str
+sendEvent :: TVar (LanguageContextData c) -> OutMessage -> IO ()
+sendEvent tvarCtx msg = sendResponse tvarCtx msg
 
 -- |
 --
-sendResponse :: J.ToJSON a => TVar (LanguageContextData c) -> a -> IO ()
-sendResponse tvarCtx str = do
+sendResponse :: TVar (LanguageContextData c) -> OutMessage -> IO ()
+sendResponse tvarCtx msg = do
   ctx <- readTVarIO tvarCtx
-  resSendResponse ctx str
+  resSendResponse ctx msg
 
 
 -- ---------------------------------------------------------------------
@@ -485,22 +500,22 @@ sendErrorResponse tv origId msg = sendErrorResponseS (sendEvent tv) origId J.Int
 
 sendErrorResponseS ::  SendFunc -> J.LspIdRsp -> J.ErrorCode -> Text -> IO ()
 sendErrorResponseS sf origId err msg = do
-  sf $ (J.ResponseMessage "2.0" origId Nothing
-                (Just $ J.ResponseError err msg Nothing) :: J.ErrorResponse)
+  sf $ RspError (J.ResponseMessage "2.0" origId Nothing
+                  (Just $ J.ResponseError err msg Nothing) :: J.ErrorResponse)
 
 sendErrorLog :: TVar (LanguageContextData c) -> Text -> IO ()
 sendErrorLog tv msg = sendErrorLogS (sendEvent tv) msg
 
 sendErrorLogS :: SendFunc -> Text -> IO ()
 sendErrorLogS sf msg =
-  sf $ fmServerLogMessageNotification J.MtError msg
+  sf $ NotLogMessage $ fmServerLogMessageNotification J.MtError msg
 
 -- sendErrorShow :: String -> IO ()
 -- sendErrorShow msg = sendErrorShowS sendEvent msg
 
 sendErrorShowS :: SendFunc -> Text -> IO ()
 sendErrorShowS sf msg =
-  sf $ fmServerShowMessageNotification J.MtError msg
+  sf $ NotShowMessage $ fmServerShowMessageNotification J.MtError msg
 
 -- ---------------------------------------------------------------------
 
@@ -519,11 +534,17 @@ defaultErrorHandlers tvarDat origId req = [ E.Handler someExcept ]
 
 -- |
 --
-initializeRequestHandler :: (Show c) => InitializeCallback c
+initializeRequestHandler' :: (Show c) => InitializeCallback c
+                         -> Maybe (Handler J.InitializeRequest)
                          -> TVar (LanguageContextData c)
-                         -> J.InitializeRequest -> IO ()
-initializeRequestHandler (_configHandler,dispatcherProc) tvarCtx req@(J.RequestMessage _ origId _ params) =
+                         -> J.InitializeRequest
+                         -> IO ()
+initializeRequestHandler' (_configHandler,dispatcherProc) mHandler tvarCtx req@(J.RequestMessage _ origId _ params) =
   flip E.catches (defaultErrorHandlers tvarCtx (J.responseId origId) req) $ do
+
+    case mHandler of
+      Just handler -> handler req
+      Nothing -> return ()
 
     ctx0 <- readTVarIO tvarCtx
 
@@ -560,7 +581,7 @@ initializeRequestHandler (_configHandler,dispatcherProc) tvarCtx req@(J.RequestM
 
     case initializationResult of
       Just errResp -> do
-        sendResponse tvarCtx $ makeResponseError (J.responseId origId) errResp
+        sendResponse tvarCtx $ RspError $ makeResponseError (J.responseId origId) errResp
 
       Nothing -> do
 
@@ -592,13 +613,13 @@ initializeRequestHandler (_configHandler,dispatcherProc) tvarCtx req@(J.RequestM
               , J._documentLinkProvider             = documentLinkProvider o
               , J._executeCommandProvider           = executeCommandProvider o
               -- TODO: Add something for experimental
-              , J._experimental                     = (Nothing :: Maybe J.Value)
+              , J._experimental                     = Nothing :: Maybe J.Value
               }
 
           -- TODO: wrap this up into a fn to create a response message
           res  = J.ResponseMessage "2.0" (J.responseId origId) (Just $ J.InitializeResponseCapabilities capa) Nothing
 
-        sendResponse tvarCtx res
+        sendResponse tvarCtx $ RspInitialize res
 
 -- |
 --
@@ -607,7 +628,7 @@ shutdownRequestHandler tvarCtx req@(J.RequestMessage _ origId _ _) =
   flip E.catches (defaultErrorHandlers tvarCtx (J.responseId origId) req) $ do
   let res  = makeResponseMessage req "ok"
 
-  sendResponse tvarCtx res
+  sendResponse tvarCtx $ RspShutdown res
 
 -- ---------------------------------------------------------------------
 
@@ -622,8 +643,8 @@ publishDiagnostics tvarDat maxDiagnosticCount uri mversion diags = do
   case mdp of
     Nothing -> return ()
     Just params -> do
-      resSendResponse ctx
-        $ J.NotificationMessage "2.0" J.TextDocumentPublishDiagnostics (Just params)
+      resSendResponse ctx $ NotPublishDiagnostics
+        $ J.NotificationMessage "2.0" J.TextDocumentPublishDiagnostics params
 
 -- ---------------------------------------------------------------------
 
@@ -642,8 +663,8 @@ flushDiagnosticsBySource tvarDat maxDiagnosticCount msource = do
     case mdp of
       Nothing -> return ()
       Just params -> do
-        resSendResponse ctx
-          $ J.NotificationMessage "2.0" J.TextDocumentPublishDiagnostics (Just params)
+        resSendResponse ctx $ NotPublishDiagnostics
+          $ J.NotificationMessage "2.0" J.TextDocumentPublishDiagnostics params
 
 -- |=====================================================================
 --
