@@ -25,6 +25,7 @@ import           Data.Monoid
 #endif
 import           Language.Haskell.LSP.Capture
 import qualified Language.Haskell.LSP.Core as Core
+import           Language.Haskell.LSP.Messages
 import           Language.Haskell.LSP.Utility
 import           System.IO
 import           System.IO.Error
@@ -70,7 +71,7 @@ runWithHandles hin hout dp h o captureFp = do
   maybe (return ()) removeFileIfExists captureFp
 
 
-  cout <- atomically newTChan :: IO (TChan Core.OutMessage)
+  cout <- atomically newTChan :: IO (TChan FromServerMessage)
   _rhpid <- forkIO $ sendServer cout hout captureFp
 
 
@@ -123,7 +124,7 @@ ioLoop hin dispatcherProc tvarDat = go BSL.empty
                   return ()
                 else do
                   logm $ B.pack "---> " <> cnt
-                  Core.handleRequest dispatcherProc tvarDat newBuf cnt
+                  Core.handleMessage dispatcherProc tvarDat newBuf cnt
                   ioLoop hin dispatcherProc tvarDat
       where
         readContentLength :: String -> Either ParseError Int
@@ -137,7 +138,7 @@ ioLoop hin dispatcherProc tvarDat = go BSL.empty
 -- ---------------------------------------------------------------------
 
 -- | Simple server to make sure all output is serialised
-sendServer :: TChan Core.OutMessage -> Handle -> Maybe FilePath -> IO ()
+sendServer :: TChan FromServerMessage -> Handle -> Maybe FilePath -> IO ()
 sendServer msgChan clientH captureFp =
   forever $ do
     msg <- atomically $ readTChan msgChan
@@ -153,7 +154,7 @@ sendServer msgChan clientH captureFp =
     hFlush clientH
     logm $ B.pack "<--2--" <> str
     
-    mapM_ (captureFromServer msg) captureFp
+    captureFromServer msg captureFp
 
 -- |
 --

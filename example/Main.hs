@@ -83,7 +83,7 @@ run dispatcherProc = flip E.catches handlers $ do
 -- reply sent.
 
 data ReactorInput
-  = HandlerRequest Core.OutMessage
+  = HandlerRequest FromClientMessage
       -- ^ injected into the reactor input by each of the individual callback handlers
 
 -- ---------------------------------------------------------------------
@@ -97,7 +97,7 @@ type R c a = ReaderT (Core.LspFuncs c) IO a
 
 -- ---------------------------------------------------------------------
 
-reactorSend :: Core.OutMessage -> R () ()
+reactorSend :: FromServerMessage -> R () ()
 reactorSend msg = do
   lf <- ask
   liftIO $ Core.sendFunc lf msg
@@ -130,12 +130,12 @@ reactor lf inp = do
 
       -- Handle any response from a message originating at the server, such as
       -- "workspace/applyEdit"
-      HandlerRequest (Core.RspFromClient rm) -> do
-        liftIO $ U.logs $ "reactor:got RspFromClient:" ++ show rm
+      -- HandlerRequest (RspFromClient rm) -> do
+      --   liftIO $ U.logs $ "reactor:got RspFromClient:" ++ show rm
 
       -- -------------------------------
 
-      HandlerRequest (Core.NotInitialized _notification) -> do
+      HandlerRequest (NotInitialized _notification) -> do
         liftIO $ U.logm "****** reactor: processing Initialized Notification"
         -- Server is ready, register any specific capabilities we need
 
@@ -163,7 +163,7 @@ reactor lf inp = do
         let registrations = J.RegistrationParams (J.List [registration])
         rid <- nextLspReqId
 
-        reactorSend $ Core.ReqRegisterCapability $ fmServerRegisterCapabilityRequest rid registrations
+        reactorSend $ ReqRegisterCapability $ fmServerRegisterCapabilityRequest rid registrations
 
         -- example of showMessageRequest
         let
@@ -171,11 +171,11 @@ reactor lf inp = do
                            (Just [J.MessageActionItem "option a", J.MessageActionItem "option b"])
         rid1 <- nextLspReqId
 
-        reactorSend $ Core.ReqShowMessage $ fmServerShowMessageRequest rid1 params
+        reactorSend $ ReqShowMessage $ fmServerShowMessageRequest rid1 params
 
       -- -------------------------------
 
-      HandlerRequest (Core.NotDidOpenTextDocument notification) -> do
+      HandlerRequest (NotDidOpenTextDocument notification) -> do
         liftIO $ U.logm "****** reactor: processing NotDidOpenTextDocument"
         let
             doc  = notification ^. J.params
@@ -187,7 +187,7 @@ reactor lf inp = do
 
       -- -------------------------------
 
-      HandlerRequest (Core.NotDidChangeTextDocument notification) -> do
+      HandlerRequest (NotDidChangeTextDocument notification) -> do
         let doc :: J.Uri
             doc  = notification ^. J.params
                                  . J.textDocument
@@ -203,7 +203,7 @@ reactor lf inp = do
 
       -- -------------------------------
 
-      HandlerRequest (Core.NotDidSaveTextDocument notification) -> do
+      HandlerRequest (NotDidSaveTextDocument notification) -> do
         liftIO $ U.logm "****** reactor: processing NotDidSaveTextDocument"
         let
             doc  = notification ^. J.params
@@ -215,7 +215,7 @@ reactor lf inp = do
 
       -- -------------------------------
 
-      HandlerRequest (Core.ReqRename req) -> do
+      HandlerRequest (ReqRename req) -> do
         liftIO $ U.logs $ "reactor:got RenameRequest:" ++ show req
         let
             _params = req ^. J.params
@@ -227,11 +227,11 @@ reactor lf inp = do
                     Nothing -- "changes" field is deprecated
                     (Just (J.List [])) -- populate with actual changes from the rename
         let rspMsg = Core.makeResponseMessage req we
-        reactorSend $ Core.RspRename rspMsg
+        reactorSend $ RspRename rspMsg
 
       -- -------------------------------
 
-      HandlerRequest (Core.ReqHover req) -> do
+      HandlerRequest (ReqHover req) -> do
         liftIO $ U.logs $ "reactor:got HoverRequest:" ++ show req
         let J.TextDocumentPositionParams _doc pos = req ^. J.params
             J.Position _l _c' = pos
@@ -240,11 +240,11 @@ reactor lf inp = do
           ht = J.Hover ms (Just range)
           ms = J.List [J.CodeString $ J.LanguageString "lsp-hello" "TYPE INFO" ]
           range = J.Range pos pos
-        reactorSend $ Core.RspHover $ Core.makeResponseMessage req ht
+        reactorSend $ RspHover $ Core.makeResponseMessage req ht
 
       -- -------------------------------
 
-      HandlerRequest (Core.ReqCodeAction req) -> do
+      HandlerRequest (ReqCodeAction req) -> do
         liftIO $ U.logs $ "reactor:got CodeActionRequest:" ++ show req
         let params = req ^. J.params
             doc = params ^. J.textDocument
@@ -267,11 +267,11 @@ reactor lf inp = do
               cmdparams = Just args
           makeCommand (J.Diagnostic _r _s _c _source _m _l) = []
         let body = J.List $ concatMap makeCommand diags
-        reactorSend $ Core.RspCodeAction $ Core.makeResponseMessage req body
+        reactorSend $ RspCodeAction $ Core.makeResponseMessage req body
 
       -- -------------------------------
 
-      HandlerRequest (Core.ReqExecuteCommand req) -> do
+      HandlerRequest (ReqExecuteCommand req) -> do
         liftIO $ U.logs "reactor:got ExecuteCommandRequest:" -- ++ show req
         let params = req ^. J.params
             margs = params ^. J.arguments
@@ -279,7 +279,7 @@ reactor lf inp = do
         liftIO $ U.logs $ "reactor:ExecuteCommandRequest:margs=" ++ show margs
 
         let
-          reply v = reactorSend $ Core.RspExecuteCommand $ Core.makeResponseMessage req v
+          reply v = reactorSend $ RspExecuteCommand $ Core.makeResponseMessage req v
         -- When we get a RefactorResult or HieDiff, we need to send a
         -- separate WorkspaceEdit Notification
           r = J.List [] :: J.List Int
@@ -289,7 +289,7 @@ reactor lf inp = do
             reply (J.Object mempty)
             lid <- nextLspReqId
             -- reactorSend $ J.RequestMessage "2.0" lid "workspace/applyEdit" (Just we)
-            reactorSend $ Core.ReqApplyWorkspaceEdit $ fmServerApplyWorkspaceEditRequest lid we
+            reactorSend $ ReqApplyWorkspaceEdit $ fmServerApplyWorkspaceEditRequest lid we
           Nothing ->
             reply (J.Object mempty)
 
@@ -339,22 +339,22 @@ lspOptions = def { Core.textDocumentSync = Just syncOptions
 
 lspHandlers :: TChan ReactorInput -> Core.Handlers
 lspHandlers rin
-  = def { Core.initializedHandler                       = Just $ passHandler rin Core.NotInitialized
-        , Core.renameHandler                            = Just $ passHandler rin Core.ReqRename
-        , Core.hoverHandler                             = Just $ passHandler rin Core.ReqHover
-        , Core.didOpenTextDocumentNotificationHandler   = Just $ passHandler rin Core.NotDidOpenTextDocument
-        , Core.didSaveTextDocumentNotificationHandler   = Just $ passHandler rin Core.NotDidSaveTextDocument
-        , Core.didChangeTextDocumentNotificationHandler = Just $ passHandler rin Core.NotDidChangeTextDocument
-        , Core.didCloseTextDocumentNotificationHandler  = Just $ passHandler rin Core.NotDidCloseTextDocument
-        , Core.cancelNotificationHandler                = Just $ passHandler rin Core.NotCancelRequest
+  = def { Core.initializedHandler                       = Just $ passHandler rin NotInitialized
+        , Core.renameHandler                            = Just $ passHandler rin ReqRename
+        , Core.hoverHandler                             = Just $ passHandler rin ReqHover
+        , Core.didOpenTextDocumentNotificationHandler   = Just $ passHandler rin NotDidOpenTextDocument
+        , Core.didSaveTextDocumentNotificationHandler   = Just $ passHandler rin NotDidSaveTextDocument
+        , Core.didChangeTextDocumentNotificationHandler = Just $ passHandler rin NotDidChangeTextDocument
+        , Core.didCloseTextDocumentNotificationHandler  = Just $ passHandler rin NotDidCloseTextDocument
+        , Core.cancelNotificationHandler                = Just $ passHandler rin NotCancelRequestFromClient
         , Core.responseHandler                          = Just $ responseHandlerCb rin
-        , Core.codeActionHandler                        = Just $ passHandler rin Core.ReqCodeAction
-        , Core.executeCommandHandler                    = Just $ passHandler rin Core.ReqExecuteCommand
+        , Core.codeActionHandler                        = Just $ passHandler rin ReqCodeAction
+        , Core.executeCommandHandler                    = Just $ passHandler rin ReqExecuteCommand
         }
 
 -- ---------------------------------------------------------------------
 
-passHandler :: TChan ReactorInput -> (a -> Core.OutMessage) -> Core.Handler a
+passHandler :: TChan ReactorInput -> (a -> FromClientMessage) -> Core.Handler a
 passHandler rin c notification = do
   atomically $ writeTChan rin (HandlerRequest (c notification))
 
