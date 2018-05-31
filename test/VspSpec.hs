@@ -32,17 +32,23 @@ mkRange ls cs le ce = Just $ J.Range (J.Position ls cs) (J.Position le ce)
 
 vspSpec :: Spec
 vspSpec = do
-  describe "sorts changes" $ do
-    it "sorts changes that all have ranges" $ do
-      let
-        unsorted =
-          [ (J.TextDocumentContentChangeEvent (mkRange 1 0 2 0) Nothing "")
-          , (J.TextDocumentContentChangeEvent (mkRange 2 0 3 0) Nothing "")
-          ]
-      (sortChanges unsorted) `shouldBe`
-          [ (J.TextDocumentContentChangeEvent (mkRange 2 0 3 0) Nothing "")
-          , (J.TextDocumentContentChangeEvent (mkRange 1 0 2 0) Nothing "")
-          ]
+  describe "applys changes in order" $ do
+    it "handles vscode style undos" $ do
+      let orig = "abc"
+          changes =
+            [ J.TextDocumentContentChangeEvent (mkRange 0 2 0 3) Nothing ""
+            , J.TextDocumentContentChangeEvent (mkRange 0 1 0 2) Nothing ""
+            , J.TextDocumentContentChangeEvent (mkRange 0 0 0 1) Nothing ""
+            ]
+      applyChanges orig changes `shouldBe` ""
+    it "handles vscode style redos" $ do
+      let orig = ""
+          changes =
+            [ J.TextDocumentContentChangeEvent (mkRange 0 1 0 1) Nothing "a"
+            , J.TextDocumentContentChangeEvent (mkRange 0 2 0 2) Nothing "b"
+            , J.TextDocumentContentChangeEvent (mkRange 0 3 0 3) Nothing "c"
+            ]
+      applyChanges orig changes `shouldBe` "abc"
 
     -- ---------------------------------
 
