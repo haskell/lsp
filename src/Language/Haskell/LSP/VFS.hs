@@ -18,8 +18,8 @@ module Language.Haskell.LSP.VFS
   , closeVFS
 
   -- * for tests
+  , applyChanges
   , applyChange
-  , sortChanges
   , deleteChars , addChars
   , changeChars
   , yiSplitAt
@@ -89,12 +89,11 @@ data TextDocumentContentChangeEvent =
     } deriving (Read,Show,Eq)
 -}
 
--- | Apply the list of changes, in descending order of range. Assuming no overlaps.
+-- | Apply the list of changes.
+-- Changes should be applied in the order that they are
+-- received from the client.
 applyChanges :: Yi.YiString -> [J.TextDocumentContentChangeEvent] -> Yi.YiString
-applyChanges str changes' = r
-  where
-    changes = sortChanges changes'
-    r = foldl' applyChange str changes
+applyChanges = foldl' applyChange
 
 -- ---------------------------------------------------------------------
 
@@ -175,17 +174,5 @@ yiSplitAt l c str = (before,after)
     (b,a) = Yi.splitAtLine l str
     before = Yi.concat [b,Yi.take c a]
     after = Yi.drop c a
-
-
--- ---------------------------------------------------------------------
-
-sortChanges :: [J.TextDocumentContentChangeEvent] -> [J.TextDocumentContentChangeEvent]
-sortChanges changes = changes'
-  where
-    myComp (J.TextDocumentContentChangeEvent (Just r1) _ _)
-           (J.TextDocumentContentChangeEvent (Just r2) _ _)
-      = compare r2 r1 -- want descending order
-    myComp _ _ = EQ
-    changes' = sortBy myComp changes
 
 -- ---------------------------------------------------------------------
