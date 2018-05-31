@@ -22,9 +22,10 @@ defaults: &defaults
 
     - restore_cache:
         keys:
-          - stack-cache-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ checksum "stack-build.txt" }}-{{ checksum "all-cabal.txt" }}
-          - stack-cache-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ checksum "stack-build.txt" }}
-          - stack-cache-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ checksum "resolver.txt" }}
+          # TODO: change the version number into a variable. It gets bumped every time a build fails for a bad cache.
+          - stack-cache-01-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ checksum "stack-build.txt" }}-{{ checksum "all-cabal.txt" }}
+          - stack-cache-01-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ checksum "stack-build.txt" }}
+          - stack-cache-01-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ checksum "resolver.txt" }}
 
     - run:
         name: Stack setup
@@ -35,7 +36,7 @@ defaults: &defaults
         command: stack -j 2 --stack-yaml=${STACK_FILE} test --no-run-tests
 
     - save_cache:
-        key: stack-cache-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ checksum "resolver.txt" }}
+        key: stack-cache-01-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ checksum "resolver.txt" }}
         paths:
           - ~/.stack
           - ~/.cache
@@ -49,13 +50,13 @@ defaults: &defaults
         no_output_timeout: 120m
 
     - save_cache:
-        key: stack-cache-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ checksum "stack-build.txt" }}
+        key: stack-cache-01-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ checksum "stack-build.txt" }}
         paths:
           - ~/.stack
           - ~/.cache
 
     - save_cache:
-        key: stack-cache-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ checksum "stack-build.txt" }}-{{ checksum "all-cabal.txt" }}
+        key: stack-cache-01-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ checksum "stack-build.txt" }}-{{ checksum "all-cabal.txt" }}
         paths:
           - ~/.stack
           - ~/.cache
