@@ -9,8 +9,8 @@ import Data.Time.Clock
 import GHC.Generics
 import Language.Haskell.LSP.Messages
 
-data Event a = FromClient UTCTime a
-             | FromServer UTCTime a
+data Event = FromClient UTCTime FromClientMessage
+           | FromServer UTCTime FromServerMessage
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 captureFromServer :: FromServerMessage -> Maybe FilePath -> IO ()
