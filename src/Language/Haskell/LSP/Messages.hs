@@ -56,7 +56,9 @@ data FromClientMessage = ReqInitialized              InitializeRequest
                        | UnknownFromClientMessage        Value
 
 
-  deriving (Eq,Read,Show,Generic,ToJSON,FromJSON)
+  deriving (Eq,Read,Show,Generic,FromJSON)
+instance ToJSON FromClientMessage where
+  toJSON     = genericToJSON $ defaultOptions { sumEncoding = UntaggedValue }
 
 data FromServerMessage = ReqRegisterCapability       RegisterCapabilityRequest
                        | ReqApplyWorkspaceEdit       ApplyWorkspaceEditRequest
@@ -91,4 +93,7 @@ data FromServerMessage = ReqRegisterCapability       RegisterCapabilityRequest
                        | NotShowMessage              ShowMessageNotification
                        -- A cancel request notification is duplex!
                        | NotCancelRequestFromServer  CancelNotification
-  deriving (Eq,Read,Show,Generic,ToJSON,FromJSON)
+  deriving (Eq,Read,Show,Generic,FromJSON)
+
+instance ToJSON FromServerMessage where
+  toJSON     = genericToJSON $ defaultOptions { sumEncoding = UntaggedValue }
