@@ -14,12 +14,13 @@ module Language.Haskell.LSP.Control
 import           Control.Concurrent
 import           Control.Concurrent.STM.TChan
 import           Control.Concurrent.STM.TVar
-import           Control.Exception
 import           Control.Monad
 import           Control.Monad.STM
 import qualified Data.Aeson as J
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as B
+import           Data.Time.Clock
+import           Data.Time.Format
 #if __GLASGOW_HASKELL__ < 804
 import           Data.Monoid
 #endif
@@ -28,8 +29,7 @@ import qualified Language.Haskell.LSP.Core as Core
 import           Language.Haskell.LSP.Messages
 import           Language.Haskell.LSP.Utility
 import           System.IO
-import           System.IO.Error
-import           System.Directory
+import           System.FilePath
 import           Text.Parsec
 
 -- ---------------------------------------------------------------------
@@ -67,12 +67,12 @@ runWithHandles hin hout dp h o captureFp = do
   hSetBuffering hout NoBuffering
   hSetEncoding  hout utf8
 
-  -- Delete existing recordings if they exist
-  maybe (return ()) removeFileIfExists captureFp
-
+  timestamp <- formatTime defaultTimeLocale (iso8601DateFormat (Just "%H-%M-%S")) <$> getCurrentTime
+  let timestampCaptureFp = fmap (\f -> (dropExtension f) ++ timestamp ++ (takeExtension f))
+                                captureFp
 
   cout <- atomically newTChan :: IO (TChan FromServerMessage)
-  _rhpid <- forkIO $ sendServer cout hout captureFp
+  _rhpid <- forkIO $ sendServer cout hout timestampCaptureFp
 
 
   let sendFunc :: Core.SendFunc
@@ -81,17 +81,11 @@ runWithHandles hin hout dp h o captureFp = do
 
   tvarId <- atomically $ newTVar 0
 
-  tvarDat <- atomically $ newTVar $ Core.defaultLanguageContextData h o lf tvarId sendFunc captureFp
+  tvarDat <- atomically $ newTVar $ Core.defaultLanguageContextData h o lf tvarId sendFunc timestampCaptureFp
 
   ioLoop hin dp tvarDat
 
   return 1
-
-  where
-    removeFileIfExists f = removeFile f `catch` handleDoesNotExist
-    handleDoesNotExist e
-      | isDoesNotExistError e = return ()
-      | otherwise = throwIO e
 
 
 -- ---------------------------------------------------------------------
