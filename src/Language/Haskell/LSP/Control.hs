@@ -68,7 +68,7 @@ runWithHandles hin hout dp h o captureFp = do
   hSetEncoding  hout utf8
 
   timestamp <- formatTime defaultTimeLocale (iso8601DateFormat (Just "%H-%M-%S")) <$> getCurrentTime
-  let timestampCaptureFp = fmap (\f -> (dropExtension f) ++ timestamp ++ (takeExtension f))
+  let timestampCaptureFp = fmap (\f -> dropExtension f ++ timestamp ++ takeExtension f)
                                 captureFp
 
   cout <- atomically newTChan :: IO (TChan FromServerMessage)
@@ -150,7 +150,7 @@ sendServer msgChan clientH captureFp =
     BSL.hPut clientH out
     hFlush clientH
     logm $ B.pack "<--2--" <> str
-    
+
     captureFromServer msg captureFp
 
 -- |
@@ -158,3 +158,5 @@ sendServer msgChan clientH captureFp =
 --
 _TWO_CRLF :: String
 _TWO_CRLF = "\r\n\r\n"
+
+
