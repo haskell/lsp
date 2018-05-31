@@ -143,7 +143,10 @@ sendServer msgChan clientH captureFp =
   forever $ do
     msg <- atomically $ readTChan msgChan
 
-    let str = J.encode msg
+    -- We need to make sure we only send over the content of the message,
+    -- and no other tags/wrapper stuff
+    let str = J.encode $
+                J.genericToJSON (J.defaultOptions { J.sumEncoding = J.UntaggedValue }) msg
 
     let out = BSL.concat
                  [ str2lbs $ "Content-Length: " ++ show (BSL.length str)
