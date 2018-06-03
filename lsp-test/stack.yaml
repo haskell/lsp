@@ -7,7 +7,7 @@ extra-deps:
     commit: b7cf14eb48837a73032e867dab90db1708220c66
   - haskell-lsp-types-0.2.2.0
   - github: Bubba/haskell-lsp
-    commit: 04eeb0e676a344612073fa7c615a4bfa033c793a
+    commit: 8a9f16e11f1ca921f8316e3e7cd2b4756598775c
   - sorted-list-0.2.1.0
   - github: yi-editor/yi-rope
     commit: 7867909f4f20952be051fd4252cca5bbfc80cf41
