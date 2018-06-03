@@ -13,7 +13,7 @@ import           Language.Haskell.LSP.TH.DataTypesJSON
 import           GHC.Generics
 import           Data.Aeson
 
-data FromClientMessage = ReqInitialized              InitializeRequest
+data FromClientMessage = ReqInitialize               InitializeRequest
                        | ReqShutdown                 ShutdownRequest
                        | ReqHover                    HoverRequest
                        | ReqCompletion               CompletionRequest

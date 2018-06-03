@@ -500,6 +500,9 @@ initializeRequestHandler' (_configHandler,dispatcherProc) mHandler tvarCtx req@(
 
     ctx0 <- readTVarIO tvarCtx
 
+    -- capture initialize request
+    captureFromClient (ReqInitialize req) (resCaptureFile ctx0)
+
     let rootDir = getFirst $ foldMap First [ params ^. J.rootUri  >>= J.uriToFilePath
                                            , params ^. J.rootPath <&> T.unpack ]
 
