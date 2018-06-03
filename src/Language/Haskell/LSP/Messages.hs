@@ -13,6 +13,8 @@ import           Language.Haskell.LSP.TH.DataTypesJSON
 import           GHC.Generics
 import           Data.Aeson
 
+-- | A wrapper around a message that originates from the client
+-- and is sent to the server.
 data FromClientMessage = ReqInitialize               InitializeRequest
                        | ReqShutdown                 ShutdownRequest
                        | ReqHover                    HoverRequest
@@ -56,6 +58,8 @@ data FromClientMessage = ReqInitialize               InitializeRequest
                        | UnknownFromClientMessage        Value
   deriving (Eq,Read,Show,Generic,ToJSON,FromJSON)
 
+-- | A wrapper around a message that originates from the server
+-- and is sent to the client.
 data FromServerMessage = ReqRegisterCapability       RegisterCapabilityRequest
                        | ReqApplyWorkspaceEdit       ApplyWorkspaceEditRequest
                        | ReqShowMessage              ShowMessageRequest
