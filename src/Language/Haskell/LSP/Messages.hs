@@ -54,8 +54,6 @@ data FromClientMessage = ReqInitialize               InitializeRequest
                        | NotDidChangeWatchedFiles        DidChangeWatchedFilesNotification
                        -- Unknown (The client sends something we don't understand)
                        | UnknownFromClientMessage        Value
-
-
   deriving (Eq,Read,Show,Generic,ToJSON,FromJSON)
 
 data FromServerMessage = ReqRegisterCapability       RegisterCapabilityRequest
@@ -83,7 +81,7 @@ data FromServerMessage = ReqRegisterCapability       RegisterCapabilityRequest
                        | RspExecuteCommand           ExecuteCommandResponse
                        | RspError                    ErrorResponse
                        | RspDocumentLink             DocumentLinkResponse
-                       | RspDocumentLinkResolve      DocumentLinkResolveRequest
+                       | RspDocumentLinkResolve      DocumentLinkResolveResponse
                        | RspWillSaveWaitUntil        WillSaveWaitUntilTextDocumentResponse
                        -- Notifications
                        | NotPublishDiagnostics       PublishDiagnosticsNotification
