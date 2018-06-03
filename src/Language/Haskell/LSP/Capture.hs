@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
-module Language.Haskell.LSP.Capture (captureFromServer, captureFromClient) where
+module Language.Haskell.LSP.Capture where
 
 import Data.Aeson
 import Data.ByteString.Lazy.Char8 as BSL
