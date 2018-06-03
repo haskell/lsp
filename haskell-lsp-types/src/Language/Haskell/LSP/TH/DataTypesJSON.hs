@@ -296,6 +296,7 @@ instance A.FromJSON ServerMethod where
   parseJSON (A.String "workspace/applyEdit")             = return WorkspaceApplyEdit
   -- Document
   parseJSON (A.String "textDocument/publishDiagnostics") = return TextDocumentPublishDiagnostics
+  -- Cancelling
   parseJSON (A.String "$/cancelRequest")                 = return CancelRequestServer
   parseJSON _                                            = mempty
 
@@ -312,6 +313,8 @@ instance A.ToJSON ServerMethod where
   toJSON WorkspaceApplyEdit = A.String "workspace/applyEdit"
   -- Document
   toJSON TextDocumentPublishDiagnostics = A.String "textDocument/publishDiagnostics"
+  -- Cancelling
+  toJSON CancelRequestServer = A.String "$/cancelRequest"
 
 data RequestMessage m req resp =
   RequestMessage
