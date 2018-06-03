@@ -61,6 +61,7 @@ data FromClientMessage = ReqInitialize               InitializeRequest
 -- | A wrapper around a message that originates from the server
 -- and is sent to the client.
 data FromServerMessage = ReqRegisterCapability       RegisterCapabilityRequest
+                       | ReqUnregisterCapability     UnregisterCapabilityRequest
                        | ReqApplyWorkspaceEdit       ApplyWorkspaceEditRequest
                        | ReqShowMessage              ShowMessageRequest
                        -- Responses
@@ -91,6 +92,7 @@ data FromServerMessage = ReqRegisterCapability       RegisterCapabilityRequest
                        | NotPublishDiagnostics       PublishDiagnosticsNotification
                        | NotLogMessage               LogMessageNotification
                        | NotShowMessage              ShowMessageNotification
+                       | NotTelemetry                TelemetryNotification
                        -- A cancel request notification is duplex!
                        | NotCancelRequestFromServer  CancelNotification
   deriving (Eq,Read,Show,Generic,ToJSON,FromJSON)
