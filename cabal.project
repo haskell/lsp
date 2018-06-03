@@ -1,3 +1,5 @@
 packages:
          ./
          ./haskell-lsp-types/
+         ./submodules/yi-rope
+
