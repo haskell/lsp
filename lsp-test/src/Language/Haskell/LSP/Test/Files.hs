@@ -44,7 +44,7 @@ mapUris f event =
     FromServer t msg -> FromServer t (fromServerMsg msg)
 
   where
-    --TODO: Handle all other URLs that might need swapped
+    --TODO: Handle all other URIs that might need swapped
     fromClientMsg (NotDidOpenTextDocument n) = NotDidOpenTextDocument $ swapUri (params . textDocument) n
     fromClientMsg (NotDidChangeTextDocument n) = NotDidChangeTextDocument $ swapUri (params . textDocument) n
     fromClientMsg (NotWillSaveTextDocument n) = NotWillSaveTextDocument $ swapUri (params . textDocument) n

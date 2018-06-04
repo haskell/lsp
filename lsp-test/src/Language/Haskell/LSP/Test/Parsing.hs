@@ -11,7 +11,6 @@ import           Language.Haskell.LSP.Types
                                          hiding ( error )
 import           Language.Haskell.LSP.Messages
 import qualified Data.HashMap.Strict           as HM
-import           Debug.Trace
 
 getAllMessages :: Handle -> IO [B.ByteString]
 getAllMessages h = do
@@ -109,7 +108,7 @@ matchResponseMsgType req bytes = case req of
 
 decodeFromServerMsg :: RequestMap -> B.ByteString -> FromServerMessage
 decodeFromServerMsg reqMap bytes =
-  case HM.lookup "method" fromJust (decode bytes) of
+  case HM.lookup "method" (fromJust $ decode bytes :: Object) of
     Just methodStr -> case fromJSON methodStr of
       Success method -> case method of
         -- We can work out the type of the message
