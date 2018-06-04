@@ -11,12 +11,10 @@ where
 import           Control.Concurrent
 import           Control.Monad.Trans.Class
 import           Control.Monad.Trans.Reader
-import           Data.Default
 import qualified Data.ByteString.Lazy.Char8    as B
 import           Data.List
 import           Language.Haskell.LSP.Capture
 import           Language.Haskell.LSP.Messages
-import           Language.Haskell.LSP.Core
 import qualified Language.Haskell.LSP.Types    as LSP
 import           Data.Aeson
 import           Data.Maybe
@@ -40,7 +38,9 @@ replay sessionFp curRootDir = do
   prevDir <- getCurrentDirectory
 
   (Just serverIn, Just serverOut, _, serverProc) <- createProcess
-    (proc "hie" ["--lsp", "-l", "/tmp/hie.log"]) { std_in  = CreatePipe , std_out = CreatePipe }
+    (proc "hie" ["--lsp", "-l", "/tmp/hie.log"]) { std_in  = CreatePipe
+                                                 , std_out = CreatePipe
+                                                 }
 
   hSetBuffering serverIn  NoBuffering
   hSetBuffering serverOut NoBuffering
@@ -51,24 +51,26 @@ replay sessionFp curRootDir = do
   rspSema <- newEmptyMVar :: IO (MVar LSP.LspId)
   let semas = (reqSema, rspSema)
 
-  didPass      <- newEmptyMVar
+  didPass <- newEmptyMVar
 
   entries <- B.lines <$> B.readFile sessionFp
 
   -- decode session
   let unswappedEvents = map (fromJust . decode) entries
-  
+
   events <- swapFiles curRootDir unswappedEvents
 
-  let clientEvents = map (\(FromClient _ msg) -> msg) $ filter isClientMsg events
-      serverEvents = map (\(FromServer _ msg) -> msg) $ filter isServerMsg events
+  let clientEvents =
+        map (\(FromClient _ msg) -> msg) $ filter isClientMsg events
+      serverEvents =
+        map (\(FromServer _ msg) -> msg) $ filter isServerMsg events
+      requestMap = getRequestMap clientEvents
 
   -- listen to server
-  forkIO $ runReaderT (listenServer serverEvents serverOut semas) didPass
+  forkIO $ runReaderT (listenServer serverEvents serverOut requestMap semas)
+                      didPass
 
-  forM_ clientEvents (processClient serverIn)
-
-  print events
+  forM_ clientEvents (processClient serverIn rspSema reqSema)
 
   result <- takeMVar didPass
   terminateProcess serverProc
@@ -77,16 +79,12 @@ replay sessionFp curRootDir = do
   setCurrentDirectory prevDir
 
   return result
-  where
-    isClientMsg (FromClient _ _) = True
-    isClientMsg _ = False
+ where
+  isClientMsg (FromClient _ _) = True
+  isClientMsg _                = False
 
-    isServerMsg (FromServer _ _) = True
-    isServerMsg _ = False
-
-processEvent :: Handle -> MVar LSP.LspId -> MVar LSP.LspIdRsp -> Event -> IO ()
-processEvent serverH rspSema reqSema (FromClient _ msg) = processClient serverH rspSema reqSema msg
-processEvent _ _ _ (FromServer _ msg) = processServer msg
+  isServerMsg (FromServer _ _) = True
+  isServerMsg _                = False
 
 processClient
   :: Handle -> MVar LSP.LspId -> MVar LSP.LspIdRsp -> FromClientMessage -> IO ()
@@ -113,6 +111,20 @@ processClient serverH rspSema reqSema msg = case msg of
   ReqDocumentLink             m -> request m
   ReqDocumentLinkResolve      m -> request m
   ReqWillSaveWaitUntil        m -> request m
+  RspApplyWorkspaceEdit       m -> response m
+  RspFromClient               m -> response m
+  NotInitialized              m -> notification m
+  NotExit                     m -> notification m
+  NotCancelRequestFromClient  m -> notification m
+  NotDidChangeConfiguration   m -> notification m
+  NotDidOpenTextDocument      m -> notification m
+  NotDidChangeTextDocument    m -> notification m
+  NotDidCloseTextDocument     m -> notification m
+  NotWillSaveTextDocument     m -> notification m
+  NotDidSaveTextDocument      m -> notification m
+  NotDidChangeWatchedFiles    m -> notification m
+  UnknownFromClientMessage m ->
+    error $ "Unknown message was recorded from the client" ++ show m
  where
   -- TODO: May need to prevent premature exit notification being sent
   notification msg@(LSP.NotificationMessage _ LSP.Exit _) = do
@@ -171,77 +183,134 @@ passSession = do
 
 -- | Listens to the server output, makes sure it matches the record and
 -- signals any semaphores
-listenServer :: [FromServerMessage] -> Handle -> (MVar LSP.LspIdRsp, MVar LSP.LspId) -> Session ()
-listenServer [] _ _ = passSession
-listenServer expectedMsgs h semas@(reqSema, rspSema) = do
-  msg <- lift $ getNextMessage h
+listenServer
+  :: [FromServerMessage]
+  -> Handle
+  -> RequestMap
+  -> (MVar LSP.LspIdRsp, MVar LSP.LspId)
+  -> Session ()
+listenServer []           _ _      _                        = passSession
+listenServer expectedMsgs h reqMap semas@(reqSema, rspSema) = do
+  msgBytes <- lift $ getNextMessage h
 
-  newExpectedMsgs <- case decode msg of
-    Just m -> request m
-    Nothing -> case decode msg of
-      Just m -> notification m
-      Nothing -> case decode msg of
-        Just m -> response m
-        Nothing -> failSession "Malformed message" >> return expectedMsgs
+  let actualMsg = decodeFromServerMsg reqMap msgBytes
 
-  listenServer newExpectedMsgs h semas
+  lift $ print actualMsg
 
-  where response :: LSP.ResponseMessage a -> Session [FromServerMessage]
-        response res = do
-          lift $ putStrLn $ "Got response for id " ++ show (res ^. LSP.id)
+  newExpectedMsgs <- case actualMsg of
+    ReqRegisterCapability       m -> request actualMsg m
+    ReqApplyWorkspaceEdit       m -> request actualMsg m
+    ReqShowMessage              m -> request actualMsg m
+    ReqUnregisterCapability     m -> request actualMsg m
+    RspInitialize               m -> response actualMsg m
+    RspShutdown                 m -> response actualMsg m
+    RspHover                    m -> response actualMsg m
+    RspCompletion               m -> response actualMsg m
+    RspCompletionItemResolve    m -> response actualMsg m
+    RspSignatureHelp            m -> response actualMsg m
+    RspDefinition               m -> response actualMsg m
+    RspFindReferences           m -> response actualMsg m
+    RspDocumentHighlights       m -> response actualMsg m
+    RspDocumentSymbols          m -> response actualMsg m
+    RspWorkspaceSymbols         m -> response actualMsg m
+    RspCodeAction               m -> response actualMsg m
+    RspCodeLens                 m -> response actualMsg m
+    RspCodeLensResolve          m -> response actualMsg m
+    RspDocumentFormatting       m -> response actualMsg m
+    RspDocumentRangeFormatting  m -> response actualMsg m
+    RspDocumentOnTypeFormatting m -> response actualMsg m
+    RspRename                   m -> response actualMsg m
+    RspExecuteCommand           m -> response actualMsg m
+    RspError                    m -> response actualMsg m
+    RspDocumentLink             m -> response actualMsg m
+    RspDocumentLinkResolve      m -> response actualMsg m
+    RspWillSaveWaitUntil        m -> response actualMsg m
+    NotPublishDiagnostics       m -> notification actualMsg m
+    NotLogMessage               m -> notification actualMsg m
+    NotShowMessage              m -> notification actualMsg m
+    NotTelemetry                m -> notification actualMsg m
+    NotCancelRequestFromServer  m -> notification actualMsg m
 
-          lift $ print res
+  listenServer newExpectedMsgs h reqMap semas
+ where
+  response
+    :: Show a
+    => FromServerMessage
+    -> LSP.ResponseMessage a
+    -> Session [FromServerMessage]
+  response msg res = do
+    lift $ putStrLn $ "Got response for id " ++ show (res ^. LSP.id)
 
-          checkOrder res
+    lift $ print res
 
-          lift $ putMVar reqSema (res ^. LSP.id) -- unblock the handler waiting to send a request
+    checkOrder msg
 
-          markReceived res
+    lift $ putMVar reqSema (res ^. LSP.id) -- unblock the handler waiting to send a request
 
-        request :: LSP.RequestMessage LSP.ServerMethod a b -> Session [FromServerMessage]
-        request req = do
-          lift $ putStrLn $ "Got request for id " ++ show (req ^. LSP.id) ++ " " ++ show (req ^. LSP.method)
+    markReceived msg
 
-          lift $ print req
+  request
+    :: (Show a, Show b)
+    => FromServerMessage
+    -> LSP.RequestMessage LSP.ServerMethod a b
+    -> Session [FromServerMessage]
+  request msg req = do
+    lift
+      $  putStrLn
+      $  "Got request for id "
+      ++ show (req ^. LSP.id)
+      ++ " "
+      ++ show (req ^. LSP.method)
 
-          checkOrder req
+    lift $ print req
 
-          lift $ putMVar rspSema (req ^. LSP.id) -- unblock the handler waiting for a response
+    checkOrder msg
 
-          markReceived req
+    lift $ putMVar rspSema (req ^. LSP.id) -- unblock the handler waiting for a response
 
-        notification :: LSP.NotificationMessage LSP.ServerMethod a -> Session [FromServerMessage]
-        notification n = do
-          lift $ putStrLn $ "Got notification " ++ show (n ^. LSP.method)
-          lift $ print n
+    markReceived msg
 
-          lift $ putStrLn $ show (length (filter isNotification expectedMsgs) - 1) ++ " notifications remaining"
+  notification
+    :: Show a
+    => FromServerMessage
+    -> LSP.NotificationMessage LSP.ServerMethod a
+    -> Session [FromServerMessage]
+  notification msg n = do
+    lift $ putStrLn $ "Got notification " ++ show (n ^. LSP.method)
+    lift $ print n
 
-          if n ^. LSP.method == LSP.WindowLogMessage
-            then return expectedMsgs
-            else markReceived n
+    lift
+      $  putStrLn
+      $  show (length (filter isNotification expectedMsgs) - 1)
+      ++ " notifications remaining"
 
-        checkOrder msg = unless (inRightOrder msg expectedMsgs) $ do
-          let (Just expected) = decode firstExpected
-              _ = expected == msg -- make expected type same as res
-          failSession ("Out of order\nExpected\n" ++ show expected ++ "\nGot\n" ++ show msg ++ "\n")
+    if n ^. LSP.method == LSP.WindowLogMessage
+      then return expectedMsgs
+      else markReceived msg
 
-        markReceived :: Eq a => a -> [FromServerMessage] -> Session [FromServerMessage]
-        markReceived msg = 
-          -- TODO: Find some way of equating FromServerMessage and LSP.ResponseMessage etc.
-          let new = delete msg expectedMsgs
-           in if new == expectedMsgs
-              then failSession ("Unexpected message: " ++ show msg) >> return new
-              else return new
+  checkOrder msg = unless (inRightOrder msg expectedMsgs) $ failSession
+    (  "Out of order\nExpected\n"
+    ++ show firstExpected
+    ++ "\nGot\n"
+    ++ show msg
+    ++ "\n"
+    )
 
-        firstExpected = head $ filter (not . isNotification) expectedMsgs
+  markReceived :: FromServerMessage -> Session [FromServerMessage]
+  markReceived msg =
+    let new = delete msg expectedMsgs
+    in  if new == expectedMsgs
+          then failSession ("Unexpected message: " ++ show msg) >> return new
+          else return new
+
+  firstExpected = head $ filter (not . isNotification) expectedMsgs
 
 isNotification :: FromServerMessage -> Bool
-isNotification (NotPublishDiagnostics _) = True
-isNotification (NotLogMessage _) = True
-isNotification (NotShowMessage _) = True
+isNotification (NotPublishDiagnostics      _) = True
+isNotification (NotLogMessage              _) = True
+isNotification (NotShowMessage             _) = True
 isNotification (NotCancelRequestFromServer _) = True
-isNotification _ = False
+isNotification _                              = False
 
 -- TODO: QuickCheck tests?
 -- | Checks wether or not the message appears in the right order
@@ -253,12 +322,12 @@ isNotification _ = False
 -- given RES1
 -- @ N1 N3 N4 N5 XXXX RES1 @ False!
 -- Order of requests and responses matter
-inRightOrder :: (FromJSON a, Eq a) => a -> [B.ByteString] -> Bool
+inRightOrder :: FromServerMessage -> [FromServerMessage] -> Bool
 
 inRightOrder _ [] = error "Why is this empty"
 -- inRightOrder (LSP.NotificationMessage _ _ _) _ = True
 
-inRightOrder received (expected:msgs)
-  | Just received == decode expected = True
+inRightOrder received (expected : msgs)
+  | received == expected    = True
   | isNotification expected = inRightOrder received msgs
-  | otherwise =  False
+  | otherwise               = False

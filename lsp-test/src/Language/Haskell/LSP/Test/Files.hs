@@ -11,8 +11,6 @@ import           Language.Haskell.LSP.Capture
 import           Language.Haskell.LSP.Types hiding ( error )
 import           Language.Haskell.LSP.Messages
 import           Control.Lens
-import           Data.Aeson
-import qualified Data.ByteString.Lazy.Char8    as B
 import qualified Data.HashMap.Strict           as HM
 import qualified Data.Text                     as T
 import           Data.Maybe
@@ -46,6 +44,7 @@ mapUris f event =
     FromServer t msg -> FromServer t (fromServerMsg msg)
 
   where
+    --TODO: Handle all other URLs that might need swapped
     fromClientMsg (NotDidOpenTextDocument n) = NotDidOpenTextDocument $ swapUri (params . textDocument) n
     fromClientMsg (NotDidChangeTextDocument n) = NotDidChangeTextDocument $ swapUri (params . textDocument) n
     fromClientMsg (NotWillSaveTextDocument n) = NotWillSaveTextDocument $ swapUri (params . textDocument) n
