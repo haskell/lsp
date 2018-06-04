@@ -118,6 +118,10 @@ instance A.FromJSON LspId where
   parseJSON  (A.String  s) = return (IdString s)
   parseJSON _              = mempty
 
+instance Hashable LspId where
+  hashWithSalt salt (IdInt i) = hashWithSalt salt i
+  hashWithSalt salt (IdString s) = hashWithSalt salt s
+
 -- ---------------------------------------------------------------------
 
 -- | Id used for a response, Can be either a String or an Int, or Null. If a
@@ -139,9 +143,19 @@ instance A.FromJSON LspIdRsp where
   parseJSON  A.Null        = return IdRspNull
   parseJSON _              = mempty
 
+instance Hashable LspIdRsp where
+  hashWithSalt salt (IdRspInt i) = hashWithSalt salt i
+  hashWithSalt salt (IdRspString s) = hashWithSalt salt s
+
+-- | Converts an LspId to its LspIdRsp counterpart.
 responseId :: LspId -> LspIdRsp
 responseId (IdInt    i) = (IdRspInt i)
 responseId (IdString s) = (IdRspString s)
+
+-- | Converts an LspIdRsp to its LspId counterpart. 
+requestId :: LspIdRsp -> LspId
+requestId (IdRspInt    i) = (IdInt i)
+requestId (IdRspString s) = (IdString s)
 
 -- ---------------------------------------------------------------------
 
@@ -492,6 +506,7 @@ deriveJSON lspOptions ''CancelParams
 makeFieldsNoPrefix ''CancelParams
 
 type CancelNotification = NotificationMessage ClientMethod CancelParams
+type CancelNotificationServer = NotificationMessage ServerMethod CancelParams
 
 -- ---------------------------------------------------------------------
 

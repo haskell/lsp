@@ -94,5 +94,5 @@ data FromServerMessage = ReqRegisterCapability       RegisterCapabilityRequest
                        | NotShowMessage              ShowMessageNotification
                        | NotTelemetry                TelemetryNotification
                        -- A cancel request notification is duplex!
-                       | NotCancelRequestFromServer  CancelNotification
+                       | NotCancelRequestFromServer  CancelNotificationServer
   deriving (Eq,Read,Show,Generic,ToJSON,FromJSON)
