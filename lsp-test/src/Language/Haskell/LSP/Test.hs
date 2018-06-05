@@ -1,122 +1,170 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ExistentialQuantification #-}
+
 module Language.Haskell.LSP.Test
   (
   -- * Sessions
-    manualSession
-  -- * Documents
-  , openDocument
-  , documentSymbols
+    runSession
+  , Session
+  -- * Sending
+  , sendRequest
+  , sendNotification
+  -- * Receving
+  , getMessage
+  -- * Utilities
+  , getDocItem
+  , getDocUri
   ) where
 
-import Control.Lens
+import Control.Monad.Trans.Class
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Reader
+import Control.Monad.Trans.State
+import Control.Concurrent
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
+import Data.Aeson
+import qualified Data.ByteString.Lazy.Char8 as B
+import Data.Default
 import Data.Maybe
 import Data.Proxy
 import System.Process
-import qualified Language.Haskell.LSP.Client as Client
-import Language.Haskell.LSP.Messages
-import qualified Language.Haskell.LSP.TH.DataTypesJSON as LSP
-import Language.Haskell.LSP.Test.Recorded
-import Capabilities
+import Language.Haskell.LSP.Types hiding (error, id)
 import Compat
+import System.IO
+import System.Directory
+import System.FilePath
+import Language.Haskell.LSP.Test.Parsing
 
-type Session = ReaderT Client.Client IO
+data SessionContext = SessionContext
+  {
+    messageSema :: MVar B.ByteString,
+    serverIn :: Handle,
+    serverOut :: Handle,
+    rootDir :: FilePath
+  }
 
-manualSession :: Session a -> IO ()
-manualSession f = do
-  (Just hin, Just hout, _, serverProc) <- createProcess (proc "hie" ["--lsp", "-l", "/tmp/hie.log"])
+newtype SessionState = SessionState
+  {
+    curReqId :: LspId
+  }
+type Session = StateT SessionState (ReaderT SessionContext IO)
+
+runSession :: FilePath -> Session a -> IO ()
+runSession rootDir session = do
+
+  absRootDir <- canonicalizePath rootDir
+
+  (Just serverIn, Just serverOut, Nothing, serverProc) <- createProcess
+    (proc "hie" ["--lsp", "-d", "-l", "/tmp/hie-test.log"])
     { std_in = CreatePipe, std_out = CreatePipe }
-  client <- Client.start $ Client.Config hin hout notificationHandler requestHandler
+
+  hSetBuffering serverIn  NoBuffering
+  hSetBuffering serverOut NoBuffering
 
   pid <- getProcessID
+  messageSema <- newEmptyMVar
 
-  let initializeParams :: LSP.InitializeParams
-      initializeParams = LSP.InitializeParams (Just pid)
+  let initializeParams :: InitializeParams
+      initializeParams = InitializeParams (Just pid)
+                                              (Just $ T.pack absRootDir)
+                                              (Just $ filePathToUri absRootDir)
                                               Nothing
-                                              Nothing
-                                              Nothing
-                                              capabilities
-                                              Nothing
+                                              def
+                                              (Just TraceOff)
+      context = SessionContext messageSema serverIn serverOut absRootDir
+      initState = SessionState (IdInt 9)
 
-  Client.sendClientRequest client
-                           (Proxy :: Proxy LSP.InitializeRequest)
-                           LSP.Initialize initializeParams
-  Client.sendClientNotification client
-                                LSP.Initialized
-                                (Just LSP.InitializedParams)
+      -- | The session wrapped around initialize and shutdown calls
+      fullSession = do
+        sendRequest (Proxy :: Proxy InitializeRequest) Initialize initializeParams
+        (ResponseMessage _ _ (Just (InitializeResponseCapabilities _)) e) <- getMessage
+        liftIO $ maybe (return ()) (putStrLn . ("Error when initializing: " ++) . show ) e
 
-  putStrLn "Session started"
+        sendNotification Initialized InitializedParams
 
-  runReaderT f client
+        -- Run the actual thing
+        session
 
-  Client.sendClientRequest client
-                           (Proxy :: Proxy LSP.ShutdownRequest)
-                           LSP.Shutdown Nothing
-  Client.sendClientNotification client
-                                LSP.Exit
-                                (Just LSP.ExitParams)
+        sendNotification Exit ExitParams
 
-  Client.stop client
+  forkIO $ listenServer context
+  _ <- runReaderT (runStateT fullSession initState) context
 
-  -- todo: this interrupts the test server process as well?
-  -- interruptProcessGroupOf serverProc
-  -- waitForProcess serverProc
   terminateProcess serverProc
 
-  putStrLn "Session ended"
+  return ()
 
-openDocument :: FilePath -> Session ()
-openDocument path = do
-  text <- liftIO $ T.readFile path
+-- | Listens to the server output, makes sure it matches the record and
+-- signals any semaphores
+listenServer :: SessionContext -> IO ()
+listenServer context = do
+  msgBytes <- getNextMessage (serverOut context)
 
-  let uri = LSP.filePathToUri path
+  case decode msgBytes :: Maybe LogMessageNotification of
+    -- Just print log and show messages
+    Just (NotificationMessage _ WindowLogMessage (LogMessageParams _ msg)) -> T.putStrLn msg
+    _ -> case decode msgBytes :: Maybe ShowMessageNotification of
+      Just (NotificationMessage _ WindowShowMessage (ShowMessageParams _ msg)) -> T.putStrLn msg
+    -- Give everything else for getMessage to handle
+      _ -> putMVar (messageSema context) msgBytes
+    
+  listenServer context
 
-  client <- ask
-  liftIO $ Client.sendClientNotification client LSP.TextDocumentDidOpen (Just (LSP.DidOpenTextDocumentParams (LSP.TextDocumentItem uri "haskell" 1 text)))
+-- | Sends a request to the server.
+sendRequest
+  :: forall params resp. (ToJSON params, ToJSON resp, FromJSON resp)
+  => Proxy (RequestMessage ClientMethod params resp)
+  -> ClientMethod
+  -> params
+  -> Session LspId
+sendRequest _ method params = do
+  h <- serverIn <$> lift ask
 
-documentSymbols :: FilePath -> Session (LSP.List LSP.SymbolInformation)
-documentSymbols path = do
-  let uri = LSP.filePathToUri path
+  id <- curReqId <$> get
+  get >>= \c -> put c { curReqId = nextId id }
 
-  client <- ask
+  let msg = RequestMessage "2.0" id method params :: RequestMessage ClientMethod params resp
 
-  liftIO $ do
-    res <- Client.sendClientRequest client
-                                    (Proxy :: Proxy LSP.DocumentSymbolRequest)
-                                    LSP.TextDocumentDocumentSymbol (LSP.DocumentSymbolParams (LSP.TextDocumentIdentifier uri))
-    return $ case res of
-      Just (Right syms) -> syms
-      _ -> error "Failed to get document symbols"
+  liftIO $ B.hPut h $ addHeader (encode msg)
 
-notificationHandler :: Client.NotificationMessageHandler
-notificationHandler = Client.NotificationMessageHandler
-  (\(LSP.NotificationMessage _ _ (LSP.ShowMessageParams _ msg)) -> print msg)
-  (\(LSP.NotificationMessage _ _ (LSP.LogMessageParams _ msg)) -> print msg)
-  (\(LSP.NotificationMessage _ _ json) -> putStrLn $ "Telemetry: " ++ show json)
-  (\(LSP.NotificationMessage _ _ (LSP.PublishDiagnosticsParams uri diags)) ->
-    putStrLn $ "Diagnostics at " ++ showUri uri ++ ": " ++ showDiags diags)
+  return id
 
-  where showDiags :: LSP.List LSP.Diagnostic -> String
-        showDiags (LSP.List diags) = unlines $ map (T.unpack . (^. LSP.message)) diags
-        showUri :: LSP.Uri -> String
-        showUri = fromMaybe "unknown path" . LSP.uriToFilePath
+  where nextId (IdInt i) = IdInt (i + 1)
+        nextId (IdString s) = IdString $ T.pack $ show $ read (T.unpack s) + 1
 
+-- | Sends a notification to the server.
+sendNotification :: ToJSON a => ClientMethod -> a -> Session ()
+sendNotification method params = do
+  h <- serverIn <$> lift ask
 
+  let msg = NotificationMessage "2.0" method params
+  liftIO $ B.hPut h $ addHeader (encode msg)
 
-requestHandler :: Client.RequestMessageHandler
-requestHandler = Client.RequestMessageHandler
-  (\m -> emptyRsp m <$ print m)
-  (\m -> emptyRsp m <$ print m)
-  (\m -> emptyRsp m <$ print m)
-  (\m -> emptyRsp m <$ print m)
-  where emptyRsp :: LSP.RequestMessage m req rsp -> LSP.ResponseMessage a
-        emptyRsp m = LSP.ResponseMessage (m ^. LSP.jsonrpc)
-                                         (lspIdToRspId $ m ^. LSP.id)
-                                         Nothing
-                                         Nothing
+-- | Reads in a message from the server.
+getMessage :: FromJSON a => Session a
+getMessage = do
+  sema <- messageSema <$> lift ask
+  bytes <- liftIO $ takeMVar sema
+  return $ fromMaybe (error $ "Wrong type! Got: " ++ show bytes) (decode bytes)
 
-        lspIdToRspId (LSP.IdInt i) = LSP.IdRspInt i
-        lspIdToRspId (LSP.IdString i) = LSP.IdRspString i
+-- | Reads in a text document as the first version.
+getDocItem :: FilePath
+           -- ^ The path to the text document to read in.
+           -> String
+           -- ^ The language ID, e.g "haskell" for .hs files.
+           -> Session TextDocumentItem
+getDocItem file languageId = do
+  context <- lift ask
+  let fp = rootDir context </> file
+  contents <- liftIO $ T.readFile fp
+  return $ TextDocumentItem (filePathToUri fp) (T.pack languageId) 0 contents
+
+-- | Gets the Uri for the file corrected to the session directory.
+getDocUri :: FilePath -> Session Uri
+getDocUri file = do
+  context <- lift ask
+  let fp = rootDir context </> file
+  return $ filePathToUri fp

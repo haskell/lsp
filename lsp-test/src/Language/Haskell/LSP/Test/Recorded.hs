@@ -31,8 +31,8 @@ import           Language.Haskell.LSP.Test.Parsing
 
 data SessionContext = SessionContext
   {
-    reqSema :: MVar LSP.LspId,
-    rspSema :: MVar LSP.LspIdRsp,
+    reqSema :: MVar FromServerMessage,
+    rspSema :: MVar LSP.LspId,
     serverIn :: Handle
   }
 type Session = StateT [FromClientMessage] (ReaderT SessionContext IO)
@@ -46,11 +46,8 @@ replay sessionDir session = do
 
   let sessionFp = sessionDir </> "session.log"
 
-  -- need to keep hold of current directory since haskell-lsp changes it
-  prevRootDir <- getCurrentDirectory
-
   (Just serverIn, Just serverOut, _, serverProc) <- createProcess
-    (proc "hie" ["--lsp", "-l", "/tmp/hie.log"]) { std_in  = CreatePipe
+    (proc "hie" ["--lsp", "-d", "-l", "/tmp/test-hie.log"]) { std_in  = CreatePipe
                                                  , std_out = CreatePipe
                                                  }
 
@@ -58,10 +55,9 @@ replay sessionDir session = do
   hSetBuffering serverOut NoBuffering
 
   -- whether to send the next request
-  reqSema <- newEmptyMVar :: IO (MVar LSP.LspIdRsp)
+  reqSema <- newEmptyMVar
   -- whether to send the next response
-  rspSema <- newEmptyMVar :: IO (MVar LSP.LspId)
-  let semas = (reqSema, rspSema)
+  rspSema <- newEmptyMVar
 
   entries <- B.lines <$> B.readFile sessionFp
 
@@ -72,16 +68,14 @@ replay sessionDir session = do
 
   let clientEvents = map (\(FromClient _ msg) -> msg) $ filter isClientMsg events
       requestMap = getRequestMap clientEvents
+      context = (SessionContext rspSema reqSema serverIn)
 
   -- listen to server
-  forkIO $ listenServer serverOut requestMap semas
+  forkIO $ listenServer serverOut requestMap context
 
-  runReaderT (runStateT session clientEvents) (SessionContext rspSema reqSema serverIn)
+  runReaderT (runStateT session clientEvents) context
 
   terminateProcess serverProc
-
-  -- restore directory
-  setCurrentDirectory prevRootDir
   
   where
     isClientMsg (FromClient _ _) = True
@@ -90,7 +84,7 @@ replay sessionDir session = do
     isServerMsg (FromServer _ _) = True
     isServerMsg _                = False
 
-sendNextRequest :: Session ()
+sendNextRequest :: Session FromServerMessage
 sendNextRequest = do
   (nextMsg:remainingMsgs) <- get
   put remainingMsgs
@@ -140,6 +134,8 @@ sendNextRequest = do
       putStrLn "Will send exit notification soon"
       threadDelay 10000000
       B.hPut (serverIn context) $ addHeader (encode msg)
+    
+    error "Done"
 
   notification msg@(LSP.NotificationMessage _ m _) = do
     context <- lift ask
@@ -154,21 +150,24 @@ sendNextRequest = do
     context <- lift ask
 
     liftIO $ do
-      when (m == LSP.TextDocumentDocumentSymbol) $ threadDelay 5000000
+
+      print $ addHeader $ encode msg
 
       B.hPut (serverIn context) $ addHeader (encode msg)
       putStrLn $  "Sent a request id " ++ show id ++ ": " ++ show m ++ "\nWaiting for a response"
 
-      rspId <- takeMVar (rspSema context)
-      when (LSP.responseId id /= rspId) $ 
-        error $ "Expected id " ++ show id ++ ", got " ++ show rspId
+      rsp <- takeMVar (reqSema context)
+      -- when (LSP.responseId id /= rsp ^. LSP.id) $ 
+      --   error $ "Expected id " ++ show id ++ ", got " ++ show (rsp ^. LSP.id)
+      
+      return rsp
 
   response msg@(LSP.ResponseMessage _ id _ _) = do
     context <- lift ask
 
     liftIO $ do
       putStrLn $ "Waiting for request id " ++ show id ++ " from the server"
-      reqId <- takeMVar (reqSema context)
+      reqId <- takeMVar (rspSema context)
       if LSP.responseId reqId /= id
         then error $ "Expected id " ++ show reqId ++ ", got " ++ show reqId
         else do
@@ -180,8 +179,9 @@ sendNextRequest = do
 
 -- | Listens to the server output, makes sure it matches the record and
 -- signals any semaphores
-listenServer :: Handle -> RequestMap -> (MVar LSP.LspIdRsp, MVar LSP.LspId) -> IO ()
-listenServer h reqMap semas@(reqSema, rspSema) = do
+listenServer :: Handle -> RequestMap -> SessionContext -> IO ()
+listenServer h reqMap context = do
+
   msgBytes <- getNextMessage h
 
   let msg = decodeFromServerMsg reqMap msgBytes
@@ -193,45 +193,43 @@ listenServer h reqMap semas@(reqSema, rspSema) = do
     ReqApplyWorkspaceEdit       m -> request m
     ReqShowMessage              m -> request m
     ReqUnregisterCapability     m -> request m
-    RspInitialize               m -> response m
-    RspShutdown                 m -> response m
-    RspHover                    m -> response m
-    RspCompletion               m -> response m
-    RspCompletionItemResolve    m -> response m
-    RspSignatureHelp            m -> response m
-    RspDefinition               m -> response m
-    RspFindReferences           m -> response m
-    RspDocumentHighlights       m -> response m
-    RspDocumentSymbols          m -> response m
-    RspWorkspaceSymbols         m -> response m
-    RspCodeAction               m -> response m
-    RspCodeLens                 m -> response m
-    RspCodeLensResolve          m -> response m
-    RspDocumentFormatting       m -> response m
-    RspDocumentRangeFormatting  m -> response m
-    RspDocumentOnTypeFormatting m -> response m
-    RspRename                   m -> response m
-    RspExecuteCommand           m -> response m
-    RspError                    m -> response m
-    RspDocumentLink             m -> response m
-    RspDocumentLinkResolve      m -> response m
-    RspWillSaveWaitUntil        m -> response m
+    RspInitialize               m -> response m msg
+    RspShutdown                 m -> response m msg
+    RspHover                    m -> response m msg
+    RspCompletion               m -> response m msg
+    RspCompletionItemResolve    m -> response m msg
+    RspSignatureHelp            m -> response m msg
+    RspDefinition               m -> response m msg
+    RspFindReferences           m -> response m msg
+    RspDocumentHighlights       m -> response m msg
+    RspDocumentSymbols          m -> response m msg
+    RspWorkspaceSymbols         m -> response m msg
+    RspCodeAction               m -> response m msg
+    RspCodeLens                 m -> response m msg
+    RspCodeLensResolve          m -> response m msg
+    RspDocumentFormatting       m -> response m msg
+    RspDocumentRangeFormatting  m -> response m msg
+    RspDocumentOnTypeFormatting m -> response m msg
+    RspRename                   m -> response m msg
+    RspExecuteCommand           m -> response m msg
+    RspError                    m -> response m msg
+    RspDocumentLink             m -> response m msg
+    RspDocumentLinkResolve      m -> response m msg
+    RspWillSaveWaitUntil        m -> response m msg
     NotPublishDiagnostics       m -> notification m
     NotLogMessage               m -> notification m
     NotShowMessage              m -> notification m
     NotTelemetry                m -> notification m
     NotCancelRequestFromServer  m -> notification m
 
-  listenServer h reqMap semas
+  listenServer h reqMap context
 
   where
-  response :: Show a => LSP.ResponseMessage a -> IO ()
-  response res = do
+  response :: Show a => LSP.ResponseMessage a -> FromServerMessage -> IO ()
+  response res wrappedMsg = do
     putStrLn $ "Got response for id " ++ show (res ^. LSP.id)
 
-    print res
-
-    putMVar reqSema (res ^. LSP.id) -- unblock the handler waiting to send a request
+    putMVar (reqSema context) wrappedMsg -- send back the response for the request we're waiting on
 
   request :: Show a => LSP.RequestMessage LSP.ServerMethod a b -> IO ()
   request req = do
@@ -241,14 +239,10 @@ listenServer h reqMap semas@(reqSema, rspSema) = do
       ++ " "
       ++ show (req ^. LSP.method)
 
-    print req
-
-    putMVar rspSema (req ^. LSP.id) -- unblock the handler waiting for a response
+    putMVar (rspSema context) (req ^. LSP.id) -- unblock the handler waiting for a response
 
   notification :: Show a => LSP.NotificationMessage LSP.ServerMethod a -> IO ()
-  notification n = do
-    putStrLn $ "Got notification " ++ show (n ^. LSP.method)
-    print n
+  notification n = putStrLn $ "Got notification " ++ show (n ^. LSP.method)
 
   --   lift
   --     $  putStrLn

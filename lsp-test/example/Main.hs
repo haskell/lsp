@@ -1,16 +1,17 @@
 import Language.Haskell.LSP.Test
-import qualified Language.Haskell.LSP.TH.DataTypesJSON as LSP
-import qualified Data.Text.IO as T
-import Control.Lens
-import Control.Monad
-import Control.Monad.IO.Class
-import System.Directory
-import System.Environment
+import Language.Haskell.LSP.TH.DataTypesJSON
+import Data.Proxy
 
-main = do
-  files <- getArgs
-  forM_ files $ \fp -> manualSession $ do
-    file <- liftIO $ canonicalizePath fp
-    openDocument file
-    symbols <- documentSymbols file
-    liftIO $ mapM_ T.putStrLn (symbols ^.. traverse . LSP.name)
+import Control.Monad.IO.Class
+
+main = runSession "test/recordings/renamePass" $ do
+
+  docItem <- getDocItem "Desktop/simple.hs" "haskell"
+  docId <- TextDocumentIdentifier <$> getDocUri "Desktop/simple.hs"
+
+  sendNotification TextDocumentDidOpen (DidOpenTextDocumentParams docItem)
+  
+  sendRequest (Proxy :: Proxy DocumentSymbolRequest) TextDocumentDocumentSymbol (DocumentSymbolParams docId)
+
+  syms <- getMessage :: Session DocumentSymbolsResponse
+  liftIO $ print syms
