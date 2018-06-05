@@ -2,7 +2,7 @@
 module Language.Haskell.LSP.Test
   (
   -- * Sessions
-    session
+    manualSession
   -- * Documents
   , openDocument
   , documentSymbols
@@ -17,14 +17,16 @@ import Data.Maybe
 import Data.Proxy
 import System.Process
 import qualified Language.Haskell.LSP.Client as Client
+import Language.Haskell.LSP.Messages
 import qualified Language.Haskell.LSP.TH.DataTypesJSON as LSP
+import Language.Haskell.LSP.Test.Recorded
 import Capabilities
 import Compat
 
 type Session = ReaderT Client.Client IO
 
-session :: Session a -> IO ()
-session f = do
+manualSession :: Session a -> IO ()
+manualSession f = do
   (Just hin, Just hout, _, serverProc) <- createProcess (proc "hie" ["--lsp", "-l", "/tmp/hie.log"])
     { std_in = CreatePipe, std_out = CreatePipe }
   client <- Client.start $ Client.Config hin hout notificationHandler requestHandler
@@ -58,7 +60,7 @@ session f = do
                                 (Just LSP.ExitParams)
 
   Client.stop client
-  
+
   -- todo: this interrupts the test server process as well?
   -- interruptProcessGroupOf serverProc
   -- waitForProcess serverProc

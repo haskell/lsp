@@ -9,7 +9,7 @@ import System.Environment
 
 main = do
   files <- getArgs
-  forM_ files $ \fp -> session $ do
+  forM_ files $ \fp -> manualSession $ do
     file <- liftIO $ canonicalizePath fp
     openDocument file
     symbols <- documentSymbols file

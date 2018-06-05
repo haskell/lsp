@@ -1,8 +1,12 @@
 import           Language.Haskell.LSP.Test.Recorded
 import           System.Directory
 import           System.Environment
+import           Control.Monad.IO.Class
 
 main = do
-  [session, dir] <- (take 2 <$> getArgs) >>= mapM canonicalizePath
-  passed <- replay session dir
-  putStrLn $ if passed then "Passed" else "Failed"
+  sessionFile <- (head <$> getArgs) >>= canonicalizePath
+  replay sessionFile $ do
+    x <- sendNextRequest
+    liftIO $ print x
+    y <- sendNextRequest
+    liftIO $ print y
