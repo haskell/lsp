@@ -3,6 +3,14 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE ExistentialQuantification #-}
 
+-- |
+-- Module      : Language.Haskell.LSP.Test
+-- Description : A functional testing framework for LSP servers.
+-- Maintainer  : luke_lau@icloud.com
+-- Stability   : experimental
+--
+-- A framework for testing <https://github.com/Microsoft/language-server-protocol Language Server Protocol servers> at the JSON level.
+
 module Language.Haskell.LSP.Test
   (
   -- * Sessions
@@ -50,9 +58,25 @@ newtype SessionState = SessionState
   {
     curReqId :: LspId
   }
+
+-- | A session representing one instance of launching and connecting to a server.
+-- 
+-- You can send and receive messages to the server within 'Session' via 'getMessage',
+-- 'sendRequest' and 'sendNotification'.
+--
+-- @
+-- runSession \"path\/to\/root\/dir\" $ do
+--   docItem <- getDocItem "Desktop/simple.hs" "haskell"
+--   sendNotification TextDocumentDidOpen (DidOpenTextDocumentParams docItem)
+--   diagnostics <- getMessage :: Session PublishDiagnosticsNotification
+-- @
+-- 
 type Session = StateT SessionState (ReaderT SessionContext IO)
 
-runSession :: FilePath -> Session a -> IO ()
+-- | Starts a new session.
+runSession :: FilePath -- ^ The filepath to the root directory for the session.
+           -> Session a -- ^ The session to run.
+           -> IO ()
 runSession rootDir session = do
 
   absRootDir <- canonicalizePath rootDir
@@ -69,11 +93,11 @@ runSession rootDir session = do
 
   let initializeParams :: InitializeParams
       initializeParams = InitializeParams (Just pid)
-                                              (Just $ T.pack absRootDir)
-                                              (Just $ filePathToUri absRootDir)
-                                              Nothing
-                                              def
-                                              (Just TraceOff)
+                                          (Just $ T.pack absRootDir)
+                                          (Just $ filePathToUri absRootDir)
+                                          Nothing
+                                          def
+                                          (Just TraceOff)
       context = SessionContext messageSema serverIn serverOut absRootDir
       initState = SessionState (IdInt 9)
 
@@ -85,7 +109,7 @@ runSession rootDir session = do
 
         sendNotification Initialized InitializedParams
 
-        -- Run the actual thing
+        -- Run the actual test
         session
 
         sendNotification Exit ExitParams
@@ -114,12 +138,18 @@ listenServer context = do
   listenServer context
 
 -- | Sends a request to the server.
+--
+-- @
+-- sendRequest (Proxy :: Proxy DocumentSymbolRequest)
+--             TextDocumentDocumentSymbol
+--             (DocumentSymbolParams docId)
+-- @
 sendRequest
   :: forall params resp. (ToJSON params, ToJSON resp, FromJSON resp)
-  => Proxy (RequestMessage ClientMethod params resp)
-  -> ClientMethod
-  -> params
-  -> Session LspId
+  => Proxy (RequestMessage ClientMethod params resp) -- ^ A proxy to provide more type information about the request.
+  -> ClientMethod -- ^ The request method.
+  -> params -- ^ The request parameters.
+  -> Session LspId -- ^ The id of the request that was sent.
 sendRequest _ method params = do
   h <- serverIn <$> lift ask
 
@@ -136,7 +166,10 @@ sendRequest _ method params = do
         nextId (IdString s) = IdString $ T.pack $ show $ read (T.unpack s) + 1
 
 -- | Sends a notification to the server.
-sendNotification :: ToJSON a => ClientMethod -> a -> Session ()
+sendNotification :: ToJSON a
+                 => ClientMethod -- ^ The notification method.
+                 -> a -- ^ The notification parameters.
+                 -> Session ()
 sendNotification method params = do
   h <- serverIn <$> lift ask
 
@@ -151,10 +184,8 @@ getMessage = do
   return $ fromMaybe (error $ "Wrong type! Got: " ++ show bytes) (decode bytes)
 
 -- | Reads in a text document as the first version.
-getDocItem :: FilePath
-           -- ^ The path to the text document to read in.
-           -> String
-           -- ^ The language ID, e.g "haskell" for .hs files.
+getDocItem :: FilePath -- ^ The path to the text document to read in.
+           -> String -- ^ The language ID, e.g "haskell" for .hs files.
            -> Session TextDocumentItem
 getDocItem file languageId = do
   context <- lift ask
