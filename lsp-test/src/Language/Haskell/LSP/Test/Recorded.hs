@@ -4,62 +4,36 @@
 -- | A testing tool for replaying recorded client logs back to a server,
 -- and validating that the server output matches up with another log.
 module Language.Haskell.LSP.Test.Recorded
-  ( replay,
-    sendNextRequest
+  ( replaySession
   )
 where
 
+import           Prelude hiding (id)
 import           Control.Concurrent
-import           Control.Monad.Trans.Class
-import           Control.Monad.Trans.Reader
-import           Control.Monad.Trans.State
 import           Control.Monad.IO.Class
 import qualified Data.ByteString.Lazy.Char8    as B
 import           Language.Haskell.LSP.Capture
 import           Language.Haskell.LSP.Messages
-import qualified Language.Haskell.LSP.Types    as LSP
+import           Language.Haskell.LSP.Types hiding (error)
 import           Data.Aeson
+import           Data.List
 import           Data.Maybe
 import           Control.Lens
 import           Control.Monad
 import           System.IO
-import           System.Directory
 import           System.FilePath
-import           System.Process
+import           Language.Haskell.LSP.Test
 import           Language.Haskell.LSP.Test.Files
 import           Language.Haskell.LSP.Test.Parsing
 
-data SessionContext = SessionContext
-  {
-    reqSema :: MVar FromServerMessage,
-    rspSema :: MVar LSP.LspId,
-    serverIn :: Handle
-  }
-type Session = StateT [FromClientMessage] (ReaderT SessionContext IO)
 
 -- | Replays a recorded client output and 
 -- makes sure it matches up with an expected response.
-replay :: FilePath -- ^ The recorded session directory.
-       -> Session a
-       -> IO ()
-replay sessionDir session = do
+replaySession :: FilePath -- ^ The recorded session directory.
+              -> IO Bool
+replaySession sessionDir = do
 
-  let sessionFp = sessionDir </> "session.log"
-
-  (Just serverIn, Just serverOut, _, serverProc) <- createProcess
-    (proc "hie" ["--lsp", "-d", "-l", "/tmp/test-hie.log"]) { std_in  = CreatePipe
-                                                 , std_out = CreatePipe
-                                                 }
-
-  hSetBuffering serverIn  NoBuffering
-  hSetBuffering serverOut NoBuffering
-
-  -- whether to send the next request
-  reqSema <- newEmptyMVar
-  -- whether to send the next response
-  rspSema <- newEmptyMVar
-
-  entries <- B.lines <$> B.readFile sessionFp
+  entries <- B.lines <$> B.readFile (sessionDir </> "session.log")
 
   -- decode session
   let unswappedEvents = map (fromJust . decode) entries
@@ -67,16 +41,19 @@ replay sessionDir session = do
   events <- swapFiles sessionDir unswappedEvents
 
   let clientEvents = map (\(FromClient _ msg) -> msg) $ filter isClientMsg events
+      serverEvents = map (\(FromServer _ msg) -> msg) $ filter isServerMsg events
       requestMap = getRequestMap clientEvents
-      context = (SessionContext rspSema reqSema serverIn)
 
-  -- listen to server
-  forkIO $ listenServer serverOut requestMap context
 
-  runReaderT (runStateT session clientEvents) context
+  reqSema <- newEmptyMVar
+  rspSema <- newEmptyMVar
+  passVar <- newEmptyMVar :: IO (MVar Bool)
 
-  terminateProcess serverProc
+  forkIO $ runSessionWithHandler (listenServer serverEvents requestMap reqSema rspSema passVar) sessionDir $
+    sendMessages clientEvents reqSema rspSema
   
+  takeMVar passVar
+
   where
     isClientMsg (FromClient _ _) = True
     isClientMsg _                = False
@@ -84,10 +61,9 @@ replay sessionDir session = do
     isServerMsg (FromServer _ _) = True
     isServerMsg _                = False
 
-sendNextRequest :: Session FromServerMessage
-sendNextRequest = do
-  (nextMsg:remainingMsgs) <- get
-  put remainingMsgs
+sendMessages :: [FromClientMessage] -> MVar LspId -> MVar LspIdRsp -> Session ()
+sendMessages [] _ _ = return ()
+sendMessages (nextMsg:remainingMsgs) reqSema rspSema =
   case nextMsg of
     ReqInitialize               m -> request m
     ReqShutdown                 m -> request m
@@ -123,148 +99,46 @@ sendNextRequest = do
     NotWillSaveTextDocument     m -> notification m
     NotDidSaveTextDocument      m -> notification m
     NotDidChangeWatchedFiles    m -> notification m
-    UnknownFromClientMessage m ->
-      error $ "Unknown message was recorded from the client" ++ show m
+    UnknownFromClientMessage m -> liftIO $ error $ "Unknown message was recorded from the client" ++ show m
  where
   -- TODO: May need to prevent premature exit notification being sent
-  notification msg@(LSP.NotificationMessage _ LSP.Exit _) = do
-    context <- lift ask
-
-    liftIO $ do
-      putStrLn "Will send exit notification soon"
-      threadDelay 10000000
-      B.hPut (serverIn context) $ addHeader (encode msg)
+  notification msg@(NotificationMessage _ Exit _) = do
+    liftIO $ putStrLn "Will send exit notification soon"
+    liftIO $ threadDelay 10000000
+    sendNotification' msg
     
-    error "Done"
+    liftIO $ error "Done"
 
-  notification msg@(LSP.NotificationMessage _ m _) = do
-    context <- lift ask
-
-    liftIO $ B.hPut (serverIn context) $ addHeader (encode msg)
+  notification msg@(NotificationMessage _ m _) = do
+    sendNotification' msg
 
     liftIO $ putStrLn $ "Sent a notification " ++ show m
     
-    sendNextRequest
+    sendMessages remainingMsgs reqSema rspSema
 
-  request msg@(LSP.RequestMessage _ id m _) = do
-    context <- lift ask
+  request msg@(RequestMessage _ id m _) = do
+    liftIO $ print $ addHeader $ encode msg
 
-    liftIO $ do
+    sendRequest' msg
+    liftIO $ putStrLn $  "Sent a request id " ++ show id ++ ": " ++ show m ++ "\nWaiting for a response"
 
-      print $ addHeader $ encode msg
+    rsp <- liftIO $ takeMVar rspSema
+    when (responseId id /= rsp) $ 
+      error $ "Expected id " ++ show id ++ ", got " ++ show rsp
+    
+    sendMessages remainingMsgs reqSema rspSema
 
-      B.hPut (serverIn context) $ addHeader (encode msg)
-      putStrLn $  "Sent a request id " ++ show id ++ ": " ++ show m ++ "\nWaiting for a response"
+  response msg@(ResponseMessage _ id _ _) = do
+    liftIO $ putStrLn $ "Waiting for request id " ++ show id ++ " from the server"
+    reqId <- liftIO $ takeMVar reqSema
+    if responseId reqId /= id
+      then error $ "Expected id " ++ show reqId ++ ", got " ++ show reqId
+      else do
+        sendResponse' msg
+        liftIO $ putStrLn $ "Sent response to request id " ++ show id
 
-      rsp <- takeMVar (reqSema context)
-      -- when (LSP.responseId id /= rsp ^. LSP.id) $ 
-      --   error $ "Expected id " ++ show id ++ ", got " ++ show (rsp ^. LSP.id)
-      
-      return rsp
+    sendMessages remainingMsgs reqSema rspSema
 
-  response msg@(LSP.ResponseMessage _ id _ _) = do
-    context <- lift ask
-
-    liftIO $ do
-      putStrLn $ "Waiting for request id " ++ show id ++ " from the server"
-      reqId <- takeMVar (rspSema context)
-      if LSP.responseId reqId /= id
-        then error $ "Expected id " ++ show reqId ++ ", got " ++ show reqId
-        else do
-          B.hPut (serverIn context) $ addHeader (encode msg)
-          putStrLn $ "Sent response to request id " ++ show id
-
-    sendNextRequest
-
-
--- | Listens to the server output, makes sure it matches the record and
--- signals any semaphores
-listenServer :: Handle -> RequestMap -> SessionContext -> IO ()
-listenServer h reqMap context = do
-
-  msgBytes <- getNextMessage h
-
-  let msg = decodeFromServerMsg reqMap msgBytes
-
-  print msg
-
-  case msg of
-    ReqRegisterCapability       m -> request m
-    ReqApplyWorkspaceEdit       m -> request m
-    ReqShowMessage              m -> request m
-    ReqUnregisterCapability     m -> request m
-    RspInitialize               m -> response m msg
-    RspShutdown                 m -> response m msg
-    RspHover                    m -> response m msg
-    RspCompletion               m -> response m msg
-    RspCompletionItemResolve    m -> response m msg
-    RspSignatureHelp            m -> response m msg
-    RspDefinition               m -> response m msg
-    RspFindReferences           m -> response m msg
-    RspDocumentHighlights       m -> response m msg
-    RspDocumentSymbols          m -> response m msg
-    RspWorkspaceSymbols         m -> response m msg
-    RspCodeAction               m -> response m msg
-    RspCodeLens                 m -> response m msg
-    RspCodeLensResolve          m -> response m msg
-    RspDocumentFormatting       m -> response m msg
-    RspDocumentRangeFormatting  m -> response m msg
-    RspDocumentOnTypeFormatting m -> response m msg
-    RspRename                   m -> response m msg
-    RspExecuteCommand           m -> response m msg
-    RspError                    m -> response m msg
-    RspDocumentLink             m -> response m msg
-    RspDocumentLinkResolve      m -> response m msg
-    RspWillSaveWaitUntil        m -> response m msg
-    NotPublishDiagnostics       m -> notification m
-    NotLogMessage               m -> notification m
-    NotShowMessage              m -> notification m
-    NotTelemetry                m -> notification m
-    NotCancelRequestFromServer  m -> notification m
-
-  listenServer h reqMap context
-
-  where
-  response :: Show a => LSP.ResponseMessage a -> FromServerMessage -> IO ()
-  response res wrappedMsg = do
-    putStrLn $ "Got response for id " ++ show (res ^. LSP.id)
-
-    putMVar (reqSema context) wrappedMsg -- send back the response for the request we're waiting on
-
-  request :: Show a => LSP.RequestMessage LSP.ServerMethod a b -> IO ()
-  request req = do
-    putStrLn
-      $  "Got request for id "
-      ++ show (req ^. LSP.id)
-      ++ " "
-      ++ show (req ^. LSP.method)
-
-    putMVar (rspSema context) (req ^. LSP.id) -- unblock the handler waiting for a response
-
-  notification :: Show a => LSP.NotificationMessage LSP.ServerMethod a -> IO ()
-  notification n = putStrLn $ "Got notification " ++ show (n ^. LSP.method)
-
-  --   lift
-  --     $  putStrLn
-  --     $  show (length (filter isNotification expectedMsgs) - 1)
-  --     ++ " notifications remaining"
-
-  -- checkOrder msg = unless (inRightOrder msg expectedMsgs) $ failSession
-  --   (  "Out of order\nExpected\n"
-  --   ++ show firstExpected
-  --   ++ "\nGot\n"
-  --   ++ show msg
-  --   ++ "\n"
-  --   )
-
-  -- markReceived :: FromServerMessage -> Session [FromServerMessage]
-  -- markReceived msg =
-  --   let new = delete msg expectedMsgs
-  --   in  if new == expectedMsgs
-  --         then failSession ("Unexpected message: " ++ show msg) >> return new
-  --         else return new
-
-  -- firstExpected = head $ filter (not . isNotification) expectedMsgs
 
 isNotification :: FromServerMessage -> Bool
 isNotification (NotPublishDiagnostics      _) = True
@@ -272,6 +146,91 @@ isNotification (NotLogMessage              _) = True
 isNotification (NotShowMessage             _) = True
 isNotification (NotCancelRequestFromServer _) = True
 isNotification _                              = False
+
+listenServer :: [FromServerMessage] -> RequestMap -> MVar LspId -> MVar LspIdRsp -> MVar Bool -> Handle -> Session ()
+listenServer [] _ _ _ passVar _ = liftIO $ putMVar passVar True
+listenServer expectedMsgs reqMap reqSema rspSema passVar serverOut  = do
+  msgBytes <- liftIO $ getNextMessage serverOut
+  let msg = decodeFromServerMsg reqMap msgBytes
+
+  case msg of
+    ReqRegisterCapability       m -> request m
+    ReqApplyWorkspaceEdit       m -> request m
+    ReqShowMessage              m -> request m
+    ReqUnregisterCapability     m -> request m
+    RspInitialize               m -> response m
+    RspShutdown                 m -> response m
+    RspHover                    m -> response m
+    RspCompletion               m -> response m
+    RspCompletionItemResolve    m -> response m
+    RspSignatureHelp            m -> response m
+    RspDefinition               m -> response m
+    RspFindReferences           m -> response m
+    RspDocumentHighlights       m -> response m
+    RspDocumentSymbols          m -> response m
+    RspWorkspaceSymbols         m -> response m
+    RspCodeAction               m -> response m
+    RspCodeLens                 m -> response m
+    RspCodeLensResolve          m -> response m
+    RspDocumentFormatting       m -> response m
+    RspDocumentRangeFormatting  m -> response m
+    RspDocumentOnTypeFormatting m -> response m
+    RspRename                   m -> response m
+    RspExecuteCommand           m -> response m
+    RspError                    m -> response m
+    RspDocumentLink             m -> response m
+    RspDocumentLinkResolve      m -> response m
+    RspWillSaveWaitUntil        m -> response m
+    NotPublishDiagnostics       m -> notification m
+    NotLogMessage               m -> notification m
+    NotShowMessage              m -> notification m
+    NotTelemetry                m -> notification m
+    NotCancelRequestFromServer  m -> notification m
+  
+  if inRightOrder msg expectedMsgs
+    then listenServer (delete msg expectedMsgs) reqMap reqSema rspSema passVar serverOut
+    else liftIO $ do
+      putStrLn "Out of order"
+      putStrLn "Got:"
+      print msg
+      putStrLn "Expected one of:"
+      mapM_ print $ takeWhile (not . isNotification) expectedMsgs
+      print $ head $ dropWhile (not . isNotification) expectedMsgs
+      putMVar passVar False
+
+  where
+  response :: Show a => ResponseMessage a -> Session ()
+  response res = do
+    liftIO $ putStrLn $ "Got response for id " ++ show (res ^. id)
+
+    liftIO $ print res
+
+    liftIO $ putMVar rspSema (res ^. id) -- unblock the handler waiting to send a request
+
+  request :: (Show a, Show b) => RequestMessage ServerMethod a b -> Session ()
+  request req = do
+    liftIO
+      $  putStrLn
+      $  "Got request for id "
+      ++ show (req ^. id)
+      ++ " "
+      ++ show (req ^. method)
+
+    liftIO $ print req
+
+    liftIO $ putMVar reqSema (req ^. id) -- unblock the handler waiting for a response
+
+  notification :: Show a => NotificationMessage ServerMethod a -> Session ()
+  notification n = do
+    liftIO $ putStrLn $ "Got notification " ++ show (n ^. method)
+    liftIO $ print n
+
+    liftIO
+      $  putStrLn
+      $  show (length (filter isNotification expectedMsgs) - 1)
+      ++ " notifications remaining"
+
+
 
 -- TODO: QuickCheck tests?
 -- | Checks wether or not the message appears in the right order
@@ -292,19 +251,3 @@ inRightOrder received (expected : msgs)
   | received == expected    = True
   | isNotification expected = inRightOrder received msgs
   | otherwise               = False
-
--- | The internal monad for tests that can fail or pass,
--- ending execution early.
--- type Session = ReaderT (MVar Bool) IO
-
--- -- TODO: Make return type polymoprhic more like error
--- failSession :: String -> Session ()
--- failSession reason = do
---   lift $ putStrLn reason
---   passVar <- ask
---   lift $ putMVar passVar False
-
--- passSession :: Session ()
--- passSession = do
---   passVar <- ask
---   lift $ putMVar passVar True

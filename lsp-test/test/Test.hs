@@ -5,9 +5,10 @@ import           Data.Proxy
 import           Control.Monad.IO.Class
 import           Control.Lens hiding (List)
 import           Language.Haskell.LSP.Test
+import           Language.Haskell.LSP.Test.Recorded
 import           Language.Haskell.LSP.TH.DataTypesJSON
 
-main = hspec $
+main = hspec $ do
   describe "manual session validation" $ 
     it "passes a test" $
       runSession "test/recordings/renamePass" $ do
@@ -32,3 +33,7 @@ main = hspec $
           mainSymbol ^. kind `shouldBe` SkFunction
           mainSymbol ^. location . range `shouldBe` Range (Position 3 0) (Position 3 4)
           mainSymbol ^. containerName `shouldBe` Nothing
+  
+  describe "replay session" $
+    it "passes a test" $
+      replaySession "test/recordings/renamePass" `shouldReturn` True

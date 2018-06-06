@@ -15,10 +15,14 @@ module Language.Haskell.LSP.Test
   (
   -- * Sessions
     runSession
+  , runSessionWithHandler
   , Session
   -- * Sending
   , sendRequest
   , sendNotification
+  , sendRequest'
+  , sendNotification'
+  , sendResponse'
   -- * Receving
   , getMessage
   -- * Utilities
@@ -26,6 +30,7 @@ module Language.Haskell.LSP.Test
   , getDocUri
   ) where
 
+import Control.Monad
 import Control.Monad.Trans.Class
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Reader
@@ -50,7 +55,6 @@ data SessionContext = SessionContext
   {
     messageSema :: MVar B.ByteString,
     serverIn :: Handle,
-    serverOut :: Handle,
     rootDir :: FilePath
   }
 
@@ -78,7 +82,35 @@ runSession :: FilePath -- ^ The filepath to the root directory for the session.
            -> Session a -- ^ The session to run.
            -> IO ()
 runSession rootDir session = do
+  pid <- getProcessID
+  absRootDir <- canonicalizePath rootDir
 
+  let initializeParams = InitializeParams (Just pid)
+                                          (Just $ T.pack absRootDir)
+                                          (Just $ filePathToUri absRootDir)
+                                          Nothing
+                                          def
+                                          (Just TraceOff)
+
+  runSessionWithHandler listenServer rootDir $ do
+
+    -- Wrap the session around initialize and shutdown calls
+    sendRequest (Proxy :: Proxy InitializeRequest) Initialize initializeParams
+    (ResponseMessage _ _ (Just (InitializeResponseCapabilities _)) e) <- getMessage
+    liftIO $ maybe (return ()) (putStrLn . ("Error when initializing: " ++) . show ) e
+
+    sendNotification Initialized InitializedParams
+
+    -- Run the actual test
+    session
+
+    sendNotification Exit ExitParams
+
+runSessionWithHandler :: (Handle -> Session ())
+                      -> FilePath
+                      -> Session a
+                      -> IO a
+runSessionWithHandler serverHandler rootDir session = do
   absRootDir <- canonicalizePath rootDir
 
   (Just serverIn, Just serverOut, Nothing, serverProc) <- createProcess
@@ -88,54 +120,34 @@ runSession rootDir session = do
   hSetBuffering serverIn  NoBuffering
   hSetBuffering serverOut NoBuffering
 
-  pid <- getProcessID
   messageSema <- newEmptyMVar
 
-  let initializeParams :: InitializeParams
-      initializeParams = InitializeParams (Just pid)
-                                          (Just $ T.pack absRootDir)
-                                          (Just $ filePathToUri absRootDir)
-                                          Nothing
-                                          def
-                                          (Just TraceOff)
-      context = SessionContext messageSema serverIn serverOut absRootDir
+  let context = SessionContext messageSema serverIn absRootDir
       initState = SessionState (IdInt 9)
 
-      -- | The session wrapped around initialize and shutdown calls
-      fullSession = do
-        sendRequest (Proxy :: Proxy InitializeRequest) Initialize initializeParams
-        (ResponseMessage _ _ (Just (InitializeResponseCapabilities _)) e) <- getMessage
-        liftIO $ maybe (return ()) (putStrLn . ("Error when initializing: " ++) . show ) e
-
-        sendNotification Initialized InitializedParams
-
-        -- Run the actual test
-        session
-
-        sendNotification Exit ExitParams
-
-  forkIO $ listenServer context
-  _ <- runReaderT (runStateT fullSession initState) context
+  forkIO $ void $ runReaderT (runStateT (serverHandler serverOut) initState) context
+  (result, _) <- runReaderT (runStateT session initState) context
 
   terminateProcess serverProc
 
-  return ()
+  return result
 
 -- | Listens to the server output, makes sure it matches the record and
 -- signals any semaphores
-listenServer :: SessionContext -> IO ()
-listenServer context = do
-  msgBytes <- getNextMessage (serverOut context)
+listenServer :: Handle -> Session ()
+listenServer serverOut = do
+  context <- lift ask
+  msgBytes <- liftIO $ getNextMessage serverOut
 
-  case decode msgBytes :: Maybe LogMessageNotification of
+  liftIO $ case decode msgBytes :: Maybe LogMessageNotification of
     -- Just print log and show messages
     Just (NotificationMessage _ WindowLogMessage (LogMessageParams _ msg)) -> T.putStrLn msg
     _ -> case decode msgBytes :: Maybe ShowMessageNotification of
       Just (NotificationMessage _ WindowShowMessage (ShowMessageParams _ msg)) -> T.putStrLn msg
     -- Give everything else for getMessage to handle
       _ -> putMVar (messageSema context) msgBytes
-    
-  listenServer context
+
+  listenServer serverOut
 
 -- | Sends a request to the server.
 --
@@ -151,29 +163,39 @@ sendRequest
   -> params -- ^ The request parameters.
   -> Session LspId -- ^ The id of the request that was sent.
 sendRequest _ method params = do
-  h <- serverIn <$> lift ask
-
   id <- curReqId <$> get
   get >>= \c -> put c { curReqId = nextId id }
 
-  let msg = RequestMessage "2.0" id method params :: RequestMessage ClientMethod params resp
+  let req = RequestMessage "2.0" id method params :: RequestMessage ClientMethod params resp
 
-  liftIO $ B.hPut h $ addHeader (encode msg)
+  sendRequest' req
 
   return id
 
   where nextId (IdInt i) = IdInt (i + 1)
         nextId (IdString s) = IdString $ T.pack $ show $ read (T.unpack s) + 1
 
+sendRequest' :: (ToJSON a, ToJSON b, ToJSON c) => RequestMessage a b c -> Session ()
+sendRequest' = sendMessage
+
 -- | Sends a notification to the server.
 sendNotification :: ToJSON a
                  => ClientMethod -- ^ The notification method.
                  -> a -- ^ The notification parameters.
                  -> Session ()
-sendNotification method params = do
-  h <- serverIn <$> lift ask
+sendNotification method params =
+  let notif = NotificationMessage "2.0" method params
+    in sendNotification' notif
 
-  let msg = NotificationMessage "2.0" method params
+sendNotification' :: (ToJSON a, ToJSON b) => NotificationMessage a b -> Session ()
+sendNotification' = sendMessage
+
+sendResponse' :: ToJSON a => ResponseMessage a -> Session ()
+sendResponse' = sendMessage
+
+sendMessage :: ToJSON a => a -> Session ()
+sendMessage msg = do
+  h <- serverIn <$> lift ask
   liftIO $ B.hPut h $ addHeader (encode msg)
 
 -- | Reads in a message from the server.

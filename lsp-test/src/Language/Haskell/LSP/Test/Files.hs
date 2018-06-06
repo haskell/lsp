@@ -51,16 +51,32 @@ mapUris f event =
     fromClientMsg (NotDidSaveTextDocument n) = NotDidSaveTextDocument $ swapUri (params . textDocument) n
     fromClientMsg (NotDidCloseTextDocument n) = NotDidCloseTextDocument $ swapUri (params . textDocument) n
     fromClientMsg (ReqInitialize r) = ReqInitialize $ params .~ (transformInit (r ^. params)) $ r
+    fromClientMsg (ReqDocumentSymbols r) = ReqDocumentSymbols $ swapUri (params . textDocument) r
+    fromClientMsg (ReqRename r) = ReqRename $ swapUri (params . textDocument) r
     fromClientMsg x = x
 
     fromServerMsg :: FromServerMessage -> FromServerMessage
     fromServerMsg (ReqApplyWorkspaceEdit r) =
-      let newDocChanges = fmap (fmap (swapUri textDocument)) $ r ^. params . edit . documentChanges
-          r1 = (params . edit . documentChanges) .~ newDocChanges $ r
-          newChanges = fmap (swapKeys f) $ r1 ^. params . edit . changes
-          r2 = (params . edit . changes) .~ newChanges $ r1
-      in ReqApplyWorkspaceEdit r2
+      ReqApplyWorkspaceEdit $ params . edit .~ swapWorkspaceEdit (r ^. params . edit) $ r
+
+    fromServerMsg (NotPublishDiagnostics n) = NotPublishDiagnostics $ swapUri params n
+
+    fromServerMsg (RspDocumentSymbols r) = 
+      let newSymbols = fmap (fmap (swapUri location)) $ r ^. result
+      in RspDocumentSymbols $ result .~ newSymbols $ r
+
+    fromServerMsg (RspRename r) =
+      let oldResult = r ^. result :: Maybe WorkspaceEdit
+          newResult = fmap swapWorkspaceEdit oldResult
+      in RspRename $ result .~ newResult $ r
+
     fromServerMsg x = x
+
+    swapWorkspaceEdit :: WorkspaceEdit -> WorkspaceEdit
+    swapWorkspaceEdit e =
+      let newDocChanges = fmap (fmap (swapUri textDocument)) $ e ^. documentChanges
+          newChanges = fmap (swapKeys f) $ e ^. changes
+      in WorkspaceEdit newChanges newDocChanges
 
     swapKeys :: (Uri -> Uri) -> HM.HashMap Uri b -> HM.HashMap Uri b
     swapKeys f = HM.foldlWithKey' (\acc k v -> HM.insert (f k) v acc) HM.empty
