@@ -40,18 +40,20 @@ replaySession sessionDir = do
 
   events <- swapFiles sessionDir unswappedEvents
 
-  let clientEvents = map (\(FromClient _ msg) -> msg) $ filter isClientMsg events
-      serverEvents = map (\(FromServer _ msg) -> msg) $ filter isServerMsg events
-      requestMap = getRequestMap clientEvents
+  let clientEvents = filter isClientMsg events
+      serverEvents = filter isServerMsg events
+      clientMsgs = map (\(FromClient _ msg) -> msg) clientEvents
+      serverMsgs = filter (not . shouldSkip) $ map (\(FromServer _ msg) -> msg) serverEvents
+      requestMap = getRequestMap clientMsgs
 
 
   reqSema <- newEmptyMVar
   rspSema <- newEmptyMVar
   passVar <- newEmptyMVar :: IO (MVar Bool)
 
-  forkIO $ runSessionWithHandler (listenServer serverEvents requestMap reqSema rspSema passVar) sessionDir $
-    sendMessages clientEvents reqSema rspSema
-  
+  forkIO $ runSessionWithHandler (listenServer serverMsgs requestMap reqSema rspSema passVar) sessionDir $
+    sendMessages clientMsgs reqSema rspSema
+
   takeMVar passVar
 
   where
@@ -106,26 +108,24 @@ sendMessages (nextMsg:remainingMsgs) reqSema rspSema =
     liftIO $ putStrLn "Will send exit notification soon"
     liftIO $ threadDelay 10000000
     sendNotification' msg
-    
+
     liftIO $ error "Done"
 
   notification msg@(NotificationMessage _ m _) = do
     sendNotification' msg
 
     liftIO $ putStrLn $ "Sent a notification " ++ show m
-    
+
     sendMessages remainingMsgs reqSema rspSema
 
   request msg@(RequestMessage _ id m _) = do
-    liftIO $ print $ addHeader $ encode msg
-
     sendRequest' msg
     liftIO $ putStrLn $  "Sent a request id " ++ show id ++ ": " ++ show m ++ "\nWaiting for a response"
 
     rsp <- liftIO $ takeMVar rspSema
-    when (responseId id /= rsp) $ 
+    when (responseId id /= rsp) $
       error $ "Expected id " ++ show id ++ ", got " ++ show rsp
-    
+
     sendMessages remainingMsgs reqSema rspSema
 
   response msg@(ResponseMessage _ id _ _) = do
@@ -186,24 +186,24 @@ listenServer expectedMsgs reqMap reqSema rspSema passVar serverOut  = do
     NotShowMessage              m -> notification m
     NotTelemetry                m -> notification m
     NotCancelRequestFromServer  m -> notification m
-  
-  if inRightOrder msg expectedMsgs
-    then listenServer (delete msg expectedMsgs) reqMap reqSema rspSema passVar serverOut
-    else liftIO $ do
-      putStrLn "Out of order"
-      putStrLn "Got:"
-      print msg
-      putStrLn "Expected one of:"
-      mapM_ print $ takeWhile (not . isNotification) expectedMsgs
-      print $ head $ dropWhile (not . isNotification) expectedMsgs
-      putMVar passVar False
+
+  if shouldSkip msg
+    then listenServer expectedMsgs reqMap reqSema rspSema passVar serverOut
+    else if inRightOrder msg expectedMsgs
+      then listenServer (delete msg expectedMsgs) reqMap reqSema rspSema passVar serverOut
+      else liftIO $ do
+        putStrLn "Out of order"
+        putStrLn "Got:"
+        print msg
+        putStrLn "Expected one of:"
+        mapM_ print $ takeWhile (not . isNotification) expectedMsgs
+        print $ head $ dropWhile (not . isNotification) expectedMsgs
+        putMVar passVar False
 
   where
   response :: Show a => ResponseMessage a -> Session ()
   response res = do
     liftIO $ putStrLn $ "Got response for id " ++ show (res ^. id)
-
-    liftIO $ print res
 
     liftIO $ putMVar rspSema (res ^. id) -- unblock the handler waiting to send a request
 
@@ -216,19 +216,10 @@ listenServer expectedMsgs reqMap reqSema rspSema passVar serverOut  = do
       ++ " "
       ++ show (req ^. method)
 
-    liftIO $ print req
-
     liftIO $ putMVar reqSema (req ^. id) -- unblock the handler waiting for a response
 
   notification :: Show a => NotificationMessage ServerMethod a -> Session ()
-  notification n = do
-    liftIO $ putStrLn $ "Got notification " ++ show (n ^. method)
-    liftIO $ print n
-
-    liftIO
-      $  putStrLn
-      $  show (length (filter isNotification expectedMsgs) - 1)
-      ++ " notifications remaining"
+  notification n = liftIO $ putStrLn $ "Got notification " ++ show (n ^. method)
 
 
 
@@ -245,9 +236,15 @@ listenServer expectedMsgs reqMap reqSema rspSema passVar serverOut  = do
 inRightOrder :: FromServerMessage -> [FromServerMessage] -> Bool
 
 inRightOrder _ [] = error "Why is this empty"
--- inRightOrder (LSP.NotificationMessage _ _ _) _ = True
 
 inRightOrder received (expected : msgs)
   | received == expected    = True
   | isNotification expected = inRightOrder received msgs
   | otherwise               = False
+
+-- | Ignore logging notifications since they vary from session to session
+shouldSkip :: FromServerMessage -> Bool
+shouldSkip (NotLogMessage  _) = True
+shouldSkip (NotShowMessage _) = True
+shouldSkip (ReqShowMessage _) = True
+shouldSkip _                  = False
