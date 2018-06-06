@@ -1,6 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE RankNTypes #-}
 -- | A testing tool for replaying captured client logs back to a server,
 -- and validating that the server output matches up with another log.
 module Language.Haskell.LSP.Test.Replay
@@ -24,7 +21,8 @@ import           System.IO
 import           System.FilePath
 import           Language.Haskell.LSP.Test
 import           Language.Haskell.LSP.Test.Files
-import           Language.Haskell.LSP.Test.Parsing
+import           Language.Haskell.LSP.Test.Decoding
+import           Language.Haskell.LSP.Test.Messages
 
 
 -- | Replays a captured client output and 
@@ -68,42 +66,7 @@ replaySession sessionDir = do
 sendMessages :: [FromClientMessage] -> MVar LspId -> MVar LspIdRsp -> Session ()
 sendMessages [] _ _ = return ()
 sendMessages (nextMsg:remainingMsgs) reqSema rspSema =
-  case nextMsg of
-    ReqInitialize               m -> request m
-    ReqShutdown                 m -> request m
-    ReqHover                    m -> request m
-    ReqCompletion               m -> request m
-    ReqCompletionItemResolve    m -> request m
-    ReqSignatureHelp            m -> request m
-    ReqDefinition               m -> request m
-    ReqFindReferences           m -> request m
-    ReqDocumentHighlights       m -> request m
-    ReqDocumentSymbols          m -> request m
-    ReqWorkspaceSymbols         m -> request m
-    ReqCodeAction               m -> request m
-    ReqCodeLens                 m -> request m
-    ReqCodeLensResolve          m -> request m
-    ReqDocumentFormatting       m -> request m
-    ReqDocumentRangeFormatting  m -> request m
-    ReqDocumentOnTypeFormatting m -> request m
-    ReqRename                   m -> request m
-    ReqExecuteCommand           m -> request m
-    ReqDocumentLink             m -> request m
-    ReqDocumentLinkResolve      m -> request m
-    ReqWillSaveWaitUntil        m -> request m
-    RspApplyWorkspaceEdit       m -> response m
-    RspFromClient               m -> response m
-    NotInitialized              m -> notification m
-    NotExit                     m -> notification m
-    NotCancelRequestFromClient  m -> notification m
-    NotDidChangeConfiguration   m -> notification m
-    NotDidOpenTextDocument      m -> notification m
-    NotDidChangeTextDocument    m -> notification m
-    NotDidCloseTextDocument     m -> notification m
-    NotWillSaveTextDocument     m -> notification m
-    NotDidSaveTextDocument      m -> notification m
-    NotDidChangeWatchedFiles    m -> notification m
-    UnknownFromClientMessage m -> liftIO $ error $ "Unknown message was recorded from the client" ++ show m
+  handleClientMessage request response notification nextMsg
  where
   -- TODO: May need to prevent premature exit notification being sent
   notification msg@(NotificationMessage _ Exit _) = do
@@ -154,40 +117,8 @@ listenServer [] _ _ _ passVar _ = liftIO $ putMVar passVar True
 listenServer expectedMsgs reqMap reqSema rspSema passVar serverOut  = do
   msgBytes <- liftIO $ getNextMessage serverOut
   let msg = decodeFromServerMsg reqMap msgBytes
-
-  case msg of
-    ReqRegisterCapability       m -> request m
-    ReqApplyWorkspaceEdit       m -> request m
-    ReqShowMessage              m -> request m
-    ReqUnregisterCapability     m -> request m
-    RspInitialize               m -> response m
-    RspShutdown                 m -> response m
-    RspHover                    m -> response m
-    RspCompletion               m -> response m
-    RspCompletionItemResolve    m -> response m
-    RspSignatureHelp            m -> response m
-    RspDefinition               m -> response m
-    RspFindReferences           m -> response m
-    RspDocumentHighlights       m -> response m
-    RspDocumentSymbols          m -> response m
-    RspWorkspaceSymbols         m -> response m
-    RspCodeAction               m -> response m
-    RspCodeLens                 m -> response m
-    RspCodeLensResolve          m -> response m
-    RspDocumentFormatting       m -> response m
-    RspDocumentRangeFormatting  m -> response m
-    RspDocumentOnTypeFormatting m -> response m
-    RspRename                   m -> response m
-    RspExecuteCommand           m -> response m
-    RspError                    m -> response m
-    RspDocumentLink             m -> response m
-    RspDocumentLinkResolve      m -> response m
-    RspWillSaveWaitUntil        m -> response m
-    NotPublishDiagnostics       m -> notification m
-    NotLogMessage               m -> notification m
-    NotShowMessage              m -> notification m
-    NotTelemetry                m -> notification m
-    NotCancelRequestFromServer  m -> notification m
+  
+  handleServerMessage request response notification msg
 
   if shouldSkip msg
     then listenServer expectedMsgs reqMap reqSema rspSema passVar serverOut
@@ -203,13 +134,13 @@ listenServer expectedMsgs reqMap reqSema rspSema passVar serverOut  = do
         putMVar passVar False
 
   where
-  response :: Show a => ResponseMessage a -> Session ()
+  response :: ResponseMessage a -> Session ()
   response res = do
     liftIO $ putStrLn $ "Got response for id " ++ show (res ^. id)
 
     liftIO $ putMVar rspSema (res ^. id) -- unblock the handler waiting to send a request
 
-  request :: (Show a, Show b) => RequestMessage ServerMethod a b -> Session ()
+  request :: RequestMessage ServerMethod a b -> Session ()
   request req = do
     liftIO
       $  putStrLn
@@ -220,7 +151,7 @@ listenServer expectedMsgs reqMap reqSema rspSema passVar serverOut  = do
 
     liftIO $ putMVar reqSema (req ^. id) -- unblock the handler waiting for a response
 
-  notification :: Show a => NotificationMessage ServerMethod a -> Session ()
+  notification :: NotificationMessage ServerMethod a -> Session ()
   notification n = liftIO $ putStrLn $ "Got notification " ++ show (n ^. method)
 
 

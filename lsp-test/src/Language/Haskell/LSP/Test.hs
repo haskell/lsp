@@ -49,7 +49,7 @@ import Language.Haskell.LSP.Test.Compat
 import System.IO
 import System.Directory
 import System.FilePath
-import Language.Haskell.LSP.Test.Parsing
+import Language.Haskell.LSP.Test.Decoding
 
 data SessionContext = SessionContext
   {
