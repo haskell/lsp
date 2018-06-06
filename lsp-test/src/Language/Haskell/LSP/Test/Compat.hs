@@ -1,6 +1,6 @@
 {-# LANGUAGE CPP #-}
 
-module Compat where
+module Language.Haskell.LSP.Test.Compat where
 
 
 #ifdef mingw32_HOST_OS

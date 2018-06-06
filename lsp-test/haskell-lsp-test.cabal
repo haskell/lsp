@@ -16,7 +16,7 @@ extra-source-files:  README.md
 library
   hs-source-dirs:      src
   exposed-modules:     Language.Haskell.LSP.Test
-                     , Language.Haskell.LSP.Test.Recorded
+                     , Language.Haskell.LSP.Test.Replay
   default-language:    Haskell2010
   build-depends:       base >= 4.7 && < 5
                      , haskell-lsp-types
@@ -36,7 +36,7 @@ library
     build-depends:     win32
   else
     build-depends:     unix
-  other-modules:       Compat
+  other-modules:       Language.Haskell.LSP.Test.Compat
                        Language.Haskell.LSP.Test.Files
                        Language.Haskell.LSP.Test.Parsing
   ghc-options:         -W
@@ -63,12 +63,4 @@ executable example
                      , haskell-lsp-types
                      , lens
                      , text
-                     , directory
-
-executable recorded-example
-  hs-source-dirs:      example
-  main-is:             Recorded.hs
-  default-language:    Haskell2010
-  build-depends:       base >= 4.7 && < 5
-                     , haskell-lsp-test
                      , directory

@@ -5,7 +5,7 @@ import           Data.Proxy
 import           Control.Monad.IO.Class
 import           Control.Lens hiding (List)
 import           Language.Haskell.LSP.Test
-import           Language.Haskell.LSP.Test.Recorded
+import           Language.Haskell.LSP.Test.Replay
 import           Language.Haskell.LSP.TH.DataTypesJSON
 
 main = hspec $ do

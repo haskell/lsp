@@ -45,7 +45,7 @@ import Data.Maybe
 import Data.Proxy
 import System.Process
 import Language.Haskell.LSP.Types hiding (error, id)
-import Compat
+import Language.Haskell.LSP.Test.Compat
 import System.IO
 import System.Directory
 import System.FilePath

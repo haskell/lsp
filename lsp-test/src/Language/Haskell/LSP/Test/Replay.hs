@@ -1,9 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
--- | A testing tool for replaying recorded client logs back to a server,
+-- | A testing tool for replaying captured client logs back to a server,
 -- and validating that the server output matches up with another log.
-module Language.Haskell.LSP.Test.Recorded
+module Language.Haskell.LSP.Test.Replay
   ( replaySession
   )
 where
@@ -27,8 +27,10 @@ import           Language.Haskell.LSP.Test.Files
 import           Language.Haskell.LSP.Test.Parsing
 
 
--- | Replays a recorded client output and 
+-- | Replays a captured client output and 
 -- makes sure it matches up with an expected response.
+-- The session directory should have a captured session file in it
+-- named "session.log".
 replaySession :: FilePath -- ^ The recorded session directory.
               -> IO Bool
 replaySession sessionDir = do
