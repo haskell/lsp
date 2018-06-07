@@ -16,6 +16,17 @@ module Language.Haskell.LSP.Test
   -- * Sessions
     runSession
   , runSessionWithHandler
+  -- | A session representing one instance of launching and connecting to a server.
+  -- 
+  -- You can send and receive messages to the server within 'Session' via 'getMessage',
+  -- 'sendRequest' and 'sendNotification'.
+  --
+  -- @
+  -- runSession \"path\/to\/root\/dir\" $ do
+  --   docItem <- getDocItem "Desktop/simple.hs" "haskell"
+  --   sendNotification TextDocumentDidOpen (DidOpenTextDocumentParams docItem)
+  --   diagnostics <- getMessage :: Session PublishDiagnosticsNotification
+  -- @
   , Session
   -- * Sending
   , sendRequest
@@ -24,7 +35,13 @@ module Language.Haskell.LSP.Test
   , sendNotification'
   , sendResponse'
   -- * Receving
-  , getMessage
+  , request
+  , response
+  , notification
+  , loggingNotification
+  -- * Parsing
+  , many
+  , skipMany
   -- * Utilities
   , getDocItem
   , getDocUri
@@ -34,48 +51,23 @@ import Control.Monad
 import Control.Monad.Trans.Class
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Reader
-import Control.Monad.Trans.State
 import Control.Concurrent
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import Data.Aeson
 import qualified Data.ByteString.Lazy.Char8 as B
 import Data.Default
-import Data.Maybe
 import Data.Proxy
 import System.Process
 import Language.Haskell.LSP.Types hiding (error, id)
+import Language.Haskell.LSP.Messages
 import Language.Haskell.LSP.Test.Compat
 import System.IO
 import System.Directory
 import System.FilePath
 import Language.Haskell.LSP.Test.Decoding
-
-data SessionContext = SessionContext
-  {
-    messageSema :: MVar B.ByteString,
-    serverIn :: Handle,
-    rootDir :: FilePath
-  }
-
-newtype SessionState = SessionState
-  {
-    curReqId :: LspId
-  }
-
--- | A session representing one instance of launching and connecting to a server.
--- 
--- You can send and receive messages to the server within 'Session' via 'getMessage',
--- 'sendRequest' and 'sendNotification'.
---
--- @
--- runSession \"path\/to\/root\/dir\" $ do
---   docItem <- getDocItem "Desktop/simple.hs" "haskell"
---   sendNotification TextDocumentDidOpen (DidOpenTextDocumentParams docItem)
---   diagnostics <- getMessage :: Session PublishDiagnosticsNotification
--- @
--- 
-type Session = StateT SessionState (ReaderT SessionContext IO)
+import Language.Haskell.LSP.Test.Parsing
+import Text.Parsec
 
 -- | Starts a new session.
 runSession :: FilePath -- ^ The filepath to the root directory for the session.
@@ -96,8 +88,9 @@ runSession rootDir session = do
 
     -- Wrap the session around initialize and shutdown calls
     sendRequest (Proxy :: Proxy InitializeRequest) Initialize initializeParams
-    (ResponseMessage _ _ (Just (InitializeResponseCapabilities _)) e) <- getMessage
-    liftIO $ maybe (return ()) (putStrLn . ("Error when initializing: " ++) . show ) e
+    -- (ResponseMessage _ _ (Just (InitializeResponseCapabilities _)) e) <- getMessage
+    -- liftIO $ maybe (return ()) (putStrLn . ("Error when initializing: " ++) . show ) e
+    (RspInitialize _ ) <- response
 
     sendNotification Initialized InitializedParams
 
@@ -120,32 +113,32 @@ runSessionWithHandler serverHandler rootDir session = do
   hSetBuffering serverIn  NoBuffering
   hSetBuffering serverOut NoBuffering
 
-  messageSema <- newEmptyMVar
+  reqMap <- newMVar newRequestMap
+  messageChan <- newChan
+  meaninglessChan <- newChan
 
-  let context = SessionContext messageSema serverIn absRootDir
+  let context = SessionContext serverIn absRootDir messageChan reqMap
       initState = SessionState (IdInt 9)
 
-  forkIO $ void $ runReaderT (runStateT (serverHandler serverOut) initState) context
-  (result, _) <- runReaderT (runStateT session initState) context
+  forkIO $ void $ runReaderT (runParserT (serverHandler serverOut) initState "" meaninglessChan) context
+  result <- runReaderT (runParserT session initState "" messageChan) context
 
   terminateProcess serverProc
 
-  return result
+  case result of
+    Right x -> return x
+    Left err -> error $ show err
 
 -- | Listens to the server output, makes sure it matches the record and
 -- signals any semaphores
 listenServer :: Handle -> Session ()
 listenServer serverOut = do
-  context <- lift ask
   msgBytes <- liftIO $ getNextMessage serverOut
 
-  liftIO $ case decode msgBytes :: Maybe LogMessageNotification of
-    -- Just print log and show messages
-    Just (NotificationMessage _ WindowLogMessage (LogMessageParams _ msg)) -> T.putStrLn msg
-    _ -> case decode msgBytes :: Maybe ShowMessageNotification of
-      Just (NotificationMessage _ WindowShowMessage (ShowMessageParams _ msg)) -> T.putStrLn msg
-    -- Give everything else for getMessage to handle
-      _ -> putMVar (messageSema context) msgBytes
+  context <- lift ask
+  reqMap <- liftIO $ readMVar $ requestMap context
+
+  liftIO $ writeChan (messageChan context) $ decodeFromServerMsg reqMap msgBytes
 
   listenServer serverOut
 
@@ -163,8 +156,8 @@ sendRequest
   -> params -- ^ The request parameters.
   -> Session LspId -- ^ The id of the request that was sent.
 sendRequest _ method params = do
-  id <- curReqId <$> get
-  get >>= \c -> put c { curReqId = nextId id }
+  id <- curReqId <$> getState
+  modifyState $ \c -> c { curReqId = nextId id }
 
   let req = RequestMessage "2.0" id method params :: RequestMessage ClientMethod params resp
 
@@ -175,8 +168,13 @@ sendRequest _ method params = do
   where nextId (IdInt i) = IdInt (i + 1)
         nextId (IdString s) = IdString $ T.pack $ show $ read (T.unpack s) + 1
 
-sendRequest' :: (ToJSON a, ToJSON b, ToJSON c) => RequestMessage a b c -> Session ()
-sendRequest' = sendMessage
+sendRequest' :: (ToJSON a, ToJSON b) => RequestMessage ClientMethod a b -> Session ()
+sendRequest' req = do
+  -- Update the request map
+  reqMap <- requestMap <$> lift ask
+  liftIO $ modifyMVar_ reqMap (return . flip updateRequestMap req)
+
+  sendMessage req
 
 -- | Sends a notification to the server.
 sendNotification :: ToJSON a
@@ -197,13 +195,6 @@ sendMessage :: ToJSON a => a -> Session ()
 sendMessage msg = do
   h <- serverIn <$> lift ask
   liftIO $ B.hPut h $ addHeader (encode msg)
-
--- | Reads in a message from the server.
-getMessage :: FromJSON a => Session a
-getMessage = do
-  sema <- messageSema <$> lift ask
-  bytes <- liftIO $ takeMVar sema
-  return $ fromMaybe (error $ "Wrong type! Got: " ++ show bytes) (decode bytes)
 
 -- | Reads in a text document as the first version.
 getDocItem :: FilePath -- ^ The path to the text document to read in.

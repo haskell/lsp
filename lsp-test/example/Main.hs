@@ -13,5 +13,6 @@ main = runSession "test/recordings/renamePass" $ do
   
   sendRequest (Proxy :: Proxy DocumentSymbolRequest) TextDocumentDocumentSymbol (DocumentSymbolParams docId)
 
-  syms <- getMessage :: Session DocumentSymbolsResponse
-  liftIO $ print syms
+  skipMany loggingNotification
+
+  response >>= liftIO . print

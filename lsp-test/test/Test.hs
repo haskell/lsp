@@ -6,7 +6,8 @@ import           Control.Monad.IO.Class
 import           Control.Lens hiding (List)
 import           Language.Haskell.LSP.Test
 import           Language.Haskell.LSP.Test.Replay
-import           Language.Haskell.LSP.TH.DataTypesJSON
+import           Language.Haskell.LSP.Types
+import           Language.Haskell.LSP.Messages
 
 main = hspec $ do
   describe "manual session validation" $ 
@@ -17,8 +18,9 @@ main = hspec $ do
 
         sendNotification TextDocumentDidOpen (DidOpenTextDocumentParams docItem)
 
-        (NotificationMessage _ TextDocumentPublishDiagnostics (PublishDiagnosticsParams _ (List diags))) <-
-          getMessage :: Session PublishDiagnosticsNotification
+        skipMany loggingNotification
+
+        (NotPublishDiagnostics (NotificationMessage _ TextDocumentPublishDiagnostics (PublishDiagnosticsParams _ (List diags)))) <- notification
 
         liftIO $ diags `shouldBe` []
         
@@ -26,7 +28,8 @@ main = hspec $ do
                     TextDocumentDocumentSymbol
                     (DocumentSymbolParams docId)
 
-        (ResponseMessage _ _ (Just (List symbols)) Nothing) <- getMessage :: Session DocumentSymbolsResponse
+        (RspDocumentSymbols (ResponseMessage _ _ (Just (List symbols)) Nothing)) <- response
+
         liftIO $ do
           let mainSymbol = head symbols
           mainSymbol ^. name `shouldBe` "main"

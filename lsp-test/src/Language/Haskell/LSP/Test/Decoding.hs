@@ -46,65 +46,68 @@ getHeaders h = do
   let (name, val) = span (/= ':') l
   if null val then return [] else ((name, drop 2 val) :) <$> getHeaders h
 
-type RequestMap = HM.HashMap LspId FromClientMessage
+type RequestMap = HM.HashMap LspId ClientMethod
+
+newRequestMap :: RequestMap
+newRequestMap = HM.empty
+
+updateRequestMap :: RequestMap -> RequestMessage ClientMethod a b -> RequestMap
+updateRequestMap reqMap msg = HM.insert (msg ^. id) (msg ^. method) reqMap
 
 getRequestMap :: [FromClientMessage] -> RequestMap
 getRequestMap = foldl helper HM.empty
  where
   helper acc msg = case msg of
-    (ReqInitialize val) -> insert val msg acc
-    (ReqShutdown val) -> insert val msg acc
-    (ReqHover val) -> insert val msg acc
-    (ReqCompletion val) -> insert val msg acc
-    (ReqCompletionItemResolve val) -> insert val msg acc
-    (ReqSignatureHelp val) -> insert val msg acc
-    (ReqDefinition val) -> insert val msg acc
-    (ReqFindReferences val) -> insert val msg acc
-    (ReqDocumentHighlights val) -> insert val msg acc
-    (ReqDocumentSymbols val) -> insert val msg acc
-    (ReqWorkspaceSymbols val) -> insert val msg acc
-    (ReqCodeAction val) -> insert val msg acc
-    (ReqCodeLens val) -> insert val msg acc
-    (ReqCodeLensResolve val) -> insert val msg acc
-    (ReqDocumentFormatting val) -> insert val msg acc
-    (ReqDocumentRangeFormatting val) -> insert val msg acc
-    (ReqDocumentOnTypeFormatting val) -> insert val msg acc
-    (ReqRename val) -> insert val msg acc
-    (ReqExecuteCommand val) -> insert val msg acc
-    (ReqDocumentLink val) -> insert val msg acc
-    (ReqDocumentLinkResolve val) -> insert val msg acc
-    (ReqWillSaveWaitUntil val) -> insert val msg acc
+    (ReqInitialize val) -> insert val acc
+    (ReqShutdown val) -> insert val acc
+    (ReqHover val) -> insert val acc
+    (ReqCompletion val) -> insert val acc
+    (ReqCompletionItemResolve val) -> insert val acc
+    (ReqSignatureHelp val) -> insert val acc
+    (ReqDefinition val) -> insert val acc
+    (ReqFindReferences val) -> insert val acc
+    (ReqDocumentHighlights val) -> insert val acc
+    (ReqDocumentSymbols val) -> insert val acc
+    (ReqWorkspaceSymbols val) -> insert val acc
+    (ReqCodeAction val) -> insert val acc
+    (ReqCodeLens val) -> insert val acc
+    (ReqCodeLensResolve val) -> insert val acc
+    (ReqDocumentFormatting val) -> insert val acc
+    (ReqDocumentRangeFormatting val) -> insert val acc
+    (ReqDocumentOnTypeFormatting val) -> insert val acc
+    (ReqRename val) -> insert val acc
+    (ReqExecuteCommand val) -> insert val acc
+    (ReqDocumentLink val) -> insert val acc
+    (ReqDocumentLinkResolve val) -> insert val acc
+    (ReqWillSaveWaitUntil val) -> insert val acc
     _ -> acc
-  insert m = HM.insert (m ^. id)
+  insert m = HM.insert (m ^. id) (m ^. method)
 
-matchResponseMsgType :: FromClientMessage -> B.ByteString -> FromServerMessage
+matchResponseMsgType :: ClientMethod -> B.ByteString -> FromServerMessage
 matchResponseMsgType req bytes = case req of
-  ReqInitialize _ -> RspInitialize $ fromJust $ decode bytes
-  ReqShutdown   _ -> RspShutdown $ fromJust $ decode bytes
-  ReqHover      _ -> RspHover $ fromJust $ decode bytes
-  ReqCompletion _ -> RspCompletion $ fromJust $ decode bytes
-  ReqCompletionItemResolve _ ->
-    RspCompletionItemResolve $ fromJust $ decode bytes
-  ReqSignatureHelp      _ -> RspSignatureHelp $ fromJust $ decode bytes
-  ReqDefinition         _ -> RspDefinition $ fromJust $ decode bytes
-  ReqFindReferences     _ -> RspFindReferences $ fromJust $ decode bytes
-  ReqDocumentHighlights _ -> RspDocumentHighlights $ fromJust $ decode bytes
-  ReqDocumentSymbols    _ -> RspDocumentSymbols $ fromJust $ decode bytes
-  ReqWorkspaceSymbols   _ -> RspWorkspaceSymbols $ fromJust $ decode bytes
-  ReqCodeAction         _ -> RspCodeAction $ fromJust $ decode bytes
-  ReqCodeLens           _ -> RspCodeLens $ fromJust $ decode bytes
-  ReqCodeLensResolve    _ -> RspCodeLensResolve $ fromJust $ decode bytes
-  ReqDocumentFormatting _ -> RspDocumentFormatting $ fromJust $ decode bytes
-  ReqDocumentRangeFormatting _ ->
-    RspDocumentRangeFormatting $ fromJust $ decode bytes
-  ReqDocumentOnTypeFormatting _ ->
-    RspDocumentOnTypeFormatting $ fromJust $ decode bytes
-  ReqRename              _ -> RspRename $ fromJust $ decode bytes
-  ReqExecuteCommand      _ -> RspExecuteCommand $ fromJust $ decode bytes
-  ReqDocumentLink        _ -> RspDocumentLink $ fromJust $ decode bytes
-  ReqDocumentLinkResolve _ -> RspDocumentLinkResolve $ fromJust $ decode bytes
-  ReqWillSaveWaitUntil   _ -> RspWillSaveWaitUntil $ fromJust $ decode bytes
-  x                        -> error $ "Not a request: " ++ show x
+  Initialize                    -> RspInitialize $ fromJust $ decode bytes
+  Shutdown                      -> RspShutdown $ fromJust $ decode bytes
+  TextDocumentHover             -> RspHover $ fromJust $ decode bytes
+  TextDocumentCompletion        -> RspCompletion $ fromJust $ decode bytes
+  CompletionItemResolve         -> RspCompletionItemResolve $ fromJust $ decode bytes
+  TextDocumentSignatureHelp     -> RspSignatureHelp $ fromJust $ decode bytes
+  TextDocumentDefinition        -> RspDefinition $ fromJust $ decode bytes
+  TextDocumentReferences        -> RspFindReferences $ fromJust $ decode bytes
+  TextDocumentDocumentHighlight -> RspDocumentHighlights $ fromJust $ decode bytes
+  TextDocumentDocumentSymbol    -> RspDocumentSymbols $ fromJust $ decode bytes
+  WorkspaceSymbol               -> RspWorkspaceSymbols $ fromJust $ decode bytes
+  TextDocumentCodeAction        -> RspCodeAction $ fromJust $ decode bytes
+  TextDocumentCodeLens          -> RspCodeLens $ fromJust $ decode bytes
+  CodeLensResolve               -> RspCodeLensResolve $ fromJust $ decode bytes
+  TextDocumentFormatting        -> RspDocumentFormatting $ fromJust $ decode bytes
+  TextDocumentRangeFormatting   -> RspDocumentRangeFormatting $ fromJust $ decode bytes
+  TextDocumentOnTypeFormatting  -> RspDocumentOnTypeFormatting $ fromJust $ decode bytes
+  TextDocumentRename            -> RspRename $ fromJust $ decode bytes
+  WorkspaceExecuteCommand       -> RspExecuteCommand $ fromJust $ decode bytes
+  TextDocumentDocumentLink      -> RspDocumentLink $ fromJust $ decode bytes
+  DocumentLinkResolve           -> RspDocumentLinkResolve $ fromJust $ decode bytes
+  TextDocumentWillSaveWaitUntil -> RspWillSaveWaitUntil $ fromJust $ decode bytes
+  x                             -> error $ "Not a request: " ++ show x
 
 decodeFromServerMsg :: RequestMap -> B.ByteString -> FromServerMessage
 decodeFromServerMsg reqMap bytes =
