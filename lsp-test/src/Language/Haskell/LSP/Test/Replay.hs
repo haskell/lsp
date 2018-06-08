@@ -46,7 +46,6 @@ replaySession sessionDir = do
       serverMsgs = filter (not . shouldSkip) $ map (\(FromServer _ msg) -> msg) serverEvents
       requestMap = getRequestMap clientMsgs
 
-
   reqSema <- newEmptyMVar
   rspSema <- newEmptyMVar
   passVar <- newEmptyMVar :: IO (MVar Bool)
@@ -99,7 +98,7 @@ sendMessages (nextMsg:remainingMsgs) reqSema rspSema =
     if responseId reqId /= id
       then error $ "Expected id " ++ show reqId ++ ", got " ++ show reqId
       else do
-        sendResponse' msg
+        sendResponse msg
         liftIO $ putStrLn $ "Sent response to request id " ++ show id
 
     sendMessages remainingMsgs reqSema rspSema

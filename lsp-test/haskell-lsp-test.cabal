@@ -21,17 +21,19 @@ library
   build-depends:       base >= 4.7 && < 5
                      , haskell-lsp-types
                      , haskell-lsp
-                     , data-default
-                     , bytestring
                      , aeson
-                     , lens
+                     , bytestring
+                     , conduit-parse
+                     , conduit
+                     , containers
+                     , data-default
+                     , directory
                      , filepath
+                     , lens
+                     , parsers
+                     , process
                      , text
                      , transformers
-                     , parsec
-                     , process
-                     , directory
-                     , containers
                      , unordered-containers
   if os(windows)
     build-depends:     win32

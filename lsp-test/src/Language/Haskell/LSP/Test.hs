@@ -16,42 +16,59 @@ module Language.Haskell.LSP.Test
   -- * Sessions
     runSession
   , runSessionWithHandler
-  -- | A session representing one instance of launching and connecting to a server.
-  -- 
-  -- You can send and receive messages to the server within 'Session' via 'getMessage',
-  -- 'sendRequest' and 'sendNotification'.
-  --
-  -- @
-  -- runSession \"path\/to\/root\/dir\" $ do
-  --   docItem <- getDocItem "Desktop/simple.hs" "haskell"
-  --   sendNotification TextDocumentDidOpen (DidOpenTextDocumentParams docItem)
-  --   diagnostics <- getMessage :: Session PublishDiagnosticsNotification
-  -- @
   , Session
   -- * Sending
   , sendRequest
   , sendNotification
   , sendRequest'
   , sendNotification'
-  , sendResponse'
+  , sendResponse
   -- * Receving
   , request
   , response
   , notification
   , loggingNotification
-  -- * Parsing
+  -- * Combinators
+  , choice
+  , option
+  , optional
+  , skipOptional
+  , between
+  , some
   , many
+  , sepBy
+  , sepBy1
+  , sepByNonEmpty
+  , sepEndBy1
+  , sepEndByNonEmpty
+  , sepEndBy
+  , endBy1
+  , endByNonEmpty
+  , endBy
+  , count
+  , chainl
+  , chainr
+  , chainl1
+  , chainr1
+  , manyTill
+  , try
+  , (<?>)
   , skipMany
+  , skipSome
+  , unexpected
+  , notFollowedBy
+  , (<|>)
+  , satisfy
   -- * Utilities
   , getDocItem
   , getDocUri
   ) where
 
+import Control.Applicative
 import Control.Monad
-import Control.Monad.Trans.Class
 import Control.Monad.IO.Class
-import Control.Monad.Trans.Reader
 import Control.Concurrent
+import Control.Lens
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import Data.Aeson
@@ -59,7 +76,8 @@ import qualified Data.ByteString.Lazy.Char8 as B
 import Data.Default
 import Data.Proxy
 import System.Process
-import Language.Haskell.LSP.Types hiding (error, id)
+import Language.Haskell.LSP.Types
+import qualified  Language.Haskell.LSP.Types as LSP (error)
 import Language.Haskell.LSP.Messages
 import Language.Haskell.LSP.Test.Compat
 import System.IO
@@ -67,7 +85,7 @@ import System.Directory
 import System.FilePath
 import Language.Haskell.LSP.Test.Decoding
 import Language.Haskell.LSP.Test.Parsing
-import Text.Parsec
+import Text.Parser.Combinators
 
 -- | Starts a new session.
 runSession :: FilePath -- ^ The filepath to the root directory for the session.
@@ -88,9 +106,8 @@ runSession rootDir session = do
 
     -- Wrap the session around initialize and shutdown calls
     sendRequest (Proxy :: Proxy InitializeRequest) Initialize initializeParams
-    -- (ResponseMessage _ _ (Just (InitializeResponseCapabilities _)) e) <- getMessage
-    -- liftIO $ maybe (return ()) (putStrLn . ("Error when initializing: " ++) . show ) e
-    (RspInitialize _ ) <- response
+    RspInitialize initRsp <- response
+    liftIO $ maybe (return ()) (putStrLn . ("Error while initializing: " ++) . show ) (initRsp ^. LSP.error)
 
     sendNotification Initialized InitializedParams
 
@@ -99,6 +116,8 @@ runSession rootDir session = do
 
     sendNotification Exit ExitParams
 
+-- | An internal version of 'runSession' that allows for a custom handler to listen to the server.
+-- It also does not automatically send initialize and exit messages.
 runSessionWithHandler :: (Handle -> Session ())
                       -> FilePath
                       -> Session a
@@ -120,14 +139,12 @@ runSessionWithHandler serverHandler rootDir session = do
   let context = SessionContext serverIn absRootDir messageChan reqMap
       initState = SessionState (IdInt 9)
 
-  forkIO $ void $ runReaderT (runParserT (serverHandler serverOut) initState "" meaninglessChan) context
-  result <- runReaderT (runParserT session initState "" messageChan) context
+  forkIO $ void $ runSession' meaninglessChan context initState (serverHandler serverOut)
+  (result, _) <- runSession' messageChan context initState session
 
   terminateProcess serverProc
 
-  case result of
-    Right x -> return x
-    Left err -> error $ show err
+  return result
 
 -- | Listens to the server output, makes sure it matches the record and
 -- signals any semaphores
@@ -135,7 +152,7 @@ listenServer :: Handle -> Session ()
 listenServer serverOut = do
   msgBytes <- liftIO $ getNextMessage serverOut
 
-  context <- lift ask
+  context <- ask
   reqMap <- liftIO $ readMVar $ requestMap context
 
   liftIO $ writeChan (messageChan context) $ decodeFromServerMsg reqMap msgBytes
@@ -156,8 +173,8 @@ sendRequest
   -> params -- ^ The request parameters.
   -> Session LspId -- ^ The id of the request that was sent.
 sendRequest _ method params = do
-  id <- curReqId <$> getState
-  modifyState $ \c -> c { curReqId = nextId id }
+  id <- curReqId <$> get
+  modify $ \c -> c { curReqId = nextId id }
 
   let req = RequestMessage "2.0" id method params :: RequestMessage ClientMethod params resp
 
@@ -171,7 +188,7 @@ sendRequest _ method params = do
 sendRequest' :: (ToJSON a, ToJSON b) => RequestMessage ClientMethod a b -> Session ()
 sendRequest' req = do
   -- Update the request map
-  reqMap <- requestMap <$> lift ask
+  reqMap <- requestMap <$> ask
   liftIO $ modifyMVar_ reqMap (return . flip updateRequestMap req)
 
   sendMessage req
@@ -188,12 +205,12 @@ sendNotification method params =
 sendNotification' :: (ToJSON a, ToJSON b) => NotificationMessage a b -> Session ()
 sendNotification' = sendMessage
 
-sendResponse' :: ToJSON a => ResponseMessage a -> Session ()
-sendResponse' = sendMessage
+sendResponse :: ToJSON a => ResponseMessage a -> Session ()
+sendResponse = sendMessage
 
 sendMessage :: ToJSON a => a -> Session ()
 sendMessage msg = do
-  h <- serverIn <$> lift ask
+  h <- serverIn <$> ask
   liftIO $ B.hPut h $ addHeader (encode msg)
 
 -- | Reads in a text document as the first version.
@@ -201,7 +218,7 @@ getDocItem :: FilePath -- ^ The path to the text document to read in.
            -> String -- ^ The language ID, e.g "haskell" for .hs files.
            -> Session TextDocumentItem
 getDocItem file languageId = do
-  context <- lift ask
+  context <- ask
   let fp = rootDir context </> file
   contents <- liftIO $ T.readFile fp
   return $ TextDocumentItem (filePathToUri fp) (T.pack languageId) 0 contents
@@ -209,6 +226,6 @@ getDocItem file languageId = do
 -- | Gets the Uri for the file corrected to the session directory.
 getDocUri :: FilePath -> Session Uri
 getDocUri file = do
-  context <- lift ask
+  context <- ask
   let fp = rootDir context </> file
   return $ filePathToUri fp

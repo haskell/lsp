@@ -3,16 +3,20 @@
 {-# LANGUAGE FlexibleInstances #-}
 module Language.Haskell.LSP.Test.Parsing where
 
+import Control.Applicative
+import Control.Monad.Trans.Class
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Reader
-import qualified Data.ByteString.Lazy.Char8 as B
+import Control.Monad.Trans.State
 import Language.Haskell.LSP.Messages
 import Language.Haskell.LSP.Types
 import Language.Haskell.LSP.Test.Messages
 import Language.Haskell.LSP.Test.Decoding
 import System.IO
-import Control.Concurrent
-import Text.Parsec hiding (satisfy)
+import Control.Concurrent.Chan
+import Control.Concurrent.MVar
+import Data.Conduit hiding (await)
+import Data.Conduit.Parser
 
 data MessageParserState = MessageParserState
 
@@ -29,17 +33,33 @@ newtype SessionState = SessionState
     curReqId :: LspId
   }
 
-type Session = ParsecT (Chan FromServerMessage) SessionState (ReaderT SessionContext IO)
+type ParserStateReader a s r m = ConduitParser a (StateT s (ReaderT r m))
+-- | A session representing one instance of launching and connecting to a server.
+-- 
+-- You can send and receive messages to the server within 'Session' via 'getMessage',
+-- 'sendRequest' and 'sendNotification'.
+--
+-- @
+-- runSession \"path\/to\/root\/dir\" $ do
+--   docItem <- getDocItem "Desktop/simple.hs" "haskell"
+--   sendNotification TextDocumentDidOpen (DidOpenTextDocumentParams docItem)
+--   diagnostics <- getMessage :: Session PublishDiagnosticsNotification
+-- @
+type Session = ParserStateReader FromServerMessage SessionState SessionContext IO
 
+-- | Matches if the message is a notification.
 notification :: Session FromServerMessage
 notification = satisfy isServerNotification
 
+-- | Matches if the message is a request.
 request :: Session FromServerMessage
 request = satisfy isServerRequest
 
+-- | Matches if the message is a response.
 response :: Session FromServerMessage
 response = satisfy isServerResponse
 
+-- | Matches if the message is a log message notification or a show message notification/request.
 loggingNotification :: Session FromServerMessage
 loggingNotification = satisfy shouldSkip
   where
@@ -48,16 +68,31 @@ loggingNotification = satisfy shouldSkip
     shouldSkip (ReqShowMessage _) = True
     shouldSkip _ = False
 
-satisfy :: (Stream s m a, Eq a, Show a) => (a -> Bool) -> ParsecT s u m a
-satisfy pred = tokenPrim show nextPos test
-  where nextPos x _ _ = x
-        test x = if pred x then Just x else Nothing
+satisfy :: Monad m => (a -> Bool) -> ConduitParser a m a
+satisfy pred = do
+  x <- await
+  if pred x
+    then return x
+    else empty
 
-testLog = NotLogMessage (NotificationMessage "2.0" WindowLogMessage (LogMessageParams MtLog "Hello world"))
+chanSource:: MonadIO m => Chan o -> ConduitT i o m b
+chanSource c = do
+  x <- liftIO $ readChan c
+  yield x
+  chanSource c
 
-testSymbols = RspDocumentSymbols (ResponseMessage "2.0" (IdRspInt 0) (Just (List [])) Nothing)
+runSession' :: Chan FromServerMessage -> SessionContext -> SessionState -> Session a -> IO (a, SessionState)
+runSession' chan context state session = runReaderT (runStateT conduit state) context
+  where conduit = runConduit $ chanSource chan .| runConduitParser session
 
-instance (MonadIO m) => Stream (Chan a) m a where
-  uncons c = do
-    x <- liftIO $ readChan c
-    return $ Just (x, c)
+get :: Monad m => ParserStateReader a s r m s
+get = lift Control.Monad.Trans.State.get
+
+put :: Monad m => s -> ParserStateReader a s r m ()
+put = lift . Control.Monad.Trans.State.put
+
+modify :: Monad m => (s -> s) -> ParserStateReader a s r m ()
+modify = lift . Control.Monad.Trans.State.modify
+
+ask :: Monad m => ParserStateReader a s r m r
+ask = lift $ lift Control.Monad.Trans.Reader.ask
