@@ -60,6 +60,7 @@ module Language.Haskell.LSP.Test
   , (<|>)
   , satisfy
   -- * Utilities
+  , openDoc
   , getDocItem
   , getDocUri
   ) where
@@ -212,6 +213,13 @@ sendMessage :: ToJSON a => a -> Session ()
 sendMessage msg = do
   h <- serverIn <$> ask
   liftIO $ B.hPut h $ addHeader (encode msg)
+
+-- | Opens a text document and sends a notification to the client.
+openDoc :: FilePath -> String -> Session TextDocumentIdentifier
+openDoc file languageId = do
+  item <- getDocItem file languageId
+  sendNotification TextDocumentDidOpen (DidOpenTextDocumentParams item)
+  TextDocumentIdentifier <$> getDocUri file
 
 -- | Reads in a text document as the first version.
 getDocItem :: FilePath -- ^ The path to the text document to read in.

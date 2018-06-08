@@ -14,10 +14,7 @@ main = hspec $ do
   describe "manual session validation" $ 
     it "passes a test" $
       runSession "test/recordings/renamePass" $ do
-        docItem <- getDocItem "Desktop/simple.hs" "haskell"
-        docId   <- TextDocumentIdentifier <$> getDocUri "Desktop/simple.hs"
-
-        sendNotification TextDocumentDidOpen (DidOpenTextDocumentParams docItem)
+        doc <- openDoc "Desktop/simple.hs" "haskell"
 
         skipMany loggingNotification
 
@@ -27,7 +24,7 @@ main = hspec $ do
         
         sendRequest (Proxy :: Proxy DocumentSymbolRequest)
                     TextDocumentDocumentSymbol
-                    (DocumentSymbolParams docId)
+                    (DocumentSymbolParams doc)
 
         RspDocumentSymbols rspSymbols <- response
         
