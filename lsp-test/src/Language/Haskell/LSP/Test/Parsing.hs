@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleInstances #-}
 module Language.Haskell.LSP.Test.Parsing where
@@ -9,7 +8,7 @@ import Control.Monad.IO.Class
 import Control.Monad.Trans.Reader
 import Control.Monad.Trans.State
 import Language.Haskell.LSP.Messages
-import Language.Haskell.LSP.Types
+import Language.Haskell.LSP.Types hiding (error)
 import Language.Haskell.LSP.Test.Messages
 import Language.Haskell.LSP.Test.Decoding
 import System.IO
@@ -17,8 +16,6 @@ import Control.Concurrent.Chan
 import Control.Concurrent.MVar
 import Data.Conduit hiding (await)
 import Data.Conduit.Parser
-
-data MessageParserState = MessageParserState
 
 data SessionContext = SessionContext
   {
@@ -67,6 +64,13 @@ loggingNotification = satisfy shouldSkip
     shouldSkip (NotShowMessage _) = True
     shouldSkip (ReqShowMessage _) = True
     shouldSkip _ = False
+
+publishDiagnosticsNotification :: Session PublishDiagnosticsNotification
+publishDiagnosticsNotification = do
+  (NotPublishDiagnostics diags) <- satisfy test
+  return diags
+  where test (NotPublishDiagnostics _) = False
+        test _ = False
 
 satisfy :: Monad m => (a -> Bool) -> ConduitParser a m a
 satisfy pred = do

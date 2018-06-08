@@ -28,6 +28,7 @@ module Language.Haskell.LSP.Test
   , response
   , notification
   , loggingNotification
+  , publishDiagnosticsNotification
   -- * Combinators
   , choice
   , option
