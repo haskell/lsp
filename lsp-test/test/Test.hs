@@ -1,6 +1,7 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE OverloadedStrings #-}
 import           Test.Hspec
+import           Data.Maybe
 import           Data.Proxy
 import           Control.Monad.IO.Class
 import           Control.Lens hiding (List)
@@ -20,18 +21,19 @@ main = hspec $ do
 
         skipMany loggingNotification
 
-        (NotPublishDiagnostics (NotificationMessage _ TextDocumentPublishDiagnostics (PublishDiagnosticsParams _ (List diags)))) <- notification
+        NotPublishDiagnostics diagsNot <- notification
 
-        liftIO $ diags `shouldBe` []
+        liftIO $ diagsNot ^. params . diagnostics `shouldBe` List []
         
         sendRequest (Proxy :: Proxy DocumentSymbolRequest)
                     TextDocumentDocumentSymbol
                     (DocumentSymbolParams docId)
 
-        (RspDocumentSymbols (ResponseMessage _ _ (Just (List symbols)) Nothing)) <- response
-
+        RspDocumentSymbols rspSymbols <- response
+        
         liftIO $ do
-          let mainSymbol = head symbols
+          let (List symbols) = fromJust (rspSymbols ^. result)
+              mainSymbol = head symbols
           mainSymbol ^. name `shouldBe` "main"
           mainSymbol ^. kind `shouldBe` SkFunction
           mainSymbol ^. location . range `shouldBe` Range (Position 3 0) (Position 3 4)

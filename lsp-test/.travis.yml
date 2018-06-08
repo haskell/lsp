@@ -17,7 +17,7 @@ install:
   - git clone https://github.com/haskell/haskell-ide-engine.git --recursive
   - cd haskell-ide-engine
   - git checkout c34c08eeced8173983601e98304258075f3057e1
-  - stack --no-terminal --skip-ghc-check install -j1
+  - stack --no-terminal --skip-ghc-check install -j2
   - stack exec hoogle generate
   - cd ..
 
