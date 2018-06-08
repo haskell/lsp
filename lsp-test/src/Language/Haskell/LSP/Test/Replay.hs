@@ -129,7 +129,7 @@ listenServer expectedMsgs reqMap reqSema rspSema passVar serverOut  = do
         print msg
         putStrLn "Expected one of:"
         mapM_ print $ takeWhile (not . isNotification) expectedMsgs
-        print $ head $ dropWhile (not . isNotification) expectedMsgs
+        print $ head $ dropWhile isNotification expectedMsgs
         putMVar passVar False
 
   where

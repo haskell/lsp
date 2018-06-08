@@ -36,6 +36,8 @@ main = hspec $ do
           mainSymbol ^. location . range `shouldBe` Range (Position 3 0) (Position 3 4)
           mainSymbol ^. containerName `shouldBe` Nothing
   
-  describe "replay session" $
+  describe "replay session" $ do
     it "passes a test" $
       replaySession "test/recordings/renamePass" `shouldReturn` True
+    it "fails a test" $
+      replaySession "test/recordings/renameFail" `shouldReturn` False
