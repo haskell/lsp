@@ -33,31 +33,21 @@ module Language.Haskell.LSP.Test
   , choice
   , option
   , optional
-  , skipOptional
   , between
   , some
   , many
   , sepBy
   , sepBy1
-  , sepByNonEmpty
   , sepEndBy1
-  , sepEndByNonEmpty
   , sepEndBy
   , endBy1
-  , endByNonEmpty
   , endBy
   , count
-  , chainl
-  , chainr
-  , chainl1
-  , chainr1
   , manyTill
-  , try
-  , (<?>)
   , skipMany
   , skipSome
-  , unexpected
-  , notFollowedBy
+  , skipManyTill
+  , skipSomeTill
   , (<|>)
   , satisfy
   -- * Utilities
@@ -67,6 +57,7 @@ module Language.Haskell.LSP.Test
   ) where
 
 import Control.Applicative
+import Control.Applicative.Combinators
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Concurrent
@@ -87,7 +78,6 @@ import System.Directory
 import System.FilePath
 import Language.Haskell.LSP.Test.Decoding
 import Language.Haskell.LSP.Test.Parsing
-import Text.Parser.Combinators
 
 -- | Starts a new session.
 runSession :: FilePath -- ^ The filepath to the root directory for the session.

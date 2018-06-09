@@ -31,6 +31,7 @@ newtype SessionState = SessionState
   }
 
 type ParserStateReader a s r m = ConduitParser a (StateT s (ReaderT r m))
+
 -- | A session representing one instance of launching and connecting to a server.
 -- 
 -- You can send and receive messages to the server within 'Session' via 'getMessage',
@@ -45,19 +46,19 @@ type ParserStateReader a s r m = ConduitParser a (StateT s (ReaderT r m))
 type Session = ParserStateReader FromServerMessage SessionState SessionContext IO
 
 -- | Matches if the message is a notification.
-notification :: Session FromServerMessage
+notification :: Monad m => ConduitParser FromServerMessage m FromServerMessage
 notification = satisfy isServerNotification
 
 -- | Matches if the message is a request.
-request :: Session FromServerMessage
+request :: Monad m => ConduitParser FromServerMessage m FromServerMessage
 request = satisfy isServerRequest
 
 -- | Matches if the message is a response.
-response :: Session FromServerMessage
+response :: Monad m => ConduitParser FromServerMessage m FromServerMessage
 response = satisfy isServerResponse
 
 -- | Matches if the message is a log message notification or a show message notification/request.
-loggingNotification :: Session FromServerMessage
+loggingNotification :: Monad m => ConduitParser FromServerMessage m FromServerMessage
 loggingNotification = satisfy shouldSkip
   where
     shouldSkip (NotLogMessage _) = True
@@ -65,11 +66,11 @@ loggingNotification = satisfy shouldSkip
     shouldSkip (ReqShowMessage _) = True
     shouldSkip _ = False
 
-publishDiagnosticsNotification :: Session PublishDiagnosticsNotification
+publishDiagnosticsNotification :: Monad m => ConduitParser FromServerMessage m PublishDiagnosticsNotification
 publishDiagnosticsNotification = do
-  (NotPublishDiagnostics diags) <- satisfy test
+  NotPublishDiagnostics diags <- satisfy test
   return diags
-  where test (NotPublishDiagnostics _) = False
+  where test (NotPublishDiagnostics _) = True
         test _ = False
 
 satisfy :: Monad m => (a -> Bool) -> ConduitParser a m a
@@ -79,7 +80,7 @@ satisfy pred = do
     then return x
     else empty
 
-chanSource:: MonadIO m => Chan o -> ConduitT i o m b
+chanSource :: MonadIO m => Chan o -> ConduitT i o m b
 chanSource c = do
   x <- liftIO $ readChan c
   yield x
