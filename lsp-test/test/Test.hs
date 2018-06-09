@@ -2,32 +2,28 @@
 {-# LANGUAGE OverloadedStrings #-}
 import           Test.Hspec
 import           Data.Maybe
-import           Data.Proxy
 import           Control.Monad.IO.Class
 import           Control.Lens hiding (List)
 import           Language.Haskell.LSP.Test
 import           Language.Haskell.LSP.Test.Replay
 import           Language.Haskell.LSP.Types
-import           Language.Haskell.LSP.Messages
 import           ParsingTests
 
 main = hspec $ do
-  describe "manual session validation" $ do
+  describe "manual session" $ do
     it "passes a test" $
       runSession "test/recordings/renamePass" $ do
         doc <- openDoc "Desktop/simple.hs" "haskell"
 
         skipMany loggingNotification
 
-        NotPublishDiagnostics diagsNot <- notification
+        diagsNot <- notification :: Session PublishDiagnosticsNotification
 
         liftIO $ diagsNot ^. params . diagnostics `shouldBe` List []
         
-        sendRequest (Proxy :: Proxy DocumentSymbolRequest)
-                    TextDocumentDocumentSymbol
-                    (DocumentSymbolParams doc)
+        sendRequest TextDocumentDocumentSymbol (DocumentSymbolParams doc)
 
-        RspDocumentSymbols rspSymbols <- response
+        rspSymbols <- response :: Session DocumentSymbolsResponse
         
         liftIO $ do
           let (List symbols) = fromJust (rspSymbols ^. result)
@@ -40,9 +36,9 @@ main = hspec $ do
     it "fails a test" $
       -- TODO: Catch the exception in haskell-lsp-test and provide nicer output
       let session = runSession "test/recordings/renamePass" $ do
-                    openDoc "Desktop/simple.hs" "haskell"
-                    skipMany loggingNotification
-                    request
+                      openDoc "Desktop/simple.hs" "haskell"
+                      skipMany loggingNotification
+                      anyRequest
         in session `shouldThrow` anyException
   
   describe "replay session" $ do

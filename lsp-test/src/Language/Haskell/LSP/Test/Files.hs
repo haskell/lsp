@@ -50,7 +50,7 @@ mapUris f event =
     fromClientMsg (NotWillSaveTextDocument n) = NotWillSaveTextDocument $ swapUri (params . textDocument) n
     fromClientMsg (NotDidSaveTextDocument n) = NotDidSaveTextDocument $ swapUri (params . textDocument) n
     fromClientMsg (NotDidCloseTextDocument n) = NotDidCloseTextDocument $ swapUri (params . textDocument) n
-    fromClientMsg (ReqInitialize r) = ReqInitialize $ params .~ (transformInit (r ^. params)) $ r
+    fromClientMsg (ReqInitialize r) = ReqInitialize $ params .~ transformInit (r ^. params) $ r
     fromClientMsg (ReqDocumentSymbols r) = ReqDocumentSymbols $ swapUri (params . textDocument) r
     fromClientMsg (ReqRename r) = ReqRename $ swapUri (params . textDocument) r
     fromClientMsg x = x
@@ -61,7 +61,7 @@ mapUris f event =
 
     fromServerMsg (NotPublishDiagnostics n) = NotPublishDiagnostics $ swapUri params n
 
-    fromServerMsg (RspDocumentSymbols r) = 
+    fromServerMsg (RspDocumentSymbols r) =
       let newSymbols = fmap (fmap (swapUri location)) $ r ^. result
       in RspDocumentSymbols $ result .~ newSymbols $ r
 

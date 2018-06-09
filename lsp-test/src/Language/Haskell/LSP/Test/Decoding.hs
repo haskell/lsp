@@ -51,8 +51,8 @@ type RequestMap = HM.HashMap LspId ClientMethod
 newRequestMap :: RequestMap
 newRequestMap = HM.empty
 
-updateRequestMap :: RequestMap -> RequestMessage ClientMethod a b -> RequestMap
-updateRequestMap reqMap msg = HM.insert (msg ^. id) (msg ^. method) reqMap
+updateRequestMap :: RequestMap -> LspId -> ClientMethod -> RequestMap
+updateRequestMap reqMap id method = HM.insert id method reqMap
 
 getRequestMap :: [FromClientMessage] -> RequestMap
 getRequestMap = foldl helper HM.empty
