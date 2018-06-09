@@ -132,10 +132,11 @@ runSessionWithHandler serverHandler rootDir session = do
   let context = SessionContext serverIn absRootDir messageChan reqMap
       initState = SessionState (IdInt 9)
 
-  forkIO $ void $ runSession' meaninglessChan context initState (serverHandler serverOut)
+  threadId <- forkIO $ void $ runSession' meaninglessChan context initState (serverHandler serverOut)
   (result, _) <- runSession' messageChan context initState session
 
   terminateProcess serverProc
+  killThread threadId
 
   return result
 
