@@ -18,6 +18,7 @@ import Data.Conduit.Parser
 import Data.Maybe
 import Language.Haskell.LSP.Messages
 import Language.Haskell.LSP.Types 
+import Language.Haskell.LSP.Test.Compat
 import Language.Haskell.LSP.Test.Decoding
 import Language.Haskell.LSP.Test.Messages
 import System.IO
@@ -107,12 +108,6 @@ satisfy pred = do
   if pred x
     then return x
     else empty
-
-chanSource :: MonadIO m => Chan o -> ConduitT i o m b
-chanSource c = do
-  x <- liftIO $ readChan c
-  yield x
-  chanSource c
 
 runSession' :: Chan FromServerMessage -> SessionContext -> SessionState -> Session a -> IO (a, SessionState)
 runSession' chan context state session = runReaderT (runStateT conduit state) context
