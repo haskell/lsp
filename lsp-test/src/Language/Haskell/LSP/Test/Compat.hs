@@ -1,4 +1,8 @@
 {-# LANGUAGE CPP #-}
+-- For some reason ghc warns about not using
+-- Control.Monad.IO.Class but it's needed for
+-- MonadIO
+{-# OPTIONS_GHC -Wunused-imports #-}
 module Language.Haskell.LSP.Test.Compat where
 
 import Control.Concurrent.Chan
