@@ -18,10 +18,9 @@ parsingSpec =
                                        (PublishDiagnosticsParams (Uri "foo")
                                                                  (List [])))
     it "get picked up" $ do
-      let 
-          source = yield testDiag
+      let source = yield testDiag
           session = do
-            diags <- publishDiagnosticsNotification
+            diags <- publishDiagnosticsNotification :: ConduitParser FromServerMessage IO PublishDiagnosticsNotification
             return $ diags ^. params . uri
       runConduit (source .| runConduitParser session) `shouldReturn` Uri "foo"
     it "get picked up after skipping others before" $ do
@@ -33,6 +32,6 @@ parsingSpec =
           notTestDiag = NotLogMessage (NotificationMessage "2.0" WindowLogMessage (LogMessageParams MtLog "foo"))
           source = yield notTestDiag >> yield testDiag
           session = do
-            diags <- skipManyTill notification publishDiagnosticsNotification
+            diags <- skipManyTill anyNotification notification :: ConduitParser FromServerMessage IO PublishDiagnosticsNotification
             return $ diags ^. params . uri
       runConduit (source .| runConduitParser session) `shouldReturn` Uri "foo"

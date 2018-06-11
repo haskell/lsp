@@ -1,7 +1,13 @@
 {-# LANGUAGE CPP #-}
-
+-- For some reason ghc warns about not using
+-- Control.Monad.IO.Class but it's needed for
+-- MonadIO
+{-# OPTIONS_GHC -Wunused-imports #-}
 module Language.Haskell.LSP.Test.Compat where
 
+import Control.Concurrent.Chan
+import Control.Monad.IO.Class
+import Data.Conduit
 
 #ifdef mingw32_HOST_OS
 
@@ -16,3 +22,13 @@ getProcessID :: IO Int
 getProcessID = fromIntegral <$> P.getProcessID
 
 #endif
+
+#if MIN_VERSION_conduit(1,3,0)
+chanSource :: MonadIO m => Chan o -> ConduitT i o m b
+#else
+chanSource :: MonadIO m => Chan o -> ConduitM i o m b
+#endif
+chanSource c = do
+  x <- liftIO $ readChan c
+  yield x
+  chanSource c

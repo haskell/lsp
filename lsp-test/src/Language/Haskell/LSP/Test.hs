@@ -24,8 +24,11 @@ module Language.Haskell.LSP.Test
   , sendNotification'
   , sendResponse
   -- * Receving
+  , anyRequest
   , request
+  , anyResponse
   , response
+  , anyNotification
   , notification
   , loggingNotification
   , publishDiagnosticsNotification
@@ -61,17 +64,15 @@ import Control.Applicative.Combinators
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Concurrent
-import Control.Lens
+import Control.Lens hiding ((.=))
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import Data.Aeson
 import qualified Data.ByteString.Lazy.Char8 as B
 import Data.Default
-import Data.Proxy
 import System.Process
 import Language.Haskell.LSP.Types
-import qualified  Language.Haskell.LSP.Types as LSP (error)
-import Language.Haskell.LSP.Messages
+import qualified  Language.Haskell.LSP.Types as LSP (error, id)
 import Language.Haskell.LSP.Test.Compat
 import System.IO
 import System.Directory
@@ -98,8 +99,8 @@ runSession serverExe rootDir session = do
   runSessionWithHandler listenServer serverExe rootDir $ do
 
     -- Wrap the session around initialize and shutdown calls
-    sendRequest (Proxy :: Proxy InitializeRequest) Initialize initializeParams
-    RspInitialize initRsp <- response
+    sendRequest Initialize initializeParams
+    initRsp <- response :: Session InitializeResponse
     liftIO $ maybe (return ()) (putStrLn . ("Error while initializing: " ++) . show ) (initRsp ^. LSP.error)
 
     sendNotification Initialized InitializedParams
@@ -133,10 +134,11 @@ runSessionWithHandler serverHandler serverExe rootDir session = do
   let context = SessionContext serverIn absRootDir messageChan reqMap
       initState = SessionState (IdInt 9)
 
-  forkIO $ void $ runSession' meaninglessChan context initState (serverHandler serverOut)
+  threadId <- forkIO $ void $ runSession' meaninglessChan context initState (serverHandler serverOut)
   (result, _) <- runSession' messageChan context initState session
 
   terminateProcess serverProc
+  killThread threadId
 
   return result
 
@@ -161,29 +163,45 @@ listenServer serverOut = do
 --             (DocumentSymbolParams docId)
 -- @
 sendRequest
-  :: forall params resp. (ToJSON params, ToJSON resp, FromJSON resp)
-  => Proxy (RequestMessage ClientMethod params resp) -- ^ A proxy to provide more type information about the request.
-  -> ClientMethod -- ^ The request method.
+  :: (ToJSON params)
+  => --Proxy (RequestMessage ClientMethod params resp) -- ^ A proxy to provide more type information about the request.
+  ClientMethod -- ^ The request method.
   -> params -- ^ The request parameters.
   -> Session LspId -- ^ The id of the request that was sent.
-sendRequest _ method params = do
+sendRequest method params = do
   id <- curReqId <$> get
   modify $ \c -> c { curReqId = nextId id }
 
-  let req = RequestMessage "2.0" id method params :: RequestMessage ClientMethod params resp
+  let req = RequestMessage' "2.0" id method params
 
-  sendRequest' req
+  -- Update the request map
+  reqMap <- requestMap <$> ask
+  liftIO $ modifyMVar_ reqMap $
+    \r -> return $ updateRequestMap r id method
+
+  sendMessage req
 
   return id
 
   where nextId (IdInt i) = IdInt (i + 1)
         nextId (IdString s) = IdString $ T.pack $ show $ read (T.unpack s) + 1
 
+-- | A custom type for request message that doesn't
+-- need a response type, allows us to infer the request
+-- message type without using proxies.
+data RequestMessage' a = RequestMessage' T.Text LspId ClientMethod a
+
+instance ToJSON a => ToJSON (RequestMessage' a) where
+  toJSON (RequestMessage' rpc id method params) =
+    object ["jsonrpc" .= rpc, "id" .= id, "method" .= method, "params" .= params]
+
+
 sendRequest' :: (ToJSON a, ToJSON b) => RequestMessage ClientMethod a b -> Session ()
 sendRequest' req = do
   -- Update the request map
   reqMap <- requestMap <$> ask
-  liftIO $ modifyMVar_ reqMap (return . flip updateRequestMap req)
+  liftIO $ modifyMVar_ reqMap $
+    \r -> return $ updateRequestMap r (req ^. LSP.id) (req ^. method)
 
   sendMessage req
 

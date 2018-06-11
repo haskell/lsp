@@ -51,10 +51,15 @@ replaySession serverExe sessionDir = do
   rspSema <- newEmptyMVar
   passVar <- newEmptyMVar :: IO (MVar Bool)
 
-  forkIO $ runSessionWithHandler (listenServer serverMsgs requestMap reqSema rspSema passVar) serverExe sessionDir $
-    sendMessages clientMsgs reqSema rspSema
+  threadId <- forkIO $
+    runSessionWithHandler (listenServer serverMsgs requestMap reqSema rspSema passVar)
+                          serverExe
+                          sessionDir
+                          (sendMessages clientMsgs reqSema rspSema)
 
-  takeMVar passVar
+  result <- takeMVar passVar
+  killThread threadId
+  return result
 
   where
     isClientMsg (FromClient _ _) = True

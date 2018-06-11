@@ -11,8 +11,8 @@ main = runSession "hie" "test/recordings/renamePass" $ do
 
   sendNotification TextDocumentDidOpen (DidOpenTextDocumentParams docItem)
   
-  sendRequest (Proxy :: Proxy DocumentSymbolRequest) TextDocumentDocumentSymbol (DocumentSymbolParams docId)
+  sendRequest TextDocumentDocumentSymbol (DocumentSymbolParams docId)
 
   skipMany loggingNotification
 
-  response >>= liftIO . print
+  anyResponse >>= liftIO . print
