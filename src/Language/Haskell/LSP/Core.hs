@@ -547,9 +547,13 @@ initializeRequestHandler' (_configHandler,dispatcherProc) mHandler tvarCtx req@(
           supported (Just _) = Just True
           supported Nothing   = Nothing
 
+          sync = case textDocumentSync o of
+                  Just x -> Just (J.TDSOptions x)
+                  Nothing -> Nothing
+
           capa =
             J.InitializeResponseCapabilitiesInner
-              { J._textDocumentSync                 = textDocumentSync o
+              { J._textDocumentSync                 = sync
               , J._hoverProvider                    = supported (hoverHandler h)
               , J._completionProvider               = completionProvider o
               , J._signatureHelpProvider            = signatureHelpProvider o

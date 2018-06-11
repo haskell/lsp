@@ -12,6 +12,7 @@
 
 module Language.Haskell.LSP.TH.DataTypesJSON where
 
+import           Control.Applicative
 import           Control.Lens.TH                            (makeFieldsNoPrefix)
 import qualified Data.Aeson                                 as A
 import           Data.Aeson.TH
@@ -146,16 +147,18 @@ instance A.FromJSON LspIdRsp where
 instance Hashable LspIdRsp where
   hashWithSalt salt (IdRspInt i) = hashWithSalt salt i
   hashWithSalt salt (IdRspString s) = hashWithSalt salt s
+  hashWithSalt _ IdRspNull = 0
 
 -- | Converts an LspId to its LspIdRsp counterpart.
 responseId :: LspId -> LspIdRsp
-responseId (IdInt    i) = (IdRspInt i)
-responseId (IdString s) = (IdRspString s)
+responseId (IdInt    i) = IdRspInt i
+responseId (IdString s) = IdRspString s
 
 -- | Converts an LspIdRsp to its LspId counterpart. 
 requestId :: LspIdRsp -> LspId
-requestId (IdRspInt    i) = (IdInt i)
-requestId (IdRspString s) = (IdString s)
+requestId (IdRspInt    i) = IdInt i
+requestId (IdRspString s) = IdString s
+requestId IdRspNull       = error "Null response id"
 
 -- ---------------------------------------------------------------------
 
@@ -1518,9 +1521,21 @@ interface ServerCapabilities {
 }
 -}
 
+-- | Wrapper for TextDocumentSyncKind fallback.
+data TDS = TDSOptions TextDocumentSyncOptions
+         | TDSKind TextDocumentSyncKind
+    deriving (Show, Read, Eq)
+
+instance FromJSON TDS where
+    parseJSON x = TDSOptions <$> parseJSON x <|> TDSKind <$> parseJSON x
+    
+instance ToJSON TDS where
+    toJSON (TDSOptions x) = toJSON x
+    toJSON (TDSKind x) = toJSON x
+      
 data InitializeResponseCapabilitiesInner =
   InitializeResponseCapabilitiesInner
-    { _textDocumentSync                 :: Maybe TextDocumentSyncOptions
+    { _textDocumentSync                 :: Maybe TDS
     , _hoverProvider                    :: Maybe Bool
     , _completionProvider               :: Maybe CompletionOptions
     , _signatureHelpProvider            :: Maybe SignatureHelpOptions
@@ -1543,7 +1558,6 @@ data InitializeResponseCapabilitiesInner =
 
 deriveJSON lspOptions ''InitializeResponseCapabilitiesInner
 makeFieldsNoPrefix ''InitializeResponseCapabilitiesInner
-
 
 -- ---------------------------------------------------------------------
 -- |
