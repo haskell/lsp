@@ -1,6 +1,5 @@
 {-# LANGUAGE CPP                 #-}
 {-# LANGUAGE GADTs               #-}
-{-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE MultiWayIf          #-}
 {-# LANGUAGE BinaryLiterals      #-}
 {-# LANGUAGE OverloadedStrings   #-}
@@ -20,13 +19,17 @@ import           Control.Monad.STM
 import qualified Data.Aeson as J
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as B
+import           Data.Time.Clock
+import           Data.Time.Format
 #if __GLASGOW_HASKELL__ < 804
 import           Data.Monoid
 #endif
+import           Language.Haskell.LSP.Capture
 import qualified Language.Haskell.LSP.Core as Core
+import           Language.Haskell.LSP.Messages
 import           Language.Haskell.LSP.Utility
 import           System.IO
-import           System.Directory
+import           System.FilePath
 import           Text.Parsec
 
 -- ---------------------------------------------------------------------
@@ -39,9 +42,7 @@ run :: (Show c) => Core.InitializeCallback c
     -> Core.Handlers
     -> Core.Options
     -> Maybe FilePath
-    -- ^ File to record the client input to.
-    -> Maybe FilePath
-    -- ^ File to record the server output to.
+    -- ^ File to capture the session to.
     -> IO Int
 run = runWithHandles stdin stdout
 
@@ -56,9 +57,8 @@ runWithHandles :: (Show c) =>
     -> Core.Handlers
     -> Core.Options
     -> Maybe FilePath
-    -> Maybe FilePath
     -> IO Int         -- exit code
-runWithHandles hin hout dp h o recInFp recOutFp = do
+runWithHandles hin hout dp h o captureFp = do
 
   logm $ B.pack "\n\n\n\n\nhaskell-lsp:Starting up server ..."
   hSetBuffering hin NoBuffering
@@ -67,41 +67,38 @@ runWithHandles hin hout dp h o recInFp recOutFp = do
   hSetBuffering hout NoBuffering
   hSetEncoding  hout utf8
 
-  -- Delete existing recordings if they exist
-  forM_ [recInFp, recOutFp] $ maybe (return ()) $ \f -> do
-    exists <- doesFileExist f
-    when exists $ removeFile f
+  timestamp <- formatTime defaultTimeLocale (iso8601DateFormat (Just "%H-%M-%S")) <$> getCurrentTime
+  let timestampCaptureFp = fmap (\f -> dropExtension f ++ timestamp ++ takeExtension f)
+                                captureFp
 
-  cout <- atomically newTChan :: IO (TChan BSL.ByteString)
-  _rhpid <- forkIO $ sendServer cout hout recOutFp
+  cout <- atomically newTChan :: IO (TChan FromServerMessage)
+  _rhpid <- forkIO $ sendServer cout hout timestampCaptureFp
 
 
   let sendFunc :: Core.SendFunc
-      sendFunc str = atomically $ writeTChan cout (J.encode str)
+      sendFunc msg = atomically $ writeTChan cout msg
   let lf = error "LifeCycle error, ClientCapabilities not set yet via initialize maessage"
 
   tvarId <- atomically $ newTVar 0
 
-  tvarDat <- atomically $ newTVar $ Core.defaultLanguageContextData h o lf tvarId sendFunc
+  tvarDat <- atomically $ newTVar $ Core.defaultLanguageContextData h o lf tvarId sendFunc timestampCaptureFp
 
-  ioLoop hin dp tvarDat recInFp
+  ioLoop hin dp tvarDat
 
   return 1
+
 
 -- ---------------------------------------------------------------------
 
 ioLoop :: (Show c) => Handle
                    -> Core.InitializeCallback c
                    -> TVar (Core.LanguageContextData c)
-                   -> Maybe FilePath
                    -> IO ()
-ioLoop hin dispatcherProc tvarDat recFp = go BSL.empty
+ioLoop hin dispatcherProc tvarDat = go BSL.empty
   where
     go :: BSL.ByteString -> IO ()
     go buf = do
       c <- BSL.hGet hin 1
-
-      record c
 
       if c == BSL.empty
         then do
@@ -115,16 +112,14 @@ ioLoop hin dispatcherProc tvarDat recFp = go BSL.empty
             Right len -> do
               cnt <- BSL.hGet hin len
 
-              record cnt
-              
               if cnt == BSL.empty
                 then do
                   logm $ B.pack "\nhaskell-lsp:Got EOF, exiting 1 ...\n"
                   return ()
                 else do
-                  logm $ (B.pack "---> ") <> cnt
-                  Core.handleRequest dispatcherProc tvarDat newBuf cnt
-                  ioLoop hin dispatcherProc tvarDat recFp
+                  logm $ B.pack "---> " <> cnt
+                  Core.handleMessage dispatcherProc tvarDat newBuf cnt
+                  ioLoop hin dispatcherProc tvarDat
       where
         readContentLength :: String -> Either ParseError Int
         readContentLength = parse parser "readContentLength"
@@ -134,25 +129,29 @@ ioLoop hin dispatcherProc tvarDat recFp = go BSL.empty
           len <- manyTill digit (string _TWO_CRLF)
           return . read $ len
 
-        record c = maybe (return ()) (flip BSL.appendFile c) recFp
-
 -- ---------------------------------------------------------------------
 
 -- | Simple server to make sure all output is serialised
-sendServer :: TChan BSL.ByteString -> Handle -> Maybe FilePath -> IO ()
-sendServer cstdout handle recFp =
+sendServer :: TChan FromServerMessage -> Handle -> Maybe FilePath -> IO ()
+sendServer msgChan clientH captureFp =
   forever $ do
-    str <- atomically $ readTChan cstdout
+    msg <- atomically $ readTChan msgChan
+
+    -- We need to make sure we only send over the content of the message,
+    -- and no other tags/wrapper stuff
+    let str = J.encode $
+                J.genericToJSON (J.defaultOptions { J.sumEncoding = J.UntaggedValue }) msg
+
     let out = BSL.concat
                  [ str2lbs $ "Content-Length: " ++ show (BSL.length str)
                  , str2lbs _TWO_CRLF
                  , str ]
 
-    BSL.hPut handle out
-    hFlush handle
+    BSL.hPut clientH out
+    hFlush clientH
     logm $ B.pack "<--2--" <> str
 
-    maybe (return ()) (flip BSL.appendFile out) recFp
+    captureFromServer msg captureFp
 
 -- |
 --

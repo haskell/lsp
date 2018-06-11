@@ -12,6 +12,7 @@
 
 module Language.Haskell.LSP.TH.DataTypesJSON where
 
+import           Control.Applicative
 import           Control.Lens.TH                            (makeFieldsNoPrefix)
 import qualified Data.Aeson                                 as A
 import           Data.Aeson.TH
@@ -118,6 +119,10 @@ instance A.FromJSON LspId where
   parseJSON  (A.String  s) = return (IdString s)
   parseJSON _              = mempty
 
+instance Hashable LspId where
+  hashWithSalt salt (IdInt i) = hashWithSalt salt i
+  hashWithSalt salt (IdString s) = hashWithSalt salt s
+
 -- ---------------------------------------------------------------------
 
 -- | Id used for a response, Can be either a String or an Int, or Null. If a
@@ -139,9 +144,21 @@ instance A.FromJSON LspIdRsp where
   parseJSON  A.Null        = return IdRspNull
   parseJSON _              = mempty
 
+instance Hashable LspIdRsp where
+  hashWithSalt salt (IdRspInt i) = hashWithSalt salt i
+  hashWithSalt salt (IdRspString s) = hashWithSalt salt s
+  hashWithSalt _ IdRspNull = 0
+
+-- | Converts an LspId to its LspIdRsp counterpart.
 responseId :: LspId -> LspIdRsp
-responseId (IdInt    i) = (IdRspInt i)
-responseId (IdString s) = (IdRspString s)
+responseId (IdInt    i) = IdRspInt i
+responseId (IdString s) = IdRspString s
+
+-- | Converts an LspIdRsp to its LspId counterpart. 
+requestId :: LspIdRsp -> LspId
+requestId (IdRspInt    i) = IdInt i
+requestId (IdRspString s) = IdString s
+requestId IdRspNull       = error "Null response id"
 
 -- ---------------------------------------------------------------------
 
@@ -279,6 +296,8 @@ data ServerMethod =
   | WorkspaceApplyEdit
   -- Document
   | TextDocumentPublishDiagnostics
+  -- Cancelling
+  | CancelRequestServer  
    deriving (Eq,Ord,Read,Show)
 
 instance A.FromJSON ServerMethod where
@@ -294,6 +313,8 @@ instance A.FromJSON ServerMethod where
   parseJSON (A.String "workspace/applyEdit")             = return WorkspaceApplyEdit
   -- Document
   parseJSON (A.String "textDocument/publishDiagnostics") = return TextDocumentPublishDiagnostics
+  -- Cancelling
+  parseJSON (A.String "$/cancelRequest")                 = return CancelRequestServer
   parseJSON _                                            = mempty
 
 instance A.ToJSON ServerMethod where
@@ -309,6 +330,8 @@ instance A.ToJSON ServerMethod where
   toJSON WorkspaceApplyEdit = A.String "workspace/applyEdit"
   -- Document
   toJSON TextDocumentPublishDiagnostics = A.String "textDocument/publishDiagnostics"
+  -- Cancelling
+  toJSON CancelRequestServer = A.String "$/cancelRequest"
 
 data RequestMessage m req resp =
   RequestMessage
@@ -486,6 +509,7 @@ deriveJSON lspOptions ''CancelParams
 makeFieldsNoPrefix ''CancelParams
 
 type CancelNotification = NotificationMessage ClientMethod CancelParams
+type CancelNotificationServer = NotificationMessage ServerMethod CancelParams
 
 -- ---------------------------------------------------------------------
 
@@ -1497,9 +1521,21 @@ interface ServerCapabilities {
 }
 -}
 
+-- | Wrapper for TextDocumentSyncKind fallback.
+data TDS = TDSOptions TextDocumentSyncOptions
+         | TDSKind TextDocumentSyncKind
+    deriving (Show, Read, Eq)
+
+instance FromJSON TDS where
+    parseJSON x = TDSOptions <$> parseJSON x <|> TDSKind <$> parseJSON x
+    
+instance ToJSON TDS where
+    toJSON (TDSOptions x) = toJSON x
+    toJSON (TDSKind x) = toJSON x
+      
 data InitializeResponseCapabilitiesInner =
   InitializeResponseCapabilitiesInner
-    { _textDocumentSync                 :: Maybe TextDocumentSyncOptions
+    { _textDocumentSync                 :: Maybe TDS
     , _hoverProvider                    :: Maybe Bool
     , _completionProvider               :: Maybe CompletionOptions
     , _signatureHelpProvider            :: Maybe SignatureHelpOptions
@@ -1522,7 +1558,6 @@ data InitializeResponseCapabilitiesInner =
 
 deriveJSON lspOptions ''InitializeResponseCapabilitiesInner
 makeFieldsNoPrefix ''InitializeResponseCapabilitiesInner
-
 
 -- ---------------------------------------------------------------------
 -- |
@@ -1936,6 +1971,8 @@ makeFieldsNoPrefix ''RegistrationParams
 -- |Note: originates at the server
 type RegisterCapabilityRequest = RequestMessage ServerMethod RegistrationParams ()
 
+type RegisterCapabilityResponse = ResponseMessage ()
+
 -- -------------------------------------
 
 {-
@@ -2019,6 +2056,8 @@ deriveJSON lspOptions ''UnregistrationParams
 makeFieldsNoPrefix ''UnregistrationParams
 
 type UnregisterCapabilityRequest = RequestMessage ServerMethod UnregistrationParams ()
+
+type UnregisterCapabilityResponse = ResponseMessage ()
 
 -- ---------------------------------------------------------------------
 {-
