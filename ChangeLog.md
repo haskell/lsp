@@ -1,5 +1,14 @@
 # Revision history for haskell-lsp
 
+## 0.2.3.0  -- 2018-99-99
+
+* GHC 8.4.3 support
+* Apply changes to the VFS in the order received in a message.
+  This fixes vscode undo behaviour. By @Bubba
+* Introduce additional error codes as per the LSP spec. By @Bubba
+* Add preliminary support for recording LSP traffic for later playback
+  in test scenarios. By @Bubba
+
 ## 0.2.2.0  -- 2018-05-04
 
 * Make Diagnostic relatedInformation optional, as per the LSP Spec. By @Bubba.

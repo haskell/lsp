@@ -5,8 +5,7 @@ packages:
 - ./haskell-lsp-types
 
 extra-deps:
-# - yi-rope-0.10
-- ./submodules/yi-rope
+- yi-rope-0.11
 - sorted-list-0.2.1.0
 
 flags: {}

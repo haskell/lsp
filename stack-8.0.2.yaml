@@ -5,6 +5,7 @@ packages:
 - ./haskell-lsp-types
 extra-deps:
 - sorted-list-0.2.1.0
+- aeson-1.2.4.0
 flags: {}
 extra-package-dbs: []
 nix:
