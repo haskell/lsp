@@ -12,18 +12,14 @@ import           ParsingTests
 main = hspec $ do
   describe "manual session" $ do
     it "passes a test" $
-      runSession "hie --lsp" "test/recordings/renamePass" $ do
+      runSession "hie --lsp" "test/data/renamePass" $ do
         doc <- openDoc "Desktop/simple.hs" "haskell"
 
         skipMany loggingNotification
 
-        diagsNot <- notification :: Session PublishDiagnosticsNotification
-
-        liftIO $ diagsNot ^. params . diagnostics `shouldBe` List []
+        checkNoDiagnostics
         
-        sendRequest TextDocumentDocumentSymbol (DocumentSymbolParams doc)
-
-        rspSymbols <- response :: Session DocumentSymbolsResponse
+        rspSymbols <- documentSymbols doc
         
         liftIO $ do
           let (List symbols) = fromJust (rspSymbols ^. result)
@@ -35,7 +31,7 @@ main = hspec $ do
     
     it "fails a test" $
       -- TODO: Catch the exception in haskell-lsp-test and provide nicer output
-      let session = runSession "hie --lsp" "test/recordings/renamePass" $ do
+      let session = runSession "hie --lsp" "test/data/renamePass" $ do
                       openDoc "Desktop/simple.hs" "haskell"
                       skipMany loggingNotification
                       anyRequest
@@ -43,8 +39,33 @@ main = hspec $ do
   
   describe "replay session" $ do
     it "passes a test" $
-      replaySession "hie --lsp" "test/recordings/renamePass" `shouldReturn` True
+      replaySession "hie --lsp" "test/data/renamePass" `shouldReturn` True
     it "fails a test" $
-      replaySession "hie --lsp" "test/recordings/renameFail" `shouldReturn` False
+      replaySession "hie --lsp" "test/data/renameFail" `shouldReturn` False
+
+  describe "manual javascript session" $
+    it "passes a test" $
+      runSession "javascript-typescript-stdio" "test/data/javascriptPass" $ do
+        doc <- openDoc "test.js" "javascript"
+        
+        checkNoDiagnostics
+
+        rspSymbols <- documentSymbols doc
+
+        let (List symbols) = fromJust (rspSymbols ^. result)
+            fooSymbol = head symbols
+        liftIO $ do
+          fooSymbol ^. name `shouldBe` "foo"
+          fooSymbol ^. kind `shouldBe` SkFunction
   
   parsingSpec
+
+checkNoDiagnostics :: Session ()
+checkNoDiagnostics = do
+  diagsNot <- notification :: Session PublishDiagnosticsNotification
+  liftIO $ diagsNot ^. params . diagnostics `shouldBe` List []
+
+documentSymbols :: TextDocumentIdentifier -> Session DocumentSymbolsResponse
+documentSymbols doc = do
+  sendRequest TextDocumentDocumentSymbol (DocumentSymbolParams doc)
+  response

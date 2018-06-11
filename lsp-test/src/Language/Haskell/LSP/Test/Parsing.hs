@@ -8,7 +8,6 @@ import Control.Applicative
 import Control.Concurrent.Chan
 import Control.Concurrent.MVar
 import Control.Monad.Trans.Class
-import Control.Monad.IO.Class
 import Control.Monad.Trans.Reader
 import Control.Monad.Trans.State
 import Data.Aeson
@@ -17,7 +16,7 @@ import Data.Conduit hiding (await)
 import Data.Conduit.Parser
 import Data.Maybe
 import Language.Haskell.LSP.Messages
-import Language.Haskell.LSP.Types 
+import Language.Haskell.LSP.Types hiding (error)
 import Language.Haskell.LSP.Test.Compat
 import Language.Haskell.LSP.Test.Decoding
 import Language.Haskell.LSP.Test.Messages
@@ -59,7 +58,7 @@ notification :: forall m a. (Monad m, FromJSON a) => ConduitParser FromServerMes
 notification = do
   let parser = decode . encodeMsg :: FromServerMessage -> Maybe (NotificationMessage ServerMethod a)
   x <- satisfy (isJust . parser)
-  return $ fromJust $ decode $ encodeMsg x
+  return $ decodeMsg $ encodeMsg x
 
 -- | Matches if the message is a request.
 anyRequest :: Monad m => ConduitParser FromServerMessage m FromServerMessage
@@ -69,7 +68,7 @@ request :: forall m a b. (Monad m, FromJSON a, FromJSON b) => ConduitParser From
 request = do
   let parser = decode . encodeMsg :: FromServerMessage -> Maybe (RequestMessage ServerMethod a b)
   x <- satisfy (isJust . parser)
-  return $ fromJust $ decode $ encodeMsg x
+  return $ decodeMsg $ encodeMsg x
 
 -- | Matches if the message is a response.
 anyResponse :: Monad m => ConduitParser FromServerMessage m FromServerMessage
@@ -79,12 +78,16 @@ response :: forall m a. (Monad m, FromJSON a) => ConduitParser FromServerMessage
 response = do
   let parser = decode . encodeMsg :: FromServerMessage -> Maybe (ResponseMessage a)
   x <- satisfy (isJust . parser)
-  return $ fromJust $ decode $ encodeMsg x
+  return $ decodeMsg $ encodeMsg x
 
 -- | A version of encode that encodes FromServerMessages as if they
 -- weren't wrapped.
 encodeMsg :: FromServerMessage -> B.ByteString
 encodeMsg = encode . genericToJSON (defaultOptions { sumEncoding = UntaggedValue })
+
+decodeMsg :: FromJSON a => B.ByteString -> a
+decodeMsg x = fromMaybe (error $ "Unexpected message type\nGot:\n " ++ show x)
+                  (decode x)
 
 -- | Matches if the message is a log message notification or a show message notification/request.
 loggingNotification :: Monad m => ConduitParser FromServerMessage m FromServerMessage

@@ -120,8 +120,8 @@ runSessionWithHandler :: (Handle -> Session ())
 runSessionWithHandler serverHandler serverExe rootDir session = do
   absRootDir <- canonicalizePath rootDir
 
-  let createProc = (shell serverExe) { std_in = CreatePipe, std_out = CreatePipe }
-  (Just serverIn, Just serverOut, Nothing, serverProc) <- createProcess createProc
+  let createProc = (shell serverExe) { std_in = CreatePipe, std_out = CreatePipe, std_err = CreatePipe }
+  (Just serverIn, Just serverOut, _, serverProc) <- createProcess createProc
 
   hSetBuffering serverIn  NoBuffering
   hSetBuffering serverOut NoBuffering

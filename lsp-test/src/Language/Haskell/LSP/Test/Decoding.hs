@@ -84,30 +84,33 @@ getRequestMap = foldl helper HM.empty
   insert m = HM.insert (m ^. id) (m ^. method)
 
 matchResponseMsgType :: ClientMethod -> B.ByteString -> FromServerMessage
-matchResponseMsgType req bytes = case req of
-  Initialize                    -> RspInitialize $ fromJust $ decode bytes
-  Shutdown                      -> RspShutdown $ fromJust $ decode bytes
-  TextDocumentHover             -> RspHover $ fromJust $ decode bytes
-  TextDocumentCompletion        -> RspCompletion $ fromJust $ decode bytes
-  CompletionItemResolve         -> RspCompletionItemResolve $ fromJust $ decode bytes
-  TextDocumentSignatureHelp     -> RspSignatureHelp $ fromJust $ decode bytes
-  TextDocumentDefinition        -> RspDefinition $ fromJust $ decode bytes
-  TextDocumentReferences        -> RspFindReferences $ fromJust $ decode bytes
-  TextDocumentDocumentHighlight -> RspDocumentHighlights $ fromJust $ decode bytes
-  TextDocumentDocumentSymbol    -> RspDocumentSymbols $ fromJust $ decode bytes
-  WorkspaceSymbol               -> RspWorkspaceSymbols $ fromJust $ decode bytes
-  TextDocumentCodeAction        -> RspCodeAction $ fromJust $ decode bytes
-  TextDocumentCodeLens          -> RspCodeLens $ fromJust $ decode bytes
-  CodeLensResolve               -> RspCodeLensResolve $ fromJust $ decode bytes
-  TextDocumentFormatting        -> RspDocumentFormatting $ fromJust $ decode bytes
-  TextDocumentRangeFormatting   -> RspDocumentRangeFormatting $ fromJust $ decode bytes
-  TextDocumentOnTypeFormatting  -> RspDocumentOnTypeFormatting $ fromJust $ decode bytes
-  TextDocumentRename            -> RspRename $ fromJust $ decode bytes
-  WorkspaceExecuteCommand       -> RspExecuteCommand $ fromJust $ decode bytes
-  TextDocumentDocumentLink      -> RspDocumentLink $ fromJust $ decode bytes
-  DocumentLinkResolve           -> RspDocumentLinkResolve $ fromJust $ decode bytes
-  TextDocumentWillSaveWaitUntil -> RspWillSaveWaitUntil $ fromJust $ decode bytes
-  x                             -> error $ "Not a request: " ++ show x
+matchResponseMsgType req = case req of
+  Initialize                    -> RspInitialize . decoded
+  Shutdown                      -> RspShutdown . decoded
+  TextDocumentHover             -> RspHover . decoded
+  TextDocumentCompletion        -> RspCompletion . decoded
+  CompletionItemResolve         -> RspCompletionItemResolve . decoded
+  TextDocumentSignatureHelp     -> RspSignatureHelp . decoded
+  TextDocumentDefinition        -> RspDefinition . decoded
+  TextDocumentReferences        -> RspFindReferences . decoded
+  TextDocumentDocumentHighlight -> RspDocumentHighlights . decoded
+  TextDocumentDocumentSymbol    -> RspDocumentSymbols . decoded
+  WorkspaceSymbol               -> RspWorkspaceSymbols . decoded
+  TextDocumentCodeAction        -> RspCodeAction . decoded
+  TextDocumentCodeLens          -> RspCodeLens . decoded
+  CodeLensResolve               -> RspCodeLensResolve . decoded
+  TextDocumentFormatting        -> RspDocumentFormatting . decoded
+  TextDocumentRangeFormatting   -> RspDocumentRangeFormatting . decoded
+  TextDocumentOnTypeFormatting  -> RspDocumentOnTypeFormatting . decoded
+  TextDocumentRename            -> RspRename . decoded
+  WorkspaceExecuteCommand       -> RspExecuteCommand . decoded
+  TextDocumentDocumentLink      -> RspDocumentLink . decoded
+  DocumentLinkResolve           -> RspDocumentLinkResolve . decoded
+  TextDocumentWillSaveWaitUntil -> RspWillSaveWaitUntil . decoded
+  x                             -> error . ((show x ++ " is not a request: ") ++) . show
+  where decoded x = fromMaybe (error $ "Couldn't decode response for the request type: "
+                                        ++ show req ++ "\n" ++ show x)
+                              (decode x)
 
 decodeFromServerMsg :: RequestMap -> B.ByteString -> FromServerMessage
 decodeFromServerMsg reqMap bytes =

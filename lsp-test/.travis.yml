@@ -1,4 +1,4 @@
-language: c
+language: javascript
 
 sudo: false
 
@@ -7,11 +7,17 @@ cache:
   directories:
   - $HOME/.stack
 
+addons:
+  apt:
+    packages:
+    - npm
+
 before_install:
   # Download and unpack the stack executable
   - mkdir -p ~/.local/bin
   - export PATH=$HOME/.local/bin:$PATH
   - travis_retry curl -L https://get.haskellstack.org/stable/linux-x86_64.tar.gz | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
+  - npm update
 
 install:
   - git clone https://github.com/haskell/haskell-ide-engine.git --recursive
@@ -21,6 +27,7 @@ install:
   - stack --no-terminal --skip-ghc-check install -j2
   - stack exec hoogle generate
   - cd ..
+  - npm i -g javascript-typescript-langserver
 
 script:
   - stack --no-terminal --skip-ghc-check test
