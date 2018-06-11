@@ -29,9 +29,10 @@ import           Language.Haskell.LSP.Test.Messages
 -- makes sure it matches up with an expected response.
 -- The session directory should have a captured session file in it
 -- named "session.log".
-replaySession :: FilePath -- ^ The recorded session directory.
+replaySession :: FilePath -- ^ The filepath to the server executable.
+              -> FilePath -- ^ The recorded session directory.
               -> IO Bool
-replaySession sessionDir = do
+replaySession serverExe sessionDir = do
 
   entries <- B.lines <$> B.readFile (sessionDir </> "session.log")
 
@@ -50,7 +51,7 @@ replaySession sessionDir = do
   rspSema <- newEmptyMVar
   passVar <- newEmptyMVar :: IO (MVar Bool)
 
-  forkIO $ runSessionWithHandler (listenServer serverMsgs requestMap reqSema rspSema passVar) sessionDir $
+  forkIO $ runSessionWithHandler (listenServer serverMsgs requestMap reqSema rspSema passVar) serverExe sessionDir $
     sendMessages clientMsgs reqSema rspSema
 
   takeMVar passVar

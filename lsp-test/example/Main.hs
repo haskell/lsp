@@ -4,7 +4,7 @@ import Data.Proxy
 
 import Control.Monad.IO.Class
 
-main = runSession "test/recordings/renamePass" $ do
+main = runSession "hie" "test/recordings/renamePass" $ do
 
   docItem <- getDocItem "Desktop/simple.hs" "haskell"
   docId <- TextDocumentIdentifier <$> getDocUri "Desktop/simple.hs"

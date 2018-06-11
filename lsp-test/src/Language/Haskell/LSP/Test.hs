@@ -80,10 +80,11 @@ import Language.Haskell.LSP.Test.Decoding
 import Language.Haskell.LSP.Test.Parsing
 
 -- | Starts a new session.
-runSession :: FilePath -- ^ The filepath to the root directory for the session.
+runSession :: FilePath -- ^ The filepath to the server executable.
+           -> FilePath -- ^ The filepath to the root directory for the session.
            -> Session a -- ^ The session to run.
            -> IO ()
-runSession rootDir session = do
+runSession serverExe rootDir session = do
   pid <- getProcessID
   absRootDir <- canonicalizePath rootDir
 
@@ -94,7 +95,7 @@ runSession rootDir session = do
                                           def
                                           (Just TraceOff)
 
-  runSessionWithHandler listenServer rootDir $ do
+  runSessionWithHandler listenServer serverExe rootDir $ do
 
     -- Wrap the session around initialize and shutdown calls
     sendRequest (Proxy :: Proxy InitializeRequest) Initialize initializeParams
@@ -112,13 +113,14 @@ runSession rootDir session = do
 -- It also does not automatically send initialize and exit messages.
 runSessionWithHandler :: (Handle -> Session ())
                       -> FilePath
+                      -> FilePath
                       -> Session a
                       -> IO a
-runSessionWithHandler serverHandler rootDir session = do
+runSessionWithHandler serverHandler serverExe rootDir session = do
   absRootDir <- canonicalizePath rootDir
 
   (Just serverIn, Just serverOut, Nothing, serverProc) <- createProcess
-    (proc "hie" ["--lsp", "-d", "-l", "/tmp/hie-test.log"])
+    (proc serverExe ["--lsp", "-d", "-l", "/tmp/hie-test.log"])
     { std_in = CreatePipe, std_out = CreatePipe }
 
   hSetBuffering serverIn  NoBuffering

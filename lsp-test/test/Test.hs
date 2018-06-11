@@ -14,7 +14,7 @@ import           ParsingTests
 main = hspec $ do
   describe "manual session validation" $ do
     it "passes a test" $
-      runSession "test/recordings/renamePass" $ do
+      runSession "hie" "test/recordings/renamePass" $ do
         doc <- openDoc "Desktop/simple.hs" "haskell"
 
         skipMany loggingNotification
@@ -39,7 +39,7 @@ main = hspec $ do
     
     it "fails a test" $
       -- TODO: Catch the exception in haskell-lsp-test and provide nicer output
-      let session = runSession "test/recordings/renamePass" $ do
+      let session = runSession "hie" "test/recordings/renamePass" $ do
                     openDoc "Desktop/simple.hs" "haskell"
                     skipMany loggingNotification
                     request
@@ -47,8 +47,8 @@ main = hspec $ do
   
   describe "replay session" $ do
     it "passes a test" $
-      replaySession "test/recordings/renamePass" `shouldReturn` True
+      replaySession "hie" "test/recordings/renamePass" `shouldReturn` True
     it "fails a test" $
-      replaySession "test/recordings/renameFail" `shouldReturn` False
+      replaySession "hie" "test/recordings/renameFail" `shouldReturn` False
   
   parsingSpec
