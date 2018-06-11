@@ -29,7 +29,7 @@ import           Language.Haskell.LSP.Test.Messages
 -- makes sure it matches up with an expected response.
 -- The session directory should have a captured session file in it
 -- named "session.log".
-replaySession :: FilePath -- ^ The filepath to the server executable.
+replaySession :: String -- ^ The command to run the server.
               -> FilePath -- ^ The recorded session directory.
               -> IO Bool
 replaySession serverExe sessionDir = do

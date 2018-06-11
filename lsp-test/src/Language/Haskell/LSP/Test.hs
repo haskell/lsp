@@ -81,7 +81,7 @@ import Language.Haskell.LSP.Test.Decoding
 import Language.Haskell.LSP.Test.Parsing
 
 -- | Starts a new session.
-runSession :: FilePath -- ^ The filepath to the server executable.
+runSession :: String -- ^ The command to run the server.
            -> FilePath -- ^ The filepath to the root directory for the session.
            -> Session a -- ^ The session to run.
            -> IO ()
@@ -113,16 +113,15 @@ runSession serverExe rootDir session = do
 -- | An internal version of 'runSession' that allows for a custom handler to listen to the server.
 -- It also does not automatically send initialize and exit messages.
 runSessionWithHandler :: (Handle -> Session ())
-                      -> FilePath
+                      -> String
                       -> FilePath
                       -> Session a
                       -> IO a
 runSessionWithHandler serverHandler serverExe rootDir session = do
   absRootDir <- canonicalizePath rootDir
 
-  (Just serverIn, Just serverOut, Nothing, serverProc) <- createProcess
-    (proc serverExe ["--lsp", "-d", "-l", "/tmp/hie-test.log"])
-    { std_in = CreatePipe, std_out = CreatePipe }
+  let createProc = (shell serverExe) { std_in = CreatePipe, std_out = CreatePipe }
+  (Just serverIn, Just serverOut, Nothing, serverProc) <- createProcess createProc
 
   hSetBuffering serverIn  NoBuffering
   hSetBuffering serverOut NoBuffering
