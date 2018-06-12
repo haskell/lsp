@@ -27,7 +27,8 @@ data SessionContext = SessionContext
     serverIn :: Handle,
     rootDir :: FilePath,
     messageChan :: Chan FromServerMessage,
-    requestMap :: MVar RequestMap
+    requestMap :: MVar RequestMap,
+    initRsp :: MVar InitializeResponse
   }
 
 newtype SessionState = SessionState

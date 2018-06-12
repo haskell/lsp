@@ -54,6 +54,7 @@ module Language.Haskell.LSP.Test
   , (<|>)
   , satisfy
   -- * Utilities
+  , getInitializeResponse
   , openDoc
   , getDocItem
   , getDocUri
@@ -100,8 +101,13 @@ runSession serverExe rootDir session = do
 
     -- Wrap the session around initialize and shutdown calls
     sendRequest Initialize initializeParams
-    initRsp <- response :: Session InitializeResponse
-    liftIO $ maybe (return ()) (putStrLn . ("Error while initializing: " ++) . show ) (initRsp ^. LSP.error)
+    initRspMsg <- response :: Session InitializeResponse
+
+    liftIO $ maybe (return ()) (putStrLn . ("Error while initializing: " ++) . show ) (initRspMsg ^. LSP.error)
+
+    initRspVar <- initRsp <$> ask
+    liftIO $ putMVar initRspVar initRspMsg
+    
 
     sendNotification Initialized InitializedParams
 
@@ -129,8 +135,9 @@ runSessionWithHandler serverHandler serverExe rootDir session = do
   reqMap <- newMVar newRequestMap
   messageChan <- newChan
   meaninglessChan <- newChan
+  initRsp <- newEmptyMVar
 
-  let context = SessionContext serverIn absRootDir messageChan reqMap
+  let context = SessionContext serverIn absRootDir messageChan reqMap initRsp
       initState = SessionState (IdInt 9)
 
   threadId <- forkIO $ void $ runSession' meaninglessChan context initState (serverHandler serverOut)
@@ -223,6 +230,12 @@ sendMessage :: ToJSON a => a -> Session ()
 sendMessage msg = do
   h <- serverIn <$> ask
   liftIO $ B.hPut h $ addHeader (encode msg)
+
+-- | Returns the initialize response that was received from the server.
+-- The initialize requests and responses are not included the session,
+-- so if you need to test it use this.
+getInitializeResponse :: Session InitializeResponse
+getInitializeResponse = initRsp <$> ask >>= (liftIO . readMVar)
 
 -- | Opens a text document and sends a notification to the client.
 openDoc :: FilePath -> String -> Session TextDocumentIdentifier
