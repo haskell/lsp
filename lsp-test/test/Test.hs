@@ -36,6 +36,9 @@ main = hspec $ do
                       skipMany loggingNotification
                       anyRequest
         in session `shouldThrow` anyException
+    it "can get initialize response" $ runSession "hie --lsp" "test/data/renamePass" $ do
+      rsp <- getInitializeResponse
+      liftIO $ rsp ^. result `shouldNotBe` Nothing
   
   describe "replay session" $ do
     it "passes a test" $
