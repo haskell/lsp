@@ -85,7 +85,7 @@ import Language.Haskell.LSP.Test.Parsing
 runSession :: String -- ^ The command to run the server.
            -> FilePath -- ^ The filepath to the root directory for the session.
            -> Session a -- ^ The session to run.
-           -> IO ()
+           -> IO a
 runSession serverExe rootDir session = do
   pid <- getProcessID
   absRootDir <- canonicalizePath rootDir
@@ -112,9 +112,11 @@ runSession serverExe rootDir session = do
     sendNotification Initialized InitializedParams
 
     -- Run the actual test
-    session
+    result <- session
 
     sendNotification Exit ExitParams
+
+    return result
 
 -- | An internal version of 'runSession' that allows for a custom handler to listen to the server.
 -- It also does not automatically send initialize and exit messages.
