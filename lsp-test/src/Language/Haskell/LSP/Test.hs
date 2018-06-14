@@ -15,7 +15,7 @@ module Language.Haskell.LSP.Test
   (
   -- * Sessions
     runSession
-  , runSessionWithHandler
+  , runSessionWithHandles
   , Session
   -- * Sending
   , sendRequest
@@ -65,21 +65,27 @@ import Control.Applicative.Combinators
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Concurrent
-import Control.Lens hiding ((.=))
+import Control.Lens hiding ((.=), List)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import Data.Aeson
 import qualified Data.ByteString.Lazy.Char8 as B
 import Data.Default
-import System.Process
+import Data.Foldable
+import qualified Data.HashMap.Strict as HashMap
+import Data.List
 import Language.Haskell.LSP.Types
 import qualified  Language.Haskell.LSP.Types as LSP (error, id)
+import Language.Haskell.LSP.Messages
+import Language.Haskell.LSP.VFS
 import Language.Haskell.LSP.Test.Compat
+import Language.Haskell.LSP.Test.Decoding
+import Language.Haskell.LSP.Test.Parsing
+import Language.Haskell.LSP.Test.Session
+import Language.Haskell.LSP.Test.Server
 import System.IO
 import System.Directory
 import System.FilePath
-import Language.Haskell.LSP.Test.Decoding
-import Language.Haskell.LSP.Test.Parsing
 
 -- | Starts a new session.
 runSession :: String -- ^ The command to run the server.
@@ -97,7 +103,7 @@ runSession serverExe rootDir session = do
                                           def
                                           (Just TraceOff)
 
-  runSessionWithHandler listenServer serverExe rootDir $ do
+  withServer serverExe $ \serverIn serverOut _ -> runSessionWithHandles serverIn serverOut listenServer rootDir $ do
 
     -- Wrap the session around initialize and shutdown calls
     sendRequest Initialize initializeParams
@@ -107,7 +113,6 @@ runSession serverExe rootDir session = do
 
     initRspVar <- initRsp <$> ask
     liftIO $ putMVar initRspVar initRspMsg
-    
 
     sendNotification Initialized InitializedParams
 
@@ -118,38 +123,6 @@ runSession serverExe rootDir session = do
 
     return result
 
--- | An internal version of 'runSession' that allows for a custom handler to listen to the server.
--- It also does not automatically send initialize and exit messages.
-runSessionWithHandler :: (Handle -> Session ())
-                      -> String
-                      -> FilePath
-                      -> Session a
-                      -> IO a
-runSessionWithHandler serverHandler serverExe rootDir session = do
-  absRootDir <- canonicalizePath rootDir
-
-  let createProc = (shell serverExe) { std_in = CreatePipe, std_out = CreatePipe, std_err = CreatePipe }
-  (Just serverIn, Just serverOut, _, serverProc) <- createProcess createProc
-
-  hSetBuffering serverIn  NoBuffering
-  hSetBuffering serverOut NoBuffering
-
-  reqMap <- newMVar newRequestMap
-  messageChan <- newChan
-  meaninglessChan <- newChan
-  initRsp <- newEmptyMVar
-
-  let context = SessionContext serverIn absRootDir messageChan reqMap initRsp
-      initState = SessionState (IdInt 9)
-
-  threadId <- forkIO $ void $ runSession' meaninglessChan context initState (serverHandler serverOut)
-  (result, _) <- runSession' messageChan context initState session
-
-  terminateProcess serverProc
-  killThread threadId
-
-  return result
-
 -- | Listens to the server output, makes sure it matches the record and
 -- signals any semaphores
 listenServer :: Handle -> Session ()
@@ -159,9 +132,40 @@ listenServer serverOut = do
   context <- ask
   reqMap <- liftIO $ readMVar $ requestMap context
 
-  liftIO $ writeChan (messageChan context) $ decodeFromServerMsg reqMap msgBytes
+  let msg = decodeFromServerMsg reqMap msgBytes
+  processTextChanges msg
+  liftIO $ writeChan (messageChan context) msg
 
   listenServer serverOut
+
+processTextChanges :: FromServerMessage -> Session ()
+processTextChanges (ReqApplyWorkspaceEdit r) = do
+  List changeParams <- case r ^. params . edit . documentChanges of
+    Just cs -> mapM applyTextDocumentEdit cs
+    Nothing -> case r ^. params . edit . changes of
+      Just cs -> mapM (uncurry applyTextEdit) (List (HashMap.toList cs))
+      Nothing -> return (List [])
+
+  let groupedParams = groupBy (\a b -> (a ^. textDocument == b ^. textDocument)) changeParams
+      mergedParams = map mergeParams groupedParams
+  
+  forM_ mergedParams (sendNotification TextDocumentDidChange)
+
+  where applyTextDocumentEdit (TextDocumentEdit docId (List edits)) = do
+          oldVFS <- vfs <$> get
+          let changeEvents = map (\e -> TextDocumentContentChangeEvent (Just (e ^. range)) Nothing (e ^. newText)) edits
+              params = DidChangeTextDocumentParams docId (List changeEvents)
+          newVFS <- liftIO $ changeVFS oldVFS (fmClientDidChangeTextDocumentNotification params)
+          modify (\s -> s { vfs = newVFS })
+          liftIO $ print newVFS
+          return params
+
+        applyTextEdit uri edits = applyTextDocumentEdit (TextDocumentEdit (VersionedTextDocumentIdentifier uri 0) edits)
+
+        mergeParams :: [DidChangeTextDocumentParams] -> DidChangeTextDocumentParams
+        mergeParams params = let events = concat (toList (map (toList . (^. contentChanges)) params))
+                             in DidChangeTextDocumentParams (head params ^. textDocument) (List events)
+processTextChanges _ = return ()
 
 -- | Sends a request to the server.
 --

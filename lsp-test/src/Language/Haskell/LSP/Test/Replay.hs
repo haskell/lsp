@@ -7,22 +7,27 @@ where
 
 import           Prelude hiding (id)
 import           Control.Concurrent
+import           Control.Exception
 import           Control.Monad.IO.Class
 import qualified Data.ByteString.Lazy.Char8    as B
+import qualified Data.Text                     as T
+import           Data.UUID
 import           Language.Haskell.LSP.Capture
 import           Language.Haskell.LSP.Messages
 import           Language.Haskell.LSP.Types hiding (error)
 import           Data.Aeson
 import           Data.List
 import           Data.Maybe
-import           Control.Lens
+import           Control.Lens hiding (List)
 import           Control.Monad
 import           System.IO
 import           System.FilePath
+import           System.Random
 import           Language.Haskell.LSP.Test
 import           Language.Haskell.LSP.Test.Files
 import           Language.Haskell.LSP.Test.Decoding
 import           Language.Haskell.LSP.Test.Messages
+import           Language.Haskell.LSP.Test.Server
 
 
 -- | Replays a captured client output and 
@@ -39,27 +44,30 @@ replaySession serverExe sessionDir = do
   -- decode session
   let unswappedEvents = map (fromJust . decode) entries
 
-  events <- swapFiles sessionDir unswappedEvents
+  withServer serverExe $ \serverIn serverOut pid -> do
 
-  let clientEvents = filter isClientMsg events
-      serverEvents = filter isServerMsg events
-      clientMsgs = map (\(FromClient _ msg) -> msg) clientEvents
-      serverMsgs = filter (not . shouldSkip) $ map (\(FromServer _ msg) -> msg) serverEvents
-      requestMap = getRequestMap clientMsgs
+    events <- swapUUIDs pid <$> swapFiles sessionDir unswappedEvents
 
-  reqSema <- newEmptyMVar
-  rspSema <- newEmptyMVar
-  passVar <- newEmptyMVar :: IO (MVar Bool)
+    let clientEvents = filter isClientMsg events
+        serverEvents = filter isServerMsg events
+        clientMsgs = map (\(FromClient _ msg) -> msg) clientEvents
+        serverMsgs = filter (not . shouldSkip) $ map (\(FromServer _ msg) -> msg) serverEvents
+        requestMap = getRequestMap clientMsgs
 
-  threadId <- forkIO $
-    runSessionWithHandler (listenServer serverMsgs requestMap reqSema rspSema passVar)
-                          serverExe
-                          sessionDir
-                          (sendMessages clientMsgs reqSema rspSema)
+    reqSema <- newEmptyMVar
+    rspSema <- newEmptyMVar
+    passVar <- newEmptyMVar :: IO (MVar Bool)
 
-  result <- takeMVar passVar
-  killThread threadId
-  return result
+    threadId <- forkIO $
+      runSessionWithHandles serverIn
+                            serverOut
+                            (listenServer serverMsgs requestMap reqSema rspSema passVar)
+                            sessionDir
+                            (sendMessages clientMsgs reqSema rspSema)
+
+    result <- takeMVar passVar
+    killThread threadId
+    return result
 
   where
     isClientMsg (FromClient _ _) = True
@@ -120,9 +128,13 @@ isNotification _                              = False
 listenServer :: [FromServerMessage] -> RequestMap -> MVar LspId -> MVar LspIdRsp -> MVar Bool -> Handle -> Session ()
 listenServer [] _ _ _ passVar _ = liftIO $ putMVar passVar True
 listenServer expectedMsgs reqMap reqSema rspSema passVar serverOut  = do
-  msgBytes <- liftIO $ getNextMessage serverOut
+
+  let handler :: IOException -> IO B.ByteString
+      handler _ = putMVar passVar False >> return B.empty
+
+  msgBytes <- liftIO $ catch (getNextMessage serverOut) handler
   let msg = decodeFromServerMsg reqMap msgBytes
-  
+
   handleServerMessage request response notification msg
 
   if shouldSkip msg
@@ -176,9 +188,9 @@ inRightOrder :: FromServerMessage -> [FromServerMessage] -> Bool
 inRightOrder _ [] = error "Why is this empty"
 
 inRightOrder received (expected : msgs)
-  | received == expected    = True
-  | isNotification expected = inRightOrder received msgs
-  | otherwise               = False
+  | received == expected               = True
+  | isNotification expected            = inRightOrder received msgs
+  | otherwise                          = False
 
 -- | Ignore logging notifications since they vary from session to session
 shouldSkip :: FromServerMessage -> Bool
@@ -186,3 +198,19 @@ shouldSkip (NotLogMessage  _) = True
 shouldSkip (NotShowMessage _) = True
 shouldSkip (ReqShowMessage _) = True
 shouldSkip _                  = False
+
+-- | Swaps out the expected UUIDs to match the current process ID
+swapUUIDs :: Int -> [Event] -> [Event]
+swapUUIDs _ [] = []
+swapUUIDs pid (FromServer t (RspInitialize rsp):xs) = FromServer t (RspInitialize swapped):swapUUIDs pid xs
+  where swapped = case newCommands of
+          Just cmds -> result . _Just . capabilities . executeCommandProvider . _Just . commands .~ cmds $ rsp
+          Nothing -> rsp
+        oldCommands = rsp ^? result . _Just . capabilities . executeCommandProvider . _Just . commands
+        newCommands = fmap (fmap swap) oldCommands
+        swap cmd
+          | isUuid cmd = T.append uuid $ T.dropWhile (/= ':') cmd
+          | otherwise = cmd
+        uuid = toText $ fst $ random $ mkStdGen pid
+        isUuid = isJust . fromText . T.takeWhile (/= ':')
+swapUUIDs pid (x:xs) = x:swapUUIDs pid xs
