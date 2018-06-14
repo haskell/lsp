@@ -31,7 +31,7 @@ library
                      , filepath
                      , lens
                      , parser-combinators
-                     , process
+                     , process >= 1.6.3
                      , random
                      , text
                      , transformers
