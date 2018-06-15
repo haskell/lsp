@@ -11,7 +11,6 @@ import           Control.Exception
 import           Control.Monad.IO.Class
 import qualified Data.ByteString.Lazy.Char8    as B
 import qualified Data.Text                     as T
-import           Data.UUID
 import           Language.Haskell.LSP.Capture
 import           Language.Haskell.LSP.Messages
 import           Language.Haskell.LSP.Types hiding (error)
@@ -22,7 +21,6 @@ import           Control.Lens hiding (List)
 import           Control.Monad
 import           System.IO
 import           System.FilePath
-import           System.Random
 import           Language.Haskell.LSP.Test
 import           Language.Haskell.LSP.Test.Files
 import           Language.Haskell.LSP.Test.Decoding
@@ -46,7 +44,7 @@ replaySession serverExe sessionDir = do
 
   withServer serverExe $ \serverIn serverOut pid -> do
 
-    events <- swapUUIDs pid <$> swapFiles sessionDir unswappedEvents
+    events <- swapCommands pid <$> swapFiles sessionDir unswappedEvents
 
     let clientEvents = filter isClientMsg events
         serverEvents = filter isServerMsg events
@@ -199,18 +197,26 @@ shouldSkip (NotShowMessage _) = True
 shouldSkip (ReqShowMessage _) = True
 shouldSkip _                  = False
 
--- | Swaps out the expected UUIDs to match the current process ID
-swapUUIDs :: Int -> [Event] -> [Event]
-swapUUIDs _ [] = []
-swapUUIDs pid (FromServer t (RspInitialize rsp):xs) = FromServer t (RspInitialize swapped):swapUUIDs pid xs
+-- | Swaps out any commands uniqued with process IDs to match the specified process ID
+swapCommands :: Int -> [Event] -> [Event]
+swapCommands _ [] = []
+
+swapCommands pid (FromClient t (ReqExecuteCommand req):xs) =  FromClient t (ReqExecuteCommand swapped):swapCommands pid xs
+  where swapped = params . command .~ newCmd $ req
+        newCmd = swapPid pid (req ^. params . command)
+
+swapCommands pid (FromServer t (RspInitialize rsp):xs) = FromServer t (RspInitialize swapped):swapCommands pid xs
   where swapped = case newCommands of
           Just cmds -> result . _Just . capabilities . executeCommandProvider . _Just . commands .~ cmds $ rsp
           Nothing -> rsp
         oldCommands = rsp ^? result . _Just . capabilities . executeCommandProvider . _Just . commands
-        newCommands = fmap (fmap swap) oldCommands
-        swap cmd
-          | isUuid cmd = T.append uuid $ T.dropWhile (/= ':') cmd
-          | otherwise = cmd
-        uuid = toText $ fst $ random $ mkStdGen pid
-        isUuid = isJust . fromText . T.takeWhile (/= ':')
-swapUUIDs pid (x:xs) = x:swapUUIDs pid xs
+        newCommands = fmap (fmap (swapPid pid)) oldCommands
+
+swapCommands pid (x:xs) = x:swapCommands pid xs
+
+hasPid :: T.Text -> Bool
+hasPid = (>= 2) . T.length . T.filter (':' ==)
+swapPid :: Int -> T.Text -> T.Text
+swapPid pid t
+  | hasPid t = T.append (T.pack $ show pid) $ T.dropWhile (/= ':') t
+  | otherwise = t

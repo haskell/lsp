@@ -32,13 +32,11 @@ library
                      , lens
                      , parser-combinators
                      , process >= 1.6.3
-                     , random
                      , text
                      , transformers
-                     , uuid
                      , unordered-containers
   if os(windows)
-    build-depends:     win32
+    build-depends:     Win32
   else
     build-depends:     unix
   other-modules:       Language.Haskell.LSP.Test.Compat
