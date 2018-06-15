@@ -148,7 +148,7 @@ processTextChanges (ReqApplyWorkspaceEdit r) = do
 
   let groupedParams = groupBy (\a b -> (a ^. textDocument == b ^. textDocument)) changeParams
       mergedParams = map mergeParams groupedParams
-  
+
   forM_ mergedParams (sendNotification TextDocumentDidChange)
 
   where applyTextDocumentEdit (TextDocumentEdit docId (List edits)) = do
@@ -157,7 +157,6 @@ processTextChanges (ReqApplyWorkspaceEdit r) = do
               params = DidChangeTextDocumentParams docId (List changeEvents)
           newVFS <- liftIO $ changeVFS oldVFS (fmClientDidChangeTextDocumentNotification params)
           modify (\s -> s { vfs = newVFS })
-          liftIO $ print newVFS
           return params
 
         applyTextEdit uri edits = applyTextDocumentEdit (TextDocumentEdit (VersionedTextDocumentIdentifier uri 0) edits)

@@ -61,6 +61,8 @@ test-suite tests
                      , haskell-lsp
                      , conduit
                      , conduit-parse
+                     , aeson
+                     , unordered-containers
   other-modules:       ParsingTests
   default-language:    Haskell2010
 
