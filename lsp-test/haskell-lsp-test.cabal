@@ -42,6 +42,7 @@ library
     build-depends:     unix
   other-modules:       Language.Haskell.LSP.Test.Compat
                        Language.Haskell.LSP.Test.Decoding
+                       Language.Haskell.LSP.Test.Exceptions
                        Language.Haskell.LSP.Test.Files
                        Language.Haskell.LSP.Test.Messages
                        Language.Haskell.LSP.Test.Parsing

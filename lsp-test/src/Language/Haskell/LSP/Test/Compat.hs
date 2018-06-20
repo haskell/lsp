@@ -32,3 +32,4 @@ chanSource c = do
   x <- liftIO $ readChan c
   yield x
   chanSource c
+  

@@ -16,8 +16,12 @@ module Language.Haskell.LSP.Test
   -- * Sessions
     runSession
   , runSessionWithHandles
-  , runSessionWithCapabilities
+  , runSessionWithConfig
   , Session
+  , SessionConfig(..)
+  , MonadSessionConfig(..)
+  , SessionException(..)
+  , anySessionException
   -- * Sending
   , sendRequest
   , sendNotification
@@ -74,12 +78,12 @@ import qualified Data.ByteString.Lazy.Char8 as B
 import Data.Default
 import qualified Data.Map as Map
 import Data.Maybe
-import Language.Haskell.LSP.Types
-import qualified  Language.Haskell.LSP.Types as LSP (error, id)
-import Language.Haskell.LSP.TH.ClientCapabilities
+import Language.Haskell.LSP.Types hiding (id, capabilities)
+import qualified Language.Haskell.LSP.Types as LSP
 import Language.Haskell.LSP.VFS
 import Language.Haskell.LSP.Test.Compat
 import Language.Haskell.LSP.Test.Decoding
+import Language.Haskell.LSP.Test.Exceptions
 import Language.Haskell.LSP.Test.Parsing
 import Language.Haskell.LSP.Test.Session
 import Language.Haskell.LSP.Test.Server
@@ -93,15 +97,15 @@ runSession :: String -- ^ The command to run the server.
            -> FilePath -- ^ The filepath to the root directory for the session.
            -> Session a -- ^ The session to run.
            -> IO a
-runSession = runSessionWithCapabilities def
+runSession = runSessionWithConfig def
 
 -- | Starts a new sesion with a client with the specified capabilities.
-runSessionWithCapabilities :: ClientCapabilities -- ^ The capabilities the client should have.
-                           -> String -- ^ The command to run the server.
-                           -> FilePath -- ^ The filepath to the root directory for the session.
-                           -> Session a -- ^ The session to run.
-                           -> IO a
-runSessionWithCapabilities caps serverExe rootDir session = do
+runSessionWithConfig :: SessionConfig -- ^ The capabilities the client should have.
+                     -> String -- ^ The command to run the server.
+                     -> FilePath -- ^ The filepath to the root directory for the session.
+                     -> Session a -- ^ The session to run.
+                     -> IO a
+runSessionWithConfig config serverExe rootDir session = do
   pid <- getProcessID
   absRootDir <- canonicalizePath rootDir
 
@@ -109,28 +113,29 @@ runSessionWithCapabilities caps serverExe rootDir session = do
                                           (Just $ T.pack absRootDir)
                                           (Just $ filePathToUri absRootDir)
                                           Nothing
-                                          caps
+                                          (capabilities config)
                                           (Just TraceOff)
 
-  withServer serverExe $ \serverIn serverOut _ -> runSessionWithHandles serverIn serverOut listenServer rootDir $ do
+  withServer serverExe $ \serverIn serverOut _ ->
+    runSessionWithHandles serverIn serverOut listenServer config rootDir $ do
 
-    -- Wrap the session around initialize and shutdown calls
-    sendRequest Initialize initializeParams
-    initRspMsg <- response :: Session InitializeResponse
+      -- Wrap the session around initialize and shutdown calls
+      sendRequest Initialize initializeParams
+      initRspMsg <- response :: Session InitializeResponse
 
-    liftIO $ maybe (return ()) (putStrLn . ("Error while initializing: " ++) . show ) (initRspMsg ^. LSP.error)
+      liftIO $ maybe (return ()) (putStrLn . ("Error while initializing: " ++) . show ) (initRspMsg ^. LSP.error)
 
-    initRspVar <- initRsp <$> ask
-    liftIO $ putMVar initRspVar initRspMsg
+      initRspVar <- initRsp <$> ask
+      liftIO $ putMVar initRspVar initRspMsg
 
-    sendNotification Initialized InitializedParams
+      sendNotification Initialized InitializedParams
 
-    -- Run the actual test
-    result <- session
+      -- Run the actual test
+      result <- session
 
-    sendNotification Exit ExitParams
+      sendNotification Exit ExitParams
 
-    return result
+      return result
 
 -- | Listens to the server output, makes sure it matches the record and
 -- signals any semaphores

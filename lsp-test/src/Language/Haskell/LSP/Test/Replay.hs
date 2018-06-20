@@ -13,8 +13,9 @@ import qualified Data.ByteString.Lazy.Char8    as B
 import qualified Data.Text                     as T
 import           Language.Haskell.LSP.Capture
 import           Language.Haskell.LSP.Messages
-import           Language.Haskell.LSP.Types hiding (error)
+import           Language.Haskell.LSP.Types as LSP hiding (error)
 import           Data.Aeson
+import           Data.Default
 import           Data.List
 import           Data.Maybe
 import           Control.Lens hiding (List)
@@ -60,6 +61,7 @@ replaySession serverExe sessionDir = do
       runSessionWithHandles serverIn
                             serverOut
                             (listenServer serverMsgs requestMap reqSema rspSema passVar)
+                            def
                             sessionDir
                             (sendMessages clientMsgs reqSema rspSema)
 
@@ -207,9 +209,9 @@ swapCommands pid (FromClient t (ReqExecuteCommand req):xs) =  FromClient t (ReqE
 
 swapCommands pid (FromServer t (RspInitialize rsp):xs) = FromServer t (RspInitialize swapped):swapCommands pid xs
   where swapped = case newCommands of
-          Just cmds -> result . _Just . capabilities . executeCommandProvider . _Just . commands .~ cmds $ rsp
+          Just cmds -> result . _Just . LSP.capabilities . executeCommandProvider . _Just . commands .~ cmds $ rsp
           Nothing -> rsp
-        oldCommands = rsp ^? result . _Just . capabilities . executeCommandProvider . _Just . commands
+        oldCommands = rsp ^? result . _Just . LSP.capabilities . executeCommandProvider . _Just . commands
         newCommands = fmap (fmap (swapPid pid)) oldCommands
 
 swapCommands pid (x:xs) = x:swapCommands pid xs

@@ -1,9 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleInstances #-}
 
-module Language.Haskell.LSP.Test.Session 
+module Language.Haskell.LSP.Test.Session
   ( Session
-  , SessionState(..)
+  , SessionConfig(..)
   , SessionContext(..)
+  , SessionState(..)
+  , MonadSessionConfig(..)
   , runSessionWithHandles
   , get
   , put
@@ -25,33 +28,18 @@ import qualified Data.ByteString.Lazy.Char8 as B
 import Data.Aeson
 import Data.Conduit
 import Data.Conduit.Parser
+import Data.Default
 import Data.Foldable
 import Data.List
 import qualified Data.HashMap.Strict as HashMap
 import Language.Haskell.LSP.Messages
+import Language.Haskell.LSP.TH.ClientCapabilities
 import Language.Haskell.LSP.Types
 import Language.Haskell.LSP.VFS
 import Language.Haskell.LSP.Test.Compat
 import Language.Haskell.LSP.Test.Decoding
 import System.Directory
 import System.IO
-
-data SessionContext = SessionContext
-  {
-    serverIn :: Handle
-  , rootDir :: FilePath
-  , messageChan :: Chan FromServerMessage
-  , requestMap :: MVar RequestMap
-  , initRsp :: MVar InitializeResponse
-  }
-
-data SessionState = SessionState
-  {
-    curReqId :: LspId
-  , vfs :: VFS
-  }
-
-type ParserStateReader a s r m = ConduitParser a (StateT s (ReaderT r m))
 
 -- | A session representing one instance of launching and connecting to a server.
 -- 
@@ -66,10 +54,44 @@ type ParserStateReader a s r m = ConduitParser a (StateT s (ReaderT r m))
 -- @
 type Session = ParserStateReader FromServerMessage SessionState SessionContext IO
 
+-- | Stuff you can configure for a 'Session'.
+data SessionConfig = SessionConfig
+  {
+    capabilities :: ClientCapabilities, -- ^ Specific capabilities the client should advertise.
+    timeout :: Int -- ^ Maximum time to wait for a request in seconds.
+  }
+
+instance Default SessionConfig where
+  def = SessionConfig def 60
+
+class Monad m => MonadSessionConfig m where
+  sessionConfig :: m SessionConfig
+
+instance Monad m => MonadSessionConfig (StateT SessionState (ReaderT SessionContext m)) where
+  sessionConfig = config <$> lift Reader.ask
+
+data SessionContext = SessionContext
+  {
+    serverIn :: Handle
+  , rootDir :: FilePath
+  , messageChan :: Chan FromServerMessage
+  , requestMap :: MVar RequestMap
+  , initRsp :: MVar InitializeResponse
+  , config :: SessionConfig
+  }
+
+data SessionState = SessionState
+  {
+    curReqId :: LspId
+  , vfs :: VFS
+  }
+
+type ParserStateReader a s r m = ConduitParser a (StateT s (ReaderT r m))
+
 type SessionProcessor = ConduitT FromServerMessage FromServerMessage (StateT SessionState (ReaderT SessionContext IO))
 
-runSession' :: Chan FromServerMessage -> SessionProcessor () -> SessionContext -> SessionState -> Session a -> IO (a, SessionState)
-runSession' chan preprocessor context state session = runReaderT (runStateT conduit state) context
+runSession :: Chan FromServerMessage -> SessionProcessor () -> SessionContext -> SessionState -> Session a -> IO (a, SessionState)
+runSession chan preprocessor context state session = runReaderT (runStateT conduit state) context
   where conduit = runConduit $ chanSource chan .| preprocessor .| runConduitParser session
 
 get :: Monad m => ParserStateReader a s r m s
@@ -89,10 +111,11 @@ ask = lift $ lift Reader.ask
 runSessionWithHandles :: Handle -- ^ Server in
                       -> Handle -- ^ Server out
                       -> (Handle -> Session ()) -- ^ Server listener
+                      -> SessionConfig
                       -> FilePath
                       -> Session a
                       -> IO a
-runSessionWithHandles serverIn serverOut serverHandler rootDir session = do
+runSessionWithHandles serverIn serverOut serverHandler config rootDir session = do
   absRootDir <- canonicalizePath rootDir
 
   hSetBuffering serverIn  NoBuffering
@@ -103,11 +126,11 @@ runSessionWithHandles serverIn serverOut serverHandler rootDir session = do
   meaninglessChan <- newChan
   initRsp <- newEmptyMVar
 
-  let context = SessionContext serverIn absRootDir messageChan reqMap initRsp
+  let context = SessionContext serverIn absRootDir messageChan reqMap initRsp config
       initState = SessionState (IdInt 0) mempty
 
-  threadId <- forkIO $ void $ runSession' meaninglessChan processor context initState (serverHandler serverOut)
-  (result, _) <- runSession' messageChan processor context initState session
+  threadId <- forkIO $ void $ runSession meaninglessChan processor context initState (serverHandler serverOut)
+  (result, _) <- runSession messageChan processor context initState session
 
   killThread threadId
 

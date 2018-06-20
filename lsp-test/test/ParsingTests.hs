@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleInstances #-}
 module ParsingTests where
 
 import Control.Lens hiding (List)
@@ -7,9 +8,13 @@ import Language.Haskell.LSP.Test
 import Language.Haskell.LSP.Types
 import Data.Conduit
 import Data.Conduit.Parser
+import Data.Default
 import Test.Hspec
 
 type TestSession = ConduitParser FromServerMessage IO
+
+instance MonadSessionConfig IO where
+  sessionConfig = return def
 
 parsingSpec :: Spec
 parsingSpec =

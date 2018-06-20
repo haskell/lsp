@@ -7,13 +7,14 @@ import           Data.Aeson
 import           Data.Default
 import qualified Data.HashMap.Strict as HM
 import           Data.Maybe
+import           Control.Concurrent
 import           Control.Monad.IO.Class
 import           Control.Lens hiding (List)
 import           GHC.Generics
 import           Language.Haskell.LSP.Test
 import           Language.Haskell.LSP.Test.Replay
 import           Language.Haskell.LSP.TH.ClientCapabilities
-import           Language.Haskell.LSP.Types
+import           Language.Haskell.LSP.Types hiding (capabilities)
 import           ParsingTests
 
 main = hspec $ do
@@ -51,7 +52,20 @@ main = hspec $ do
       let caps = def { _workspace = Just workspaceCaps }
           workspaceCaps = def { _didChangeConfiguration = Just configCaps }
           configCaps = DidChangeConfigurationClientCapabilities (Just True)
-      runSessionWithCapabilities caps "hie --lsp" "test/data/renamePass" $ return ()
+          conf = def { capabilities = caps }
+      runSessionWithConfig conf "hie --lsp" "test/data/renamePass" $ return ()
+    
+    it "times out" $
+      let sesh = runSessionWithConfig (def {timeout = 10}) "hie --lsp" "test/data/renamePass" $ do
+              skipMany loggingNotification
+              _ <- request :: Session ApplyWorkspaceEditRequest
+              return ()
+      in sesh `shouldThrow` anySessionException
+    
+    it "doesn't time out" $ runSessionWithConfig (def {timeout = 10}) "hie --lsp" "test/data/renamePass" $ do
+      loggingNotification
+      liftIO $ threadDelay 5
+
 
   describe "replay session" $ do
     it "passes a test" $
