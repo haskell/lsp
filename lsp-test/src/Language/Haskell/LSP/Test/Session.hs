@@ -130,6 +130,7 @@ processTextChanges (ReqApplyWorkspaceEdit r) = do
   let groupedParams = groupBy (\a b -> (a ^. textDocument == b ^. textDocument)) changeParams
       mergedParams = map mergeParams groupedParams
 
+  -- TODO: Don't do this when replaying a session
   forM_ mergedParams $ \p -> do
     h <- serverIn <$> lift (lift Reader.ask)
     let msg = NotificationMessage "2.0" TextDocumentDidChange p

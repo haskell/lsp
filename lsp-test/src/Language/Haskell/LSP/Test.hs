@@ -219,6 +219,16 @@ sendNotification TextDocumentDidOpen params = do
   modify (\s -> s { vfs = newVFS })
   sendNotification' n
 
+-- | Close a virtual file if we send a close text document notification
+sendNotification TextDocumentDidClose params = do
+  let params' = fromJust $ decode $ encode params
+      n :: DidCloseTextDocumentNotification
+      n = NotificationMessage "2.0" TextDocumentDidClose params'
+  oldVFS <- vfs <$> get
+  newVFS <- liftIO $ closeVFS oldVFS n
+  modify (\s -> s { vfs = newVFS })
+  sendNotification' n
+
 sendNotification method params = sendNotification' (NotificationMessage "2.0" method params)
 
 sendNotification' :: (ToJSON a, ToJSON b) => NotificationMessage a b -> Session ()
