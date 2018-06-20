@@ -3,10 +3,11 @@ packages:
   - .
 
 extra-deps:
+  # - haskell-lsp
   - github: Bubba/haskell-lsp-client
     commit: b7cf14eb48837a73032e867dab90db1708220c66
   - github: Bubba/haskell-lsp
-    commit: 554b1535ae120f8541f860db5f131372da102bef
+    commit: 3e046bf095568099dae606e1c20a92f1dc60b7b9
     subdirs:
       - .
       - ./haskell-lsp-types

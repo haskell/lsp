@@ -4,6 +4,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 import           Test.Hspec
 import           Data.Aeson
+import           Data.Default
 import qualified Data.HashMap.Strict as HM
 import           Data.Maybe
 import           Control.Monad.IO.Class
@@ -11,6 +12,7 @@ import           Control.Lens hiding (List)
 import           GHC.Generics
 import           Language.Haskell.LSP.Test
 import           Language.Haskell.LSP.Test.Replay
+import           Language.Haskell.LSP.TH.ClientCapabilities
 import           Language.Haskell.LSP.Types
 import           ParsingTests
 
@@ -44,6 +46,12 @@ main = hspec $ do
     it "can get initialize response" $ runSession "hie --lsp" "test/data/renamePass" $ do
       rsp <- getInitializeResponse
       liftIO $ rsp ^. result `shouldNotBe` Nothing
+
+    it "can register specific capabilities" $ do
+      let caps = def { _workspace = Just workspaceCaps }
+          workspaceCaps = def { _didChangeConfiguration = Just configCaps }
+          configCaps = DidChangeConfigurationClientCapabilities (Just True)
+      runSessionWithCapabilities caps "hie --lsp" "test/data/renamePass" $ return ()
 
   describe "replay session" $ do
     it "passes a test" $
