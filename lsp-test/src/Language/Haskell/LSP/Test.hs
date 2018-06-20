@@ -57,12 +57,12 @@ module Language.Haskell.LSP.Test
   , getInitializeResponse
   , openDoc
   , getDocItem
+  , documentContents
   , getDocUri
   ) where
 
 import Control.Applicative
 import Control.Applicative.Combinators
-import Control.Monad
 import Control.Monad.IO.Class
 import Control.Concurrent
 import Control.Lens hiding ((.=), List)
@@ -71,12 +71,10 @@ import qualified Data.Text.IO as T
 import Data.Aeson
 import qualified Data.ByteString.Lazy.Char8 as B
 import Data.Default
-import Data.Foldable
-import qualified Data.HashMap.Strict as HashMap
-import Data.List
+import qualified Data.Map as Map
+import Data.Maybe
 import Language.Haskell.LSP.Types
 import qualified  Language.Haskell.LSP.Types as LSP (error, id)
-import Language.Haskell.LSP.Messages
 import Language.Haskell.LSP.VFS
 import Language.Haskell.LSP.Test.Compat
 import Language.Haskell.LSP.Test.Decoding
@@ -86,6 +84,7 @@ import Language.Haskell.LSP.Test.Server
 import System.IO
 import System.Directory
 import System.FilePath
+import qualified Yi.Rope as Rope
 
 -- | Starts a new session.
 runSession :: String -- ^ The command to run the server.
@@ -133,38 +132,16 @@ listenServer serverOut = do
   reqMap <- liftIO $ readMVar $ requestMap context
 
   let msg = decodeFromServerMsg reqMap msgBytes
-  processTextChanges msg
   liftIO $ writeChan (messageChan context) msg
 
   listenServer serverOut
 
-processTextChanges :: FromServerMessage -> Session ()
-processTextChanges (ReqApplyWorkspaceEdit r) = do
-  List changeParams <- case r ^. params . edit . documentChanges of
-    Just cs -> mapM applyTextDocumentEdit cs
-    Nothing -> case r ^. params . edit . changes of
-      Just cs -> mapM (uncurry applyTextEdit) (List (HashMap.toList cs))
-      Nothing -> return (List [])
-
-  let groupedParams = groupBy (\a b -> (a ^. textDocument == b ^. textDocument)) changeParams
-      mergedParams = map mergeParams groupedParams
-
-  forM_ mergedParams (sendNotification TextDocumentDidChange)
-
-  where applyTextDocumentEdit (TextDocumentEdit docId (List edits)) = do
-          oldVFS <- vfs <$> get
-          let changeEvents = map (\e -> TextDocumentContentChangeEvent (Just (e ^. range)) Nothing (e ^. newText)) edits
-              params = DidChangeTextDocumentParams docId (List changeEvents)
-          newVFS <- liftIO $ changeVFS oldVFS (fmClientDidChangeTextDocumentNotification params)
-          modify (\s -> s { vfs = newVFS })
-          return params
-
-        applyTextEdit uri edits = applyTextDocumentEdit (TextDocumentEdit (VersionedTextDocumentIdentifier uri 0) edits)
-
-        mergeParams :: [DidChangeTextDocumentParams] -> DidChangeTextDocumentParams
-        mergeParams params = let events = concat (toList (map (toList . (^. contentChanges)) params))
-                             in DidChangeTextDocumentParams (head params ^. textDocument) (List events)
-processTextChanges _ = return ()
+-- | The current text contents of a document.
+documentContents :: TextDocumentIdentifier -> Session T.Text
+documentContents doc = do
+  vfs <- vfs <$> get
+  let file = vfs Map.! (doc ^. uri)
+  return $ Rope.toText $ Language.Haskell.LSP.VFS._text file
 
 -- | Sends a request to the server.
 --
@@ -221,9 +198,18 @@ sendNotification :: ToJSON a
                  => ClientMethod -- ^ The notification method.
                  -> a -- ^ The notification parameters.
                  -> Session ()
-sendNotification method params =
-  let notif = NotificationMessage "2.0" method params
-    in sendNotification' notif
+
+-- | Open a virtual file if we send a did open text document notification
+sendNotification TextDocumentDidOpen params = do
+  let params' = fromJust $ decode $ encode params
+      n :: DidOpenTextDocumentNotification
+      n = NotificationMessage "2.0" TextDocumentDidOpen params'
+  oldVFS <- vfs <$> get
+  newVFS <- liftIO $ openVFS oldVFS n
+  modify (\s -> s { vfs = newVFS })
+  sendNotification' n
+
+sendNotification method params = sendNotification' (NotificationMessage "2.0" method params)
 
 sendNotification' :: (ToJSON a, ToJSON b) => NotificationMessage a b -> Session ()
 sendNotification' = sendMessage
@@ -265,3 +251,4 @@ getDocUri file = do
   context <- ask
   let fp = rootDir context </> file
   return $ filePathToUri fp
+

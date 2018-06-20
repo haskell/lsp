@@ -35,6 +35,7 @@ library
                      , text
                      , transformers
                      , unordered-containers
+                     , yi-rope
   if os(windows)
     build-depends:     Win32
   else

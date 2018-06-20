@@ -88,6 +88,9 @@ main = hspec $ do
 
         checkNoDiagnostics
 
+        contents <- documentContents doc
+        liftIO $ contents `shouldBe` "main :: IO Int\nmain = return 42"
+
   parsingSpec
 
 data ApplyOneParams = AOP
