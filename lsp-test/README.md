@@ -7,9 +7,8 @@ runSession "session/root/dir" $ do
   
   skipMany notification
   
-  sendRequest (Proxy :: Proxy DocumentSymbolRequest)
-              TextDocumentDocumentSymbol
-              (DocumentSymbolParams doc)
+  sendRequest TextDocumentDocumentSymbol (DocumentSymbolParams doc)
               
-  RspDocumentSymbols rspSymbols <- response
+  rspSymbols <- response :: DocumentSymbolsResponse
   let (List symbols) = fromJust (rspSymbols ^. result)
+```

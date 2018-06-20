@@ -8,6 +8,8 @@ import System.Process
 
 withServer :: String -> (Handle -> Handle -> Int -> IO a) -> IO a
 withServer serverExe f = do
+  -- TODO Probably should just change runServer to accept
+  -- separate command and arguments
   let cmd:args = words serverExe
       createProc = (proc cmd args) { std_in = CreatePipe, std_out = CreatePipe, std_err = CreatePipe }
   (Just serverIn, Just serverOut, Just serverErr, serverProc) <- createProcess createProc

@@ -20,7 +20,7 @@ library
   default-language:    Haskell2010
   build-depends:       base >= 4.7 && < 5
                      , haskell-lsp-types
-                     , haskell-lsp
+                     , haskell-lsp >= 0.3
                      , aeson
                      , bytestring
                      , conduit
@@ -57,9 +57,11 @@ test-suite tests
   build-depends:       base >= 4.7 && < 5
                      , hspec
                      , lens
+                     , data-default
                      , directory
                      , haskell-lsp-test
                      , haskell-lsp
+                     , haskell-lsp-types
                      , conduit
                      , conduit-parse
                      , aeson

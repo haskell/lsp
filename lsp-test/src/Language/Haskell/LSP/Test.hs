@@ -16,6 +16,7 @@ module Language.Haskell.LSP.Test
   -- * Sessions
     runSession
   , runSessionWithHandles
+  , runSessionWithCapabilities
   , Session
   -- * Sending
   , sendRequest
@@ -75,6 +76,7 @@ import qualified Data.Map as Map
 import Data.Maybe
 import Language.Haskell.LSP.Types
 import qualified  Language.Haskell.LSP.Types as LSP (error, id)
+import Language.Haskell.LSP.TH.ClientCapabilities
 import Language.Haskell.LSP.VFS
 import Language.Haskell.LSP.Test.Compat
 import Language.Haskell.LSP.Test.Decoding
@@ -91,7 +93,15 @@ runSession :: String -- ^ The command to run the server.
            -> FilePath -- ^ The filepath to the root directory for the session.
            -> Session a -- ^ The session to run.
            -> IO a
-runSession serverExe rootDir session = do
+runSession = runSessionWithCapabilities def
+
+-- | Starts a new sesion with a client with the specified capabilities.
+runSessionWithCapabilities :: ClientCapabilities -- ^ The capabilities the client should have.
+                           -> String -- ^ The command to run the server.
+                           -> FilePath -- ^ The filepath to the root directory for the session.
+                           -> Session a -- ^ The session to run.
+                           -> IO a
+runSessionWithCapabilities caps serverExe rootDir session = do
   pid <- getProcessID
   absRootDir <- canonicalizePath rootDir
 
@@ -99,7 +109,7 @@ runSession serverExe rootDir session = do
                                           (Just $ T.pack absRootDir)
                                           (Just $ filePathToUri absRootDir)
                                           Nothing
-                                          def
+                                          caps
                                           (Just TraceOff)
 
   withServer serverExe $ \serverIn serverOut _ -> runSessionWithHandles serverIn serverOut listenServer rootDir $ do
