@@ -110,7 +110,7 @@ runSession chan preprocessor context state session = runReaderT (runStateT condu
             Nothing -> throw e
 
         handler e = throw e
-        
+
         skipToEnd x = do
           y <- peek
           case y of

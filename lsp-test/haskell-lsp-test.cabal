@@ -22,6 +22,7 @@ library
                      , haskell-lsp-types
                      , haskell-lsp >= 0.3
                      , aeson
+                     , async
                      , bytestring
                      , conduit
                      , conduit-parse

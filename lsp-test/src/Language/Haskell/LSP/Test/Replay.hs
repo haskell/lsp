@@ -7,7 +7,6 @@ where
 
 import           Prelude hiding (id)
 import           Control.Concurrent
-import           Control.Exception
 import           Control.Monad.IO.Class
 import qualified Data.ByteString.Lazy.Char8    as B
 import qualified Data.Text                     as T
@@ -35,7 +34,7 @@ import           Language.Haskell.LSP.Test.Server
 -- named "session.log".
 replaySession :: String -- ^ The command to run the server.
               -> FilePath -- ^ The recorded session directory.
-              -> IO Bool
+              -> IO ()
 replaySession serverExe sessionDir = do
 
   entries <- B.lines <$> B.readFile (sessionDir </> "session.log")
@@ -55,19 +54,18 @@ replaySession serverExe sessionDir = do
 
     reqSema <- newEmptyMVar
     rspSema <- newEmptyMVar
-    passVar <- newEmptyMVar :: IO (MVar Bool)
+    passSema <- newEmptyMVar
+    mainThread <- myThreadId
 
-    threadId <- forkIO $
+    sessionThread <- liftIO $ forkIO $
       runSessionWithHandles serverIn
                             serverOut
-                            (listenServer serverMsgs requestMap reqSema rspSema passVar)
+                            (listenServer serverMsgs requestMap reqSema rspSema passSema mainThread)
                             def
                             sessionDir
                             (sendMessages clientMsgs reqSema rspSema)
-
-    result <- takeMVar passVar
-    killThread threadId
-    return result
+    takeMVar passSema
+    killThread sessionThread
 
   where
     isClientMsg (FromClient _ _) = True
@@ -125,30 +123,23 @@ isNotification (NotShowMessage             _) = True
 isNotification (NotCancelRequestFromServer _) = True
 isNotification _                              = False
 
-listenServer :: [FromServerMessage] -> RequestMap -> MVar LspId -> MVar LspIdRsp -> MVar Bool -> Handle -> Session ()
-listenServer [] _ _ _ passVar _ = liftIO $ putMVar passVar True
-listenServer expectedMsgs reqMap reqSema rspSema passVar serverOut  = do
+listenServer :: [FromServerMessage] -> RequestMap -> MVar LspId -> MVar LspIdRsp -> MVar () -> ThreadId -> Handle -> Session ()
+listenServer [] _ _ _ passSema _ _ = liftIO $ putMVar passSema ()
+listenServer expectedMsgs reqMap reqSema rspSema passSema mainThreadId serverOut  = do
 
-  let handler :: IOException -> IO B.ByteString
-      handler _ = putMVar passVar False >> return B.empty
-
-  msgBytes <- liftIO $ catch (getNextMessage serverOut) handler
+  msgBytes <- liftIO $ getNextMessage serverOut
   let msg = decodeFromServerMsg reqMap msgBytes
 
   handleServerMessage request response notification msg
 
   if shouldSkip msg
-    then listenServer expectedMsgs reqMap reqSema rspSema passVar serverOut
+    then listenServer expectedMsgs reqMap reqSema rspSema passSema mainThreadId serverOut
     else if inRightOrder msg expectedMsgs
-      then listenServer (delete msg expectedMsgs) reqMap reqSema rspSema passVar serverOut
-      else liftIO $ do
-        putStrLn "Out of order"
-        putStrLn "Got:"
-        print msg
-        putStrLn "Expected one of:"
-        mapM_ print $ takeWhile (not . isNotification) expectedMsgs
-        print $ head $ dropWhile isNotification expectedMsgs
-        putMVar passVar False
+      then listenServer (delete msg expectedMsgs) reqMap reqSema rspSema passSema mainThreadId serverOut
+      else let expectedMsgs = takeWhile (not . isNotification) expectedMsgs
+                ++ [head $ dropWhile isNotification expectedMsgs]
+               exc = ReplayOutOfOrderException msg expectedMsgs
+            in liftIO $ throwTo mainThreadId exc
 
   where
   response :: ResponseMessage a -> Session ()

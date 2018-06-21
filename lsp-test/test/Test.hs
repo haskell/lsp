@@ -55,7 +55,7 @@ main = hspec $ do
           configCaps = DidChangeConfigurationClientCapabilities (Just True)
           conf = def { capabilities = caps }
       runSessionWithConfig conf "hie --lsp" "test/data/renamePass" $ return ()
-  
+
     describe "exceptions" $ do
       it "throw on time out" $
         let sesh = runSessionWithConfig (def {timeout = 10}) "hie --lsp" "test/data/renamePass" $ do
@@ -64,31 +64,35 @@ main = hspec $ do
                 return ()
         in sesh `shouldThrow` anySessionException
 
-      it "don't throw when no time out" $ runSessionWithConfig (def {timeout = 10}) "hie --lsp" "test/data/renamePass" $ do
+      it "don't throw when no time out" $ runSessionWithConfig (def {timeout = 5}) "hie --lsp" "test/data/renamePass" $ do
         loggingNotification
-        liftIO $ threadDelay 5
+        liftIO $ threadDelay 10
+        _ <- openDoc "Desktop/simple.hs" "haskell"
+        return ()
 
       it "throw when there's an unexpected message" $
-        let msgExc (UnexpectedMessageException "Publish diagnostics notification" (NotLogMessage _)) = True
-            msgExc _ = False
-          in runSession "hie --lsp" "test/data/renamePass" publishDiagnosticsNotification `shouldThrow` msgExc
-      
+        let selector (UnexpectedMessageException "Publish diagnostics notification" (NotLogMessage _)) = True
+            selector _ = False
+          in runSession "hie --lsp" "test/data/renamePass" publishDiagnosticsNotification `shouldThrow` selector
+
       it "throw when there's an unexpected message 2" $
-        let msgExc (UnexpectedMessageException "Response" (NotPublishDiagnostics _)) = True
-            msgExc _ = False
+        let selector (UnexpectedMessageException "Response" (NotPublishDiagnostics _)) = True
+            selector _ = False
             sesh = do
               doc <- openDoc "Desktop/simple.hs" "haskell"
               sendRequest TextDocumentDocumentSymbol (DocumentSymbolParams doc)
               skipMany anyNotification
               response :: Session RenameResponse -- the wrong type
           in runSession "hie --lsp" "test/data/renamePass" sesh
-            `shouldThrow` msgExc
+            `shouldThrow` selector
 
   describe "replay session" $ do
     it "passes a test" $
-      replaySession "hie --lsp" "test/data/renamePass" `shouldReturn` True
+      replaySession "hie --lsp" "test/data/renamePass"
     it "fails a test" $
-      replaySession "hie --lsp" "test/data/renameFail" `shouldReturn` False
+      let selector (ReplayOutOfOrderException _ _) = True
+          selector _ = False
+        in replaySession "hie --lsp" "test/data/renameFail" `shouldThrow` selector
 
   describe "manual javascript session" $
     it "passes a test" $
