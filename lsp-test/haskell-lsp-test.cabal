@@ -30,6 +30,7 @@ library
                      , directory
                      , filepath
                      , lens
+                     , mtl
                      , parser-combinators
                      , process >= 1.6.3
                      , text

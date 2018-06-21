@@ -11,6 +11,7 @@ import           Control.Concurrent
 import           Control.Monad.IO.Class
 import           Control.Lens hiding (List)
 import           GHC.Generics
+import           Language.Haskell.LSP.Messages
 import           Language.Haskell.LSP.Test
 import           Language.Haskell.LSP.Test.Replay
 import           Language.Haskell.LSP.TH.ClientCapabilities
@@ -54,18 +55,34 @@ main = hspec $ do
           configCaps = DidChangeConfigurationClientCapabilities (Just True)
           conf = def { capabilities = caps }
       runSessionWithConfig conf "hie --lsp" "test/data/renamePass" $ return ()
-    
-    it "times out" $
-      let sesh = runSessionWithConfig (def {timeout = 10}) "hie --lsp" "test/data/renamePass" $ do
-              skipMany loggingNotification
-              _ <- request :: Session ApplyWorkspaceEditRequest
-              return ()
-      in sesh `shouldThrow` anySessionException
-    
-    it "doesn't time out" $ runSessionWithConfig (def {timeout = 10}) "hie --lsp" "test/data/renamePass" $ do
-      loggingNotification
-      liftIO $ threadDelay 5
+  
+    describe "exceptions" $ do
+      it "throw on time out" $
+        let sesh = runSessionWithConfig (def {timeout = 10}) "hie --lsp" "test/data/renamePass" $ do
+                skipMany loggingNotification
+                _ <- request :: Session ApplyWorkspaceEditRequest
+                return ()
+        in sesh `shouldThrow` anySessionException
 
+      it "don't throw when no time out" $ runSessionWithConfig (def {timeout = 10}) "hie --lsp" "test/data/renamePass" $ do
+        loggingNotification
+        liftIO $ threadDelay 5
+
+      it "throw when there's an unexpected message" $
+        let msgExc (UnexpectedMessageException "Publish diagnostics notification" (NotLogMessage _)) = True
+            msgExc _ = False
+          in runSession "hie --lsp" "test/data/renamePass" publishDiagnosticsNotification `shouldThrow` msgExc
+      
+      it "throw when there's an unexpected message 2" $
+        let msgExc (UnexpectedMessageException "Response" (NotPublishDiagnostics _)) = True
+            msgExc _ = False
+            sesh = do
+              doc <- openDoc "Desktop/simple.hs" "haskell"
+              sendRequest TextDocumentDocumentSymbol (DocumentSymbolParams doc)
+              skipMany anyNotification
+              response :: Session RenameResponse -- the wrong type
+          in runSession "hie --lsp" "test/data/renamePass" sesh
+            `shouldThrow` msgExc
 
   describe "replay session" $ do
     it "passes a test" $

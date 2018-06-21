@@ -16,21 +16,23 @@ module Language.Haskell.LSP.Test.Session
 where
 
 import Control.Concurrent hiding (yield)
+import Control.Exception
 import Control.Lens hiding (List)
 import Control.Monad
 import Control.Monad.IO.Class
-import Control.Monad.Trans.Class
+import Control.Monad.Except
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import qualified Control.Monad.Trans.Reader as Reader (ask)
 import Control.Monad.Trans.State (StateT, runStateT)
 import qualified Control.Monad.Trans.State as State (get, put, modify)
 import qualified Data.ByteString.Lazy.Char8 as B
 import Data.Aeson
-import Data.Conduit
+import Data.Conduit hiding (await)
 import Data.Conduit.Parser
 import Data.Default
 import Data.Foldable
 import Data.List
+import qualified Data.Text as T
 import qualified Data.HashMap.Strict as HashMap
 import Language.Haskell.LSP.Messages
 import Language.Haskell.LSP.TH.ClientCapabilities
@@ -38,6 +40,7 @@ import Language.Haskell.LSP.Types
 import Language.Haskell.LSP.VFS
 import Language.Haskell.LSP.Test.Compat
 import Language.Haskell.LSP.Test.Decoding
+import Language.Haskell.LSP.Test.Exceptions
 import System.Directory
 import System.IO
 
@@ -92,7 +95,28 @@ type SessionProcessor = ConduitT FromServerMessage FromServerMessage (StateT Ses
 
 runSession :: Chan FromServerMessage -> SessionProcessor () -> SessionContext -> SessionState -> Session a -> IO (a, SessionState)
 runSession chan preprocessor context state session = runReaderT (runStateT conduit state) context
-  where conduit = runConduit $ chanSource chan .| preprocessor .| runConduitParser session
+  where conduit = runConduit $ chanSource chan .| preprocessor .| runConduitParser (catchError session handler)
+        handler e@(Unexpected "ConduitParser.empty") = do
+          
+          -- Horrible way to get last item in conduit:
+          -- Add a fake message so we can tell when to stop
+          liftIO $ writeChan chan (RspShutdown (ResponseMessage "EMPTY" IdRspNull Nothing Nothing))
+          x <- peek
+          case x of
+            Just x -> do
+              lastMsg <- skipToEnd x
+              name <- getParserName
+              liftIO $ throw (UnexpectedMessageException (T.unpack name) lastMsg)
+            Nothing -> throw e
+
+        handler e = throw e
+        
+        skipToEnd x = do
+          y <- peek
+          case y of
+            Just (RspShutdown (ResponseMessage "EMPTY" IdRspNull Nothing Nothing)) -> return x
+            Just _ -> await >>= skipToEnd
+            Nothing -> return x
 
 get :: Monad m => ParserStateReader a s r m s
 get = lift State.get
