@@ -8,19 +8,48 @@ module Language.Haskell.LSP.Test.Compat where
 import Control.Concurrent.Chan
 import Control.Monad.IO.Class
 import Data.Conduit
+import Data.Maybe
+
+#if MIN_VERSION_process(1,6,3)
+import System.Process hiding (getPid)
+import qualified System.Process (getPid)
+#else
+import System.Process
+import System.Process.Internals
+import Control.Concurrent.MVar
+#endif
 
 #ifdef mingw32_HOST_OS
-
-import qualified System.Win32.Process as P (getCurrentProcessId)
-getProcessID :: IO Int
-getProcessID = fromIntegral <$> P.getCurrentProcessId
-
+import qualified System.Win32.Process
 #else
+import qualified System.Posix.Process
+#endif
 
-import qualified System.Posix.Process as P (getProcessID)
-getProcessID :: IO Int
-getProcessID = fromIntegral <$> P.getProcessID
 
+getCurrentProcessID :: IO Int
+#ifdef mingw32_HOST_OS
+getCurrentProcessID = fromIntegral <$> System.Win32.Process.getCurrentProcessId
+#else
+getCurrentProcessID = fromIntegral <$> System.Posix.Process.getProcessID
+#endif
+
+getProcessID :: ProcessHandle -> IO Int
+getProcessID p = fromIntegral . fromJust <$> getProcessID' p
+  where
+#if MIN_VERSION_process(1,6,3)
+  getProcessID' = System.Process.getPid
+#else
+  getProcessID' (ProcessHandle mh _ _) = do
+    p_ <- readMVar mh
+    case p_ of
+#ifdef mingw32_HOST_OS
+      OpenHandle h -> do
+        pid <- System.Win32.Process.getProcessId h
+        return $ Just pid
+#else
+      OpenHandle pid -> return $ Just pid
+#endif
+      _ -> return Nothing
 #endif
 
 #if MIN_VERSION_conduit(1,3,0)
@@ -32,4 +61,3 @@ chanSource c = do
   x <- liftIO $ readChan c
   yield x
   chanSource c
-  

@@ -91,7 +91,7 @@ data SessionState = SessionState
 
 type ParserStateReader a s r m = ConduitParser a (StateT s (ReaderT r m))
 
-type SessionProcessor = ConduitT FromServerMessage FromServerMessage (StateT SessionState (ReaderT SessionContext IO))
+type SessionProcessor = ConduitM FromServerMessage FromServerMessage (StateT SessionState (ReaderT SessionContext IO))
 
 runSession :: Chan FromServerMessage -> SessionProcessor () -> SessionContext -> SessionState -> Session a -> IO (a, SessionState)
 runSession chan preprocessor context state session = runReaderT (runStateT conduit state) context

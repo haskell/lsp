@@ -2,7 +2,7 @@ module Language.Haskell.LSP.Test.Server (withServer) where
 
 import Control.Concurrent
 import Control.Monad
-import Data.Maybe
+import Language.Haskell.LSP.Test.Compat
 import System.IO
 import System.Process
 
@@ -19,7 +19,7 @@ withServer serverExe f = do
   hSetBuffering serverErr NoBuffering
   errSinkThread <- forkIO $ forever $ hGetLine serverErr
 
-  pid <- fromIntegral . fromJust <$> getPid serverProc
+  pid <- getProcessID serverProc
 
   result <- f serverIn serverOut pid
 

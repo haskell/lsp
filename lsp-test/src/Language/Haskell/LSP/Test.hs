@@ -106,7 +106,7 @@ runSessionWithConfig :: SessionConfig -- ^ The capabilities the client should ha
                      -> Session a -- ^ The session to run.
                      -> IO a
 runSessionWithConfig config serverExe rootDir session = do
-  pid <- getProcessID
+  pid <- getCurrentProcessID
   absRootDir <- canonicalizePath rootDir
 
   let initializeParams = InitializeParams (Just pid)

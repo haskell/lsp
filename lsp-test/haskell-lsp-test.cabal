@@ -33,7 +33,7 @@ library
                      , lens
                      , mtl
                      , parser-combinators
-                     , process >= 1.6.3
+                     , process
                      , text
                      , transformers
                      , unordered-containers
