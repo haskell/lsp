@@ -506,8 +506,8 @@ $(deriveJSON lspOptions ''CodeActionLiteralSupport)
 
 data CodeActionClientCapabilities =
   CodeActionClientCapabilities
-    { _dynamicRegistration     :: Maybe Bool -- ^ Whether code action supports dynamic registration.
-    , codeActionLiteralSupport :: Maybe CodeActionLiteralSupport -- ^ The client support code action literals as a valid response
+    { _dynamicRegistration      :: Maybe Bool -- ^ Whether code action supports dynamic registration.
+    , _codeActionLiteralSupport :: Maybe CodeActionLiteralSupport -- ^ The client support code action literals as a valid response
                                                                  -- of the `textDocument/codeAction` request.
                                                                  -- Since 3.8.0
     } deriving (Show, Read, Eq)
