@@ -266,9 +266,8 @@ reactor lf inp = do
                       ]
               cmdparams = Just args
           makeCommand (J.Diagnostic _r _s _c _source _m _l) = []
-        let body = Just $ J.List $ map J.CommandOrCodeActionCommand $ concatMap makeCommand diags
-            rsp = Core.makeResponseMessage req body
-        reactorSend $ RspCodeAction rsp
+        let body = J.List $ concatMap makeCommand diags
+        reactorSend $ RspCodeAction $ Core.makeResponseMessage req body
 
       -- -------------------------------
 
