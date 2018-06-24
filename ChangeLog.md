@@ -1,5 +1,13 @@
 # Revision history for haskell-lsp
 
+## 0.4.0.0
+
+* CodeAction support as per v3.8 of the specification.
+
+## 0.3.0.0
+
+* Handle TextDocumentSync fallbacks with new TDS type.
+
 ## 0.2.3.0  -- 2018-99-99
 
 * GHC 8.4.3 support
