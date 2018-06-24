@@ -1,19 +1,13 @@
-{-# LANGUAGE DeriveGeneric         #-}
 {-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE TemplateHaskell       #-}
-{-# LANGUAGE TypeSynonymInstances  #-}
 
 module Language.Haskell.LSP.TH.ClientCapabilities where
 
 import           Data.Aeson.TH
--- import           Data.Aeson.Types
 import qualified Data.Aeson as A
--- import qualified Data.HashMap.Strict as H
--- import qualified Data.Text as T
-
 import Language.Haskell.LSP.TH.Constants
--- import Language.Haskell.LSP.Utility
+import Language.Haskell.LSP.TH.CodeAction
+import Language.Haskell.LSP.TH.List
 import Data.Default
 
 -- ---------------------------------------------------------------------
@@ -496,9 +490,26 @@ $(deriveJSON lspOptions ''DefinitionClientCapabilities)
 
 -- -------------------------------------
 
+data CodeActionKindValueSet =
+  CodeActionKindValueSet
+   { _valueSet :: List CodeActionKind
+   } deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''CodeActionKindValueSet)
+
+data CodeActionLiteralSupport =
+  CodeActionLiteralSupport
+    { _codeActionKind :: CodeActionKindValueSet -- ^ The code action kind is support with the following value set.
+    } deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''CodeActionLiteralSupport)
+
 data CodeActionClientCapabilities =
   CodeActionClientCapabilities
-    { _dynamicRegistration :: Maybe Bool
+    { _dynamicRegistration     :: Maybe Bool -- ^ Whether code action supports dynamic registration.
+    , codeActionLiteralSupport :: Maybe CodeActionLiteralSupport -- ^ The client support code action literals as a valid response
+                                                                 -- of the `textDocument/codeAction` request.
+                                                                 -- Since 3.8.0
     } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''CodeActionClientCapabilities)

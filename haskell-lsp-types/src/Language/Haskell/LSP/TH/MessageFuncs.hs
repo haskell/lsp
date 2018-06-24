@@ -1,12 +1,11 @@
 {-# LANGUAGE GADTs               #-}
-{-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE MultiWayIf          #-}
 {-# LANGUAGE BinaryLiterals      #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Language.Haskell.LSP.TH.Messages (
+module Language.Haskell.LSP.TH.MessageFuncs (
   -- * General
     fmClientInitializeRequest
   , fmClientInitializedNotification
