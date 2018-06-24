@@ -2,13 +2,13 @@
 {-# LANGUAGE DeriveGeneric #-}
 
 module Language.Haskell.LSP.Messages
-  ( module Language.Haskell.LSP.TH.Messages
+  ( module Language.Haskell.LSP.TH.MessageFuncs
   , FromClientMessage(..)
   , FromServerMessage(..)
   )
 where
 
-import           Language.Haskell.LSP.TH.Messages
+import           Language.Haskell.LSP.TH.MessageFuncs
 import           Language.Haskell.LSP.TH.DataTypesJSON
 import           GHC.Generics
 import           Data.Aeson

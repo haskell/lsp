@@ -20,9 +20,17 @@ library
   exposed-modules:     Language.Haskell.LSP.TH.ClientCapabilities
                      , Language.Haskell.LSP.TH.Constants
                      , Language.Haskell.LSP.TH.DataTypesJSON
-                     , Language.Haskell.LSP.TH.Messages
+                     , Language.Haskell.LSP.TH.MessageFuncs
                      , Language.Haskell.LSP.TH.Utils
-  -- other-modules:
+  other-modules:       Language.Haskell.LSP.TH.Command
+                     , Language.Haskell.LSP.TH.CodeAction
+                     , Language.Haskell.LSP.TH.Diagnostic
+                     , Language.Haskell.LSP.TH.List
+                     , Language.Haskell.LSP.TH.Location
+                     , Language.Haskell.LSP.TH.Message
+                     , Language.Haskell.LSP.TH.TextDocumentIdentifier
+                     , Language.Haskell.LSP.TH.Uri
+                     , Language.Haskell.LSP.TH.WorkspaceEdit
  -- other-extensions:
   ghc-options:         -Wall
   -- ghc-options:         -Werror

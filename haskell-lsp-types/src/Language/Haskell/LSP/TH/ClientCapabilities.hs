@@ -1,19 +1,11 @@
-{-# LANGUAGE DeriveGeneric         #-}
 {-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE TemplateHaskell       #-}
-{-# LANGUAGE TypeSynonymInstances  #-}
 
 module Language.Haskell.LSP.TH.ClientCapabilities where
 
 import           Data.Aeson.TH
--- import           Data.Aeson.Types
 import qualified Data.Aeson as A
--- import qualified Data.HashMap.Strict as H
--- import qualified Data.Text as T
-
 import Language.Haskell.LSP.TH.Constants
--- import Language.Haskell.LSP.Utility
 import Data.Default
 
 -- ---------------------------------------------------------------------
@@ -498,7 +490,7 @@ $(deriveJSON lspOptions ''DefinitionClientCapabilities)
 
 data CodeActionClientCapabilities =
   CodeActionClientCapabilities
-    { _dynamicRegistration :: Maybe Bool
+    { _dynamicRegistration     :: Maybe Bool -- ^ Whether code action supports dynamic registration.
     } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''CodeActionClientCapabilities)
