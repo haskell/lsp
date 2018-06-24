@@ -10,7 +10,6 @@ import           Data.Hashable
 import           Data.Text                                  (Text)
 import qualified Data.Text                                  as T
 import           Language.Haskell.LSP.TH.Constants
-import           Language.Haskell.LSP.TH.Uri
   
 
 -- | Id used for a request, Can be either a String or an Int

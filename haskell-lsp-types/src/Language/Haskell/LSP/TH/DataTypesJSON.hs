@@ -28,12 +28,8 @@ import           Control.Lens.TH                            (makeFieldsNoPrefix)
 import qualified Data.Aeson                                 as A
 import           Data.Aeson.TH
 import           Data.Aeson.Types
-import           Data.Hashable
-import qualified Data.HashMap.Strict                        as H
-import           Data.Monoid                                ((<>))
 import           Data.Text                                  (Text)
 import qualified Data.Text                                  as T
-import           System.IO                                  (FilePath)
 
 import           Language.Haskell.LSP.TH.ClientCapabilities
 import           Language.Haskell.LSP.TH.CodeAction

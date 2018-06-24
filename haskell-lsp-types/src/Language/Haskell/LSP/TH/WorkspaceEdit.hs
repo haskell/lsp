@@ -3,7 +3,6 @@
 {-# LANGUAGE TemplateHaskell            #-}
 module Language.Haskell.LSP.TH.WorkspaceEdit where
 
-import qualified Data.Aeson                                 as A
 import           Data.Aeson.TH
 import qualified Data.HashMap.Strict                        as H
 import           Data.Text                                  (Text)
