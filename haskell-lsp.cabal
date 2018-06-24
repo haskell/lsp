@@ -28,6 +28,7 @@ library
                      , Language.Haskell.LSP.Diagnostics
                      , Language.Haskell.LSP.Messages
                      , Language.Haskell.LSP.Types
+                     , Language.Haskell.LSP.Types.Capabilities
                      , Language.Haskell.LSP.Utility
                      , Language.Haskell.LSP.VFS
   -- other-modules:
