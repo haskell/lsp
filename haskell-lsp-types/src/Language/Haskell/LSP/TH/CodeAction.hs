@@ -7,6 +7,7 @@ import           Control.Applicative
 import qualified Data.Aeson                                 as A
 import           Data.Aeson.TH
 import           Data.Aeson.Types
+import           Data.Text                                  (Text)
 import           Language.Haskell.LSP.TH.Command
 import           Language.Haskell.LSP.TH.Constants
 import           Language.Haskell.LSP.TH.Diagnostic
@@ -257,13 +258,13 @@ data CodeActionParams =
 deriveJSON lspOptions ''CodeActionParams
 
 data CodeAction =
-  -- |  code action represents a change that can be performed in code, e.g. to fix a problem or
+  -- | A code action represents a change that can be performed in code, e.g. to fix a problem or
   -- to refactor code.
   --
   -- A CodeAction must set either '_edit' and/or a '_command'. If both are supplied,
   -- the '_edit' is applied first, then the '_command' is executed.
   CodeAction
-    { _title       :: String -- ^ A short, human-readable, title for this code action.
+    { _title       :: Text -- ^ A short, human-readable, title for this code action.
     , _kind        :: Maybe CodeActionKind -- ^ The kind of the code action. Used to filter code actions.
     , _diagnostics :: Maybe (List Diagnostic) -- ^ The diagnostics that this code action resolves.
     , _edit        :: Maybe WorkspaceEdit -- ^ The workspace edit this code action performs.
