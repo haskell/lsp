@@ -3357,6 +3357,7 @@ makeFieldsNoPrefix ''Location
 -- CodeActions
 makeFieldsNoPrefix ''CodeActionContext
 makeFieldsNoPrefix ''CodeActionParams
+makeFieldsNoPrefix ''CodeAction
 
 -- WorkspaceEdit
 makeFieldsNoPrefix ''TextEdit
