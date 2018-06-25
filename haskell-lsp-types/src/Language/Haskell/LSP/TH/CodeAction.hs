@@ -4,10 +4,10 @@
 module Language.Haskell.LSP.TH.CodeAction where
 
 import           Control.Applicative
-import qualified Data.Aeson                                 as A
+import qualified Data.Aeson                    as A
 import           Data.Aeson.TH
 import           Data.Aeson.Types
-import           Data.Text                                  (Text)
+import           Data.Text                      ( Text )
 import           Language.Haskell.LSP.TH.Command
 import           Language.Haskell.LSP.TH.Constants
 import           Language.Haskell.LSP.TH.Diagnostic
@@ -16,7 +16,7 @@ import           Language.Haskell.LSP.TH.Location
 import           Language.Haskell.LSP.TH.Message
 import           Language.Haskell.LSP.TH.TextDocumentIdentifier
 import           Language.Haskell.LSP.TH.WorkspaceEdit
-  
+
 
 {-
 Code Action Request
@@ -218,26 +218,29 @@ data CodeActionKind = CodeActionQuickFix
                     | CodeActionRefactorRewrite
                     | CodeActionSource
                     | CodeActionSourceOrganizeImports
+                    | CodeActionUnknown Text
   deriving (Read,Show,Eq)
 
 instance ToJSON CodeActionKind where
-  toJSON CodeActionQuickFix = String "quickfix"
-  toJSON CodeActionRefactor = String "refactor"
-  toJSON CodeActionRefactorExtract = String "refactor.extract"
-  toJSON CodeActionRefactorInline = String "refactor.inline"
-  toJSON CodeActionRefactorRewrite = String "refactor.rewrite"
-  toJSON CodeActionSource = String "source"
-  toJSON CodeActionSourceOrganizeImports = String "source.organizeImports"
+  toJSON CodeActionQuickFix                   = String "quickfix"
+  toJSON CodeActionRefactor                   = String "refactor"
+  toJSON CodeActionRefactorExtract            = String "refactor.extract"
+  toJSON CodeActionRefactorInline             = String "refactor.inline"
+  toJSON CodeActionRefactorRewrite            = String "refactor.rewrite"
+  toJSON CodeActionSource                     = String "source"
+  toJSON CodeActionSourceOrganizeImports      = String "source.organizeImports"
+  toJSON (CodeActionUnknown s)                = String s
 
 instance FromJSON CodeActionKind where
-  parseJSON (String "quickfix") = return CodeActionQuickFix
-  parseJSON (String "refactor") = return CodeActionRefactor
-  parseJSON (String "refactor.extract") = return CodeActionRefactorExtract
-  parseJSON (String "refactor.inline") = return CodeActionRefactorInline
-  parseJSON (String "refactor.rewrite") = return CodeActionRefactorRewrite
-  parseJSON (String "source") = return CodeActionSource
-  parseJSON (String "source.organizeImports") = return CodeActionSourceOrganizeImports
-  parseJSON _ = mempty
+  parseJSON (String "quickfix")               = pure CodeActionQuickFix
+  parseJSON (String "refactor")               = pure CodeActionRefactor
+  parseJSON (String "refactor.extract")       = pure CodeActionRefactorExtract
+  parseJSON (String "refactor.inline")        = pure CodeActionRefactorInline
+  parseJSON (String "refactor.rewrite")       = pure CodeActionRefactorRewrite
+  parseJSON (String "source")                 = pure CodeActionSource
+  parseJSON (String "source.organizeImports") = pure CodeActionSourceOrganizeImports
+  parseJSON (String s)                        = pure (CodeActionUnknown s)
+  parseJSON _                                 = mempty
 
 data CodeActionContext =
   CodeActionContext
@@ -280,9 +283,9 @@ data CommandOrCodeAction = CommandOrCodeActionCommand Command
   deriving (Read,Show,Eq)
 
 instance FromJSON CommandOrCodeAction where
-  parseJSON x = CommandOrCodeActionCommand <$> parseJSON x 
+  parseJSON x = CommandOrCodeActionCommand <$> parseJSON x
               <|> CommandOrCodeActionCodeAction <$> parseJSON x
-    
+
 instance ToJSON CommandOrCodeAction where
   toJSON (CommandOrCodeActionCommand x) = toJSON x
   toJSON (CommandOrCodeActionCodeAction x) = toJSON x
