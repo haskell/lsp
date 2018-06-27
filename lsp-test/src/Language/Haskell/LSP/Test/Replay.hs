@@ -136,9 +136,9 @@ listenServer expectedMsgs reqMap reqSema rspSema passSema mainThreadId serverOut
     then listenServer expectedMsgs reqMap reqSema rspSema passSema mainThreadId serverOut
     else if inRightOrder msg expectedMsgs
       then listenServer (delete msg expectedMsgs) reqMap reqSema rspSema passSema mainThreadId serverOut
-      else let expectedMsgs = takeWhile (not . isNotification) expectedMsgs
+      else let remainingMsgs = takeWhile (not . isNotification) expectedMsgs
                 ++ [head $ dropWhile isNotification expectedMsgs]
-               exc = ReplayOutOfOrderException msg expectedMsgs
+               exc = ReplayOutOfOrderException msg remainingMsgs
             in liftIO $ throwTo mainThreadId exc
 
   where

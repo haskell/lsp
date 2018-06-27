@@ -6,6 +6,8 @@ import Language.Haskell.LSP.Messages
 data SessionException = TimeoutException
                       | UnexpectedMessageException String FromServerMessage
                       | ReplayOutOfOrderException FromServerMessage [FromServerMessage]
+                      | UnexpectedDiagnosticsException
+                      | IncorrectApplyEditRequestException String
 
 instance Exception SessionException
 
@@ -19,6 +21,9 @@ instance Show SessionException where
     "Replay is out of order:\n" ++
     "Received from server:" ++ show received ++ "\n" ++
     "Expected one of: " ++ concatMap show expected
+  show UnexpectedDiagnosticsException = "Unexpectedly received diagnostics from the server."
+  show (IncorrectApplyEditRequestException msgStr) = "ApplyEditRequest didn't contain document, instead received:\n"
+                                          ++ msgStr
 
 anySessionException :: SessionException -> Bool
 anySessionException = const True

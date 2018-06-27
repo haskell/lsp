@@ -2,6 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DeriveAnyClass #-}
+
 import           Test.Hspec
 import           Data.Aeson
 import           Data.Default
@@ -26,7 +27,7 @@ main = hspec $ do
 
         skipMany loggingNotification
 
-        checkNoDiagnostics
+        noDiagnostics
 
         rspSymbols <- documentSymbols doc
 
@@ -46,7 +47,7 @@ main = hspec $ do
                       anyRequest
         in session `shouldThrow` anyException
     it "can get initialize response" $ runSession "hie --lsp" "test/data/renamePass" $ do
-      rsp <- getInitializeResponse
+      rsp <- initializeResponse
       liftIO $ rsp ^. result `shouldNotBe` Nothing
 
     it "can register specific capabilities" $ do
@@ -99,7 +100,7 @@ main = hspec $ do
       runSession "javascript-typescript-stdio" "test/data/javascriptPass" $ do
         doc <- openDoc "test.js" "javascript"
 
-        checkNoDiagnostics
+        noDiagnostics
 
         rspSymbols <- documentSymbols doc
 
@@ -109,7 +110,7 @@ main = hspec $ do
           fooSymbol ^. name `shouldBe` "foo"
           fooSymbol ^. kind `shouldBe` SkFunction
 
-  describe "text document state" $
+  describe "text document VFS" $
     it "sends back didChange notifications" $
       runSession "hie --lsp" "test/data/refactor" $ do
         doc <- openDoc "Main.hs" "haskell"
@@ -129,10 +130,27 @@ main = hspec $ do
           u `shouldBe` doc ^. uri
           es `shouldBe` [TextEdit (Range (Position 1 0) (Position 1 18)) "main = return 42"]
 
-        checkNoDiagnostics
+        noDiagnostics
 
         contents <- documentContents doc
         liftIO $ contents `shouldBe` "main :: IO Int\nmain = return 42"
+    
+  describe "documentEdit" $
+    it "automatically consumes applyedit requests" $
+      runSession "hie --lsp" "test/data/refactor" $ do
+        doc <- openDoc "Main.hs" "haskell"
+
+        let args = toJSON $ AOP (doc ^. uri)
+                                (Position 1 14)
+                                "Redundant bracket"
+            reqParams = ExecuteCommandParams "applyrefact:applyOne" (Just (List [args]))
+        sendRequest WorkspaceExecuteCommand reqParams
+        skipMany anyNotification
+        _ <- response :: Session ExecuteCommandResponse
+
+        contents <- documentEdit doc
+        liftIO $ contents `shouldBe` "main :: IO Int\nmain = return 42"
+        noDiagnostics
 
   parsingSpec
 
@@ -142,12 +160,3 @@ data ApplyOneParams = AOP
   , hintTitle :: String
   } deriving (Generic, ToJSON)
 
-checkNoDiagnostics :: Session ()
-checkNoDiagnostics = do
-  diagsNot <- notification :: Session PublishDiagnosticsNotification
-  liftIO $ diagsNot ^. params . diagnostics `shouldBe` List []
-
-documentSymbols :: TextDocumentIdentifier -> Session DocumentSymbolsResponse
-documentSymbols doc = do
-  sendRequest TextDocumentDocumentSymbol (DocumentSymbolParams doc)
-  response

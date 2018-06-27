@@ -59,23 +59,29 @@ module Language.Haskell.LSP.Test
   , (<|>)
   , satisfy
   -- * Utilities
-  , getInitializeResponse
+  , initializeResponse
   , openDoc
-  , getDocItem
   , documentContents
+  , documentEdit
   , getDocUri
+  , noDiagnostics
+  , documentSymbols
+  ,
   ) where
 
 import Control.Applicative
 import Control.Applicative.Combinators
-import Control.Monad.IO.Class
 import Control.Concurrent
+import Control.Monad
+import Control.Monad.IO.Class
+import Control.Exception
 import Control.Lens hiding ((.=), List)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import Data.Aeson
 import qualified Data.ByteString.Lazy.Char8 as B
 import Data.Default
+import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map as Map
 import Data.Maybe
 import Language.Haskell.LSP.Types hiding (id, capabilities)
@@ -157,6 +163,29 @@ documentContents doc = do
   vfs <- vfs <$> get
   let file = vfs Map.! (doc ^. uri)
   return $ Rope.toText $ Language.Haskell.LSP.VFS._text file
+
+-- | Parses an ApplyEditRequest, checks that it is for the passed document
+-- and returns the new content
+documentEdit :: TextDocumentIdentifier -> Session T.Text
+documentEdit doc = do
+  req <- request :: Session ApplyWorkspaceEditRequest
+
+  unless (checkDocumentChanges req || checkChanges req) $
+    liftIO $ throw (IncorrectApplyEditRequestException (show req))
+
+  documentContents doc
+  where
+    checkDocumentChanges :: ApplyWorkspaceEditRequest -> Bool
+    checkDocumentChanges req =
+      let changes = req ^. params . edit . documentChanges
+          maybeDocs = fmap (fmap (^. textDocument . uri)) changes
+      in case maybeDocs of
+        Just docs -> (doc ^. uri) `elem` docs
+        Nothing -> False
+    checkChanges :: ApplyWorkspaceEditRequest -> Bool
+    checkChanges req =
+      let mMap = req ^. params . edit . changes
+        in maybe False (HashMap.member (doc ^. uri)) mMap
 
 -- | Sends a request to the server.
 --
@@ -250,8 +279,8 @@ sendMessage msg = do
 -- | Returns the initialize response that was received from the server.
 -- The initialize requests and responses are not included the session,
 -- so if you need to test it use this.
-getInitializeResponse :: Session InitializeResponse
-getInitializeResponse = initRsp <$> ask >>= (liftIO . readMVar)
+initializeResponse :: Session InitializeResponse
+initializeResponse = initRsp <$> ask >>= (liftIO . readMVar)
 
 -- | Opens a text document and sends a notification to the client.
 openDoc :: FilePath -> String -> Session TextDocumentIdentifier
@@ -259,16 +288,16 @@ openDoc file languageId = do
   item <- getDocItem file languageId
   sendNotification TextDocumentDidOpen (DidOpenTextDocumentParams item)
   TextDocumentIdentifier <$> getDocUri file
-
--- | Reads in a text document as the first version.
-getDocItem :: FilePath -- ^ The path to the text document to read in.
-           -> String -- ^ The language ID, e.g "haskell" for .hs files.
-           -> Session TextDocumentItem
-getDocItem file languageId = do
-  context <- ask
-  let fp = rootDir context </> file
-  contents <- liftIO $ T.readFile fp
-  return $ TextDocumentItem (filePathToUri fp) (T.pack languageId) 0 contents
+  where
+  -- | Reads in a text document as the first version.
+  getDocItem :: FilePath -- ^ The path to the text document to read in.
+            -> String -- ^ The language ID, e.g "haskell" for .hs files.
+            -> Session TextDocumentItem
+  getDocItem file languageId = do
+    context <- ask
+    let fp = rootDir context </> file
+    contents <- liftIO $ T.readFile fp
+    return $ TextDocumentItem (filePathToUri fp) (T.pack languageId) 0 contents
 
 -- | Gets the Uri for the file corrected to the session directory.
 getDocUri :: FilePath -> Session Uri
@@ -277,3 +306,16 @@ getDocUri file = do
   let fp = rootDir context </> file
   return $ filePathToUri fp
 
+-- | Expects a 'PublishDiagnosticsNotification' and throws an
+-- 'UnexpectedDiagnosticsException' if there are any diagnostics
+-- returned.
+noDiagnostics :: Session ()
+noDiagnostics = do
+  diagsNot <- notification :: Session PublishDiagnosticsNotification
+  when (diagsNot ^. params . diagnostics /= List []) $ liftIO $ throw UnexpectedDiagnosticsException
+
+-- | Returns the symbols in a document.
+documentSymbols :: TextDocumentIdentifier -> Session DocumentSymbolsResponse
+documentSymbols doc = do
+  sendRequest TextDocumentDocumentSymbol (DocumentSymbolParams doc)
+  response

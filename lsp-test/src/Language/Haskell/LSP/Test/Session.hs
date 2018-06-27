@@ -60,8 +60,8 @@ type Session = ParserStateReader FromServerMessage SessionState SessionContext I
 -- | Stuff you can configure for a 'Session'.
 data SessionConfig = SessionConfig
   {
-    capabilities :: ClientCapabilities, -- ^ Specific capabilities the client should advertise.
-    timeout :: Int -- ^ Maximum time to wait for a request in seconds.
+    capabilities :: ClientCapabilities -- ^ Specific capabilities the client should advertise. Default is yes to everything.
+  , timeout :: Int -- ^ Maximum time to wait for a request in seconds. Defaults to 60.
   }
 
 instance Default SessionConfig where
