@@ -29,7 +29,7 @@ main = hspec $ do
 
         noDiagnostics
 
-        rspSymbols <- documentSymbols doc
+        rspSymbols <- getDocumentSymbols doc
 
         liftIO $ do
           let (List symbols) = fromJust (rspSymbols ^. result)
@@ -102,7 +102,7 @@ main = hspec $ do
 
         noDiagnostics
 
-        rspSymbols <- documentSymbols doc
+        rspSymbols <- getDocumentSymbols doc
 
         let (List symbols) = fromJust (rspSymbols ^. result)
             fooSymbol = head symbols
@@ -148,7 +148,7 @@ main = hspec $ do
         skipMany anyNotification
         _ <- response :: Session ExecuteCommandResponse
 
-        contents <- documentEdit doc
+        contents <- getDocumentEdit doc
         liftIO $ contents `shouldBe` "main :: IO Int\nmain = return 42"
         noDiagnostics
 
