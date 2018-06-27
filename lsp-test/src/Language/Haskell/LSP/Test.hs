@@ -62,11 +62,11 @@ module Language.Haskell.LSP.Test
   , initializeResponse
   , openDoc
   , documentContents
-  , documentEdit
+  , getDocumentEdit
   , getDocUri
   , noDiagnostics
-  , documentSymbols
-  ,
+  , getDocumentSymbols
+  , getDiagnostics
   ) where
 
 import Control.Applicative
@@ -121,7 +121,6 @@ runSessionWithConfig config serverExe rootDir session = do
                                           Nothing
                                           (capabilities config)
                                           (Just TraceOff)
-
   withServer serverExe $ \serverIn serverOut _ ->
     runSessionWithHandles serverIn serverOut listenServer config rootDir $ do
 
@@ -160,14 +159,20 @@ listenServer serverOut = do
 -- | The current text contents of a document.
 documentContents :: TextDocumentIdentifier -> Session T.Text
 documentContents doc = do
-  vfs <- vfs <$> get
-  let file = vfs Map.! (doc ^. uri)
+  vfs' <- vfs <$> get
+  let docUri = doc ^. uri
+  file <- case Map.lookup docUri vfs' of
+            Just file -> return file
+            Nothing -> do
+              openDoc (fromJust (uriToFilePath docUri)) ""
+              newVfs <- vfs <$> get
+              return $ newVfs Map.! docUri
   return $ Rope.toText $ Language.Haskell.LSP.VFS._text file
 
 -- | Parses an ApplyEditRequest, checks that it is for the passed document
 -- and returns the new content
-documentEdit :: TextDocumentIdentifier -> Session T.Text
-documentEdit doc = do
+getDocumentEdit :: TextDocumentIdentifier -> Session T.Text
+getDocumentEdit doc = do
   req <- request :: Session ApplyWorkspaceEditRequest
 
   unless (checkDocumentChanges req || checkChanges req) $
@@ -306,16 +311,22 @@ getDocUri file = do
   let fp = rootDir context </> file
   return $ filePathToUri fp
 
+getDiagnostics :: Session [Diagnostic]
+getDiagnostics = do
+  diagsNot <- notification :: Session PublishDiagnosticsNotification
+  let (List diags) = diagsNot ^. params . LSP.diagnostics
+  return diags
+
 -- | Expects a 'PublishDiagnosticsNotification' and throws an
 -- 'UnexpectedDiagnosticsException' if there are any diagnostics
 -- returned.
 noDiagnostics :: Session ()
 noDiagnostics = do
   diagsNot <- notification :: Session PublishDiagnosticsNotification
-  when (diagsNot ^. params . diagnostics /= List []) $ liftIO $ throw UnexpectedDiagnosticsException
+  when (diagsNot ^. params . LSP.diagnostics /= List []) $ liftIO $ throw UnexpectedDiagnosticsException
 
 -- | Returns the symbols in a document.
-documentSymbols :: TextDocumentIdentifier -> Session DocumentSymbolsResponse
-documentSymbols doc = do
+getDocumentSymbols :: TextDocumentIdentifier -> Session DocumentSymbolsResponse
+getDocumentSymbols doc = do
   sendRequest TextDocumentDocumentSymbol (DocumentSymbolParams doc)
   response
