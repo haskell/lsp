@@ -159,14 +159,8 @@ listenServer serverOut = do
 -- | The current text contents of a document.
 documentContents :: TextDocumentIdentifier -> Session T.Text
 documentContents doc = do
-  vfs' <- vfs <$> get
-  let docUri = doc ^. uri
-  file <- case Map.lookup docUri vfs' of
-            Just file -> return file
-            Nothing -> do
-              openDoc (fromJust (uriToFilePath docUri)) ""
-              newVfs <- vfs <$> get
-              return $ newVfs Map.! docUri
+  vfs <- vfs <$> get
+  let file = vfs Map.! (doc ^. uri)
   return $ Rope.toText $ Language.Haskell.LSP.VFS._text file
 
 -- | Parses an ApplyEditRequest, checks that it is for the passed document

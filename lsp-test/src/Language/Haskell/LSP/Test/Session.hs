@@ -11,6 +11,7 @@ module Language.Haskell.LSP.Test.Session
   , get
   , put
   , modify
+  , modifyM
   , ask)
 
 where
@@ -32,8 +33,11 @@ import Data.Conduit.Parser
 import Data.Default
 import Data.Foldable
 import Data.List
+import qualified Data.Map as Map
 import qualified Data.Text as T
+import qualified Data.Text.IO as T
 import qualified Data.HashMap.Strict as HashMap
+import Data.Maybe
 import Language.Haskell.LSP.Messages
 import Language.Haskell.LSP.TH.ClientCapabilities
 import Language.Haskell.LSP.Types
@@ -127,6 +131,12 @@ put = lift . State.put
 modify :: Monad m => (s -> s) -> ParserStateReader a s r m ()
 modify = lift . State.modify
 
+modifyM :: Monad m => (s -> m s) -> ParserStateReader a s r m ()
+modifyM f = do
+  old <- lift State.get
+  new <- lift $ lift $ lift $ f old
+  lift $ State.put new
+
 ask :: Monad m => ParserStateReader a s r m r
 ask = lift $ lift Reader.ask
 
@@ -168,30 +178,55 @@ runSessionWithHandles serverIn serverOut serverHandler config rootDir session = 
 
 processTextChanges :: FromServerMessage -> SessionProcessor ()
 processTextChanges (ReqApplyWorkspaceEdit r) = do
-  List changeParams <- case r ^. params . edit . documentChanges of
-    Just cs -> mapM applyTextDocumentEdit cs
+  changeParams <- case r ^. params . edit . documentChanges of
+    Just (List cs) -> mapM applyTextDocumentEdit cs
     Nothing -> case r ^. params . edit . changes of
-      Just cs -> mapM (uncurry applyTextEdit) (List (HashMap.toList cs))
-      Nothing -> return (List [])
+      Just cs -> concat <$> mapM (uncurry applyChange) (HashMap.toList cs)
+      Nothing -> return []
 
   let groupedParams = groupBy (\a b -> (a ^. textDocument == b ^. textDocument)) changeParams
       mergedParams = map mergeParams groupedParams
+  
+  ctx <- lift $ lift Reader.ask
 
   -- TODO: Don't do this when replaying a session
   forM_ mergedParams $ \p -> do
-    h <- serverIn <$> lift (lift Reader.ask)
-    let msg = NotificationMessage "2.0" TextDocumentDidChange p
+    let h = serverIn ctx
+        msg = NotificationMessage "2.0" TextDocumentDidChange p
     liftIO $ B.hPut h $ addHeader (encode msg)
 
   where applyTextDocumentEdit (TextDocumentEdit docId (List edits)) = do
           oldVFS <- vfs <$> lift State.get
+          ctx <- lift $ lift Reader.ask
+
+
+          -- if its not open, open it
+          unless ((docId ^. uri) `Map.member` oldVFS) $ do
+            let fp = fromJust $ uriToFilePath (docId ^. uri)
+            contents <- liftIO $ T.readFile fp
+            let item = TextDocumentItem (filePathToUri fp) "" 0 contents
+                msg = NotificationMessage "2.0" TextDocumentDidOpen (DidOpenTextDocumentParams item)
+            liftIO $ B.hPut (serverIn ctx) $ addHeader (encode msg)
+
+            oldVFS <- vfs <$> lift State.get
+            newVFS <- liftIO $ openVFS oldVFS msg
+            lift $ State.modify (\s -> s { vfs = newVFS })
+
+          -- we might have updated it above
+          oldVFS <- vfs <$> lift State.get
+
           let changeEvents = map (\e -> TextDocumentContentChangeEvent (Just (e ^. range)) Nothing (e ^. newText)) edits
               params = DidChangeTextDocumentParams docId (List changeEvents)
           newVFS <- liftIO $ changeVFS oldVFS (fmClientDidChangeTextDocumentNotification params)
           lift $ State.modify (\s -> s { vfs = newVFS })
+
           return params
 
-        applyTextEdit uri edits = applyTextDocumentEdit (TextDocumentEdit (VersionedTextDocumentIdentifier uri 0) edits)
+        textDocumentVersions uri = map (VersionedTextDocumentIdentifier uri) [0..]
+
+        textDocumentEdits uri edits = map (\(v, e) -> TextDocumentEdit v (List [e])) $ zip (textDocumentVersions uri) edits
+        
+        applyChange uri (List edits) = mapM applyTextDocumentEdit (textDocumentEdits uri (reverse edits))
 
         mergeParams :: [DidChangeTextDocumentParams] -> DidChangeTextDocumentParams
         mergeParams params = let events = concat (toList (map (toList . (^. contentChanges)) params))
