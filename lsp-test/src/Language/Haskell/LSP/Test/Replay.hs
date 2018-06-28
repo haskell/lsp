@@ -42,7 +42,7 @@ replaySession serverExe sessionDir = do
   -- decode session
   let unswappedEvents = map (fromJust . decode) entries
 
-  withServer serverExe $ \serverIn serverOut pid -> do
+  withServer serverExe False $ \serverIn serverOut pid -> do
 
     events <- swapCommands pid <$> swapFiles sessionDir unswappedEvents
 

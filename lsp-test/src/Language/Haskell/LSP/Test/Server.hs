@@ -6,8 +6,8 @@ import Language.Haskell.LSP.Test.Compat
 import System.IO
 import System.Process
 
-withServer :: String -> (Handle -> Handle -> Int -> IO a) -> IO a
-withServer serverExe f = do
+withServer :: String -> Bool -> (Handle -> Handle -> Int -> IO a) -> IO a
+withServer serverExe logStdErr f = do
   -- TODO Probably should just change runServer to accept
   -- separate command and arguments
   let cmd:args = words serverExe
@@ -17,7 +17,7 @@ withServer serverExe f = do
   -- Need to continuously consume to stderr else it gets blocked
   -- Can't pass NoStream either to std_err
   hSetBuffering serverErr NoBuffering
-  errSinkThread <- forkIO $ forever $ hGetLine serverErr
+  errSinkThread <- forkIO $ forever $ hGetLine serverErr >>= when logStdErr . putStrLn
 
   pid <- getProcessID serverProc
 

@@ -66,10 +66,11 @@ data SessionConfig = SessionConfig
   {
     capabilities :: ClientCapabilities -- ^ Specific capabilities the client should advertise. Default is yes to everything.
   , timeout :: Int -- ^ Maximum time to wait for a request in seconds. Defaults to 60.
+  , logStdErr :: Bool -- ^ When True redirects the servers stderr output to haskell-lsp-test's stdout. Defaults to False
   }
 
 instance Default SessionConfig where
-  def = SessionConfig def 60
+  def = SessionConfig def 60 False
 
 class Monad m => MonadSessionConfig m where
   sessionConfig :: m SessionConfig
@@ -225,7 +226,7 @@ processTextChanges (ReqApplyWorkspaceEdit r) = do
         textDocumentVersions uri = map (VersionedTextDocumentIdentifier uri) [0..]
 
         textDocumentEdits uri edits = map (\(v, e) -> TextDocumentEdit v (List [e])) $ zip (textDocumentVersions uri) edits
-        
+
         applyChange uri (List edits) = mapM applyTextDocumentEdit (textDocumentEdits uri (reverse edits))
 
         mergeParams :: [DidChangeTextDocumentParams] -> DidChangeTextDocumentParams

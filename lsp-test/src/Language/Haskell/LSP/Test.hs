@@ -121,7 +121,7 @@ runSessionWithConfig config serverExe rootDir session = do
                                           Nothing
                                           (capabilities config)
                                           (Just TraceOff)
-  withServer serverExe $ \serverIn serverOut _ ->
+  withServer serverExe (logStdErr config) $ \serverIn serverOut _ ->
     runSessionWithHandles serverIn serverOut listenServer config rootDir $ do
 
       -- Wrap the session around initialize and shutdown calls
