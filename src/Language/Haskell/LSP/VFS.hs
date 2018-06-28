@@ -14,7 +14,8 @@ module Language.Haskell.LSP.VFS
     VFS
   , VirtualFile(..)
   , openVFS
-  , changeVFS
+  , changeFromClientVFS
+  , changeFromServerVFS
   , closeVFS
 
   -- * for tests
@@ -25,11 +26,15 @@ module Language.Haskell.LSP.VFS
   , yiSplitAt
   ) where
 
+import           Control.Lens
+import           Control.Monad
 import           Data.Text ( Text )
 import           Data.List
+import           Data.Ord
 #if __GLASGOW_HASKELL__ < 804
 import           Data.Monoid
 #endif
+import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map as Map
 import qualified Language.Haskell.LSP.TH.DataTypesJSON      as J
 import           Language.Haskell.LSP.Utility
@@ -58,8 +63,8 @@ openVFS vfs (J.NotificationMessage _ _ params) = do
 
 -- ---------------------------------------------------------------------
 
-changeVFS :: VFS -> J.DidChangeTextDocumentNotification -> IO VFS
-changeVFS vfs (J.NotificationMessage _ _ params) = do
+changeFromClientVFS :: VFS -> J.DidChangeTextDocumentNotification -> IO VFS
+changeFromClientVFS vfs (J.NotificationMessage _ _ params) = do
   let
     J.DidChangeTextDocumentParams vid (J.List changes) = params
     J.VersionedTextDocumentIdentifier uri version = vid
@@ -70,6 +75,38 @@ changeVFS vfs (J.NotificationMessage _ _ params) = do
     Nothing -> do
       logs $ "haskell-lsp:changeVfs:can't find uri:" ++ show uri
       return vfs
+
+-- ---------------------------------------------------------------------
+
+changeFromServerVFS :: VFS -> J.ApplyWorkspaceEditRequest -> IO VFS
+changeFromServerVFS initVfs (J.RequestMessage _ _ _ params) = do
+  let J.ApplyWorkspaceEditParams edit = params
+      J.WorkspaceEdit mChanges mDocChanges = edit
+  case mDocChanges of
+    Just (J.List textDocEdits) -> applyEdits textDocEdits
+    Nothing -> case mChanges of
+      Just cs -> applyEdits $ HashMap.foldlWithKey' changeToTextDocumentEdit [] cs
+      Nothing -> do
+        logs "haskell-lsp:changeVfs:no changes"
+        return initVfs
+
+  where
+
+    changeToTextDocumentEdit acc uri edits =
+      acc ++ [J.TextDocumentEdit (J.VersionedTextDocumentIdentifier uri 0) edits]
+
+    applyEdits = foldM f initVfs . sortOn (^. J.textDocument . J.version)
+
+    f vfs (J.TextDocumentEdit vid (J.List edits)) = do
+      -- all edits are supposed to be applied at once
+      -- so apply from bottom up so they don't affect others
+      let sortedEdits = sortOn (Down . (^. J.range)) edits
+          changeEvents = map editToChangeEvent sortedEdits
+          ps = J.DidChangeTextDocumentParams vid (J.List changeEvents)
+          notif = J.NotificationMessage "" J.TextDocumentDidChange ps
+      changeFromClientVFS vfs notif
+  
+    editToChangeEvent (J.TextEdit range text) = J.TextDocumentContentChangeEvent (Just range) Nothing text
 
 -- ---------------------------------------------------------------------
 
@@ -176,3 +213,4 @@ yiSplitAt l c str = (before,after)
     after = Yi.drop c a
 
 -- ---------------------------------------------------------------------
+
