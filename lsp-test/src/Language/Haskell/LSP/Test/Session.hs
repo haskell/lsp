@@ -40,7 +40,7 @@ import qualified Data.HashMap.Strict as HashMap
 import Data.Maybe
 import Language.Haskell.LSP.Messages
 import Language.Haskell.LSP.TH.ClientCapabilities
-import Language.Haskell.LSP.Types
+import Language.Haskell.LSP.Types hiding (error)
 import Language.Haskell.LSP.VFS
 import Language.Haskell.LSP.Test.Compat
 import Language.Haskell.LSP.Test.Decoding
@@ -102,7 +102,7 @@ runSession :: Chan FromServerMessage -> SessionProcessor () -> SessionContext ->
 runSession chan preprocessor context state session = runReaderT (runStateT conduit state) context
   where conduit = runConduit $ chanSource chan .| preprocessor .| runConduitParser (catchError session handler)
         handler e@(Unexpected "ConduitParser.empty") = do
-          
+
           -- Horrible way to get last item in conduit:
           -- Add a fake message so we can tell when to stop
           liftIO $ writeChan chan (RspShutdown (ResponseMessage "EMPTY" IdRspNull Nothing Nothing))
@@ -179,15 +179,24 @@ runSessionWithHandles serverIn serverOut serverHandler config rootDir session = 
 
 processTextChanges :: FromServerMessage -> SessionProcessor ()
 processTextChanges (ReqApplyWorkspaceEdit r) = do
-  changeParams <- case r ^. params . edit . documentChanges of
-    Just (List cs) -> mapM applyTextDocumentEdit cs
-    Nothing -> case r ^. params . edit . changes of
-      Just cs -> concat <$> mapM (uncurry applyChange) (HashMap.toList cs)
-      Nothing -> return []
 
-  let groupedParams = groupBy (\a b -> (a ^. textDocument == b ^. textDocument)) changeParams
+  allChangeParams <- case r ^. params . edit . documentChanges of
+    Just (List cs) -> do
+      mapM_ (checkIfNeedsOpened . (^. textDocument . uri)) cs
+      return $ map getParams cs
+    Nothing -> case r ^. params . edit . changes of
+      Just cs -> do
+        mapM_ checkIfNeedsOpened (HashMap.keys cs)
+        return $ concatMap (uncurry getChangeParams) (HashMap.toList cs)
+      Nothing -> error "No changes!"
+
+  oldVFS <- vfs <$> lift State.get
+  newVFS <- liftIO $ changeFromServerVFS oldVFS r
+  lift $ State.modify (\s -> s { vfs = newVFS })
+
+  let groupedParams = groupBy (\a b -> (a ^. textDocument == b ^. textDocument)) allChangeParams
       mergedParams = map mergeParams groupedParams
-  
+
   ctx <- lift $ lift Reader.ask
 
   -- TODO: Don't do this when replaying a session
@@ -196,14 +205,13 @@ processTextChanges (ReqApplyWorkspaceEdit r) = do
         msg = NotificationMessage "2.0" TextDocumentDidChange p
     liftIO $ B.hPut h $ addHeader (encode msg)
 
-  where applyTextDocumentEdit (TextDocumentEdit docId (List edits)) = do
+  where checkIfNeedsOpened uri = do
           oldVFS <- vfs <$> lift State.get
           ctx <- lift $ lift Reader.ask
 
-
           -- if its not open, open it
-          unless ((docId ^. uri) `Map.member` oldVFS) $ do
-            let fp = fromJust $ uriToFilePath (docId ^. uri)
+          unless (uri `Map.member` oldVFS) $ do
+            let fp = fromJust $ uriToFilePath uri
             contents <- liftIO $ T.readFile fp
             let item = TextDocumentItem (filePathToUri fp) "" 0 contents
                 msg = NotificationMessage "2.0" TextDocumentDidOpen (DidOpenTextDocumentParams item)
@@ -213,21 +221,15 @@ processTextChanges (ReqApplyWorkspaceEdit r) = do
             newVFS <- liftIO $ openVFS oldVFS msg
             lift $ State.modify (\s -> s { vfs = newVFS })
 
-          -- we might have updated it above
-          oldVFS <- vfs <$> lift State.get
-
+        getParams (TextDocumentEdit docId (List edits)) =
           let changeEvents = map (\e -> TextDocumentContentChangeEvent (Just (e ^. range)) Nothing (e ^. newText)) edits
-              params = DidChangeTextDocumentParams docId (List changeEvents)
-          newVFS <- liftIO $ changeVFS oldVFS (fmClientDidChangeTextDocumentNotification params)
-          lift $ State.modify (\s -> s { vfs = newVFS })
-
-          return params
+            in DidChangeTextDocumentParams docId (List changeEvents)
 
         textDocumentVersions uri = map (VersionedTextDocumentIdentifier uri) [0..]
 
         textDocumentEdits uri edits = map (\(v, e) -> TextDocumentEdit v (List [e])) $ zip (textDocumentVersions uri) edits
 
-        applyChange uri (List edits) = mapM applyTextDocumentEdit (textDocumentEdits uri (reverse edits))
+        getChangeParams uri (List edits) = map getParams (textDocumentEdits uri (reverse edits))
 
         mergeParams :: [DidChangeTextDocumentParams] -> DidChangeTextDocumentParams
         mergeParams params = let events = concat (toList (map (toList . (^. contentChanges)) params))

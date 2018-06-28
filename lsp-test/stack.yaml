@@ -5,8 +5,8 @@ packages:
 extra-deps:
   - github: Bubba/haskell-lsp-client
     commit: b7cf14eb48837a73032e867dab90db1708220c66
-  - github: alanz/haskell-lsp
-    commit: 5f60fb1cbe09e7026201577ad76fa95116008131
+  - github: Bubba/haskell-lsp
+    commit: 4c705c23cac58b4f6535474acc61d054230b6699
     subdirs:
       - .
       - ./haskell-lsp-types

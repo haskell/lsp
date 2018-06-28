@@ -2,6 +2,8 @@ module Language.Haskell.LSP.Test.Exceptions where
 
 import Control.Exception
 import Language.Haskell.LSP.Messages
+import Data.Aeson
+import qualified Data.ByteString.Lazy.Char8 as B
 
 data SessionException = TimeoutException
                       | UnexpectedMessageException String FromServerMessage
@@ -19,8 +21,9 @@ instance Show SessionException where
     "Last message accepted: " ++ show lastMsg
   show (ReplayOutOfOrderException received expected) =
     "Replay is out of order:\n" ++
-    "Received from server:" ++ show received ++ "\n" ++
-    "Expected one of: " ++ concatMap show expected
+    -- Print json so its a bit easier to update the session logs
+    "Received from server:\n" ++ B.unpack (encode received) ++ "\n" ++
+    "Expected one of:\n" ++ unlines (map (B.unpack . encode) expected)
   show UnexpectedDiagnosticsException = "Unexpectedly received diagnostics from the server."
   show (IncorrectApplyEditRequestException msgStr) = "ApplyEditRequest didn't contain document, instead received:\n"
                                           ++ msgStr
