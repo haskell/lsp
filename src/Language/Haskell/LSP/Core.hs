@@ -241,7 +241,7 @@ handlerMap _ h J.WorkspaceSymbol                 = hh nop ReqWorkspaceSymbols $ 
 handlerMap _ h J.WorkspaceExecuteCommand         = hh nop ReqExecuteCommand $ executeCommandHandler h
 -- Document
 handlerMap _ h J.TextDocumentDidOpen             = hh openVFS NotDidOpenTextDocument $ didOpenTextDocumentNotificationHandler h
-handlerMap _ h J.TextDocumentDidChange           = hh changeVFS NotDidChangeTextDocument $ didChangeTextDocumentNotificationHandler h
+handlerMap _ h J.TextDocumentDidChange           = hh changeFromClientVFS NotDidChangeTextDocument $ didChangeTextDocumentNotificationHandler h
 handlerMap _ h J.TextDocumentWillSave            = hh nop NotWillSaveTextDocument $ willSaveTextDocumentNotificationHandler h
 handlerMap _ h J.TextDocumentWillSaveWaitUntil   = hh nop ReqWillSaveWaitUntil $ willSaveWaitUntilTextDocHandler h
 handlerMap _ h J.TextDocumentDidSave             = hh nop NotDidSaveTextDocument $ didSaveTextDocumentNotificationHandler h
