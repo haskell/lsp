@@ -29,13 +29,13 @@ satisfy pred = do
   x <- await
   liftIO $ killThread timeoutThread
 
-  liftIO $ do
-    setSGR [SetColor Foreground Vivid Magenta]
-    putStrLn $ "<-- " ++ B.unpack (encodeMsg x)
-    setSGR [Reset]
-
   if pred x
-    then return x
+    then do
+      liftIO $ do
+        setSGR [SetColor Foreground Vivid Magenta]
+        putStrLn $ "<-- " ++ B.unpack (encodeMsg x)
+        setSGR [Reset]
+      return x
     else empty
 
 -- | Matches if the message is a notification.
