@@ -495,6 +495,17 @@ data CodeActionKindValueSet =
    { _valueSet :: List CodeActionKind
    } deriving (Show, Read, Eq)
 
+instance Default CodeActionKindValueSet where
+  def = CodeActionKindValueSet (List allKinds)
+    where allKinds = [ CodeActionQuickFix
+                     , CodeActionRefactor
+                     , CodeActionRefactorExtract
+                     , CodeActionRefactorInline
+                     , CodeActionRefactorRewrite
+                     , CodeActionSource
+                     , CodeActionSourceOrganizeImports
+                     ]
+
 $(deriveJSON lspOptions ''CodeActionKindValueSet)
 
 data CodeActionLiteralSupport =
