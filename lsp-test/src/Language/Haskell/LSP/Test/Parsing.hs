@@ -17,8 +17,9 @@ import Language.Haskell.LSP.Types hiding (error)
 import Language.Haskell.LSP.Test.Exceptions
 import Language.Haskell.LSP.Test.Messages
 import Language.Haskell.LSP.Test.Session
+import System.Console.ANSI
 
-satisfy :: (MonadIO m, MonadSessionConfig m) => (a -> Bool) -> ConduitParser a m a
+satisfy :: (MonadIO m, MonadSessionConfig m) => (FromServerMessage -> Bool) -> ConduitParser FromServerMessage m FromServerMessage
 satisfy pred = do
   timeout <- timeout <$> lift sessionConfig
   tId <- liftIO myThreadId
@@ -27,6 +28,12 @@ satisfy pred = do
     throwTo tId TimeoutException
   x <- await
   liftIO $ killThread timeoutThread
+
+  liftIO $ do
+    setSGR [SetColor Foreground Vivid Magenta]
+    putStrLn $ "<-- " ++ B.unpack (encodeMsg x)
+    setSGR [Reset]
+
   if pred x
     then return x
     else empty

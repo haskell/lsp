@@ -93,6 +93,7 @@ import Language.Haskell.LSP.Test.Exceptions
 import Language.Haskell.LSP.Test.Parsing
 import Language.Haskell.LSP.Test.Session
 import Language.Haskell.LSP.Test.Server
+import System.Console.ANSI
 import System.IO
 import System.Directory
 import System.FilePath
@@ -273,7 +274,16 @@ sendResponse = sendMessage
 sendMessage :: ToJSON a => a -> Session ()
 sendMessage msg = do
   h <- serverIn <$> ask
-  liftIO $ B.hPut h $ addHeader (encode msg)
+  let encoded = encode msg
+  liftIO $ do
+
+    setSGR [SetColor Foreground Vivid Cyan]
+    putStrLn $ "--> " ++ B.unpack encoded
+    setSGR [Reset]
+
+    B.hPut h (addHeader encoded)
+
+
 
 -- | Returns the initialize response that was received from the server.
 -- The initialize requests and responses are not included the session,

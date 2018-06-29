@@ -48,9 +48,9 @@ isServerNotification _                               = False
 
 handleServerMessage
     :: forall a.
-       (forall b c . RequestMessage ServerMethod b c -> a)
-    -> (forall d . ResponseMessage d -> a)
-    -> (forall e . NotificationMessage ServerMethod e -> a)
+       (forall b c. RequestMessage ServerMethod b c -> a)
+    -> (forall d. ResponseMessage d -> a)
+    -> (forall e. NotificationMessage ServerMethod e -> a)
     -> FromServerMessage
     -> a
 handleServerMessage request response notification msg = case msg of
