@@ -5,6 +5,8 @@ module Language.Haskell.LSP.TH.WorkspaceEdit where
 
 import           Data.Aeson.TH
 import qualified Data.HashMap.Strict                        as H
+-- For <= 8.2.2
+import           Data.Monoid                                ((<>))
 import           Data.Text                                  (Text)
 import           Language.Haskell.LSP.TH.Constants
 import           Language.Haskell.LSP.TH.List
