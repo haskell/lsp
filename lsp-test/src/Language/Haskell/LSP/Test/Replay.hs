@@ -95,7 +95,7 @@ sendMessages (nextMsg:remainingMsgs) reqSema rspSema =
     sendMessages remainingMsgs reqSema rspSema
 
   request msg@(RequestMessage _ id m _) = do
-    sendRequest' msg
+    sendRequestMessage msg
     liftIO $ putStrLn $  "Sent a request id " ++ show id ++ ": " ++ show m ++ "\nWaiting for a response"
 
     rsp <- liftIO $ takeMVar rspSema

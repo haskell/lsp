@@ -7,7 +7,7 @@ import           Test.Hspec
 import           Data.Aeson
 import           Data.Default
 import qualified Data.HashMap.Strict as HM
-import           Data.Maybe
+import qualified Data.Text as T
 import           Control.Concurrent
 import           Control.Monad.IO.Class
 import           Control.Lens hiding (List)
@@ -21,24 +21,6 @@ import           ParsingTests
 
 main = hspec $ do
   describe "manual session" $ do
-    it "passes a test" $
-      runSession "hie --lsp" "test/data/renamePass" $ do
-        doc <- openDoc "Desktop/simple.hs" "haskell"
-
-        skipMany loggingNotification
-
-        noDiagnostics
-
-        rspSymbols <- getDocumentSymbols doc
-
-        liftIO $ do
-          let (List symbols) = fromJust (rspSymbols ^. result)
-              mainSymbol = head symbols
-          mainSymbol ^. name `shouldBe` "main"
-          mainSymbol ^. kind `shouldBe` SkFunction
-          mainSymbol ^. location . range `shouldBe` Range (Position 3 0) (Position 3 4)
-          mainSymbol ^. containerName `shouldBe` Nothing
-
     it "fails a test" $
       -- TODO: Catch the exception in haskell-lsp-test and provide nicer output
       let session = runSession "hie --lsp" "test/data/renamePass" $ do
@@ -81,7 +63,7 @@ main = hspec $ do
             selector _ = False
             sesh = do
               doc <- openDoc "Desktop/simple.hs" "haskell"
-              sendRequest TextDocumentDocumentSymbol (DocumentSymbolParams doc)
+              sendRequest' TextDocumentDocumentSymbol (DocumentSymbolParams doc)
               skipMany anyNotification
               response :: Session RenameResponse -- the wrong type
           in runSession "hie --lsp" "test/data/renamePass" sesh
@@ -102,10 +84,8 @@ main = hspec $ do
 
         noDiagnostics
 
-        rspSymbols <- getDocumentSymbols doc
+        (fooSymbol:_) <- getDocumentSymbols doc
 
-        let (List symbols) = fromJust (rspSymbols ^. result)
-            fooSymbol = head symbols
         liftIO $ do
           fooSymbol ^. name `shouldBe` "foo"
           fooSymbol ^. kind `shouldBe` SkFunction
@@ -119,9 +99,7 @@ main = hspec $ do
                                 (Position 1 14)
                                 "Redundant bracket"
             reqParams = ExecuteCommandParams "applyrefact:applyOne" (Just (List [args]))
-        sendRequest WorkspaceExecuteCommand reqParams
-        skipMany anyNotification
-        _ <- response :: Session ExecuteCommandResponse
+        sendRequest_ WorkspaceExecuteCommand reqParams
 
         editReq <- request :: Session ApplyWorkspaceEditRequest
         liftIO $ do
@@ -144,13 +122,36 @@ main = hspec $ do
                                 (Position 1 14)
                                 "Redundant bracket"
             reqParams = ExecuteCommandParams "applyrefact:applyOne" (Just (List [args]))
-        sendRequest WorkspaceExecuteCommand reqParams
-        skipMany anyNotification
-        _ <- response :: Session ExecuteCommandResponse
-
+        sendRequest_ WorkspaceExecuteCommand reqParams
         contents <- getDocumentEdit doc
         liftIO $ contents `shouldBe` "main :: IO Int\nmain = return 42"
         noDiagnostics
+  
+  describe "getAllCodeActions" $
+    it "works" $ runSession "hie --lsp" "test/data/refactor" $ do
+      doc <- openDoc "Main.hs" "haskell"
+      _ <- waitForDiagnostics
+      actions <- getAllCodeActions doc
+      liftIO $ do
+        let [CommandOrCodeActionCommand action] = actions
+        action ^. title `shouldBe` "Apply hint:Redundant bracket"
+        action ^. command `shouldSatisfy` T.isSuffixOf ":applyrefact:applyOne"
+  
+  describe "getDocumentSymbols" $ 
+    it "works" $ runSession "hie --lsp" "test/data/renamePass" $ do
+      doc <- openDoc "Desktop/simple.hs" "haskell"
+
+      skipMany loggingNotification
+
+      noDiagnostics
+
+      (mainSymbol:_) <- getDocumentSymbols doc
+
+      liftIO $ do
+        mainSymbol ^. name `shouldBe` "main"
+        mainSymbol ^. kind `shouldBe` SkFunction
+        mainSymbol ^. location . range `shouldBe` Range (Position 3 0) (Position 3 4)
+        mainSymbol ^. containerName `shouldBe` Nothing
 
   parsingSpec
 

@@ -6,6 +6,7 @@ module Language.Haskell.LSP.Test.Parsing where
 
 import Control.Applicative
 import Control.Concurrent
+import Control.Lens
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Class
 import Data.Aeson
@@ -13,7 +14,7 @@ import qualified Data.ByteString.Lazy.Char8 as B
 import Data.Conduit.Parser
 import Data.Maybe
 import Language.Haskell.LSP.Messages
-import Language.Haskell.LSP.Types hiding (error)
+import Language.Haskell.LSP.Types as LSP hiding (error)
 import Language.Haskell.LSP.Test.Exceptions
 import Language.Haskell.LSP.Test.Messages
 import Language.Haskell.LSP.Test.Session
@@ -67,6 +68,15 @@ response = named "Response" $ do
   let parser = decode . encodeMsg :: FromServerMessage -> Maybe (ResponseMessage a)
   x <- satisfy (isJust . parser)
   return $ castMsg x
+
+responseForId :: forall m a. (MonadIO m, MonadSessionConfig m, FromJSON a) => LspId -> ConduitParser FromServerMessage m (ResponseMessage a)
+responseForId lid = named "Response for id" $ do
+  let parser = decode . encodeMsg :: FromServerMessage -> Maybe (ResponseMessage a)
+  x <- satisfy (maybe False (\z -> z ^. LSP.id == responseId lid) . parser)
+  return $ castMsg x
+
+anyMessage :: (MonadIO m, MonadSessionConfig m) => ConduitParser FromServerMessage m FromServerMessage
+anyMessage = satisfy (const True)
 
 -- | A stupid method for getting out the inner message.
 castMsg :: FromJSON a => FromServerMessage -> a

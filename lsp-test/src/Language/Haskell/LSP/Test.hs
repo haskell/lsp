@@ -24,8 +24,10 @@ module Language.Haskell.LSP.Test
   , anySessionException
   -- * Sending
   , sendRequest
-  , sendNotification
+  , sendRequest_
   , sendRequest'
+  , sendNotification
+  , sendRequestMessage
   , sendNotification'
   , sendResponse
   -- * Receving
@@ -35,6 +37,7 @@ module Language.Haskell.LSP.Test
   , response
   , anyNotification
   , notification
+  , anyMessage
   , loggingNotification
   , publishDiagnosticsNotification
   -- * Combinators
@@ -66,7 +69,8 @@ module Language.Haskell.LSP.Test
   , getDocUri
   , noDiagnostics
   , getDocumentSymbols
-  , getDiagnostics
+  , waitForDiagnostics
+  , getAllCodeActions
   ) where
 
 import Control.Applicative
@@ -126,8 +130,7 @@ runSessionWithConfig config serverExe rootDir session = do
     runSessionWithHandles serverIn serverOut listenServer config rootDir $ do
 
       -- Wrap the session around initialize and shutdown calls
-      sendRequest Initialize initializeParams
-      initRspMsg <- response :: Session InitializeResponse
+      initRspMsg <- sendRequest Initialize initializeParams :: Session InitializeResponse
 
       liftIO $ maybe (return ()) (putStrLn . ("Error while initializing: " ++) . show ) (initRspMsg ^. LSP.error)
 
@@ -187,20 +190,26 @@ getDocumentEdit doc = do
       let mMap = req ^. params . edit . changes
         in maybe False (HashMap.member (doc ^. uri)) mMap
 
--- | Sends a request to the server.
---
+-- | Sends a request to the server and waits for its response.
 -- @
--- sendRequest (Proxy :: Proxy DocumentSymbolRequest)
---             TextDocumentDocumentSymbol
---             (DocumentSymbolParams docId)
+-- rsp <- sendRequest TextDocumentDocumentSymbol params :: Session DocumentSymbolsResponse
 -- @
-sendRequest
-  :: (ToJSON params)
-  => --Proxy (RequestMessage ClientMethod params resp) -- ^ A proxy to provide more type information about the request.
-  ClientMethod -- ^ The request method.
+-- Note: will skip any messages in between the request and the response.
+sendRequest :: (ToJSON params, FromJSON a) => ClientMethod -> params -> Session (ResponseMessage a)
+sendRequest m = sendRequest' m >=> skipManyTill anyMessage . responseForId
+
+-- | Send a request to the server and wait for its response,
+-- but discard it.
+sendRequest_ :: ToJSON params => ClientMethod -> params -> Session ()
+sendRequest_ p = void . (sendRequest p :: ToJSON params => params -> Session (ResponseMessage Value))
+
+-- | Sends a request to the server without waiting on the response.
+sendRequest'
+  :: ToJSON params
+  => ClientMethod -- ^ The request method.
   -> params -- ^ The request parameters.
   -> Session LspId -- ^ The id of the request that was sent.
-sendRequest method params = do
+sendRequest' method params = do
   id <- curReqId <$> get
   modify $ \c -> c { curReqId = nextId id }
 
@@ -228,8 +237,8 @@ instance ToJSON a => ToJSON (RequestMessage' a) where
     object ["jsonrpc" .= rpc, "id" .= id, "method" .= method, "params" .= params]
 
 
-sendRequest' :: (ToJSON a, ToJSON b) => RequestMessage ClientMethod a b -> Session ()
-sendRequest' req = do
+sendRequestMessage :: (ToJSON a, ToJSON b) => RequestMessage ClientMethod a b -> Session ()
+sendRequestMessage req = do
   -- Update the request map
   reqMap <- requestMap <$> ask
   liftIO $ modifyMVar_ reqMap $
@@ -315,9 +324,9 @@ getDocUri file = do
   let fp = rootDir context </> file
   return $ filePathToUri fp
 
-getDiagnostics :: Session [Diagnostic]
-getDiagnostics = do
-  diagsNot <- notification :: Session PublishDiagnosticsNotification
+waitForDiagnostics :: Session [Diagnostic]
+waitForDiagnostics = do
+  diagsNot <- skipManyTill anyMessage notification :: Session PublishDiagnosticsNotification
   let (List diags) = diagsNot ^. params . LSP.diagnostics
   return diags
 
@@ -330,7 +339,27 @@ noDiagnostics = do
   when (diagsNot ^. params . LSP.diagnostics /= List []) $ liftIO $ throw UnexpectedDiagnosticsException
 
 -- | Returns the symbols in a document.
-getDocumentSymbols :: TextDocumentIdentifier -> Session DocumentSymbolsResponse
+getDocumentSymbols :: TextDocumentIdentifier -> Session [SymbolInformation]
 getDocumentSymbols doc = do
-  sendRequest TextDocumentDocumentSymbol (DocumentSymbolParams doc)
-  response
+  ResponseMessage _ rspLid mRes mErr <- sendRequest TextDocumentDocumentSymbol (DocumentSymbolParams doc)
+  maybe (return ()) (throw . UnexpectedResponseError rspLid) mErr
+  let (Just (List symbols)) = mRes
+  return symbols
+
+getAllCodeActions :: TextDocumentIdentifier -> Session [CommandOrCodeAction]
+getAllCodeActions doc = do
+  curDiags <- fromMaybe [] . Map.lookup (doc ^. uri) . curDiagnostics <$> get
+  let ctx = CodeActionContext (List curDiags) Nothing
+
+  foldM (go ctx) [] curDiags
+
+  where
+    go :: CodeActionContext -> [CommandOrCodeAction] -> Diagnostic -> Session [CommandOrCodeAction]
+    go ctx acc diag = do
+      ResponseMessage _ rspLid mRes mErr <- sendRequest TextDocumentCodeAction (CodeActionParams doc (diag ^. range) ctx)
+
+      case mErr of
+        Just e -> throw (UnexpectedResponseError rspLid e)
+        Nothing ->
+          let Just (List cmdOrCAs) = mRes
+            in return (acc ++ cmdOrCAs)

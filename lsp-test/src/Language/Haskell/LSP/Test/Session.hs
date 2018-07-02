@@ -92,6 +92,7 @@ data SessionState = SessionState
   {
     curReqId :: LspId
   , vfs :: VFS
+  , curDiagnostics :: Map.Map Uri [Diagnostic]
   }
 
 type ParserStateReader a s r m = ConduitParser a (StateT s (ReaderT r m))
@@ -162,7 +163,7 @@ runSessionWithHandles serverIn serverOut serverHandler config rootDir session = 
   initRsp <- newEmptyMVar
 
   let context = SessionContext serverIn absRootDir messageChan reqMap initRsp config
-      initState = SessionState (IdInt 0) mempty
+      initState = SessionState (IdInt 0) mempty mempty
 
   threadId <- forkIO $ void $ runSession meaninglessChan processor context initState (serverHandler serverOut)
   (result, _) <- runSession messageChan processor context initState session
@@ -178,6 +179,13 @@ runSessionWithHandles serverIn serverOut serverHandler config rootDir session = 
 
 
 processTextChanges :: FromServerMessage -> SessionProcessor ()
+processTextChanges (NotPublishDiagnostics n) = do
+  let List diags = n ^. params . diagnostics
+      doc = n ^. params . uri
+  lift $ State.modify (\s ->
+    let newDiags = Map.insert doc diags (curDiagnostics s) 
+      in s { curDiagnostics = newDiags })
+
 processTextChanges (ReqApplyWorkspaceEdit r) = do
 
   allChangeParams <- case r ^. params . edit . documentChanges of
