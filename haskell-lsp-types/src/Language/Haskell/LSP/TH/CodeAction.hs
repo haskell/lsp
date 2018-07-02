@@ -290,5 +290,5 @@ instance ToJSON CommandOrCodeAction where
   toJSON (CommandOrCodeActionCommand x) = toJSON x
   toJSON (CommandOrCodeActionCodeAction x) = toJSON x
 
-type CodeActionRequest  = RequestMessage ClientMethod CodeActionParams (Maybe (List CommandOrCodeAction))
-type CodeActionResponse = ResponseMessage (Maybe (List CommandOrCodeAction))
+type CodeActionRequest  = RequestMessage ClientMethod CodeActionParams (List CommandOrCodeAction)
+type CodeActionResponse = ResponseMessage (List CommandOrCodeAction)
