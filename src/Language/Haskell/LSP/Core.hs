@@ -68,7 +68,6 @@ type SendFunc = FromServerMessage -> IO ()
 data LanguageContextData a =
   LanguageContextData {
     resSeqDebugContextData :: !Int
-  , resRootPath            :: !(Maybe FilePath)
   , resHandlers            :: !Handlers
   , resOptions             :: !Options
   , resSendResponse        :: !SendFunc
@@ -122,6 +121,7 @@ data LspFuncs c =
     , publishDiagnosticsFunc       :: !PublishDiagnosticsFunc
     , flushDiagnosticsBySourceFunc :: !FlushDiagnosticsBySourceFunc
     , getNextReqId                 :: !(IO J.LspId)
+    , rootPath                     :: !(Maybe FilePath)
     }
 
 -- | The function in the LSP process that is called once the 'initialize'
@@ -200,7 +200,7 @@ instance Default Handlers where
 nop :: a -> b -> IO a
 nop = const . return
 
-        
+
 helper :: J.FromJSON a => (TVar (LanguageContextData c) -> a -> IO ()) -> (TVar (LanguageContextData c) -> J.Value -> IO ())
 helper requestHandler tvarDat json =
   case J.fromJSON json of
@@ -369,7 +369,7 @@ _ERR_MSG_URL = [ "`stack update` and install new haskell-lsp."
 --
 defaultLanguageContextData :: Handlers -> Options -> LspFuncs c -> TVar Int -> SendFunc -> Maybe FilePath -> LanguageContextData c
 defaultLanguageContextData h o lf tv sf cf =
-  LanguageContextData _INITIAL_RESPONSE_SEQUENCE Nothing h o sf mempty mempty Nothing tv lf cf
+  LanguageContextData _INITIAL_RESPONSE_SEQUENCE h o sf mempty mempty Nothing tv lf cf
 
 -- ---------------------------------------------------------------------
 
@@ -506,7 +506,6 @@ initializeRequestHandler' (_configHandler,dispatcherProc) mHandler tvarCtx req@(
     let rootDir = getFirst $ foldMap First [ params ^. J.rootUri  >>= J.uriToFilePath
                                            , params ^. J.rootPath <&> T.unpack ]
 
-    atomically $ modifyTVar' tvarCtx (\c -> c { resRootPath = rootDir })
     case rootDir of
       Nothing -> return ()
       Just dir -> do
@@ -529,6 +528,7 @@ initializeRequestHandler' (_configHandler,dispatcherProc) mHandler tvarCtx req@(
                             (publishDiagnostics tvarCtx)
                             (flushDiagnosticsBySource tvarCtx)
                             (getLspId $ resLspId ctx0)
+                            rootDir
     let ctx = ctx0 { resLspFuncs = lspFuncs }
     atomically $ writeTVar tvarCtx ctx
 
