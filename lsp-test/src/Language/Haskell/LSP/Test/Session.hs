@@ -1,5 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module Language.Haskell.LSP.Test.Session
   ( Session
@@ -11,8 +13,10 @@ module Language.Haskell.LSP.Test.Session
   , get
   , put
   , modify
-  , modifyM
-  , ask)
+  , ask
+  , asks
+  , sendMessage
+  , processMessage)
 
 where
 
@@ -25,7 +29,7 @@ import Control.Monad.Except
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import qualified Control.Monad.Trans.Reader as Reader (ask)
 import Control.Monad.Trans.State (StateT, runStateT)
-import qualified Control.Monad.Trans.State as State (get, put, modify)
+import qualified Control.Monad.Trans.State as State (get, put)
 import qualified Data.ByteString.Lazy.Char8 as B
 import Data.Aeson
 import Data.Conduit hiding (await)
@@ -45,6 +49,7 @@ import Language.Haskell.LSP.VFS
 import Language.Haskell.LSP.Test.Compat
 import Language.Haskell.LSP.Test.Decoding
 import Language.Haskell.LSP.Test.Exceptions
+import System.Console.ANSI
 import System.Directory
 import System.IO
 
@@ -88,6 +93,17 @@ data SessionContext = SessionContext
   , config :: SessionConfig
   }
 
+class Monad m => HasReader r m where
+  ask :: m r
+  asks :: (r -> b) -> m b
+  asks f = f <$> ask
+
+instance Monad m => HasReader r (ParserStateReader a s r m) where
+  ask = lift $ lift Reader.ask
+
+instance HasReader SessionContext SessionProcessor where
+  ask = lift $ lift Reader.ask
+
 data SessionState = SessionState
   {
     curReqId :: LspId
@@ -95,9 +111,26 @@ data SessionState = SessionState
   , curDiagnostics :: Map.Map Uri [Diagnostic]
   }
 
+class Monad m => HasState s m where
+  get :: m s
+
+  put :: s -> m ()
+
+  modify :: (s -> s) -> m ()
+  modify f = get >>= put . f
+
+instance Monad m => HasState s (ParserStateReader a s r m) where
+  get = lift State.get
+  put = lift . State.put
+
+instance HasState SessionState SessionProcessor where
+  get = lift State.get
+  put = lift . State.put
+
 type ParserStateReader a s r m = ConduitParser a (StateT s (ReaderT r m))
 
 type SessionProcessor = ConduitM FromServerMessage FromServerMessage (StateT SessionState (ReaderT SessionContext IO))
+
 
 runSession :: Chan FromServerMessage -> SessionProcessor () -> SessionContext -> SessionState -> Session a -> IO (a, SessionState)
 runSession chan preprocessor context state session = runReaderT (runStateT conduit state) context
@@ -123,24 +156,6 @@ runSession chan preprocessor context state session = runReaderT (runStateT condu
             Just (RspShutdown (ResponseMessage "EMPTY" IdRspNull Nothing Nothing)) -> return x
             Just _ -> await >>= skipToEnd
             Nothing -> return x
-
-get :: Monad m => ParserStateReader a s r m s
-get = lift State.get
-
-put :: Monad m => s -> ParserStateReader a s r m ()
-put = lift . State.put
-
-modify :: Monad m => (s -> s) -> ParserStateReader a s r m ()
-modify = lift . State.modify
-
-modifyM :: Monad m => (s -> m s) -> ParserStateReader a s r m ()
-modifyM f = do
-  old <- lift State.get
-  new <- lift $ lift $ lift $ f old
-  lift $ State.put new
-
-ask :: Monad m => ParserStateReader a s r m r
-ask = lift $ lift Reader.ask
 
 -- | An internal version of 'runSession' that allows for a custom handler to listen to the server.
 -- It also does not automatically send initialize and exit messages.
@@ -174,19 +189,19 @@ runSessionWithHandles serverIn serverOut serverHandler config rootDir session = 
 
   where processor :: SessionProcessor ()
         processor = awaitForever $ \msg -> do
-          processTextChanges msg
+          processMessage msg
           yield msg
 
 
-processTextChanges :: FromServerMessage -> SessionProcessor ()
-processTextChanges (NotPublishDiagnostics n) = do
+processMessage :: (MonadIO m, HasReader SessionContext m, HasState SessionState m) => FromServerMessage -> m ()
+processMessage (NotPublishDiagnostics n) = do
   let List diags = n ^. params . diagnostics
       doc = n ^. params . uri
-  lift $ State.modify (\s ->
+  modify (\s ->
     let newDiags = Map.insert doc diags (curDiagnostics s) 
       in s { curDiagnostics = newDiags })
 
-processTextChanges (ReqApplyWorkspaceEdit r) = do
+processMessage (ReqApplyWorkspaceEdit r) = do
 
   allChangeParams <- case r ^. params . edit . documentChanges of
     Just (List cs) -> do
@@ -198,24 +213,19 @@ processTextChanges (ReqApplyWorkspaceEdit r) = do
         return $ concatMap (uncurry getChangeParams) (HashMap.toList cs)
       Nothing -> error "No changes!"
 
-  oldVFS <- vfs <$> lift State.get
+  oldVFS <- vfs <$> get
   newVFS <- liftIO $ changeFromServerVFS oldVFS r
-  lift $ State.modify (\s -> s { vfs = newVFS })
+  modify (\s -> s { vfs = newVFS })
 
   let groupedParams = groupBy (\a b -> (a ^. textDocument == b ^. textDocument)) allChangeParams
       mergedParams = map mergeParams groupedParams
 
-  ctx <- lift $ lift Reader.ask
-
   -- TODO: Don't do this when replaying a session
-  forM_ mergedParams $ \p -> do
-    let h = serverIn ctx
-        msg = NotificationMessage "2.0" TextDocumentDidChange p
-    liftIO $ B.hPut h $ addHeader (encode msg)
+  forM_ mergedParams (sendMessage . NotificationMessage "2.0" TextDocumentDidChange)
 
   where checkIfNeedsOpened uri = do
-          oldVFS <- vfs <$> lift State.get
-          ctx <- lift $ lift Reader.ask
+          oldVFS <- vfs <$> get
+          ctx <- ask
 
           -- if its not open, open it
           unless (uri `Map.member` oldVFS) $ do
@@ -225,9 +235,9 @@ processTextChanges (ReqApplyWorkspaceEdit r) = do
                 msg = NotificationMessage "2.0" TextDocumentDidOpen (DidOpenTextDocumentParams item)
             liftIO $ B.hPut (serverIn ctx) $ addHeader (encode msg)
 
-            oldVFS <- vfs <$> lift State.get
+            oldVFS <- vfs <$> get
             newVFS <- liftIO $ openVFS oldVFS msg
-            lift $ State.modify (\s -> s { vfs = newVFS })
+            modify (\s -> s { vfs = newVFS })
 
         getParams (TextDocumentEdit docId (List edits)) =
           let changeEvents = map (\e -> TextDocumentContentChangeEvent (Just (e ^. range)) Nothing (e ^. newText)) edits
@@ -242,4 +252,16 @@ processTextChanges (ReqApplyWorkspaceEdit r) = do
         mergeParams :: [DidChangeTextDocumentParams] -> DidChangeTextDocumentParams
         mergeParams params = let events = concat (toList (map (toList . (^. contentChanges)) params))
                               in DidChangeTextDocumentParams (head params ^. textDocument) (List events)
-processTextChanges _ = return ()
+processMessage _ = return ()
+
+sendMessage :: (MonadIO m, HasReader SessionContext m, ToJSON a) => a -> m ()
+sendMessage msg = do
+  h <- serverIn <$> ask
+  let encoded = encode msg
+  liftIO $ do
+
+    setSGR [SetColor Foreground Vivid Cyan]
+    putStrLn $ "--> " ++ B.unpack encoded
+    setSGR [Reset]
+
+    B.hPut h (addHeader encoded)

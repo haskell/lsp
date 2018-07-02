@@ -63,14 +63,21 @@ module Language.Haskell.LSP.Test
   , satisfy
   -- * Utilities
   , initializeResponse
+  -- ** Documents
   , openDoc
   , documentContents
   , getDocumentEdit
   , getDocUri
-  , noDiagnostics
+  -- ** Symbols
   , getDocumentSymbols
+  -- ** Diagnostics
   , waitForDiagnostics
+  , noDiagnostics
+  -- ** Commands
+  , executeCommand
+  -- ** Code Actions
   , getAllCodeActions
+  , executeCodeAction
   ) where
 
 import Control.Applicative
@@ -83,13 +90,13 @@ import Control.Lens hiding ((.=), List)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import Data.Aeson
-import qualified Data.ByteString.Lazy.Char8 as B
 import Data.Default
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map as Map
 import Data.Maybe
-import Language.Haskell.LSP.Types hiding (id, capabilities)
+import Language.Haskell.LSP.Types hiding (id, capabilities, error)
 import qualified Language.Haskell.LSP.Types as LSP
+import Language.Haskell.LSP.Messages
 import Language.Haskell.LSP.VFS
 import Language.Haskell.LSP.Test.Compat
 import Language.Haskell.LSP.Test.Decoding
@@ -97,7 +104,6 @@ import Language.Haskell.LSP.Test.Exceptions
 import Language.Haskell.LSP.Test.Parsing
 import Language.Haskell.LSP.Test.Session
 import Language.Haskell.LSP.Test.Server
-import System.Console.ANSI
 import System.IO
 import System.Directory
 import System.FilePath
@@ -280,20 +286,6 @@ sendNotification' = sendMessage
 sendResponse :: ToJSON a => ResponseMessage a -> Session ()
 sendResponse = sendMessage
 
-sendMessage :: ToJSON a => a -> Session ()
-sendMessage msg = do
-  h <- serverIn <$> ask
-  let encoded = encode msg
-  liftIO $ do
-
-    setSGR [SetColor Foreground Vivid Cyan]
-    putStrLn $ "--> " ++ B.unpack encoded
-    setSGR [Reset]
-
-    B.hPut h (addHeader encoded)
-
-
-
 -- | Returns the initialize response that was received from the server.
 -- The initialize requests and responses are not included the session,
 -- so if you need to test it use this.
@@ -363,3 +355,19 @@ getAllCodeActions doc = do
         Nothing ->
           let Just (List cmdOrCAs) = mRes
             in return (acc ++ cmdOrCAs)
+
+executeCommand :: Command -> Session ()
+executeCommand cmd = do
+  let args = decode $ encode $ fromJust $ cmd ^. arguments
+      execParams = ExecuteCommandParams (cmd ^. command) args
+  sendRequest_ WorkspaceExecuteCommand execParams
+
+executeCodeAction :: CodeAction -> Session ()
+executeCodeAction action = do
+  maybe (return ()) handleEdit $ action ^. edit
+  maybe (return ()) executeCommand $ action ^. command
+
+  where handleEdit :: WorkspaceEdit -> Session ()
+        handleEdit e =
+          let req = RequestMessage "" (IdInt 0) WorkspaceApplyEdit (ApplyWorkspaceEditParams e)
+            in processMessage (ReqApplyWorkspaceEdit req)
