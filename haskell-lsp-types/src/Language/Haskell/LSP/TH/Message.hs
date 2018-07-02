@@ -7,10 +7,12 @@ import qualified Data.Aeson                                 as A
 import           Data.Aeson.TH
 import           Data.Aeson.Types
 import           Data.Hashable
+-- For <= 8.2.2
+import           Data.Monoid                                ((<>))
 import           Data.Text                                  (Text)
 import qualified Data.Text                                  as T
 import           Language.Haskell.LSP.TH.Constants
-  
+
 
 -- | Id used for a request, Can be either a String or an Int
 data LspId = IdInt Int | IdString Text
