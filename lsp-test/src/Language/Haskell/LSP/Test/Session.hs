@@ -131,7 +131,6 @@ type ParserStateReader a s r m = ConduitParser a (StateT s (ReaderT r m))
 
 type SessionProcessor = ConduitM FromServerMessage FromServerMessage (StateT SessionState (ReaderT SessionContext IO))
 
-
 runSession :: Chan FromServerMessage -> SessionProcessor () -> SessionContext -> SessionState -> Session a -> IO (a, SessionState)
 runSession chan preprocessor context state session = runReaderT (runStateT conduit state) context
   where conduit = runConduit $ chanSource chan .| preprocessor .| runConduitParser (catchError session handler)
@@ -161,7 +160,7 @@ runSession chan preprocessor context state session = runReaderT (runStateT condu
 -- It also does not automatically send initialize and exit messages.
 runSessionWithHandles :: Handle -- ^ Server in
                       -> Handle -- ^ Server out
-                      -> (Handle -> Session ()) -- ^ Server listener
+                      -> (Handle -> SessionContext -> IO ()) -- ^ Server listener
                       -> SessionConfig
                       -> FilePath
                       -> Session a
@@ -174,13 +173,12 @@ runSessionWithHandles serverIn serverOut serverHandler config rootDir session = 
 
   reqMap <- newMVar newRequestMap
   messageChan <- newChan
-  meaninglessChan <- newChan
   initRsp <- newEmptyMVar
 
   let context = SessionContext serverIn absRootDir messageChan reqMap initRsp config
       initState = SessionState (IdInt 0) mempty mempty
 
-  threadId <- forkIO $ void $ runSession meaninglessChan processor context initState (serverHandler serverOut)
+  threadId <- forkIO $ void $ serverHandler serverOut context
   (result, _) <- runSession messageChan processor context initState session
 
   killThread threadId
@@ -265,3 +263,7 @@ sendMessage msg = do
     setSGR [Reset]
 
     B.hPut h (addHeader encoded)
+
+-- withTimeout :: Int -> Session a -> Session a
+-- withTimeout duration = do
+--   liftIO $ fork threadDelay 

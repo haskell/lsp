@@ -94,7 +94,7 @@ import Data.Default
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map as Map
 import Data.Maybe
-import Language.Haskell.LSP.Types hiding (id, capabilities, error)
+import Language.Haskell.LSP.Types hiding (id, capabilities)
 import qualified Language.Haskell.LSP.Types as LSP
 import Language.Haskell.LSP.Messages
 import Language.Haskell.LSP.VFS
@@ -151,20 +151,19 @@ runSessionWithConfig config serverExe rootDir session = do
       sendNotification Exit ExitParams
 
       return result
+  where
+  -- | Listens to the server output, makes sure it matches the record and
+  -- signals any semaphores
+  listenServer :: Handle -> SessionContext -> IO ()
+  listenServer serverOut context = do
+    msgBytes <- getNextMessage serverOut
 
--- | Listens to the server output, makes sure it matches the record and
--- signals any semaphores
-listenServer :: Handle -> Session ()
-listenServer serverOut = do
-  msgBytes <- liftIO $ getNextMessage serverOut
+    reqMap <- readMVar $ requestMap context
 
-  context <- ask
-  reqMap <- liftIO $ readMVar $ requestMap context
+    let msg = decodeFromServerMsg reqMap msgBytes
+    writeChan (messageChan context) msg
 
-  let msg = decodeFromServerMsg reqMap msgBytes
-  liftIO $ writeChan (messageChan context) msg
-
-  listenServer serverOut
+    listenServer serverOut context
 
 -- | The current text contents of a document.
 documentContents :: TextDocumentIdentifier -> Session T.Text

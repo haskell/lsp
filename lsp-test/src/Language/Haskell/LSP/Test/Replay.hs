@@ -19,7 +19,6 @@ import           Data.List
 import           Data.Maybe
 import           Control.Lens hiding (List)
 import           Control.Monad
-import           System.IO
 import           System.FilePath
 import           Language.Haskell.LSP.Test
 import           Language.Haskell.LSP.Test.Files
@@ -123,44 +122,51 @@ isNotification (NotShowMessage             _) = True
 isNotification (NotCancelRequestFromServer _) = True
 isNotification _                              = False
 
-listenServer :: [FromServerMessage] -> RequestMap -> MVar LspId -> MVar LspIdRsp -> MVar () -> ThreadId -> Handle -> Session ()
-listenServer [] _ _ _ passSema _ _ = liftIO $ putMVar passSema ()
-listenServer expectedMsgs reqMap reqSema rspSema passSema mainThreadId serverOut  = do
+-- listenServer :: [FromServerMessage]
+--              -> RequestMap
+--              -> MVar LspId
+--              -> MVar LspIdRsp
+--              -> MVar ()
+--              -> ThreadId
+--              -> Handle
+--              -> SessionContext
+--              -> IO ()
+listenServer [] _ _ _ passSema _ _ _ = putMVar passSema ()
+listenServer expectedMsgs reqMap reqSema rspSema passSema mainThreadId serverOut ctx = do
 
-  msgBytes <- liftIO $ getNextMessage serverOut
+  msgBytes <- getNextMessage serverOut
   let msg = decodeFromServerMsg reqMap msgBytes
 
   handleServerMessage request response notification msg
 
   if shouldSkip msg
-    then listenServer expectedMsgs reqMap reqSema rspSema passSema mainThreadId serverOut
+    then listenServer expectedMsgs reqMap reqSema rspSema passSema mainThreadId serverOut ctx
     else if inRightOrder msg expectedMsgs
-      then listenServer (delete msg expectedMsgs) reqMap reqSema rspSema passSema mainThreadId serverOut
+      then listenServer (delete msg expectedMsgs) reqMap reqSema rspSema passSema mainThreadId serverOut ctx
       else let remainingMsgs = takeWhile (not . isNotification) expectedMsgs
                 ++ [head $ dropWhile isNotification expectedMsgs]
                exc = ReplayOutOfOrderException msg remainingMsgs
             in liftIO $ throwTo mainThreadId exc
 
   where
-  response :: ResponseMessage a -> Session ()
+  response :: ResponseMessage a -> IO ()
   response res = do
-    liftIO $ putStrLn $ "Got response for id " ++ show (res ^. id)
+    putStrLn $ "Got response for id " ++ show (res ^. id)
 
-    liftIO $ putMVar rspSema (res ^. id) -- unblock the handler waiting to send a request
+    putMVar rspSema (res ^. id) -- unblock the handler waiting to send a request
 
-  request :: RequestMessage ServerMethod a b -> Session ()
+  request :: RequestMessage ServerMethod a b -> IO ()
   request req = do
-    liftIO
-      $  putStrLn
+    putStrLn
       $  "Got request for id "
       ++ show (req ^. id)
       ++ " "
       ++ show (req ^. method)
 
-    liftIO $ putMVar reqSema (req ^. id) -- unblock the handler waiting for a response
+    putMVar reqSema (req ^. id) -- unblock the handler waiting for a response
 
-  notification :: NotificationMessage ServerMethod a -> Session ()
-  notification n = liftIO $ putStrLn $ "Got notification " ++ show (n ^. method)
+  notification :: NotificationMessage ServerMethod a -> IO ()
+  notification n = putStrLn $ "Got notification " ++ show (n ^. method)
 
 
 
