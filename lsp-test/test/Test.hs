@@ -10,14 +10,16 @@ import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
 import           Control.Concurrent
 import           Control.Monad.IO.Class
+import           Control.Monad
 import           Control.Lens hiding (List)
 import           GHC.Generics
 import           Language.Haskell.LSP.Messages
 import           Language.Haskell.LSP.Test
 import           Language.Haskell.LSP.Test.Replay
 import           Language.Haskell.LSP.TH.ClientCapabilities
-import           Language.Haskell.LSP.Types hiding (capabilities)
+import           Language.Haskell.LSP.Types hiding (message, capabilities)
 import           ParsingTests
+import           System.Timeout
 
 main = hspec $ do
   describe "manual session" $ do
@@ -39,35 +41,83 @@ main = hspec $ do
           conf = def { capabilities = caps }
       runSessionWithConfig conf "hie --lsp" "test/data/renamePass" $ return ()
 
+    describe "withTimeout" $ do
+      it "times out" $
+        let sesh = runSession "hie --lsp" "test/data/renamePass" $ do
+                    openDoc "Desktop/simple.hs" "haskell"
+                    -- won't receive a request - will timeout
+                    -- incoming logging requests shouldn't increase the
+                    -- timeout
+                    withTimeout 5 $ skipManyTill anyMessage message :: Session ApplyWorkspaceEditRequest
+          -- wait just a bit longer than 5 seconds so we have time
+          -- to open the document
+          in timeout 6000000 sesh `shouldThrow` anySessionException
+          
+      it "doesn't time out" $
+        let sesh = runSession "hie --lsp" "test/data/renamePass" $ do
+                    openDoc "Desktop/simple.hs" "haskell"
+                    withTimeout 5 $ skipManyTill anyMessage publishDiagnosticsNotification
+          in void $ timeout 6000000 sesh
+
+      it "further timeout messages are ignored" $ runSession "hie --lsp" "test/data/renamePass" $ do
+        doc <- openDoc "Desktop/simple.hs" "haskell"
+        withTimeout 3 $ getDocumentSymbols doc
+        liftIO $ threadDelay 5000000
+        -- shouldn't throw an exception
+        getDocumentSymbols doc
+        return ()
+
+      it "overrides global message timeout" $
+        let sesh =
+              runSessionWithConfig (def { messageTimeout = 5 }) "hie --lsp" "test/data/renamePass" $ do
+                doc <- openDoc "Desktop/simple.hs" "haskell"
+                -- shouldn't time out in here since we are overriding it
+                withTimeout 10 $ liftIO $ threadDelay 7000000
+                getDocumentSymbols doc
+                return True
+        in sesh `shouldReturn` True
+
+      it "unoverrides global message timeout" $
+        let sesh =
+              runSessionWithConfig (def { messageTimeout = 5 }) "hie --lsp" "test/data/renamePass" $ do
+                doc <- openDoc "Desktop/simple.hs" "haskell"
+                -- shouldn't time out in here since we are overriding it
+                withTimeout 10 $ liftIO $ threadDelay 7000000
+                getDocumentSymbols doc
+                -- should now timeout
+                skipManyTill anyMessage message :: Session ApplyWorkspaceEditRequest
+        in sesh `shouldThrow` (== TimeoutException)
+
+
     describe "exceptions" $ do
       it "throw on time out" $
-        let sesh = runSessionWithConfig (def {timeout = 10}) "hie --lsp" "test/data/renamePass" $ do
+        let sesh = runSessionWithConfig (def {messageTimeout = 10}) "hie --lsp" "test/data/renamePass" $ do
                 skipMany loggingNotification
-                _ <- request :: Session ApplyWorkspaceEditRequest
+                _ <- message :: Session ApplyWorkspaceEditRequest
                 return ()
         in sesh `shouldThrow` anySessionException
 
-      it "don't throw when no time out" $ runSessionWithConfig (def {timeout = 5}) "hie --lsp" "test/data/renamePass" $ do
+      it "don't throw when no time out" $ runSessionWithConfig (def {messageTimeout = 5}) "hie --lsp" "test/data/renamePass" $ do
         loggingNotification
         liftIO $ threadDelay 10
         _ <- openDoc "Desktop/simple.hs" "haskell"
         return ()
 
-      it "throw when there's an unexpected message" $
-        let selector (UnexpectedMessageException "Publish diagnostics notification" (NotLogMessage _)) = True
-            selector _ = False
-          in runSession "hie --lsp" "test/data/renamePass" publishDiagnosticsNotification `shouldThrow` selector
-
-      it "throw when there's an unexpected message 2" $
-        let selector (UnexpectedMessageException "Response" (NotPublishDiagnostics _)) = True
-            selector _ = False
-            sesh = do
-              doc <- openDoc "Desktop/simple.hs" "haskell"
-              sendRequest' TextDocumentDocumentSymbol (DocumentSymbolParams doc)
-              skipMany anyNotification
-              response :: Session RenameResponse -- the wrong type
-          in runSession "hie --lsp" "test/data/renamePass" sesh
-            `shouldThrow` selector
+      describe "UnexpectedMessageException" $ do
+        it "throws when there's an unexpected message" $
+          let selector (UnexpectedMessageException "Publish diagnostics notification" (NotLogMessage _)) = True
+              selector _ = False
+            in runSession "hie --lsp" "test/data/renamePass" publishDiagnosticsNotification `shouldThrow` selector
+        it "provides the correct types that were expected and received" $
+          let selector (UnexpectedMessageException "ResponseMessage WorkspaceEdit" (RspDocumentSymbols _)) = True
+              selector _ = False
+              sesh = do
+                doc <- openDoc "Desktop/simple.hs" "haskell"
+                sendRequest' TextDocumentDocumentSymbol (DocumentSymbolParams doc)
+                skipMany anyNotification
+                message :: Session RenameResponse -- the wrong type
+            in runSession "hie --lsp" "test/data/renamePass" sesh
+              `shouldThrow` selector
 
   describe "replay session" $ do
     it "passes a test" $
@@ -101,7 +151,7 @@ main = hspec $ do
             reqParams = ExecuteCommandParams "applyrefact:applyOne" (Just (List [args]))
         sendRequest_ WorkspaceExecuteCommand reqParams
 
-        editReq <- request :: Session ApplyWorkspaceEditRequest
+        editReq <- message :: Session ApplyWorkspaceEditRequest
         liftIO $ do
           let (Just cs) = editReq ^. params . edit . changes
               [(u, List es)] = HM.toList cs
@@ -112,7 +162,7 @@ main = hspec $ do
 
         contents <- documentContents doc
         liftIO $ contents `shouldBe` "main :: IO Int\nmain = return 42"
-    
+
   describe "documentEdit" $
     it "automatically consumes applyedit requests" $
       runSession "hie --lsp" "test/data/refactor" $ do
@@ -126,7 +176,7 @@ main = hspec $ do
         contents <- getDocumentEdit doc
         liftIO $ contents `shouldBe` "main :: IO Int\nmain = return 42"
         noDiagnostics
-  
+
   describe "getAllCodeActions" $
     it "works" $ runSession "hie --lsp" "test/data/refactor" $ do
       doc <- openDoc "Main.hs" "haskell"
@@ -136,8 +186,8 @@ main = hspec $ do
         let [CommandOrCodeActionCommand action] = actions
         action ^. title `shouldBe` "Apply hint:Redundant bracket"
         action ^. command `shouldSatisfy` T.isSuffixOf ":applyrefact:applyOne"
-  
-  describe "getDocumentSymbols" $ 
+
+  describe "getDocumentSymbols" $
     it "works" $ runSession "hie --lsp" "test/data/renamePass" $ do
       doc <- openDoc "Desktop/simple.hs" "haskell"
 
@@ -160,4 +210,3 @@ data ApplyOneParams = AOP
   , start_pos :: Position
   , hintTitle :: String
   } deriving (Generic, ToJSON)
-

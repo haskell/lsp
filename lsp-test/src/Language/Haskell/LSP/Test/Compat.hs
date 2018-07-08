@@ -5,9 +5,6 @@
 {-# OPTIONS_GHC -Wunused-imports #-}
 module Language.Haskell.LSP.Test.Compat where
 
-import Control.Concurrent.Chan
-import Control.Monad.IO.Class
-import Data.Conduit
 import Data.Maybe
 
 #if MIN_VERSION_process(1,6,3)
@@ -51,13 +48,3 @@ getProcessID p = fromIntegral . fromJust <$> getProcessID' p
 #endif
       _ -> return Nothing
 #endif
-
-#if MIN_VERSION_conduit(1,3,0)
-chanSource :: MonadIO m => Chan o -> ConduitT i o m b
-#else
-chanSource :: MonadIO m => Chan o -> ConduitM i o m b
-#endif
-chanSource c = do
-  x <- liftIO $ readChan c
-  yield x
-  chanSource c

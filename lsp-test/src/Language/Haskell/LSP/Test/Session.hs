@@ -6,6 +6,7 @@
 module Language.Haskell.LSP.Test.Session
   ( Session
   , SessionConfig(..)
+  , SessionMessage(..)
   , SessionContext(..)
   , SessionState(..)
   , MonadSessionConfig(..)
@@ -16,7 +17,9 @@ module Language.Haskell.LSP.Test.Session
   , ask
   , asks
   , sendMessage
-  , processMessage)
+  , updateState
+  , withTimeout
+  )
 
 where
 
@@ -32,8 +35,8 @@ import Control.Monad.Trans.State (StateT, runStateT)
 import qualified Control.Monad.Trans.State as State (get, put)
 import qualified Data.ByteString.Lazy.Char8 as B
 import Data.Aeson
-import Data.Conduit hiding (await)
-import Data.Conduit.Parser
+import Data.Conduit as Conduit
+import Data.Conduit.Parser as Parser
 import Data.Default
 import Data.Foldable
 import Data.List
@@ -46,7 +49,6 @@ import Language.Haskell.LSP.Messages
 import Language.Haskell.LSP.TH.ClientCapabilities
 import Language.Haskell.LSP.Types hiding (error)
 import Language.Haskell.LSP.VFS
-import Language.Haskell.LSP.Test.Compat
 import Language.Haskell.LSP.Test.Decoding
 import Language.Haskell.LSP.Test.Exceptions
 import System.Console.ANSI
@@ -70,7 +72,7 @@ type Session = ParserStateReader FromServerMessage SessionState SessionContext I
 data SessionConfig = SessionConfig
   {
     capabilities :: ClientCapabilities -- ^ Specific capabilities the client should advertise. Default is yes to everything.
-  , timeout :: Int -- ^ Maximum time to wait for a request in seconds. Defaults to 60.
+  , messageTimeout :: Int -- ^ Maximum time to wait for a message in seconds. Defaults to 60.
   , logStdErr :: Bool -- ^ When True redirects the servers stderr output to haskell-lsp-test's stdout. Defaults to False
   }
 
@@ -83,11 +85,15 @@ class Monad m => MonadSessionConfig m where
 instance Monad m => MonadSessionConfig (StateT SessionState (ReaderT SessionContext m)) where
   sessionConfig = config <$> lift Reader.ask
 
+data SessionMessage = ServerMessage FromServerMessage
+                    | TimeoutMessage Int
+  deriving Show
+
 data SessionContext = SessionContext
   {
     serverIn :: Handle
   , rootDir :: FilePath
-  , messageChan :: Chan FromServerMessage
+  , messageChan :: Chan SessionMessage
   , requestMap :: MVar RequestMap
   , initRsp :: MVar InitializeResponse
   , config :: SessionConfig
@@ -101,7 +107,7 @@ class Monad m => HasReader r m where
 instance Monad m => HasReader r (ParserStateReader a s r m) where
   ask = lift $ lift Reader.ask
 
-instance HasReader SessionContext SessionProcessor where
+instance Monad m => HasReader SessionContext (ConduitM a b (StateT s (ReaderT SessionContext m))) where
   ask = lift $ lift Reader.ask
 
 data SessionState = SessionState
@@ -109,6 +115,11 @@ data SessionState = SessionState
     curReqId :: LspId
   , vfs :: VFS
   , curDiagnostics :: Map.Map Uri [Diagnostic]
+  , curTimeoutId :: Int
+  , overridingTimeout :: Bool
+  -- ^ The last received message from the server.
+  -- Used for providing exception information
+  , lastReceivedMessage :: Maybe FromServerMessage
   }
 
 class Monad m => HasState s m where
@@ -123,38 +134,39 @@ instance Monad m => HasState s (ParserStateReader a s r m) where
   get = lift State.get
   put = lift . State.put
 
-instance HasState SessionState SessionProcessor where
+instance Monad m => HasState SessionState (ConduitM a b (StateT SessionState m))
+ where
   get = lift State.get
   put = lift . State.put
 
 type ParserStateReader a s r m = ConduitParser a (StateT s (ReaderT r m))
 
-type SessionProcessor = ConduitM FromServerMessage FromServerMessage (StateT SessionState (ReaderT SessionContext IO))
+runSession :: SessionContext -> SessionState -> Session a -> IO (a, SessionState)
+runSession context state session =
+    -- source <- sourceList <$> getChanContents (messageChan context)
+    runReaderT (runStateT conduit state) context
+  where
+    conduit = runConduit $ chanSource .| watchdog .| updateStateC .| runConduitParser (catchError session handler)
+        
+    handler (Unexpected "ConduitParser.empty") = do
+      lastMsg <- fromJust . lastReceivedMessage <$> get
+      name <- getParserName
+      liftIO $ throw (UnexpectedMessageException (T.unpack name) lastMsg)
 
-runSession :: Chan FromServerMessage -> SessionProcessor () -> SessionContext -> SessionState -> Session a -> IO (a, SessionState)
-runSession chan preprocessor context state session = runReaderT (runStateT conduit state) context
-  where conduit = runConduit $ chanSource chan .| preprocessor .| runConduitParser (catchError session handler)
-        handler e@(Unexpected "ConduitParser.empty") = do
+    handler e = throw e
 
-          -- Horrible way to get last item in conduit:
-          -- Add a fake message so we can tell when to stop
-          liftIO $ writeChan chan (RspShutdown (ResponseMessage "EMPTY" IdRspNull Nothing Nothing))
-          x <- peek
-          case x of
-            Just x -> do
-              lastMsg <- skipToEnd x
-              name <- getParserName
-              liftIO $ throw (UnexpectedMessageException (T.unpack name) lastMsg)
-            Nothing -> throw e
+    chanSource = do
+      msg <- liftIO $ readChan (messageChan context)
+      yield msg
+      chanSource
 
-        handler e = throw e
 
-        skipToEnd x = do
-          y <- peek
-          case y of
-            Just (RspShutdown (ResponseMessage "EMPTY" IdRspNull Nothing Nothing)) -> return x
-            Just _ -> await >>= skipToEnd
-            Nothing -> return x
+    watchdog :: ConduitM SessionMessage FromServerMessage (StateT SessionState (ReaderT SessionContext IO)) ()
+    watchdog = Conduit.awaitForever $ \msg -> do
+      curId <- curTimeoutId <$> get
+      case msg of
+        ServerMessage sMsg -> yield sMsg
+        TimeoutMessage tId -> when (curId == tId) $ throw TimeoutException
 
 -- | An internal version of 'runSession' that allows for a custom handler to listen to the server.
 -- It also does not automatically send initialize and exit messages.
@@ -176,30 +188,29 @@ runSessionWithHandles serverIn serverOut serverHandler config rootDir session = 
   initRsp <- newEmptyMVar
 
   let context = SessionContext serverIn absRootDir messageChan reqMap initRsp config
-      initState = SessionState (IdInt 0) mempty mempty
+      initState = SessionState (IdInt 0) mempty mempty 0 False Nothing
 
   threadId <- forkIO $ void $ serverHandler serverOut context
-  (result, _) <- runSession messageChan processor context initState session
+  (result, _) <- runSession context initState session
 
   killThread threadId
 
   return result
 
-  where processor :: SessionProcessor ()
-        processor = awaitForever $ \msg -> do
-          processMessage msg
-          yield msg
+updateStateC :: ConduitM FromServerMessage FromServerMessage (StateT SessionState (ReaderT SessionContext IO)) ()
+updateStateC = awaitForever $ \msg -> do
+  updateState msg
+  yield msg
 
-
-processMessage :: (MonadIO m, HasReader SessionContext m, HasState SessionState m) => FromServerMessage -> m ()
-processMessage (NotPublishDiagnostics n) = do
+updateState :: (MonadIO m, HasReader SessionContext m, HasState SessionState m) => FromServerMessage -> m ()
+updateState (NotPublishDiagnostics n) = do
   let List diags = n ^. params . diagnostics
       doc = n ^. params . uri
   modify (\s ->
-    let newDiags = Map.insert doc diags (curDiagnostics s) 
+    let newDiags = Map.insert doc diags (curDiagnostics s)
       in s { curDiagnostics = newDiags })
 
-processMessage (ReqApplyWorkspaceEdit r) = do
+updateState (ReqApplyWorkspaceEdit r) = do
 
   allChangeParams <- case r ^. params . edit . documentChanges of
     Just (List cs) -> do
@@ -250,7 +261,7 @@ processMessage (ReqApplyWorkspaceEdit r) = do
         mergeParams :: [DidChangeTextDocumentParams] -> DidChangeTextDocumentParams
         mergeParams params = let events = concat (toList (map (toList . (^. contentChanges)) params))
                               in DidChangeTextDocumentParams (head params ^. textDocument) (List events)
-processMessage _ = return ()
+updateState _ = return ()
 
 sendMessage :: (MonadIO m, HasReader SessionContext m, ToJSON a) => a -> m ()
 sendMessage msg = do
@@ -264,6 +275,19 @@ sendMessage msg = do
 
     B.hPut h (addHeader encoded)
 
--- withTimeout :: Int -> Session a -> Session a
--- withTimeout duration = do
---   liftIO $ fork threadDelay 
+-- | Execute a block f that will throw a 'TimeoutException'
+-- after duration seconds. This will override the global timeout
+-- for waiting for messages to arrive defined in 'SessionConfig'.
+withTimeout :: Int -> Session a -> Session a
+withTimeout duration f = do
+  chan <- asks messageChan
+  timeoutId <- curTimeoutId <$> get 
+  modify $ \s -> s { overridingTimeout = True }
+  liftIO $ forkIO $ do
+    threadDelay (duration * 1000000)
+    writeChan chan (TimeoutMessage timeoutId)
+  res <- f
+  modify $ \s -> s { curTimeoutId = timeoutId + 1,
+                     overridingTimeout = False 
+                   }
+  return res

@@ -12,6 +12,7 @@ data SessionException = TimeoutException
                       | UnexpectedDiagnosticsException
                       | IncorrectApplyEditRequestException String
                       | UnexpectedResponseError LspIdRsp ResponseError
+  deriving Eq
 
 instance Exception SessionException
 
@@ -19,8 +20,8 @@ instance Show SessionException where
   show TimeoutException = "Timed out waiting to receive a message from the server."
   show (UnexpectedMessageException expected lastMsg) =
     "Received an unexpected message from the server:\n" ++
-    "Expected: " ++ expected ++ "\n" ++
-    "Last message accepted: " ++ show lastMsg
+    "Was parsing: " ++ expected ++ "\n" ++
+    "Last message received: " ++ show lastMsg
   show (ReplayOutOfOrderException received expected) =
     "Replay is out of order:\n" ++
     -- Print json so its a bit easier to update the session logs
