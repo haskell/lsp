@@ -19,7 +19,6 @@ module Language.Haskell.LSP.Test
   , runSessionWithConfig
   , Session
   , SessionConfig(..)
-  , MonadSessionConfig(..)
   , SessionException(..)
   , anySessionException
   , withTimeout

@@ -71,7 +71,6 @@ test-suite tests
                      , aeson
                      , unordered-containers
                      , text
-  other-modules:       ParsingTests
   default-language:    Haskell2010
 
 executable example

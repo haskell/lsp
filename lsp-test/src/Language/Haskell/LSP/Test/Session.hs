@@ -9,7 +9,6 @@ module Language.Haskell.LSP.Test.Session
   , SessionMessage(..)
   , SessionContext(..)
   , SessionState(..)
-  , MonadSessionConfig(..)
   , runSessionWithHandles
   , get
   , put
@@ -78,12 +77,6 @@ data SessionConfig = SessionConfig
 
 instance Default SessionConfig where
   def = SessionConfig def 60 False
-
-class Monad m => MonadSessionConfig m where
-  sessionConfig :: m SessionConfig
-
-instance Monad m => MonadSessionConfig (StateT SessionState (ReaderT SessionContext m)) where
-  sessionConfig = config <$> lift Reader.ask
 
 data SessionMessage = ServerMessage FromServerMessage
                     | TimeoutMessage Int

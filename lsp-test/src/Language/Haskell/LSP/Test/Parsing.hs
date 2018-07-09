@@ -23,7 +23,7 @@ import System.Console.ANSI
 
 satisfy :: (FromServerMessage -> Bool) -> Session FromServerMessage
 satisfy pred = do
-
+  
   skipTimeout <- overridingTimeout <$> get
   timeoutId <- curTimeoutId <$> get
   unless skipTimeout $ do

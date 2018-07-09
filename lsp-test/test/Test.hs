@@ -18,7 +18,6 @@ import           Language.Haskell.LSP.Test
 import           Language.Haskell.LSP.Test.Replay
 import           Language.Haskell.LSP.TH.ClientCapabilities
 import           Language.Haskell.LSP.Types hiding (message, capabilities)
-import           ParsingTests
 import           System.Timeout
 
 main = hspec $ do
@@ -202,8 +201,6 @@ main = hspec $ do
         mainSymbol ^. kind `shouldBe` SkFunction
         mainSymbol ^. location . range `shouldBe` Range (Position 3 0) (Position 3 4)
         mainSymbol ^. containerName `shouldBe` Nothing
-
-  parsingSpec
 
 data ApplyOneParams = AOP
   { file      :: Uri
