@@ -104,10 +104,10 @@ reactorSend msg = do
 
 -- ---------------------------------------------------------------------
 
-publishDiagnostics :: Int -> J.Uri -> Maybe J.TextDocumentVersion -> DiagnosticsBySource -> R () ()
-publishDiagnostics maxToPublish uri mv diags = do
+publishDiagnostics :: Int -> J.Uri -> J.TextDocumentVersion -> DiagnosticsBySource -> R () ()
+publishDiagnostics maxToPublish uri v diags = do
   lf <- ask
-  liftIO $ (Core.publishDiagnosticsFunc lf) maxToPublish uri mv diags
+  liftIO $ (Core.publishDiagnosticsFunc lf) maxToPublish uri v diags
 
 -- ---------------------------------------------------------------------
 
@@ -309,7 +309,7 @@ toWorkspaceEdit _ = Nothing
 -- | Analyze the file and send any diagnostics to the client in a
 -- "textDocument/publishDiagnostics" notification
 sendDiagnostics :: J.Uri -> Maybe Int -> R () ()
-sendDiagnostics fileUri mversion = do
+sendDiagnostics fileUri version = do
   let
     diags = [J.Diagnostic
               (J.Range (J.Position 0 1) (J.Position 0 5))
@@ -320,7 +320,7 @@ sendDiagnostics fileUri mversion = do
               (Just (J.List []))
             ]
   -- reactorSend $ J.NotificationMessage "2.0" "textDocument/publishDiagnostics" (Just r)
-  publishDiagnostics 100 fileUri mversion (partitionBySource diags)
+  publishDiagnostics 100 fileUri version (partitionBySource diags)
 
 -- ---------------------------------------------------------------------
 

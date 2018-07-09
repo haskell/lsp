@@ -36,6 +36,7 @@ import           Data.Monoid
 #endif
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map as Map
+import           Data.Maybe
 import qualified Language.Haskell.LSP.TH.DataTypesJSON      as J
 import           Language.Haskell.LSP.Utility
 import qualified Yi.Rope as Yi
@@ -71,7 +72,8 @@ changeFromClientVFS vfs (J.NotificationMessage _ _ params) = do
   case Map.lookup uri vfs of
     Just (VirtualFile _ str) -> do
       let str' = applyChanges str changes
-      return $ Map.insert uri (VirtualFile version str') vfs
+      -- the client shouldn't be sending over a null version, only the server.
+      return $ Map.insert uri (VirtualFile (fromMaybe 0 version) str') vfs
     Nothing -> do
       logs $ "haskell-lsp:changeVfs:can't find uri:" ++ show uri
       return vfs
@@ -93,7 +95,7 @@ changeFromServerVFS initVfs (J.RequestMessage _ _ _ params) = do
   where
 
     changeToTextDocumentEdit acc uri edits =
-      acc ++ [J.TextDocumentEdit (J.VersionedTextDocumentIdentifier uri 0) edits]
+      acc ++ [J.TextDocumentEdit (J.VersionedTextDocumentIdentifier uri (Just 0)) edits]
 
     applyEdits = foldM f initVfs . sortOn (^. J.textDocument . J.version)
 
@@ -213,4 +215,3 @@ yiSplitAt l c str = (before,after)
     after = Yi.drop c a
 
 -- ---------------------------------------------------------------------
-

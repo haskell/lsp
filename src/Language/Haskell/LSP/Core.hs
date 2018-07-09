@@ -103,7 +103,7 @@ instance Default Options where
 -- 'textDocument/publishDiagnostics' notification with the total (limited by the
 -- first parameter) whenever it is updated.
 type PublishDiagnosticsFunc = Int -- Max number of diagnostics to send
-                            -> J.Uri -> Maybe J.TextDocumentVersion -> DiagnosticsBySource -> IO ()
+                            -> J.Uri -> J.TextDocumentVersion -> DiagnosticsBySource -> IO ()
 
 -- | A function to remove all diagnostics from a particular source, and send the updates to the client.
 type FlushDiagnosticsBySourceFunc = Int -- Max number of diagnostics to send
@@ -594,9 +594,9 @@ shutdownRequestHandler tvarCtx req@(J.RequestMessage _ origId _ _) =
 -- | Take the new diagnostics, update the stored diagnostics for the given file
 -- and version, and publish the total to the client.
 publishDiagnostics :: TVar (LanguageContextData c) -> PublishDiagnosticsFunc
-publishDiagnostics tvarDat maxDiagnosticCount uri mversion diags = do
+publishDiagnostics tvarDat maxDiagnosticCount uri version diags = do
   ctx <- readTVarIO tvarDat
-  let ds = updateDiagnostics (resDiagnostics ctx) uri mversion diags
+  let ds = updateDiagnostics (resDiagnostics ctx) uri version diags
   atomically $ writeTVar tvarDat $ ctx{resDiagnostics = ds}
   let mdp = getDiagnosticParamsFor maxDiagnosticCount ds uri
   case mdp of

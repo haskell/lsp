@@ -42,7 +42,7 @@ all prior entries for the Uri.
 type DiagnosticStore = Map.Map J.Uri StoreItem
 
 data StoreItem
-  = StoreItem (Maybe J.TextDocumentVersion) DiagnosticsBySource
+  = StoreItem J.TextDocumentVersion DiagnosticsBySource
   deriving (Show,Eq)
 
 type DiagnosticsBySource = Map.Map (Maybe J.DiagnosticSource) (SL.SortedList J.Diagnostic)
@@ -63,7 +63,7 @@ flushBySource store (Just source) = Map.map remove store
 -- ---------------------------------------------------------------------
 
 updateDiagnostics :: DiagnosticStore
-                  -> J.Uri -> Maybe J.TextDocumentVersion -> DiagnosticsBySource
+                  -> J.Uri -> J.TextDocumentVersion -> DiagnosticsBySource
                   -> DiagnosticStore
 updateDiagnostics store uri mv newDiagsBySource = r
   where
