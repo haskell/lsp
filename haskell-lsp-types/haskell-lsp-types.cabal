@@ -10,7 +10,7 @@ license:             MIT
 license-file:        LICENSE
 author:              Alan Zimmerman
 maintainer:          alan.zimm@gmail.com
-copyright:           Alan Zimmerman, 2016-2017
+copyright:           Alan Zimmerman, 2016-2018
 category:            Development
 build-type:          Simple
 extra-source-files:  ChangeLog.md, README.md
