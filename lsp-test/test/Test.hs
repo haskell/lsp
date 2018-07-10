@@ -16,7 +16,7 @@ import           GHC.Generics
 import           Language.Haskell.LSP.Messages
 import           Language.Haskell.LSP.Test
 import           Language.Haskell.LSP.Test.Replay
-import           Language.Haskell.LSP.TH.ClientCapabilities
+import           Language.Haskell.LSP.Types.Capabilities
 import           Language.Haskell.LSP.Types hiding (message, capabilities)
 import           System.Timeout
 

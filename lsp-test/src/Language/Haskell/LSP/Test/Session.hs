@@ -46,7 +46,7 @@ import qualified Data.HashMap.Strict as HashMap
 import Data.Maybe
 import Data.Function
 import Language.Haskell.LSP.Messages
-import Language.Haskell.LSP.TH.ClientCapabilities
+import Language.Haskell.LSP.Types.Capabilities
 import Language.Haskell.LSP.Types hiding (error)
 import Language.Haskell.LSP.VFS
 import Language.Haskell.LSP.Test.Decoding
