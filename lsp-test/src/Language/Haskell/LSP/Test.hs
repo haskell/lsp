@@ -77,6 +77,8 @@ module Language.Haskell.LSP.Test
   -- ** Code Actions
   , getAllCodeActions
   , executeCodeAction
+  -- ** Completions
+  , getCompletions
   -- ** Edits
   , applyEdit
   ) where
@@ -181,7 +183,7 @@ getDocumentEdit doc = do
   req <- message :: Session ApplyWorkspaceEditRequest
 
   unless (checkDocumentChanges req || checkChanges req) $
-    liftIO $ throw (IncorrectApplyEditRequestException (show req))
+    liftIO $ throw (IncorrectApplyEditRequest (show req))
 
   documentContents doc
   where
@@ -330,7 +332,7 @@ waitForDiagnostics = do
 noDiagnostics :: Session ()
 noDiagnostics = do
   diagsNot <- message :: Session PublishDiagnosticsNotification
-  when (diagsNot ^. params . LSP.diagnostics /= List []) $ liftIO $ throw UnexpectedDiagnosticsException
+  when (diagsNot ^. params . LSP.diagnostics /= List []) $ liftIO $ throw UnexpectedDiagnostics
 
 -- | Returns the symbols in a document.
 getDocumentSymbols :: TextDocumentIdentifier -> Session [SymbolInformation]
@@ -394,8 +396,8 @@ getVersionedDoc (TextDocumentIdentifier uri) = do
   return (VersionedTextDocumentIdentifier uri ver)
 
 -- | Applys an edit to the document and returns the updated document version.
-applyEdit :: TextEdit -> TextDocumentIdentifier -> Session VersionedTextDocumentIdentifier
-applyEdit edit doc = do
+applyEdit :: TextDocumentIdentifier -> TextEdit -> Session VersionedTextDocumentIdentifier
+applyEdit doc edit = do
 
   verDoc <- getVersionedDoc doc
 
@@ -421,3 +423,14 @@ applyEdit edit doc = do
   -- version may have changed
   getVersionedDoc doc
   
+-- | Returns the completions for the position in the document.
+getCompletions :: TextDocumentIdentifier -> Position -> Session [CompletionItem]
+getCompletions doc pos = do
+  rsp <- sendRequest TextDocumentCompletion (TextDocumentPositionParams doc pos)
+
+  let exc = throw $ UnexpectedResponseError (rsp ^. LSP.id)
+                                            (fromJust $ rsp ^. LSP.error)
+      res = fromMaybe exc (rsp ^. result)
+  case res of
+    Completions (List items) -> return items
+    CompletionList (CompletionListType _ (List items)) -> return items

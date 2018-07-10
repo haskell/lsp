@@ -136,16 +136,14 @@ instance Monad m => HasState SessionState (ConduitM a b (StateT SessionState m))
 type ParserStateReader a s r m = ConduitParser a (StateT s (ReaderT r m))
 
 runSession :: SessionContext -> SessionState -> Session a -> IO (a, SessionState)
-runSession context state session =
-    -- source <- sourceList <$> getChanContents (messageChan context)
-    runReaderT (runStateT conduit state) context
+runSession context state session = runReaderT (runStateT conduit state) context
   where
     conduit = runConduit $ chanSource .| watchdog .| updateStateC .| runConduitParser (catchError session handler)
         
     handler (Unexpected "ConduitParser.empty") = do
       lastMsg <- fromJust . lastReceivedMessage <$> get
       name <- getParserName
-      liftIO $ throw (UnexpectedMessageException (T.unpack name) lastMsg)
+      liftIO $ throw (UnexpectedMessage (T.unpack name) lastMsg)
 
     handler e = throw e
 
@@ -160,7 +158,7 @@ runSession context state session =
       curId <- curTimeoutId <$> get
       case msg of
         ServerMessage sMsg -> yield sMsg
-        TimeoutMessage tId -> when (curId == tId) $ throw TimeoutException
+        TimeoutMessage tId -> when (curId == tId) $ throw Timeout
 
 -- | An internal version of 'runSession' that allows for a custom handler to listen to the server.
 -- It also does not automatically send initialize and exit messages.

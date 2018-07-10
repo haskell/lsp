@@ -21,7 +21,7 @@ import           Language.Haskell.LSP.Types hiding (message, capabilities)
 import           System.Timeout
 
 main = hspec $ do
-  describe "manual session" $ do
+  describe "Session" $ do
     it "fails a test" $
       -- TODO: Catch the exception in haskell-lsp-test and provide nicer output
       let session = runSession "hie --lsp" "test/data/renamePass" $ do
@@ -29,11 +29,11 @@ main = hspec $ do
                       skipMany loggingNotification
                       anyRequest
         in session `shouldThrow` anyException
-    it "can get initialize response" $ runSession "hie --lsp" "test/data/renamePass" $ do
+    it "initializeResponse" $ runSession "hie --lsp" "test/data/renamePass" $ do
       rsp <- initializeResponse
       liftIO $ rsp ^. result `shouldNotBe` Nothing
 
-    it "can register specific capabilities" $
+    it "runSessionWithConfig" $
       runSessionWithConfig (def { capabilities = didChangeCaps })
         "hie --lsp" "test/data/renamePass" $ return ()
 
@@ -82,10 +82,10 @@ main = hspec $ do
                 getDocumentSymbols doc
                 -- should now timeout
                 skipManyTill anyMessage message :: Session ApplyWorkspaceEditRequest
-        in sesh `shouldThrow` (== TimeoutException)
+        in sesh `shouldThrow` (== Timeout)
 
 
-    describe "exceptions" $ do
+    describe "SessionException" $ do
       it "throw on time out" $
         let sesh = runSessionWithConfig (def {messageTimeout = 10}) "hie --lsp" "test/data/renamePass" $ do
                 skipMany loggingNotification
@@ -101,11 +101,11 @@ main = hspec $ do
 
       describe "UnexpectedMessageException" $ do
         it "throws when there's an unexpected message" $
-          let selector (UnexpectedMessageException "Publish diagnostics notification" (NotLogMessage _)) = True
+          let selector (UnexpectedMessage "Publish diagnostics notification" (NotLogMessage _)) = True
               selector _ = False
             in runSession "hie --lsp" "test/data/renamePass" publishDiagnosticsNotification `shouldThrow` selector
         it "provides the correct types that were expected and received" $
-          let selector (UnexpectedMessageException "ResponseMessage WorkspaceEdit" (RspDocumentSymbols _)) = True
+          let selector (UnexpectedMessage "ResponseMessage WorkspaceEdit" (RspDocumentSymbols _)) = True
               selector _ = False
               sesh = do
                 doc <- openDoc "Desktop/simple.hs" "haskell"
@@ -115,11 +115,11 @@ main = hspec $ do
             in runSession "hie --lsp" "test/data/renamePass" sesh
               `shouldThrow` selector
 
-  describe "replay session" $ do
+  describe "replaySession" $ do
     it "passes a test" $
       replaySession "hie --lsp" "test/data/renamePass"
     it "fails a test" $
-      let selector (ReplayOutOfOrderException _ _) = True
+      let selector (ReplayOutOfOrder _ _) = True
           selector _ = False
         in replaySession "hie --lsp" "test/data/renameFail" `shouldThrow` selector
 
@@ -159,7 +159,7 @@ main = hspec $ do
         contents <- documentContents doc
         liftIO $ contents `shouldBe` "main :: IO Int\nmain = return 42"
 
-  describe "documentEdit" $
+  describe "getDocumentEdit" $
     it "automatically consumes applyedit requests" $
       runSession "hie --lsp" "test/data/refactor" $ do
         doc <- openDoc "Main.hs" "haskell"
@@ -204,14 +204,23 @@ main = hspec $ do
       doc <- openDoc "Desktop/simple.hs" "haskell"
       VersionedTextDocumentIdentifier _ (Just oldVersion) <- getVersionedDoc doc
       let edit = TextEdit (Range (Position 1 1) (Position 1 3)) "foo" 
-      VersionedTextDocumentIdentifier _ (Just newVersion) <- applyEdit edit doc
+      VersionedTextDocumentIdentifier _ (Just newVersion) <- applyEdit doc edit
       liftIO $ newVersion `shouldBe` oldVersion + 1
     it "changes the document contents" $ runSession "hie --lsp" "test/data/renamePass" $ do
       doc <- openDoc "Desktop/simple.hs" "haskell"
       let edit = TextEdit (Range (Position 0 0) (Position 0 2)) "foo" 
-      applyEdit edit doc
+      applyEdit doc edit
       contents <- documentContents doc
       liftIO $ contents `shouldSatisfy` T.isPrefixOf "foodule"
+
+  describe "getCompletions" $
+    it "works" $ runSession "hie --lsp" "test/data/renamePass" $ do
+      doc <- openDoc "Desktop/simple.hs" "haskell"
+      [item] <- getCompletions doc (Position 5 5)
+      liftIO $ do
+        item ^. label `shouldBe` "interactWithUser"
+        item ^. kind `shouldBe` Just CiFunction
+        item ^. detail `shouldBe` Just "Items -> IO ()\nMain"
 
 
 didChangeCaps :: ClientCapabilities
