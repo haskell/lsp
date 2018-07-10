@@ -33,7 +33,7 @@ library
                      , Language.Haskell.LSP.VFS
   -- other-modules:
  -- other-extensions:
-  ghc-options:         -Wall
+  ghc-options:         -Wall -Werror
   -- ghc-options:         -Werror
   build-depends:       base >=4.9 && <4.12
                      , aeson >=1.0.0.0
@@ -44,7 +44,7 @@ library
                      , filepath
                      , hslogger
                      , hashable
-                     , haskell-lsp-types >= 0.3
+                     , haskell-lsp-types >= 0.4
                      , lens >= 4.15.2
                      , mtl
                      , network-uri

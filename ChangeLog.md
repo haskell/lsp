@@ -1,8 +1,9 @@
 # Revision history for haskell-lsp
 
-## 0.4.0.0
+## 0.4.0.0  -- 2018-07-10
 
-* CodeAction support as per v3.8 of the specification.
+* CodeAction support as per v3.8 of the specification, by @Bubba
+* Update VersionedTextDocumentIdentifier to match specification, by @Bubba
 
 ## 0.3.0.0
 
