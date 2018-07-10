@@ -3,6 +3,7 @@
 ## 0.4.0.0
 
 * CodeAction support as per v3.8 of the specification.
+* Update VersionedTextDocumentIdentifier to match specification.
 
 ## 0.3.0.0
 
