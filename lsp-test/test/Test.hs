@@ -33,12 +33,9 @@ main = hspec $ do
       rsp <- initializeResponse
       liftIO $ rsp ^. result `shouldNotBe` Nothing
 
-    it "can register specific capabilities" $ do
-      let caps = def { _workspace = Just workspaceCaps }
-          workspaceCaps = def { _didChangeConfiguration = Just configCaps }
-          configCaps = DidChangeConfigurationClientCapabilities (Just True)
-          conf = def { capabilities = caps }
-      runSessionWithConfig conf "hie --lsp" "test/data/renamePass" $ return ()
+    it "can register specific capabilities" $
+      runSessionWithConfig (def { capabilities = didChangeCaps })
+        "hie --lsp" "test/data/renamePass" $ return ()
 
     describe "withTimeout" $ do
       it "times out" $
@@ -201,6 +198,33 @@ main = hspec $ do
         mainSymbol ^. kind `shouldBe` SkFunction
         mainSymbol ^. location . range `shouldBe` Range (Position 3 0) (Position 3 4)
         mainSymbol ^. containerName `shouldBe` Nothing
+
+  describe "applyEdit" $ do
+    it "increments the version" $ runSessionWithConfig (def { capabilities = docChangesCaps }) "hie --lsp" "test/data/renamePass" $ do
+      doc <- openDoc "Desktop/simple.hs" "haskell"
+      VersionedTextDocumentIdentifier _ (Just oldVersion) <- getVersionedDoc doc
+      let edit = TextEdit (Range (Position 1 1) (Position 1 3)) "foo" 
+      VersionedTextDocumentIdentifier _ (Just newVersion) <- applyEdit edit doc
+      liftIO $ newVersion `shouldBe` oldVersion + 1
+    it "changes the document contents" $ runSession "hie --lsp" "test/data/renamePass" $ do
+      doc <- openDoc "Desktop/simple.hs" "haskell"
+      let edit = TextEdit (Range (Position 0 0) (Position 0 2)) "foo" 
+      applyEdit edit doc
+      contents <- documentContents doc
+      liftIO $ contents `shouldSatisfy` T.isPrefixOf "foodule"
+
+
+didChangeCaps :: ClientCapabilities
+didChangeCaps = def { _workspace = Just workspaceCaps }
+  where
+    workspaceCaps = def { _didChangeConfiguration = Just configCaps }
+    configCaps = DidChangeConfigurationClientCapabilities (Just True)
+
+docChangesCaps :: ClientCapabilities
+docChangesCaps = def { _workspace = Just workspaceCaps }
+  where
+    workspaceCaps = def { _workspaceEdit = Just editCaps }
+    editCaps = WorkspaceEditClientCapabilities (Just True)
 
 data ApplyOneParams = AOP
   { file      :: Uri

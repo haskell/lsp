@@ -66,6 +66,7 @@ module Language.Haskell.LSP.Test
   , documentContents
   , getDocumentEdit
   , getDocUri
+  , getVersionedDoc
   -- ** Symbols
   , getDocumentSymbols
   -- ** Diagnostics
@@ -76,6 +77,8 @@ module Language.Haskell.LSP.Test
   -- ** Code Actions
   , getAllCodeActions
   , executeCodeAction
+  -- ** Edits
+  , applyEdit
   ) where
 
 import Control.Applicative
@@ -94,6 +97,7 @@ import qualified Data.Map as Map
 import Data.Maybe
 import Language.Haskell.LSP.Types hiding (id, capabilities, message)
 import qualified Language.Haskell.LSP.Types as LSP
+import qualified Language.Haskell.LSP.Types.Capabilities as LSP
 import Language.Haskell.LSP.Messages
 import Language.Haskell.LSP.VFS
 import Language.Haskell.LSP.Test.Compat
@@ -313,6 +317,7 @@ getDocUri file = do
   let fp = rootDir context </> file
   return $ filePathToUri fp
 
+-- | Waits for diagnostics to be published and returns them.
 waitForDiagnostics :: Session [Diagnostic]
 waitForDiagnostics = do
   diagsNot <- skipManyTill anyMessage message :: Session PublishDiagnosticsNotification
@@ -335,6 +340,9 @@ getDocumentSymbols doc = do
   let (Just (List symbols)) = mRes
   return symbols
 
+-- | Returns all the code actions in a document by 
+-- querying the code actions at each of the current 
+-- diagnostics' positions.
 getAllCodeActions :: TextDocumentIdentifier -> Session [CommandOrCodeAction]
 getAllCodeActions doc = do
   curDiags <- fromMaybe [] . Map.lookup (doc ^. uri) . curDiagnostics <$> get
@@ -353,12 +361,17 @@ getAllCodeActions doc = do
           let Just (List cmdOrCAs) = mRes
             in return (acc ++ cmdOrCAs)
 
+-- | Executes a command.
 executeCommand :: Command -> Session ()
 executeCommand cmd = do
   let args = decode $ encode $ fromJust $ cmd ^. arguments
       execParams = ExecuteCommandParams (cmd ^. command) args
   sendRequest_ WorkspaceExecuteCommand execParams
 
+-- | Executes a code action. 
+-- Matching with the specification, if a code action
+-- contains both an edit and a command, the edit will
+-- be applied first.
 executeCodeAction :: CodeAction -> Session ()
 executeCodeAction action = do
   maybe (return ()) handleEdit $ action ^. edit
@@ -366,5 +379,45 @@ executeCodeAction action = do
 
   where handleEdit :: WorkspaceEdit -> Session ()
         handleEdit e =
+          -- Its ok to pass in dummy parameters here as they aren't used
           let req = RequestMessage "" (IdInt 0) WorkspaceApplyEdit (ApplyWorkspaceEditParams e)
             in updateState (ReqApplyWorkspaceEdit req)
+
+-- | Adds the current version to the document, as tracked by the session.
+getVersionedDoc :: TextDocumentIdentifier -> Session VersionedTextDocumentIdentifier
+getVersionedDoc (TextDocumentIdentifier uri) = do
+  fs <- vfs <$> get
+  let ver =
+        case fs Map.!? uri of
+          Just (VirtualFile v _) -> Just v
+          _ -> Nothing
+  return (VersionedTextDocumentIdentifier uri ver)
+
+-- | Applys an edit to the document and returns the updated document version.
+applyEdit :: TextEdit -> TextDocumentIdentifier -> Session VersionedTextDocumentIdentifier
+applyEdit edit doc = do
+
+  verDoc <- getVersionedDoc doc
+
+  caps <- asks (capabilities . config)
+
+  let supportsDocChanges = fromMaybe False $ do
+        let LSP.ClientCapabilities mWorkspace _ _ = caps
+        LSP.WorkspaceClientCapabilities _ mEdit _ _ _ _ <- mWorkspace
+        LSP.WorkspaceEditClientCapabilities mDocChanges <- mEdit
+        mDocChanges
+
+  let wEdit = if supportsDocChanges
+      then
+        let docEdit = TextDocumentEdit verDoc (List [edit])
+        in WorkspaceEdit Nothing (Just (List [docEdit]))
+      else
+        let changes = HashMap.singleton (doc ^. uri) (List [edit])
+        in WorkspaceEdit (Just changes) Nothing
+
+  let req = RequestMessage "" (IdInt 0) WorkspaceApplyEdit (ApplyWorkspaceEditParams wEdit)
+  updateState (ReqApplyWorkspaceEdit req)
+
+  -- version may have changed
+  getVersionedDoc doc
+  

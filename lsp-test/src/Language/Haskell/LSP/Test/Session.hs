@@ -44,6 +44,7 @@ import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import qualified Data.HashMap.Strict as HashMap
 import Data.Maybe
+import Data.Function
 import Language.Haskell.LSP.Messages
 import Language.Haskell.LSP.TH.ClientCapabilities
 import Language.Haskell.LSP.Types hiding (error)
@@ -205,6 +206,8 @@ updateState (NotPublishDiagnostics n) = do
 
 updateState (ReqApplyWorkspaceEdit r) = do
 
+  oldVFS <- vfs <$> get
+
   allChangeParams <- case r ^. params . edit . documentChanges of
     Just (List cs) -> do
       mapM_ (checkIfNeedsOpened . (^. textDocument . uri)) cs
@@ -215,7 +218,6 @@ updateState (ReqApplyWorkspaceEdit r) = do
         return $ concatMap (uncurry getChangeParams) (HashMap.toList cs)
       Nothing -> error "No changes!"
 
-  oldVFS <- vfs <$> get
   newVFS <- liftIO $ changeFromServerVFS oldVFS r
   modify (\s -> s { vfs = newVFS })
 
@@ -224,6 +226,18 @@ updateState (ReqApplyWorkspaceEdit r) = do
 
   -- TODO: Don't do this when replaying a session
   forM_ mergedParams (sendMessage . NotificationMessage "2.0" TextDocumentDidChange)
+
+  -- Update VFS to new document versions
+  let sortedVersions = map (sortBy (compare `on` (^. textDocument . version))) groupedParams
+      latestVersions = map ((^. textDocument) . last) sortedVersions
+      bumpedVersions = map (version . _Just +~ 1) latestVersions
+
+  forM_ bumpedVersions $ \(VersionedTextDocumentIdentifier uri v) ->
+    modify $ \s ->
+      let oldVFS = vfs s
+          update (VirtualFile oldV t) = VirtualFile (fromMaybe oldV v) t
+          newVFS = Map.adjust update uri oldVFS
+      in s { vfs = newVFS }
 
   where checkIfNeedsOpened uri = do
           oldVFS <- vfs <$> get
@@ -245,7 +259,7 @@ updateState (ReqApplyWorkspaceEdit r) = do
           let changeEvents = map (\e -> TextDocumentContentChangeEvent (Just (e ^. range)) Nothing (e ^. newText)) edits
             in DidChangeTextDocumentParams docId (List changeEvents)
 
-        textDocumentVersions uri = map (VersionedTextDocumentIdentifier uri) [0..]
+        textDocumentVersions uri = map (VersionedTextDocumentIdentifier uri . Just) [0..]
 
         textDocumentEdits uri edits = map (\(v, e) -> TextDocumentEdit v (List [e])) $ zip (textDocumentVersions uri) edits
 

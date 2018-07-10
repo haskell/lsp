@@ -6,7 +6,7 @@ extra-deps:
   - github: Bubba/haskell-lsp-client
     commit: b7cf14eb48837a73032e867dab90db1708220c66
   - github: Bubba/haskell-lsp
-    commit: 47176f14738451b36b061b2314a2acb05329fde4
+    commit: 0772972aec20df9413b6c3b4b4f0abfa6d4c1535
     subdirs:
       - .
       - ./haskell-lsp-types
