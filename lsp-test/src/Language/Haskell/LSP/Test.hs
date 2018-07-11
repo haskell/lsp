@@ -39,25 +39,6 @@ module Language.Haskell.LSP.Test
   , loggingNotification
   , publishDiagnosticsNotification
   -- * Combinators
-  , choice
-  , option
-  , optional
-  , between
-  , some
-  , many
-  , sepBy
-  , sepBy1
-  , sepEndBy1
-  , sepEndBy
-  , endBy1
-  , endBy
-  , count
-  , manyTill
-  , skipMany
-  , skipSome
-  , skipManyTill
-  , skipSomeTill
-  , (<|>)
   , satisfy
   -- * Utilities
   , initializeResponse
@@ -83,7 +64,6 @@ module Language.Haskell.LSP.Test
   , applyEdit
   ) where
 
-import Control.Applicative
 import Control.Applicative.Combinators
 import Control.Concurrent
 import Control.Monad

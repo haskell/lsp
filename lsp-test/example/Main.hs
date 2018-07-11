@@ -1,7 +1,7 @@
+import Control.Applicative.Combinators
+import Control.Monad.IO.Class
 import Language.Haskell.LSP.Test
 import Language.Haskell.LSP.Types
-
-import Control.Monad.IO.Class
 
 main = runSession "hie --lsp" "test/recordings/renamePass" $ do
   docItem <- openDoc "Desktop/simple.hs" "haskell"

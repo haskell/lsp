@@ -53,9 +53,8 @@ satisfy pred = do
 message :: forall a. (Typeable a, FromJSON a) => Session a
 message =
   let parser = decode . encodeMsg :: FromServerMessage -> Maybe a
-  in named (T.pack $ show $ head $ snd $ splitTyConApp $ last $ typeRepArgs $ typeOf parser) $ do
-    x <- satisfy (isJust . parser)
-    return $ castMsg x
+  in named (T.pack $ show $ head $ snd $ splitTyConApp $ last $ typeRepArgs $ typeOf parser) $
+    castMsg <$> satisfy (isJust . parser)
 
 -- | Matches if the message is a notification.
 anyNotification :: Session FromServerMessage

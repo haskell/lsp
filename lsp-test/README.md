@@ -6,9 +6,9 @@ runSession "session/root/dir" $ do
   doc <- openDoc "foo.hs" "haskell"
   
   skipMany notification
-  
-  sendRequest TextDocumentDocumentSymbol (DocumentSymbolParams doc)
-              
-  rspSymbols <- response :: DocumentSymbolsResponse
-  let (List symbols) = fromJust (rspSymbols ^. result)
+
+  symbols <- getDocumentSymbols doc
 ```
+
+## Developing
+To test make sure you have [haskell-ide-engine](https://github.com/haskell/haskell-ide-engine) installed.

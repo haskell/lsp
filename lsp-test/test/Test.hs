@@ -8,6 +8,7 @@ import           Data.Aeson
 import           Data.Default
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
+import           Control.Applicative.Combinators
 import           Control.Concurrent
 import           Control.Monad.IO.Class
 import           Control.Monad
@@ -17,8 +18,11 @@ import           Language.Haskell.LSP.Messages
 import           Language.Haskell.LSP.Test
 import           Language.Haskell.LSP.Test.Replay
 import           Language.Haskell.LSP.Types.Capabilities
-import           Language.Haskell.LSP.Types hiding (message, capabilities)
+import           Language.Haskell.LSP.Types hiding (capabilities, message)
 import           System.Timeout
+
+{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
+{-# ANN module ("HLint: ignore Unnecessary hiding" :: String) #-}
 
 main = hspec $ do
   describe "Session" $ do
@@ -157,7 +161,7 @@ main = hspec $ do
         noDiagnostics
 
         contents <- documentContents doc
-        liftIO $ contents `shouldBe` "main :: IO Int\nmain = return 42"
+        liftIO $ contents `shouldBe` "main :: IO Int\nmain = return 42\n"
 
   describe "getDocumentEdit" $
     it "automatically consumes applyedit requests" $
@@ -170,7 +174,7 @@ main = hspec $ do
             reqParams = ExecuteCommandParams "applyrefact:applyOne" (Just (List [args]))
         sendRequest_ WorkspaceExecuteCommand reqParams
         contents <- getDocumentEdit doc
-        liftIO $ contents `shouldBe` "main :: IO Int\nmain = return 42"
+        liftIO $ contents `shouldBe` "main :: IO Int\nmain = return 42\n"
         noDiagnostics
 
   describe "getAllCodeActions" $
