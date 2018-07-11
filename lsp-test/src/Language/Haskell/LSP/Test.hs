@@ -153,6 +153,8 @@ runSessionWithConfig config serverExe rootDir session = do
 documentContents :: TextDocumentIdentifier -> Session T.Text
 documentContents doc = do
   vfs <- vfs <$> get
+  liftIO $ print vfs
+  liftIO $ print doc
   let file = vfs Map.! (doc ^. uri)
   return $ Rope.toText $ Language.Haskell.LSP.VFS._text file
 

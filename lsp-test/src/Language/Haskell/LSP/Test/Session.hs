@@ -13,6 +13,7 @@ module Language.Haskell.LSP.Test.Session
   , get
   , put
   , modify
+  , modifyM
   , ask
   , asks
   , sendMessage
@@ -124,6 +125,9 @@ class Monad m => HasState s m where
   modify :: (s -> s) -> m ()
   modify f = get >>= put . f
 
+  modifyM :: (HasState s m, Monad m) => (s -> m s) -> m ()
+  modifyM f = get >>= f >>= put
+
 instance Monad m => HasState s (ParserStateReader a s r m) where
   get = lift State.get
   put = lift . State.put
@@ -204,7 +208,6 @@ updateState (NotPublishDiagnostics n) = do
 
 updateState (ReqApplyWorkspaceEdit r) = do
 
-  oldVFS <- vfs <$> get
 
   allChangeParams <- case r ^. params . edit . documentChanges of
     Just (List cs) -> do
@@ -216,8 +219,9 @@ updateState (ReqApplyWorkspaceEdit r) = do
         return $ concatMap (uncurry getChangeParams) (HashMap.toList cs)
       Nothing -> error "No changes!"
 
-  newVFS <- liftIO $ changeFromServerVFS oldVFS r
-  modify (\s -> s { vfs = newVFS })
+  modifyM $ \s -> do
+    newVFS <- liftIO $ changeFromServerVFS (vfs s) r
+    return $ s { vfs = newVFS }
 
   let groupedParams = groupBy (\a b -> (a ^. textDocument == b ^. textDocument)) allChangeParams
       mergedParams = map mergeParams groupedParams
@@ -249,9 +253,9 @@ updateState (ReqApplyWorkspaceEdit r) = do
                 msg = NotificationMessage "2.0" TextDocumentDidOpen (DidOpenTextDocumentParams item)
             liftIO $ B.hPut (serverIn ctx) $ addHeader (encode msg)
 
-            oldVFS <- vfs <$> get
-            newVFS <- liftIO $ openVFS oldVFS msg
-            modify (\s -> s { vfs = newVFS })
+            modifyM $ \s -> do 
+              newVFS <- liftIO $ openVFS (vfs s) msg
+              return $ s { vfs = newVFS }
 
         getParams (TextDocumentEdit docId (List edits)) =
           let changeEvents = map (\e -> TextDocumentContentChangeEvent (Just (e ^. range)) Nothing (e ^. newText)) edits
