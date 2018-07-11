@@ -1,14 +1,19 @@
 import Language.Haskell.LSP.Test
-import Language.Haskell.LSP.TH.DataTypesJSON
+import Language.Haskell.LSP.Types
 
 import Control.Monad.IO.Class
 
 main = runSession "hie --lsp" "test/recordings/renamePass" $ do
   docItem <- openDoc "Desktop/simple.hs" "haskell"
   
+  -- Use your favourite favourite combinators.
+  skipManyTill loggingNotification (count 2 publishDiagnosticsNotification)
+
+  -- Send requests and notifications and receive responses
   let params = DocumentSymbolParams docItem
-  _ <- sendRequest TextDocumentDocumentSymbol params :: Session DocumentSymbolsResponse
+  response <- sendRequest TextDocumentDocumentSymbol params :: Session DocumentSymbolsResponse
+  liftIO $ print response
 
-  skipMany loggingNotification
+  -- Or use one of the helper functions
+  getDocumentSymbols docItem >>= liftIO . print
 
-  anyResponse >>= liftIO . print
