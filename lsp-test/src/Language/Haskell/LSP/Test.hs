@@ -60,6 +60,8 @@ module Language.Haskell.LSP.Test
   , executeCodeAction
   -- ** Completions
   , getCompletions
+  -- ** References
+  , getReferences
   -- ** Edits
   , applyEdit
   ) where
@@ -414,3 +416,9 @@ getCompletions doc pos = do
   case res of
     Completions (List items) -> return items
     CompletionList (CompletionListType _ (List items)) -> return items
+
+getReferences :: TextDocumentIdentifier -> Position -> Bool -> Session [Location]
+getReferences doc pos inclDecl =
+  let ctx = ReferenceContext inclDecl
+      params = ReferenceParams doc pos ctx
+  in fromMaybe [] . (^. result) <$> sendRequest TextDocumentReferences params 

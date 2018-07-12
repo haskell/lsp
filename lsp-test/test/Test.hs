@@ -18,7 +18,7 @@ import           Language.Haskell.LSP.Messages
 import           Language.Haskell.LSP.Test
 import           Language.Haskell.LSP.Test.Replay
 import           Language.Haskell.LSP.Types.Capabilities
-import           Language.Haskell.LSP.Types hiding (capabilities, message)
+import           Language.Haskell.LSP.Types as LSP hiding (capabilities, message)
 import           System.Timeout
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
@@ -225,6 +225,19 @@ main = hspec $ do
         item ^. label `shouldBe` "interactWithUser"
         item ^. kind `shouldBe` Just CiFunction
         item ^. detail `shouldBe` Just "Items -> IO ()\nMain"
+
+  describe "getReferences" $
+    it "works" $ runSession "hie --lsp" "test/data/renamePass" $ do
+      doc <- openDoc "Desktop/simple.hs" "haskell"
+      let pos = Position 40 3 -- interactWithUser
+          uri = doc ^. LSP.uri
+      refs <- getReferences doc pos True
+      liftIO $ refs `shouldContain` map (Location uri) [
+          mkRange 41 0 41 16
+        , mkRange 75 6 75 22
+        , mkRange 71 6 71 22
+        ]
+    where mkRange sl sc el ec = Range (Position sl sc) (Position el ec)
 
 
 didChangeCaps :: ClientCapabilities
