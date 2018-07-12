@@ -239,12 +239,18 @@ main = hspec $ do
         ]
 
   describe "waitForDiagnosticsSource" $
-    it "works" $ runSession "hie --lsp" "test/data/error" $ do
+    it "works" $ runSession "hie --lsp" "test/data" $ do
       openDoc "Error.hs" "haskell"
       [diag] <- waitForDiagnosticsSource "ghcmod"
       liftIO $ do
         diag ^. severity `shouldBe` Just DsError
         diag ^. source `shouldBe` Just "ghcmod"
+
+  describe "rename" $
+    it "works" $ runSession "hie --lsp" "test/data" $ do
+      doc <- openDoc "Rename.hs" "haskell"
+      rename doc (Position 1 0) "bar"
+      documentContents doc >>= liftIO . shouldBe "main = bar\nbar = return 42\n"
 
 mkRange sl sc el ec = Range (Position sl sc) (Position el ec)
 

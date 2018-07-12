@@ -63,6 +63,8 @@ module Language.Haskell.LSP.Test
   , getCompletions
   -- ** References
   , getReferences
+  -- ** Renaming
+  , rename
   -- ** Edits
   , applyEdit
   ) where
@@ -422,15 +424,33 @@ getCompletions :: TextDocumentIdentifier -> Position -> Session [CompletionItem]
 getCompletions doc pos = do
   rsp <- sendRequest TextDocumentCompletion (TextDocumentPositionParams doc pos)
 
-  let exc = throw $ UnexpectedResponseError (rsp ^. LSP.id)
-                                            (fromJust $ rsp ^. LSP.error)
-      res = fromMaybe exc (rsp ^. result)
-  case res of
+  case getResponseResult rsp of
     Completions (List items) -> return items
     CompletionList (CompletionListType _ (List items)) -> return items
 
-getReferences :: TextDocumentIdentifier -> Position -> Bool -> Session [Location]
+-- | Returns the references for the position in the document.
+getReferences :: TextDocumentIdentifier -- ^ The document to lookup in.
+              -> Position -- ^ The position to lookup. 
+              -> Bool -- ^ Whether to include declarations as references.
+              -> Session [Location] -- ^ The locations of the references.
 getReferences doc pos inclDecl =
   let ctx = ReferenceContext inclDecl
       params = ReferenceParams doc pos ctx
   in fromMaybe [] . (^. result) <$> sendRequest TextDocumentReferences params 
+
+-- ^ Renames the term at the specified position.
+rename :: TextDocumentIdentifier -> Position -> String -> Session ()
+rename doc pos newName = do
+  let params = RenameParams doc pos (T.pack newName)
+  rsp <- sendRequest TextDocumentRename params :: Session RenameResponse
+  let wEdit = getResponseResult rsp
+      req = RequestMessage "" (IdInt 0) WorkspaceApplyEdit (ApplyWorkspaceEditParams wEdit)
+  updateState (ReqApplyWorkspaceEdit req)
+
+-- | Checks the response for errors and throws an exception if needed.
+-- Returns the result if successful.
+getResponseResult :: ResponseMessage a -> a 
+getResponseResult rsp = fromMaybe exc (rsp ^. result)
+  where exc = throw $ UnexpectedResponseError (rsp ^. LSP.id)
+                                              (fromJust $ rsp ^. LSP.error)
+
