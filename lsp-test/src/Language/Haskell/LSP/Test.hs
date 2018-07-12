@@ -52,6 +52,7 @@ module Language.Haskell.LSP.Test
   , getDocumentSymbols
   -- ** Diagnostics
   , waitForDiagnostics
+  , waitForDiagnosticsSource
   , noDiagnostics
   -- ** Commands
   , executeCommand
@@ -307,6 +308,17 @@ waitForDiagnostics = do
   diagsNot <- skipManyTill anyMessage message :: Session PublishDiagnosticsNotification
   let (List diags) = diagsNot ^. params . LSP.diagnostics
   return diags
+
+waitForDiagnosticsSource :: String -> Session [Diagnostic]
+waitForDiagnosticsSource src = do
+  diags <- waitForDiagnostics
+  let res = filter matches diags
+  if null res
+    then waitForDiagnosticsSource src
+    else return res
+  where
+    matches :: Diagnostic -> Bool
+    matches d = d ^. source == Just (T.pack src)
 
 -- | Expects a 'PublishDiagnosticsNotification' and throws an
 -- 'UnexpectedDiagnosticsException' if there are any diagnostics

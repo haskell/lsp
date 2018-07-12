@@ -237,8 +237,16 @@ main = hspec $ do
         , mkRange 75 6 75 22
         , mkRange 71 6 71 22
         ]
-    where mkRange sl sc el ec = Range (Position sl sc) (Position el ec)
 
+  describe "waitForDiagnosticsSource" $
+    it "works" $ runSession "hie --lsp" "test/data/error" $ do
+      openDoc "Error.hs" "haskell"
+      [diag] <- waitForDiagnosticsSource "ghcmod"
+      liftIO $ do
+        diag ^. severity `shouldBe` Just DsError
+        diag ^. source `shouldBe` Just "ghcmod"
+
+mkRange sl sc el ec = Range (Position sl sc) (Position el ec)
 
 didChangeCaps :: ClientCapabilities
 didChangeCaps = def { _workspace = Just workspaceCaps }
