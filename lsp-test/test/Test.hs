@@ -238,6 +238,13 @@ main = hspec $ do
         , mkRange 71 6 71 22
         ]
 
+  describe "getDefinitions" $
+    it "works" $ runSession "hie --lsp" "test/data/renamePass" $ do
+      doc <- openDoc "Desktop/simple.hs" "haskell"
+      let pos = Position 49 25 -- addItem
+      defs <- getDefinitions doc pos
+      liftIO $ defs `shouldBe` [Location (doc ^. uri) (mkRange 28 0 28 7)]
+
   describe "waitForDiagnosticsSource" $
     it "works" $ runSession "hie --lsp" "test/data" $ do
       openDoc "Error.hs" "haskell"

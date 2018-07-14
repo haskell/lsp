@@ -9,7 +9,9 @@
 -- Maintainer  : luke_lau@icloud.com
 -- Stability   : experimental
 --
--- A framework for testing <https://github.com/Microsoft/language-server-protocol Language Server Protocol servers> at the JSON level.
+-- A framework for testing
+-- <https://github.com/Microsoft/language-server-protocol Language Server Protocol servers>
+-- functionally.
 
 module Language.Haskell.LSP.Test
   (
@@ -63,6 +65,8 @@ module Language.Haskell.LSP.Test
   , getCompletions
   -- ** References
   , getReferences
+  -- ** Definitions
+  , getDefinitions
   -- ** Renaming
   , rename
   -- ** Edits
@@ -436,7 +440,15 @@ getReferences :: TextDocumentIdentifier -- ^ The document to lookup in.
 getReferences doc pos inclDecl =
   let ctx = ReferenceContext inclDecl
       params = ReferenceParams doc pos ctx
-  in fromMaybe [] . (^. result) <$> sendRequest TextDocumentReferences params 
+  in getResponseResult <$> sendRequest TextDocumentReferences params 
+
+-- | Returns the definition(s) for the term at the specified position.
+getDefinitions :: TextDocumentIdentifier -- ^ The document the term is in.
+               -> Position -- ^ The position the term is at.
+               -> Session [Location] -- ^ The location(s) of the definitions
+getDefinitions doc pos =
+  let params = TextDocumentPositionParams doc pos
+  in getResponseResult <$> sendRequest TextDocumentDefinition params
 
 -- ^ Renames the term at the specified position.
 rename :: TextDocumentIdentifier -> Position -> String -> Session ()
