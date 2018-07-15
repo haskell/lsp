@@ -101,6 +101,7 @@ data ClientMethod =
  | TextDocumentRangeFormatting
  | TextDocumentOnTypeFormatting
  | TextDocumentDefinition
+ | TextDocumentImplementation
  | TextDocumentCodeAction
  | TextDocumentCodeLens
  | CodeLensResolve
@@ -142,6 +143,7 @@ instance A.FromJSON ClientMethod where
   parseJSON (A.String "textDocument/rangeFormatting")     = return TextDocumentRangeFormatting
   parseJSON (A.String "textDocument/onTypeFormatting")    = return TextDocumentOnTypeFormatting
   parseJSON (A.String "textDocument/definition")          = return TextDocumentDefinition
+  parseJSON (A.String "textDocument/implementation")      = return TextDocumentImplementation
   parseJSON (A.String "textDocument/codeAction")          = return TextDocumentCodeAction
   parseJSON (A.String "textDocument/codeLens")            = return TextDocumentCodeLens
   parseJSON (A.String "codeLens/resolve")                 = return CodeLensResolve
@@ -183,6 +185,7 @@ instance A.ToJSON ClientMethod where
   toJSON TextDocumentRangeFormatting     = A.String "textDocument/rangeFormatting"
   toJSON TextDocumentOnTypeFormatting    = A.String "textDocument/onTypeFormatting"
   toJSON TextDocumentDefinition          = A.String "textDocument/definition"
+  toJSON TextDocumentImplementation      = A.String "textDocument/implementation"
   toJSON TextDocumentCodeAction          = A.String "textDocument/codeAction"
   toJSON TextDocumentCodeLens            = A.String "textDocument/codeLens"
   toJSON CodeLensResolve                 = A.String "codeLens/resolve"
