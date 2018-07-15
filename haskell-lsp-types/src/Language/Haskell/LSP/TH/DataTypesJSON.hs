@@ -2311,19 +2311,42 @@ Response:
 
 -- {"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{"textDocument":{"uri":"file:///tmp/Foo.hs"},"position":{"line":1,"character":8}}}
 
-data DefinitionResponseParams = SingleLoc Location | MultiLoc [Location]
+data LocationResponseParams = SingleLoc Location | MultiLoc [Location]
   deriving (Eq,Read,Show)
 
-instance A.ToJSON DefinitionResponseParams where
+instance A.ToJSON LocationResponseParams where
   toJSON (SingleLoc x) = toJSON x
   toJSON (MultiLoc xs) = toJSON xs
 
-instance A.FromJSON DefinitionResponseParams where
+instance A.FromJSON LocationResponseParams where
   parseJSON xs@(A.Array _) = MultiLoc <$> parseJSON xs
   parseJSON x              = SingleLoc <$> parseJSON x
 
-type DefinitionRequest  = RequestMessage ClientMethod TextDocumentPositionParams DefinitionResponseParams
-type DefinitionResponse = ResponseMessage DefinitionResponseParams
+type DefinitionRequest  = RequestMessage ClientMethod TextDocumentPositionParams LocationResponseParams
+type DefinitionResponse = ResponseMessage LocationResponseParams
+
+-- ---------------------------------------------------------------------
+
+{-
+Goto Implementation Request (:leftwards_arrow_with_hook:)
+Since version 3.6.0
+
+The goto implementation request is sent from the client to the server to resolve the implementation location of a symbol at a given text document position.
+
+Request:
+
+method: ‘textDocument/implementation’
+params: TextDocumentPositionParams
+Response:
+
+result: Location | Location[] | null
+error: code and message set in case an exception happens during the definition request.
+Registration Options: TextDocumentRegistrationOptions
+-}
+
+
+type ImplementationRequest  = RequestMessage ClientMethod TextDocumentPositionParams LocationResponseParams
+type ImplementationResponse = ResponseMessage LocationResponseParams
 
 -- ---------------------------------------------------------------------
 
