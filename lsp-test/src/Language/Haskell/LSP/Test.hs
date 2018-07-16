@@ -69,6 +69,8 @@ module Language.Haskell.LSP.Test
   , getDefinitions
   -- ** Renaming
   , rename
+  -- ** Hover
+  , getHover
   -- ** Edits
   , applyEdit
   ) where
@@ -458,6 +460,12 @@ rename doc pos newName = do
   let wEdit = getResponseResult rsp
       req = RequestMessage "" (IdInt 0) WorkspaceApplyEdit (ApplyWorkspaceEditParams wEdit)
   updateState (ReqApplyWorkspaceEdit req)
+
+-- ^ Returns the hover information at the specified position.
+getHover :: TextDocumentIdentifier -> Position -> Session (Maybe Hover)
+getHover doc pos = do
+  let params = TextDocumentPositionParams doc pos
+  getResponseResult <$> sendRequest TextDocumentHover params
 
 -- | Checks the response for errors and throws an exception if needed.
 -- Returns the result if successful.

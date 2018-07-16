@@ -7,6 +7,7 @@ import           Test.Hspec
 import           Data.Aeson
 import           Data.Default
 import qualified Data.HashMap.Strict as HM
+import           Data.Maybe
 import qualified Data.Text as T
 import           Control.Applicative.Combinators
 import           Control.Concurrent
@@ -258,6 +259,14 @@ main = hspec $ do
       doc <- openDoc "Rename.hs" "haskell"
       rename doc (Position 1 0) "bar"
       documentContents doc >>= liftIO . shouldBe "main = bar\nbar = return 42\n"
+
+  describe "getHover" $
+    it "works" $ runSession "hie --lsp" "test/data/renamePass" $ do
+      doc <- openDoc "Desktop/simple.hs" "haskell"
+      -- hover returns nothing until module is loaded
+      skipManyTill loggingNotification $ count 2 noDiagnostics
+      hover <- getHover doc (Position 45 9) -- putStrLn
+      liftIO $ hover `shouldSatisfy` isJust
 
 mkRange sl sc el ec = Range (Position sl sc) (Position el ec)
 
