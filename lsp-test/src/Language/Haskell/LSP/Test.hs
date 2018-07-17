@@ -71,6 +71,8 @@ module Language.Haskell.LSP.Test
   , rename
   -- ** Hover
   , getHover
+  -- ** Highlights
+  , getHighlights
   -- ** Edits
   , applyEdit
   ) where
@@ -463,9 +465,14 @@ rename doc pos newName = do
 
 -- ^ Returns the hover information at the specified position.
 getHover :: TextDocumentIdentifier -> Position -> Session (Maybe Hover)
-getHover doc pos = do
+getHover doc pos =
   let params = TextDocumentPositionParams doc pos
-  getResponseResult <$> sendRequest TextDocumentHover params
+  in getResponseResult <$> sendRequest TextDocumentHover params
+
+getHighlights :: TextDocumentIdentifier -> Position -> Session [DocumentHighlight]
+getHighlights doc pos =
+  let params = TextDocumentPositionParams doc pos
+  in getResponseResult <$> sendRequest TextDocumentDocumentHighlight params
 
 -- | Checks the response for errors and throws an exception if needed.
 -- Returns the result if successful.

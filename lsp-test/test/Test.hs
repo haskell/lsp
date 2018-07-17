@@ -267,6 +267,12 @@ main = hspec $ do
       skipManyTill loggingNotification $ count 2 noDiagnostics
       hover <- getHover doc (Position 45 9) -- putStrLn
       liftIO $ hover `shouldSatisfy` isJust
+  describe "getHighlights" $
+    it "works" $ runSession "hie --lsp" "test/data/renamePass" $ do
+      doc <- openDoc "Desktop/simple.hs" "haskell"
+      skipManyTill loggingNotification $ count 2 noDiagnostics
+      highlights <- getHighlights doc (Position 27 4) -- addItem
+      liftIO $ length highlights `shouldBe` 4
 
 mkRange sl sc el ec = Range (Position sl sc) (Position el ec)
 
