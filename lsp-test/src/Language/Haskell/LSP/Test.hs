@@ -73,6 +73,9 @@ module Language.Haskell.LSP.Test
   , getHover
   -- ** Highlights
   , getHighlights
+  -- ** Formatting
+  , formatDoc
+  , formatRange
   -- ** Edits
   , applyEdit
   ) where
@@ -463,12 +466,13 @@ rename doc pos newName = do
       req = RequestMessage "" (IdInt 0) WorkspaceApplyEdit (ApplyWorkspaceEditParams wEdit)
   updateState (ReqApplyWorkspaceEdit req)
 
--- ^ Returns the hover information at the specified position.
+-- | Returns the hover information at the specified position.
 getHover :: TextDocumentIdentifier -> Position -> Session (Maybe Hover)
 getHover doc pos =
   let params = TextDocumentPositionParams doc pos
   in getResponseResult <$> sendRequest TextDocumentHover params
 
+-- | Returns the highlighted occurences of the term at the specified position
 getHighlights :: TextDocumentIdentifier -> Position -> Session [DocumentHighlight]
 getHighlights doc pos =
   let params = TextDocumentPositionParams doc pos
@@ -480,4 +484,24 @@ getResponseResult :: ResponseMessage a -> a
 getResponseResult rsp = fromMaybe exc (rsp ^. result)
   where exc = throw $ UnexpectedResponseError (rsp ^. LSP.id)
                                               (fromJust $ rsp ^. LSP.error)
+
+-- | Applies formatting to the specified document.
+formatDoc :: TextDocumentIdentifier -> FormattingOptions -> Session ()
+formatDoc doc opts = do
+  let params = DocumentFormattingParams doc opts
+  edits <- getResponseResult <$> sendRequest TextDocumentFormatting params
+  applyTextEdits doc edits
+
+-- | Applies formatting to the specified range in a document.
+formatRange :: TextDocumentIdentifier -> FormattingOptions -> Range -> Session ()
+formatRange doc opts range = do
+  let params = DocumentRangeFormattingParams doc range opts
+  edits <- getResponseResult <$> sendRequest TextDocumentRangeFormatting params
+  applyTextEdits doc edits
+
+applyTextEdits :: TextDocumentIdentifier -> List TextEdit -> Session ()
+applyTextEdits doc edits =
+  let wEdit = WorkspaceEdit (Just (HashMap.singleton (doc ^. uri) edits)) Nothing
+      req = RequestMessage "" (IdInt 0) WorkspaceApplyEdit (ApplyWorkspaceEditParams wEdit)
+  in updateState (ReqApplyWorkspaceEdit req)
 

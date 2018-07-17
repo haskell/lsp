@@ -208,7 +208,6 @@ updateState (NotPublishDiagnostics n) = do
 
 updateState (ReqApplyWorkspaceEdit r) = do
 
-
   allChangeParams <- case r ^. params . edit . documentChanges of
     Just (List cs) -> do
       mapM_ (checkIfNeedsOpened . (^. textDocument . uri)) cs

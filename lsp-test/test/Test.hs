@@ -267,12 +267,27 @@ main = hspec $ do
       skipManyTill loggingNotification $ count 2 noDiagnostics
       hover <- getHover doc (Position 45 9) -- putStrLn
       liftIO $ hover `shouldSatisfy` isJust
+
   describe "getHighlights" $
     it "works" $ runSession "hie --lsp" "test/data/renamePass" $ do
       doc <- openDoc "Desktop/simple.hs" "haskell"
       skipManyTill loggingNotification $ count 2 noDiagnostics
       highlights <- getHighlights doc (Position 27 4) -- addItem
       liftIO $ length highlights `shouldBe` 4
+
+  describe "formatDoc" $
+    it "works" $ runSession "hie --lsp" "test/data" $ do
+      doc <- openDoc "Format.hs" "haskell"
+      oldContents <- documentContents doc
+      formatDoc doc (FormattingOptions 4 True)
+      documentContents doc >>= liftIO . (`shouldNotBe` oldContents)
+
+  describe "formatRange" $
+    it "works" $ runSession "hie --lsp" "test/data" $ do
+      doc <- openDoc "Format.hs" "haskell"
+      oldContents <- documentContents doc
+      formatRange doc (FormattingOptions 4 True) (Range (Position 1 10) (Position 2 10))
+      documentContents doc >>= liftIO . (`shouldNotBe` oldContents)
 
 mkRange sl sc el ec = Range (Position sl sc) (Position el ec)
 
