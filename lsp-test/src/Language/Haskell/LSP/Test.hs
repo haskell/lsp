@@ -46,6 +46,7 @@ module Language.Haskell.LSP.Test
   , initializeResponse
   -- ** Documents
   , openDoc
+  , closeDoc
   , documentContents
   , getDocumentEdit
   , getDocUri
@@ -307,6 +308,17 @@ openDoc file languageId = do
     let fp = rootDir context </> file
     contents <- liftIO $ T.readFile fp
     return $ TextDocumentItem (filePathToUri fp) (T.pack languageId) 0 contents
+
+-- | Closes a text document and sends a notification to the client.
+closeDoc :: TextDocumentIdentifier -> Session ()
+closeDoc docId = do
+  let params = DidCloseTextDocumentParams (TextDocumentIdentifier (docId ^. uri))
+  sendNotification TextDocumentDidClose params
+
+  oldVfs <- vfs <$> get
+  let notif = NotificationMessage "" TextDocumentDidClose params
+  newVfs <- liftIO $ closeVFS oldVfs notif
+  modify $ \s -> s { vfs = newVfs }
 
 -- | Gets the Uri for the file corrected to the session directory.
 getDocUri :: FilePath -> Session Uri

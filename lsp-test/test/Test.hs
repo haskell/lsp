@@ -289,6 +289,16 @@ main = hspec $ do
       formatRange doc (FormattingOptions 4 True) (Range (Position 1 10) (Position 2 10))
       documentContents doc >>= liftIO . (`shouldNotBe` oldContents)
 
+  describe "closeDoc" $
+    it "works" $
+      let sesh =
+            runSession "hie --lsp" "test/data" $ do
+              doc <- openDoc "Format.hs" "haskell"
+              closeDoc doc
+              -- need to evaluate to throw
+              documentContents doc >>= liftIO . print
+      in sesh `shouldThrow` anyException
+
 mkRange sl sc el ec = Range (Position sl sc) (Position el ec)
 
 didChangeCaps :: ClientCapabilities
