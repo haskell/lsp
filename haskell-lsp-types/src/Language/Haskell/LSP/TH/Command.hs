@@ -6,6 +6,7 @@ import           Data.Aeson
 import           Data.Aeson.TH
 import           Data.Text
 import           Language.Haskell.LSP.TH.Constants
+import           Language.Haskell.LSP.TH.List
 -- ---------------------------------------------------------------------
 {-
 Command
@@ -38,7 +39,7 @@ data Command =
   Command
     { _title     :: Text
     , _command   :: Text
-    , _arguments :: Maybe Value
+    , _arguments :: Maybe (List Value)
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''Command

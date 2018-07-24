@@ -260,7 +260,7 @@ reactor lf inp = do
               -- NOTE: the cmd needs to be registered via the InitializeResponse message. See lspOptions above
               cmd = "lsp-hello-command"
               -- need 'file' and 'start_pos'
-              args = J.Array$ V.fromList
+              args = J.List
                       [ J.Object $ H.fromList [("file",     J.Object $ H.fromList [("textDocument",J.toJSON doc)])]
                       , J.Object $ H.fromList [("start_pos",J.Object $ H.fromList [("position",    J.toJSON start)])]
                       ]
