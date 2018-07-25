@@ -1,5 +1,9 @@
 # Revision history for haskell-lsp
 
+## 0.5.0.0
+
+* Update Command.arguments to match specification
+
 ## 0.4.0.0  -- 2018-07-10
 
 * CodeAction support as per v3.8 of the specification, by @Bubba
