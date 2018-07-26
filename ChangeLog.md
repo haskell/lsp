@@ -1,6 +1,6 @@
 # Revision history for haskell-lsp
 
-## 0.5.0.0
+## 0.5.0.0  -- 2018-xx-xx
 
 * Update Command.arguments to match specification
 
