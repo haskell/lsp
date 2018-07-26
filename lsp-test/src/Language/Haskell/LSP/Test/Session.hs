@@ -35,6 +35,7 @@ import Control.Monad.Trans.State (StateT, runStateT)
 import qualified Control.Monad.Trans.State as State (get, put)
 import qualified Data.ByteString.Lazy.Char8 as B
 import Data.Aeson
+import Data.Aeson.Encode.Pretty
 import Data.Conduit as Conduit
 import Data.Conduit.Parser as Parser
 import Data.Default
@@ -276,10 +277,12 @@ updateState _ = return ()
 sendMessage :: (MonadIO m, HasReader SessionContext m, ToJSON a) => a -> m ()
 sendMessage msg = do
   h <- serverIn <$> ask
-  let encoded = encode msg
-  liftIO $ do
+  let encoded = encodePretty msg
 
-    setSGR [SetColor Foreground Vivid Cyan]
+  shouldLog <- asks $ logMessages . config
+  liftIO $ when shouldLog $ do
+  
+    setSGR [SetColor Foreground Dull Cyan]
     putStrLn $ "--> " ++ B.unpack encoded
     setSGR [Reset]
 

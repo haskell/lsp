@@ -26,6 +26,7 @@ library
   build-depends:       base >= 4.7 && < 5
                      , haskell-lsp >= 0.4
                      , aeson
+                     , aeson-pretty
                      , ansi-terminal
                      , bytestring
                      , conduit
