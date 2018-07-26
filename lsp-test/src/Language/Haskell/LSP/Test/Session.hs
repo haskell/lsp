@@ -72,13 +72,13 @@ type Session = ParserStateReader FromServerMessage SessionState SessionContext I
 -- | Stuff you can configure for a 'Session'.
 data SessionConfig = SessionConfig
   {
-    capabilities :: ClientCapabilities -- ^ Specific capabilities the client should advertise. Default is yes to everything.
-  , messageTimeout :: Int -- ^ Maximum time to wait for a message in seconds. Defaults to 60.
-  , logStdErr :: Bool -- ^ When True redirects the servers stderr output to haskell-lsp-test's stdout. Defaults to False
+    messageTimeout :: Int -- ^ Maximum time to wait for a message in seconds. Defaults to 60.
+  , logStdErr :: Bool -- ^ When True redirects the servers stderr output to haskell-lsp-test's stdout. Defaults to False.
+  , logMessages :: Bool -- ^ When True traces the communication between client and server to stdout. Defaults to True.
   }
 
 instance Default SessionConfig where
-  def = SessionConfig def 60 False
+  def = SessionConfig 60 False True
 
 data SessionMessage = ServerMessage FromServerMessage
                     | TimeoutMessage Int
@@ -92,6 +92,7 @@ data SessionContext = SessionContext
   , requestMap :: MVar RequestMap
   , initRsp :: MVar InitializeResponse
   , config :: SessionConfig
+  , sessionCapabilities :: ClientCapabilities
   }
 
 class Monad m => HasReader r m where
@@ -170,10 +171,11 @@ runSessionWithHandles :: Handle -- ^ Server in
                       -> Handle -- ^ Server out
                       -> (Handle -> SessionContext -> IO ()) -- ^ Server listener
                       -> SessionConfig
-                      -> FilePath
+                      -> ClientCapabilities
+                      -> FilePath -- ^ Root directory
                       -> Session a
                       -> IO a
-runSessionWithHandles serverIn serverOut serverHandler config rootDir session = do
+runSessionWithHandles serverIn serverOut serverHandler config caps rootDir session = do
   absRootDir <- canonicalizePath rootDir
 
   hSetBuffering serverIn  NoBuffering
@@ -183,7 +185,7 @@ runSessionWithHandles serverIn serverOut serverHandler config rootDir session = 
   messageChan <- newChan
   initRsp <- newEmptyMVar
 
-  let context = SessionContext serverIn absRootDir messageChan reqMap initRsp config
+  let context = SessionContext serverIn absRootDir messageChan reqMap initRsp config caps
       initState = SessionState (IdInt 0) mempty mempty 0 False Nothing
 
   threadId <- forkIO $ void $ serverHandler serverOut context

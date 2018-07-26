@@ -61,6 +61,7 @@ replaySession serverExe sessionDir = do
                             serverOut
                             (listenServer serverMsgs requestMap reqSema rspSema passSema mainThread)
                             def
+                            fullCaps
                             sessionDir
                             (sendMessages clientMsgs reqSema rspSema)
     takeMVar passSema
