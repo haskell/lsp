@@ -36,5 +36,5 @@ before_install:
   - npm update
   - npm i -g javascript-typescript-langserver
 
-# script:
-#   - stack --no-terminal --skip-ghc-check test
+script:
+  - cabal new-test -O2
