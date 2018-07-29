@@ -37,4 +37,5 @@ before_install:
   - npm i -g javascript-typescript-langserver
 
 script:
+  - cabal new-configure
   - cabal new-test -O2
