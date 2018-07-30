@@ -6,6 +6,7 @@
 module Language.Haskell.LSP.Test.Session
   ( Session
   , SessionConfig(..)
+  , defaultConfig
   , SessionMessage(..)
   , SessionContext(..)
   , SessionState(..)
@@ -19,6 +20,8 @@ module Language.Haskell.LSP.Test.Session
   , sendMessage
   , updateState
   , withTimeout
+  , logMsg
+  , LogMsgType(..)
   )
 
 where
@@ -72,14 +75,17 @@ type Session = ParserStateReader FromServerMessage SessionState SessionContext I
 
 -- | Stuff you can configure for a 'Session'.
 data SessionConfig = SessionConfig
-  {
-    messageTimeout :: Int -- ^ Maximum time to wait for a message in seconds. Defaults to 60.
-  , logStdErr :: Bool -- ^ When True redirects the servers stderr output to haskell-lsp-test's stdout. Defaults to False.
-  , logMessages :: Bool -- ^ When True traces the communication between client and server to stdout. Defaults to True.
+  { messageTimeout :: Int  -- ^ Maximum time to wait for a message in seconds, defaults to 60.
+  , logStdErr      :: Bool -- ^ Redirect the server's stderr to this stdout, defaults to False.
+  , logMessages    :: Bool -- ^ Trace the messages sent and received to stdout, defaults to True.
+  , logColor       :: Bool -- ^ Add ANSI color to the logged messages, defaults to True.
   }
 
+defaultConfig :: SessionConfig
+defaultConfig = SessionConfig 60 False True True
+
 instance Default SessionConfig where
-  def = SessionConfig 60 False True
+  def = defaultConfig
 
 data SessionMessage = ServerMessage FromServerMessage
                     | TimeoutMessage Int
@@ -157,7 +163,6 @@ runSession context state session = runReaderT (runStateT conduit state) context
       msg <- liftIO $ readChan (messageChan context)
       yield msg
       chanSource
-
 
     watchdog :: ConduitM SessionMessage FromServerMessage (StateT SessionState (ReaderT SessionContext IO)) ()
     watchdog = Conduit.awaitForever $ \msg -> do
@@ -277,16 +282,8 @@ updateState _ = return ()
 sendMessage :: (MonadIO m, HasReader SessionContext m, ToJSON a) => a -> m ()
 sendMessage msg = do
   h <- serverIn <$> ask
-  let encoded = encodePretty msg
-
-  shouldLog <- asks $ logMessages . config
-  liftIO $ when shouldLog $ do
-  
-    setSGR [SetColor Foreground Dull Cyan]
-    putStrLn $ "--> " ++ B.unpack encoded
-    setSGR [Reset]
-
-    B.hPut h (addHeader encoded)
+  logMsg LogClient msg
+  liftIO $ B.hPut h (addHeader $ encode msg)
 
 -- | Execute a block f that will throw a 'TimeoutException'
 -- after duration seconds. This will override the global timeout
@@ -304,3 +301,36 @@ withTimeout duration f = do
                      overridingTimeout = False 
                    }
   return res
+
+-- logClientMsg :: (MonadIO m, HasReader SessionContext m)
+--              => FromClientMessage -> m ()
+-- logClientMsg = logMsg True
+
+-- logServerMsg :: (MonadIO m, HasReader SessionContext m)
+--              => FromServerMessage -> m ()
+-- logServerMsg = logMsg False
+
+data LogMsgType = LogServer | LogClient
+  deriving Eq
+
+-- | Logs the message if the config specified it
+logMsg :: (ToJSON a, MonadIO m, HasReader SessionContext m)
+       => LogMsgType -> a -> m ()
+logMsg t msg = do
+  shouldLog <- asks $ logMessages . config
+  shouldColor <- asks $ logColor . config
+  liftIO $ when shouldLog $ do
+    when shouldColor $ setSGR [SetColor Foreground Dull color]
+    putStrLn $ arrow ++ showPretty msg
+    when shouldColor $ setSGR [Reset]
+
+  where arrow
+          | t == LogServer  = "<-- "
+          | otherwise       = "--> "
+        color
+          | t == LogServer  = Magenta
+          | otherwise       = Cyan
+  
+
+showPretty :: ToJSON a => a -> String
+showPretty = B.unpack . encodePretty

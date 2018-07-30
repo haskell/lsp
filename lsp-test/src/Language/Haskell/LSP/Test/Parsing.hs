@@ -10,7 +10,6 @@ import Control.Lens
 import Control.Monad.IO.Class
 import Control.Monad
 import Data.Aeson
-import Data.Aeson.Encode.Pretty
 import qualified Data.ByteString.Lazy.Char8 as B
 import Data.Conduit.Parser
 import Data.Maybe
@@ -20,7 +19,6 @@ import Language.Haskell.LSP.Messages
 import Language.Haskell.LSP.Types as LSP hiding (error)
 import Language.Haskell.LSP.Test.Messages
 import Language.Haskell.LSP.Test.Session
-import System.Console.ANSI
 
 satisfy :: (FromServerMessage -> Bool) -> Session FromServerMessage
 satisfy pred = do
@@ -43,11 +41,7 @@ satisfy pred = do
 
   if pred x
     then do
-      shouldLog <- asks $ logMessages . config
-      liftIO $ when shouldLog $ do
-        setSGR [SetColor Foreground Dull Magenta]
-        putStrLn $ "<-- " ++ B.unpack (encodeMsgPretty x)
-        setSGR [Reset]
+      logMsg LogServer x
       return x
     else empty
 
@@ -87,9 +81,6 @@ castMsg = fromMaybe (error "Failed casting a message") . decode . encodeMsg
 -- weren't wrapped.
 encodeMsg :: FromServerMessage -> B.ByteString
 encodeMsg = encode . genericToJSON (defaultOptions { sumEncoding = UntaggedValue })
-
-encodeMsgPretty :: FromServerMessage -> B.ByteString
-encodeMsgPretty = encodePretty . genericToJSON (defaultOptions { sumEncoding = UntaggedValue })
 
 -- | Matches if the message is a log message notification or a show message notification/request.
 loggingNotification :: Session FromServerMessage

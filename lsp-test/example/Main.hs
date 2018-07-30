@@ -3,7 +3,7 @@ import Control.Monad.IO.Class
 import Language.Haskell.LSP.Test
 import Language.Haskell.LSP.Types
 
-main = runSession "hie --lsp" fullCaps "test/recordings/renamePass" $ do
+main = runSession "hie --lsp" fullCaps "test/data/renamePass" $ do
   docItem <- openDoc "Desktop/simple.hs" "haskell"
   
   -- Use your favourite favourite combinators.
