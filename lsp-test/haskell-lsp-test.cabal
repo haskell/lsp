@@ -33,6 +33,7 @@ library
                      , conduit-parse
                      , containers
                      , data-default
+                     , Diff
                      , directory
                      , filepath
                      , lens
