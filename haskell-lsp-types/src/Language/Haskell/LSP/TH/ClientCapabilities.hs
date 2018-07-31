@@ -7,6 +7,7 @@ import           Data.Aeson.TH
 import qualified Data.Aeson as A
 import Language.Haskell.LSP.TH.Constants
 import Language.Haskell.LSP.TH.CodeAction
+import Language.Haskell.LSP.TH.Completion
 import Language.Haskell.LSP.TH.List
 import Language.Haskell.LSP.TH.MarkupContent
 import Language.Haskell.LSP.TH.Symbol
@@ -639,6 +640,7 @@ data CompletionItemKindClientCapabilities =
       --  to a default value when unknown.
       _valueSet :: Maybe (List CompletionItemKind)
     }
+  deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''CompletionItemKindClientCapabilities)
 
@@ -671,6 +673,7 @@ data SignatureInformationClientCapabilities =
       -- property. The order describes the preferred format of the client.
       documentationFormat :: Maybe (List MarkupKind)
     }
+  deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''SignatureInformationClientCapabilities)
 
@@ -718,7 +721,9 @@ data DocumentSymbolKindClientCapabilities =
       --  the initial version of the protocol.
       _valueSet :: Maybe (List SymbolKind)
     }
+  deriving (Show, Read, Eq)
 
+$(deriveJSON lspOptions ''DocumentSymbolKindClientCapabilities)
 
 data DocumentSymbolClientCapabilities =
   DocumentSymbolClientCapabilities

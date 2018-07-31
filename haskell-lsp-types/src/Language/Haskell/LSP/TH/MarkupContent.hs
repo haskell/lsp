@@ -12,6 +12,7 @@ module Language.Haskell.LSP.TH.MarkupContent where
 import           Data.Aeson
 import           Data.Aeson.TH
 import           Data.Text                                      (Text)
+import           Language.Haskell.LSP.TH.Constants
 
 {-
 /**
@@ -117,3 +118,5 @@ data MarkupContent =
     , _value :: Text -- ^ The content itself
     }
   deriving (Read, Show, Eq)
+
+deriveJSON lspOptions ''MarkupContent
