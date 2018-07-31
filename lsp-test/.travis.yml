@@ -41,7 +41,8 @@ before_install:
   - npm i -g javascript-typescript-langserver
 
 script:
-  - pwd
-  - ls -a
-  - cabal configure --enable-tests
-  - cabal test -j2 --show-details=streaming
+ - stack test
+  # - pwd
+  # - ls -a
+  # - cabal configure --enable-tests
+  # - cabal test -j2 --show-details=streaming
