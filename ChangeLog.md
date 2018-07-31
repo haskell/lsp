@@ -3,6 +3,7 @@
 ## 0.5.0.0  -- 2018-xx-xx
 
 * Update Command.arguments to match specification
+* Add TextDocumentClientCapabilities.publishDiagnostics
 
 ## 0.4.0.0  -- 2018-07-10
 

@@ -44,7 +44,7 @@ library
                      , filepath
                      , hslogger
                      , hashable
-                     , haskell-lsp-types >= 0.4
+                     , haskell-lsp-types >= 0.5
                      , lens >= 4.15.2
                      , mtl
                      , network-uri

@@ -353,6 +353,16 @@ export interface TextDocumentClientCapabilities {
                  */
                 dynamicRegistration?: boolean;
         };
+
+        /**
+	 * Capabilities specific to `textDocument/publishDiagnostics`.
+	 */
+	publishDiagnostics?: {
+		/**
+		 * Whether the clients accepts diagnostics with related information.
+		 */
+		relatedInformation?: boolean;
+	};
 }
 
 -}
@@ -552,6 +562,13 @@ data RenameClientCapabilities =
 
 $(deriveJSON lspOptions ''RenameClientCapabilities)
 
+data PublishDiagnosticsClientCapabilities =
+  PublishDiagnosticsClientCapabilities
+    { _relatedInformation :: Maybe Bool
+    } deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''PublishDiagnosticsClientCapabilities)
+
 -- -------------------------------------
 
 data TextDocumentClientCapabilities =
@@ -599,12 +616,15 @@ data TextDocumentClientCapabilities =
 
       -- | Capabilities specific to the `textDocument/rename`
     , _rename :: Maybe RenameClientCapabilities
+
+      -- | Capabilities specific to `textDocument/publishDiagnostics`
+    , _publishDiagnostics :: Maybe PublishDiagnosticsClientCapabilities
     } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''TextDocumentClientCapabilities)
 
 instance Default TextDocumentClientCapabilities where
-  def = TextDocumentClientCapabilities def def def def def def def
+  def = TextDocumentClientCapabilities def def def def def def def def
                                        def def def def def def def def
 
 -- ---------------------------------------------------------------------
