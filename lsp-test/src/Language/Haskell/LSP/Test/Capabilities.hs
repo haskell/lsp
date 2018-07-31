@@ -13,41 +13,45 @@ data LSPVersion = LSPVersion Int -- ^ Major
                              Int -- ^ Minor
 
 -- | Capabilities for full conformance to the LSP specification up until a version.
+-- Some important milestones:
+--
+-- * 3.8 codeAction literals
+-- * 3.0 dynamic registration
 capsForVersion :: LSPVersion -> ClientCapabilities
 capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) Nothing
   where
     w = WorkspaceClientCapabilities
           (Just True)
           (Just (WorkspaceEditClientCapabilities (Just True)))
-          (Just (DidChangeConfigurationClientCapabilities (Just True)))
-          (Just (DidChangeWatchedFilesClientCapabilities (Just True)))
-          (Just (SymbolClientCapabilities (Just True)))
-          (Just (ExecuteClientCapabilities (Just True)))
+          (Just (DidChangeConfigurationClientCapabilities dynamicReg))
+          (Just (DidChangeWatchedFilesClientCapabilities dynamicReg))
+          (Just (SymbolClientCapabilities dynamicReg))
+          (Just (ExecuteClientCapabilities dynamicReg))
     td = TextDocumentClientCapabilities
           (Just sync)
           (Just (CompletionClientCapabilities 
-                  (Just True)
+                  dynamicReg
                   (Just (CompletionItemClientCapabilities (Just True)))))
-          (Just (HoverClientCapabilities (Just True)))
-          (Just (SignatureHelpClientCapabilities (Just True)))
-          (Just (ReferencesClientCapabilities (Just True)))
-          (Just (DocumentHighlightClientCapabilities (Just True)))
-          (Just (DocumentSymbolClientCapabilities (Just True)))
+          (Just (HoverClientCapabilities dynamicReg))
+          (Just (SignatureHelpClientCapabilities dynamicReg))
+          (Just (ReferencesClientCapabilities dynamicReg))
+          (Just (DocumentHighlightClientCapabilities dynamicReg))
+          (Just (DocumentSymbolClientCapabilities dynamicReg))
           (Just (FormattingClientCapabilities (Just True)))
-          (Just (RangeFormattingClientCapabilities (Just True)))
-          (Just (OnTypeFormattingClientCapabilities (Just True)))
-          (Just (DefinitionClientCapabilities (Just True)))
+          (Just (RangeFormattingClientCapabilities dynamicReg))
+          (Just (OnTypeFormattingClientCapabilities dynamicReg))
+          (Just (DefinitionClientCapabilities dynamicReg))
           (Just codeAction)
-          (Just (CodeLensClientCapabilities (Just True)))
-          (Just (DocumentLinkClientCapabilities (Just True)))
-          (Just (RenameClientCapabilities (Just True)))
+          (Just (CodeLensClientCapabilities dynamicReg))
+          (Just (DocumentLinkClientCapabilities dynamicReg))
+          (Just (RenameClientCapabilities dynamicReg))
     sync = SynchronizationTextDocumentClientCapabilities
-            (Just True)
+            dynamicReg
             (Just True)
             (Just True)
             (Just True)
     codeAction = CodeActionClientCapabilities
-                  (Just True)
+                  dynamicReg
                   codeActionLiterals
     codeActionLiterals
       | maj >= 3 && min >= 8 = Just (CodeActionLiteralSupport kinds)
@@ -61,3 +65,6 @@ capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) Noth
                     , CodeActionSource
                     , CodeActionSourceOrganizeImports
                     ])
+    dynamicReg
+      | maj >= 3  = Just True
+      | otherwise = Nothing
