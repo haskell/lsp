@@ -17,6 +17,7 @@ module Language.Haskell.LSP.TH.DataTypesJSON
     , module Language.Haskell.LSP.TH.Diagnostic
     , module Language.Haskell.LSP.TH.List
     , module Language.Haskell.LSP.TH.Location
+    , module Language.Haskell.LSP.TH.MarkupContent
     , module Language.Haskell.LSP.TH.Message
     , module Language.Haskell.LSP.TH.Symbol
     , module Language.Haskell.LSP.TH.TextDocumentIdentifier

@@ -27,6 +27,7 @@ library
                      , Language.Haskell.LSP.TH.Diagnostic
                      , Language.Haskell.LSP.TH.List
                      , Language.Haskell.LSP.TH.Location
+                     , Language.Haskell.LSP.TH.MarkupContent
                      , Language.Haskell.LSP.TH.Message
                      , Language.Haskell.LSP.TH.Symbol
                      , Language.Haskell.LSP.TH.TextDocumentIdentifier
