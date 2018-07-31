@@ -8,6 +8,7 @@ import qualified Data.Aeson as A
 import Language.Haskell.LSP.TH.Constants
 import Language.Haskell.LSP.TH.CodeAction
 import Language.Haskell.LSP.TH.List
+import Language.Haskell.LSP.TH.Symbol
 import Data.Default
 
 -- ---------------------------------------------------------------------
@@ -15,68 +16,96 @@ import Data.Default
 New in 3.0
 ----------
 
-WorkspaceClientCapabilities
-
-define capabilities the editor / tool provides on the workspace:
 /**
  * Workspace specific client capabilities.
  */
 export interface WorkspaceClientCapabilities {
-        /**
-         * The client supports applying batch edits to the workspace by supporting
-         * the request 'workspace/applyEdit'
-         */
-        applyEdit?: boolean;
+	/**
+	 * The client supports applying batch edits to the workspace by supporting
+	 * the request 'workspace/applyEdit'
+	 */
+	applyEdit?: boolean;
 
-        /**
-         * Capabilities specific to `WorkspaceEdit`s
-         */
-        workspaceEdit?: {
-                /**
-                 * The client supports versioned document changes in `WorkspaceEdit`s
-                 */
-                documentChanges?: boolean;
-        };
+	/**
+	 * Capabilities specific to `WorkspaceEdit`s
+	 */
+	workspaceEdit?: {
+		/**
+		 * The client supports versioned document changes in `WorkspaceEdit`s
+		 */
+		documentChanges?: boolean;
+	};
 
-        /**
-         * Capabilities specific to the `workspace/didChangeConfiguration` notification.
-         */
-        didChangeConfiguration?: {
-                /**
-                 * Did change configuration notification supports dynamic registration.
-                 */
-                dynamicRegistration?: boolean;
-        };
+	/**
+	 * Capabilities specific to the `workspace/didChangeConfiguration` notification.
+	 */
+	didChangeConfiguration?: {
+		/**
+		 * Did change configuration notification supports dynamic registration.
+		 */
+		dynamicRegistration?: boolean;
+	};
 
-        /**
-         * Capabilities specific to the `workspace/didChangeWatchedFiles` notification.
-         */
-        didChangeWatchedFiles?: {
-                /**
-                 * Did change watched files notification supports dynamic registration.
-                 */
-                dynamicRegistration?: boolean;
-        };
+	/**
+	 * Capabilities specific to the `workspace/didChangeWatchedFiles` notification.
+	 */
+	didChangeWatchedFiles?: {
+		/**
+		 * Did change watched files notification supports dynamic registration.
+		 */
+		dynamicRegistration?: boolean;
+	};
 
-        /**
-         * Capabilities specific to the `workspace/symbol` request.
-         */
-        symbol?: {
-                /**
-                 * Symbol request supports dynamic registration.
-                 */
-                dynamicRegistration?: boolean;
-        };
+	/**
+	 * Capabilities specific to the `workspace/symbol` request.
+	 */
+	symbol?: {
+		/**
+		 * Symbol request supports dynamic registration.
+		 */
+		dynamicRegistration?: boolean;
 
-        /**
-         * Capabilities specific to the `workspace/executeCommand` request.
-         */
-        executeCommand?: {
-                /**
-                 * Execute command supports dynamic registration.
-                 */
-                dynamicRegistration?: boolean;
-        };
+		/**
+		 * Specific capabilities for the `SymbolKind` in the `workspace/symbol` request.
+		 */
+		symbolKind?: {
+			/**
+			 * The symbol kind values the client supports. When this
+			 * property exists the client also guarantees that it will
+			 * handle values outside its set gracefully and falls back
+			 * to a default value when unknown.
+			 *
+			 * If this property is not present the client only supports
+			 * the symbol kinds from `File` to `Array` as defined in
+			 * the initial version of the protocol.
+			 */
+			valueSet?: SymbolKind[];
+		}
+	};
+
+	/**
+	 * Capabilities specific to the `workspace/executeCommand` request.
+	 */
+	executeCommand?: {
+		/**
+		 * Execute command supports dynamic registration.
+		 */
+		dynamicRegistration?: boolean;
+	};
+
+	/**
+	 * The client has support for workspace folders.
+	 *
+	 * Since 3.6.0
+	 */
+	workspaceFolders?: boolean;
+
+	/**
+	 * The client supports `workspace/configuration` requests.
+	 *
+	 * Since 3.6.0
+	 */
+	configuration?: boolean;
 }
 -}
 
@@ -114,10 +143,48 @@ $(deriveJSON lspOptions ''DidChangeWatchedFilesClientCapabilities)
 
 -- -------------------------------------
 
+data SymbolKindCapabilities =
+  SymbolKindCapabilities
+   { -- | The symbol kind values the client supports. When this
+     -- property exists the client also guarantees that it will
+     -- handle values outside its set gracefully and falls back
+     -- to a default value when unknown.
+     -- 
+     -- If this property is not present the client only supports
+     -- the symbol kinds from `File` to `Array` as defined in
+     -- the initial version of the protocol. 
+     _valueSet :: List SymbolKind
+   } deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''SymbolKindCapabilities)
+
+instance Default SymbolKindCapabilities where
+  def = SymbolKindCapabilities (List allKinds)
+    where allKinds = [ SkFile
+                     , SkModule
+                     , SkNamespace
+                     , SkPackage
+                     , SkClass
+                     , SkMethod
+                     , SkProperty
+                     , SkField
+                     , SkConstructor
+                     , SkEnum
+                     , SkInterface
+                     , SkFunction
+                     , SkVariable
+                     , SkConstant
+                     , SkString
+                     , SkNumber
+                     , SkBoolean
+                     , SkArray
+                     ]
+
 data SymbolClientCapabilities =
   SymbolClientCapabilities
     { _dynamicRegistration :: Maybe Bool -- ^Symbol request supports dynamic
                                          -- registration.
+    , _symbolKind :: SymbolKindCapabilities -- ^ Specific capabilities for the `SymbolKind`.
     } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''SymbolClientCapabilities)
@@ -154,12 +221,18 @@ data WorkspaceClientCapabilities =
 
       -- | Capabilities specific to the `workspace/executeCommand` request.
     , _executeCommand :: Maybe ExecuteClientCapabilities
+
+      -- | The client has support for workspace folders.
+    , _workspaceFolders :: Maybe Bool
+
+      -- | The client supports `workspace/configuration` requests.
+    , _configuration :: Maybe Bool
     } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''WorkspaceClientCapabilities)
 
 instance Default WorkspaceClientCapabilities where
-  def = WorkspaceClientCapabilities def def def def def def
+  def = WorkspaceClientCapabilities def def def def def def def def
 
 -- ---------------------------------------------------------------------
 {-
@@ -490,13 +563,19 @@ $(deriveJSON lspOptions ''DefinitionClientCapabilities)
 
 -- -------------------------------------
 
-data CodeActionKindValueSet =
-  CodeActionKindValueSet
-   { _valueSet :: List CodeActionKind
+data CodeActionKindCapabilities =
+  CodeActionKindCapabilities
+   { -- | The code action kind values the client supports. When this
+     -- property exists the client also guarantees that it will
+     -- handle values outside its set gracefully and falls back
+     -- to a default value when unknown.
+      _valueSet :: List CodeActionKind
    } deriving (Show, Read, Eq)
 
-instance Default CodeActionKindValueSet where
-  def = CodeActionKindValueSet (List allKinds)
+$(deriveJSON lspOptions ''CodeActionKindCapabilities)
+
+instance Default CodeActionKindCapabilities where
+  def = CodeActionKindCapabilities (List allKinds)
     where allKinds = [ CodeActionQuickFix
                      , CodeActionRefactor
                      , CodeActionRefactorExtract
@@ -506,11 +585,9 @@ instance Default CodeActionKindValueSet where
                      , CodeActionSourceOrganizeImports
                      ]
 
-$(deriveJSON lspOptions ''CodeActionKindValueSet)
-
 data CodeActionLiteralSupport =
   CodeActionLiteralSupport
-    { _codeActionKind :: CodeActionKindValueSet -- ^ The code action kind is support with the following value set.
+    { _codeActionKind :: CodeActionKindCapabilities -- ^ The code action kind is support with the following value set.
     } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''CodeActionLiteralSupport)
@@ -519,8 +596,8 @@ data CodeActionClientCapabilities =
   CodeActionClientCapabilities
     { _dynamicRegistration      :: Maybe Bool -- ^ Whether code action supports dynamic registration.
     , _codeActionLiteralSupport :: Maybe CodeActionLiteralSupport -- ^ The client support code action literals as a valid response
-                                                                 -- of the `textDocument/codeAction` request.
-                                                                 -- Since 3.8.0
+                                                                  -- of the `textDocument/codeAction` request.
+                                                                  -- Since 3.8.0
     } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''CodeActionClientCapabilities)
