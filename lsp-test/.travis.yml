@@ -10,6 +10,7 @@ sudo: false
 cache:
   directories:
   - $HOME/.stack
+  - $HOME/haskell-ide-engine
 
 addons:
   apt:
@@ -22,20 +23,25 @@ before_install:
   - export PATH=$HOME/.local/bin:$PATH
   - travis_retry curl -L https://get.haskellstack.org/stable/linux-x86_64.tar.gz | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
     
-  - git clone https://github.com/haskell/haskell-ide-engine.git --recursive
+  - cd $HOME
+  # It's ok to fail
+  - git clone https://github.com/haskell/haskell-ide-engine.git --recursive || true
   - cd haskell-ide-engine
+  - git pull
   - git submodule sync
   - git submodule update
   # - cabal new-update
   # - cabal new-configure
   # - cabal new-build
-  # - export PATH=dist-newstyle/build/*/ghc-*/haskell-ide-engine-*/x/hie/build:$PATH
+  # - export PATH=$HOME/haskell-ide-engine/dist-newstyle/build/*/ghc-*/haskell-ide-engine-*/x/hie/build:$PATH
   - stack --no-terminal --skip-ghc-check install -j2
   - stack exec hoogle generate
-  - cd ..
+  - cd $TRAVIS_BUILD_DIR
   - npm update
   - npm i -g javascript-typescript-langserver
 
 script:
-  - cabal new-configure
-  - cabal new-test -O2
+  - pwd
+  - ls -a
+  - cabal configure --enable-tests
+  - cabal test -j2 --show-details=streaming
