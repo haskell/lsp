@@ -18,6 +18,7 @@ extra-source-files:  README.md
 library
   hs-source-dirs:      src
   exposed-modules:     Language.Haskell.LSP.Test
+                     , Language.Haskell.LSP.Test.Capabilities
                      , Language.Haskell.LSP.Test.Replay
   reexported-modules:  haskell-lsp:Language.Haskell.LSP.Types
                      , haskell-lsp:Language.Haskell.LSP.Types.Capabilities
@@ -48,8 +49,7 @@ library
     build-depends:     Win32
   else
     build-depends:     unix
-  other-modules:       Language.Haskell.LSP.Test.Capabilities
-                       Language.Haskell.LSP.Test.Compat
+  other-modules:       Language.Haskell.LSP.Test.Compat
                        Language.Haskell.LSP.Test.Decoding
                        Language.Haskell.LSP.Test.Exceptions
                        Language.Haskell.LSP.Test.Files

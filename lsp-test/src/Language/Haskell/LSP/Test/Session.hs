@@ -302,14 +302,6 @@ withTimeout duration f = do
                    }
   return res
 
--- logClientMsg :: (MonadIO m, HasReader SessionContext m)
---              => FromClientMessage -> m ()
--- logClientMsg = logMsg True
-
--- logServerMsg :: (MonadIO m, HasReader SessionContext m)
---              => FromServerMessage -> m ()
--- logServerMsg = logMsg False
-
 data LogMsgType = LogServer | LogClient
   deriving Eq
 
@@ -331,6 +323,4 @@ logMsg t msg = do
           | t == LogServer  = Magenta
           | otherwise       = Cyan
   
-
-showPretty :: ToJSON a => a -> String
-showPretty = B.unpack . encodePretty
+        showPretty = B.unpack . encodePretty

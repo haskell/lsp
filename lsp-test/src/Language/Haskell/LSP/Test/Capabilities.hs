@@ -1,11 +1,20 @@
+-- TODO: Move this into haskell-lsp
 module Language.Haskell.LSP.Test.Capabilities where
 import Language.Haskell.LSP.Types
 import Language.Haskell.LSP.Types.Capabilities
 
--- | Capabilities for full conformance to the LSP specification.
+-- | Capabilities for full conformance to the current (v3.10) LSP specification.
 -- The whole shebang.
 fullCaps :: ClientCapabilities
-fullCaps = ClientCapabilities (Just w) (Just td) Nothing
+fullCaps = capsForVersion (LSPVersion maxBound maxBound)
+
+-- | A specific version of the LSP specification.
+data LSPVersion = LSPVersion Int -- ^ Major
+                             Int -- ^ Minor
+
+-- | Capabilities for full conformance to the LSP specification up until a version.
+capsForVersion :: LSPVersion -> ClientCapabilities
+capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) Nothing
   where
     w = WorkspaceClientCapabilities
           (Just True)
@@ -39,7 +48,10 @@ fullCaps = ClientCapabilities (Just w) (Just td) Nothing
             (Just True)
     codeAction = CodeActionClientCapabilities
                   (Just True)
-                  (Just (CodeActionLiteralSupport kinds))
+                  codeActionLiterals
+    codeActionLiterals
+      | maj >= 3 && min >= 8 = Just (CodeActionLiteralSupport kinds)
+      | otherwise            = Nothing
     kinds = CodeActionKindValueSet
               (List [ CodeActionQuickFix
                     , CodeActionRefactor
