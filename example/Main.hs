@@ -22,7 +22,6 @@ import qualified Data.HashMap.Strict                   as H
 import           Data.Monoid
 #endif
 import qualified Data.Text                             as T
-import qualified Data.Vector                           as V
 import qualified Language.Haskell.LSP.Control          as CTRL
 import qualified Language.Haskell.LSP.Core             as Core
 import           Language.Haskell.LSP.Diagnostics
