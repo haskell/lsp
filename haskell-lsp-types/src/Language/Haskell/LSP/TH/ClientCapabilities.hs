@@ -155,13 +155,13 @@ data SymbolKindClientCapabilities =
      -- If this property is not present the client only supports
      -- the symbol kinds from `File` to `Array` as defined in
      -- the initial version of the protocol. 
-     _valueSet :: List SymbolKind
+     _valueSet :: Maybe (List SymbolKind)
    } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''SymbolKindClientCapabilities)
 
 instance Default SymbolKindClientCapabilities where
-  def = SymbolKindClientCapabilities (List allKinds)
+  def = SymbolKindClientCapabilities (Just $ List allKinds)
     where allKinds = [ SkFile
                      , SkModule
                      , SkNamespace
@@ -186,7 +186,7 @@ data SymbolClientCapabilities =
   SymbolClientCapabilities
     { _dynamicRegistration :: Maybe Bool -- ^Symbol request supports dynamic
                                          -- registration.
-    , _symbolKind :: SymbolKindClientCapabilities -- ^ Specific capabilities for the `SymbolKind`.
+    , _symbolKind :: Maybe SymbolKindClientCapabilities -- ^ Specific capabilities for the `SymbolKind`.
     } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''SymbolClientCapabilities)

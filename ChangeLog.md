@@ -6,6 +6,8 @@
 * Update ClientCapabilities to v3.10
 * Add MarkupContent
 * Add new CompletionKinds
+* Add new SymbolKinds
+* Add preset version capabilities
 
 ## 0.4.0.0  -- 2018-07-10
 
