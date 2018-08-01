@@ -10,7 +10,7 @@ sudo: false
 cache:
   directories:
   - $HOME/.stack
-  - $HOME/haskell-ide-engine
+  - $HOME/haskell-ide-engine/.stack-work
 
 addons:
   apt:
