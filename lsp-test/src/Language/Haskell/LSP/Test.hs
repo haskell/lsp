@@ -3,34 +3,35 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE ExistentialQuantification #-}
 
--- |
--- Module      : Language.Haskell.LSP.Test
--- Description : A functional testing framework for LSP servers.
--- Maintainer  : luke_lau@icloud.com
--- Stability   : experimental
---
--- A framework for testing
--- <https://github.com/Microsoft/language-server-protocol Language Server Protocol servers>
--- functionally.
+{-|
+Module      : Language.Haskell.LSP.Test
+Description : A functional testing framework for LSP servers.
+Maintainer  : luke_lau@icloud.com
+Stability   : experimental
+Portability : POSIX
 
+A framework for testing
+<https://github.com/Microsoft/language-server-protocol Language Server Protocol servers>
+functionally.
+-}
 module Language.Haskell.LSP.Test
   (
   -- * Sessions
-    runSession
-  , runSessionWithHandles
+    Session
+  , runSession
+  -- ** Config
   , runSessionWithConfig
-  , Session
   , SessionConfig(..)
   , defaultConfig
+  , module Language.Haskell.LSP.Test.Capabilities
+  -- ** Exceptions
   , SessionException(..)
   , anySessionException
   , withTimeout
-  -- * Capabilities
-  , fullCaps
   -- * Sending
+  , request
+  , request_
   , sendRequest
-  , sendRequest_
-  , sendRequest'
   , sendNotification
   , sendRequestMessage
   , sendNotification'
@@ -143,7 +144,7 @@ runSessionWithConfig config serverExe caps rootDir session = do
     runSessionWithHandles serverIn serverOut listenServer config caps rootDir $ do
 
       -- Wrap the session around initialize and shutdown calls
-      initRspMsg <- sendRequest Initialize initializeParams :: Session InitializeResponse
+      initRspMsg <- request Initialize initializeParams :: Session InitializeResponse
 
       liftIO $ maybe (return ()) (putStrLn . ("Error while initializing: " ++) . show ) (initRspMsg ^. LSP.error)
 
@@ -203,25 +204,25 @@ getDocumentEdit doc = do
         in maybe False (HashMap.member (doc ^. uri)) mMap
 
 -- | Sends a request to the server and waits for its response.
+-- Will skip any messages in between the request and the response
 -- @
--- rsp <- sendRequest TextDocumentDocumentSymbol params :: Session DocumentSymbolsResponse
+-- rsp <- request TextDocumentDocumentSymbol params :: Session DocumentSymbolsResponse
 -- @
 -- Note: will skip any messages in between the request and the response.
-sendRequest :: (ToJSON params, FromJSON a) => ClientMethod -> params -> Session (ResponseMessage a)
-sendRequest m = sendRequest' m >=> skipManyTill anyMessage . responseForId
+request :: (ToJSON params, FromJSON a) => ClientMethod -> params -> Session (ResponseMessage a)
+request m = sendRequest m >=> skipManyTill anyMessage . responseForId
 
--- | Send a request to the server and wait for its response,
--- but discard it.
-sendRequest_ :: ToJSON params => ClientMethod -> params -> Session ()
-sendRequest_ p = void . (sendRequest p :: ToJSON params => params -> Session (ResponseMessage Value))
+-- | The same as 'sendRequest', but discard the response.
+request_ :: ToJSON params => ClientMethod -> params -> Session ()
+request_ p = void . (request p :: ToJSON params => params -> Session (ResponseMessage Value))
 
--- | Sends a request to the server without waiting on the response.
-sendRequest'
+-- | Sends a request to the server. Unlike 'request', this doesn't wait for the response.
+sendRequest
   :: ToJSON params
   => ClientMethod -- ^ The request method.
   -> params -- ^ The request parameters.
   -> Session LspId -- ^ The id of the request that was sent.
-sendRequest' method params = do
+sendRequest method params = do
   id <- curReqId <$> get
   modify $ \c -> c { curReqId = nextId id }
 
@@ -362,7 +363,7 @@ noDiagnostics = do
 -- | Returns the symbols in a document.
 getDocumentSymbols :: TextDocumentIdentifier -> Session [SymbolInformation]
 getDocumentSymbols doc = do
-  ResponseMessage _ rspLid mRes mErr <- sendRequest TextDocumentDocumentSymbol (DocumentSymbolParams doc)
+  ResponseMessage _ rspLid mRes mErr <- request TextDocumentDocumentSymbol (DocumentSymbolParams doc)
   maybe (return ()) (throw . UnexpectedResponseError rspLid) mErr
   let (Just (List symbols)) = mRes
   return symbols
@@ -380,7 +381,7 @@ getAllCodeActions doc = do
   where
     go :: CodeActionContext -> [CommandOrCodeAction] -> Diagnostic -> Session [CommandOrCodeAction]
     go ctx acc diag = do
-      ResponseMessage _ rspLid mRes mErr <- sendRequest TextDocumentCodeAction (CodeActionParams doc (diag ^. range) ctx)
+      ResponseMessage _ rspLid mRes mErr <- request TextDocumentCodeAction (CodeActionParams doc (diag ^. range) ctx)
 
       case mErr of
         Just e -> throw (UnexpectedResponseError rspLid e)
@@ -393,7 +394,7 @@ executeCommand :: Command -> Session ()
 executeCommand cmd = do
   let args = decode $ encode $ fromJust $ cmd ^. arguments
       execParams = ExecuteCommandParams (cmd ^. command) args
-  sendRequest_ WorkspaceExecuteCommand execParams
+  request_ WorkspaceExecuteCommand execParams
 
 -- | Executes a code action. 
 -- Matching with the specification, if a code action
@@ -447,11 +448,11 @@ applyEdit doc edit = do
 
   -- version may have changed
   getVersionedDoc doc
-  
+
 -- | Returns the completions for the position in the document.
 getCompletions :: TextDocumentIdentifier -> Position -> Session [CompletionItem]
 getCompletions doc pos = do
-  rsp <- sendRequest TextDocumentCompletion (TextDocumentPositionParams doc pos)
+  rsp <- request TextDocumentCompletion (TextDocumentPositionParams doc pos)
 
   case getResponseResult rsp of
     Completions (List items) -> return items
@@ -465,7 +466,7 @@ getReferences :: TextDocumentIdentifier -- ^ The document to lookup in.
 getReferences doc pos inclDecl =
   let ctx = ReferenceContext inclDecl
       params = ReferenceParams doc pos ctx
-  in getResponseResult <$> sendRequest TextDocumentReferences params 
+  in getResponseResult <$> request TextDocumentReferences params
 
 -- | Returns the definition(s) for the term at the specified position.
 getDefinitions :: TextDocumentIdentifier -- ^ The document the term is in.
@@ -473,13 +474,13 @@ getDefinitions :: TextDocumentIdentifier -- ^ The document the term is in.
                -> Session [Location] -- ^ The location(s) of the definitions
 getDefinitions doc pos =
   let params = TextDocumentPositionParams doc pos
-  in getResponseResult <$> sendRequest TextDocumentDefinition params
+  in getResponseResult <$> request TextDocumentDefinition params
 
 -- ^ Renames the term at the specified position.
 rename :: TextDocumentIdentifier -> Position -> String -> Session ()
 rename doc pos newName = do
   let params = RenameParams doc pos (T.pack newName)
-  rsp <- sendRequest TextDocumentRename params :: Session RenameResponse
+  rsp <- request TextDocumentRename params :: Session RenameResponse
   let wEdit = getResponseResult rsp
       req = RequestMessage "" (IdInt 0) WorkspaceApplyEdit (ApplyWorkspaceEditParams wEdit)
   updateState (ReqApplyWorkspaceEdit req)
@@ -488,17 +489,17 @@ rename doc pos newName = do
 getHover :: TextDocumentIdentifier -> Position -> Session (Maybe Hover)
 getHover doc pos =
   let params = TextDocumentPositionParams doc pos
-  in getResponseResult <$> sendRequest TextDocumentHover params
+  in getResponseResult <$> request TextDocumentHover params
 
 -- | Returns the highlighted occurences of the term at the specified position
 getHighlights :: TextDocumentIdentifier -> Position -> Session [DocumentHighlight]
 getHighlights doc pos =
   let params = TextDocumentPositionParams doc pos
-  in getResponseResult <$> sendRequest TextDocumentDocumentHighlight params
+  in getResponseResult <$> request TextDocumentDocumentHighlight params
 
 -- | Checks the response for errors and throws an exception if needed.
 -- Returns the result if successful.
-getResponseResult :: ResponseMessage a -> a 
+getResponseResult :: ResponseMessage a -> a
 getResponseResult rsp = fromMaybe exc (rsp ^. result)
   where exc = throw $ UnexpectedResponseError (rsp ^. LSP.id)
                                               (fromJust $ rsp ^. LSP.error)
@@ -507,14 +508,14 @@ getResponseResult rsp = fromMaybe exc (rsp ^. result)
 formatDoc :: TextDocumentIdentifier -> FormattingOptions -> Session ()
 formatDoc doc opts = do
   let params = DocumentFormattingParams doc opts
-  edits <- getResponseResult <$> sendRequest TextDocumentFormatting params
+  edits <- getResponseResult <$> request TextDocumentFormatting params
   applyTextEdits doc edits
 
 -- | Applies formatting to the specified range in a document.
 formatRange :: TextDocumentIdentifier -> FormattingOptions -> Range -> Session ()
 formatRange doc opts range = do
   let params = DocumentRangeFormattingParams doc range opts
-  edits <- getResponseResult <$> sendRequest TextDocumentRangeFormatting params
+  edits <- getResponseResult <$> request TextDocumentRangeFormatting params
   applyTextEdits doc edits
 
 applyTextEdits :: TextDocumentIdentifier -> List TextEdit -> Session ()
@@ -522,4 +523,3 @@ applyTextEdits doc edits =
   let wEdit = WorkspaceEdit (Just (HashMap.singleton (doc ^. uri) edits)) Nothing
       req = RequestMessage "" (IdInt 0) WorkspaceApplyEdit (ApplyWorkspaceEditParams wEdit)
   in updateState (ReqApplyWorkspaceEdit req)
-

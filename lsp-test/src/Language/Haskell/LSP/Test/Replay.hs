@@ -25,6 +25,7 @@ import           Language.Haskell.LSP.Test.Files
 import           Language.Haskell.LSP.Test.Decoding
 import           Language.Haskell.LSP.Test.Messages
 import           Language.Haskell.LSP.Test.Server
+import           Language.Haskell.LSP.Test.Session
 
 
 -- | Replays a captured client output and 

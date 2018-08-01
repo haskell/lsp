@@ -11,8 +11,8 @@ main = runSession "hie --lsp" fullCaps "test/data/renamePass" $ do
 
   -- Send requests and notifications and receive responses
   let params = DocumentSymbolParams docItem
-  response <- sendRequest TextDocumentDocumentSymbol params :: Session DocumentSymbolsResponse
-  liftIO $ print response
+  rsp <- request TextDocumentDocumentSymbol params :: Session DocumentSymbolsResponse
+  liftIO $ print rsp
 
   -- Or use one of the helper functions
   getDocumentSymbols docItem >>= liftIO . print

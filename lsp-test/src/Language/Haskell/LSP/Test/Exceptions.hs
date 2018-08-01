@@ -9,6 +9,7 @@ import Data.Algorithm.DiffOutput
 import Data.List
 import qualified Data.ByteString.Lazy.Char8 as B
 
+-- | An exception that can be thrown during a 'Haskell.LSP.Test.Session.Session'
 data SessionException = Timeout
                       | UnexpectedMessage String FromServerMessage
                       | ReplayOutOfOrder FromServerMessage [FromServerMessage]
@@ -40,5 +41,6 @@ instance Show SessionException where
   show (UnexpectedResponseError lid e) = "Received an exepected error in a response for id " ++ show lid ++ ":\n"
                                           ++ show e
 
+-- | A predicate that matches on any 'SessionException'
 anySessionException :: SessionException -> Bool
 anySessionException = const True

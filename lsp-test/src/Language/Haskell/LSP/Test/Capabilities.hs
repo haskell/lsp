@@ -3,14 +3,13 @@ module Language.Haskell.LSP.Test.Capabilities where
 import Language.Haskell.LSP.Types
 import Language.Haskell.LSP.Types.Capabilities
 
--- | Capabilities for full conformance to the current (v3.10) LSP specification.
--- The whole shebang.
+-- | The whole shebang. The real deal.
+-- Capabilities for full conformance to the current (v3.10) LSP specification.
 fullCaps :: ClientCapabilities
 fullCaps = capsForVersion (LSPVersion maxBound maxBound)
 
 -- | A specific version of the LSP specification.
-data LSPVersion = LSPVersion Int -- ^ Major
-                             Int -- ^ Minor
+data LSPVersion = LSPVersion Int Int -- ^ Construct a major.minor version
 
 -- | Capabilities for full conformance to the LSP specification up until a version.
 -- Some important milestones:
