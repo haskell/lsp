@@ -65,12 +65,7 @@ import System.IO
 -- You can send and receive messages to the server within 'Session' via 'getMessage',
 -- 'sendRequest' and 'sendNotification'.
 --
--- @
--- runSession \"path\/to\/root\/dir\" $ do
---   docItem <- getDocItem "Desktop/simple.hs" "haskell"
---   sendNotification TextDocumentDidOpen (DidOpenTextDocumentParams docItem)
---   diagnostics <- getMessage :: Session PublishDiagnosticsNotification
--- @
+
 type Session = ParserStateReader FromServerMessage SessionState SessionContext IO
 
 -- | Stuff you can configure for a 'Session'.

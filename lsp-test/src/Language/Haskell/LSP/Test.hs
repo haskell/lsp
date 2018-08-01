@@ -10,9 +10,9 @@ Maintainer  : luke_lau@icloud.com
 Stability   : experimental
 Portability : POSIX
 
-A framework for testing
-<https://github.com/Microsoft/language-server-protocol Language Server Protocol servers>
-functionally.
+Provides the framework to start functionally testing
+<https://github.com/Microsoft/language-server-protocol Language Server Protocol servers>.
+You should import "Language.Haskell.LSP.Types" alongside this.
 -}
 module Language.Haskell.LSP.Test
   (
@@ -25,8 +25,7 @@ module Language.Haskell.LSP.Test
   , defaultConfig
   , module Language.Haskell.LSP.Test.Capabilities
   -- ** Exceptions
-  , SessionException(..)
-  , anySessionException
+  , module Language.Haskell.LSP.Test.Exceptions
   , withTimeout
   -- * Sending
   , request
@@ -35,16 +34,10 @@ module Language.Haskell.LSP.Test
   , sendNotification
   , sendResponse
   -- * Receving
-  , message
-  , anyRequest
-  , anyResponse
-  , anyNotification
-  , anyMessage
-  , loggingNotification
-  , publishDiagnosticsNotification
-  -- * Combinators
-  , satisfy
+  , module Language.Haskell.LSP.Test.Parsing
   -- * Utilities
+  -- | Quick helper functions for common tasks.
+  -- ** Initialization
   , initializeResponse
   -- ** Documents
   , openDoc
@@ -114,6 +107,13 @@ import System.FilePath
 import qualified Yi.Rope as Rope
 
 -- | Starts a new session.
+-- 
+-- > runSession "hie" fullCaps "path/to/root/dir" $ do
+-- >   doc <- openDoc "Desktop/simple.hs" "haskell"
+-- >   diags <- waitForDiagnostics
+-- >   let pos = Position 12 5
+-- >       params = TextDocumentPositionParams doc
+-- >   hover <- request TextDocumentHover params
 runSession :: String -- ^ The command to run the server.
            -> LSP.ClientCapabilities -- ^ The capabilities that the client should declare.
            -> FilePath -- ^ The filepath to the root directory for the session.
@@ -121,7 +121,7 @@ runSession :: String -- ^ The command to run the server.
            -> IO a
 runSession = runSessionWithConfig def
 
--- | Starts a new sesion with a client with the specified capabilities.
+-- | Starts a new sesion with a custom configuration.
 runSessionWithConfig :: SessionConfig -- ^ Configuration options for the session.
                      -> String -- ^ The command to run the server.
                      -> LSP.ClientCapabilities -- ^ The capabilities that the client should declare.
@@ -254,7 +254,7 @@ sendNotification :: ToJSON a
                  -> a -- ^ The notification parameters.
                  -> Session ()
 
--- | Open a virtual file if we send a did open text document notification
+-- Open a virtual file if we send a did open text document notification
 sendNotification TextDocumentDidOpen params = do
   let params' = fromJust $ decode $ encode params
       n :: DidOpenTextDocumentNotification
@@ -264,7 +264,7 @@ sendNotification TextDocumentDidOpen params = do
   modify (\s -> s { vfs = newVFS })
   sendMessage n
 
--- | Close a virtual file if we send a close text document notification
+-- Close a virtual file if we send a close text document notification
 sendNotification TextDocumentDidClose params = do
   let params' = fromJust $ decode $ encode params
       n :: DidCloseTextDocumentNotification
@@ -276,6 +276,7 @@ sendNotification TextDocumentDidClose params = do
 
 sendNotification method params = sendMessage (NotificationMessage "2.0" method params)
 
+-- | Sends a response to the server.
 sendResponse :: ToJSON a => ResponseMessage a -> Session ()
 sendResponse = sendMessage
 
@@ -327,6 +328,8 @@ waitForDiagnostics = do
   let (List diags) = diagsNot ^. params . LSP.diagnostics
   return diags
 
+-- | The same as 'waitForDiagnostics', but will only match a specific
+-- 'Language.Haskell.LSP.Types._source'.
 waitForDiagnosticsSource :: String -> Session [Diagnostic]
 waitForDiagnosticsSource src = do
   diags <- waitForDiagnostics
@@ -462,7 +465,7 @@ getDefinitions doc pos =
   let params = TextDocumentPositionParams doc pos
   in getResponseResult <$> request TextDocumentDefinition params
 
--- ^ Renames the term at the specified position.
+-- | Renames the term at the specified position.
 rename :: TextDocumentIdentifier -> Position -> String -> Session ()
 rename doc pos newName = do
   let params = RenameParams doc pos (T.pack newName)

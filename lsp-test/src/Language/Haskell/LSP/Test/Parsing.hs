@@ -2,7 +2,18 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE OverloadedStrings #-}
-module Language.Haskell.LSP.Test.Parsing where
+
+module Language.Haskell.LSP.Test.Parsing
+  ( -- $receiving
+    message
+  , anyRequest
+  , anyResponse
+  , anyNotification
+  , anyMessage
+  , loggingNotification
+  , publishDiagnosticsNotification
+  , responseForId
+  ) where
 
 import Control.Applicative
 import Control.Concurrent
@@ -16,9 +27,37 @@ import Data.Maybe
 import qualified Data.Text as T
 import Data.Typeable
 import Language.Haskell.LSP.Messages
-import Language.Haskell.LSP.Types as LSP hiding (error)
+import Language.Haskell.LSP.Types as LSP hiding (error, message)
 import Language.Haskell.LSP.Test.Messages
 import Language.Haskell.LSP.Test.Session
+
+-- $receiving
+-- To receive a message, just specify the type that expect:
+-- 
+-- @
+-- msg1 <- message :: Session ApplyWorkspaceEditRequest
+-- msg2 <- message :: Session HoverResponse
+-- @
+--
+-- 'Language.Haskell.LSP.Test.Session' is actually just a parser
+-- that operates on messages under the hood. This means that you
+-- can create and combine parsers to match speicifc sequences of
+-- messages that you expect.
+--
+-- For example, if you wanted to match either a definition or
+-- references request:
+-- 
+-- > defOrImpl = (message :: Session DefinitionRequest)
+-- >          <|> (message :: Session ReferencesRequest)
+--
+-- If you wanted to match any number of telemetry
+-- notifications immediately followed by a response:
+-- 
+-- @
+-- logThenDiags =
+--  skipManyTill (message :: Session TelemetryNotification)
+--               anyResponse 
+-- @
 
 satisfy :: (FromServerMessage -> Bool) -> Session FromServerMessage
 satisfy pred = do
@@ -64,12 +103,14 @@ anyRequest = named "Any request" $ satisfy isServerRequest
 anyResponse :: Session FromServerMessage
 anyResponse = named "Any response" $ satisfy isServerResponse
 
+-- | Matches a response for a specific id.
 responseForId :: forall a. FromJSON a => LspId -> Session (ResponseMessage a)
 responseForId lid = named (T.pack $ "Response for id: " ++ show lid) $ do
   let parser = decode . encodeMsg :: FromServerMessage -> Maybe (ResponseMessage a)
   x <- satisfy (maybe False (\z -> z ^. LSP.id == responseId lid) . parser)
   return $ castMsg x
 
+-- | Matches any type of message.
 anyMessage :: Session FromServerMessage
 anyMessage = satisfy (const True)
 
@@ -91,6 +132,8 @@ loggingNotification = named "Logging notification" $ satisfy shouldSkip
     shouldSkip (ReqShowMessage _) = True
     shouldSkip _ = False
 
+-- | Matches a 'Language.Haskell.LSP.Test.PublishDiagnosticsNotification'
+-- (textDocument/publishDiagnostics) notification.
 publishDiagnosticsNotification :: Session PublishDiagnosticsNotification
 publishDiagnosticsNotification = named "Publish diagnostics notification" $ do
   NotPublishDiagnostics diags <- satisfy test
