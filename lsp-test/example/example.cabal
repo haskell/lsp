@@ -1,0 +1,11 @@
+name:          example
+version:       0.0.0.0
+cabal-version: >= 1.22
+build-type:    Simple
+
+test-suite tests
+  type:          exitcode-stdio-1.0
+  main-is:       Test.hs
+  build-depends: base
+               , lsp-test
+               , parser-combinators

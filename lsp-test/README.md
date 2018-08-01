@@ -34,6 +34,7 @@ count 4 (message :: Session ApplyWorkspaceEditRequest)
 anyRequest <|> anyResponse
 ```
 
+Try out the example tests in the `example` directory with `cabal new-test`.
 For more examples check the [Wiki](https://github.com/Bubba/haskell-lsp-test/wiki/Introduction)
 
 ## Developing

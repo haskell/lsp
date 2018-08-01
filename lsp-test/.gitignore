@@ -8,5 +8,10 @@ cabal.project.local*
 **/.DS_Store
 *.swp
 
+example/dist
+example/dist-newstyle
+example/cabal.project.local
+example/.ghc.environment.*
+
 # used for rerunning failed hspec tests
 .hspec-failures
