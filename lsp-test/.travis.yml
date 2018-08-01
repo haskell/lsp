@@ -25,9 +25,11 @@ before_install:
     
   - cd $HOME
   # It's ok to fail
-  - git clone https://github.com/haskell/haskell-ide-engine.git --recursive || true
   - cd haskell-ide-engine
-  - git pull
+  - git init
+  - git remote add origin https://github.com/haskell/haskell-ide-engine.git
+  - git pull origin master
+  - git submodule init
   - git submodule sync
   - git submodule update
   # - cabal new-update
