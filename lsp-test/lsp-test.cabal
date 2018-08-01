@@ -1,4 +1,4 @@
-name:                haskell-lsp-test
+name:                lsp-test
 version:             0.1.0.0
 synopsis:            Functional test framework for LSP servers.
 -- description:
@@ -69,7 +69,7 @@ test-suite tests
                      , lens
                      , data-default
                      , haskell-lsp >= 0.4
-                     , haskell-lsp-test
+                     , lsp-test
                      , aeson
                      , unordered-containers
                      , text
@@ -80,4 +80,4 @@ executable lsp-test-example
   main-is:             Main.hs
   default-language:    Haskell2010
   build-depends:       base >= 4.7 && < 5
-                     , haskell-lsp-test
+                     , lsp-test

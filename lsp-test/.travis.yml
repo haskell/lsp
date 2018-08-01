@@ -1,8 +1,8 @@
-language: haskell
-
-ghc:
-  - "8.2.2"
-  - "8.4.2"
+# language: haskell
+# ghc:
+#   - "8.2.2"
+#   - "8.4.2"
+language: c
 
 sudo: false
 
@@ -42,7 +42,5 @@ before_install:
 
 script:
  - stack test
-  # - pwd
-  # - ls -a
   # - cabal configure --enable-tests
   # - cabal test -j2 --show-details=streaming
