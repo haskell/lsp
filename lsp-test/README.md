@@ -1,5 +1,5 @@
-# haskell-lsp-test [![Build Status](https://travis-ci.com/Bubba/haskell-lsp-test.svg?branch=master)](https://travis-ci.com/Bubba/haskell-lsp-test)
-haskell-lsp-test is a functional testing framework for Language Server Protocol servers.
+# lsp-test [![Build Status](https://travis-ci.com/Bubba/haskell-lsp-test.svg?branch=master)](https://travis-ci.com/Bubba/haskell-lsp-test)
+lsp-test is a functional testing framework for Language Server Protocol servers.
 
 ```haskell
 import Language.Haskell.LSP.Test
@@ -24,7 +24,7 @@ describe "diagnostics" $
 
 ### Replaying captured session
 ```haskell
-replaySession "hie --lsp" "test/data/renamePass"
+replaySession "hie" "test/data/renamePass"
 ```
 
 ### Parsing with combinators
