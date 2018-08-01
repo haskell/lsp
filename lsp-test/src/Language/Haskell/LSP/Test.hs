@@ -33,8 +33,6 @@ module Language.Haskell.LSP.Test
   , request_
   , sendRequest
   , sendNotification
-  , sendRequestMessage
-  , sendNotification'
   , sendResponse
   -- * Receving
   , message
@@ -250,15 +248,6 @@ instance ToJSON a => ToJSON (RequestMessage' a) where
     object ["jsonrpc" .= rpc, "id" .= id, "method" .= method, "params" .= params]
 
 
-sendRequestMessage :: (ToJSON a, ToJSON b) => RequestMessage ClientMethod a b -> Session ()
-sendRequestMessage req = do
-  -- Update the request map
-  reqMap <- requestMap <$> ask
-  liftIO $ modifyMVar_ reqMap $
-    \r -> return $ updateRequestMap r (req ^. LSP.id) (req ^. method)
-
-  sendMessage req
-
 -- | Sends a notification to the server.
 sendNotification :: ToJSON a
                  => ClientMethod -- ^ The notification method.
@@ -273,7 +262,7 @@ sendNotification TextDocumentDidOpen params = do
   oldVFS <- vfs <$> get
   newVFS <- liftIO $ openVFS oldVFS n
   modify (\s -> s { vfs = newVFS })
-  sendNotification' n
+  sendMessage n
 
 -- | Close a virtual file if we send a close text document notification
 sendNotification TextDocumentDidClose params = do
@@ -283,12 +272,9 @@ sendNotification TextDocumentDidClose params = do
   oldVFS <- vfs <$> get
   newVFS <- liftIO $ closeVFS oldVFS n
   modify (\s -> s { vfs = newVFS })
-  sendNotification' n
+  sendMessage n
 
-sendNotification method params = sendNotification' (NotificationMessage "2.0" method params)
-
-sendNotification' :: (ToJSON a, ToJSON b) => NotificationMessage a b -> Session ()
-sendNotification' = sendMessage
+sendNotification method params = sendMessage (NotificationMessage "2.0" method params)
 
 sendResponse :: ToJSON a => ResponseMessage a -> Session ()
 sendResponse = sendMessage

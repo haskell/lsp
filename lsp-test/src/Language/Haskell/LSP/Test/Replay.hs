@@ -84,12 +84,12 @@ sendMessages (nextMsg:remainingMsgs) reqSema rspSema =
   notification msg@(NotificationMessage _ Exit _) = do
     liftIO $ putStrLn "Will send exit notification soon"
     liftIO $ threadDelay 10000000
-    sendNotification' msg
+    sendMessage msg
 
     liftIO $ error "Done"
 
   notification msg@(NotificationMessage _ m _) = do
-    sendNotification' msg
+    sendMessage msg
 
     liftIO $ putStrLn $ "Sent a notification " ++ show m
 
@@ -115,6 +115,15 @@ sendMessages (nextMsg:remainingMsgs) reqSema rspSema =
         liftIO $ putStrLn $ "Sent response to request id " ++ show id
 
     sendMessages remainingMsgs reqSema rspSema
+
+sendRequestMessage :: (ToJSON a, ToJSON b) => RequestMessage ClientMethod a b -> Session ()
+sendRequestMessage req = do
+  -- Update the request map
+  reqMap <- requestMap <$> ask
+  liftIO $ modifyMVar_ reqMap $
+    \r -> return $ updateRequestMap r (req ^. LSP.id) (req ^. method)
+
+  sendMessage req
 
 
 isNotification :: FromServerMessage -> Bool
