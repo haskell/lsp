@@ -33,7 +33,7 @@ platformAwareUriToFilePath systemOS (Uri uri) = do
 
 platformAdjustFromUriPath :: SystemOS -> String -> FilePath
 platformAdjustFromUriPath systemOS srcPath =
-  if systemOS /= windowsOS then srcPath
+  if systemOS /= windowsOS || null srcPath then srcPath
     else let
       firstSegment:rest = (FPP.splitDirectories . tail) srcPath  -- Drop leading '/' for absolute Windows paths
       drive = if FPW.isDrive firstSegment then FPW.addTrailingPathSeparator firstSegment else firstSegment
