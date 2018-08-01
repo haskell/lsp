@@ -22,14 +22,17 @@ library
                      , Language.Haskell.LSP.TH.DataTypesJSON
                      , Language.Haskell.LSP.TH.MessageFuncs
                      , Language.Haskell.LSP.TH.Utils
-  other-modules:       Language.Haskell.LSP.TH.Command
-                     , Language.Haskell.LSP.TH.CodeAction
+  other-modules:       Language.Haskell.LSP.TH.CodeAction
+                     , Language.Haskell.LSP.TH.Command
+                     , Language.Haskell.LSP.TH.Completion
                      , Language.Haskell.LSP.TH.Diagnostic
+                     , Language.Haskell.LSP.TH.DocumentFilter
                      , Language.Haskell.LSP.TH.List
                      , Language.Haskell.LSP.TH.Location
+                     , Language.Haskell.LSP.TH.MarkupContent
                      , Language.Haskell.LSP.TH.Message
                      , Language.Haskell.LSP.TH.Symbol
-                     , Language.Haskell.LSP.TH.TextDocumentIdentifier
+                     , Language.Haskell.LSP.TH.TextDocument
                      , Language.Haskell.LSP.TH.Uri
                      , Language.Haskell.LSP.TH.WorkspaceEdit
  -- other-extensions:

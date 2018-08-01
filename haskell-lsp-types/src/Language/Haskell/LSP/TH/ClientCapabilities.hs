@@ -7,7 +7,10 @@ import           Data.Aeson.TH
 import qualified Data.Aeson as A
 import Language.Haskell.LSP.TH.Constants
 import Language.Haskell.LSP.TH.CodeAction
+import Language.Haskell.LSP.TH.Completion
 import Language.Haskell.LSP.TH.List
+import Language.Haskell.LSP.TH.MarkupContent
+import Language.Haskell.LSP.TH.Symbol
 import Data.Default
 
 -- ---------------------------------------------------------------------
@@ -15,9 +18,6 @@ import Data.Default
 New in 3.0
 ----------
 
-WorkspaceClientCapabilities
-
-define capabilities the editor / tool provides on the workspace:
 /**
  * Workspace specific client capabilities.
  */
@@ -66,6 +66,23 @@ export interface WorkspaceClientCapabilities {
                  * Symbol request supports dynamic registration.
                  */
                 dynamicRegistration?: boolean;
+
+                /**
+                 * Specific capabilities for the `SymbolKind` in the `workspace/symbol` request.
+                 */
+                symbolKind?: {
+                        /**
+                         * The symbol kind values the client supports. When this
+                         * property exists the client also guarantees that it will
+                         * handle values outside its set gracefully and falls back
+                         * to a default value when unknown.
+                         *
+                         * If this property is not present the client only supports
+                         * the symbol kinds from `File` to `Array` as defined in
+                         * the initial version of the protocol.
+                         */
+                        valueSet?: SymbolKind[];
+                }
         };
 
         /**
@@ -77,6 +94,20 @@ export interface WorkspaceClientCapabilities {
                  */
                 dynamicRegistration?: boolean;
         };
+
+        /**
+         * The client has support for workspace folders.
+         *
+         * Since 3.6.0
+         */
+        workspaceFolders?: boolean;
+
+        /**
+         * The client supports `workspace/configuration` requests.
+         *
+         * Since 3.6.0
+         */
+        configuration?: boolean;
 }
 -}
 
@@ -114,10 +145,48 @@ $(deriveJSON lspOptions ''DidChangeWatchedFilesClientCapabilities)
 
 -- -------------------------------------
 
+data SymbolKindClientCapabilities =
+  SymbolKindClientCapabilities
+   { -- | The symbol kind values the client supports. When this
+     -- property exists the client also guarantees that it will
+     -- handle values outside its set gracefully and falls back
+     -- to a default value when unknown.
+     -- 
+     -- If this property is not present the client only supports
+     -- the symbol kinds from `File` to `Array` as defined in
+     -- the initial version of the protocol. 
+     _valueSet :: List SymbolKind
+   } deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''SymbolKindClientCapabilities)
+
+instance Default SymbolKindClientCapabilities where
+  def = SymbolKindClientCapabilities (List allKinds)
+    where allKinds = [ SkFile
+                     , SkModule
+                     , SkNamespace
+                     , SkPackage
+                     , SkClass
+                     , SkMethod
+                     , SkProperty
+                     , SkField
+                     , SkConstructor
+                     , SkEnum
+                     , SkInterface
+                     , SkFunction
+                     , SkVariable
+                     , SkConstant
+                     , SkString
+                     , SkNumber
+                     , SkBoolean
+                     , SkArray
+                     ]
+
 data SymbolClientCapabilities =
   SymbolClientCapabilities
     { _dynamicRegistration :: Maybe Bool -- ^Symbol request supports dynamic
                                          -- registration.
+    , _symbolKind :: SymbolKindClientCapabilities -- ^ Specific capabilities for the `SymbolKind`.
     } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''SymbolClientCapabilities)
@@ -154,21 +223,23 @@ data WorkspaceClientCapabilities =
 
       -- | Capabilities specific to the `workspace/executeCommand` request.
     , _executeCommand :: Maybe ExecuteClientCapabilities
+
+      -- | The client has support for workspace folders.
+    , _workspaceFolders :: Maybe Bool
+
+      -- | The client supports `workspace/configuration` requests.
+    , _configuration :: Maybe Bool
     } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''WorkspaceClientCapabilities)
 
 instance Default WorkspaceClientCapabilities where
-  def = WorkspaceClientCapabilities def def def def def def
+  def = WorkspaceClientCapabilities def def def def def def def def
 
 -- ---------------------------------------------------------------------
 {-
 New in 3.0
 ----------
-
-TextDocumentClientCapabilities
-    define capabilities the editor / tool provides on text documents.
-
 /**
  * Text document specific client capabilities.
  */
@@ -221,7 +292,48 @@ export interface TextDocumentClientCapabilities {
                          * that is typing in one will update others too.
                          */
                         snippetSupport?: boolean;
+
+                        /**
+                         * Client supports commit characters on a completion item.
+                         */
+                        commitCharactersSupport?: boolean
+
+                        /**
+                         * Client supports the follow content formats for the documentation
+                         * property. The order describes the preferred format of the client.
+                         */
+                        documentationFormat?: MarkupKind[];
+
+                        /**
+                         * Client supports the deprecated property on a completion item.
+                         */
+                        deprecatedSupport?: boolean;
+
+                        /**
+                         * Client supports the preselect property on a completion item.
+                         */
+                        preselectSupport?: boolean;
                 }
+
+                completionItemKind?: {
+                        /**
+                         * The completion item kind values the client supports. When this
+                         * property exists the client also guarantees that it will
+                         * handle values outside its set gracefully and falls back
+                         * to a default value when unknown.
+                         *
+                         * If this property is not present the client only supports
+                         * the completion items kinds from `Text` to `Reference` as defined in
+                         * the initial version of the protocol.
+                         */
+                        valueSet?: CompletionItemKind[];
+                },
+
+                /**
+                 * The client supports to send additional context information for a
+                 * `textDocument/completion` request.
+                 */
+                contextSupport?: boolean;
         };
 
         /**
@@ -232,6 +344,12 @@ export interface TextDocumentClientCapabilities {
                  * Whether hover supports dynamic registration.
                  */
                 dynamicRegistration?: boolean;
+
+                /**
+                 * Client supports the follow content formats for the content
+                 * property. The order describes the preferred format of the client.
+                 */
+                contentFormat?: MarkupKind[];
         };
 
         /**
@@ -242,6 +360,18 @@ export interface TextDocumentClientCapabilities {
                  * Whether signature help supports dynamic registration.
                  */
                 dynamicRegistration?: boolean;
+
+                /**
+                 * The client supports the following `SignatureInformation`
+                 * specific properties.
+                 */
+                signatureInformation?: {
+                        /**
+                         * Client supports the follow content formats for the documentation
+                         * property. The order describes the preferred format of the client.
+                         */
+                        documentationFormat?: MarkupKind[];
+                };
         };
 
         /**
@@ -272,6 +402,23 @@ export interface TextDocumentClientCapabilities {
                  * Whether document symbol supports dynamic registration.
                  */
                 dynamicRegistration?: boolean;
+
+                /**
+                 * Specific capabilities for the `SymbolKind`.
+                 */
+                symbolKind?: {
+                        /**
+                         * The symbol kind values the client supports. When this
+                         * property exists the client also guarantees that it will
+                         * handle values outside its set gracefully and falls back
+                         * to a default value when unknown.
+                         *
+                         * If this property is not present the client only supports
+                         * the symbol kinds from `File` to `Array` as defined in
+                         * the initial version of the protocol.
+                         */
+                        valueSet?: SymbolKind[];
+                }
         };
 
         /**
@@ -315,6 +462,34 @@ export interface TextDocumentClientCapabilities {
         };
 
         /**
+         * Capabilities specific to the `textDocument/typeDefinition`
+         *
+         * Since 3.6.0
+         */
+        typeDefinition?: {
+                /**
+                 * Whether typeDefinition supports dynamic registration. If this is set to `true`
+                 * the client supports the new `(TextDocumentRegistrationOptions & StaticRegistrationOptions)`
+                 * return value for the corresponding server capability as well.
+                 */
+                dynamicRegistration?: boolean;
+        };
+
+        /**
+         * Capabilities specific to the `textDocument/implementation`.
+         *
+         * Since 3.6.0
+         */
+        implementation?: {
+                /**
+                 * Whether implementation supports dynamic registration. If this is set to `true`
+                 * the client supports the new `(TextDocumentRegistrationOptions & StaticRegistrationOptions)`
+                 * return value for the corresponding server capability as well.
+                 */
+                dynamicRegistration?: boolean;
+        };
+
+        /**
          * Capabilities specific to the `textDocument/codeAction`
          */
         codeAction?: {
@@ -322,6 +497,28 @@ export interface TextDocumentClientCapabilities {
                  * Whether code action supports dynamic registration.
                  */
                 dynamicRegistration?: boolean;
+                /**
+                 * The client support code action literals as a valid
+                 * response of the `textDocument/codeAction` request.
+                 *
+                 * Since 3.8.0
+                 */
+                codeActionLiteralSupport?: {
+                        /**
+                         * The code action kind is support with the following value
+                         * set.
+                         */
+                        codeActionKind: {
+
+                                /**
+                                 * The code action kind values the client supports. When this
+                                 * property exists the client also guarantees that it will
+                                 * handle values outside its set gracefully and falls back
+                                 * to a default value when unknown.
+                                 */
+                                valueSet: CodeActionKind[];
+                        };
+                };
         };
 
         /**
@@ -345,6 +542,21 @@ export interface TextDocumentClientCapabilities {
         };
 
         /**
+         * Capabilities specific to the `textDocument/documentColor` and the
+         * `textDocument/colorPresentation` request.
+         *
+         * Since 3.6.0
+         */
+        colorProvider?: {
+                /**
+                 * Whether colorProvider supports dynamic registration. If this is set to `true`
+                 * the client supports the new `(ColorProviderOptions & TextDocumentRegistrationOptions & StaticRegistrationOptions)`
+                 * return value for the corresponding server capability as well.
+                 */
+                dynamicRegistration?: boolean;
+        }
+
+        /**
          * Capabilities specific to the `textDocument/rename`
          */
         rename?: {
@@ -355,14 +567,14 @@ export interface TextDocumentClientCapabilities {
         };
 
         /**
-	 * Capabilities specific to `textDocument/publishDiagnostics`.
-	 */
-	publishDiagnostics?: {
-		/**
-		 * Whether the clients accepts diagnostics with related information.
-		 */
-		relatedInformation?: boolean;
-	};
+         * Capabilities specific to `textDocument/publishDiagnostics`.
+         */
+        publishDiagnostics?: {
+                /**
+                 * Whether the clients accepts diagnostics with related information.
+                 */
+                relatedInformation?: boolean;
+        };
 }
 
 -}
@@ -396,23 +608,49 @@ instance Default SynchronizationTextDocumentClientCapabilities where
 
 data CompletionItemClientCapabilities =
   CompletionItemClientCapabilities
-    {
-      -- | Client supports snippets as insert text.
+    { -- | Client supports snippets as insert text.
       --
       -- A snippet can define tab stops and placeholders with `$1`, `$2` and
       -- `${3:foo}`. `$0` defines the final tab stop, it defaults to the end of
       -- the snippet. Placeholders with equal identifiers are linked, that is
       -- typing in one will update others too.
       _snippetSupport :: Maybe Bool
+
+      -- | Client supports commit characters on a completion item.
+    , _commitCharactersSupport :: Maybe Bool
+
+      -- | Client supports the follow content formats for the documentation
+      -- property. The order describes the preferred format of the client.
+    , _documentationFormat :: Maybe (List MarkupKind)
+
+      -- | Client supports the deprecated property on a completion item.
+    , _deprecatedSupport :: Maybe Bool
+
+      -- | Client supports the preselect property on a completion item.
+    , _preselectSupport :: Maybe Bool
     } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''CompletionItemClientCapabilities)
+
+data CompletionItemKindClientCapabilities =
+  CompletionItemKindClientCapabilities
+    { -- | The completion item kind values the client supports. When this
+      -- property exists the client also guarantees that it will
+      --  handle values outside its set gracefully and falls back
+      --  to a default value when unknown.
+      _valueSet :: Maybe (List CompletionItemKind)
+    }
+  deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''CompletionItemKindClientCapabilities)
 
 data CompletionClientCapabilities =
   CompletionClientCapabilities
     { _dynamicRegistration :: Maybe Bool -- ^Whether completion supports dynamic
                                          -- registration.
     , _completionItem :: Maybe CompletionItemClientCapabilities
+    , _completionItemKind :: Maybe CompletionItemKindClientCapabilities
+    , _contextSupport :: Maybe Bool
     } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''CompletionClientCapabilities)
@@ -422,15 +660,31 @@ $(deriveJSON lspOptions ''CompletionClientCapabilities)
 data HoverClientCapabilities =
   HoverClientCapabilities
     { _dynamicRegistration :: Maybe Bool
+    , _contentFormat :: Maybe (List MarkupKind)
     } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''HoverClientCapabilities)
 
 -- -------------------------------------
 
+data SignatureInformationClientCapabilities = 
+  SignatureInformationClientCapabilities
+    { -- | Client supports the follow content formats for the documentation
+      -- property. The order describes the preferred format of the client.
+      documentationFormat :: Maybe (List MarkupKind)
+    }
+  deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''SignatureInformationClientCapabilities)
+
 data SignatureHelpClientCapabilities =
   SignatureHelpClientCapabilities
-    { _dynamicRegistration :: Maybe Bool
+    { -- | Whether signature help supports dynamic registration.
+      _dynamicRegistration :: Maybe Bool
+      
+      -- | The client supports the following `SignatureInformation`
+      -- specific properties.
+    , _signatureInformation :: Maybe SignatureInformationClientCapabilities
     } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''SignatureHelpClientCapabilities)
@@ -455,9 +709,28 @@ $(deriveJSON lspOptions ''DocumentHighlightClientCapabilities)
 
 -- -------------------------------------
 
+data DocumentSymbolKindClientCapabilities =
+  DocumentSymbolKindClientCapabilities
+    { -- | The symbol kind values the client supports. When this
+      --  property exists the client also guarantees that it will
+      --  handle values outside its set gracefully and falls back
+      --  to a default value when unknown.
+      --  
+      --  If this property is not present the client only supports
+      --  the symbol kinds from `File` to `Array` as defined in
+      --  the initial version of the protocol.
+      _valueSet :: Maybe (List SymbolKind)
+    }
+  deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''DocumentSymbolKindClientCapabilities)
+
 data DocumentSymbolClientCapabilities =
   DocumentSymbolClientCapabilities
-    { _dynamicRegistration :: Maybe Bool
+    { -- | Whether document symbol supports dynamic registration.
+      _dynamicRegistration :: Maybe Bool
+      -- | Specific capabilities for the `SymbolKind`.
+    , _symbolKind :: Maybe DocumentSymbolKindClientCapabilities
     } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''DocumentSymbolClientCapabilities)
@@ -500,13 +773,43 @@ $(deriveJSON lspOptions ''DefinitionClientCapabilities)
 
 -- -------------------------------------
 
-data CodeActionKindValueSet =
-  CodeActionKindValueSet
-   { _valueSet :: List CodeActionKind
+data TypeDefinitionClientCapabilities =
+  TypeDefinitionClientCapabilities
+    { -- | Whether typeDefinition supports dynamic registration. If this is set to `true`
+      --  the client supports the new `(TextDocumentRegistrationOptions & StaticRegistrationOptions)`
+      --  return value for the corresponding server capability as well.
+      _dynamicRegistration :: Maybe Bool
+    } deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''TypeDefinitionClientCapabilities)
+
+-- -------------------------------------
+--
+data ImplementationClientCapabilities =
+  ImplementationClientCapabilities
+    { -- | Whether implementation supports dynamic registration. If this is set to `true`
+      -- the client supports the new `(TextDocumentRegistrationOptions & StaticRegistrationOptions)`
+      -- return value for the corresponding server capability as well.
+      _dynamicRegistration :: Maybe Bool
+    } deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''ImplementationClientCapabilities)
+
+-- -------------------------------------
+
+data CodeActionKindClientCapabilities =
+  CodeActionKindClientCapabilities
+   { -- | The code action kind values the client supports. When this
+     -- property exists the client also guarantees that it will
+     -- handle values outside its set gracefully and falls back
+     -- to a default value when unknown.
+      _valueSet :: List CodeActionKind
    } deriving (Show, Read, Eq)
 
-instance Default CodeActionKindValueSet where
-  def = CodeActionKindValueSet (List allKinds)
+$(deriveJSON lspOptions ''CodeActionKindClientCapabilities)
+
+instance Default CodeActionKindClientCapabilities where
+  def = CodeActionKindClientCapabilities (List allKinds)
     where allKinds = [ CodeActionQuickFix
                      , CodeActionRefactor
                      , CodeActionRefactorExtract
@@ -516,11 +819,9 @@ instance Default CodeActionKindValueSet where
                      , CodeActionSourceOrganizeImports
                      ]
 
-$(deriveJSON lspOptions ''CodeActionKindValueSet)
-
 data CodeActionLiteralSupport =
   CodeActionLiteralSupport
-    { _codeActionKind :: CodeActionKindValueSet -- ^ The code action kind is support with the following value set.
+    { _codeActionKind :: CodeActionKindClientCapabilities -- ^ The code action kind is support with the following value set.
     } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''CodeActionLiteralSupport)
@@ -529,8 +830,8 @@ data CodeActionClientCapabilities =
   CodeActionClientCapabilities
     { _dynamicRegistration      :: Maybe Bool -- ^ Whether code action supports dynamic registration.
     , _codeActionLiteralSupport :: Maybe CodeActionLiteralSupport -- ^ The client support code action literals as a valid response
-                                                                 -- of the `textDocument/codeAction` request.
-                                                                 -- Since 3.8.0
+                                                                  -- of the `textDocument/codeAction` request.
+                                                                  -- Since 3.8.0
     } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''CodeActionClientCapabilities)
@@ -555,6 +856,18 @@ $(deriveJSON lspOptions ''DocumentLinkClientCapabilities)
 
 -- -------------------------------------
 
+data ColorProviderClientCapabilities =
+  ColorProviderClientCapabilities
+    { -- | Whether colorProvider supports dynamic registration. If this is set to `true`
+      --  the client supports the new `(ColorProviderOptions & TextDocumentRegistrationOptions & StaticRegistrationOptions)`
+      --  return value for the corresponding server capability as well.
+      _dynamicRegistration :: Maybe Bool
+    } deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''ColorProviderClientCapabilities)
+
+-- -------------------------------------
+
 data RenameClientCapabilities =
   RenameClientCapabilities
     { _dynamicRegistration :: Maybe Bool
@@ -562,9 +875,12 @@ data RenameClientCapabilities =
 
 $(deriveJSON lspOptions ''RenameClientCapabilities)
 
+-- -------------------------------------
+
 data PublishDiagnosticsClientCapabilities =
   PublishDiagnosticsClientCapabilities
-    { _relatedInformation :: Maybe Bool
+    { -- | Whether the clients accepts diagnostics with related information.
+      _relatedInformation :: Maybe Bool
     } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''PublishDiagnosticsClientCapabilities)
@@ -605,6 +921,12 @@ data TextDocumentClientCapabilities =
       -- | Capabilities specific to the `textDocument/definition`
     , _definition :: Maybe DefinitionClientCapabilities
 
+      -- | Capabilities specific to the `textDocument/typeDefinition`
+    , _typeDefinition :: Maybe TypeDefinitionClientCapabilities
+
+      -- | Capabilities specific to the `textDocument/implementation`
+    , _implementation :: Maybe ImplementationClientCapabilities
+
       -- | Capabilities specific to the `textDocument/codeAction`
     , _codeAction :: Maybe CodeActionClientCapabilities
 
@@ -613,6 +935,10 @@ data TextDocumentClientCapabilities =
 
       -- | Capabilities specific to the `textDocument/documentLink`
     , _documentLink :: Maybe DocumentLinkClientCapabilities
+
+      -- | Capabilities specific to the `textDocument/documentColor` and the
+      -- `textDocument/colorPresentation` request
+    , _colorProvider :: Maybe ColorProviderClientCapabilities
 
       -- | Capabilities specific to the `textDocument/rename`
     , _rename :: Maybe RenameClientCapabilities
@@ -626,6 +952,7 @@ $(deriveJSON lspOptions ''TextDocumentClientCapabilities)
 instance Default TextDocumentClientCapabilities where
   def = TextDocumentClientCapabilities def def def def def def def def
                                        def def def def def def def def
+                                       def def def
 
 -- ---------------------------------------------------------------------
 {-

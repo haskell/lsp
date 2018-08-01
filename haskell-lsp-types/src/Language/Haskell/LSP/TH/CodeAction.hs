@@ -14,7 +14,7 @@ import           Language.Haskell.LSP.TH.Diagnostic
 import           Language.Haskell.LSP.TH.List
 import           Language.Haskell.LSP.TH.Location
 import           Language.Haskell.LSP.TH.Message
-import           Language.Haskell.LSP.TH.TextDocumentIdentifier
+import           Language.Haskell.LSP.TH.TextDocument
 import           Language.Haskell.LSP.TH.WorkspaceEdit
 
 
