@@ -6,6 +6,8 @@
 * Update ClientCapabilities to v3.10
 * Add MarkupContent
 * Add new CompletionKinds
+* Add new DocumentSymbol type and heirarchal support
+* Rename CommandOrCodeAction to CAResult
 
 ## 0.4.0.0  -- 2018-07-10
 

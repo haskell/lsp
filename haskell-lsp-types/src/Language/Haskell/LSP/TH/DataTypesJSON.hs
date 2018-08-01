@@ -2729,4 +2729,5 @@ makeFieldsNoPrefix ''DiagnosticRelatedInformation
 
 -- Symbol
 makeFieldsNoPrefix ''DocumentSymbolParams
+makeFieldsNoPrefix ''DocumentSymbol
 makeFieldsNoPrefix ''SymbolInformation
