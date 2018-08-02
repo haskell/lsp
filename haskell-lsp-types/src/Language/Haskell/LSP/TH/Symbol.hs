@@ -5,6 +5,7 @@ module Language.Haskell.LSP.TH.Symbol where
 import           Control.Applicative
 import           Data.Aeson
 import           Data.Aeson.TH
+import           Data.Scientific
 import           Data.Text                                      (Text)
 import           Language.Haskell.LSP.TH.Constants
 import           Language.Haskell.LSP.TH.TextDocument
@@ -126,6 +127,7 @@ data SymbolKind
     | SkNumber
     | SkBoolean
     | SkArray
+    | SkUnknown Scientific
     deriving (Read,Show,Eq)
 
 instance ToJSON SymbolKind where
@@ -147,6 +149,7 @@ instance ToJSON SymbolKind where
   toJSON SkNumber      = Number 16
   toJSON SkBoolean     = Number 17
   toJSON SkArray       = Number 18
+  toJSON (SkUnknown x) = Number x
 
 instance FromJSON SymbolKind where
   parseJSON (Number  1) = pure SkFile
@@ -167,7 +170,8 @@ instance FromJSON SymbolKind where
   parseJSON (Number 16) = pure SkNumber
   parseJSON (Number 17) = pure SkBoolean
   parseJSON (Number 18) = pure SkArray
-  parseJSON _             = mempty
+  parseJSON (Number x)  = pure (SkUnknown x)
+  parseJSON _           = mempty
 
 
 -- ---------------------------------------------------------------------
