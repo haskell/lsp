@@ -46,6 +46,7 @@ library
                      , hashable
                      , lens >= 4.15.2
                      , network-uri
+                     , scientific
                      , text
                      , unordered-containers
   hs-source-dirs:      src

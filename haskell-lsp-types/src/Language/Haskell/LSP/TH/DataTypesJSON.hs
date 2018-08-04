@@ -48,7 +48,6 @@ import           Language.Haskell.LSP.TH.MarkupContent
 import           Language.Haskell.LSP.TH.Message
 import           Language.Haskell.LSP.TH.Symbol
 import           Language.Haskell.LSP.TH.TextDocument
-import           Language.Haskell.LSP.TH.Utils
 import           Language.Haskell.LSP.TH.Uri
 import           Language.Haskell.LSP.TH.WorkspaceEdit
 
@@ -2729,4 +2728,5 @@ makeFieldsNoPrefix ''DiagnosticRelatedInformation
 
 -- Symbol
 makeFieldsNoPrefix ''DocumentSymbolParams
+makeFieldsNoPrefix ''DocumentSymbol
 makeFieldsNoPrefix ''SymbolInformation
