@@ -8,6 +8,8 @@
 * Add new CompletionKinds
 * Add new SymbolKinds
 * Add preset version capabilities
+* Add new DocumentSymbol type and hierarchal support
+* Rename CommandOrCodeAction to CAResult
 
 ## 0.4.0.0  -- 2018-07-10
 

@@ -278,17 +278,16 @@ data CodeAction =
 
 deriveJSON lspOptions ''CodeAction
 
-data CommandOrCodeAction = CommandOrCodeActionCommand Command
-                         | CommandOrCodeActionCodeAction CodeAction
+data CAResult = CACommand Command
+              | CACodeAction CodeAction
   deriving (Read,Show,Eq)
 
-instance FromJSON CommandOrCodeAction where
-  parseJSON x = CommandOrCodeActionCommand <$> parseJSON x
-              <|> CommandOrCodeActionCodeAction <$> parseJSON x
+instance FromJSON CAResult where
+  parseJSON x = CACommand <$> parseJSON x <|> CACodeAction <$> parseJSON x
 
-instance ToJSON CommandOrCodeAction where
-  toJSON (CommandOrCodeActionCommand x) = toJSON x
-  toJSON (CommandOrCodeActionCodeAction x) = toJSON x
+instance ToJSON CAResult where
+  toJSON (CACommand x) = toJSON x
+  toJSON (CACodeAction x) = toJSON x
 
-type CodeActionRequest  = RequestMessage ClientMethod CodeActionParams (List CommandOrCodeAction)
-type CodeActionResponse = ResponseMessage (List CommandOrCodeAction)
+type CodeActionRequest  = RequestMessage ClientMethod CodeActionParams (List CAResult)
+type CodeActionResponse = ResponseMessage (List CAResult)

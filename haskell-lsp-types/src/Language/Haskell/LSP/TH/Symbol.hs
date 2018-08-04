@@ -1,8 +1,11 @@
 {-# LANGUAGE TemplateHaskell            #-}
+{-# LANGUAGE DuplicateRecordFields      #-}
 module Language.Haskell.LSP.TH.Symbol where
 
+import           Control.Applicative
 import           Data.Aeson
 import           Data.Aeson.TH
+import           Data.Scientific
 import           Data.Text                                      (Text)
 import           Language.Haskell.LSP.TH.Constants
 import           Language.Haskell.LSP.TH.TextDocument
@@ -132,6 +135,7 @@ data SymbolKind
     | SkEvent
     | SkOperator
     | SkTypeParameter
+    | SkUnknown Scientific
     deriving (Read,Show,Eq)
 
 instance ToJSON SymbolKind where
@@ -161,7 +165,7 @@ instance ToJSON SymbolKind where
   toJSON SkEvent         = Number 24
   toJSON SkOperator      = Number 25
   toJSON SkTypeParameter = Number 26
-
+  toJSON (SkUnknown x)   = Number x
 
 instance FromJSON SymbolKind where
   parseJSON (Number  1) = pure SkFile
@@ -190,23 +194,78 @@ instance FromJSON SymbolKind where
   parseJSON (Number 24) = pure SkEvent
   parseJSON (Number 25) = pure SkOperator
   parseJSON (Number 26) = pure SkTypeParameter
-  parseJSON _             = mempty
-
+  parseJSON (Number x)  = pure (SkUnknown x)
+  parseJSON _           = mempty
 
 -- ---------------------------------------------------------------------
 
+-- | Represents programming constructs like variables, classes, interfaces etc.
+-- that appear in a document. Document symbols can be hierarchical and they
+-- have two ranges: one that encloses its definition and one that points to its
+-- most interesting range, e.g. the range of an identifier.
+data DocumentSymbol =
+  DocumentSymbol
+    { _name           :: Text -- ^ The name of this symbol.
+    -- | More detail for this symbol, e.g the signature of a function. If not
+    -- provided the name is used.
+    , _detail         :: Maybe Text
+    , _kind           :: SymbolKind -- ^ The kind of this symbol.
+    , _deprecated     :: Maybe Bool -- ^ Indicates if this symbol is deprecated.
+    -- | The range enclosing this symbol not including leading/trailing
+    -- whitespace but everything else like comments. This information is
+    -- typically used to determine if the the clients cursor is inside the symbol
+    -- to reveal in the symbol in the UI.
+    , _range          :: Range
+    -- | The range that should be selected and revealed when this symbol is being
+    -- picked, e.g the name of a function. Must be contained by the the '_range'.
+    , _selectionRange :: Range
+    -- | Children of this symbol, e.g. properties of a class.
+    , _children       :: Maybe (List DocumentSymbol)
+    } deriving (Read,Show,Eq)
+
+deriveJSON lspOptions ''DocumentSymbol
+
+-- ---------------------------------------------------------------------
+
+-- | Represents information about programming constructs like variables, classes,
+-- interfaces etc.
 data SymbolInformation =
   SymbolInformation
-    { _name          :: Text
-    , _kind          :: SymbolKind
+    { _name          :: Text -- ^ The name of this symbol.
+    , _kind          :: SymbolKind -- ^ The kind of this symbol.
+    , _deprecated    :: Maybe Bool -- ^ Indicates if this symbol is deprecated.
+    -- | The location of this symbol. The location's range is used by a tool
+    -- to reveal the location in the editor. If the symbol is selected in the
+    -- tool the range's start information is used to position the cursor. So
+    -- the range usually spans more then the actual symbol's name and does
+    -- normally include things like visibility modifiers.
+    --
+    -- The range doesn't have to denote a node range in the sense of a abstract
+    -- syntax tree. It can therefore not be used to re-construct a hierarchy of
+    -- the symbols.
     , _location      :: Location
-    , _containerName :: Maybe Text -- ^The name of the symbol containing this
-                                     -- symbol.
+    -- | The name of the symbol containing this symbol. This information is for
+    -- user interface purposes (e.g. to render a qualifier in the user interface
+    -- if necessary). It can't be used to re-infer a hierarchy for the document
+    -- symbols.
+    , _containerName :: Maybe Text
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''SymbolInformation
 
 -- -------------------------------------
 
-type DocumentSymbolRequest = RequestMessage ClientMethod DocumentSymbolParams (List SymbolInformation)
-type DocumentSymbolsResponse = ResponseMessage (List SymbolInformation)
+data DSResult = DSDocumentSymbols (List DocumentSymbol)
+              | DSSymbolInformation (List SymbolInformation)
+  deriving (Read,Show,Eq)
+
+instance FromJSON DSResult where
+  parseJSON x = DSDocumentSymbols <$> parseJSON x <|> DSSymbolInformation <$> parseJSON x
+
+instance ToJSON DSResult where
+  toJSON (DSDocumentSymbols x) = toJSON x
+  toJSON (DSSymbolInformation x) = toJSON x
+
+
+type DocumentSymbolRequest = RequestMessage ClientMethod DocumentSymbolParams DSResult
+type DocumentSymbolsResponse = ResponseMessage DSResult
