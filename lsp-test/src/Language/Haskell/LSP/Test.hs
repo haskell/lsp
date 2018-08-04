@@ -23,7 +23,7 @@ module Language.Haskell.LSP.Test
   , runSessionWithConfig
   , SessionConfig(..)
   , defaultConfig
-  , module Language.Haskell.LSP.Test.Capabilities
+  , module Language.Haskell.LSP.Types.Capabilities
   -- ** Exceptions
   , module Language.Haskell.LSP.Test.Exceptions
   , withTimeout
@@ -91,10 +91,9 @@ import qualified Data.Map as Map
 import Data.Maybe
 import Language.Haskell.LSP.Types hiding (id, capabilities, message)
 import qualified Language.Haskell.LSP.Types as LSP
-import qualified Language.Haskell.LSP.Types.Capabilities as LSP
+import Language.Haskell.LSP.Types.Capabilities
 import Language.Haskell.LSP.Messages
 import Language.Haskell.LSP.VFS
-import Language.Haskell.LSP.Test.Capabilities
 import Language.Haskell.LSP.Test.Compat
 import Language.Haskell.LSP.Test.Decoding
 import Language.Haskell.LSP.Test.Exceptions
@@ -115,7 +114,7 @@ import qualified Yi.Rope as Rope
 -- >       params = TextDocumentPositionParams doc
 -- >   hover <- request TextDocumentHover params
 runSession :: String -- ^ The command to run the server.
-           -> LSP.ClientCapabilities -- ^ The capabilities that the client should declare.
+           -> ClientCapabilities -- ^ The capabilities that the client should declare.
            -> FilePath -- ^ The filepath to the root directory for the session.
            -> Session a -- ^ The session to run.
            -> IO a
@@ -124,7 +123,7 @@ runSession = runSessionWithConfig def
 -- | Starts a new sesion with a custom configuration.
 runSessionWithConfig :: SessionConfig -- ^ Configuration options for the session.
                      -> String -- ^ The command to run the server.
-                     -> LSP.ClientCapabilities -- ^ The capabilities that the client should declare.
+                     -> ClientCapabilities -- ^ The capabilities that the client should declare.
                      -> FilePath -- ^ The filepath to the root directory for the session.
                      -> Session a -- ^ The session to run.
                      -> IO a
@@ -419,9 +418,9 @@ applyEdit doc edit = do
   caps <- asks sessionCapabilities
 
   let supportsDocChanges = fromMaybe False $ do
-        let LSP.ClientCapabilities mWorkspace _ _ = caps
-        LSP.WorkspaceClientCapabilities _ mEdit _ _ _ _ <- mWorkspace
-        LSP.WorkspaceEditClientCapabilities mDocChanges <- mEdit
+        let ClientCapabilities mWorkspace _ _ = caps
+        WorkspaceClientCapabilities _ mEdit _ _ _ _ _ _ <- mWorkspace
+        WorkspaceEditClientCapabilities mDocChanges <- mEdit
         mDocChanges
 
   let wEdit = if supportsDocChanges
