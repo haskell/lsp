@@ -1,4 +1,4 @@
-# lsp-test [![Build Status](https://travis-ci.com/Bubba/haskell-lsp-test.svg?branch=master)](https://travis-ci.com/Bubba/haskell-lsp-test)
+# lsp-test [![Build Status](https://travis-ci.com/Bubba/haskell-lsp-test.svg?branch=master)](https://travis-ci.com/Bubba/haskell-lsp-test) [![Hackage](https://img.shields.io/hackage/v/lsp-test.svg)](https://hackage.haskell.org/package/lsp-test-0.1.0.0)
 lsp-test is a functional testing framework for Language Server Protocol servers.
 
 ```haskell
