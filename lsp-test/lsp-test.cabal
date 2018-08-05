@@ -4,15 +4,10 @@ synopsis:            Functional test framework for LSP servers.
 description:
   A test framework for writing tests against 
   <https://microsoft.github.io/language-server-protocol/ Language Server Protocol servers>.
-  @lsp-test@ launches your server as a subprocess and allows you to simulate a session
-  down to the wire.
-  Used for testing in <https://github.com/haskell/haskell-ide-engine haskell-ide-engine>.
-  > runSession "hie" fullCaps "path/to/root/dir" $ do
-  > doc <- openDoc "Desktop/simple.hs" "haskell"
-  > diags <- waitForDiagnostics
-  > let pos = Position 12 5
-  >     params = TextDocumentPositionParams doc
-  > hover <- request TextDocumentHover params
+  @Language.Haskell.LSP.Test@ launches your server as a subprocess and allows you to simulate a session
+  down to the wire, and @Language.Haskell.LSP.Test@ can replay captured sessions from
+  <haskell-lsp-test https://hackage.haskell.org/package/haskell-lsp>.
+  It's currently used for testing in <https://github.com/haskell/haskell-ide-engine haskell-ide-engine>.
 homepage:            https://github.com/Bubba/haskell-lsp-test#readme
 license:             BSD3
 license-file:        LICENSE
