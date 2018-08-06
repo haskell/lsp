@@ -1,5 +1,10 @@
 # Revision history for haskell-lsp-types
 
+## 0.6.0.0  -- 2018-xx-xx
+
+* Add new DocumentSymbol type and hierarchal support
+* Rename CommandOrCodeAction to CAResult
+
 ## 0.5.0.0  -- 2018-08-03
 
 * Update Command.arguments to match specification
@@ -8,8 +13,6 @@
 * Add new CompletionKinds
 * Add new SymbolKinds
 * Add preset version capabilities
-* Add new DocumentSymbol type and hierarchal support
-* Rename CommandOrCodeAction to CAResult
 
 ## 0.4.0.0  -- 2018-07-10
 
