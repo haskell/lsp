@@ -6,11 +6,13 @@ module Language.Haskell.LSP.TH.Completion where
 import           Control.Applicative
 import qualified Data.Aeson                    as A
 import           Data.Aeson.TH
+import           Data.Scientific                ( Scientific )
 import           Data.Text                      ( Text )
 import           Language.Haskell.LSP.TH.Command
 import           Language.Haskell.LSP.TH.Constants
 import           Language.Haskell.LSP.TH.DocumentFilter
 import           Language.Haskell.LSP.TH.List
+import           Language.Haskell.LSP.TH.Location
 import           Language.Haskell.LSP.TH.MarkupContent
 import           Language.Haskell.LSP.TH.Message
 import           Language.Haskell.LSP.TH.TextDocument
@@ -389,8 +391,57 @@ data CompletionResponseResult
 
 deriveJSON defaultOptions { fieldLabelModifier = rdrop (length ("CompletionResponseResult"::String)), sumEncoding = UntaggedValue } ''CompletionResponseResult
 
+-- | How a completion was triggered
+data CompletionTriggerKind = -- | Completion was triggered by typing an identifier (24x7 code
+                             -- complete), manual invocation (e.g Ctrl+Space) or via API.
+                             CtInvoked
+                             -- | Completion was triggered by a trigger character specified by
+                             -- the `triggerCharacters` properties of the `CompletionRegistrationOptions`.
+                           | CtTriggerCharacter
+                             -- | Completion was re-triggered as the current completion list is incomplete.
+                           | CtTriggerForIncompleteCompletions
+                             -- | An unknown 'CompletionTriggerKind' not yet supported in haskell-lsp.
+                           | CtUnknown Scientific
+  deriving (Read, Show, Eq)
+
+instance A.ToJSON CompletionTriggerKind where
+  toJSON CtInvoked                         = A.Number 1
+  toJSON CtTriggerCharacter                = A.Number 2
+  toJSON CtTriggerForIncompleteCompletions = A.Number 3
+  toJSON (CtUnknown x)                     = A.Number x
+
+instance A.FromJSON CompletionTriggerKind where
+  parseJSON (A.Number 1) = pure CtInvoked
+  parseJSON (A.Number 2) = pure CtTriggerCharacter
+  parseJSON (A.Number 3) = pure CtTriggerForIncompleteCompletions
+  parseJSON (A.Number x) = pure (CtUnknown x)
+  parseJSON _          = mempty
+
+data CompletionContext =
+  CompletionContext
+    { _triggerKind      :: CompletionTriggerKind -- ^ How the completion was triggered.
+    , _triggerCharacter :: Maybe Text
+      -- ^ The trigger character (a single character) that has trigger code complete.
+      -- Is undefined if `triggerKind !== CompletionTriggerKind.TriggerCharacter`
+    }
+  deriving (Read, Show, Eq)
+
+deriveJSON lspOptions ''CompletionContext
+
+data CompletionParams =
+  CompletionParams
+    { _textDocument :: TextDocumentIdentifier -- ^ The text document.
+    , _position     :: Position -- ^ The position inside the text document.
+    , _context      :: Maybe CompletionContext
+      -- ^ The completion context. This is only available if the client specifies
+      -- to send this using `ClientCapabilities.textDocument.completion.contextSupport === true`
+    }
+  deriving (Read, Show, Eq)
+
+deriveJSON lspOptions ''CompletionParams
+
 type CompletionResponse = ResponseMessage CompletionResponseResult
-type CompletionRequest = RequestMessage ClientMethod TextDocumentPositionParams CompletionResponseResult
+type CompletionRequest = RequestMessage ClientMethod CompletionParams CompletionResponseResult
 
 -- -------------------------------------
 {-
