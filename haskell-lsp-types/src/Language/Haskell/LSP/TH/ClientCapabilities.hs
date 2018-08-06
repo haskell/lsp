@@ -13,6 +13,8 @@ import Language.Haskell.LSP.TH.MarkupContent
 import Language.Haskell.LSP.TH.Symbol
 import Data.Default
 
+{-# ANN module "HLint: ignore Use newtype instead of data" #-}
+
 -- ---------------------------------------------------------------------
 {-
 New in 3.0
@@ -731,6 +733,7 @@ data DocumentSymbolClientCapabilities =
       _dynamicRegistration :: Maybe Bool
       -- | Specific capabilities for the `SymbolKind`.
     , _symbolKind :: Maybe DocumentSymbolKindClientCapabilities
+    , _hierarchicalDocumentSymbolSupport :: Maybe Bool
     } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''DocumentSymbolClientCapabilities)
