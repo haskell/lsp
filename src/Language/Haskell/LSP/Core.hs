@@ -144,7 +144,8 @@ data Handlers =
     , completionHandler              :: !(Maybe (Handler J.CompletionRequest))
     , completionResolveHandler       :: !(Maybe (Handler J.CompletionItemResolveRequest))
     , signatureHelpHandler           :: !(Maybe (Handler J.SignatureHelpRequest))
-    , definitionHandler              :: !(Maybe (Handler J.DefinitionRequest))
+    , definitionHandler              :: !(Maybe (Handler J.ImplementationRequest))
+    , implementationHandler          :: !(Maybe (Handler J.ImplementationRequest))
     , referencesHandler              :: !(Maybe (Handler J.ReferencesRequest))
     , documentHighlightHandler       :: !(Maybe (Handler J.DocumentHighlightRequest))
     , documentSymbolHandler          :: !(Maybe (Handler J.DocumentSymbolRequest))
@@ -194,7 +195,7 @@ instance Default Handlers where
   def = Handlers Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
                  Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
                  Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
-                 Nothing Nothing Nothing Nothing Nothing
+                 Nothing Nothing Nothing Nothing Nothing Nothing
 
 -- ---------------------------------------------------------------------
 nop :: a -> b -> IO a
@@ -257,6 +258,7 @@ handlerMap _ h J.TextDocumentFormatting          = hh nop ReqDocumentFormatting 
 handlerMap _ h J.TextDocumentRangeFormatting     = hh nop ReqDocumentRangeFormatting $ documentRangeFormattingHandler h
 handlerMap _ h J.TextDocumentOnTypeFormatting    = hh nop ReqDocumentOnTypeFormatting $ documentTypeFormattingHandler h
 handlerMap _ h J.TextDocumentDefinition          = hh nop ReqDefinition $ definitionHandler h
+handlerMap _ h J.TextDocumentImplementation      = hh nop ReqDefinition $ implementationHandler h
 handlerMap _ h J.TextDocumentCodeAction          = hh nop ReqCodeAction $ codeActionHandler h
 handlerMap _ h J.TextDocumentCodeLens            = hh nop ReqCodeLens $ codeLensHandler h
 handlerMap _ h J.CodeLensResolve                 = hh nop ReqCodeLensResolve $ codeLensResolveHandler h

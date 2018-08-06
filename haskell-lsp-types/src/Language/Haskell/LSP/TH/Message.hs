@@ -62,7 +62,7 @@ responseId :: LspId -> LspIdRsp
 responseId (IdInt    i) = IdRspInt i
 responseId (IdString s) = IdRspString s
 
--- | Converts an LspIdRsp to its LspId counterpart. 
+-- | Converts an LspIdRsp to its LspId counterpart.
 requestId :: LspIdRsp -> LspId
 requestId (IdRspInt    i) = IdInt i
 requestId (IdRspString s) = IdString s
@@ -208,7 +208,7 @@ data ServerMethod =
   -- Document
   | TextDocumentPublishDiagnostics
   -- Cancelling
-  | CancelRequestServer  
+  | CancelRequestServer
    deriving (Eq,Ord,Read,Show)
 
 instance A.FromJSON ServerMethod where

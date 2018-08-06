@@ -6,7 +6,6 @@ packages:
 
 extra-deps:
 - yi-rope-0.11
-- sorted-list-0.2.1.0
 
 flags: {}
 extra-package-dbs: []
