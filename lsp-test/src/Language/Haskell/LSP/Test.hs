@@ -349,12 +349,14 @@ noDiagnostics = do
   when (diagsNot ^. params . LSP.diagnostics /= List []) $ liftIO $ throw UnexpectedDiagnostics
 
 -- | Returns the symbols in a document.
-getDocumentSymbols :: TextDocumentIdentifier -> Session [SymbolInformation]
+getDocumentSymbols :: TextDocumentIdentifier -> Session (Either [DocumentSymbol] [SymbolInformation])
 getDocumentSymbols doc = do
-  ResponseMessage _ rspLid mRes mErr <- request TextDocumentDocumentSymbol (DocumentSymbolParams doc)
+  ResponseMessage _ rspLid mRes mErr <- request TextDocumentDocumentSymbol (DocumentSymbolParams doc) :: Session DocumentSymbolsResponse
   maybe (return ()) (throw . UnexpectedResponseError rspLid) mErr
-  let (Just (List symbols)) = mRes
-  return symbols
+  case mRes of
+    Just (DSDocumentSymbols (List xs)) -> return (Left xs)
+    Just (DSSymbolInformation (List xs)) -> return (Right xs)
+    Nothing -> Prelude.error "No result and no error in DocumentSymbolsResponse"
 
 -- | Returns all the code actions in a document by 
 -- querying the code actions at each of the current 

@@ -1,5 +1,5 @@
 name:                lsp-test
-version:             0.1.0.0
+version:             0.2.0.0
 synopsis:            Functional test framework for LSP servers.
 description:
   A test framework for writing tests against 
@@ -20,6 +20,7 @@ category:            Testing
 build-type:          Simple
 cabal-version:       2.0
 extra-source-files:  README.md
+                   , ChangeLog.md
 tested-with:         GHC == 8.2.2 , GHC == 8.4.2 , GHC == 8.4.3
 
 source-repository head

@@ -27,8 +27,8 @@ before_install:
   # It's ok to fail
   - cd haskell-ide-engine
   - git init
-  - git remote add origin https://github.com/haskell/haskell-ide-engine.git
-  - git pull origin master
+  - git remote add origin https://github.com/Bubba/haskell-ide-engine.git
+  - git pull origin heirarchal-document-symbols
   - git submodule init
   - git submodule sync
   - git submodule update
