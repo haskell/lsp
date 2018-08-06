@@ -352,6 +352,11 @@ data CompletionItem =
          -- ^ An optional array of additional text edits that are applied when
          -- selecting this completion. Edits must not overlap with the main edit
          -- nor with themselves.
+    , _commitCharacters    :: Maybe (List Text)
+         -- ^ An optional set of characters that when pressed while this completion
+         -- is active will accept it first and then type that character. *Note*
+         -- that all commit characters should have `length=1` and that superfluous
+	 -- characters will be ignored.
     , _command             :: Maybe Command
         -- ^ An optional command that is executed *after* inserting this
         -- completion. *Note* that additional modifications to the current
