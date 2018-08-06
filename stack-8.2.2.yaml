@@ -1,4 +1,4 @@
-resolver: lts-11.17 # GHC 8.2.2 version
+resolver: lts-11.20 # GHC 8.2.2 version
 
 packages:
 - '.'

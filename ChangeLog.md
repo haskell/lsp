@@ -1,9 +1,11 @@
 # Revision history for haskell-lsp
 
-## 0.6.0.0
+## 0.6.0.0 -- 2018-08-06
 
 * Add new DocumentSymbol type and heirarchal support
 * Rename CommandOrCodeAction to CAResult
+* Add handler for 'textDocument/implementation' request from client
+* Bump stack resolvers for lts 11 and lts 12
 
 ## 0.5.0.0  -- 2018-08-03
 
