@@ -35,7 +35,7 @@ library
                      , parser-combinators:Control.Applicative.Combinators
   default-language:    Haskell2010
   build-depends:       base >= 4.7 && < 5
-                     , haskell-lsp >= 0.5
+                     , haskell-lsp >= 0.6
                      , aeson
                      , aeson-pretty
                      , ansi-terminal
@@ -78,7 +78,7 @@ test-suite tests
                      , hspec
                      , lens
                      , data-default
-                     , haskell-lsp >= 0.5
+                     , haskell-lsp >= 0.6
                      , lsp-test
                      , aeson
                      , unordered-containers

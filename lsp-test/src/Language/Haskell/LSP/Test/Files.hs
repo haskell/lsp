@@ -62,7 +62,9 @@ mapUris f event =
     fromServerMsg (NotPublishDiagnostics n) = NotPublishDiagnostics $ swapUri params n
 
     fromServerMsg (RspDocumentSymbols r) =
-      let newSymbols = fmap (fmap (swapUri location)) $ r ^. result
+      let newSymbols = case r ^. result of
+            Just (DSSymbolInformation si) -> Just (DSSymbolInformation (fmap (swapUri location) si))
+            x -> x
       in RspDocumentSymbols $ result .~ newSymbols $ r
 
     fromServerMsg (RspRename r) =

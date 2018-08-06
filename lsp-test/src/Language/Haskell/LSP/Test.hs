@@ -359,7 +359,7 @@ getDocumentSymbols doc = do
 -- | Returns all the code actions in a document by 
 -- querying the code actions at each of the current 
 -- diagnostics' positions.
-getAllCodeActions :: TextDocumentIdentifier -> Session [CommandOrCodeAction]
+getAllCodeActions :: TextDocumentIdentifier -> Session [CAResult]
 getAllCodeActions doc = do
   curDiags <- fromMaybe [] . Map.lookup (doc ^. uri) . curDiagnostics <$> get
   let ctx = CodeActionContext (List curDiags) Nothing
@@ -367,7 +367,7 @@ getAllCodeActions doc = do
   foldM (go ctx) [] curDiags
 
   where
-    go :: CodeActionContext -> [CommandOrCodeAction] -> Diagnostic -> Session [CommandOrCodeAction]
+    go :: CodeActionContext -> [CAResult] -> Diagnostic -> Session [CAResult]
     go ctx acc diag = do
       ResponseMessage _ rspLid mRes mErr <- request TextDocumentCodeAction (CodeActionParams doc (diag ^. range) ctx)
 
