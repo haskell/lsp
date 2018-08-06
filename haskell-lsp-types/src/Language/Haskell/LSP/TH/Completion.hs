@@ -3,6 +3,7 @@
 {-# LANGUAGE TemplateHaskell            #-}
 module Language.Haskell.LSP.TH.Completion where
 
+import           Control.Applicative
 import qualified Data.Aeson                    as A
 import           Data.Aeson.TH
 import           Data.Text                      ( Text )
@@ -10,6 +11,7 @@ import           Language.Haskell.LSP.TH.Command
 import           Language.Haskell.LSP.TH.Constants
 import           Language.Haskell.LSP.TH.DocumentFilter
 import           Language.Haskell.LSP.TH.List
+import           Language.Haskell.LSP.TH.MarkupContent
 import           Language.Haskell.LSP.TH.Message
 import           Language.Haskell.LSP.TH.TextDocument
 import           Language.Haskell.LSP.TH.Utils
@@ -304,6 +306,17 @@ instance A.FromJSON InsertTextFormat where
   parseJSON (A.Number  2) = pure Snippet
   parseJSON _             = mempty
 
+data CompletionDoc = CompletionDocString Text
+                   | CompletionDocMarkup MarkupContent
+  deriving (Show, Read, Eq)
+
+instance A.ToJSON CompletionDoc where
+  toJSON (CompletionDocString x) = A.toJSON x
+  toJSON (CompletionDocMarkup x) = A.toJSON x
+
+instance A.FromJSON CompletionDoc where
+  parseJSON x = CompletionDocString <$> A.parseJSON x <|> CompletionDocMarkup <$> A.parseJSON x
+
 data CompletionItem =
   CompletionItem
     { _label               :: Text -- ^ The label of this completion item. By default also
@@ -313,8 +326,8 @@ data CompletionItem =
     , _detail              :: Maybe Text -- ^ A human-readable string with additional
                               -- information about this item, like type or
                               -- symbol information.
-    , _documentation       :: Maybe Text -- ^ A human-readable string that represents
-                                    -- a doc-comment.
+    , _documentation       :: Maybe CompletionDoc -- ^ A human-readable string that represents
+                                                  -- a doc-comment.
     , _sortText            :: Maybe Text -- ^ A string that should be used when filtering
                                 -- a set of completion items. When `falsy` the
                                 -- label is used.
