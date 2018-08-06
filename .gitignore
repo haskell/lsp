@@ -13,3 +13,5 @@
 *.swo
 *.DS_Store
 .hspec-failures
+/haskell-lsp-types/dist/
+/haskell-lsp-types/dist-newstyle/

@@ -188,6 +188,7 @@ capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) Noth
     documentSymbol = DocumentSymbolClientCapabilities
       dynamicReg
       (since 3 4 documentSymbolKind)
+      (since 3 10 True)
 
     documentSymbolKind =
       DocumentSymbolKindClientCapabilities
