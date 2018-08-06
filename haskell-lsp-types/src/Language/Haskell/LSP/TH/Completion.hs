@@ -328,6 +328,12 @@ data CompletionItem =
                               -- symbol information.
     , _documentation       :: Maybe CompletionDoc -- ^ A human-readable string that represents
                                                   -- a doc-comment.
+    , _deprecated          :: Maybe Bool -- ^ Indicates if this item is deprecated.
+    , _preselect           :: Maybe Bool
+         -- ^ Select this item when showing.
+         -- *Note* that only one completion item can be selected and that the
+         -- tool / client decides which item that is. The rule is that the *first*
+         -- item of those that match best is selected.
     , _sortText            :: Maybe Text -- ^ A string that should be used when filtering
                                 -- a set of completion items. When `falsy` the
                                 -- label is used.
@@ -356,7 +362,7 @@ data CompletionItem =
          -- ^ An optional set of characters that when pressed while this completion
          -- is active will accept it first and then type that character. *Note*
          -- that all commit characters should have `length=1` and that superfluous
-	 -- characters will be ignored.
+         -- characters will be ignored.
     , _command             :: Maybe Command
         -- ^ An optional command that is executed *after* inserting this
         -- completion. *Note* that additional modifications to the current
