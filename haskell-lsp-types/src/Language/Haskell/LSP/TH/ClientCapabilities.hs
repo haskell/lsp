@@ -13,8 +13,6 @@ import Language.Haskell.LSP.TH.MarkupContent
 import Language.Haskell.LSP.TH.Symbol
 import Data.Default
 
-{-# ANN module "HLint: ignore Use newtype instead of data" #-}
-
 -- ---------------------------------------------------------------------
 {-
 New in 3.0
