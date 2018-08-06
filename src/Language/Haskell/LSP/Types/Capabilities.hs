@@ -2,7 +2,7 @@ module Language.Haskell.LSP.Types.Capabilities
   (
     module Language.Haskell.LSP.TH.ClientCapabilities
   , fullCaps
-  , LSPVersion
+  , LSPVersion(..)
   , capsForVersion
   ) where
 
