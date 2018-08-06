@@ -18,7 +18,6 @@ import           GHC.Generics
 import           Language.Haskell.LSP.Messages
 import           Language.Haskell.LSP.Test
 import           Language.Haskell.LSP.Test.Replay
-import           Language.Haskell.LSP.Types.Capabilities
 import           Language.Haskell.LSP.Types as LSP hiding (capabilities, message)
 import           System.Timeout
 
@@ -134,7 +133,7 @@ main = hspec $ do
 
         noDiagnostics
 
-        (fooSymbol:_) <- getDocumentSymbols doc
+        Right (fooSymbol:_) <- getDocumentSymbols doc
 
         liftIO $ do
           fooSymbol ^. name `shouldBe` "foo"
@@ -183,7 +182,7 @@ main = hspec $ do
       _ <- waitForDiagnostics
       actions <- getAllCodeActions doc
       liftIO $ do
-        let [CommandOrCodeActionCodeAction action] = actions
+        let [CACodeAction action] = actions
         action ^. title `shouldBe` "Apply hint:Redundant bracket"
         action ^. command . _Just . command `shouldSatisfy` T.isSuffixOf ":applyrefact:applyOne"
 
@@ -195,13 +194,12 @@ main = hspec $ do
 
       noDiagnostics
 
-      (mainSymbol:_) <- getDocumentSymbols doc
+      Left (mainSymbol:_) <- getDocumentSymbols doc
 
       liftIO $ do
         mainSymbol ^. name `shouldBe` "main"
         mainSymbol ^. kind `shouldBe` SkFunction
-        mainSymbol ^. location . range `shouldBe` Range (Position 3 0) (Position 3 4)
-        mainSymbol ^. containerName `shouldBe` Nothing
+        mainSymbol ^. range `shouldBe` Range (Position 3 0) (Position 3 4)
 
   describe "applyEdit" $ do
     it "increments the version" $ runSession "hie --lsp" docChangesCaps "test/data/renamePass" $ do
