@@ -3,6 +3,7 @@ module ServerCapabilitiesSpec where
 
 import Control.Lens.Operators
 import Data.Aeson
+import Data.Monoid ((<>))
 import Language.Haskell.LSP.Types
 import Test.Hspec
 

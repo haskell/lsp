@@ -110,7 +110,7 @@ test-suite haskell-lsp-test
                      , network-uri
                      , sorted-list == 0.2.1.*
                      , yi-rope
-                     , haskell-lsp
+                     , haskell-lsp >= 0.6
                      , text
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N -Wall
   default-language:    Haskell2010
