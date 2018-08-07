@@ -35,6 +35,7 @@ data FromClientMessage = ReqInitialize               InitializeRequest
                        | ReqDocumentRangeFormatting  DocumentRangeFormattingRequest
                        | ReqDocumentOnTypeFormatting DocumentOnTypeFormattingRequest
                        | ReqRename                   RenameRequest
+                       | ReqFoldingRange             FoldingRangeRequest
                        | ReqExecuteCommand           ExecuteCommandRequest
                        | ReqDocumentLink             DocumentLinkRequest
                        | ReqDocumentLinkResolve      DocumentLinkResolveRequest
@@ -74,6 +75,8 @@ data FromServerMessage = ReqRegisterCapability       RegisterCapabilityRequest
                        | RspCompletionItemResolve    CompletionItemResolveResponse
                        | RspSignatureHelp            SignatureHelpResponse
                        | RspDefinition               DefinitionResponse
+                       | RspTypeDefinition           TypeDefinitionResponse
+                       | RspImplementation           ImplementationResponse
                        | RspFindReferences           ReferencesResponse
                        | RspDocumentHighlights       DocumentHighlightsResponse
                        | RspDocumentSymbols          DocumentSymbolsResponse
@@ -85,6 +88,7 @@ data FromServerMessage = ReqRegisterCapability       RegisterCapabilityRequest
                        | RspDocumentRangeFormatting  DocumentRangeFormattingResponse
                        | RspDocumentOnTypeFormatting DocumentOnTypeFormattingResponse
                        | RspRename                   RenameResponse
+                       | RspFoldingRange             FoldingRangeResponse
                        | RspExecuteCommand           ExecuteCommandResponse
                        | RspError                    ErrorResponse
                        | RspDocumentLink             DocumentLinkResponse

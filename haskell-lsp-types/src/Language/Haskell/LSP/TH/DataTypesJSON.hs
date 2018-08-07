@@ -17,6 +17,7 @@ module Language.Haskell.LSP.TH.DataTypesJSON
     , module Language.Haskell.LSP.TH.Completion
     , module Language.Haskell.LSP.TH.Diagnostic
     , module Language.Haskell.LSP.TH.DocumentFilter
+    , module Language.Haskell.LSP.TH.FoldingRange
     , module Language.Haskell.LSP.TH.List
     , module Language.Haskell.LSP.TH.Location
     , module Language.Haskell.LSP.TH.MarkupContent
@@ -42,6 +43,7 @@ import           Language.Haskell.LSP.TH.Completion
 import           Language.Haskell.LSP.TH.Constants
 import           Language.Haskell.LSP.TH.Diagnostic
 import           Language.Haskell.LSP.TH.DocumentFilter
+import           Language.Haskell.LSP.TH.FoldingRange
 import           Language.Haskell.LSP.TH.List
 import           Language.Haskell.LSP.TH.Location
 import           Language.Haskell.LSP.TH.MarkupContent
@@ -2911,3 +2913,7 @@ makeFieldsNoPrefix ''DiagnosticRelatedInformation
 makeFieldsNoPrefix ''DocumentSymbolParams
 makeFieldsNoPrefix ''DocumentSymbol
 makeFieldsNoPrefix ''SymbolInformation
+
+-- Folding Range
+makeFieldsNoPrefix ''FoldingRange
+makeFieldsNoPrefix ''FoldingRangeParams
