@@ -2690,7 +2690,9 @@ makeFieldsNoPrefix ''Location
 
 -- Completion
 makeFieldsNoPrefix ''CompletionItem
+makeFieldsNoPrefix ''CompletionContext
 makeFieldsNoPrefix ''CompletionListType
+makeFieldsNoPrefix ''CompletionParams
 makeFieldsNoPrefix ''CompletionRegistrationOptions
 
 -- CodeActions
