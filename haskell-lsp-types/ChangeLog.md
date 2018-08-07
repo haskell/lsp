@@ -1,5 +1,14 @@
 # Revision history for haskell-lsp-types
 
+## 0.7.0.0 -- ???
+
+* Update CompletionItem
+ * Add `commitCharacters` field
+ * Add `MarkupContent` option for `documentation`
+ * Add `preselect` field
+* Add CompletionContext
+* Add new server capabilities
+
 ## 0.6.0.0  -- 2018-08-06
 
 * Add new DocumentSymbol type and hierarchal support
