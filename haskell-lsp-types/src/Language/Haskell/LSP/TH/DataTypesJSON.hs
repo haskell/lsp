@@ -571,8 +571,8 @@ instance ToJSON TDS where
     toJSON (TDSOptions x) = toJSON x
     toJSON (TDSKind x) = toJSON x
 
-data GotoOptions = GotoOptionsBool Bool
-                 | GotoOptionsRegistration
+data GotoOptions = GotoOptionsStatic Bool
+                 | GotoOptionsDynamic
                     { -- | A document selector to identify the scope of the registration. If set to null
                       -- the document selector provided on the client side will be used.
                       _documentSelector :: Maybe DocumentSelector 
@@ -582,8 +582,72 @@ data GotoOptions = GotoOptionsBool Bool
                     }
   deriving (Show, Read, Eq)
 
-deriveJSON lspOptions ''GotoOptions
-makeFieldsNoPrefix ''GotoOptions
+deriveJSON lspOptions { sumEncoding = A.UntaggedValue } ''GotoOptions
+-- TODO: Figure out how to make Lens', not Traversal', for sum types
+--makeFieldsNoPrefix ''GotoOptions
+
+data ColorOptions = ColorOptionsStatic Bool
+                  | ColorOptionsDynamic
+                  | ColorOptionsDynamicDocument
+                    { -- | A document selector to identify the scope of the registration. If set to null
+                      -- the document selector provided on the client side will be used.
+                      _documentSelector :: Maybe DocumentSelector
+                      -- | The id used to register the request. The id can be used to deregister
+                      -- the request again. See also Registration#id.
+                    , _id :: Maybe Text
+                    }
+  deriving (Show, Read, Eq)
+
+deriveJSON lspOptions { sumEncoding = A.UntaggedValue } ''ColorOptions
+-- makeFieldsNoPrefix ''ColorOptions
+
+data FoldingRangeOptions = FoldingRangeOptionsStatic Bool
+                         | FoldingRangeOptionsDynamic
+                         | FoldingRangeOptionsDynamicDocument
+                           { -- | A document selector to identify the scope of the registration. If set to null
+                             -- the document selector provided on the client side will be used.
+                             _documentSelector :: Maybe DocumentSelector
+                             -- | The id used to register the request. The id can be used to deregister
+                             -- the request again. See also Registration#id.
+                           , _id :: Maybe Text
+                           }
+  deriving (Show, Read, Eq)
+
+deriveJSON lspOptions { sumEncoding = A.UntaggedValue } ''FoldingRangeOptions
+-- makeFieldsNoPrefix ''FoldingRangeOptions
+
+data WorkspaceFolderChangeNotifications = WorkspaceFolderChangeNotificationsString Text
+                                        | WorkspaceFolderChangeNotificationsBool Bool
+  deriving (Show, Read, Eq)
+
+deriveJSON lspOptions{ sumEncoding = A.UntaggedValue } ''WorkspaceFolderChangeNotifications
+
+data WorkspaceFolderOptions =
+  WorkspaceFolderOptions
+    { -- | The server has support for workspace folders
+      _supported :: Maybe Bool
+      -- | Whether the server wants to receive workspace folder
+      -- change notifications.
+      -- If a strings is provided the string is treated as a ID
+      -- under which the notification is registered on the client
+      -- side. The ID can be used to unregister for these events
+      -- using the `client/unregisterCapability` request.
+    , _changeNotifications :: Maybe WorkspaceFolderChangeNotifications
+    }
+  deriving (Show, Read, Eq)
+
+deriveJSON lspOptions ''WorkspaceFolderOptions
+makeFieldsNoPrefix ''WorkspaceFolderOptions
+
+data WorkspaceOptions =
+  WorkspaceOptions
+    { -- |The server supports workspace folder. Since LSP 3.6, @since 0.7.0.0
+      _workspaceFolders :: Maybe WorkspaceFolderOptions
+    }
+  deriving (Show, Read, Eq)
+
+deriveJSON lspOptions ''WorkspaceOptions
+makeFieldsNoPrefix ''WorkspaceOptions
       
 data InitializeResponseCapabilitiesInner =
   InitializeResponseCapabilitiesInner
@@ -628,9 +692,9 @@ data InitializeResponseCapabilitiesInner =
       -- | The server provides document link support.
     , _documentLinkProvider             :: Maybe DocumentLinkOptions
       -- | The server provides color provider support. Since LSP 3.6, @since 0.7.0.0
-    , _colorProvider                    :: Maybe ???
+    , _colorProvider                    :: Maybe ColorOptions
       -- | The server provides folding provider support. Since LSP 3.10, @since 0.7.0.0
-    , _foldingRangeProvider             :: Maybe ???
+    , _foldingRangeProvider             :: Maybe FoldingRangeOptions
       -- | The server provides execute command support.
     , _executeCommandProvider           :: Maybe ExecuteCommandOptions
       -- | Workspace specific server capabilities
