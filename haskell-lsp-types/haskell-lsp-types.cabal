@@ -20,6 +20,7 @@ library
   exposed-modules:     Language.Haskell.LSP.TH.ClientCapabilities
                      , Language.Haskell.LSP.TH.Constants
                      , Language.Haskell.LSP.TH.DataTypesJSON
+                     , Language.Haskell.LSP.TH.Lens
                      , Language.Haskell.LSP.TH.MessageFuncs
                      , Language.Haskell.LSP.TH.Utils
   other-modules:       Language.Haskell.LSP.TH.CodeAction
