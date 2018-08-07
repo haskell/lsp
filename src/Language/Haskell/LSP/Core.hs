@@ -89,6 +89,8 @@ data Options =
     { textDocumentSync                 :: Maybe J.TextDocumentSyncOptions
     , completionProvider               :: Maybe J.CompletionOptions
     , signatureHelpProvider            :: Maybe J.SignatureHelpOptions
+    , typeDefinitionProvider           :: Maybe J.GotoOptions
+    , implementationProvider           :: Maybe J.GotoOptions
     , codeLensProvider                 :: Maybe J.CodeLensOptions
     , documentOnTypeFormattingProvider :: Maybe J.DocumentOnTypeFormattingOptions
     , documentLinkProvider             :: Maybe J.DocumentLinkOptions
@@ -96,7 +98,7 @@ data Options =
     }
 
 instance Default Options where
-  def = Options Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+  def = Options Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
 
 -- | A function to publish diagnostics. It aggregates all diagnostics pertaining
 -- to a particular version of a document, by source, and sends a
@@ -562,10 +564,8 @@ initializeRequestHandler' (_configHandler,dispatcherProc) mHandler tvarCtx req@(
               , J._completionProvider               = completionProvider o
               , J._signatureHelpProvider            = signatureHelpProvider o
               , J._definitionProvider               = supported (definitionHandler h)
-              -- TODO: add!
-              , J._typeDefinitionProvider           = Nothing
-              -- TODO: add!
-              , J._implementationProvider           = Nothing
+              , J._typeDefinitionProvider           = typeDefinitionProvider o
+              , J._implementationProvider           = implementationProvider o
               , J._referencesProvider               = supported (referencesHandler h)
               , J._documentHighlightProvider        = supported (documentHighlightHandler h)
               , J._documentSymbolProvider           = supported (documentSymbolHandler h)
