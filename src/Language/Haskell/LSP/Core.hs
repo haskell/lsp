@@ -560,9 +560,12 @@ initializeRequestHandler' (_configHandler,dispatcherProc) mHandler tvarCtx req@(
               , J._completionProvider               = completionProvider o
               , J._signatureHelpProvider            = signatureHelpProvider o
               , J._definitionProvider               = supported (definitionHandler h)
+              -- TODO: add!
+              , J._typeDefinitionProvider           = Nothing
+              -- TODO: add!
+              , J._implementationProvider           = Nothing
               , J._referencesProvider               = supported (referencesHandler h)
               , J._documentHighlightProvider        = supported (documentHighlightHandler h)
-
               , J._documentSymbolProvider           = supported (documentSymbolHandler h)
               , J._workspaceSymbolProvider          = supported (workspaceSymbolHandler h)
               , J._codeActionProvider               = supported (codeActionHandler h)
@@ -572,7 +575,13 @@ initializeRequestHandler' (_configHandler,dispatcherProc) mHandler tvarCtx req@(
               , J._documentOnTypeFormattingProvider = documentOnTypeFormattingProvider o
               , J._renameProvider                   = supported (renameHandler h)
               , J._documentLinkProvider             = documentLinkProvider o
+              -- TODO: add!
+              , J._colorProvider                    = Nothing
+              -- TODO: add!
+              , J._foldingRangeProvider             = Nothing
               , J._executeCommandProvider           = executeCommandProvider o
+              -- TODO: add!
+              , J._workspace                        = Nothing
               -- TODO: Add something for experimental
               , J._experimental                     = Nothing :: Maybe J.Value
               }
