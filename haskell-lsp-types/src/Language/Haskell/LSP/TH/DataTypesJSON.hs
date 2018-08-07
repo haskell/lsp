@@ -435,7 +435,7 @@ Extended in 3.0
 interface ServerCapabilities {
         /**
          * Defines how text documents are synced. Is either a detailed structure defining each notification or
-         * for backwards compatibility the TextDocumentSyncKind number.
+         * for backwards compatibility the TextDocumentSyncKind number. If omitted it defaults to `TextDocumentSyncKind.None`.
          */
         textDocumentSync?: TextDocumentSyncOptions | number;
         /**
@@ -454,6 +454,18 @@ interface ServerCapabilities {
          * The server provides goto definition support.
          */
         definitionProvider?: boolean;
+        /**
+         * The server provides Goto Type Definition support.
+         *
+         * Since 3.6.0
+         */
+        typeDefinitionProvider?: boolean | (TextDocumentRegistrationOptions & StaticRegistrationOptions);
+        /**
+         * The server provides Goto Implementation support.
+         *
+         * Since 3.6.0
+         */
+        implementationProvider?: boolean | (TextDocumentRegistrationOptions & StaticRegistrationOptions);
         /**
          * The server provides find references support.
          */
@@ -499,9 +511,47 @@ interface ServerCapabilities {
          */
         documentLinkProvider?: DocumentLinkOptions;
         /**
+         * The server provides color provider support.
+         *
+         * Since 3.6.0
+         */
+        colorProvider?: boolean | ColorProviderOptions | (ColorProviderOptions & TextDocumentRegistrationOptions & StaticRegistrationOptions);
+        /**
+         * The server provides folding provider support.
+         *
+         * Since 3.10.0
+         */
+        foldingRangeProvider?: boolean | FoldingRangeProviderOptions | (FoldingRangeProviderOptions & TextDocumentRegistrationOptions & StaticRegistrationOptions);     
+        /**
          * The server provides execute command support.
          */
         executeCommandProvider?: ExecuteCommandOptions;
+        /**
+         * Workspace specific server capabilities
+         */
+        workspace?: {
+                /**
+                 * The server supports workspace folder.
+                 *
+                 * Since 3.6.0
+                 */
+                workspaceFolders?: {
+                        /**
+                        * The server has support for workspace folders
+                        */
+                        supported?: boolean;
+                        /**
+                        * Whether the server wants to receive workspace folder
+                        * change notifications.
+                        *
+                        * If a strings is provided the string is treated as a ID
+                        * under which the notification is registered on the client
+                        * side. The ID can be used to unregister for these events
+                        * using the `client/unregisterCapability` request.
+                        */
+                        changeNotifications?: string | boolean;
+                }
+        }
         /**
          * Experimental server capabilities.
          */
@@ -520,27 +570,136 @@ instance FromJSON TDS where
 instance ToJSON TDS where
     toJSON (TDSOptions x) = toJSON x
     toJSON (TDSKind x) = toJSON x
+
+data GotoOptions = GotoOptionsStatic Bool
+                 | GotoOptionsDynamic
+                    { -- | A document selector to identify the scope of the registration. If set to null
+                      -- the document selector provided on the client side will be used.
+                      _documentSelector :: Maybe DocumentSelector 
+                      -- | The id used to register the request. The id can be used to deregister
+                      -- the request again. See also Registration#id.
+                    , _id :: Maybe Text
+                    }
+  deriving (Show, Read, Eq)
+
+deriveJSON lspOptions { sumEncoding = A.UntaggedValue } ''GotoOptions
+-- TODO: Figure out how to make Lens', not Traversal', for sum types
+--makeFieldsNoPrefix ''GotoOptions
+
+data ColorOptions = ColorOptionsStatic Bool
+                  | ColorOptionsDynamic
+                  | ColorOptionsDynamicDocument
+                    { -- | A document selector to identify the scope of the registration. If set to null
+                      -- the document selector provided on the client side will be used.
+                      _documentSelector :: Maybe DocumentSelector
+                      -- | The id used to register the request. The id can be used to deregister
+                      -- the request again. See also Registration#id.
+                    , _id :: Maybe Text
+                    }
+  deriving (Show, Read, Eq)
+
+deriveJSON lspOptions { sumEncoding = A.UntaggedValue } ''ColorOptions
+-- makeFieldsNoPrefix ''ColorOptions
+
+data FoldingRangeOptions = FoldingRangeOptionsStatic Bool
+                         | FoldingRangeOptionsDynamic
+                         | FoldingRangeOptionsDynamicDocument
+                           { -- | A document selector to identify the scope of the registration. If set to null
+                             -- the document selector provided on the client side will be used.
+                             _documentSelector :: Maybe DocumentSelector
+                             -- | The id used to register the request. The id can be used to deregister
+                             -- the request again. See also Registration#id.
+                           , _id :: Maybe Text
+                           }
+  deriving (Show, Read, Eq)
+
+deriveJSON lspOptions { sumEncoding = A.UntaggedValue } ''FoldingRangeOptions
+-- makeFieldsNoPrefix ''FoldingRangeOptions
+
+data WorkspaceFolderChangeNotifications = WorkspaceFolderChangeNotificationsString Text
+                                        | WorkspaceFolderChangeNotificationsBool Bool
+  deriving (Show, Read, Eq)
+
+deriveJSON lspOptions{ sumEncoding = A.UntaggedValue } ''WorkspaceFolderChangeNotifications
+
+data WorkspaceFolderOptions =
+  WorkspaceFolderOptions
+    { -- | The server has support for workspace folders
+      _supported :: Maybe Bool
+      -- | Whether the server wants to receive workspace folder
+      -- change notifications.
+      -- If a strings is provided the string is treated as a ID
+      -- under which the notification is registered on the client
+      -- side. The ID can be used to unregister for these events
+      -- using the `client/unregisterCapability` request.
+    , _changeNotifications :: Maybe WorkspaceFolderChangeNotifications
+    }
+  deriving (Show, Read, Eq)
+
+deriveJSON lspOptions ''WorkspaceFolderOptions
+makeFieldsNoPrefix ''WorkspaceFolderOptions
+
+data WorkspaceOptions =
+  WorkspaceOptions
+    { -- |The server supports workspace folder. Since LSP 3.6, @since 0.7.0.0
+      _workspaceFolders :: Maybe WorkspaceFolderOptions
+    }
+  deriving (Show, Read, Eq)
+
+deriveJSON lspOptions ''WorkspaceOptions
+makeFieldsNoPrefix ''WorkspaceOptions
       
 data InitializeResponseCapabilitiesInner =
   InitializeResponseCapabilitiesInner
-    { _textDocumentSync                 :: Maybe TDS
+    { -- | Defines how text documents are synced. Is either a detailed structure
+      -- defining each notification or for backwards compatibility the
+      -- 'TextDocumentSyncKind' number.
+      -- If omitted it defaults to 'TdSyncNone'.
+      _textDocumentSync                 :: Maybe TDS
+      -- | The server provides hover support.
     , _hoverProvider                    :: Maybe Bool
+      -- | The server provides completion support.
     , _completionProvider               :: Maybe CompletionOptions
+      -- | The server provides signature help support.
     , _signatureHelpProvider            :: Maybe SignatureHelpOptions
+      -- | The server provides goto definition support.
     , _definitionProvider               :: Maybe Bool
+      -- | The server provides Goto Type Definition support. Since LSP 3.6, @since 0.7.0.0
+    , _typeDefinitionProvider           :: Maybe GotoOptions
+      -- | The server provides Goto Implementation support.
+      -- Since LSP 3.6, @since 0.7.0.0
+    , _implementationProvider           :: Maybe GotoOptions
+      -- | The server provides find references support.
     , _referencesProvider               :: Maybe Bool
+      -- | The server provides document highlight support.
     , _documentHighlightProvider        :: Maybe Bool
+      -- | The server provides document symbol support.
     , _documentSymbolProvider           :: Maybe Bool
+      -- | The server provides workspace symbol support.
     , _workspaceSymbolProvider          :: Maybe Bool
+      -- | The server provides code actions.
     , _codeActionProvider               :: Maybe Bool
+      -- | The server provides code lens.
     , _codeLensProvider                 :: Maybe CodeLensOptions
+      -- | The server provides document formatting.
     , _documentFormattingProvider       :: Maybe Bool
+      -- | The server provides document range formatting.
     , _documentRangeFormattingProvider  :: Maybe Bool
+      -- | The server provides document formatting on typing.
     , _documentOnTypeFormattingProvider :: Maybe DocumentOnTypeFormattingOptions
+      -- | The server provides rename support.
     , _renameProvider                   :: Maybe Bool
-    -- Following are new in 3.0
+      -- | The server provides document link support.
     , _documentLinkProvider             :: Maybe DocumentLinkOptions
+      -- | The server provides color provider support. Since LSP 3.6, @since 0.7.0.0
+    , _colorProvider                    :: Maybe ColorOptions
+      -- | The server provides folding provider support. Since LSP 3.10, @since 0.7.0.0
+    , _foldingRangeProvider             :: Maybe FoldingRangeOptions
+      -- | The server provides execute command support.
     , _executeCommandProvider           :: Maybe ExecuteCommandOptions
+      -- | Workspace specific server capabilities
+    , _workspace                        :: Maybe WorkspaceOptions
+      -- | Experimental server capabilities.
     , _experimental                     :: Maybe A.Value
     } deriving (Show, Read, Eq)
 

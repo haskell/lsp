@@ -40,8 +40,8 @@ export interface DocumentFilter {
 -}
 data DocumentFilter =
   DocumentFilter
-    { _language :: Text
-    , _scheme   :: Text
+    { _language :: Maybe Text
+    , _scheme   :: Maybe Text
     , _pattern  :: Maybe Text
     } deriving (Show, Read, Eq)
 
