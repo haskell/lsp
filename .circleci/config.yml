@@ -42,7 +42,7 @@ defaults: &defaults
           - ~/.cache
 
     - restore_cache:
-          key: stack-work-dirs-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ checksum "stack-build.txt" }}
+          key: stack-work-dirs-00-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ checksum "stack-build.txt" }}
 
     - run:
         name: Compile + Test
@@ -62,7 +62,7 @@ defaults: &defaults
           - ~/.cache
 
     - save_cache:
-        key: stack-work-dirs-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ checksum "stack-build.txt" }}
+        key: stack-work-dirs-00-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ checksum "stack-build.txt" }}
         paths:
           - ~/build/.stack-work
           - ~/build/hie-plugin-api/.stack-work
