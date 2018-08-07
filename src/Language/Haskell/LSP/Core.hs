@@ -144,7 +144,8 @@ data Handlers =
     , completionHandler              :: !(Maybe (Handler J.CompletionRequest))
     , completionResolveHandler       :: !(Maybe (Handler J.CompletionItemResolveRequest))
     , signatureHelpHandler           :: !(Maybe (Handler J.SignatureHelpRequest))
-    , definitionHandler              :: !(Maybe (Handler J.ImplementationRequest))
+    , definitionHandler              :: !(Maybe (Handler J.DefinitionRequest))
+    , typeDefinitionHandler          :: !(Maybe (Handler J.TypeDefinitionRequest))
     , implementationHandler          :: !(Maybe (Handler J.ImplementationRequest))
     , referencesHandler              :: !(Maybe (Handler J.ReferencesRequest))
     , documentHighlightHandler       :: !(Maybe (Handler J.DocumentHighlightRequest))
@@ -195,7 +196,7 @@ instance Default Handlers where
   def = Handlers Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
                  Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
                  Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
-                 Nothing Nothing Nothing Nothing Nothing Nothing
+                 Nothing Nothing Nothing Nothing Nothing Nothing Nothing
 
 -- ---------------------------------------------------------------------
 nop :: a -> b -> IO a
@@ -251,14 +252,15 @@ handlerMap _ h J.TextDocumentCompletion          = hh nop ReqCompletion $ comple
 handlerMap _ h J.CompletionItemResolve           = hh nop ReqCompletionItemResolve $ completionResolveHandler h
 handlerMap _ h J.TextDocumentHover               = hh nop ReqHover $ hoverHandler h
 handlerMap _ h J.TextDocumentSignatureHelp       = hh nop ReqSignatureHelp $ signatureHelpHandler h
+handlerMap _ h J.TextDocumentDefinition          = hh nop ReqDefinition $ definitionHandler h
+handlerMap _ h J.TextDocumentTypeDefinition      = hh nop ReqTypeDefinition $ definitionHandler h
+handlerMap _ h J.TextDocumentImplementation      = hh nop ReqImplementation $ implementationHandler h
 handlerMap _ h J.TextDocumentReferences          = hh nop ReqFindReferences $ referencesHandler h
 handlerMap _ h J.TextDocumentDocumentHighlight   = hh nop ReqDocumentHighlights $ documentHighlightHandler h
 handlerMap _ h J.TextDocumentDocumentSymbol      = hh nop ReqDocumentSymbols $ documentSymbolHandler h
 handlerMap _ h J.TextDocumentFormatting          = hh nop ReqDocumentFormatting $ documentFormattingHandler h
 handlerMap _ h J.TextDocumentRangeFormatting     = hh nop ReqDocumentRangeFormatting $ documentRangeFormattingHandler h
 handlerMap _ h J.TextDocumentOnTypeFormatting    = hh nop ReqDocumentOnTypeFormatting $ documentTypeFormattingHandler h
-handlerMap _ h J.TextDocumentDefinition          = hh nop ReqDefinition $ definitionHandler h
-handlerMap _ h J.TextDocumentImplementation      = hh nop ReqDefinition $ implementationHandler h
 handlerMap _ h J.TextDocumentCodeAction          = hh nop ReqCodeAction $ codeActionHandler h
 handlerMap _ h J.TextDocumentCodeLens            = hh nop ReqCodeLens $ codeLensHandler h
 handlerMap _ h J.CodeLensResolve                 = hh nop ReqCodeLensResolve $ codeLensResolveHandler h
