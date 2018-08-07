@@ -1,7 +1,7 @@
 {-# LANGUAGE DuplicateRecordFields      #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE TemplateHaskell            #-}
-module Language.Haskell.LSP.TH.Message where
+module Language.Haskell.LSP.Types.Message where
 
 import qualified Data.Aeson                                 as A
 import           Data.Aeson.TH
@@ -11,7 +11,7 @@ import           Data.Hashable
 import           Data.Monoid                                ((<>))
 import           Data.Text                                  (Text)
 import qualified Data.Text                                  as T
-import           Language.Haskell.LSP.TH.Constants
+import           Language.Haskell.LSP.Types.Constants
 
 
 -- | Id used for a request, Can be either a String or an Int

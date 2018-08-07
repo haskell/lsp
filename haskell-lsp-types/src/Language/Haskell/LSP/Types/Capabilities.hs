@@ -1,14 +1,14 @@
 module Language.Haskell.LSP.Types.Capabilities
   (
-    module Language.Haskell.LSP.TH.ClientCapabilities
+    module Language.Haskell.LSP.Types.ClientCapabilities
   , fullCaps
   , LSPVersion(..)
   , capsForVersion
   ) where
 
 import Prelude hiding (min)
-import Language.Haskell.LSP.TH.ClientCapabilities
-import Language.Haskell.LSP.TH.DataTypesJSON
+import Language.Haskell.LSP.Types.ClientCapabilities
+import Language.Haskell.LSP.Types
 
 -- | The whole shebang. The real deal.
 -- Capabilities for full conformance to the current (v3.10) LSP specification.

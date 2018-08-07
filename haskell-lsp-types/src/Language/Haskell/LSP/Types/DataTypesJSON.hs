@@ -10,21 +10,21 @@
 {-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE TypeSynonymInstances       #-}
 
-module Language.Haskell.LSP.TH.DataTypesJSON
-    ( module Language.Haskell.LSP.TH.DataTypesJSON
-    , module Language.Haskell.LSP.TH.CodeAction
-    , module Language.Haskell.LSP.TH.Command
-    , module Language.Haskell.LSP.TH.Completion
-    , module Language.Haskell.LSP.TH.Diagnostic
-    , module Language.Haskell.LSP.TH.DocumentFilter
-    , module Language.Haskell.LSP.TH.List
-    , module Language.Haskell.LSP.TH.Location
-    , module Language.Haskell.LSP.TH.MarkupContent
-    , module Language.Haskell.LSP.TH.Message
-    , module Language.Haskell.LSP.TH.Symbol
-    , module Language.Haskell.LSP.TH.TextDocument
-    , module Language.Haskell.LSP.TH.Uri
-    , module Language.Haskell.LSP.TH.WorkspaceEdit
+module Language.Haskell.LSP.Types.DataTypesJSON
+    ( module Language.Haskell.LSP.Types.DataTypesJSON
+    , module Language.Haskell.LSP.Types.CodeAction
+    , module Language.Haskell.LSP.Types.Command
+    , module Language.Haskell.LSP.Types.Completion
+    , module Language.Haskell.LSP.Types.Diagnostic
+    , module Language.Haskell.LSP.Types.DocumentFilter
+    , module Language.Haskell.LSP.Types.List
+    , module Language.Haskell.LSP.Types.Location
+    , module Language.Haskell.LSP.Types.MarkupContent
+    , module Language.Haskell.LSP.Types.Message
+    , module Language.Haskell.LSP.Types.Symbol
+    , module Language.Haskell.LSP.Types.TextDocument
+    , module Language.Haskell.LSP.Types.Uri
+    , module Language.Haskell.LSP.Types.WorkspaceEdit
     ) where
 
 import           Control.Applicative
@@ -34,21 +34,21 @@ import           Data.Aeson.Types
 import           Data.Text                                  (Text)
 import qualified Data.Text                                  as T
 
-import           Language.Haskell.LSP.TH.ClientCapabilities
-import           Language.Haskell.LSP.TH.CodeAction
-import           Language.Haskell.LSP.TH.Command
-import           Language.Haskell.LSP.TH.Completion
-import           Language.Haskell.LSP.TH.Constants
-import           Language.Haskell.LSP.TH.Diagnostic
-import           Language.Haskell.LSP.TH.DocumentFilter
-import           Language.Haskell.LSP.TH.List
-import           Language.Haskell.LSP.TH.Location
-import           Language.Haskell.LSP.TH.MarkupContent
-import           Language.Haskell.LSP.TH.Message
-import           Language.Haskell.LSP.TH.Symbol
-import           Language.Haskell.LSP.TH.TextDocument
-import           Language.Haskell.LSP.TH.Uri
-import           Language.Haskell.LSP.TH.WorkspaceEdit
+import           Language.Haskell.LSP.Types.ClientCapabilities
+import           Language.Haskell.LSP.Types.CodeAction
+import           Language.Haskell.LSP.Types.Command
+import           Language.Haskell.LSP.Types.Completion
+import           Language.Haskell.LSP.Types.Constants
+import           Language.Haskell.LSP.Types.Diagnostic
+import           Language.Haskell.LSP.Types.DocumentFilter
+import           Language.Haskell.LSP.Types.List
+import           Language.Haskell.LSP.Types.Location
+import           Language.Haskell.LSP.Types.MarkupContent
+import           Language.Haskell.LSP.Types.Message
+import           Language.Haskell.LSP.Types.Symbol
+import           Language.Haskell.LSP.Types.TextDocument
+import           Language.Haskell.LSP.Types.Uri
+import           Language.Haskell.LSP.Types.WorkspaceEdit
 
 -- =====================================================================
 -- ACTUAL PROTOCOL -----------------------------------------------------

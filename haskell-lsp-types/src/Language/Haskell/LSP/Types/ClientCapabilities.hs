@@ -1,17 +1,17 @@
 {-# LANGUAGE DuplicateRecordFields  #-}
 {-# LANGUAGE TemplateHaskell        #-}
 
-module Language.Haskell.LSP.TH.ClientCapabilities where
+module Language.Haskell.LSP.Types.ClientCapabilities where
 
 import           Data.Aeson.TH
 import qualified Data.Aeson as A
 import Data.Default
-import Language.Haskell.LSP.TH.Constants
-import Language.Haskell.LSP.TH.CodeAction
-import Language.Haskell.LSP.TH.Completion
-import Language.Haskell.LSP.TH.List
-import Language.Haskell.LSP.TH.MarkupContent
-import Language.Haskell.LSP.TH.Symbol
+import Language.Haskell.LSP.Types.Constants
+import Language.Haskell.LSP.Types.CodeAction
+import Language.Haskell.LSP.Types.Completion
+import Language.Haskell.LSP.Types.List
+import Language.Haskell.LSP.Types.MarkupContent
+import Language.Haskell.LSP.Types.Symbol
 
 -- ---------------------------------------------------------------------
 {-

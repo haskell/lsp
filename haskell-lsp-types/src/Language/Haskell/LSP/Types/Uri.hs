@@ -1,5 +1,5 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-module Language.Haskell.LSP.TH.Uri where
+module Language.Haskell.LSP.Types.Uri where
 
 import qualified Data.Aeson                                 as A
 import           Data.Hashable

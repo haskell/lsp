@@ -17,25 +17,27 @@ extra-source-files:  ChangeLog.md, README.md
 cabal-version:       >=1.10
 
 library
-  exposed-modules:     Language.Haskell.LSP.TH.ClientCapabilities
-                     , Language.Haskell.LSP.TH.Constants
-                     , Language.Haskell.LSP.TH.DataTypesJSON
-                     , Language.Haskell.LSP.TH.Lens
-                     , Language.Haskell.LSP.TH.MessageFuncs
-                     , Language.Haskell.LSP.TH.Utils
-  other-modules:       Language.Haskell.LSP.TH.CodeAction
-                     , Language.Haskell.LSP.TH.Command
-                     , Language.Haskell.LSP.TH.Completion
-                     , Language.Haskell.LSP.TH.Diagnostic
-                     , Language.Haskell.LSP.TH.DocumentFilter
-                     , Language.Haskell.LSP.TH.List
-                     , Language.Haskell.LSP.TH.Location
-                     , Language.Haskell.LSP.TH.MarkupContent
-                     , Language.Haskell.LSP.TH.Message
-                     , Language.Haskell.LSP.TH.Symbol
-                     , Language.Haskell.LSP.TH.TextDocument
-                     , Language.Haskell.LSP.TH.Uri
-                     , Language.Haskell.LSP.TH.WorkspaceEdit
+  exposed-modules:     Language.Haskell.LSP.Types
+                     , Language.Haskell.LSP.Types.Capabilities
+                     , Language.Haskell.LSP.Types.Constants
+                     , Language.Haskell.LSP.Types.DataTypesJSON
+                     , Language.Haskell.LSP.Types.Lens
+                     , Language.Haskell.LSP.Types.MessageFuncs
+                     , Language.Haskell.LSP.Types.Utils
+  other-modules:       Language.Haskell.LSP.Types.ClientCapabilities
+                     , Language.Haskell.LSP.Types.CodeAction
+                     , Language.Haskell.LSP.Types.Command
+                     , Language.Haskell.LSP.Types.Completion
+                     , Language.Haskell.LSP.Types.Diagnostic
+                     , Language.Haskell.LSP.Types.DocumentFilter
+                     , Language.Haskell.LSP.Types.List
+                     , Language.Haskell.LSP.Types.Location
+                     , Language.Haskell.LSP.Types.MarkupContent
+                     , Language.Haskell.LSP.Types.Message
+                     , Language.Haskell.LSP.Types.Symbol
+                     , Language.Haskell.LSP.Types.TextDocument
+                     , Language.Haskell.LSP.Types.Uri
+                     , Language.Haskell.LSP.Types.WorkspaceEdit
  -- other-extensions:
   ghc-options:         -Wall
   -- ghc-options:         -Werror

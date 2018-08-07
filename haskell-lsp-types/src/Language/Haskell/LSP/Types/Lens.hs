@@ -3,9 +3,9 @@
 {-# LANGUAGE MultiParamTypeClasses  #-}
 {-# LANGUAGE FunctionalDependencies #-}
 
-module Language.Haskell.LSP.TH.Lens where
-import Language.Haskell.LSP.TH.DataTypesJSON
-import Language.Haskell.LSP.TH.ClientCapabilities
+module Language.Haskell.LSP.Types.Lens where
+import Language.Haskell.LSP.Types.DataTypesJSON
+import Language.Haskell.LSP.Types.ClientCapabilities
 import Control.Lens.TH
 
 -- client capabilities
@@ -43,7 +43,6 @@ makeFieldsNoPrefix ''RenameClientCapabilities
 makeFieldsNoPrefix ''PublishDiagnosticsClientCapabilities
 makeFieldsNoPrefix ''TextDocumentClientCapabilities
 makeFieldsNoPrefix ''ClientCapabilities
-
 
 makeFieldsNoPrefix ''InitializeParams
 makeFieldsNoPrefix ''InitializeError
@@ -103,6 +102,7 @@ makeFieldsNoPrefix ''ApplyWorkspaceEditParams
 makeFieldsNoPrefix ''ApplyWorkspaceEditResponseBody
 makeFieldsNoPrefix ''TraceParams
 makeFieldsNoPrefix ''TraceNotification
+
 -- Location
 makeFieldsNoPrefix ''Position
 makeFieldsNoPrefix ''Range

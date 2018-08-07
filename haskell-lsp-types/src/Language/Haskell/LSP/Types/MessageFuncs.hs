@@ -5,7 +5,7 @@
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Language.Haskell.LSP.TH.MessageFuncs (
+module Language.Haskell.LSP.Types.MessageFuncs (
   -- * General
     fmClientInitializeRequest
   , fmClientInitializedNotification
@@ -59,7 +59,7 @@ module Language.Haskell.LSP.TH.MessageFuncs (
 
 import qualified Data.Aeson as J
 import           Data.Text ( Text )
-import qualified Language.Haskell.LSP.TH.DataTypesJSON      as J
+import qualified Language.Haskell.LSP.Types.DataTypesJSON      as J
 
 -- ---------------------------------------------------------------------
 {-# ANN module ("HLint: ignore Eta reduce"         :: String) #-}
