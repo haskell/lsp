@@ -220,6 +220,7 @@ data ServerMethod =
   | ClientUnregisterCapability
   -- Workspace
   | WorkspaceWorkspaceFolders
+  | WorkspaceConfiguration
   | WorkspaceApplyEdit
   -- Document
   | TextDocumentPublishDiagnostics
@@ -238,6 +239,7 @@ instance A.FromJSON ServerMethod where
   parseJSON (A.String "client/unregisterCapability")     = return ClientUnregisterCapability
   -- Workspace
   parseJSON (A.String "workspace/workspaceFolders")      = return WorkspaceWorkspaceFolders
+  parseJSON (A.String "workspace/configuration")         = return WorkspaceConfiguration
   parseJSON (A.String "workspace/applyEdit")             = return WorkspaceApplyEdit
   -- Document
   parseJSON (A.String "textDocument/publishDiagnostics") = return TextDocumentPublishDiagnostics
@@ -256,6 +258,7 @@ instance A.ToJSON ServerMethod where
   toJSON ClientUnregisterCapability = A.String "client/unregisterCapability"
   -- Workspace
   toJSON WorkspaceWorkspaceFolders = A.String "workspace/workspaceFolders"
+  toJSON WorkspaceConfiguration = A.String "workspace/configuration"
   toJSON WorkspaceApplyEdit = A.String "workspace/applyEdit"
   -- Document
   toJSON TextDocumentPublishDiagnostics = A.String "textDocument/publishDiagnostics"
