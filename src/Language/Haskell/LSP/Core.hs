@@ -275,6 +275,7 @@ handlerMap _ h J.TextDocumentCodeAction          = hh nop ReqCodeAction $ codeAc
 handlerMap _ h J.TextDocumentCodeLens            = hh nop ReqCodeLens $ codeLensHandler h
 handlerMap _ h J.CodeLensResolve                 = hh nop ReqCodeLensResolve $ codeLensResolveHandler h
 handlerMap _ h J.TextDocumentDocumentColor       = hh nop ReqDocumentColor $ documentColorHandler h
+handlerMap _ h J.TextDocumentColorPresentation   = hh nop ReqColorPresentation $ colorPresentationHandler h
 handlerMap _ h J.TextDocumentDocumentLink        = hh nop ReqDocumentLink $ documentLinkHandler h
 handlerMap _ h J.DocumentLinkResolve             = hh nop ReqDocumentLinkResolve $ documentLinkResolveHandler h
 handlerMap _ h J.TextDocumentRename              = hh nop ReqRename $ renameHandler h
