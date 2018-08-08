@@ -94,14 +94,15 @@ data ClientMethod =
  | CompletionItemResolve
  | TextDocumentHover
  | TextDocumentSignatureHelp
+ | TextDocumentDefinition
+ | TextDocumentTypeDefinition
+ | TextDocumentImplementation
  | TextDocumentReferences
  | TextDocumentDocumentHighlight
  | TextDocumentDocumentSymbol
  | TextDocumentFormatting
  | TextDocumentRangeFormatting
  | TextDocumentOnTypeFormatting
- | TextDocumentDefinition
- | TextDocumentImplementation
  | TextDocumentCodeAction
  | TextDocumentCodeLens
  | CodeLensResolve

@@ -22,6 +22,8 @@ data FromClientMessage = ReqInitialize               InitializeRequest
                        | ReqCompletionItemResolve    CompletionItemResolveRequest
                        | ReqSignatureHelp            SignatureHelpRequest
                        | ReqDefinition               DefinitionRequest
+                       | ReqTypeDefinition           TypeDefinitionRequest
+                       | ReqImplementation           ImplementationRequest
                        | ReqFindReferences           ReferencesRequest
                        | ReqDocumentHighlights       DocumentHighlightRequest
                        | ReqDocumentSymbols          DocumentSymbolRequest

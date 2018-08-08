@@ -1975,6 +1975,28 @@ type DefinitionResponse = ResponseMessage LocationResponseParams
 -- ---------------------------------------------------------------------
 
 {-
+Goto Type Definition Request (:leftwards_arrow_with_hook:)
+Since version 3.6.0
+
+The goto type definition request is sent from the client to the server to resolve the type definition location of a symbol at a given text document position.
+
+Request:
+
+method: ‘textDocument/typeDefinition’
+params: TextDocumentPositionParams
+Response:
+
+result: Location | Location[] | null
+error: code and message set in case an exception happens during the definition request.
+Registration Options: TextDocumentRegistrationOptions
+-}
+
+type TypeDefinitionRequest = RequestMessage ClientMethod TextDocumentPositionParams LocationResponseParams
+type TypeDefinitionResponse = ResponseMessage LocationResponseParams
+
+-- ---------------------------------------------------------------------
+
+{-
 Goto Implementation Request (:leftwards_arrow_with_hook:)
 Since version 3.6.0
 
