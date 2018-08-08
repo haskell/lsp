@@ -3,7 +3,7 @@
 module Language.Haskell.LSP.TH.Color where
 
 import           Data.Aeson.TH
-import           Data.Text (Text)
+import           Data.Text                      ( Text )
 import           Language.Haskell.LSP.TH.Constants
 import           Language.Haskell.LSP.TH.List
 import           Language.Haskell.LSP.TH.Location

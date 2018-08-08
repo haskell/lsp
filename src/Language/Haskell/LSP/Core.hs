@@ -183,6 +183,7 @@ data Handlers =
     , didCloseTextDocumentNotificationHandler  :: !(Maybe (Handler J.DidCloseTextDocumentNotification))
     , didSaveTextDocumentNotificationHandler   :: !(Maybe (Handler J.DidSaveTextDocumentNotification))
     , didChangeWatchedFilesNotificationHandler :: !(Maybe (Handler J.DidChangeWatchedFilesNotification))
+    , didChangeWorkspaceFoldersNotificationHandler :: !(Maybe (Handler J.DidChangeWorkspaceFoldersNotification))
     -- new in 3.0
     , initializedHandler                       :: !(Maybe (Handler J.InitializedNotification))
     , willSaveTextDocumentNotificationHandler  :: !(Maybe (Handler J.WillSaveTextDocumentNotification))
@@ -206,7 +207,7 @@ instance Default Handlers where
                  Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
                  Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
                  Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
-                 Nothing
+                 Nothing Nothing
 
 -- ---------------------------------------------------------------------
 nop :: a -> b -> IO a
@@ -247,6 +248,7 @@ handlerMap _ h J.Exit                            =
       exitSuccess
 handlerMap _ h J.CancelRequest                   = hh nop NotCancelRequestFromClient $ cancelNotificationHandler h
 -- Workspace
+handlerMap _ h J.WorkspaceDidChangeWorkspaceFolders = hh nop NotDidChangeWorkspaceFolders $ didChangeWorkspaceFoldersNotificationHandler h
 handlerMap i h J.WorkspaceDidChangeConfiguration = hc i $ didChangeConfigurationParamsHandler h
 handlerMap _ h J.WorkspaceDidChangeWatchedFiles  = hh nop NotDidChangeWatchedFiles $ didChangeWatchedFilesNotificationHandler h
 handlerMap _ h J.WorkspaceSymbol                 = hh nop ReqWorkspaceSymbols $ workspaceSymbolHandler h
@@ -339,7 +341,6 @@ hc (c,_) mh tvarDat json = do
         J.Error  err -> do
           let msg = T.pack $ unwords $ ["haskell-lsp:parse error.", show json, show err] ++ _ERR_MSG_URL
           sendErrorLog tvarDat msg
-
 
 -- ---------------------------------------------------------------------
 
@@ -530,7 +531,7 @@ initializeRequestHandler' (_configHandler,dispatcherProc) mHandler tvarCtx req@(
 
     let
       getCapabilities :: J.InitializeParams -> C.ClientCapabilities
-      getCapabilities (J.InitializeParams _ _ _ _ c _) = c
+      getCapabilities (J.InitializeParams _ _ _ _ c _ mWorkspaceFolders) = c
       getLspId tvId = atomically $ do
         cid <- readTVar tvId
         modifyTVar' tvId (+1)
@@ -567,6 +568,13 @@ initializeRequestHandler' (_configHandler,dispatcherProc) mHandler tvarCtx req@(
                   Just x -> Just (J.TDSOptions x)
                   Nothing -> Nothing
 
+          workspace = J.WorkspaceOptions workspaceFolder
+          workspaceFolder = case didChangeWorkspaceFoldersNotificationHandler h of
+            Just _ -> Just $
+              -- sign up to receive notifications
+              J.WorkspaceFolderOptions (Just True) (Just (J.WorkspaceFolderChangeNotificationsBool True))
+            Nothing -> Nothing
+
           capa =
             J.InitializeResponseCapabilitiesInner
               { J._textDocumentSync                 = sync
@@ -590,8 +598,7 @@ initializeRequestHandler' (_configHandler,dispatcherProc) mHandler tvarCtx req@(
               , J._colorProvider                    = colorProvider o
               , J._foldingRangeProvider             = foldingRangeProvider o
               , J._executeCommandProvider           = executeCommandProvider o
-              -- TODO: add!
-              , J._workspace                        = Nothing
+              , J._workspace                        = Just workspace
               -- TODO: Add something for experimental
               , J._experimental                     = Nothing :: Maybe J.Value
               }

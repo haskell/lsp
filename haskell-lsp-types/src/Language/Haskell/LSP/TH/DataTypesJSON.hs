@@ -27,6 +27,7 @@ module Language.Haskell.LSP.TH.DataTypesJSON
     , module Language.Haskell.LSP.TH.TextDocument
     , module Language.Haskell.LSP.TH.Uri
     , module Language.Haskell.LSP.TH.WorkspaceEdit
+    , module Language.Haskell.LSP.TH.WorkspaceFolders
     ) where
 
 import           Control.Applicative
@@ -54,6 +55,7 @@ import           Language.Haskell.LSP.TH.Symbol
 import           Language.Haskell.LSP.TH.TextDocument
 import           Language.Haskell.LSP.TH.Uri
 import           Language.Haskell.LSP.TH.WorkspaceEdit
+import           Language.Haskell.LSP.TH.WorkspaceFolders
 
 -- =====================================================================
 -- ACTUAL PROTOCOL -----------------------------------------------------
@@ -138,8 +140,15 @@ data InitializeParams =
   , _initializationOptions :: Maybe A.Value
   , _capabilities          :: ClientCapabilities
   , _trace                 :: Maybe Trace
+  -- |  The workspace folders configured in the client when the server starts.
+  -- This property is only available if the client supports workspace folders.
+  -- It can be `null` if the client supports workspace folders but none are
+  -- configured.
+  -- Since LSP 3.6, @since 0.7.0.0
+  , _workspaceFolders      :: Maybe (List WorkspaceFolder)
   } deriving (Show, Read, Eq)
 
+{-# DEPRECATED _rootPath "Use _rootUri" #-}
 
 deriveJSON lspOptions ''InitializeParams
 makeFieldsNoPrefix ''InitializeParams
@@ -2891,6 +2900,11 @@ makeFieldsNoPrefix ''TextEdit
 makeFieldsNoPrefix ''VersionedTextDocumentIdentifier
 makeFieldsNoPrefix ''TextDocumentEdit
 makeFieldsNoPrefix ''WorkspaceEdit
+
+-- Workspace Folders
+makeFieldsNoPrefix ''WorkspaceFolder
+makeFieldsNoPrefix ''WorkspaceFoldersChangeEvent
+makeFieldsNoPrefix ''DidChangeWorkspaceFoldersParams
 
 -- Message
 makeFieldsNoPrefix ''RequestMessage
