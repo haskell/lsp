@@ -23,6 +23,7 @@ library
                      , Language.Haskell.LSP.TH.MessageFuncs
                      , Language.Haskell.LSP.TH.Utils
   other-modules:       Language.Haskell.LSP.TH.CodeAction
+                     , Language.Haskell.LSP.TH.Color
                      , Language.Haskell.LSP.TH.Command
                      , Language.Haskell.LSP.TH.Completion
                      , Language.Haskell.LSP.TH.Diagnostic
