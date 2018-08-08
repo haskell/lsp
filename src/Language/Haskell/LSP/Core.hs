@@ -587,9 +587,7 @@ initializeRequestHandler' (_configHandler,dispatcherProc) mHandler tvarCtx req@(
               , J._documentOnTypeFormattingProvider = documentOnTypeFormattingProvider o
               , J._renameProvider                   = supported (renameHandler h)
               , J._documentLinkProvider             = documentLinkProvider o
-              -- TODO: add!
               , J._colorProvider                    = colorProvider o
-              -- TODO: add!
               , J._foldingRangeProvider             = foldingRangeProvider o
               , J._executeCommandProvider           = executeCommandProvider o
               -- TODO: add!
