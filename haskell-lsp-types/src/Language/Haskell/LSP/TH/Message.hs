@@ -109,6 +109,7 @@ data ClientMethod =
  | TextDocumentDocumentLink
  | DocumentLinkResolve
  | TextDocumentRename
+ | TextDocumentFoldingRanges
  -- Messages of the form $/message
  -- Implementation Dependent, can be ignored
  | Misc Text
@@ -137,20 +138,22 @@ instance A.FromJSON ClientMethod where
   parseJSON (A.String "completionItem/resolve")           = return CompletionItemResolve
   parseJSON (A.String "textDocument/hover")               = return TextDocumentHover
   parseJSON (A.String "textDocument/signatureHelp")       = return TextDocumentSignatureHelp
+  parseJSON (A.String "textDocument/definition")          = return TextDocumentDefinition
+  parseJSON (A.String "textDocument/typeDefinition")      = return TextDocumentTypeDefinition
+  parseJSON (A.String "textDocument/implementation")      = return TextDocumentImplementation
   parseJSON (A.String "textDocument/references")          = return TextDocumentReferences
   parseJSON (A.String "textDocument/documentHighlight")   = return TextDocumentDocumentHighlight
   parseJSON (A.String "textDocument/documentSymbol")      = return TextDocumentDocumentSymbol
   parseJSON (A.String "textDocument/formatting")          = return TextDocumentFormatting
   parseJSON (A.String "textDocument/rangeFormatting")     = return TextDocumentRangeFormatting
   parseJSON (A.String "textDocument/onTypeFormatting")    = return TextDocumentOnTypeFormatting
-  parseJSON (A.String "textDocument/definition")          = return TextDocumentDefinition
-  parseJSON (A.String "textDocument/implementation")      = return TextDocumentImplementation
   parseJSON (A.String "textDocument/codeAction")          = return TextDocumentCodeAction
   parseJSON (A.String "textDocument/codeLens")            = return TextDocumentCodeLens
   parseJSON (A.String "codeLens/resolve")                 = return CodeLensResolve
   parseJSON (A.String "textDocument/documentLink")        = return TextDocumentDocumentLink
   parseJSON (A.String "documentLink/resolve")             = return DocumentLinkResolve
   parseJSON (A.String "textDocument/rename")              = return TextDocumentRename
+  parseJSON (A.String "textDocument/foldingRanges")       = return TextDocumentFoldingRanges
   parseJSON (A.String x)                                  = if T.isPrefixOf "$/" x
                                                                then return $ Misc (T.drop 2 x)
                                                             else mempty
@@ -186,11 +189,13 @@ instance A.ToJSON ClientMethod where
   toJSON TextDocumentRangeFormatting     = A.String "textDocument/rangeFormatting"
   toJSON TextDocumentOnTypeFormatting    = A.String "textDocument/onTypeFormatting"
   toJSON TextDocumentDefinition          = A.String "textDocument/definition"
+  toJSON TextDocumentTypeDefinition      = A.String "textDocument/typeDefinition"
   toJSON TextDocumentImplementation      = A.String "textDocument/implementation"
   toJSON TextDocumentCodeAction          = A.String "textDocument/codeAction"
   toJSON TextDocumentCodeLens            = A.String "textDocument/codeLens"
   toJSON CodeLensResolve                 = A.String "codeLens/resolve"
   toJSON TextDocumentRename              = A.String "textDocument/rename"
+  toJSON TextDocumentFoldingRanges       = A.String "textDocument/foldingRanges"
   toJSON TextDocumentDocumentLink        = A.String "textDocument/documentLink"
   toJSON DocumentLinkResolve             = A.String "documentLink/resolve"
   toJSON (Misc xs)                       = A.String $ "$/" <> xs

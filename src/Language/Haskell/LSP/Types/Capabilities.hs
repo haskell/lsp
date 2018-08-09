@@ -101,6 +101,7 @@ capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) Noth
           (since 3 6 (ColorProviderClientCapabilities dynamicReg))
           (Just (RenameClientCapabilities dynamicReg))
           (Just (PublishDiagnosticsClientCapabilities (since 3 7 True)))
+          (since 3 10 foldingRange)
     sync =
       SynchronizationTextDocumentClientCapabilities
         dynamicReg
@@ -193,6 +194,12 @@ capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) Noth
     documentSymbolKind =
       DocumentSymbolKindClientCapabilities
         (Just sKs) -- same as workspace symbol kinds
+
+    foldingRange =
+      FoldingRangeClientCapabilities
+        dynamicReg
+        Nothing
+        (Just False)
 
     dynamicReg
       | maj >= 3  = Just True

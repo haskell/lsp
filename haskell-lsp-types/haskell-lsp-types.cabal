@@ -27,6 +27,7 @@ library
                      , Language.Haskell.LSP.TH.Completion
                      , Language.Haskell.LSP.TH.Diagnostic
                      , Language.Haskell.LSP.TH.DocumentFilter
+                     , Language.Haskell.LSP.TH.FoldingRange
                      , Language.Haskell.LSP.TH.List
                      , Language.Haskell.LSP.TH.Location
                      , Language.Haskell.LSP.TH.MarkupContent

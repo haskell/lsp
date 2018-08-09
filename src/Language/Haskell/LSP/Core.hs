@@ -94,11 +94,13 @@ data Options =
     , codeLensProvider                 :: Maybe J.CodeLensOptions
     , documentOnTypeFormattingProvider :: Maybe J.DocumentOnTypeFormattingOptions
     , documentLinkProvider             :: Maybe J.DocumentLinkOptions
+    , foldingRangeProvider             :: Maybe J.FoldingRangeOptions
     , executeCommandProvider           :: Maybe J.ExecuteCommandOptions
     }
 
 instance Default Options where
-  def = Options Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+  def = Options Nothing Nothing Nothing Nothing Nothing
+                Nothing Nothing Nothing Nothing Nothing
 
 -- | A function to publish diagnostics. It aggregates all diagnostics pertaining
 -- to a particular version of a document, by source, and sends a
@@ -160,6 +162,7 @@ data Handlers =
     , documentRangeFormattingHandler :: !(Maybe (Handler J.DocumentRangeFormattingRequest))
     , documentTypeFormattingHandler  :: !(Maybe (Handler J.DocumentOnTypeFormattingRequest))
     , renameHandler                  :: !(Maybe (Handler J.RenameRequest))
+    , foldingRangeHandler            :: !(Maybe (Handler J.FoldingRangeRequest))
     -- new in 3.0
     , documentLinkHandler            :: !(Maybe (Handler J.DocumentLinkRequest))
     , documentLinkResolveHandler     :: !(Maybe (Handler J.DocumentLinkResolveRequest))
@@ -198,7 +201,7 @@ instance Default Handlers where
   def = Handlers Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
                  Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
                  Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
-                 Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+                 Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
 
 -- ---------------------------------------------------------------------
 nop :: a -> b -> IO a
@@ -269,6 +272,7 @@ handlerMap _ h J.CodeLensResolve                 = hh nop ReqCodeLensResolve $ c
 handlerMap _ h J.TextDocumentDocumentLink        = hh nop ReqDocumentLink $ documentLinkHandler h
 handlerMap _ h J.DocumentLinkResolve             = hh nop ReqDocumentLinkResolve $ documentLinkResolveHandler h
 handlerMap _ h J.TextDocumentRename              = hh nop ReqRename $ renameHandler h
+handlerMap _ h J.TextDocumentFoldingRanges       = hh nop ReqFoldingRange $ foldingRangeHandler h
 handlerMap _ _ (J.Misc x)   = helper f
   where f ::  TVar (LanguageContextData c) -> J.Value -> IO ()
         f tvarDat n = do
@@ -580,7 +584,7 @@ initializeRequestHandler' (_configHandler,dispatcherProc) mHandler tvarCtx req@(
               -- TODO: add!
               , J._colorProvider                    = Nothing
               -- TODO: add!
-              , J._foldingRangeProvider             = Nothing
+              , J._foldingRangeProvider             = foldingRangeProvider o
               , J._executeCommandProvider           = executeCommandProvider o
               -- TODO: add!
               , J._workspace                        = Nothing
