@@ -15,7 +15,9 @@ import           Language.Haskell.LSP.TH.WorkspaceEdit
 Document Color Request (:leftwards_arrow_with_hook:)
 Since version 3.6.0
 
-The document color request is sent from the client to the server to list all color references found in a given text document. Along with the range, a color value in RGB is returned.
+The document color request is sent from the client to the server to list all
+color references found in a given text document. Along with the range, a color
+value in RGB is returned.
 
 Clients can use the result to decorate color references in an editor. For example:
 
@@ -71,7 +73,8 @@ interface Color {
 	 */
 	readonly alpha: number;
 }
-error: code and message set in case an exception happens during the ‘textDocument/documentColor’ request
+error: code and message set in case an exception happens during the
+‘textDocument/documentColor’ request
 -}
 
 -- | Represents a color in RGBA space.
@@ -100,14 +103,16 @@ data DocumentColorParams =
 
 deriveJSON lspOptions ''DocumentColorParams
 
-type DocumentColorRequest = RequestMessage ClientMethod DocumentColorParams (List ColorInformation)
+type DocumentColorRequest =
+  RequestMessage ClientMethod DocumentColorParams (List ColorInformation)
 type DocumentColorResponse = ResponseMessage (List ColorInformation)
 
 {-
 Color Presentation Request (:leftwards_arrow_with_hook:)
 Since version 3.6.0
 
-The color presentation request is sent from the client to the server to obtain a list of presentations for a color value at a given location. Clients can use the result to
+The color presentation request is sent from the client to the server to obtain a list of
+presentations for a color value at a given location. Clients can use the result to
 
 modify a color reference.
 show in a color picker and let users pick one of the presentations
@@ -136,24 +141,27 @@ Response:
 result: ColorPresentation[] defined as follows:
 interface ColorPresentation {
 	/**
-	 * The label of this color presentation. It will be shown on the color
-	 * picker header. By default this is also the text that is inserted when selecting
+	 * The label of this color presentation. It will be shown
+         * on the color picker header. By default this is also the
+         * text that is inserted when selecting
 	 * this color presentation.
 	 */
 	label: string;
 	/**
 	 * An [edit](#TextEdit) which is applied to a document when selecting
-	 * this presentation for the color.  When `falsy` the [label](#ColorPresentation.label)
-	 * is used.
+         * this presentation for the color.
+         * When `falsy` the [label](#ColorPresentation.label) is used.
 	 */
 	textEdit?: TextEdit;
 	/**
 	 * An optional array of additional [text edits](#TextEdit) that are applied when
-	 * selecting this color presentation. Edits must not overlap with the main [edit](#ColorPresentation.textEdit) nor with themselves.
+         * selecting this color presentation. Edits must not overlap with the main
+         * [edit](#ColorPresentation.textEdit) nor with themselves.
 	 */
 	additionalTextEdits?: TextEdit[];
 }
-error: code and message set in case an exception happens during the ‘textDocument/colorPresentation’ request
+error: code and message set in case an exception happens during the 
+‘textDocument/colorPresentation’ request
 -}
 
 data ColorPresentationParams =
@@ -187,5 +195,6 @@ data ColorPresentation =
 
 deriveJSON lspOptions ''ColorPresentation
 
-type ColorPresentationRequest = RequestMessage ClientMethod ColorPresentationParams (List ColorPresentation)
+type ColorPresentationRequest = 
+  RequestMessage ClientMethod ColorPresentationParams (List ColorPresentation)
 type ColorPresentationResponse = ResponseMessage (List ColorPresentation)
