@@ -31,14 +31,16 @@ data FromClientMessage = ReqInitialize               InitializeRequest
                        | ReqCodeAction               CodeActionRequest
                        | ReqCodeLens                 CodeLensRequest
                        | ReqCodeLensResolve          CodeLensResolveRequest
+                       | ReqDocumentLink             DocumentLinkRequest
+                       | ReqDocumentLinkResolve      DocumentLinkResolveRequest
+                       | ReqDocumentColor            DocumentColorRequest
+                       | ReqColorPresentation        ColorPresentationRequest
                        | ReqDocumentFormatting       DocumentFormattingRequest
                        | ReqDocumentRangeFormatting  DocumentRangeFormattingRequest
                        | ReqDocumentOnTypeFormatting DocumentOnTypeFormattingRequest
                        | ReqRename                   RenameRequest
                        | ReqFoldingRange             FoldingRangeRequest
                        | ReqExecuteCommand           ExecuteCommandRequest
-                       | ReqDocumentLink             DocumentLinkRequest
-                       | ReqDocumentLinkResolve      DocumentLinkResolveRequest
                        | ReqWillSaveWaitUntil        WillSaveWaitUntilTextDocumentRequest
                        -- Responses
                        | RspApplyWorkspaceEdit       ApplyWorkspaceEditResponse
@@ -84,6 +86,10 @@ data FromServerMessage = ReqRegisterCapability       RegisterCapabilityRequest
                        | RspCodeAction               CodeActionResponse
                        | RspCodeLens                 CodeLensResponse
                        | RspCodeLensResolve          CodeLensResolveResponse
+                       | RspDocumentLink             DocumentLinkResponse
+                       | RspDocumentLinkResolve      DocumentLinkResolveResponse
+                       | RspDocumentColor            DocumentColorResponse
+                       | RspColorPresentation        ColorPresentationResponse
                        | RspDocumentFormatting       DocumentFormattingResponse
                        | RspDocumentRangeFormatting  DocumentRangeFormattingResponse
                        | RspDocumentOnTypeFormatting DocumentOnTypeFormattingResponse
@@ -91,8 +97,6 @@ data FromServerMessage = ReqRegisterCapability       RegisterCapabilityRequest
                        | RspFoldingRange             FoldingRangeResponse
                        | RspExecuteCommand           ExecuteCommandResponse
                        | RspError                    ErrorResponse
-                       | RspDocumentLink             DocumentLinkResponse
-                       | RspDocumentLinkResolve      DocumentLinkResolveResponse
                        | RspWillSaveWaitUntil        WillSaveWaitUntilTextDocumentResponse
                        -- Notifications
                        | NotPublishDiagnostics       PublishDiagnosticsNotification

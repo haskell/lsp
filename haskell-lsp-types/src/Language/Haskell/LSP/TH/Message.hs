@@ -100,14 +100,16 @@ data ClientMethod =
  | TextDocumentReferences
  | TextDocumentDocumentHighlight
  | TextDocumentDocumentSymbol
- | TextDocumentFormatting
- | TextDocumentRangeFormatting
- | TextDocumentOnTypeFormatting
  | TextDocumentCodeAction
  | TextDocumentCodeLens
  | CodeLensResolve
  | TextDocumentDocumentLink
  | DocumentLinkResolve
+ | TextDocumentDocumentColor
+ | TextDocumentColorPresentation
+ | TextDocumentFormatting
+ | TextDocumentRangeFormatting
+ | TextDocumentOnTypeFormatting
  | TextDocumentRename
  | TextDocumentFoldingRanges
  -- Messages of the form $/message
@@ -144,14 +146,16 @@ instance A.FromJSON ClientMethod where
   parseJSON (A.String "textDocument/references")          = return TextDocumentReferences
   parseJSON (A.String "textDocument/documentHighlight")   = return TextDocumentDocumentHighlight
   parseJSON (A.String "textDocument/documentSymbol")      = return TextDocumentDocumentSymbol
-  parseJSON (A.String "textDocument/formatting")          = return TextDocumentFormatting
-  parseJSON (A.String "textDocument/rangeFormatting")     = return TextDocumentRangeFormatting
-  parseJSON (A.String "textDocument/onTypeFormatting")    = return TextDocumentOnTypeFormatting
   parseJSON (A.String "textDocument/codeAction")          = return TextDocumentCodeAction
   parseJSON (A.String "textDocument/codeLens")            = return TextDocumentCodeLens
   parseJSON (A.String "codeLens/resolve")                 = return CodeLensResolve
   parseJSON (A.String "textDocument/documentLink")        = return TextDocumentDocumentLink
   parseJSON (A.String "documentLink/resolve")             = return DocumentLinkResolve
+  parseJSON (A.String "textDocument/documentColor")       = return TextDocumentDocumentColor
+  parseJSON (A.String "textDocument/colorPresentation")   = return TextDocumentColorPresentation
+  parseJSON (A.String "textDocument/formatting")          = return TextDocumentFormatting
+  parseJSON (A.String "textDocument/rangeFormatting")     = return TextDocumentRangeFormatting
+  parseJSON (A.String "textDocument/onTypeFormatting")    = return TextDocumentOnTypeFormatting
   parseJSON (A.String "textDocument/rename")              = return TextDocumentRename
   parseJSON (A.String "textDocument/foldingRanges")       = return TextDocumentFoldingRanges
   parseJSON (A.String x)                                  = if T.isPrefixOf "$/" x
@@ -185,15 +189,17 @@ instance A.ToJSON ClientMethod where
   toJSON TextDocumentReferences          = A.String "textDocument/references"
   toJSON TextDocumentDocumentHighlight   = A.String "textDocument/documentHighlight"
   toJSON TextDocumentDocumentSymbol      = A.String "textDocument/documentSymbol"
-  toJSON TextDocumentFormatting          = A.String "textDocument/formatting"
-  toJSON TextDocumentRangeFormatting     = A.String "textDocument/rangeFormatting"
-  toJSON TextDocumentOnTypeFormatting    = A.String "textDocument/onTypeFormatting"
   toJSON TextDocumentDefinition          = A.String "textDocument/definition"
   toJSON TextDocumentTypeDefinition      = A.String "textDocument/typeDefinition"
   toJSON TextDocumentImplementation      = A.String "textDocument/implementation"
   toJSON TextDocumentCodeAction          = A.String "textDocument/codeAction"
   toJSON TextDocumentCodeLens            = A.String "textDocument/codeLens"
   toJSON CodeLensResolve                 = A.String "codeLens/resolve"
+  toJSON TextDocumentDocumentColor       = A.String "textDocument/documentColor"
+  toJSON TextDocumentColorPresentation   = A.String "textDocument/colorPresentation"
+  toJSON TextDocumentFormatting          = A.String "textDocument/formatting"
+  toJSON TextDocumentRangeFormatting     = A.String "textDocument/rangeFormatting"
+  toJSON TextDocumentOnTypeFormatting    = A.String "textDocument/onTypeFormatting"
   toJSON TextDocumentRename              = A.String "textDocument/rename"
   toJSON TextDocumentFoldingRanges       = A.String "textDocument/foldingRanges"
   toJSON TextDocumentDocumentLink        = A.String "textDocument/documentLink"

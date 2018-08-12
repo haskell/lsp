@@ -94,6 +94,7 @@ data Options =
     , codeLensProvider                 :: Maybe J.CodeLensOptions
     , documentOnTypeFormattingProvider :: Maybe J.DocumentOnTypeFormattingOptions
     , documentLinkProvider             :: Maybe J.DocumentLinkOptions
+    , colorProvider                    :: Maybe J.ColorOptions
     , foldingRangeProvider             :: Maybe J.FoldingRangeOptions
     , executeCommandProvider           :: Maybe J.ExecuteCommandOptions
     }
@@ -101,6 +102,7 @@ data Options =
 instance Default Options where
   def = Options Nothing Nothing Nothing Nothing Nothing
                 Nothing Nothing Nothing Nothing Nothing
+                Nothing
 
 -- | A function to publish diagnostics. It aggregates all diagnostics pertaining
 -- to a particular version of a document, by source, and sends a
@@ -158,6 +160,8 @@ data Handlers =
     , codeActionHandler              :: !(Maybe (Handler J.CodeActionRequest))
     , codeLensHandler                :: !(Maybe (Handler J.CodeLensRequest))
     , codeLensResolveHandler         :: !(Maybe (Handler J.CodeLensResolveRequest))
+    , documentColorHandler           :: !(Maybe (Handler J.DocumentColorRequest))
+    , colorPresentationHandler       :: !(Maybe (Handler J.ColorPresentationRequest))
     , documentFormattingHandler      :: !(Maybe (Handler J.DocumentFormattingRequest))
     , documentRangeFormattingHandler :: !(Maybe (Handler J.DocumentRangeFormattingRequest))
     , documentTypeFormattingHandler  :: !(Maybe (Handler J.DocumentOnTypeFormattingRequest))
@@ -201,7 +205,8 @@ instance Default Handlers where
   def = Handlers Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
                  Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
                  Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
-                 Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+                 Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+                 Nothing
 
 -- ---------------------------------------------------------------------
 nop :: a -> b -> IO a
@@ -269,6 +274,8 @@ handlerMap _ h J.TextDocumentOnTypeFormatting    = hh nop ReqDocumentOnTypeForma
 handlerMap _ h J.TextDocumentCodeAction          = hh nop ReqCodeAction $ codeActionHandler h
 handlerMap _ h J.TextDocumentCodeLens            = hh nop ReqCodeLens $ codeLensHandler h
 handlerMap _ h J.CodeLensResolve                 = hh nop ReqCodeLensResolve $ codeLensResolveHandler h
+handlerMap _ h J.TextDocumentDocumentColor       = hh nop ReqDocumentColor $ documentColorHandler h
+handlerMap _ h J.TextDocumentColorPresentation   = hh nop ReqColorPresentation $ colorPresentationHandler h
 handlerMap _ h J.TextDocumentDocumentLink        = hh nop ReqDocumentLink $ documentLinkHandler h
 handlerMap _ h J.DocumentLinkResolve             = hh nop ReqDocumentLinkResolve $ documentLinkResolveHandler h
 handlerMap _ h J.TextDocumentRename              = hh nop ReqRename $ renameHandler h
@@ -581,9 +588,7 @@ initializeRequestHandler' (_configHandler,dispatcherProc) mHandler tvarCtx req@(
               , J._documentOnTypeFormattingProvider = documentOnTypeFormattingProvider o
               , J._renameProvider                   = supported (renameHandler h)
               , J._documentLinkProvider             = documentLinkProvider o
-              -- TODO: add!
-              , J._colorProvider                    = Nothing
-              -- TODO: add!
+              , J._colorProvider                    = colorProvider o
               , J._foldingRangeProvider             = foldingRangeProvider o
               , J._executeCommandProvider           = executeCommandProvider o
               -- TODO: add!

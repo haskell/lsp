@@ -13,6 +13,7 @@
 module Language.Haskell.LSP.TH.DataTypesJSON
     ( module Language.Haskell.LSP.TH.DataTypesJSON
     , module Language.Haskell.LSP.TH.CodeAction
+    , module Language.Haskell.LSP.TH.Color
     , module Language.Haskell.LSP.TH.Command
     , module Language.Haskell.LSP.TH.Completion
     , module Language.Haskell.LSP.TH.Diagnostic
@@ -38,6 +39,7 @@ import qualified Data.Text                                  as T
 
 import           Language.Haskell.LSP.TH.ClientCapabilities
 import           Language.Haskell.LSP.TH.CodeAction
+import           Language.Haskell.LSP.TH.Color
 import           Language.Haskell.LSP.TH.Command
 import           Language.Haskell.LSP.TH.Completion
 import           Language.Haskell.LSP.TH.Constants
@@ -2915,6 +2917,13 @@ makeFieldsNoPrefix ''DiagnosticRelatedInformation
 makeFieldsNoPrefix ''DocumentSymbolParams
 makeFieldsNoPrefix ''DocumentSymbol
 makeFieldsNoPrefix ''SymbolInformation
+
+-- Color
+makeFieldsNoPrefix ''Color
+makeFieldsNoPrefix ''ColorInformation
+makeFieldsNoPrefix ''DocumentColorParams
+makeFieldsNoPrefix ''ColorPresentationParams
+makeFieldsNoPrefix ''ColorPresentation
 
 -- Folding Range
 makeFieldsNoPrefix ''FoldingRange
