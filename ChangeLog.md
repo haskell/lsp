@@ -8,6 +8,10 @@
  * Add `preselect` field
 * Add CompletionContext
 * Add new server capabilities
+* Add workspace folder support
+* Add document color and color presentation
+* Add folding range support
+* Add goto type support
 
 ## 0.6.0.0 -- 2018-08-06
 
