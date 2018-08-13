@@ -35,6 +35,7 @@ import           Data.Default
 import qualified Data.HashMap.Strict as HM
 import qualified Data.List as L
 import qualified Data.Map as Map
+import           Data.Maybe
 import           Data.Monoid
 import qualified Data.Text as T
 import           Data.Text ( Text )
@@ -77,6 +78,7 @@ data LanguageContextData a =
   , resLspId               :: !(TVar Int)
   , resLspFuncs            :: LspFuncs a -- NOTE: Cannot be strict, lazy initialization
   , resCaptureFile         :: !(Maybe FilePath)
+  , resWorkspaceFolders    :: ![J.WorkspaceFolder]
   }
 
 -- ---------------------------------------------------------------------
@@ -128,6 +130,7 @@ data LspFuncs c =
     , flushDiagnosticsBySourceFunc :: !FlushDiagnosticsBySourceFunc
     , getNextReqId                 :: !(IO J.LspId)
     , rootPath                     :: !(Maybe FilePath)
+    , getWorkspaceFolders          :: !(IO (Maybe [J.WorkspaceFolder]))
     }
 
 -- | The function in the LSP process that is called once the 'initialize'
@@ -248,7 +251,7 @@ handlerMap _ h J.Exit                            =
       exitSuccess
 handlerMap _ h J.CancelRequest                   = hh nop NotCancelRequestFromClient $ cancelNotificationHandler h
 -- Workspace
-handlerMap _ h J.WorkspaceDidChangeWorkspaceFolders = hh nop NotDidChangeWorkspaceFolders $ didChangeWorkspaceFoldersNotificationHandler h
+handlerMap _ h J.WorkspaceDidChangeWorkspaceFolders = hwf $ didChangeWorkspaceFoldersNotificationHandler h
 handlerMap i h J.WorkspaceDidChangeConfiguration = hc i $ didChangeConfigurationParamsHandler h
 handlerMap _ h J.WorkspaceDidChangeWatchedFiles  = hh nop NotDidChangeWatchedFiles $ didChangeWatchedFilesNotificationHandler h
 handlerMap _ h J.WorkspaceSymbol                 = hh nop ReqWorkspaceSymbols $ workspaceSymbolHandler h
@@ -343,6 +346,22 @@ hc (c,_) mh tvarDat json = do
           let msg = T.pack $ unwords $ ["haskell-lsp:parse error.", show json, show err] ++ _ERR_MSG_URL
           sendErrorLog tvarDat msg
 
+-- | Updates the list of workspace folders and then delegates back to 'hh'
+hwf :: Maybe (Handler J.DidChangeWorkspaceFoldersNotification) -> TVar (LanguageContextData c) -> J.Value -> IO ()
+hwf h tvarDat json = do
+  case J.fromJSON json :: J.Result J.DidChangeWorkspaceFoldersNotification of
+    J.Success (J.NotificationMessage _ _ params) -> atomically $ do
+
+      oldWfs <- resWorkspaceFolders <$> readTVar tvarDat
+      let J.List toRemove = params ^. J.event . J.removed
+          wfs0 = foldr L.delete oldWfs toRemove
+          J.List toAdd = params ^. J.event . J.added
+          wfs1 = wfs0 <> toAdd
+
+      modifyTVar' tvarDat (\c -> c {resWorkspaceFolders = wfs1})
+    _ -> return ()
+  hh nop NotDidChangeWorkspaceFolders h tvarDat json
+
 -- ---------------------------------------------------------------------
 
 getVirtualFile :: TVar (LanguageContextData c) -> J.Uri -> IO (Maybe VirtualFile)
@@ -387,7 +406,7 @@ _ERR_MSG_URL = [ "`stack update` and install new haskell-lsp."
 --
 defaultLanguageContextData :: Handlers -> Options -> LspFuncs c -> TVar Int -> SendFunc -> Maybe FilePath -> LanguageContextData c
 defaultLanguageContextData h o lf tv sf cf =
-  LanguageContextData _INITIAL_RESPONSE_SEQUENCE h o sf mempty mempty Nothing tv lf cf
+  LanguageContextData _INITIAL_RESPONSE_SEQUENCE h o sf mempty mempty Nothing tv lf cf mempty
 
 -- ---------------------------------------------------------------------
 
@@ -516,6 +535,12 @@ initializeRequestHandler' (_configHandler,dispatcherProc) mHandler tvarCtx req@(
       Just handler -> handler req
       Nothing -> return ()
 
+    let wfs = case params ^. J.workspaceFolders of
+                Just (J.List xs) -> xs
+                Nothing -> []
+
+    atomically $ modifyTVar' tvarCtx (\c -> c { resWorkspaceFolders = wfs })
+
     ctx0 <- readTVarIO tvarCtx
 
     -- capture initialize request
@@ -532,11 +557,19 @@ initializeRequestHandler' (_configHandler,dispatcherProc) mHandler tvarCtx req@(
 
     let
       getCapabilities :: J.InitializeParams -> C.ClientCapabilities
-      getCapabilities (J.InitializeParams _ _ _ _ c _ mWorkspaceFolders) = c
+      getCapabilities (J.InitializeParams _ _ _ _ c _ _) = c
       getLspId tvId = atomically $ do
         cid <- readTVar tvId
         modifyTVar' tvId (+1)
         return $ J.IdInt cid
+
+      clientSupportsWfs = fromMaybe False $ do
+        let (C.ClientCapabilities mw _ _) = params ^. J.capabilities
+        (C.WorkspaceClientCapabilities _ _ _ _ _ _ mwf _) <- mw
+        mwf
+      getWfs tvc
+        | clientSupportsWfs = atomically $ Just . resWorkspaceFolders <$> readTVar tvc
+        | otherwise = return Nothing
 
     -- Launch the given process once the project root directory has been set
     let lspFuncs = LspFuncs (getCapabilities params)
@@ -547,6 +580,7 @@ initializeRequestHandler' (_configHandler,dispatcherProc) mHandler tvarCtx req@(
                             (flushDiagnosticsBySource tvarCtx)
                             (getLspId $ resLspId ctx0)
                             rootDir
+                            (getWfs tvarCtx)
     let ctx = ctx0 { resLspFuncs = lspFuncs }
     atomically $ writeTVar tvarCtx ctx
 
