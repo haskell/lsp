@@ -79,6 +79,7 @@ data ClientMethod =
  | Exit
  | CancelRequest
  -- Workspace
+ | WorkspaceDidChangeWorkspaceFolders
  | WorkspaceDidChangeConfiguration
  | WorkspaceDidChangeWatchedFiles
  | WorkspaceSymbol
@@ -125,6 +126,7 @@ instance A.FromJSON ClientMethod where
   parseJSON (A.String "exit")                             = return Exit
   parseJSON (A.String "$/cancelRequest")                  = return CancelRequest
  -- Workspace
+  parseJSON (A.String "workspace/didChangeWorkspaceFolders") = return WorkspaceDidChangeWorkspaceFolders
   parseJSON (A.String "workspace/didChangeConfiguration") = return WorkspaceDidChangeConfiguration
   parseJSON (A.String "workspace/didChangeWatchedFiles")  = return WorkspaceDidChangeWatchedFiles
   parseJSON (A.String "workspace/symbol")                 = return WorkspaceSymbol
@@ -171,6 +173,7 @@ instance A.ToJSON ClientMethod where
   toJSON Exit                            = A.String "exit"
   toJSON CancelRequest                   = A.String "$/cancelRequest"
   -- Workspace
+  toJSON WorkspaceDidChangeWorkspaceFolders = A.String "workspace/didChangeWorkspaceFolders"
   toJSON WorkspaceDidChangeConfiguration = A.String "workspace/didChangeConfiguration"
   toJSON WorkspaceDidChangeWatchedFiles  = A.String "workspace/didChangeWatchedFiles"
   toJSON WorkspaceSymbol                 = A.String "workspace/symbol"
@@ -216,6 +219,8 @@ data ServerMethod =
   | ClientRegisterCapability
   | ClientUnregisterCapability
   -- Workspace
+  | WorkspaceWorkspaceFolders
+  | WorkspaceConfiguration
   | WorkspaceApplyEdit
   -- Document
   | TextDocumentPublishDiagnostics
@@ -233,6 +238,8 @@ instance A.FromJSON ServerMethod where
   parseJSON (A.String "client/registerCapability")       = return ClientRegisterCapability
   parseJSON (A.String "client/unregisterCapability")     = return ClientUnregisterCapability
   -- Workspace
+  parseJSON (A.String "workspace/workspaceFolders")      = return WorkspaceWorkspaceFolders
+  parseJSON (A.String "workspace/configuration")         = return WorkspaceConfiguration
   parseJSON (A.String "workspace/applyEdit")             = return WorkspaceApplyEdit
   -- Document
   parseJSON (A.String "textDocument/publishDiagnostics") = return TextDocumentPublishDiagnostics
@@ -250,6 +257,8 @@ instance A.ToJSON ServerMethod where
   toJSON ClientRegisterCapability = A.String "client/registerCapability"
   toJSON ClientUnregisterCapability = A.String "client/unregisterCapability"
   -- Workspace
+  toJSON WorkspaceWorkspaceFolders = A.String "workspace/workspaceFolders"
+  toJSON WorkspaceConfiguration = A.String "workspace/configuration"
   toJSON WorkspaceApplyEdit = A.String "workspace/applyEdit"
   -- Document
   toJSON TextDocumentPublishDiagnostics = A.String "textDocument/publishDiagnostics"

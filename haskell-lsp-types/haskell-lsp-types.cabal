@@ -37,6 +37,7 @@ library
                      , Language.Haskell.LSP.TH.TextDocument
                      , Language.Haskell.LSP.TH.Uri
                      , Language.Haskell.LSP.TH.WorkspaceEdit
+                     , Language.Haskell.LSP.TH.WorkspaceFolders
  -- other-extensions:
   ghc-options:         -Wall
   -- ghc-options:         -Werror

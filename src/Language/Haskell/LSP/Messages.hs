@@ -59,6 +59,7 @@ data FromClientMessage = ReqInitialize               InitializeRequest
                        | NotWillSaveTextDocument         WillSaveTextDocumentNotification
                        | NotDidSaveTextDocument          DidSaveTextDocumentNotification
                        | NotDidChangeWatchedFiles        DidChangeWatchedFilesNotification
+                       | NotDidChangeWorkspaceFolders    DidChangeWorkspaceFoldersNotification
                        -- Unknown (The client sends something we don't understand)
                        | UnknownFromClientMessage        Value
   deriving (Eq,Read,Show,Generic,ToJSON,FromJSON)

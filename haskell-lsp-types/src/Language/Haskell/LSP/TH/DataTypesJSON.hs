@@ -27,6 +27,7 @@ module Language.Haskell.LSP.TH.DataTypesJSON
     , module Language.Haskell.LSP.TH.TextDocument
     , module Language.Haskell.LSP.TH.Uri
     , module Language.Haskell.LSP.TH.WorkspaceEdit
+    , module Language.Haskell.LSP.TH.WorkspaceFolders
     ) where
 
 import           Control.Applicative
@@ -54,6 +55,7 @@ import           Language.Haskell.LSP.TH.Symbol
 import           Language.Haskell.LSP.TH.TextDocument
 import           Language.Haskell.LSP.TH.Uri
 import           Language.Haskell.LSP.TH.WorkspaceEdit
+import           Language.Haskell.LSP.TH.WorkspaceFolders
 
 -- =====================================================================
 -- ACTUAL PROTOCOL -----------------------------------------------------
@@ -138,8 +140,15 @@ data InitializeParams =
   , _initializationOptions :: Maybe A.Value
   , _capabilities          :: ClientCapabilities
   , _trace                 :: Maybe Trace
+  -- |  The workspace folders configured in the client when the server starts.
+  -- This property is only available if the client supports workspace folders.
+  -- It can be `null` if the client supports workspace folders but none are
+  -- configured.
+  -- Since LSP 3.6, @since 0.7.0.0
+  , _workspaceFolders      :: Maybe (List WorkspaceFolder)
   } deriving (Show, Read, Eq)
 
+{-# DEPRECATED _rootPath "Use _rootUri" #-}
 
 deriveJSON lspOptions ''InitializeParams
 makeFieldsNoPrefix ''InitializeParams
@@ -1240,8 +1249,78 @@ data DidChangeConfigurationParams =
 deriveJSON lspOptions ''DidChangeConfigurationParams
 makeFieldsNoPrefix ''DidChangeConfigurationParams
 
+-- ---------------------------------------------------------------------
 
 type DidChangeConfigurationNotification = NotificationMessage ClientMethod DidChangeConfigurationParams
+
+{-
+Configuration Request (:arrow_right_hook:)
+Since version 3.6.0
+
+The workspace/configuration request is sent from the server to the client to
+fetch configuration settings from the client. The request can fetch n
+configuration settings in one roundtrip. The order of the returned configuration
+settings correspond to the order of the passed ConfigurationItems (e.g. the
+first item in the response is the result for the first configuration item in the
+params).
+
+A ConfigurationItem consist of the configuration section to ask for and an
+additional scope URI. The configuration section ask for is defined by the server
+and doesn’t necessarily need to correspond to the configuration store used be
+the client. So a server might ask for a configuration cpp.formatterOptions but
+the client stores the configuration in a XML store layout differently. It is up
+to the client to do the necessary conversion. If a scope URI is provided the
+client should return the setting scoped to the provided resource. If the client
+for example uses EditorConfig to manage its settings the configuration should be
+returned for the passed resource URI. If the client can’t provide a
+configuration setting for a given scope then null need to be present in the
+returned array.
+
+Request:
+
+method: ‘workspace/configuration’
+params: ConfigurationParams defined as follows
+export interface ConfigurationParams {
+	items: ConfigurationItem[];
+}
+
+export interface ConfigurationItem {
+	/**
+	 * The scope to get the configuration section for.
+	 */
+	scopeUri?: string;
+
+	/**
+	 * The configuration section asked for.
+	 */
+	section?: string;
+}
+Response:
+
+result: any[]
+error: code and message set in case an exception happens during the
+‘workspace/configuration’ request
+-}
+
+data ConfigurationItem =
+  ConfigurationItem
+    { _scopeUri :: Maybe Text -- ^ The scope to get the configuration section for.
+    , _section  :: Maybe Text -- ^ The configuration section asked for.
+    } deriving (Show, Read, Eq)
+
+deriveJSON lspOptions ''ConfigurationItem
+makeFieldsNoPrefix ''ConfigurationItem
+
+data ConfigurationParams =
+  ConfigurationParams
+    { _items :: List ConfigurationItem
+    } deriving (Show, Read, Eq)
+
+deriveJSON lspOptions ''ConfigurationParams
+makeFieldsNoPrefix ''ConfigurationParams
+
+type ConfigurationRequest = RequestMessage ServerMethod ConfigurationParams (List A.Value)
+type ConfigurationResponse = ResponseMessage (List A.Value)
 
 -- ---------------------------------------------------------------------
 {-
@@ -2893,6 +2972,11 @@ makeFieldsNoPrefix ''TextEdit
 makeFieldsNoPrefix ''VersionedTextDocumentIdentifier
 makeFieldsNoPrefix ''TextDocumentEdit
 makeFieldsNoPrefix ''WorkspaceEdit
+
+-- Workspace Folders
+makeFieldsNoPrefix ''WorkspaceFolder
+makeFieldsNoPrefix ''WorkspaceFoldersChangeEvent
+makeFieldsNoPrefix ''DidChangeWorkspaceFoldersParams
 
 -- Message
 makeFieldsNoPrefix ''RequestMessage
