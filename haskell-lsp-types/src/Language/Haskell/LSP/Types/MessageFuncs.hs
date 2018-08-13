@@ -59,7 +59,7 @@ module Language.Haskell.LSP.Types.MessageFuncs (
 
 import qualified Data.Aeson as J
 import           Data.Text ( Text )
-import qualified Language.Haskell.LSP.Types.DataTypesJSON      as J
+import qualified Language.Haskell.LSP.Types      as J
 
 -- ---------------------------------------------------------------------
 {-# ANN module ("HLint: ignore Eta reduce"         :: String) #-}

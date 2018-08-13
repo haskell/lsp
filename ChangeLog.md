@@ -12,6 +12,11 @@
 * Add document color and color presentation
 * Add folding range support
 * Add goto type support
+* s/TH/Types/g
+ * Move all types into haskell-lsp-types
+ * Hide Language.Haskell.LSP.TH.DataTypesJSON - Use Language.Haskell.LSP.Types instead
+* Add lenses for Language.Haskell.LSP.Types.Capabilities
+
 
 ## 0.6.0.0 -- 2018-08-06
 

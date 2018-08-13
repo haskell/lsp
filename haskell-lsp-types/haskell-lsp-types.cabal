@@ -20,8 +20,6 @@ library
   exposed-modules:     Language.Haskell.LSP.Types
                      , Language.Haskell.LSP.Types.Capabilities
                      , Language.Haskell.LSP.Types.Constants
-                     , Language.Haskell.LSP.Types.DataTypesJSON
-                     , Language.Haskell.LSP.Types.Lens
                      , Language.Haskell.LSP.Types.MessageFuncs
                      , Language.Haskell.LSP.Types.Utils
   other-modules:       Language.Haskell.LSP.Types.ClientCapabilities
@@ -29,9 +27,11 @@ library
                      , Language.Haskell.LSP.Types.Color
                      , Language.Haskell.LSP.Types.Command
                      , Language.Haskell.LSP.Types.Completion
+                     , Language.Haskell.LSP.Types.DataTypesJSON
                      , Language.Haskell.LSP.Types.Diagnostic
                      , Language.Haskell.LSP.Types.DocumentFilter
                      , Language.Haskell.LSP.Types.FoldingRange
+                     , Language.Haskell.LSP.Types.Lens
                      , Language.Haskell.LSP.Types.List
                      , Language.Haskell.LSP.Types.Location
                      , Language.Haskell.LSP.Types.MarkupContent
