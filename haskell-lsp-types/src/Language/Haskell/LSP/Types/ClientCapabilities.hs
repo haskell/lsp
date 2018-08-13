@@ -575,6 +575,30 @@ export interface TextDocumentClientCapabilities {
                  */
                 relatedInformation?: boolean;
         };
+        
+        /**
+	 * Capabilities specific to `textDocument/foldingRange` requests.
+	 * 
+	 * Since 3.10.0
+	 */
+	foldingRange?: {
+		/**
+		 * Whether implementation supports dynamic registration for folding range providers. If this is set to `true`
+		 * the client supports the new `(FoldingRangeProviderOptions & TextDocumentRegistrationOptions & StaticRegistrationOptions)`
+		 * return value for the corresponding server capability as well.
+		 */
+		dynamicRegistration?: boolean;
+		/**
+		 * The maximum number of folding ranges that the client prefers to receive per document. The value serves as a
+		 * hint, servers are free to follow the limit.
+		 */
+		rangeLimit?: number;
+		/**
+		 * If set, the client signals that it only supports folding complete lines. If set, client will
+		 * ignore specified `startCharacter` and `endCharacter` properties in a FoldingRange.
+		 */
+		lineFoldingOnly?: boolean;
+	};
 }
 
 -}
@@ -888,6 +912,26 @@ $(deriveJSON lspOptions ''PublishDiagnosticsClientCapabilities)
 
 -- -------------------------------------
 
+data FoldingRangeClientCapabilities =
+  FoldingRangeClientCapabilities
+    { -- | Whether implementation supports dynamic registration for folding range
+      -- providers. If this is set to `true` the client supports the new
+      -- `(FoldingRangeProviderOptions & TextDocumentRegistrationOptions & StaticRegistrationOptions)`
+      -- return value for the corresponding server capability as well.
+      _dynamicRegistration :: Maybe Bool
+      -- | The maximum number of folding ranges that the client prefers to receive
+      -- per document. The value serves as a hint, servers are free to follow the limit.
+    , _rangeLimit          :: Maybe Int
+      -- | If set, the client signals that it only supports folding complete lines. If set,
+      -- client will ignore specified `startCharacter` and `endCharacter` properties in a
+      -- FoldingRange.
+    , _lineFoldingOnly     :: Maybe Bool
+    } deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''FoldingRangeClientCapabilities)
+
+-- -------------------------------------
+
 data TextDocumentClientCapabilities =
   TextDocumentClientCapabilities
     { _synchronization :: Maybe SynchronizationTextDocumentClientCapabilities
@@ -946,6 +990,9 @@ data TextDocumentClientCapabilities =
 
       -- | Capabilities specific to `textDocument/publishDiagnostics`
     , _publishDiagnostics :: Maybe PublishDiagnosticsClientCapabilities
+
+      -- | Capabilities specific to `textDocument/foldingRange` requests. Since LSP 3.10, @since 0.7.0.0
+    , _foldingRange :: Maybe FoldingRangeClientCapabilities
     } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''TextDocumentClientCapabilities)
@@ -953,7 +1000,7 @@ $(deriveJSON lspOptions ''TextDocumentClientCapabilities)
 instance Default TextDocumentClientCapabilities where
   def = TextDocumentClientCapabilities def def def def def def def def
                                        def def def def def def def def
-                                       def def def
+                                       def def def def
 
 -- ---------------------------------------------------------------------
 {-

@@ -44,6 +44,8 @@ makeFieldsNoPrefix ''PublishDiagnosticsClientCapabilities
 makeFieldsNoPrefix ''TextDocumentClientCapabilities
 makeFieldsNoPrefix ''ClientCapabilities
 
+-- ---------------------------------------------------------------------
+
 makeFieldsNoPrefix ''InitializeParams
 makeFieldsNoPrefix ''InitializeError
 makeFieldsNoPrefix ''CompletionOptions
@@ -54,6 +56,8 @@ makeFieldsNoPrefix ''DocumentLinkOptions
 makeFieldsNoPrefix ''ExecuteCommandOptions
 makeFieldsNoPrefix ''SaveOptions
 makeFieldsNoPrefix ''TextDocumentSyncOptions
+makeFieldsNoPrefix ''WorkspaceFolderOptions
+makeFieldsNoPrefix ''WorkspaceOptions
 makeFieldsNoPrefix ''InitializeResponseCapabilitiesInner
 makeFieldsNoPrefix ''InitializeResponseCapabilities
 makeFieldsNoPrefix ''ShowMessageParams
@@ -66,6 +70,8 @@ makeFieldsNoPrefix ''TextDocumentRegistrationOptions
 makeFieldsNoPrefix ''Unregistration
 makeFieldsNoPrefix ''UnregistrationParams
 makeFieldsNoPrefix ''DidChangeConfigurationParams
+makeFieldsNoPrefix ''ConfigurationItem
+makeFieldsNoPrefix ''ConfigurationParams
 makeFieldsNoPrefix ''DidOpenTextDocumentParams
 makeFieldsNoPrefix ''TextDocumentContentChangeEvent
 makeFieldsNoPrefix ''DidChangeTextDocumentParams
@@ -103,6 +109,8 @@ makeFieldsNoPrefix ''ApplyWorkspaceEditResponseBody
 makeFieldsNoPrefix ''TraceParams
 makeFieldsNoPrefix ''TraceNotification
 
+-- ---------------------------------------------------------------------
+
 -- Location
 makeFieldsNoPrefix ''Position
 makeFieldsNoPrefix ''Range
@@ -129,6 +137,11 @@ makeFieldsNoPrefix ''VersionedTextDocumentIdentifier
 makeFieldsNoPrefix ''TextDocumentEdit
 makeFieldsNoPrefix ''WorkspaceEdit
 
+-- Workspace Folders
+makeFieldsNoPrefix ''WorkspaceFolder
+makeFieldsNoPrefix ''WorkspaceFoldersChangeEvent
+makeFieldsNoPrefix ''DidChangeWorkspaceFoldersParams
+
 -- Message
 makeFieldsNoPrefix ''RequestMessage
 makeFieldsNoPrefix ''ResponseError
@@ -152,3 +165,14 @@ makeFieldsNoPrefix ''DiagnosticRelatedInformation
 makeFieldsNoPrefix ''DocumentSymbolParams
 makeFieldsNoPrefix ''DocumentSymbol
 makeFieldsNoPrefix ''SymbolInformation
+
+-- Color
+makeFieldsNoPrefix ''Color
+makeFieldsNoPrefix ''ColorInformation
+makeFieldsNoPrefix ''DocumentColorParams
+makeFieldsNoPrefix ''ColorPresentationParams
+makeFieldsNoPrefix ''ColorPresentation
+
+-- Folding Range
+makeFieldsNoPrefix ''FoldingRange
+makeFieldsNoPrefix ''FoldingRangeParams

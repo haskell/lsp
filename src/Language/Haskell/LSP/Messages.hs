@@ -22,6 +22,8 @@ data FromClientMessage = ReqInitialize               InitializeRequest
                        | ReqCompletionItemResolve    CompletionItemResolveRequest
                        | ReqSignatureHelp            SignatureHelpRequest
                        | ReqDefinition               DefinitionRequest
+                       | ReqTypeDefinition           TypeDefinitionRequest
+                       | ReqImplementation           ImplementationRequest
                        | ReqFindReferences           ReferencesRequest
                        | ReqDocumentHighlights       DocumentHighlightRequest
                        | ReqDocumentSymbols          DocumentSymbolRequest
@@ -29,13 +31,16 @@ data FromClientMessage = ReqInitialize               InitializeRequest
                        | ReqCodeAction               CodeActionRequest
                        | ReqCodeLens                 CodeLensRequest
                        | ReqCodeLensResolve          CodeLensResolveRequest
+                       | ReqDocumentLink             DocumentLinkRequest
+                       | ReqDocumentLinkResolve      DocumentLinkResolveRequest
+                       | ReqDocumentColor            DocumentColorRequest
+                       | ReqColorPresentation        ColorPresentationRequest
                        | ReqDocumentFormatting       DocumentFormattingRequest
                        | ReqDocumentRangeFormatting  DocumentRangeFormattingRequest
                        | ReqDocumentOnTypeFormatting DocumentOnTypeFormattingRequest
                        | ReqRename                   RenameRequest
+                       | ReqFoldingRange             FoldingRangeRequest
                        | ReqExecuteCommand           ExecuteCommandRequest
-                       | ReqDocumentLink             DocumentLinkRequest
-                       | ReqDocumentLinkResolve      DocumentLinkResolveRequest
                        | ReqWillSaveWaitUntil        WillSaveWaitUntilTextDocumentRequest
                        -- Responses
                        | RspApplyWorkspaceEdit       ApplyWorkspaceEditResponse
@@ -54,6 +59,7 @@ data FromClientMessage = ReqInitialize               InitializeRequest
                        | NotWillSaveTextDocument         WillSaveTextDocumentNotification
                        | NotDidSaveTextDocument          DidSaveTextDocumentNotification
                        | NotDidChangeWatchedFiles        DidChangeWatchedFilesNotification
+                       | NotDidChangeWorkspaceFolders    DidChangeWorkspaceFoldersNotification
                        -- Unknown (The client sends something we don't understand)
                        | UnknownFromClientMessage        Value
   deriving (Eq,Read,Show,Generic,ToJSON,FromJSON)
@@ -72,6 +78,8 @@ data FromServerMessage = ReqRegisterCapability       RegisterCapabilityRequest
                        | RspCompletionItemResolve    CompletionItemResolveResponse
                        | RspSignatureHelp            SignatureHelpResponse
                        | RspDefinition               DefinitionResponse
+                       | RspTypeDefinition           TypeDefinitionResponse
+                       | RspImplementation           ImplementationResponse
                        | RspFindReferences           ReferencesResponse
                        | RspDocumentHighlights       DocumentHighlightsResponse
                        | RspDocumentSymbols          DocumentSymbolsResponse
@@ -79,14 +87,17 @@ data FromServerMessage = ReqRegisterCapability       RegisterCapabilityRequest
                        | RspCodeAction               CodeActionResponse
                        | RspCodeLens                 CodeLensResponse
                        | RspCodeLensResolve          CodeLensResolveResponse
+                       | RspDocumentLink             DocumentLinkResponse
+                       | RspDocumentLinkResolve      DocumentLinkResolveResponse
+                       | RspDocumentColor            DocumentColorResponse
+                       | RspColorPresentation        ColorPresentationResponse
                        | RspDocumentFormatting       DocumentFormattingResponse
                        | RspDocumentRangeFormatting  DocumentRangeFormattingResponse
                        | RspDocumentOnTypeFormatting DocumentOnTypeFormattingResponse
                        | RspRename                   RenameResponse
+                       | RspFoldingRange             FoldingRangeResponse
                        | RspExecuteCommand           ExecuteCommandResponse
                        | RspError                    ErrorResponse
-                       | RspDocumentLink             DocumentLinkResponse
-                       | RspDocumentLinkResolve      DocumentLinkResolveResponse
                        | RspWillSaveWaitUntil        WillSaveWaitUntilTextDocumentResponse
                        -- Notifications
                        | NotPublishDiagnostics       PublishDiagnosticsNotification

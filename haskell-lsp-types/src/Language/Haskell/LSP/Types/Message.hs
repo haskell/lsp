@@ -79,6 +79,7 @@ data ClientMethod =
  | Exit
  | CancelRequest
  -- Workspace
+ | WorkspaceDidChangeWorkspaceFolders
  | WorkspaceDidChangeConfiguration
  | WorkspaceDidChangeWatchedFiles
  | WorkspaceSymbol
@@ -94,20 +95,24 @@ data ClientMethod =
  | CompletionItemResolve
  | TextDocumentHover
  | TextDocumentSignatureHelp
+ | TextDocumentDefinition
+ | TextDocumentTypeDefinition
+ | TextDocumentImplementation
  | TextDocumentReferences
  | TextDocumentDocumentHighlight
  | TextDocumentDocumentSymbol
- | TextDocumentFormatting
- | TextDocumentRangeFormatting
- | TextDocumentOnTypeFormatting
- | TextDocumentDefinition
- | TextDocumentImplementation
  | TextDocumentCodeAction
  | TextDocumentCodeLens
  | CodeLensResolve
  | TextDocumentDocumentLink
  | DocumentLinkResolve
+ | TextDocumentDocumentColor
+ | TextDocumentColorPresentation
+ | TextDocumentFormatting
+ | TextDocumentRangeFormatting
+ | TextDocumentOnTypeFormatting
  | TextDocumentRename
+ | TextDocumentFoldingRanges
  -- Messages of the form $/message
  -- Implementation Dependent, can be ignored
  | Misc Text
@@ -121,6 +126,7 @@ instance A.FromJSON ClientMethod where
   parseJSON (A.String "exit")                             = return Exit
   parseJSON (A.String "$/cancelRequest")                  = return CancelRequest
  -- Workspace
+  parseJSON (A.String "workspace/didChangeWorkspaceFolders") = return WorkspaceDidChangeWorkspaceFolders
   parseJSON (A.String "workspace/didChangeConfiguration") = return WorkspaceDidChangeConfiguration
   parseJSON (A.String "workspace/didChangeWatchedFiles")  = return WorkspaceDidChangeWatchedFiles
   parseJSON (A.String "workspace/symbol")                 = return WorkspaceSymbol
@@ -136,20 +142,24 @@ instance A.FromJSON ClientMethod where
   parseJSON (A.String "completionItem/resolve")           = return CompletionItemResolve
   parseJSON (A.String "textDocument/hover")               = return TextDocumentHover
   parseJSON (A.String "textDocument/signatureHelp")       = return TextDocumentSignatureHelp
+  parseJSON (A.String "textDocument/definition")          = return TextDocumentDefinition
+  parseJSON (A.String "textDocument/typeDefinition")      = return TextDocumentTypeDefinition
+  parseJSON (A.String "textDocument/implementation")      = return TextDocumentImplementation
   parseJSON (A.String "textDocument/references")          = return TextDocumentReferences
   parseJSON (A.String "textDocument/documentHighlight")   = return TextDocumentDocumentHighlight
   parseJSON (A.String "textDocument/documentSymbol")      = return TextDocumentDocumentSymbol
-  parseJSON (A.String "textDocument/formatting")          = return TextDocumentFormatting
-  parseJSON (A.String "textDocument/rangeFormatting")     = return TextDocumentRangeFormatting
-  parseJSON (A.String "textDocument/onTypeFormatting")    = return TextDocumentOnTypeFormatting
-  parseJSON (A.String "textDocument/definition")          = return TextDocumentDefinition
-  parseJSON (A.String "textDocument/implementation")      = return TextDocumentImplementation
   parseJSON (A.String "textDocument/codeAction")          = return TextDocumentCodeAction
   parseJSON (A.String "textDocument/codeLens")            = return TextDocumentCodeLens
   parseJSON (A.String "codeLens/resolve")                 = return CodeLensResolve
   parseJSON (A.String "textDocument/documentLink")        = return TextDocumentDocumentLink
   parseJSON (A.String "documentLink/resolve")             = return DocumentLinkResolve
+  parseJSON (A.String "textDocument/documentColor")       = return TextDocumentDocumentColor
+  parseJSON (A.String "textDocument/colorPresentation")   = return TextDocumentColorPresentation
+  parseJSON (A.String "textDocument/formatting")          = return TextDocumentFormatting
+  parseJSON (A.String "textDocument/rangeFormatting")     = return TextDocumentRangeFormatting
+  parseJSON (A.String "textDocument/onTypeFormatting")    = return TextDocumentOnTypeFormatting
   parseJSON (A.String "textDocument/rename")              = return TextDocumentRename
+  parseJSON (A.String "textDocument/foldingRanges")       = return TextDocumentFoldingRanges
   parseJSON (A.String x)                                  = if T.isPrefixOf "$/" x
                                                                then return $ Misc (T.drop 2 x)
                                                             else mempty
@@ -163,6 +173,7 @@ instance A.ToJSON ClientMethod where
   toJSON Exit                            = A.String "exit"
   toJSON CancelRequest                   = A.String "$/cancelRequest"
   -- Workspace
+  toJSON WorkspaceDidChangeWorkspaceFolders = A.String "workspace/didChangeWorkspaceFolders"
   toJSON WorkspaceDidChangeConfiguration = A.String "workspace/didChangeConfiguration"
   toJSON WorkspaceDidChangeWatchedFiles  = A.String "workspace/didChangeWatchedFiles"
   toJSON WorkspaceSymbol                 = A.String "workspace/symbol"
@@ -181,15 +192,19 @@ instance A.ToJSON ClientMethod where
   toJSON TextDocumentReferences          = A.String "textDocument/references"
   toJSON TextDocumentDocumentHighlight   = A.String "textDocument/documentHighlight"
   toJSON TextDocumentDocumentSymbol      = A.String "textDocument/documentSymbol"
-  toJSON TextDocumentFormatting          = A.String "textDocument/formatting"
-  toJSON TextDocumentRangeFormatting     = A.String "textDocument/rangeFormatting"
-  toJSON TextDocumentOnTypeFormatting    = A.String "textDocument/onTypeFormatting"
   toJSON TextDocumentDefinition          = A.String "textDocument/definition"
+  toJSON TextDocumentTypeDefinition      = A.String "textDocument/typeDefinition"
   toJSON TextDocumentImplementation      = A.String "textDocument/implementation"
   toJSON TextDocumentCodeAction          = A.String "textDocument/codeAction"
   toJSON TextDocumentCodeLens            = A.String "textDocument/codeLens"
   toJSON CodeLensResolve                 = A.String "codeLens/resolve"
+  toJSON TextDocumentDocumentColor       = A.String "textDocument/documentColor"
+  toJSON TextDocumentColorPresentation   = A.String "textDocument/colorPresentation"
+  toJSON TextDocumentFormatting          = A.String "textDocument/formatting"
+  toJSON TextDocumentRangeFormatting     = A.String "textDocument/rangeFormatting"
+  toJSON TextDocumentOnTypeFormatting    = A.String "textDocument/onTypeFormatting"
   toJSON TextDocumentRename              = A.String "textDocument/rename"
+  toJSON TextDocumentFoldingRanges       = A.String "textDocument/foldingRanges"
   toJSON TextDocumentDocumentLink        = A.String "textDocument/documentLink"
   toJSON DocumentLinkResolve             = A.String "documentLink/resolve"
   toJSON (Misc xs)                       = A.String $ "$/" <> xs
@@ -204,6 +219,8 @@ data ServerMethod =
   | ClientRegisterCapability
   | ClientUnregisterCapability
   -- Workspace
+  | WorkspaceWorkspaceFolders
+  | WorkspaceConfiguration
   | WorkspaceApplyEdit
   -- Document
   | TextDocumentPublishDiagnostics
@@ -221,6 +238,8 @@ instance A.FromJSON ServerMethod where
   parseJSON (A.String "client/registerCapability")       = return ClientRegisterCapability
   parseJSON (A.String "client/unregisterCapability")     = return ClientUnregisterCapability
   -- Workspace
+  parseJSON (A.String "workspace/workspaceFolders")      = return WorkspaceWorkspaceFolders
+  parseJSON (A.String "workspace/configuration")         = return WorkspaceConfiguration
   parseJSON (A.String "workspace/applyEdit")             = return WorkspaceApplyEdit
   -- Document
   parseJSON (A.String "textDocument/publishDiagnostics") = return TextDocumentPublishDiagnostics
@@ -238,6 +257,8 @@ instance A.ToJSON ServerMethod where
   toJSON ClientRegisterCapability = A.String "client/registerCapability"
   toJSON ClientUnregisterCapability = A.String "client/unregisterCapability"
   -- Workspace
+  toJSON WorkspaceWorkspaceFolders = A.String "workspace/workspaceFolders"
+  toJSON WorkspaceConfiguration = A.String "workspace/configuration"
   toJSON WorkspaceApplyEdit = A.String "workspace/applyEdit"
   -- Document
   toJSON TextDocumentPublishDiagnostics = A.String "textDocument/publishDiagnostics"

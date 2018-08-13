@@ -13,10 +13,12 @@
 module Language.Haskell.LSP.Types.DataTypesJSON
     ( module Language.Haskell.LSP.Types.DataTypesJSON
     , module Language.Haskell.LSP.Types.CodeAction
+    , module Language.Haskell.LSP.Types.Color
     , module Language.Haskell.LSP.Types.Command
     , module Language.Haskell.LSP.Types.Completion
     , module Language.Haskell.LSP.Types.Diagnostic
     , module Language.Haskell.LSP.Types.DocumentFilter
+    , module Language.Haskell.LSP.Types.FoldingRange
     , module Language.Haskell.LSP.Types.List
     , module Language.Haskell.LSP.Types.Location
     , module Language.Haskell.LSP.Types.MarkupContent
@@ -25,6 +27,7 @@ module Language.Haskell.LSP.Types.DataTypesJSON
     , module Language.Haskell.LSP.Types.TextDocument
     , module Language.Haskell.LSP.Types.Uri
     , module Language.Haskell.LSP.Types.WorkspaceEdit
+    , module Language.Haskell.LSP.Types.WorkspaceFolders
     ) where
 
 import           Control.Applicative
@@ -36,11 +39,13 @@ import qualified Data.Text                                  as T
 
 import           Language.Haskell.LSP.Types.ClientCapabilities
 import           Language.Haskell.LSP.Types.CodeAction
+import           Language.Haskell.LSP.Types.Color
 import           Language.Haskell.LSP.Types.Command
 import           Language.Haskell.LSP.Types.Completion
 import           Language.Haskell.LSP.Types.Constants
 import           Language.Haskell.LSP.Types.Diagnostic
 import           Language.Haskell.LSP.Types.DocumentFilter
+import           Language.Haskell.LSP.Types.FoldingRange
 import           Language.Haskell.LSP.Types.List
 import           Language.Haskell.LSP.Types.Location
 import           Language.Haskell.LSP.Types.MarkupContent
@@ -49,6 +54,7 @@ import           Language.Haskell.LSP.Types.Symbol
 import           Language.Haskell.LSP.Types.TextDocument
 import           Language.Haskell.LSP.Types.Uri
 import           Language.Haskell.LSP.Types.WorkspaceEdit
+import           Language.Haskell.LSP.Types.WorkspaceFolders
 
 -- =====================================================================
 -- ACTUAL PROTOCOL -----------------------------------------------------
@@ -133,8 +139,15 @@ data InitializeParams =
   , _initializationOptions :: Maybe A.Value
   , _capabilities          :: ClientCapabilities
   , _trace                 :: Maybe Trace
+  -- |  The workspace folders configured in the client when the server starts.
+  -- This property is only available if the client supports workspace folders.
+  -- It can be `null` if the client supports workspace folders but none are
+  -- configured.
+  -- Since LSP 3.6, @since 0.7.0.0
+  , _workspaceFolders      :: Maybe (List WorkspaceFolder)
   } deriving (Show, Read, Eq)
 
+{-# DEPRECATED _rootPath "Use _rootUri" #-}
 
 deriveJSON lspOptions ''InitializeParams
 
@@ -424,7 +437,7 @@ Extended in 3.0
 interface ServerCapabilities {
         /**
          * Defines how text documents are synced. Is either a detailed structure defining each notification or
-         * for backwards compatibility the TextDocumentSyncKind number.
+         * for backwards compatibility the TextDocumentSyncKind number. If omitted it defaults to `TextDocumentSyncKind.None`.
          */
         textDocumentSync?: TextDocumentSyncOptions | number;
         /**
@@ -443,6 +456,18 @@ interface ServerCapabilities {
          * The server provides goto definition support.
          */
         definitionProvider?: boolean;
+        /**
+         * The server provides Goto Type Definition support.
+         *
+         * Since 3.6.0
+         */
+        typeDefinitionProvider?: boolean | (TextDocumentRegistrationOptions & StaticRegistrationOptions);
+        /**
+         * The server provides Goto Implementation support.
+         *
+         * Since 3.6.0
+         */
+        implementationProvider?: boolean | (TextDocumentRegistrationOptions & StaticRegistrationOptions);
         /**
          * The server provides find references support.
          */
@@ -488,9 +513,47 @@ interface ServerCapabilities {
          */
         documentLinkProvider?: DocumentLinkOptions;
         /**
+         * The server provides color provider support.
+         *
+         * Since 3.6.0
+         */
+        colorProvider?: boolean | ColorProviderOptions | (ColorProviderOptions & TextDocumentRegistrationOptions & StaticRegistrationOptions);
+        /**
+         * The server provides folding provider support.
+         *
+         * Since 3.10.0
+         */
+        foldingRangeProvider?: boolean | FoldingRangeProviderOptions | (FoldingRangeProviderOptions & TextDocumentRegistrationOptions & StaticRegistrationOptions);     
+        /**
          * The server provides execute command support.
          */
         executeCommandProvider?: ExecuteCommandOptions;
+        /**
+         * Workspace specific server capabilities
+         */
+        workspace?: {
+                /**
+                 * The server supports workspace folder.
+                 *
+                 * Since 3.6.0
+                 */
+                workspaceFolders?: {
+                        /**
+                        * The server has support for workspace folders
+                        */
+                        supported?: boolean;
+                        /**
+                        * Whether the server wants to receive workspace folder
+                        * change notifications.
+                        *
+                        * If a strings is provided the string is treated as a ID
+                        * under which the notification is registered on the client
+                        * side. The ID can be used to unregister for these events
+                        * using the `client/unregisterCapability` request.
+                        */
+                        changeNotifications?: string | boolean;
+                }
+        }
         /**
          * Experimental server capabilities.
          */
@@ -509,27 +572,134 @@ instance FromJSON TDS where
 instance ToJSON TDS where
     toJSON (TDSOptions x) = toJSON x
     toJSON (TDSKind x) = toJSON x
+
+data GotoOptions = GotoOptionsStatic Bool
+                 | GotoOptionsDynamic
+                    { -- | A document selector to identify the scope of the registration. If set to null
+                      -- the document selector provided on the client side will be used.
+                      _documentSelector :: Maybe DocumentSelector 
+                      -- | The id used to register the request. The id can be used to deregister
+                      -- the request again. See also Registration#id.
+                    , _id :: Maybe Text
+                    }
+  deriving (Show, Read, Eq)
+
+deriveJSON lspOptions { sumEncoding = A.UntaggedValue } ''GotoOptions
+-- TODO: Figure out how to make Lens', not Traversal', for sum types
+--makeFieldsNoPrefix ''GotoOptions
+
+data ColorOptions = ColorOptionsStatic Bool
+                  | ColorOptionsDynamic
+                  | ColorOptionsDynamicDocument
+                    { -- | A document selector to identify the scope of the registration. If set to null
+                      -- the document selector provided on the client side will be used.
+                      _documentSelector :: Maybe DocumentSelector
+                      -- | The id used to register the request. The id can be used to deregister
+                      -- the request again. See also Registration#id.
+                    , _id :: Maybe Text
+                    }
+  deriving (Show, Read, Eq)
+
+deriveJSON lspOptions { sumEncoding = A.UntaggedValue } ''ColorOptions
+-- makeFieldsNoPrefix ''ColorOptions
+
+data FoldingRangeOptions = FoldingRangeOptionsStatic Bool
+                         | FoldingRangeOptionsDynamic
+                         | FoldingRangeOptionsDynamicDocument
+                           { -- | A document selector to identify the scope of the registration. If set to null
+                             -- the document selector provided on the client side will be used.
+                             _documentSelector :: Maybe DocumentSelector
+                             -- | The id used to register the request. The id can be used to deregister
+                             -- the request again. See also Registration#id.
+                           , _id :: Maybe Text
+                           }
+  deriving (Show, Read, Eq)
+
+deriveJSON lspOptions { sumEncoding = A.UntaggedValue } ''FoldingRangeOptions
+-- makeFieldsNoPrefix ''FoldingRangeOptions
+
+data WorkspaceFolderChangeNotifications = WorkspaceFolderChangeNotificationsString Text
+                                        | WorkspaceFolderChangeNotificationsBool Bool
+  deriving (Show, Read, Eq)
+
+deriveJSON lspOptions{ sumEncoding = A.UntaggedValue } ''WorkspaceFolderChangeNotifications
+
+data WorkspaceFolderOptions =
+  WorkspaceFolderOptions
+    { -- | The server has support for workspace folders
+      _supported :: Maybe Bool
+      -- | Whether the server wants to receive workspace folder
+      -- change notifications.
+      -- If a strings is provided the string is treated as a ID
+      -- under which the notification is registered on the client
+      -- side. The ID can be used to unregister for these events
+      -- using the `client/unregisterCapability` request.
+    , _changeNotifications :: Maybe WorkspaceFolderChangeNotifications
+    }
+  deriving (Show, Read, Eq)
+
+deriveJSON lspOptions ''WorkspaceFolderOptions
+
+data WorkspaceOptions =
+  WorkspaceOptions
+    { -- |The server supports workspace folder. Since LSP 3.6, @since 0.7.0.0
+      _workspaceFolders :: Maybe WorkspaceFolderOptions
+    }
+  deriving (Show, Read, Eq)
+
+deriveJSON lspOptions ''WorkspaceOptions
       
 data InitializeResponseCapabilitiesInner =
   InitializeResponseCapabilitiesInner
-    { _textDocumentSync                 :: Maybe TDS
+    { -- | Defines how text documents are synced. Is either a detailed structure
+      -- defining each notification or for backwards compatibility the
+      -- 'TextDocumentSyncKind' number.
+      -- If omitted it defaults to 'TdSyncNone'.
+      _textDocumentSync                 :: Maybe TDS
+      -- | The server provides hover support.
     , _hoverProvider                    :: Maybe Bool
+      -- | The server provides completion support.
     , _completionProvider               :: Maybe CompletionOptions
+      -- | The server provides signature help support.
     , _signatureHelpProvider            :: Maybe SignatureHelpOptions
+      -- | The server provides goto definition support.
     , _definitionProvider               :: Maybe Bool
+      -- | The server provides Goto Type Definition support. Since LSP 3.6, @since 0.7.0.0
+    , _typeDefinitionProvider           :: Maybe GotoOptions
+      -- | The server provides Goto Implementation support.
+      -- Since LSP 3.6, @since 0.7.0.0
+    , _implementationProvider           :: Maybe GotoOptions
+      -- | The server provides find references support.
     , _referencesProvider               :: Maybe Bool
+      -- | The server provides document highlight support.
     , _documentHighlightProvider        :: Maybe Bool
+      -- | The server provides document symbol support.
     , _documentSymbolProvider           :: Maybe Bool
+      -- | The server provides workspace symbol support.
     , _workspaceSymbolProvider          :: Maybe Bool
+      -- | The server provides code actions.
     , _codeActionProvider               :: Maybe Bool
+      -- | The server provides code lens.
     , _codeLensProvider                 :: Maybe CodeLensOptions
+      -- | The server provides document formatting.
     , _documentFormattingProvider       :: Maybe Bool
+      -- | The server provides document range formatting.
     , _documentRangeFormattingProvider  :: Maybe Bool
+      -- | The server provides document formatting on typing.
     , _documentOnTypeFormattingProvider :: Maybe DocumentOnTypeFormattingOptions
+      -- | The server provides rename support.
     , _renameProvider                   :: Maybe Bool
-    -- Following are new in 3.0
+      -- | The server provides document link support.
     , _documentLinkProvider             :: Maybe DocumentLinkOptions
+      -- | The server provides color provider support. Since LSP 3.6, @since 0.7.0.0
+    , _colorProvider                    :: Maybe ColorOptions
+      -- | The server provides folding provider support. Since LSP 3.10, @since 0.7.0.0
+    , _foldingRangeProvider             :: Maybe FoldingRangeOptions
+      -- | The server provides execute command support.
     , _executeCommandProvider           :: Maybe ExecuteCommandOptions
+      -- | Workspace specific server capabilities
+    , _workspace                        :: Maybe WorkspaceOptions
+      -- | Experimental server capabilities.
     , _experimental                     :: Maybe A.Value
     } deriving (Show, Read, Eq)
 
@@ -1054,8 +1224,76 @@ data DidChangeConfigurationParams =
 
 deriveJSON lspOptions ''DidChangeConfigurationParams
 
+-- ---------------------------------------------------------------------
 
 type DidChangeConfigurationNotification = NotificationMessage ClientMethod DidChangeConfigurationParams
+
+{-
+Configuration Request (:arrow_right_hook:)
+Since version 3.6.0
+
+The workspace/configuration request is sent from the server to the client to
+fetch configuration settings from the client. The request can fetch n
+configuration settings in one roundtrip. The order of the returned configuration
+settings correspond to the order of the passed ConfigurationItems (e.g. the
+first item in the response is the result for the first configuration item in the
+params).
+
+A ConfigurationItem consist of the configuration section to ask for and an
+additional scope URI. The configuration section ask for is defined by the server
+and doesn’t necessarily need to correspond to the configuration store used be
+the client. So a server might ask for a configuration cpp.formatterOptions but
+the client stores the configuration in a XML store layout differently. It is up
+to the client to do the necessary conversion. If a scope URI is provided the
+client should return the setting scoped to the provided resource. If the client
+for example uses EditorConfig to manage its settings the configuration should be
+returned for the passed resource URI. If the client can’t provide a
+configuration setting for a given scope then null need to be present in the
+returned array.
+
+Request:
+
+method: ‘workspace/configuration’
+params: ConfigurationParams defined as follows
+export interface ConfigurationParams {
+	items: ConfigurationItem[];
+}
+
+export interface ConfigurationItem {
+	/**
+	 * The scope to get the configuration section for.
+	 */
+	scopeUri?: string;
+
+	/**
+	 * The configuration section asked for.
+	 */
+	section?: string;
+}
+Response:
+
+result: any[]
+error: code and message set in case an exception happens during the
+‘workspace/configuration’ request
+-}
+
+data ConfigurationItem =
+  ConfigurationItem
+    { _scopeUri :: Maybe Text -- ^ The scope to get the configuration section for.
+    , _section  :: Maybe Text -- ^ The configuration section asked for.
+    } deriving (Show, Read, Eq)
+
+deriveJSON lspOptions ''ConfigurationItem
+
+data ConfigurationParams =
+  ConfigurationParams
+    { _items :: List ConfigurationItem
+    } deriving (Show, Read, Eq)
+
+deriveJSON lspOptions ''ConfigurationParams
+
+type ConfigurationRequest = RequestMessage ServerMethod ConfigurationParams (List A.Value)
+type ConfigurationResponse = ResponseMessage (List A.Value)
 
 -- ---------------------------------------------------------------------
 {-
@@ -1773,6 +2011,28 @@ instance A.FromJSON LocationResponseParams where
 
 type DefinitionRequest  = RequestMessage ClientMethod TextDocumentPositionParams LocationResponseParams
 type DefinitionResponse = ResponseMessage LocationResponseParams
+
+-- ---------------------------------------------------------------------
+
+{-
+Goto Type Definition Request (:leftwards_arrow_with_hook:)
+Since version 3.6.0
+
+The goto type definition request is sent from the client to the server to resolve the type definition location of a symbol at a given text document position.
+
+Request:
+
+method: ‘textDocument/typeDefinition’
+params: TextDocumentPositionParams
+Response:
+
+result: Location | Location[] | null
+error: code and message set in case an exception happens during the definition request.
+Registration Options: TextDocumentRegistrationOptions
+-}
+
+type TypeDefinitionRequest = RequestMessage ClientMethod TextDocumentPositionParams LocationResponseParams
+type TypeDefinitionResponse = ResponseMessage LocationResponseParams
 
 -- ---------------------------------------------------------------------
 
