@@ -224,7 +224,7 @@ fmClientDidCloseTextDocumentNotification params
   = J.NotificationMessage "2.0" J.TextDocumentDidClose params
 
 -- * :leftwards_arrow_with_hook: [textDocument/completion](#textDocument_completion)
-fmClientCompletionRequest :: J.LspId -> J.TextDocumentPositionParams -> J.CompletionRequest
+fmClientCompletionRequest :: J.LspId -> J.CompletionParams -> J.CompletionRequest
 fmClientCompletionRequest rid params
   = J.RequestMessage "2.0" rid J.TextDocumentCompletion params
 

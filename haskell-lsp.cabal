@@ -34,7 +34,6 @@ library
   -- other-modules:
  -- other-extensions:
   ghc-options:         -Wall
-  -- ghc-options:         -Werror
   build-depends:       base >=4.9 && <4.12
                      , aeson >=1.0.0.0
                      , bytestring
@@ -93,6 +92,7 @@ test-suite haskell-lsp-test
   hs-source-dirs:      test
   main-is:             Main.hs
   other-modules:       Spec
+                       CapabilitiesSpec
                        DiagnosticsSpec
                        MethodSpec
                        ServerCapabilitiesSpec
