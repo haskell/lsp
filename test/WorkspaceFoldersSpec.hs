@@ -23,7 +23,8 @@ spec = describe "workspace folders" $
         handlers = def
 
     tvarLspId <- newTVarIO 0
-    tvarCtx <- newTVarIO $ defaultLanguageContextData handlers def (error "ass") tvarLspId (const $ return ()) Nothing
+    tvarCtx <- newTVarIO $
+      defaultLanguageContextData handlers def undefined tvarLspId (const $ return ()) Nothing
 
     let putMsg msg =
           let jsonStr = encode msg
@@ -31,7 +32,8 @@ spec = describe "workspace folders" $
             in handleMessage initCb tvarCtx clStr jsonStr
 
     let starterWorkspaces = List [wf0]
-        initParams = InitializeParams Nothing Nothing (Just (Uri "/foo")) Nothing fullCaps Nothing (Just starterWorkspaces)
+        initParams = InitializeParams 
+          Nothing Nothing (Just (Uri "/foo")) Nothing fullCaps Nothing (Just starterWorkspaces)
         initMsg :: InitializeRequest
         initMsg = RequestMessage "2.0" (IdInt 0) Initialize initParams
 
