@@ -1,17 +1,17 @@
 {-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE DuplicateRecordFields      #-}
-module Language.Haskell.LSP.TH.Symbol where
+module Language.Haskell.LSP.Types.Symbol where
 
 import           Control.Applicative
 import           Data.Aeson
 import           Data.Aeson.TH
 import           Data.Scientific
 import           Data.Text                                      (Text)
-import           Language.Haskell.LSP.TH.Constants
-import           Language.Haskell.LSP.TH.TextDocument
-import           Language.Haskell.LSP.TH.List
-import           Language.Haskell.LSP.TH.Location
-import           Language.Haskell.LSP.TH.Message
+import           Language.Haskell.LSP.Types.Constants
+import           Language.Haskell.LSP.Types.TextDocument
+import           Language.Haskell.LSP.Types.List
+import           Language.Haskell.LSP.Types.Location
+import           Language.Haskell.LSP.Types.Message
 
 -- ---------------------------------------------------------------------
 {-

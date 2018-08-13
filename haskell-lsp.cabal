@@ -21,14 +21,14 @@ extra-source-files:  ChangeLog.md, README.md
 cabal-version:       >=1.10
 
 library
+  reexported-modules:  Language.Haskell.LSP.Types
+                     , Language.Haskell.LSP.Types.Capabilities
   exposed-modules:     Language.Haskell.LSP.Capture
                      , Language.Haskell.LSP.Constant
                      , Language.Haskell.LSP.Core
                      , Language.Haskell.LSP.Control
                      , Language.Haskell.LSP.Diagnostics
                      , Language.Haskell.LSP.Messages
-                     , Language.Haskell.LSP.Types
-                     , Language.Haskell.LSP.Types.Capabilities
                      , Language.Haskell.LSP.Utility
                      , Language.Haskell.LSP.VFS
   -- other-modules:

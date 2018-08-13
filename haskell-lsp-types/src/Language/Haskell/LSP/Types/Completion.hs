@@ -1,23 +1,23 @@
 {-# LANGUAGE DuplicateRecordFields      #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE TemplateHaskell            #-}
-module Language.Haskell.LSP.TH.Completion where
+module Language.Haskell.LSP.Types.Completion where
 
 import           Control.Applicative
 import qualified Data.Aeson                    as A
 import           Data.Aeson.TH
 import           Data.Scientific                ( Scientific )
 import           Data.Text                      ( Text )
-import           Language.Haskell.LSP.TH.Command
-import           Language.Haskell.LSP.TH.Constants
-import           Language.Haskell.LSP.TH.DocumentFilter
-import           Language.Haskell.LSP.TH.List
-import           Language.Haskell.LSP.TH.Location
-import           Language.Haskell.LSP.TH.MarkupContent
-import           Language.Haskell.LSP.TH.Message
-import           Language.Haskell.LSP.TH.TextDocument
-import           Language.Haskell.LSP.TH.Utils
-import           Language.Haskell.LSP.TH.WorkspaceEdit
+import           Language.Haskell.LSP.Types.Command
+import           Language.Haskell.LSP.Types.Constants
+import           Language.Haskell.LSP.Types.DocumentFilter
+import           Language.Haskell.LSP.Types.List
+import           Language.Haskell.LSP.Types.Location
+import           Language.Haskell.LSP.Types.MarkupContent
+import           Language.Haskell.LSP.Types.Message
+import           Language.Haskell.LSP.Types.TextDocument
+import           Language.Haskell.LSP.Types.Utils
+import           Language.Haskell.LSP.Types.WorkspaceEdit
 
 data CompletionItemKind = CiText
                         | CiMethod

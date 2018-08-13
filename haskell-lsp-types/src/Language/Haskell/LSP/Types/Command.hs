@@ -1,12 +1,12 @@
 {-# LANGUAGE TemplateHaskell            #-}
 
-module Language.Haskell.LSP.TH.Command where
+module Language.Haskell.LSP.Types.Command where
 
 import           Data.Aeson
 import           Data.Aeson.TH
 import           Data.Text
-import           Language.Haskell.LSP.TH.Constants
-import           Language.Haskell.LSP.TH.List
+import           Language.Haskell.LSP.Types.Constants
+import           Language.Haskell.LSP.Types.List
 -- ---------------------------------------------------------------------
 {-
 Command

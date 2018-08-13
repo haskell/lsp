@@ -10,52 +10,27 @@
 {-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE TypeSynonymInstances       #-}
 
-module Language.Haskell.LSP.TH.DataTypesJSON
-    ( module Language.Haskell.LSP.TH.DataTypesJSON
-    , module Language.Haskell.LSP.TH.CodeAction
-    , module Language.Haskell.LSP.TH.Color
-    , module Language.Haskell.LSP.TH.Command
-    , module Language.Haskell.LSP.TH.Completion
-    , module Language.Haskell.LSP.TH.Diagnostic
-    , module Language.Haskell.LSP.TH.DocumentFilter
-    , module Language.Haskell.LSP.TH.FoldingRange
-    , module Language.Haskell.LSP.TH.List
-    , module Language.Haskell.LSP.TH.Location
-    , module Language.Haskell.LSP.TH.MarkupContent
-    , module Language.Haskell.LSP.TH.Message
-    , module Language.Haskell.LSP.TH.Symbol
-    , module Language.Haskell.LSP.TH.TextDocument
-    , module Language.Haskell.LSP.TH.Uri
-    , module Language.Haskell.LSP.TH.WorkspaceEdit
-    , module Language.Haskell.LSP.TH.WorkspaceFolders
-    ) where
+module Language.Haskell.LSP.Types.DataTypesJSON where
 
 import           Control.Applicative
-import           Control.Lens.TH                            (makeFieldsNoPrefix)
 import qualified Data.Aeson                                 as A
 import           Data.Aeson.TH
 import           Data.Aeson.Types
 import           Data.Text                                  (Text)
 import qualified Data.Text                                  as T
-
-import           Language.Haskell.LSP.TH.ClientCapabilities
-import           Language.Haskell.LSP.TH.CodeAction
-import           Language.Haskell.LSP.TH.Color
-import           Language.Haskell.LSP.TH.Command
-import           Language.Haskell.LSP.TH.Completion
-import           Language.Haskell.LSP.TH.Constants
-import           Language.Haskell.LSP.TH.Diagnostic
-import           Language.Haskell.LSP.TH.DocumentFilter
-import           Language.Haskell.LSP.TH.FoldingRange
-import           Language.Haskell.LSP.TH.List
-import           Language.Haskell.LSP.TH.Location
-import           Language.Haskell.LSP.TH.MarkupContent
-import           Language.Haskell.LSP.TH.Message
-import           Language.Haskell.LSP.TH.Symbol
-import           Language.Haskell.LSP.TH.TextDocument
-import           Language.Haskell.LSP.TH.Uri
-import           Language.Haskell.LSP.TH.WorkspaceEdit
-import           Language.Haskell.LSP.TH.WorkspaceFolders
+import           Language.Haskell.LSP.Types.Command
+import           Language.Haskell.LSP.Types.Constants
+import           Language.Haskell.LSP.Types.ClientCapabilities
+import           Language.Haskell.LSP.Types.Diagnostic
+import           Language.Haskell.LSP.Types.DocumentFilter
+import           Language.Haskell.LSP.Types.List
+import           Language.Haskell.LSP.Types.Message
+import           Language.Haskell.LSP.Types.Location
+import           Language.Haskell.LSP.Types.Symbol
+import           Language.Haskell.LSP.Types.TextDocument
+import           Language.Haskell.LSP.Types.Uri
+import           Language.Haskell.LSP.Types.WorkspaceEdit
+import           Language.Haskell.LSP.Types.WorkspaceFolders
 
 -- =====================================================================
 -- ACTUAL PROTOCOL -----------------------------------------------------
@@ -151,7 +126,6 @@ data InitializeParams =
 {-# DEPRECATED _rootPath "Use _rootUri" #-}
 
 deriveJSON lspOptions ''InitializeParams
-makeFieldsNoPrefix ''InitializeParams
 
 -- ---------------------------------------------------------------------
 -- Initialize Response
@@ -175,7 +149,6 @@ data InitializeError =
     } deriving (Read, Show, Eq)
 
 deriveJSON lspOptions ''InitializeError
-makeFieldsNoPrefix ''InitializeError
 
 -- ---------------------------------------------------------------------
 {-
@@ -244,7 +217,6 @@ data CompletionOptions =
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions {omitNothingFields = True } ''CompletionOptions
-makeFieldsNoPrefix ''CompletionOptions
 
 -- ---------------------------------------------------------------------
 {-
@@ -264,7 +236,6 @@ data SignatureHelpOptions =
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''SignatureHelpOptions
-makeFieldsNoPrefix ''SignatureHelpOptions
 
 -- ---------------------------------------------------------------------
 {-
@@ -285,7 +256,6 @@ data CodeLensOptions =
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''CodeLensOptions
-makeFieldsNoPrefix ''CodeLensOptions
 
 -- ---------------------------------------------------------------------
 {-
@@ -310,7 +280,6 @@ data DocumentOnTypeFormattingOptions =
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''DocumentOnTypeFormattingOptions
-makeFieldsNoPrefix ''DocumentOnTypeFormattingOptions
 
 -- ---------------------------------------------------------------------
 {-
@@ -335,7 +304,6 @@ data DocumentLinkOptions =
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''DocumentLinkOptions
-makeFieldsNoPrefix ''DocumentLinkOptions
 
 -- ---------------------------------------------------------------------
 
@@ -361,7 +329,6 @@ data ExecuteCommandOptions =
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''ExecuteCommandOptions
-makeFieldsNoPrefix ''ExecuteCommandOptions
 
 -- ---------------------------------------------------------------------
 {-
@@ -384,7 +351,6 @@ data SaveOptions =
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''SaveOptions
-makeFieldsNoPrefix ''SaveOptions
 
 -- ---------------------------------------------------------------------
 {-
@@ -437,7 +403,6 @@ data TextDocumentSyncOptions =
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''TextDocumentSyncOptions
-makeFieldsNoPrefix ''TextDocumentSyncOptions
 
 -- ---------------------------------------------------------------------
 {-
@@ -650,7 +615,6 @@ data WorkspaceFolderOptions =
   deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''WorkspaceFolderOptions
-makeFieldsNoPrefix ''WorkspaceFolderOptions
 
 data WorkspaceOptions =
   WorkspaceOptions
@@ -660,7 +624,6 @@ data WorkspaceOptions =
   deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''WorkspaceOptions
-makeFieldsNoPrefix ''WorkspaceOptions
       
 data InitializeResponseCapabilitiesInner =
   InitializeResponseCapabilitiesInner
@@ -717,7 +680,6 @@ data InitializeResponseCapabilitiesInner =
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''InitializeResponseCapabilitiesInner
-makeFieldsNoPrefix ''InitializeResponseCapabilitiesInner
 
 -- ---------------------------------------------------------------------
 -- |
@@ -729,7 +691,6 @@ data InitializeResponseCapabilities =
   } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''InitializeResponseCapabilities
-makeFieldsNoPrefix ''InitializeResponseCapabilities
 
 -- ---------------------------------------------------------------------
 
@@ -926,7 +887,6 @@ data ShowMessageParams =
   } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''ShowMessageParams
-makeFieldsNoPrefix ''ShowMessageParams
 
 type ShowMessageNotification = NotificationMessage ServerMethod ShowMessageParams
 
@@ -984,7 +944,6 @@ data MessageActionItem =
     } deriving (Show,Read,Eq)
 
 deriveJSON lspOptions ''MessageActionItem
-makeFieldsNoPrefix ''MessageActionItem
 
 
 data ShowMessageRequestParams =
@@ -995,7 +954,6 @@ data ShowMessageRequestParams =
     } deriving (Show,Read,Eq)
 
 deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''ShowMessageRequestParams
-makeFieldsNoPrefix ''ShowMessageRequestParams
 
 type ShowMessageRequest = RequestMessage ServerMethod ShowMessageRequestParams Text
 type ShowMessageResponse = ResponseMessage Text
@@ -1036,7 +994,6 @@ data LogMessageParams =
   } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''LogMessageParams
-makeFieldsNoPrefix ''LogMessageParams
 
 
 type LogMessageNotification = NotificationMessage ServerMethod LogMessageParams
@@ -1118,7 +1075,6 @@ data Registration =
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''Registration
-makeFieldsNoPrefix ''Registration
 
 data RegistrationParams =
   RegistrationParams
@@ -1126,7 +1082,6 @@ data RegistrationParams =
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''RegistrationParams
-makeFieldsNoPrefix ''RegistrationParams
 
 -- |Note: originates at the server
 type RegisterCapabilityRequest = RequestMessage ServerMethod RegistrationParams ()
@@ -1154,7 +1109,6 @@ data TextDocumentRegistrationOptions =
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''TextDocumentRegistrationOptions
-makeFieldsNoPrefix ''TextDocumentRegistrationOptions
 
 -- ---------------------------------------------------------------------
 {-
@@ -1205,7 +1159,6 @@ data Unregistration =
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''Unregistration
-makeFieldsNoPrefix ''Unregistration
 
 data UnregistrationParams =
   UnregistrationParams
@@ -1213,7 +1166,6 @@ data UnregistrationParams =
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''UnregistrationParams
-makeFieldsNoPrefix ''UnregistrationParams
 
 type UnregisterCapabilityRequest = RequestMessage ServerMethod UnregistrationParams ()
 
@@ -1247,7 +1199,6 @@ data DidChangeConfigurationParams =
   } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''DidChangeConfigurationParams
-makeFieldsNoPrefix ''DidChangeConfigurationParams
 
 -- ---------------------------------------------------------------------
 
@@ -1309,7 +1260,6 @@ data ConfigurationItem =
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''ConfigurationItem
-makeFieldsNoPrefix ''ConfigurationItem
 
 data ConfigurationParams =
   ConfigurationParams
@@ -1317,7 +1267,6 @@ data ConfigurationParams =
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''ConfigurationParams
-makeFieldsNoPrefix ''ConfigurationParams
 
 type ConfigurationRequest = RequestMessage ServerMethod ConfigurationParams (List A.Value)
 type ConfigurationResponse = ResponseMessage (List A.Value)
@@ -1354,7 +1303,6 @@ data DidOpenTextDocumentParams =
   } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''DidOpenTextDocumentParams
-makeFieldsNoPrefix ''DidOpenTextDocumentParams
 
 type DidOpenTextDocumentNotification = NotificationMessage ClientMethod DidOpenTextDocumentParams
 
@@ -1416,7 +1364,6 @@ data TextDocumentContentChangeEvent =
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions { omitNothingFields = True } ''TextDocumentContentChangeEvent
-makeFieldsNoPrefix ''TextDocumentContentChangeEvent
 
 -- -------------------------------------
 
@@ -1427,7 +1374,6 @@ data DidChangeTextDocumentParams =
     } deriving (Show,Read,Eq)
 
 deriveJSON lspOptions ''DidChangeTextDocumentParams
-makeFieldsNoPrefix ''DidChangeTextDocumentParams
 
 type DidChangeTextDocumentNotification = NotificationMessage ClientMethod DidChangeTextDocumentParams
 {-
@@ -1455,7 +1401,6 @@ data TextDocumentChangeRegistrationOptions =
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''TextDocumentChangeRegistrationOptions
-makeFieldsNoPrefix ''TextDocumentChangeRegistrationOptions
 
 -- ---------------------------------------------------------------------
 {-
@@ -1538,7 +1483,6 @@ data WillSaveTextDocumentParams =
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''WillSaveTextDocumentParams
-makeFieldsNoPrefix ''WillSaveTextDocumentParams
 
 type WillSaveTextDocumentNotification = NotificationMessage ClientMethod WillSaveTextDocumentParams
 
@@ -1597,7 +1541,6 @@ data DidSaveTextDocumentParams =
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''DidSaveTextDocumentParams
-makeFieldsNoPrefix ''DidSaveTextDocumentParams
 
 type DidSaveTextDocumentNotification = NotificationMessage ClientMethod DidSaveTextDocumentParams
 
@@ -1635,7 +1578,6 @@ data DidCloseTextDocumentParams =
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''DidCloseTextDocumentParams
-makeFieldsNoPrefix ''DidCloseTextDocumentParams
 
 
 type DidCloseTextDocumentNotification = NotificationMessage ClientMethod DidCloseTextDocumentParams
@@ -1720,7 +1662,6 @@ data FileEvent =
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''FileEvent
-makeFieldsNoPrefix ''FileEvent
 
 data DidChangeWatchedFilesParams =
   DidChangeWatchedFilesParams
@@ -1728,7 +1669,6 @@ data DidChangeWatchedFilesParams =
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''DidChangeWatchedFilesParams
-makeFieldsNoPrefix ''DidChangeWatchedFilesParams
 
 
 type DidChangeWatchedFilesNotification = NotificationMessage ClientMethod DidChangeWatchedFilesParams
@@ -1767,7 +1707,6 @@ data PublishDiagnosticsParams =
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''PublishDiagnosticsParams
-makeFieldsNoPrefix ''PublishDiagnosticsParams
 
 
 type PublishDiagnosticsNotification = NotificationMessage ServerMethod PublishDiagnosticsParams
@@ -1837,7 +1776,6 @@ data LanguageString =
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''LanguageString
-makeFieldsNoPrefix ''LanguageString
 
 data MarkedString =
     PlainString T.Text
@@ -1858,7 +1796,6 @@ data Hover =
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''Hover
-makeFieldsNoPrefix ''Hover
 
 
 type HoverRequest = RequestMessage ClientMethod TextDocumentPositionParams Hover
@@ -1961,7 +1898,6 @@ data ParameterInformation =
     , _documentation :: Maybe Text
     } deriving (Read,Show,Eq)
 deriveJSON lspOptions ''ParameterInformation
-makeFieldsNoPrefix ''ParameterInformation
 
 
 -- -------------------------------------
@@ -1974,7 +1910,6 @@ data SignatureInformation =
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''SignatureInformation
-makeFieldsNoPrefix ''SignatureInformation
 
 data SignatureHelp =
   SignatureHelp
@@ -1984,7 +1919,6 @@ data SignatureHelp =
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''SignatureHelp
-makeFieldsNoPrefix ''SignatureHelp
 
 type SignatureHelpRequest = RequestMessage ClientMethod TextDocumentPositionParams SignatureHelp
 type SignatureHelpResponse = ResponseMessage SignatureHelp
@@ -2011,7 +1945,6 @@ data SignatureHelpRegistrationOptions =
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''SignatureHelpRegistrationOptions
-makeFieldsNoPrefix ''SignatureHelpRegistrationOptions
 
 -- ---------------------------------------------------------------------
 {-
@@ -2144,7 +2077,6 @@ data ReferenceContext =
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''ReferenceContext
-makeFieldsNoPrefix ''ReferenceContext
 
 
 data ReferenceParams =
@@ -2155,7 +2087,6 @@ data ReferenceParams =
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''ReferenceParams
-makeFieldsNoPrefix ''ReferenceParams
 
 
 type ReferencesRequest  = RequestMessage ClientMethod ReferenceParams (List Location)
@@ -2256,7 +2187,6 @@ data DocumentHighlight =
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''DocumentHighlight
-makeFieldsNoPrefix ''DocumentHighlight
 
 type DocumentHighlightRequest = RequestMessage ClientMethod TextDocumentPositionParams (List DocumentHighlight)
 type DocumentHighlightsResponse = ResponseMessage (List DocumentHighlight)
@@ -2298,7 +2228,6 @@ data WorkspaceSymbolParams =
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''WorkspaceSymbolParams
-makeFieldsNoPrefix ''WorkspaceSymbolParams
 
 type WorkspaceSymbolRequest  = RequestMessage ClientMethod WorkspaceSymbolParams (List SymbolInformation)
 type WorkspaceSymbolsResponse = ResponseMessage (List SymbolInformation)
@@ -2363,7 +2292,6 @@ data CodeLensParams =
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''CodeLensParams
-makeFieldsNoPrefix ''CodeLensParams
 
 
 -- -------------------------------------
@@ -2376,7 +2304,6 @@ data CodeLens =
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''CodeLens
-makeFieldsNoPrefix ''CodeLens
 
 
 type CodeLensRequest = RequestMessage ClientMethod CodeLensParams (List CodeLens)
@@ -2401,7 +2328,6 @@ data CodeLensRegistrationOptions =
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''CodeLensRegistrationOptions
-makeFieldsNoPrefix ''CodeLensRegistrationOptions
 
 -- ---------------------------------------------------------------------
 {-
@@ -2488,7 +2414,6 @@ data DocumentLinkParams =
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''DocumentLinkParams
-makeFieldsNoPrefix ''DocumentLinkParams
 
 data DocumentLink =
   DocumentLink
@@ -2497,7 +2422,6 @@ data DocumentLink =
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''DocumentLink
-makeFieldsNoPrefix ''DocumentLink
 
 type DocumentLinkRequest = RequestMessage ClientMethod DocumentLinkParams (List DocumentLink)
 type DocumentLinkResponse = ResponseMessage (List DocumentLink)
@@ -2590,7 +2514,6 @@ data FormattingOptions =
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''FormattingOptions
-makeFieldsNoPrefix ''FormattingOptions
 
 data DocumentFormattingParams =
   DocumentFormattingParams
@@ -2599,7 +2522,6 @@ data DocumentFormattingParams =
     } deriving (Show,Read,Eq)
 
 deriveJSON lspOptions ''DocumentFormattingParams
-makeFieldsNoPrefix ''DocumentFormattingParams
 
 type DocumentFormattingRequest  = RequestMessage ClientMethod DocumentFormattingParams (List TextEdit)
 type DocumentFormattingResponse = ResponseMessage (List TextEdit)
@@ -2651,7 +2573,6 @@ data DocumentRangeFormattingParams =
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''DocumentRangeFormattingParams
-makeFieldsNoPrefix ''DocumentRangeFormattingParams
 
 type DocumentRangeFormattingRequest  = RequestMessage ClientMethod DocumentRangeFormattingParams (List TextEdit)
 type DocumentRangeFormattingResponse = ResponseMessage (List TextEdit)
@@ -2721,7 +2642,6 @@ data DocumentOnTypeFormattingParams =
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''DocumentOnTypeFormattingParams
-makeFieldsNoPrefix ''DocumentOnTypeFormattingParams
 
 type DocumentOnTypeFormattingRequest  = RequestMessage ClientMethod DocumentOnTypeFormattingParams (List TextEdit)
 type DocumentOnTypeFormattingResponse = ResponseMessage (List TextEdit)
@@ -2784,7 +2704,6 @@ data RenameParams =
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''RenameParams
-makeFieldsNoPrefix ''RenameParams
 
 
 -- {\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"textDocument/rename\",\"params\":{\"textDocument\":{\"uri\":\"file:///home/alanz/mysrc/github/alanz/haskell-lsp/src/HieVscode.hs\"},\"position\":{\"line\":37,\"character\":17},\"newName\":\"getArgs'\"}}
@@ -2850,7 +2769,6 @@ data ExecuteCommandParams =
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''ExecuteCommandParams
-makeFieldsNoPrefix ''ExecuteCommandParams
 
 type ExecuteCommandRequest = RequestMessage ClientMethod ExecuteCommandParams A.Value
 type ExecuteCommandResponse = ResponseMessage A.Value
@@ -2861,7 +2779,6 @@ data ExecuteCommandRegistrationOptions =
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''ExecuteCommandRegistrationOptions
-makeFieldsNoPrefix ''ExecuteCommandRegistrationOptions
 
 -- ---------------------------------------------------------------------
 {-
@@ -2905,7 +2822,6 @@ data ApplyWorkspaceEditParams =
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''ApplyWorkspaceEditParams
-makeFieldsNoPrefix ''ApplyWorkspaceEditParams
 
 data ApplyWorkspaceEditResponseBody =
   ApplyWorkspaceEditResponseBody
@@ -2913,7 +2829,6 @@ data ApplyWorkspaceEditResponseBody =
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''ApplyWorkspaceEditResponseBody
-makeFieldsNoPrefix ''ApplyWorkspaceEditResponseBody
 
 -- | Sent from the server to the client
 type ApplyWorkspaceEditRequest  = RequestMessage ServerMethod ApplyWorkspaceEditParams ApplyWorkspaceEditResponseBody
@@ -2929,7 +2844,6 @@ data TraceParams =
   } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''TraceParams
-makeFieldsNoPrefix ''TraceParams
 
 
 data TraceNotification =
@@ -2938,77 +2852,4 @@ data TraceNotification =
   } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''TraceNotification
-makeFieldsNoPrefix ''TraceNotification
 
-
-
--- ---------------------------------------------------------------------
-
--- Generating lenses
--- Need to do this all in one file or else we get duplicate functions
-
--- Location
-makeFieldsNoPrefix ''Position
-makeFieldsNoPrefix ''Range
-makeFieldsNoPrefix ''Location
-
--- Completion
-makeFieldsNoPrefix ''CompletionItem
-makeFieldsNoPrefix ''CompletionContext
-makeFieldsNoPrefix ''CompletionListType
-makeFieldsNoPrefix ''CompletionParams
-makeFieldsNoPrefix ''CompletionRegistrationOptions
-
--- CodeActions
-makeFieldsNoPrefix ''CodeActionContext
-makeFieldsNoPrefix ''CodeActionParams
-makeFieldsNoPrefix ''CodeAction
-
--- DocumentFilter
-makeFieldsNoPrefix ''DocumentFilter
-
--- WorkspaceEdit
-makeFieldsNoPrefix ''TextEdit
-makeFieldsNoPrefix ''VersionedTextDocumentIdentifier
-makeFieldsNoPrefix ''TextDocumentEdit
-makeFieldsNoPrefix ''WorkspaceEdit
-
--- Workspace Folders
-makeFieldsNoPrefix ''WorkspaceFolder
-makeFieldsNoPrefix ''WorkspaceFoldersChangeEvent
-makeFieldsNoPrefix ''DidChangeWorkspaceFoldersParams
-
--- Message
-makeFieldsNoPrefix ''RequestMessage
-makeFieldsNoPrefix ''ResponseError
-makeFieldsNoPrefix ''ResponseMessage
-makeFieldsNoPrefix ''NotificationMessage
-makeFieldsNoPrefix ''CancelParams
-
--- TextDocument
-makeFieldsNoPrefix ''TextDocumentItem
-makeFieldsNoPrefix ''TextDocumentIdentifier
-makeFieldsNoPrefix ''TextDocumentPositionParams
-
--- Command
-makeFieldsNoPrefix ''Command
-
--- Diagnostic
-makeFieldsNoPrefix ''Diagnostic
-makeFieldsNoPrefix ''DiagnosticRelatedInformation
-
--- Symbol
-makeFieldsNoPrefix ''DocumentSymbolParams
-makeFieldsNoPrefix ''DocumentSymbol
-makeFieldsNoPrefix ''SymbolInformation
-
--- Color
-makeFieldsNoPrefix ''Color
-makeFieldsNoPrefix ''ColorInformation
-makeFieldsNoPrefix ''DocumentColorParams
-makeFieldsNoPrefix ''ColorPresentationParams
-makeFieldsNoPrefix ''ColorPresentation
-
--- Folding Range
-makeFieldsNoPrefix ''FoldingRange
-makeFieldsNoPrefix ''FoldingRangeParams

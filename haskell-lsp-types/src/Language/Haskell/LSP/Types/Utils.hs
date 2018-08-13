@@ -1,4 +1,4 @@
-module Language.Haskell.LSP.TH.Utils where
+module Language.Haskell.LSP.Types.Utils where
 
 -- ---------------------------------------------------------------------
 

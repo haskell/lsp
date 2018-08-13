@@ -1,14 +1,14 @@
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE TemplateHaskell            #-}
-module Language.Haskell.LSP.TH.FoldingRange where
+module Language.Haskell.LSP.Types.FoldingRange where
 
 import qualified Data.Aeson                    as A
 import           Data.Aeson.TH
 import           Data.Text                    (Text)
-import           Language.Haskell.LSP.TH.Constants
-import           Language.Haskell.LSP.TH.List
-import           Language.Haskell.LSP.TH.TextDocument
-import           Language.Haskell.LSP.TH.Message
+import           Language.Haskell.LSP.Types.Constants
+import           Language.Haskell.LSP.Types.List
+import           Language.Haskell.LSP.Types.TextDocument
+import           Language.Haskell.LSP.Types.Message
 
 data FoldingRangeParams =
   FoldingRangeParams

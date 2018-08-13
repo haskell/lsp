@@ -1,17 +1,17 @@
 {-# LANGUAGE CPP                        #-}
 {-# LANGUAGE DuplicateRecordFields      #-}
 {-# LANGUAGE TemplateHaskell            #-}
-module Language.Haskell.LSP.TH.WorkspaceEdit where
+module Language.Haskell.LSP.Types.WorkspaceEdit where
 
 import           Data.Aeson.TH
 import qualified Data.HashMap.Strict                        as H
 -- For <= 8.2.2
 import           Data.Monoid                                ((<>))
 import           Data.Text                                  (Text)
-import           Language.Haskell.LSP.TH.Constants
-import           Language.Haskell.LSP.TH.List
-import           Language.Haskell.LSP.TH.Location
-import           Language.Haskell.LSP.TH.Uri
+import           Language.Haskell.LSP.Types.Constants
+import           Language.Haskell.LSP.Types.List
+import           Language.Haskell.LSP.Types.Location
+import           Language.Haskell.LSP.Types.Uri
 
 -- ---------------------------------------------------------------------
 {-

@@ -1,12 +1,12 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE TemplateHaskell       #-}
-module Language.Haskell.LSP.TH.WorkspaceFolders where
+module Language.Haskell.LSP.Types.WorkspaceFolders where
 
 import           Data.Aeson.TH
 import           Data.Text                      ( Text )
-import           Language.Haskell.LSP.TH.Constants
-import           Language.Haskell.LSP.TH.List
-import           Language.Haskell.LSP.TH.Message
+import           Language.Haskell.LSP.Types.Constants
+import           Language.Haskell.LSP.Types.List
+import           Language.Haskell.LSP.Types.Message
 
 {-
 Workspace folders request (:arrow_right_hook:)

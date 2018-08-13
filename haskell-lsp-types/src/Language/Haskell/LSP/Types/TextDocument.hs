@@ -1,12 +1,12 @@
 {-# LANGUAGE DuplicateRecordFields      #-}
 {-# LANGUAGE TemplateHaskell            #-}
-module Language.Haskell.LSP.TH.TextDocument where
+module Language.Haskell.LSP.Types.TextDocument where
 
 import           Data.Aeson.TH
 import           Data.Text                      ( Text )
-import           Language.Haskell.LSP.TH.Constants
-import           Language.Haskell.LSP.TH.Location
-import           Language.Haskell.LSP.TH.Uri
+import           Language.Haskell.LSP.Types.Constants
+import           Language.Haskell.LSP.Types.Location
+import           Language.Haskell.LSP.Types.Uri
 
 -- ---------------------------------------------------------------------
 {-

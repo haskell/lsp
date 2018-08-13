@@ -1,14 +1,14 @@
 {-# LANGUAGE DuplicateRecordFields      #-}
 {-# LANGUAGE TemplateHaskell            #-}
 
-module Language.Haskell.LSP.TH.Diagnostic where
+module Language.Haskell.LSP.Types.Diagnostic where
 
 import qualified Data.Aeson                                 as A
 import           Data.Aeson.TH
 import           Data.Text
-import           Language.Haskell.LSP.TH.Constants
-import           Language.Haskell.LSP.TH.List
-import           Language.Haskell.LSP.TH.Location
+import           Language.Haskell.LSP.Types.Constants
+import           Language.Haskell.LSP.Types.List
+import           Language.Haskell.LSP.Types.Location
 
 -- ---------------------------------------------------------------------
 {-

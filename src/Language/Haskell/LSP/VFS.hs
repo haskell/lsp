@@ -37,7 +37,7 @@ import           Data.Monoid
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map as Map
 import           Data.Maybe
-import qualified Language.Haskell.LSP.TH.DataTypesJSON      as J
+import qualified Language.Haskell.LSP.Types           as J
 import           Language.Haskell.LSP.Utility
 import qualified Yi.Rope as Yi
 

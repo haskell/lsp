@@ -3,7 +3,7 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE DeriveTraversable          #-}
-module Language.Haskell.LSP.TH.List where
+module Language.Haskell.LSP.Types.List where
 
 import qualified Data.Aeson                                 as A
 import           Data.Aeson.Types

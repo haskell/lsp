@@ -1,9 +1,9 @@
 {-# LANGUAGE TemplateHaskell            #-}
-module Language.Haskell.LSP.TH.Location where
+module Language.Haskell.LSP.Types.Location where
 
 import           Data.Aeson.TH
-import           Language.Haskell.LSP.TH.Constants
-import           Language.Haskell.LSP.TH.Uri
+import           Language.Haskell.LSP.Types.Constants
+import           Language.Haskell.LSP.Types.Uri
 
 -- ---------------------------------------------------------------------
 

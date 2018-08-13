@@ -7,12 +7,12 @@
 -- Currently plaintext and markdown are supported formats.
 -- A MarkupContent is usually used in documentation properties of result
 -- literals like CompletionItem or SignatureInformation.
-module Language.Haskell.LSP.TH.MarkupContent where
+module Language.Haskell.LSP.Types.MarkupContent where
 
 import           Data.Aeson
 import           Data.Aeson.TH
 import           Data.Text                                      (Text)
-import           Language.Haskell.LSP.TH.Constants
+import           Language.Haskell.LSP.Types.Constants
 
 {-
 /**

@@ -22,7 +22,7 @@ module Language.Haskell.LSP.Diagnostics
 
 import qualified Data.SortedList as SL
 import qualified Data.Map as Map
-import qualified Language.Haskell.LSP.TH.DataTypesJSON      as J
+import qualified Language.Haskell.LSP.Types      as J
 
 -- ---------------------------------------------------------------------
 {-# ANN module ("hlint: ignore Eta reduce" :: String) #-}

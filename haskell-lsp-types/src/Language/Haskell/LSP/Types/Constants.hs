@@ -1,5 +1,5 @@
 
-module Language.Haskell.LSP.TH.Constants where
+module Language.Haskell.LSP.Types.Constants where
 
 import           Data.Aeson.TH
 
