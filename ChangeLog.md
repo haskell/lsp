@@ -1,6 +1,6 @@
 # Revision history for haskell-lsp
 
-## 0.7.0.0 -- 2018-08-13
+## 0.7.0.0 -- 2018-08-14
 
 * Update CompletionItem
  * Add `commitCharacters` field

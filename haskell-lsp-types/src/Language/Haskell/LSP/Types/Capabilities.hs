@@ -35,22 +35,22 @@ capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) Noth
           (Just (WorkspaceEditClientCapabilities (Just True)))
           (Just (DidChangeConfigurationClientCapabilities dynamicReg))
           (Just (DidChangeWatchedFilesClientCapabilities dynamicReg))
-          (Just symbol)
+          (Just symbolCapabilities)
           (Just (ExecuteClientCapabilities dynamicReg))
           (since 3 6 True)
           (since 3 6 True)
 
-    symbol = SymbolClientCapabilities
+    symbolCapabilities = SymbolClientCapabilities
       dynamicReg
-      (since 3 4 symbolKind)
+      (since 3 4 symbolKindCapabilities)
 
-    symbolKind = 
+    symbolKindCapabilities =
       SymbolKindClientCapabilities (Just sKs)
 
-    sKs 
+    sKs
       | maj >= 3 && min >= 4 = List (oldSKs ++ newSKs)
       | otherwise            = List oldSKs
-    
+
     oldSKs =   [ SkFile
                , SkModule
                , SkNamespace
@@ -83,47 +83,47 @@ capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) Noth
 
     td = TextDocumentClientCapabilities
           (Just sync)
-          (Just completion)
-          (Just hover)
-          (Just signatureHelp)
+          (Just completionCapability)
+          (Just hoverCapability)
+          (Just signatureHelpCapability)
           (Just (ReferencesClientCapabilities dynamicReg))
           (Just (DocumentHighlightClientCapabilities dynamicReg))
-          (Just documentSymbol)
+          (Just documentSymbolCapability)
           (Just (FormattingClientCapabilities (Just True)))
           (Just (RangeFormattingClientCapabilities dynamicReg))
           (Just (OnTypeFormattingClientCapabilities dynamicReg))
           (Just (DefinitionClientCapabilities dynamicReg))
           (since 3 6 (TypeDefinitionClientCapabilities dynamicReg))
           (since 3 6 (ImplementationClientCapabilities dynamicReg))
-          (Just codeAction)
+          (Just codeActionCapability)
           (Just (CodeLensClientCapabilities dynamicReg))
           (Just (DocumentLinkClientCapabilities dynamicReg))
           (since 3 6 (ColorProviderClientCapabilities dynamicReg))
           (Just (RenameClientCapabilities dynamicReg))
           (Just (PublishDiagnosticsClientCapabilities (since 3 7 True)))
-          (since 3 10 foldingRange)
+          (since 3 10 foldingRangeCapability)
     sync =
       SynchronizationTextDocumentClientCapabilities
         dynamicReg
         (Just True)
         (Just True)
         (Just True)
-     
-    completion =
+
+    completionCapability =
       CompletionClientCapabilities
         dynamicReg
-        (Just completionItem)
-        (since 3 4 completionItemKind)
+        (Just completionItemCapabilities)
+        (since 3 4 completionItemKindCapabilities)
         (since 3 3 True)
 
-    completionItem = CompletionItemClientCapabilities
+    completionItemCapabilities = CompletionItemClientCapabilities
       (Just True)
       (Just True)
       (since 3 3 (List [MkPlainText, MkMarkdown]))
       (Just True)
       (since 3 9 True)
 
-    completionItemKind =
+    completionItemKindCapabilities =
       CompletionItemKindClientCapabilities (Just ciKs)
 
     ciKs
@@ -158,15 +158,16 @@ capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) Noth
                 , CiOperator
                 , CiTypeParameter
                 ]
-    
-    hover =
+
+    hoverCapability =
       HoverClientCapabilities
         dynamicReg
         (since 3 3 (List [MkPlainText, MkMarkdown]))
 
-    codeAction = CodeActionClientCapabilities
-                  dynamicReg
-                  (since 3 8 (CodeActionLiteralSupport caKs))
+    codeActionCapability
+      = CodeActionClientCapabilities
+          dynamicReg
+          (since 3 8 (CodeActionLiteralSupport caKs))
     caKs = CodeActionKindClientCapabilities
               (List [ CodeActionQuickFix
                     , CodeActionRefactor
@@ -177,25 +178,26 @@ capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) Noth
                     , CodeActionSourceOrganizeImports
                     ])
 
-    signatureHelp =
+    signatureHelpCapability =
       SignatureHelpClientCapabilities
         dynamicReg
-        (Just signatureInformation)
-    
-    signatureInformation =
+        (Just signatureInformationCapability)
+
+    signatureInformationCapability =
       SignatureInformationClientCapabilities
         (Just (List [MkPlainText, MkMarkdown]))
-    
-    documentSymbol = DocumentSymbolClientCapabilities
-      dynamicReg
-      (since 3 4 documentSymbolKind)
-      (since 3 10 True)
+
+    documentSymbolCapability =
+      DocumentSymbolClientCapabilities
+        dynamicReg
+        (since 3 4 documentSymbolKind)
+        (since 3 10 True)
 
     documentSymbolKind =
       DocumentSymbolKindClientCapabilities
         (Just sKs) -- same as workspace symbol kinds
 
-    foldingRange =
+    foldingRangeCapability =
       FoldingRangeClientCapabilities
         dynamicReg
         Nothing
