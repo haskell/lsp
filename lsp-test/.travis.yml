@@ -50,5 +50,6 @@ before_install:
   - npm i -g javascript-typescript-langserver
 
 script:
-  - cabal configure --enable-tests
-  - cabal test --show-details=streaming
+  - stack test --no-terminal --skip-ghc-check -j2
+  # - cabal configure --enable-tests
+  # - cabal test --show-details=streaming
