@@ -52,9 +52,11 @@ module Language.Haskell.LSP.Test
   , waitForDiagnostics
   , waitForDiagnosticsSource
   , noDiagnostics
+  , getCurrentDiagnostics
   -- ** Commands
   , executeCommand
   -- ** Code Actions
+  , getCodeActions
   , getAllCodeActions
   , executeCodeAction
   -- ** Completions
@@ -358,15 +360,24 @@ getDocumentSymbols doc = do
     Just (DSSymbolInformation (List xs)) -> return (Right xs)
     Nothing -> Prelude.error "No result and no error in DocumentSymbolsResponse"
 
+-- | Returns the code actions in the specified range.
+getCodeActions :: TextDocumentIdentifier -> Range -> Session [CAResult]
+getCodeActions doc range = do
+  ctx <- getCodeActionContext doc
+  rsp <- request TextDocumentCodeAction (CodeActionParams doc range ctx)
+
+  case rsp ^. result of
+    Just (List xs) -> return xs
+    _ -> throw (UnexpectedResponseError (rsp ^. LSP.id) (fromJust $ rsp ^. LSP.error))
+
 -- | Returns all the code actions in a document by 
 -- querying the code actions at each of the current 
 -- diagnostics' positions.
 getAllCodeActions :: TextDocumentIdentifier -> Session [CAResult]
 getAllCodeActions doc = do
-  curDiags <- fromMaybe [] . Map.lookup (doc ^. uri) . curDiagnostics <$> get
-  let ctx = CodeActionContext (List curDiags) Nothing
+  ctx <- getCodeActionContext doc
 
-  foldM (go ctx) [] curDiags
+  foldM (go ctx) [] =<< getCurrentDiagnostics doc
 
   where
     go :: CodeActionContext -> [CAResult] -> Diagnostic -> Session [CAResult]
@@ -378,6 +389,16 @@ getAllCodeActions doc = do
         Nothing ->
           let Just (List cmdOrCAs) = mRes
             in return (acc ++ cmdOrCAs)
+
+getCodeActionContext :: TextDocumentIdentifier -> Session CodeActionContext
+getCodeActionContext doc = do
+  curDiags <- getCurrentDiagnostics doc
+  return $ CodeActionContext (List curDiags) Nothing
+
+-- | Returns the current diagnostics that have been sent to the client.
+-- Note that this does not wait for more to come in.
+getCurrentDiagnostics :: TextDocumentIdentifier -> Session [Diagnostic]
+getCurrentDiagnostics doc = fromMaybe [] . Map.lookup (doc ^. uri) . curDiagnostics <$> get
 
 -- | Executes a command.
 executeCommand :: Command -> Session ()

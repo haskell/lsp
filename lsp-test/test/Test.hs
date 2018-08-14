@@ -176,6 +176,13 @@ main = hspec $ do
         liftIO $ contents `shouldBe` "main :: IO Int\nmain = return 42\n"
         noDiagnostics
 
+  describe "getCodeActions" $
+    it "works" $ runSession "hie" fullCaps "test/data/refactor" $ do
+      doc <- openDoc "Main.hs" "haskell"
+      waitForDiagnostics
+      [CACodeAction action] <- getCodeActions doc (Range (Position 1 14) (Position 1 18))
+      liftIO $ action ^. title `shouldBe` "Apply hint:Redundant bracket"
+
   describe "getAllCodeActions" $
     it "works" $ runSession "hie --lsp" fullCaps "test/data/refactor" $ do
       doc <- openDoc "Main.hs" "haskell"
