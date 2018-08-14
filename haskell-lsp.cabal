@@ -18,7 +18,7 @@ copyright:           Alan Zimmerman, 2016-2018
 category:            Development
 build-type:          Simple
 extra-source-files:  ChangeLog.md, README.md
-cabal-version:       >=1.10
+cabal-version:       >=1.22
 
 library
   reexported-modules:  Language.Haskell.LSP.Types
