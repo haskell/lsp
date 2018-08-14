@@ -1,14 +1,15 @@
-# language: haskell
-# ghc:
-#   - "8.2.2"
-#   - "8.4.2"
-language: c
+language: haskell
+ghc:
+  - "8.2.2"
+  - "8.4.3"
 
 sudo: false
 
 # Caching so the next build will be fast too.
 cache:
   directories:
+  - dist
+  - dist-newstyle
   - $HOME/.stack
   - $HOME/haskell-ide-engine/.stack-work
 
@@ -18,31 +19,36 @@ addons:
     - npm
 
 before_install:
-  # Download and unpack the stack executable
+  - printenv
   - mkdir -p ~/.local/bin
   - export PATH=$HOME/.local/bin:$PATH
   - travis_retry curl -L https://get.haskellstack.org/stable/linux-x86_64.tar.gz | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
-    
-  - cd $HOME
-  # It's ok to fail
-  - cd haskell-ide-engine
+  - stack config set system-ghc --global true
+  # - export PATH=/opt/ghc/8.4.3/bin:$PATH
+  # - sh .download-hie.sh
+  # - export PATH=$TRAVIS_BUILD_DIR:$PATH
+  # - hie version
+  - mkdir -p haskell-ide-engine
+  - cd $HOME/haskell-ide-engine
   - git init
-  - git remote add origin https://github.com/Bubba/haskell-ide-engine.git
-  - git pull origin heirarchal-document-symbols
+  - git remote add origin https://github.com/haskell/haskell-ide-engine.git
+  - git pull origin master
   - git submodule init
   - git submodule sync
-  - git submodule update
-  # - cabal new-update
-  # - cabal new-configure
-  # - cabal new-build
-  # - export PATH=$HOME/haskell-ide-engine/dist-newstyle/build/*/ghc-*/haskell-ide-engine-*/x/hie/build:$PATH
-  - stack --no-terminal --skip-ghc-check install -j2
+  - git submodule update --init
+  - stack --no-terminal --skip-ghc-check -j2 install --stack-yaml=stack-$TRAVIS_HASKELL_VERSION.yaml
   - stack exec hoogle generate
   - cd $TRAVIS_BUILD_DIR
+  - hie --version
+  # - git submodule init
+  # - git submodule sync
+  # - git submodule update
+  # - cabal new-configure
+  # - cabal new-build -j2
+  # - export PATH=$HOME/haskell-ide-engine/dist-newstyle/build/*/ghc-*/haskell-ide-engine-*/c/hie/build/hie/hie:$PATH
   - npm update
   - npm i -g javascript-typescript-langserver
 
 script:
- - stack test
-  # - cabal configure --enable-tests
-  # - cabal test -j2 --show-details=streaming
+  - cabal configure --enable-tests
+  - cabal test --show-details=streaming

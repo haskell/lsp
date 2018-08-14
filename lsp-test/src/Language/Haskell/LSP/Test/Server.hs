@@ -1,6 +1,7 @@
 module Language.Haskell.LSP.Test.Server (withServer) where
 
 import Control.Concurrent
+import Control.Exception
 import Control.Monad
 import Language.Haskell.LSP.Test.Compat
 import System.IO
@@ -21,8 +22,6 @@ withServer serverExe logStdErr f = do
 
   pid <- getProcessID serverProc
 
-  result <- f serverIn serverOut pid
-
-  killThread errSinkThread
-  terminateProcess serverProc
-  return result
+  finally (f serverIn serverOut pid) $ do
+    killThread errSinkThread
+    terminateProcess serverProc

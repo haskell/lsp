@@ -78,9 +78,9 @@ test-suite tests
   build-depends:       base >= 4.7 && < 5
                      , hspec
                      , lens
-                     , data-default
-                     , haskell-lsp >= 0.6
+                     , haskell-lsp
                      , lsp-test
+                     , data-default
                      , aeson
                      , unordered-containers
                      , text

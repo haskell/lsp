@@ -15,3 +15,6 @@ example/.ghc.environment.*
 
 # used for rerunning failed hspec tests
 .hspec-failures
+
+# downloaded by .download-hie.sh on travis
+hie
