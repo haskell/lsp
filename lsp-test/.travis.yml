@@ -37,7 +37,7 @@ before_install:
   - git submodule sync
   - git submodule update --init
   - stack --no-terminal --skip-ghc-check -j2 install --stack-yaml=stack-$TRAVIS_HASKELL_VERSION.yaml
-  - stack exec hoogle generate
+  - stack exec hoogle generate --stack-yaml=stack-$TRAVIS_HASKELL_VERSION.yaml
   - cd $TRAVIS_BUILD_DIR
   - hie --version
   # - git submodule init
