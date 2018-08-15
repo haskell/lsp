@@ -50,6 +50,6 @@ before_install:
   - npm i -g javascript-typescript-langserver
 
 script:
-  - stack test --no-terminal --skip-ghc-check -j2
+  - stack test --no-terminal --skip-ghc-check -j2  --stack-yaml=stack-$TRAVIS_HASKELL_VERSION.yaml
   # - cabal configure --enable-tests
   # - cabal test --show-details=streaming
