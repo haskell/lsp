@@ -20,13 +20,13 @@ import           Data.Maybe
 import           Control.Lens hiding (List)
 import           Control.Monad
 import           System.FilePath
+import           System.IO
 import           Language.Haskell.LSP.Test
 import           Language.Haskell.LSP.Test.Files
 import           Language.Haskell.LSP.Test.Decoding
 import           Language.Haskell.LSP.Test.Messages
 import           Language.Haskell.LSP.Test.Server
 import           Language.Haskell.LSP.Test.Session
-
 
 -- | Replays a captured client output and 
 -- makes sure it matches up with an expected response.
@@ -133,15 +133,15 @@ isNotification (NotShowMessage             _) = True
 isNotification (NotCancelRequestFromServer _) = True
 isNotification _                              = False
 
--- listenServer :: [FromServerMessage]
---              -> RequestMap
---              -> MVar LspId
---              -> MVar LspIdRsp
---              -> MVar ()
---              -> ThreadId
---              -> Handle
---              -> SessionContext
---              -> IO ()
+listenServer :: [FromServerMessage]
+             -> RequestMap
+             -> MVar LspId
+             -> MVar LspIdRsp
+             -> MVar ()
+             -> ThreadId
+             -> Handle
+             -> SessionContext
+             -> IO ()
 listenServer [] _ _ _ passSema _ _ _ = putMVar passSema ()
 listenServer expectedMsgs reqMap reqSema rspSema passSema mainThreadId serverOut ctx = do
 

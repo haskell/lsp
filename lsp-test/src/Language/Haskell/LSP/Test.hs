@@ -23,7 +23,7 @@ module Language.Haskell.LSP.Test
   , runSessionWithConfig
   , SessionConfig(..)
   , defaultConfig
-  , module Language.Haskell.LSP.Types.Capabilities
+  , C.fullCaps
   -- ** Exceptions
   , module Language.Haskell.LSP.Test.Exceptions
   , withTimeout
@@ -91,9 +91,10 @@ import Data.Default
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map as Map
 import Data.Maybe
-import Language.Haskell.LSP.Types hiding (id, capabilities, message)
+import Language.Haskell.LSP.Types hiding
+  (id, capabilities, message, executeCommand, applyEdit, rename)
 import qualified Language.Haskell.LSP.Types as LSP
-import Language.Haskell.LSP.Types.Capabilities
+import qualified Language.Haskell.LSP.Types.Capabilities as C
 import Language.Haskell.LSP.Messages
 import Language.Haskell.LSP.VFS
 import Language.Haskell.LSP.Test.Compat
@@ -116,7 +117,7 @@ import qualified Yi.Rope as Rope
 -- >       params = TextDocumentPositionParams doc
 -- >   hover <- request TextDocumentHover params
 runSession :: String -- ^ The command to run the server.
-           -> ClientCapabilities -- ^ The capabilities that the client should declare.
+           -> C.ClientCapabilities -- ^ The capabilities that the client should declare.
            -> FilePath -- ^ The filepath to the root directory for the session.
            -> Session a -- ^ The session to run.
            -> IO a
@@ -125,7 +126,7 @@ runSession = runSessionWithConfig def
 -- | Starts a new sesion with a custom configuration.
 runSessionWithConfig :: SessionConfig -- ^ Configuration options for the session.
                      -> String -- ^ The command to run the server.
-                     -> ClientCapabilities -- ^ The capabilities that the client should declare.
+                     -> C.ClientCapabilities -- ^ The capabilities that the client should declare.
                      -> FilePath -- ^ The filepath to the root directory for the session.
                      -> Session a -- ^ The session to run.
                      -> IO a
@@ -139,6 +140,7 @@ runSessionWithConfig config serverExe caps rootDir session = do
                                           Nothing
                                           caps
                                           (Just TraceOff)
+                                          Nothing
   withServer serverExe (logStdErr config) $ \serverIn serverOut _ ->
     runSessionWithHandles serverIn serverOut listenServer config caps rootDir $ do
 
@@ -441,9 +443,9 @@ applyEdit doc edit = do
   caps <- asks sessionCapabilities
 
   let supportsDocChanges = fromMaybe False $ do
-        let ClientCapabilities mWorkspace _ _ = caps
-        WorkspaceClientCapabilities _ mEdit _ _ _ _ _ _ <- mWorkspace
-        WorkspaceEditClientCapabilities mDocChanges <- mEdit
+        let C.ClientCapabilities mWorkspace _ _ = caps
+        C.WorkspaceClientCapabilities _ mEdit _ _ _ _ _ _ <- mWorkspace
+        C.WorkspaceEditClientCapabilities mDocChanges <- mEdit
         mDocChanges
 
   let wEdit = if supportsDocChanges

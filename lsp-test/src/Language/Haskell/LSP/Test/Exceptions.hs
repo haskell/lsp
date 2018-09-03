@@ -3,6 +3,7 @@ module Language.Haskell.LSP.Test.Exceptions where
 import Control.Exception
 import Language.Haskell.LSP.Messages
 import Language.Haskell.LSP.Types
+import Data.Aeson
 import Data.Aeson.Encode.Pretty
 import Data.Algorithm.Diff
 import Data.Algorithm.DiffOutput
@@ -34,6 +35,7 @@ instance Show SessionException where
     in "Replay is out of order:\n" ++
        -- Print json so its a bit easier to update the session logs
        "Received from server:\n" ++ B.unpack (encodePretty received) ++ "\n" ++
+       "Raw from server:\n" ++ B.unpack (encode received) ++ "\n" ++
        "Expected one of:\n" ++ unlines (map showExp expected')
   show UnexpectedDiagnostics = "Unexpectedly received diagnostics from the server."
   show (IncorrectApplyEditRequest msgStr) = "ApplyEditRequest didn't contain document, instead received:\n"

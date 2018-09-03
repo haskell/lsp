@@ -18,7 +18,8 @@ import           GHC.Generics
 import           Language.Haskell.LSP.Messages
 import           Language.Haskell.LSP.Test
 import           Language.Haskell.LSP.Test.Replay
-import           Language.Haskell.LSP.Types as LSP hiding (capabilities, message)
+import           Language.Haskell.LSP.Types as LSP hiding (capabilities, message, rename, applyEdit)
+import           Language.Haskell.LSP.Types.Capabilities as LSP
 import           System.Timeout
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
@@ -206,7 +207,7 @@ main = hspec $ do
       liftIO $ do
         mainSymbol ^. name `shouldBe` "main"
         mainSymbol ^. kind `shouldBe` SkFunction
-        mainSymbol ^. range `shouldBe` Range (Position 3 0) (Position 3 4)
+        mainSymbol ^. range `shouldBe` Range (Position 3 0) (Position 5 30)
 
   describe "applyEdit" $ do
     it "increments the version" $ runSession "hie --lsp" docChangesCaps "test/data/renamePass" $ do
