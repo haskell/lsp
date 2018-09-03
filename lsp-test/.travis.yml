@@ -49,6 +49,7 @@ before_install:
   - npm update
   - npm i -g javascript-typescript-langserver
 
-# script:
-#   - cabal configure --enable-tests
-#   - cabal test --show-details=streaming
+script:
+  - stack test --compiler ghc-$TRAVIS_HASKELL_VERSION
+  # - cabal configure --enable-tests
+  # - cabal test --show-details=streaming
