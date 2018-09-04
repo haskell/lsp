@@ -81,6 +81,11 @@ handleServerMessage request response notification msg = case msg of
     (RspDocumentLink             m) -> response m
     (RspDocumentLinkResolve      m) -> response m
     (RspWillSaveWaitUntil        m) -> response m
+    (RspTypeDefinition           m) -> response m
+    (RspImplementation           m) -> response m
+    (RspDocumentColor            m) -> response m
+    (RspColorPresentation        m) -> response m
+    (RspFoldingRange             m) -> response m
     (NotPublishDiagnostics       m) -> notification m
     (NotLogMessage               m) -> notification m
     (NotShowMessage              m) -> notification m
@@ -117,6 +122,11 @@ handleClientMessage request response notification msg = case msg of
  (ReqDocumentLink             m) -> request m
  (ReqDocumentLinkResolve      m) -> request m
  (ReqWillSaveWaitUntil        m) -> request m
+ (ReqImplementation           m) -> request m
+ (ReqTypeDefinition           m) -> request m
+ (ReqDocumentColor            m) -> request m
+ (ReqColorPresentation        m) -> request m
+ (ReqFoldingRange             m) -> request m
  (RspApplyWorkspaceEdit       m) -> response m
  (RspFromClient               m) -> response m
  (NotInitialized              m) -> notification m
@@ -129,4 +139,5 @@ handleClientMessage request response notification msg = case msg of
  (NotWillSaveTextDocument     m) -> notification m
  (NotDidSaveTextDocument      m) -> notification m
  (NotDidChangeWatchedFiles    m) -> notification m
+ (NotDidChangeWorkspaceFolders m) -> notification m
  (UnknownFromClientMessage    m) -> error $ "Unknown message sent from client: " ++ show m
