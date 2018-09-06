@@ -5,6 +5,7 @@ import Control.Lens.Operators
 import Data.Aeson
 import Data.Monoid ((<>))
 import Language.Haskell.LSP.Types
+import Language.Haskell.LSP.Types.Lens
 import Test.Hspec
 
 spec :: Spec

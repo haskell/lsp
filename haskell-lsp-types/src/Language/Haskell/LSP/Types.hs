@@ -1,6 +1,5 @@
 module Language.Haskell.LSP.Types
   ( module Language.Haskell.LSP.Types.DataTypesJSON
-  , module Language.Haskell.LSP.Types.Lens
   , module Language.Haskell.LSP.Types.CodeAction
   , module Language.Haskell.LSP.Types.Color
   , module Language.Haskell.LSP.Types.Command
@@ -21,7 +20,6 @@ module Language.Haskell.LSP.Types
 where
 
 import           Language.Haskell.LSP.Types.DataTypesJSON
-import           Language.Haskell.LSP.Types.Lens
 import           Language.Haskell.LSP.Types.CodeAction
 import           Language.Haskell.LSP.Types.Color
 import           Language.Haskell.LSP.Types.Command
