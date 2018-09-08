@@ -1,5 +1,10 @@
 # Revision history for haskell-lsp
 
+## 0.8.0.0 -- 2018-09-08
+
+* Update Hover to be a nullable according to spec
+* Move Lenses into a separate module, `Language.Haskell.LSP.Types.Lens`
+
 ## 0.7.0.0 -- 2018-08-14
 
 * Update CompletionItem
