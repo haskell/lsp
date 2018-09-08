@@ -8,7 +8,7 @@ import qualified Data.ByteString.Lazy.Char8    as B
 import           Data.Maybe
 import           System.IO
 import           Language.Haskell.LSP.Types
-                                         hiding ( error )
+import           Language.Haskell.LSP.Types.Lens hiding (error)
 import           Language.Haskell.LSP.Messages
 import qualified Data.HashMap.Strict           as HM
 
@@ -127,6 +127,8 @@ decodeFromServerMsg reqMap bytes =
         ClientRegisterCapability       -> ReqRegisterCapability $ fromJust $ decode bytes
         ClientUnregisterCapability     -> ReqUnregisterCapability $ fromJust $ decode bytes
         WorkspaceApplyEdit             -> ReqApplyWorkspaceEdit $ fromJust $ decode bytes
+        WorkspaceWorkspaceFolders      -> error "ReqWorkspaceFolders not supported yet"
+        WorkspaceConfiguration         -> error "ReqWorkspaceConfiguration not supported yet"
 
       Error e -> error e
 

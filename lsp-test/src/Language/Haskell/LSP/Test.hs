@@ -91,9 +91,10 @@ import Data.Default
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map as Map
 import Data.Maybe
-import Language.Haskell.LSP.Types hiding
+import Language.Haskell.LSP.Types
+import Language.Haskell.LSP.Types.Lens hiding
   (id, capabilities, message, executeCommand, applyEdit, rename)
-import qualified Language.Haskell.LSP.Types as LSP
+import qualified Language.Haskell.LSP.Types.Lens as LSP
 import qualified Language.Haskell.LSP.Types.Capabilities as C
 import Language.Haskell.LSP.Messages
 import Language.Haskell.LSP.VFS

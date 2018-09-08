@@ -52,7 +52,8 @@ import Data.Maybe
 import Data.Function
 import Language.Haskell.LSP.Messages
 import Language.Haskell.LSP.Types.Capabilities
-import Language.Haskell.LSP.Types hiding (error)
+import Language.Haskell.LSP.Types
+import Language.Haskell.LSP.Types.Lens hiding (error)
 import Language.Haskell.LSP.VFS
 import Language.Haskell.LSP.Test.Decoding
 import Language.Haskell.LSP.Test.Exceptions

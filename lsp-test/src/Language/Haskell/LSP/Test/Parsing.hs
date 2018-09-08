@@ -27,7 +27,8 @@ import Data.Maybe
 import qualified Data.Text as T
 import Data.Typeable
 import Language.Haskell.LSP.Messages
-import Language.Haskell.LSP.Types as LSP hiding (error, message)
+import Language.Haskell.LSP.Types
+import qualified Language.Haskell.LSP.Types.Lens as LSP
 import Language.Haskell.LSP.Test.Messages
 import Language.Haskell.LSP.Test.Session
 

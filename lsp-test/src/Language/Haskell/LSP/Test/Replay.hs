@@ -12,7 +12,8 @@ import qualified Data.ByteString.Lazy.Char8    as B
 import qualified Data.Text                     as T
 import           Language.Haskell.LSP.Capture
 import           Language.Haskell.LSP.Messages
-import           Language.Haskell.LSP.Types as LSP hiding (error)
+import           Language.Haskell.LSP.Types 
+import           Language.Haskell.LSP.Types.Lens as LSP hiding (error)
 import           Data.Aeson
 import           Data.Default
 import           Data.List

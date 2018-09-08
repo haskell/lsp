@@ -8,7 +8,8 @@ module Language.Haskell.LSP.Test.Files
 where
 
 import           Language.Haskell.LSP.Capture
-import           Language.Haskell.LSP.Types hiding ( error )
+import           Language.Haskell.LSP.Types
+import           Language.Haskell.LSP.Types.Lens hiding (error)
 import           Language.Haskell.LSP.Messages
 import           Control.Lens
 import qualified Data.HashMap.Strict           as HM

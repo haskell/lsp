@@ -3,7 +3,7 @@ module Language.Haskell.LSP.Test.Messages where
 
 import Data.Aeson
 import Language.Haskell.LSP.Messages
-import Language.Haskell.LSP.Types hiding (error)
+import Language.Haskell.LSP.Types
 
 isServerResponse :: FromServerMessage -> Bool
 isServerResponse (RspInitialize               _) = True
