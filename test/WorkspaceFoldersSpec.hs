@@ -8,7 +8,7 @@ import Data.Aeson
 import qualified Data.ByteString.Lazy.Char8 as BSL
 import Data.Default
 import Language.Haskell.LSP.Core
-import Language.Haskell.LSP.Types hiding (error, trace)
+import Language.Haskell.LSP.Types
 import Language.Haskell.LSP.Types.Capabilities
 import Test.Hspec
 
