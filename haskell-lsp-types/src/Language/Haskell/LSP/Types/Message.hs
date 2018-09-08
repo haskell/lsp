@@ -249,17 +249,17 @@ instance A.FromJSON ServerMethod where
 
 instance A.ToJSON ServerMethod where
   -- Window
-  toJSON WindowShowMessage = A.String "window/showMessage"
+  toJSON WindowShowMessage        = A.String "window/showMessage"
   toJSON WindowShowMessageRequest = A.String "window/showMessageRequest"
-  toJSON WindowLogMessage = A.String "window/logMessage"
-  toJSON TelemetryEvent = A.String "telemetry/event"
+  toJSON WindowLogMessage         = A.String "window/logMessage"
+  toJSON TelemetryEvent           = A.String "telemetry/event"
   -- Client
-  toJSON ClientRegisterCapability = A.String "client/registerCapability"
+  toJSON ClientRegisterCapability   = A.String "client/registerCapability"
   toJSON ClientUnregisterCapability = A.String "client/unregisterCapability"
   -- Workspace
   toJSON WorkspaceWorkspaceFolders = A.String "workspace/workspaceFolders"
-  toJSON WorkspaceConfiguration = A.String "workspace/configuration"
-  toJSON WorkspaceApplyEdit = A.String "workspace/applyEdit"
+  toJSON WorkspaceConfiguration    = A.String "workspace/configuration"
+  toJSON WorkspaceApplyEdit        = A.String "workspace/applyEdit"
   -- Document
   toJSON TextDocumentPublishDiagnostics = A.String "textDocument/publishDiagnostics"
   -- Cancelling
