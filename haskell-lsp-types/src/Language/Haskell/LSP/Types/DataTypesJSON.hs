@@ -1729,7 +1729,7 @@ Request
 
 Response
 
-    result: Hover defined as follows:
+    result: Hover | null defined as follows:
 
 /**
  * The result of a hove request.
@@ -1798,8 +1798,8 @@ data Hover =
 deriveJSON lspOptions ''Hover
 
 
-type HoverRequest = RequestMessage ClientMethod TextDocumentPositionParams Hover
-type HoverResponse = ResponseMessage Hover
+type HoverRequest = RequestMessage ClientMethod TextDocumentPositionParams (Maybe Hover)
+type HoverResponse = ResponseMessage (Maybe Hover)
 
 -- ---------------------------------------------------------------------
 {-

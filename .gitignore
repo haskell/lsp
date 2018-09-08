@@ -1,6 +1,7 @@
 /dist/
 /dist-newstyle/
 /TAGS
+/ctags
 /tags
 /cabal.project.local
 .stack-work
