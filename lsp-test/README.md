@@ -1,4 +1,4 @@
-# lsp-test [![Build Status](https://travis-ci.com/Bubba/lsp-test.svg?branch=master)](https://travis-ci.com/Bubba/lsp-test) [![Hackage](https://img.shields.io/hackage/v/lsp-test.svg)](https://hackage.haskell.org/package/lsp-test-0.1.0.0)
+# lsp-test [![Build Status](https://travis-ci.com/bubba/lsp-test.svg?branch=master)](https://travis-ci.com/bubba/lsp-test) [![Hackage](https://img.shields.io/hackage/v/lsp-test.svg)](https://hackage.haskell.org/package/lsp-test-0.1.0.0)
 lsp-test is a functional testing framework for Language Server Protocol servers.
 
 ```haskell
@@ -35,7 +35,7 @@ anyRequest <|> anyResponse
 ```
 
 Try out the example tests in the `example` directory with `cabal new-test`.
-For more examples check the [Wiki](https://github.com/Bubba/lsp-test/wiki/Introduction)
+For more examples check the [Wiki](https://github.com/bubba/lsp-test/wiki/Introduction)
 
 ## Developing
 To test make sure you have the following language servers installed:
