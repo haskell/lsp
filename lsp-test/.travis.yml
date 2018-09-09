@@ -4,14 +4,15 @@ sudo: false
 
 cache:
   directories:
-  - .stack-work
-  - $HOME/.stack
-  - $HOME/haskell-ide-engine/.stack-work
+    - .stack-work
+    - $HOME/.stack
+    - $HOME/haskell-ide-engine/.stack-work
+  timeout: 1000
 
 addons:
   apt:
     packages:
-    - npm
+      - npm
 
 before_install:
   - mkdir -p ~/.local/bin
