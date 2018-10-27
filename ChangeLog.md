@@ -1,5 +1,9 @@
 # Revision history for haskell-lsp
 
+## 0.8.0.1 -- 2018-10-27
+
+* Support GHC 8.6.1 by loosening constraints. Via @domenkozar
+
 ## 0.8.0.0 -- 2018-09-08
 
 * Update Hover to be a nullable according to spec
