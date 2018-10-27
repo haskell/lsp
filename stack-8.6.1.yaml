@@ -1,0 +1,12 @@
+resolver: nightly-2018-10-26
+
+packages:
+- '.'
+- ./haskell-lsp-types
+
+extra-deps:
+
+flags: {}
+extra-package-dbs: []
+nix:
+  packages: [icu]
