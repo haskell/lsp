@@ -35,7 +35,7 @@ library
   -- other-modules:
  -- other-extensions:
   ghc-options:         -Wall
-  build-depends:       base >=4.9 && <4.12
+  build-depends:       base >=4.9 && <4.13
                      , aeson >=1.0.0.0
                      , bytestring
                      , containers
@@ -65,7 +65,7 @@ executable lsp-hello
   default-language:    Haskell2010
   ghc-options:         -Wall
 
-  build-depends:       base >=4.9 && <4.12
+  build-depends:       base >=4.9 && <4.13
                      , aeson
                      , bytestring
                      , containers

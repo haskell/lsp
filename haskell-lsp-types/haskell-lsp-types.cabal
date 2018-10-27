@@ -44,7 +44,7 @@ library
  -- other-extensions:
   ghc-options:         -Wall
   -- ghc-options:         -Werror
-  build-depends:       base >=4.9 && <4.12
+  build-depends:       base >=4.9 && <4.13
                      , aeson >=1.0.0.0
                      , bytestring
                      , data-default
