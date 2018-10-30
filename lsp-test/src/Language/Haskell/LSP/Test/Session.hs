@@ -73,7 +73,7 @@ type Session = ParserStateReader FromServerMessage SessionState SessionContext I
 data SessionConfig = SessionConfig
   { messageTimeout :: Int  -- ^ Maximum time to wait for a message in seconds, defaults to 60.
   , logStdErr      :: Bool -- ^ Redirect the server's stderr to this stdout, defaults to False.
-  , logMessages    :: Bool -- ^ Trace the messages sent and received to stdout, defaults to True.
+  , logMessages    :: Bool -- ^ Trace the messages sent and received to stdout, defaults to False.
   , logColor       :: Bool -- ^ Add ANSI color to the logged messages, defaults to True.
   }
 
