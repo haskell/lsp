@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE RankNTypes #-}
 
 module Language.Haskell.LSP.Test.Session
   ( Session
@@ -30,6 +31,7 @@ import Control.Concurrent hiding (yield)
 import Control.Exception
 import Control.Lens hiding (List)
 import Control.Monad
+import Control.Monad.Fail
 import Control.Monad.IO.Class
 import Control.Monad.Except
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
@@ -69,17 +71,23 @@ import System.IO
 
 type Session = ParserStateReader FromServerMessage SessionState SessionContext IO
 
+instance MonadFail Session where
+  fail s = do
+    lastMsg <- fromJust . lastReceivedMessage <$> get
+    liftIO $ throw (UnexpectedMessage s lastMsg)
+
 -- | Stuff you can configure for a 'Session'.
 data SessionConfig = SessionConfig
   { messageTimeout :: Int  -- ^ Maximum time to wait for a message in seconds, defaults to 60.
   , logStdErr      :: Bool -- ^ Redirect the server's stderr to this stdout, defaults to False.
   , logMessages    :: Bool -- ^ Trace the messages sent and received to stdout, defaults to True.
   , logColor       :: Bool -- ^ Add ANSI color to the logged messages, defaults to True.
+  , lspConfig      :: Maybe Value -- ^ The initial LSP config as JSON value, defaults to Nothing.
   }
 
 -- | The configuration used in 'Language.Haskell.LSP.Test.runSession'.
 defaultConfig :: SessionConfig
-defaultConfig = SessionConfig 60 False False True
+defaultConfig = SessionConfig 60 False True True Nothing
 
 instance Default SessionConfig where
   def = defaultConfig
@@ -148,7 +156,7 @@ runSession :: SessionContext -> SessionState -> Session a -> IO (a, SessionState
 runSession context state session = runReaderT (runStateT conduit state) context
   where
     conduit = runConduit $ chanSource .| watchdog .| updateStateC .| runConduitParser (catchError session handler)
-        
+
     handler (Unexpected "ConduitParser.empty") = do
       lastMsg <- fromJust . lastReceivedMessage <$> get
       name <- getParserName
@@ -257,7 +265,7 @@ updateState (ReqApplyWorkspaceEdit r) = do
                 msg = NotificationMessage "2.0" TextDocumentDidOpen (DidOpenTextDocumentParams item)
             liftIO $ B.hPut (serverIn ctx) $ addHeader (encode msg)
 
-            modifyM $ \s -> do 
+            modifyM $ \s -> do
               newVFS <- liftIO $ openVFS (vfs s) msg
               return $ s { vfs = newVFS }
 
@@ -288,14 +296,14 @@ sendMessage msg = do
 withTimeout :: Int -> Session a -> Session a
 withTimeout duration f = do
   chan <- asks messageChan
-  timeoutId <- curTimeoutId <$> get 
+  timeoutId <- curTimeoutId <$> get
   modify $ \s -> s { overridingTimeout = True }
   liftIO $ forkIO $ do
     threadDelay (duration * 1000000)
     writeChan chan (TimeoutMessage timeoutId)
   res <- f
   modify $ \s -> s { curTimeoutId = timeoutId + 1,
-                     overridingTimeout = False 
+                     overridingTimeout = False
                    }
   return res
 
@@ -319,5 +327,5 @@ logMsg t msg = do
         color
           | t == LogServer  = Magenta
           | otherwise       = Cyan
-  
+
         showPretty = B.unpack . encodePretty

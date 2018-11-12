@@ -155,6 +155,10 @@ runSessionWithConfig config serverExe caps rootDir session = do
 
       sendNotification Initialized InitializedParams
 
+      case lspConfig config of
+        Just cfg -> sendNotification WorkspaceDidChangeConfiguration (DidChangeConfigurationParams cfg)
+        Nothing -> return ()
+
       -- Run the actual test
       result <- session
 
