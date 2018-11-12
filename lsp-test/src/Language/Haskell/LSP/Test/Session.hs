@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP               #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -34,6 +35,9 @@ import Control.Monad
 import Control.Monad.Fail
 import Control.Monad.IO.Class
 import Control.Monad.Except
+#if __GLASGOW_HASKELL__ >= 806
+import qualified Control.Monad.Fail as Fail
+#endif
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import qualified Control.Monad.Trans.Reader as Reader (ask)
 import Control.Monad.Trans.State (StateT, runStateT)
@@ -71,16 +75,18 @@ import System.IO
 
 type Session = ParserStateReader FromServerMessage SessionState SessionContext IO
 
+#if __GLASGOW_HASKELL__ >= 806
 instance MonadFail Session where
   fail s = do
     lastMsg <- fromJust . lastReceivedMessage <$> get
     liftIO $ throw (UnexpectedMessage s lastMsg)
+#endif
 
 -- | Stuff you can configure for a 'Session'.
 data SessionConfig = SessionConfig
   { messageTimeout :: Int  -- ^ Maximum time to wait for a message in seconds, defaults to 60.
   , logStdErr      :: Bool -- ^ Redirect the server's stderr to this stdout, defaults to False.
-  , logMessages    :: Bool -- ^ Trace the messages sent and received to stdout, defaults to True.
+  , logMessages    :: Bool -- ^ Trace the messages sent and received to stdout, defaults to False.
   , logColor       :: Bool -- ^ Add ANSI color to the logged messages, defaults to True.
   , lspConfig      :: Maybe Value -- ^ The initial LSP config as JSON value, defaults to Nothing.
   }
