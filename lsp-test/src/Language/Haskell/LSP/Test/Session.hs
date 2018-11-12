@@ -32,11 +32,10 @@ import Control.Concurrent hiding (yield)
 import Control.Exception
 import Control.Lens hiding (List)
 import Control.Monad
-import Control.Monad.Fail
 import Control.Monad.IO.Class
 import Control.Monad.Except
 #if __GLASGOW_HASKELL__ >= 806
-import qualified Control.Monad.Fail as Fail
+import Control.Monad.Fail
 #endif
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import qualified Control.Monad.Trans.Reader as Reader (ask)
