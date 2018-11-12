@@ -229,6 +229,12 @@ main = hspec $ do
   describe "getCompletions" $
     it "works" $ runSession "hie" def "test/data/renamePass" $ do
       doc <- openDoc "Desktop/simple.hs" "haskell"
+
+      -- wait for module to be loaded
+      skipMany loggingNotification
+      noDiagnostics
+      noDiagnostics
+
       item:_ <- getCompletions doc (Position 5 5)
       liftIO $ do
         item ^. label `shouldBe` "interactWithUser"

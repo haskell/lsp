@@ -92,7 +92,7 @@ data SessionConfig = SessionConfig
 
 -- | The configuration used in 'Language.Haskell.LSP.Test.runSession'.
 defaultConfig :: SessionConfig
-defaultConfig = SessionConfig 60 False True True Nothing
+defaultConfig = SessionConfig 60 False False True Nothing
 
 instance Default SessionConfig where
   def = defaultConfig
