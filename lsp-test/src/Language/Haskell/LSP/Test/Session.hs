@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP               #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -32,6 +33,9 @@ import Control.Lens hiding (List)
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Except
+#if __GLASGOW_HASKELL__ >= 806
+import qualified Control.Monad.Fail as Fail
+#endif
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import qualified Control.Monad.Trans.Reader as Reader (ask)
 import Control.Monad.Trans.State (StateT, runStateT)
@@ -143,6 +147,11 @@ instance Monad m => HasState SessionState (ConduitM a b (StateT SessionState m))
   put = lift . State.put
 
 type ParserStateReader a s r m = ConduitParser a (StateT s (ReaderT r m))
+
+#if __GLASGOW_HASKELL__ >= 806
+instance (Fail.MonadFail m) => Fail.MonadFail (ParserStateReader a s r m) where
+  fail = Fail.fail
+#endif
 
 runSession :: SessionContext -> SessionState -> Session a -> IO (a, SessionState)
 runSession context state session = runReaderT (runStateT conduit state) context
