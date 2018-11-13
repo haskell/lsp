@@ -36,7 +36,11 @@ getProcessID p = fromIntegral . fromJust <$> getProcessID' p
 #if MIN_VERSION_process(1,6,3)
   getProcessID' = System.Process.getPid
 #else
+#if MIN_VERSION_process(1,6,0)
   getProcessID' (ProcessHandle mh _ _) = do
+#else
+  getProcessID' (ProcessHandle mh _) = do
+#endif
     p_ <- readMVar mh
     case p_ of
 #ifdef mingw32_HOST_OS
