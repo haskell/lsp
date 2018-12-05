@@ -30,12 +30,11 @@ import           System.Timeout
 main = hspec $ do
   describe "Session" $ do
     it "fails a test" $
-      -- TODO: Catch the exception in lsp-test and provide nicer output
       let session = runSession "hie" fullCaps "test/data/renamePass" $ do
                       openDoc "Desktop/simple.hs" "haskell"
                       skipMany loggingNotification
                       anyRequest
-        in session `shouldThrow` anyException
+        in session `shouldThrow` anySessionException
     it "initializeResponse" $ runSession "hie" fullCaps "test/data/renamePass" $ do
       rsp <- initializeResponse
       liftIO $ rsp ^. result `shouldNotBe` Nothing
