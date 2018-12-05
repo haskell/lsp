@@ -30,7 +30,7 @@ import           System.Timeout
 main = hspec $ do
   describe "Session" $ do
     it "fails a test" $
-      -- TODO: Catch the exception in haskell-lsp-test and provide nicer output
+      -- TODO: Catch the exception in lsp-test and provide nicer output
       let session = runSession "hie" fullCaps "test/data/renamePass" $ do
                       openDoc "Desktop/simple.hs" "haskell"
                       skipMany loggingNotification

@@ -3,12 +3,15 @@ module Language.Haskell.LSP.Test.Decoding where
 
 import           Prelude                 hiding ( id )
 import           Data.Aeson
+import           Control.Exception
 import           Control.Lens
 import qualified Data.ByteString.Lazy.Char8    as B
 import           Data.Maybe
 import           System.IO
+import           System.IO.Error
 import           Language.Haskell.LSP.Types
-import           Language.Haskell.LSP.Types.Lens hiding (error)
+import           Language.Haskell.LSP.Types.Lens
+                                         hiding ( error )
 import           Language.Haskell.LSP.Messages
 import qualified Data.HashMap.Strict           as HM
 
@@ -42,9 +45,12 @@ addHeader content = B.concat
 
 getHeaders :: Handle -> IO [(String, String)]
 getHeaders h = do
-  l <- hGetLine h
+  l <- catch (hGetLine h) eofHandler 
   let (name, val) = span (/= ':') l
   if null val then return [] else ((name, drop 2 val) :) <$> getHeaders h
+  where eofHandler e
+          | isEOFError e = error "Language Server unexpectedly terminated"
+          | otherwise = throw e
 
 type RequestMap = HM.HashMap LspId ClientMethod
 

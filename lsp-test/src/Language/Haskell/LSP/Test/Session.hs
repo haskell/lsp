@@ -203,11 +203,9 @@ runSessionWithHandles serverIn serverOut serverHandler config caps rootDir sessi
 
   let context = SessionContext serverIn absRootDir messageChan reqMap initRsp config caps
       initState = SessionState (IdInt 0) mempty mempty 0 False Nothing
-
-  threadId <- forkIO $ void $ serverHandler serverOut context
-  (result, _) <- runSession context initState session
-
-  killThread threadId
+      launchServerHandler = forkIO $ void $ serverHandler serverOut context
+  (result, _) <- bracket launchServerHandler killThread $
+    const $ runSession context initState session
 
   return result
 
