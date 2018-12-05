@@ -201,9 +201,12 @@ runSessionWithHandles serverIn serverOut serverHandler config caps rootDir sessi
   messageChan <- newChan
   initRsp <- newEmptyMVar
 
+  mainThreadId <- myThreadId
+
   let context = SessionContext serverIn absRootDir messageChan reqMap initRsp config caps
       initState = SessionState (IdInt 0) mempty mempty 0 False Nothing
-      launchServerHandler = forkIO $ void $ serverHandler serverOut context
+      launchServerHandler = forkIO $ catch (serverHandler serverOut context)
+                                           (throwTo mainThreadId :: SessionException -> IO ())
   (result, _) <- bracket launchServerHandler killThread $
     const $ runSession context initState session
 
@@ -332,3 +335,4 @@ logMsg t msg = do
           | otherwise       = Cyan
 
         showPretty = B.unpack . encodePretty
+

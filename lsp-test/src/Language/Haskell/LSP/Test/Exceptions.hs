@@ -17,6 +17,7 @@ data SessionException = Timeout
                       | UnexpectedDiagnostics
                       | IncorrectApplyEditRequest String
                       | UnexpectedResponseError LspIdRsp ResponseError
+                      | UnexpectedServerTermination
   deriving Eq
 
 instance Exception SessionException
@@ -42,6 +43,7 @@ instance Show SessionException where
                                           ++ msgStr
   show (UnexpectedResponseError lid e) = "Received an exepected error in a response for id " ++ show lid ++ ":\n"
                                           ++ show e
+  show UnexpectedServerTermination = "Language server unexpectedly terminated"
 
 -- | A predicate that matches on any 'SessionException'
 anySessionException :: SessionException -> Bool

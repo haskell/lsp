@@ -13,6 +13,7 @@ import           Language.Haskell.LSP.Types
 import           Language.Haskell.LSP.Types.Lens
                                          hiding ( error )
 import           Language.Haskell.LSP.Messages
+import           Language.Haskell.LSP.Test.Exceptions
 import qualified Data.HashMap.Strict           as HM
 
 getAllMessages :: Handle -> IO [B.ByteString]
@@ -49,7 +50,7 @@ getHeaders h = do
   let (name, val) = span (/= ':') l
   if null val then return [] else ((name, drop 2 val) :) <$> getHeaders h
   where eofHandler e
-          | isEOFError e = error "Language Server unexpectedly terminated"
+          | isEOFError e = throw UnexpectedServerTermination
           | otherwise = throw e
 
 type RequestMap = HM.HashMap LspId ClientMethod
