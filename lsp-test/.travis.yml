@@ -28,7 +28,7 @@ before_install:
   - git submodule sync
   - git submodule update --init
   - stack --no-terminal --skip-ghc-check -j2 install --stack-yaml=stack-8.6.2.yaml
-  - stack exec hoogle generate
+  - stack exec hoogle generate --stack-yaml=stack-8.6.2.yaml
   - cd $TRAVIS_BUILD_DIR
   - npm update
   - npm i -g javascript-typescript-langserver
