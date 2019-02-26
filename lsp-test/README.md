@@ -46,7 +46,7 @@ To test make sure you have the following language servers installed:
 
 The present tests are integration tests. Thus, it is required that that the executables `hie` and `javascript-typescript-langserver` are on the path.
 
-The executable `hie` has to have been built using GHC 8.6.2. This can be done by cloning [Haskell-IDE-Engine](https://github.com/haskell/haskell-ide-engine) and invoking `stack install.hs build-8.6.2`. This will create the executables `hie`, `hie-8.6` and `hie-8.6.2` in your `$HOME/.local/bin`, or respective `stack path --local-bin` location.
+The executable `hie` has to have been built using GHC 8.6.2. This can be done by cloning [Haskell-IDE-Engine](https://github.com/haskell/haskell-ide-engine) and invoking `stack install.hs hie-8.6.2`. This will create the executables `hie`, `hie-8.6` and `hie-8.6.2` in your `$HOME/.local/bin`, or respective `stack path --local-bin` location.
 To make sure the test environment is identical to the travis setup, in `.travis.yml` you can find the exact git hash that has been used to execute the tests and build `hie` from that snapshot.
 
 The language server `javascript-typescript-langserver` can be installed by invoking `npm i -g javascript-typescript-langserver`.
