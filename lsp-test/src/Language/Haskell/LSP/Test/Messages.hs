@@ -13,6 +13,7 @@ isServerResponse (RspCompletion               _) = True
 isServerResponse (RspCompletionItemResolve    _) = True
 isServerResponse (RspSignatureHelp            _) = True
 isServerResponse (RspDefinition               _) = True
+isServerResponse (RspTypeDefinition           _) = True
 isServerResponse (RspFindReferences           _) = True
 isServerResponse (RspDocumentHighlights       _) = True
 isServerResponse (RspDocumentSymbols          _) = True
