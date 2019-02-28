@@ -1,0 +1,12 @@
+resolver: lts-13.9
+
+packages:
+- '.'
+- ./haskell-lsp-types
+
+extra-deps:
+
+flags: {}
+extra-package-dbs: []
+nix:
+  packages: [icu]

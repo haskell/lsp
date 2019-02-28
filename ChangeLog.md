@@ -1,5 +1,10 @@
 # Revision history for haskell-lsp
 
+## 0.8.1.0 -- 2019-02-28
+
+* Update Handler to delegate to typeDefinitionHandler instead of
+  definitionHandler. by @fendor
+
 ## 0.8.0.1 -- 2018-10-27
 
 * Support GHC 8.6.1 by loosening constraints. Via @domenkozar
