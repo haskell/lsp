@@ -1,7 +1,4 @@
-resolver: nightly-2018-12-01
+resolver: lts-13.9
 packages:
   - .
 
-extra-deps:
-  - haskell-lsp-0.8.0.1
-  - haskell-lsp-types-0.8.0.1
