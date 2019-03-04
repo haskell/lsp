@@ -72,6 +72,7 @@ getRequestMap = foldl helper HM.empty
     (ReqCompletionItemResolve val) -> insert val acc
     (ReqSignatureHelp val) -> insert val acc
     (ReqDefinition val) -> insert val acc
+    (ReqTypeDefinition val) -> insert val acc
     (ReqFindReferences val) -> insert val acc
     (ReqDocumentHighlights val) -> insert val acc
     (ReqDocumentSymbols val) -> insert val acc
@@ -99,6 +100,7 @@ matchResponseMsgType req = case req of
   CompletionItemResolve         -> RspCompletionItemResolve . decoded
   TextDocumentSignatureHelp     -> RspSignatureHelp . decoded
   TextDocumentDefinition        -> RspDefinition . decoded
+  TextDocumentTypeDefinition    -> RspTypeDefinition . decoded
   TextDocumentReferences        -> RspFindReferences . decoded
   TextDocumentDocumentHighlight -> RspDocumentHighlights . decoded
   TextDocumentDocumentSymbol    -> RspDocumentSymbols . decoded

@@ -65,6 +65,7 @@ module Language.Haskell.LSP.Test
   , getReferences
   -- ** Definitions
   , getDefinitions
+  , getTypeDefinitions
   -- ** Renaming
   , rename
   -- ** Hover
@@ -493,6 +494,14 @@ getDefinitions :: TextDocumentIdentifier -- ^ The document the term is in.
 getDefinitions doc pos =
   let params = TextDocumentPositionParams doc pos
   in getResponseResult <$> request TextDocumentDefinition params
+
+-- | Returns the type definition(s) for the term at the specified position.
+getTypeDefinitions :: TextDocumentIdentifier -- ^ The document the term is in.
+               -> Position -- ^ The position the term is at.
+               -> Session [Location] -- ^ The location(s) of the definitions
+getTypeDefinitions doc pos =
+  let params = TextDocumentPositionParams doc pos
+  in getResponseResult <$> request TextDocumentTypeDefinition params
 
 -- | Renames the term at the specified position.
 rename :: TextDocumentIdentifier -> Position -> String -> Session ()
