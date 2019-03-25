@@ -135,37 +135,39 @@ data SymbolKind
     | SkEvent
     | SkOperator
     | SkTypeParameter
+    | SkPatternSynonym
     | SkUnknown Scientific
     deriving (Read,Show,Eq)
 
 instance ToJSON SymbolKind where
-  toJSON SkFile          = Number 1
-  toJSON SkModule        = Number 2
-  toJSON SkNamespace     = Number 3
-  toJSON SkPackage       = Number 4
-  toJSON SkClass         = Number 5
-  toJSON SkMethod        = Number 6
-  toJSON SkProperty      = Number 7
-  toJSON SkField         = Number 8
-  toJSON SkConstructor   = Number 9
-  toJSON SkEnum          = Number 10
-  toJSON SkInterface     = Number 11
-  toJSON SkFunction      = Number 12
-  toJSON SkVariable      = Number 13
-  toJSON SkConstant      = Number 14
-  toJSON SkString        = Number 15
-  toJSON SkNumber        = Number 16
-  toJSON SkBoolean       = Number 17
-  toJSON SkArray         = Number 18
-  toJSON SkObject        = Number 19
-  toJSON SkKey           = Number 20
-  toJSON SkNull          = Number 21
-  toJSON SkEnumMember    = Number 22
-  toJSON SkStruct        = Number 23
-  toJSON SkEvent         = Number 24
-  toJSON SkOperator      = Number 25
-  toJSON SkTypeParameter = Number 26
-  toJSON (SkUnknown x)   = Number x
+  toJSON SkFile           = Number 1
+  toJSON SkModule         = Number 2
+  toJSON SkNamespace      = Number 3
+  toJSON SkPackage        = Number 4
+  toJSON SkClass          = Number 5
+  toJSON SkMethod         = Number 6
+  toJSON SkProperty       = Number 7
+  toJSON SkField          = Number 8
+  toJSON SkConstructor    = Number 9
+  toJSON SkEnum           = Number 10
+  toJSON SkInterface      = Number 11
+  toJSON SkFunction       = Number 12
+  toJSON SkVariable       = Number 13
+  toJSON SkConstant       = Number 14
+  toJSON SkString         = Number 15
+  toJSON SkNumber         = Number 16
+  toJSON SkBoolean        = Number 17
+  toJSON SkArray          = Number 18
+  toJSON SkObject         = Number 19
+  toJSON SkKey            = Number 20
+  toJSON SkNull           = Number 21
+  toJSON SkEnumMember     = Number 22
+  toJSON SkStruct         = Number 23
+  toJSON SkEvent          = Number 24
+  toJSON SkOperator       = Number 25
+  toJSON SkTypeParameter  = Number 26
+  toJSON SkPatternSynonym = Number 27
+  toJSON (SkUnknown x)    = Number x
 
 instance FromJSON SymbolKind where
   parseJSON (Number  1) = pure SkFile
@@ -194,6 +196,7 @@ instance FromJSON SymbolKind where
   parseJSON (Number 24) = pure SkEvent
   parseJSON (Number 25) = pure SkOperator
   parseJSON (Number 26) = pure SkTypeParameter
+  parseJSON (Number 27) = pure SkPatternSynonym
   parseJSON (Number x)  = pure (SkUnknown x)
   parseJSON _           = mempty
 
