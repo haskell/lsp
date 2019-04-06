@@ -38,17 +38,11 @@ Try out the example tests in the `example` directory with `cabal new-test`.
 For more examples check the [Wiki](https://github.com/bubba/lsp-test/wiki/Introduction)
 
 ## Developing
-To test make sure you have the following language servers installed:
-- [haskell-ide-engine](https://github.com/haskell/haskell-ide-engine)
-- [javascript-typescript-langserver](https://github.com/sourcegraph/javascript-typescript-langserver)
+The tests are integration tests, so make sure you have the following language servers installed and on your PATH:
+### [haskell-ide-engine](https://github.com/haskell/haskell-ide-engine)
+- Check out a relatively recent version of the repo, or see `.travis.yml` to get the exact commit used for CI.
+- `stack install`
+### [javascript-typescript-langserver](https://github.com/sourcegraph/javascript-typescript-langserver)
+`npm i -g javascript-typescript-langserver`
 
-## How to run tests
-
-The present tests are integration tests. Thus, it is required that that the executables `hie` and `javascript-typescript-langserver` are on the path.
-
-The executable `hie` has to have been built using GHC 8.6.3. This can be done by cloning [Haskell-IDE-Engine](https://github.com/haskell/haskell-ide-engine) and invoking `stack install.hs hie-8.6.3`. This will create the executables `hie`, `hie-8.6` and `hie-8.6.3` in your `$HOME/.local/bin`, or respective `stack path --local-bin` location.
-To make sure the test environment is identical to the travis setup, in `.travis.yml` you can find the exact git hash that has been used to execute the tests and build `hie` from that snapshot.
-
-The language server `javascript-typescript-langserver` can be installed by invoking `npm i -g javascript-typescript-langserver`.
-
-When all prerequisites have been met, the tests can be executed by running `stack test` or `cabal new-test`.
+Then run the tests with `stack test` or `cabal new-test`.
