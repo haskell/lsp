@@ -1,0 +1,12 @@
+resolver: lts-13.16 # GHC 8.6.4
+
+packages:
+- '.'
+- ./haskell-lsp-types
+
+extra-deps:
+
+flags: {}
+extra-package-dbs: []
+nix:
+  packages: [icu]
