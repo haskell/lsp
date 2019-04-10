@@ -1,17 +1,22 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE DeriveGeneric #-}
 module Language.Haskell.LSP.Types.Uri where
 
+import           Control.DeepSeq
 import qualified Data.Aeson                                 as A
 import           Data.Hashable
 import           Data.Text                                  (Text)
 import qualified Data.Text                                  as T
+import           GHC.Generics
 import           Network.URI
 import qualified System.FilePath.Posix                      as FPP
 import qualified System.FilePath.Windows                    as FPW
 import qualified System.Info
 
 newtype Uri = Uri { getUri :: Text }
-  deriving (Eq,Ord,Read,Show,A.FromJSON,A.ToJSON,Hashable,A.ToJSONKey,A.FromJSONKey)
+  deriving (Eq,Ord,Read,Show,Generic,A.FromJSON,A.ToJSON,Hashable,A.ToJSONKey,A.FromJSONKey)
+
+instance NFData Uri
 
 fileScheme :: String
 fileScheme = "file:"
