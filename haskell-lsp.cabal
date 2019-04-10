@@ -99,6 +99,7 @@ test-suite haskell-lsp-test
                        ServerCapabilitiesSpec
                        URIFilePathSpec
                        VspSpec
+                       WorkspaceEditSpec
                        WorkspaceFoldersSpec
   build-depends:       base
                      , aeson
