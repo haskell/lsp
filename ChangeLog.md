@@ -1,5 +1,9 @@
 # Revision history for haskell-lsp
 
+## 0.8.2.0 -- 2019-04-11
+
+* Add `applyTextEdit` and `editTextEdit` helpers
+
 ## 0.8.1.0 -- 2019-02-28
 
 * Update Handler to delegate to typeDefinitionHandler instead of
