@@ -600,6 +600,12 @@ initializeRequestHandler' (_configHandler,dispatcherProc) mHandler tvarCtx req@(
           supported (Just _) = Just True
           supported Nothing   = Nothing
 
+          -- If a dynamic setting is provided use it, else set a
+          -- static True if there is a handler.
+          static (Just d) _ = Just d
+          static _ (Just _) = Just (J.GotoOptionsStatic True)
+          static _ Nothing  = Nothing
+
           sync = case textDocumentSync o of
                   Just x -> Just (J.TDSOptions x)
                   Nothing -> Nothing
@@ -618,7 +624,7 @@ initializeRequestHandler' (_configHandler,dispatcherProc) mHandler tvarCtx req@(
               , J._completionProvider               = completionProvider o
               , J._signatureHelpProvider            = signatureHelpProvider o
               , J._definitionProvider               = supported (definitionHandler h)
-              , J._typeDefinitionProvider           = typeDefinitionProvider o
+              , J._typeDefinitionProvider           = static (typeDefinitionProvider o) (typeDefinitionHandler h)
               , J._implementationProvider           = implementationProvider o
               , J._referencesProvider               = supported (referencesHandler h)
               , J._documentHighlightProvider        = supported (documentHighlightHandler h)
