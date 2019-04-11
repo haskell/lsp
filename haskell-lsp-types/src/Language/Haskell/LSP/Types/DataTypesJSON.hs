@@ -499,7 +499,7 @@ interface ServerCapabilities {
          *
          * Since 3.10.0
          */
-        foldingRangeProvider?: boolean | FoldingRangeProviderOptions | (FoldingRangeProviderOptions & TextDocumentRegistrationOptions & StaticRegistrationOptions);     
+        foldingRangeProvider?: boolean | FoldingRangeProviderOptions | (FoldingRangeProviderOptions & TextDocumentRegistrationOptions & StaticRegistrationOptions);
         /**
          * The server provides execute command support.
          */
@@ -544,7 +544,7 @@ data TDS = TDSOptions TextDocumentSyncOptions
 
 instance FromJSON TDS where
     parseJSON x = TDSOptions <$> parseJSON x <|> TDSKind <$> parseJSON x
-    
+
 instance ToJSON TDS where
     toJSON (TDSOptions x) = toJSON x
     toJSON (TDSKind x) = toJSON x
@@ -553,7 +553,7 @@ data GotoOptions = GotoOptionsStatic Bool
                  | GotoOptionsDynamic
                     { -- | A document selector to identify the scope of the registration. If set to null
                       -- the document selector provided on the client side will be used.
-                      _documentSelector :: Maybe DocumentSelector 
+                      _documentSelector :: Maybe DocumentSelector
                       -- | The id used to register the request. The id can be used to deregister
                       -- the request again. See also Registration#id.
                     , _id :: Maybe Text
@@ -624,7 +624,7 @@ data WorkspaceOptions =
   deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''WorkspaceOptions
-      
+
 data InitializeResponseCapabilitiesInner =
   InitializeResponseCapabilitiesInner
     { -- | Defines how text documents are synced. Is either a detailed structure
@@ -1232,19 +1232,19 @@ Request:
 method: ‘workspace/configuration’
 params: ConfigurationParams defined as follows
 export interface ConfigurationParams {
-	items: ConfigurationItem[];
+        items: ConfigurationItem[];
 }
 
 export interface ConfigurationItem {
-	/**
-	 * The scope to get the configuration section for.
-	 */
-	scopeUri?: string;
+        /**
+         * The scope to get the configuration section for.
+         */
+        scopeUri?: string;
 
-	/**
-	 * The configuration section asked for.
-	 */
-	section?: string;
+        /**
+         * The configuration section asked for.
+         */
+        section?: string;
 }
 Response:
 
@@ -1731,20 +1731,23 @@ Response
 
     result: Hover | null defined as follows:
 
+
 /**
- * The result of a hove request.
+ * The result of a hover request.
  */
 interface Hover {
-    /**
-     * The hover's content
-     */
-    contents: MarkedString | MarkedString[];
+        /**
+         * The hover's content
+         */
+        contents: MarkedString | MarkedString[] | MarkupContent;
 
-    /**
-     * An optional range
-     */
-    range?: Range;
+        /**
+         * An optional range is a range inside a text document
+         * that is used to visualize a hover, e.g. by changing the background color.
+         */
+        range?: Range;
 }
+
 
 Where MarkedString is defined as follows:
 /**
@@ -2852,4 +2855,3 @@ data TraceNotification =
   } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''TraceNotification
-
