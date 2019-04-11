@@ -3,6 +3,8 @@
 ## 0.8.2.0 -- 2019-04-11
 
 * Add `applyTextEdit` and `editTextEdit` helpers
+* Set the typedefinitionProvider capability if it has a handler
+* Add stack files for GHC 8.4.4 and 8.6.4
 
 ## 0.8.1.0 -- 2019-02-28
 
