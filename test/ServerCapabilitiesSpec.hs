@@ -24,7 +24,7 @@ spec = describe "server capabilities" $ do
     describe "encodes" $
       it "just id" $
         encode (FoldingRangeOptionsDynamicDocument Nothing (Just "foo")) `shouldBe` "{\"id\":\"foo\"}"
-  it "decodes" $ 
+  it "decodes" $
     let input = "{\"hoverProvider\": true, \"colorProvider\": {\"id\": \"abc123\", \"documentSelector\": " <> documentFiltersJson <> "}}"
         Just caps = decode input :: Maybe InitializeResponseCapabilitiesInner
       in caps ^. colorProvider `shouldBe` Just (ColorOptionsDynamicDocument (Just documentFilters) (Just "abc123"))

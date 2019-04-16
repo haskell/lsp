@@ -32,7 +32,7 @@ spec = describe "workspace folders" $
             in handleMessage initCb tvarCtx clStr jsonStr
 
     let starterWorkspaces = List [wf0]
-        initParams = InitializeParams 
+        initParams = InitializeParams
           Nothing Nothing (Just (Uri "/foo")) Nothing fullCaps Nothing (Just starterWorkspaces)
         initMsg :: InitializeRequest
         initMsg = RequestMessage "2.0" (IdInt 0) Initialize initParams

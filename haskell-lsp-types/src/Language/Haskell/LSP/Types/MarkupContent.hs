@@ -23,15 +23,15 @@ import           Language.Haskell.LSP.Types.Constants
  * are reserved for internal usage.
  */
 export namespace MarkupKind {
-	/**
-	 * Plain text is supported as a content format
-	 */
-	export const PlainText: 'plaintext' = 'plaintext';
+        /**
+         * Plain text is supported as a content format
+         */
+        export const PlainText: 'plaintext' = 'plaintext';
 
-	/**
-	 * Markdown is supported as a content format
-	 */
-	export const Markdown: 'markdown' = 'markdown';
+        /**
+         * Markdown is supported as a content format
+         */
+        export const Markdown: 'markdown' = 'markdown';
 }
 export type MarkupKind = 'plaintext' | 'markdown';
 -}
@@ -78,15 +78,15 @@ instance FromJSON MarkupKind where
  * remove HTML from the markdown to avoid script execution.
  */
 export interface MarkupContent {
-	/**
-	 * The type of the Markup
-	 */
-	kind: MarkupKind;
+        /**
+         * The type of the Markup
+         */
+        kind: MarkupKind;
 
-	/**
-	 * The content itself
-	 */
-	value: string;
+        /**
+         * The content itself
+         */
+        value: string;
 }
 -}
 

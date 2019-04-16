@@ -18,14 +18,15 @@ import           Data.Aeson.TH
 import           Data.Aeson.Types
 import           Data.Text                                  (Text)
 import qualified Data.Text                                  as T
+import           Language.Haskell.LSP.Types.ClientCapabilities
 import           Language.Haskell.LSP.Types.Command
 import           Language.Haskell.LSP.Types.Constants
-import           Language.Haskell.LSP.Types.ClientCapabilities
 import           Language.Haskell.LSP.Types.Diagnostic
 import           Language.Haskell.LSP.Types.DocumentFilter
 import           Language.Haskell.LSP.Types.List
-import           Language.Haskell.LSP.Types.Message
 import           Language.Haskell.LSP.Types.Location
+import           Language.Haskell.LSP.Types.MarkupContent
+import           Language.Haskell.LSP.Types.Message
 import           Language.Haskell.LSP.Types.Symbol
 import           Language.Haskell.LSP.Types.TextDocument
 import           Language.Haskell.LSP.Types.Uri
@@ -1749,11 +1750,10 @@ interface Hover {
 }
 
 
-Where MarkedString is defined as follows:
 /**
  * MarkedString can be used to render human readable text. It is either a markdown string
  * or a code-block that provides a language and a code snippet. The language identifier
- * is sematically equal to the optional language identifier in fenced code blocks in GitHub
+ * is semantically equal to the optional language identifier in fenced code blocks in GitHub
  * issues. See https://help.github.com/articles/creating-and-highlighting-code-blocks/#syntax-highlighting
  *
  * The pair of a language and a value is an equivalent to markdown:
@@ -1762,7 +1762,8 @@ Where MarkedString is defined as follows:
  * ```
  *
  * Note that markdown strings will be sanitized - that means html will be escaped.
- */
+* @deprecated use MarkupContent instead.
+*/
 type MarkedString = string | { language: string; value: string };
 
     error: code and message set in case an exception happens during the hover
@@ -1780,6 +1781,7 @@ data LanguageString =
 
 deriveJSON lspOptions ''LanguageString
 
+{-# DEPRECATED MarkedString, PlainString, CodeString "Use MarkupContent instead, since 3.3.0 (11/24/2017)" #-}
 data MarkedString =
     PlainString T.Text
   | CodeString LanguageString
@@ -1792,9 +1794,32 @@ instance FromJSON MarkedString where
   parseJSON (A.String t) = pure $ PlainString t
   parseJSON o            = CodeString <$> parseJSON o
 
+-- -------------------------------------
+
+data HoverContents =
+    HoverContentsMS (List MarkedString)
+  | HoverContents   MarkupContent
+  deriving (Read,Show,Eq)
+
+instance ToJSON HoverContents where
+  toJSON (HoverContentsMS  x) = toJSON x
+  toJSON (HoverContents    x) = toJSON x
+instance FromJSON HoverContents where
+  parseJSON v@(A.String _) = HoverContentsMS <$> parseJSON v
+  parseJSON v@(A.Null)     = HoverContentsMS <$> parseJSON v
+  parseJSON v@(A.Array _)  = HoverContentsMS <$> parseJSON v
+  parseJSON v@(A.Object o) = do
+    mk <- o .:? "kind" :: Parser (Maybe MarkupKind)
+    case mk of
+      Nothing -> HoverContentsMS <$> parseJSON v
+      _       -> HoverContents   <$> parseJSON v
+  parseJSON _ = fail "HoverContents"
+
+-- -------------------------------------
+
 data Hover =
   Hover
-    { _contents :: List MarkedString
+    { _contents :: HoverContents
     , _range    :: Maybe Range
     } deriving (Read,Show,Eq)
 
