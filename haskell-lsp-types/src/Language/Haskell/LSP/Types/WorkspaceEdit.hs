@@ -8,6 +8,7 @@ import qualified Data.HashMap.Strict                        as H
 -- For <= 8.2.2
 import           Data.Monoid                                ((<>))
 import           Data.Text                                  (Text)
+import qualified Data.Text                                  as T
 import           Language.Haskell.LSP.Types.Constants
 import           Language.Haskell.LSP.Types.List
 import           Language.Haskell.LSP.Types.Location
@@ -158,3 +159,32 @@ deriveJSON lspOptions ''WorkspaceEdit
 instance Semigroup WorkspaceEdit where
   (<>) = mappend
 #endif
+
+-- ---------------------------------------------------------------------
+
+-- | Applies a 'TextEdit' to some 'Text'.
+-- >>> applyTextEdit (TextEdit (Range (Position 0 1) (Position 0 2)) "i") "foo"
+-- "fio"
+applyTextEdit :: TextEdit -> Text -> Text
+applyTextEdit (TextEdit (Range sp ep) newText) oldText =
+  let (_, afterEnd) = splitAtPos ep oldText
+      (beforeStart, _) = splitAtPos sp oldText
+    in mconcat [beforeStart, newText, afterEnd]
+  where
+    splitAtPos :: Position -> Text -> (Text, Text)
+    splitAtPos (Position sl sc) t =
+      let index = sc + startLineIndex sl t
+        in T.splitAt index t
+
+    -- The index of the first character of line 'line'
+    startLineIndex 0 _ = 0
+    startLineIndex line t' =
+      case T.findIndex (== '\n') t' of
+        Just i -> i + 1 + startLineIndex (line - 1) (T.drop (i + 1) t')
+        Nothing -> 0
+
+-- | 'editTextEdit' @outer@ @inner@ applies @inner@ to the text inside @outer@.
+editTextEdit :: TextEdit -> TextEdit -> TextEdit
+editTextEdit (TextEdit origRange origText) innerEdit =
+  let newText = applyTextEdit innerEdit origText
+    in TextEdit origRange newText

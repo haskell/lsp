@@ -1,5 +1,9 @@
 # Revision history for haskell-lsp-types
 
+## 0.8.2.0 -- 2019-04-11
+
+* Add `applyTextEdit` and `editTextEdit` helpers
+
 ## 0.8.0.1 -- 2018-10-27
 
 * Support GHC 8.6.1 by loosening constraints. Via @domenkozar
