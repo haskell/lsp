@@ -98,6 +98,7 @@ test-suite haskell-lsp-test
                        DiagnosticsSpec
                        MethodSpec
                        ServerCapabilitiesSpec
+                       TypesSpec
                        URIFilePathSpec
                        VspSpec
                        WorkspaceEditSpec

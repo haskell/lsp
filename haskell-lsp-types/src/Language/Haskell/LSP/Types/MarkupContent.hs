@@ -11,6 +11,7 @@ module Language.Haskell.LSP.Types.MarkupContent where
 
 import           Data.Aeson
 import           Data.Aeson.TH
+import           Data.Semigroup
 import           Data.Text                                      (Text)
 import           Language.Haskell.LSP.Types.Constants
 
@@ -120,3 +121,25 @@ data MarkupContent =
   deriving (Read, Show, Eq)
 
 deriveJSON lspOptions ''MarkupContent
+
+-- ---------------------------------------------------------------------
+
+-- | Create a 'MarkupContent' containing a quoted language string only.
+markedUpContent :: Text -> Text -> MarkupContent
+markedUpContent lang quote
+ = MarkupContent MkMarkdown ("```" <> lang <> "\n" <> quote <> "\n```\n")
+
+-- ---------------------------------------------------------------------
+
+-- | Create a 'MarkupContent' containing unquoted text
+unmarkedUpContent :: Text -> MarkupContent
+unmarkedUpContent str = MarkupContent MkPlainText str
+
+-- ---------------------------------------------------------------------
+
+instance Semigroup MarkupContent where
+  MarkupContent MkPlainText s1 <> MarkupContent MkPlainText s2 = MarkupContent MkPlainText (s1 <> s2)
+  MarkupContent MkMarkdown  s1 <> MarkupContent _           s2 = MarkupContent MkMarkdown  (s1 <> s2)
+  MarkupContent _           s1 <> MarkupContent MkMarkdown  s2 = MarkupContent MkMarkdown  (s1 <> s2)
+
+-- ---------------------------------------------------------------------
