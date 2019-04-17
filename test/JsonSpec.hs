@@ -57,7 +57,9 @@ instance Arbitrary MarkupKind where
   arbitrary = oneof [pure MkPlainText,pure MkMarkdown]
 
 instance Arbitrary HoverContents where
-  arbitrary = oneof [HoverContentsMS <$> arbitrary, HoverContents <$> arbitrary]
+  arbitrary = oneof [ HoverContentsMS <$> arbitrary
+                    , HoverContents <$> arbitrary
+                    , pure HoverContentsEmpty]
 
 -- | make lists of maximum length 3 for test performance
 smallList :: Gen a -> Gen [a]

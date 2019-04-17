@@ -1,11 +1,9 @@
-{-# LANGUAGE CPP                        #-}
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE DeriveTraversable          #-}
 {-# LANGUAGE DuplicateRecordFields      #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE FunctionalDependencies     #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE TypeSynonymInstances       #-}
@@ -16,6 +14,7 @@ import           Control.Applicative
 import qualified Data.Aeson                                 as A
 import           Data.Aeson.TH
 import           Data.Aeson.Types
+import           Data.Semigroup
 import           Data.Text                                  (Text)
 import qualified Data.Text                                  as T
 import           Language.Haskell.LSP.Types.ClientCapabilities
@@ -1799,14 +1798,16 @@ instance FromJSON MarkedString where
 data HoverContents =
     HoverContentsMS (List MarkedString)
   | HoverContents   MarkupContent
+  | HoverContentsEmpty
   deriving (Read,Show,Eq)
 
 instance ToJSON HoverContents where
   toJSON (HoverContentsMS  x) = toJSON x
   toJSON (HoverContents    x) = toJSON x
+  toJSON (HoverContentsEmpty) = A.Null
 instance FromJSON HoverContents where
   parseJSON v@(A.String _) = HoverContentsMS <$> parseJSON v
-  parseJSON v@(A.Null)     = HoverContentsMS <$> parseJSON v
+  parseJSON v@(A.Null)     = pure HoverContentsEmpty
   parseJSON v@(A.Array _)  = HoverContentsMS <$> parseJSON v
   parseJSON v@(A.Object o) = do
     mk <- o .:? "kind" :: Parser (Maybe MarkupKind)
@@ -1814,6 +1815,21 @@ instance FromJSON HoverContents where
       Nothing -> HoverContentsMS <$> parseJSON v
       _       -> HoverContents   <$> parseJSON v
   parseJSON _ = fail "HoverContents"
+
+-- -------------------------------------
+
+instance Semigroup HoverContents where
+  HoverContentsEmpty <> hc = hc
+  hc <> HoverContentsEmpty = hc
+  HoverContents h1 <> HoverContents h2 = HoverContents (h1 <> h2)
+  HoverContents h1 <> HoverContentsMS (List h2s) = HoverContents (mconcat (h1: (map toMarkupContent h2s)))
+
+instance Monoid HoverContents where
+  mempty = HoverContentsEmpty
+
+toMarkupContent :: MarkedString -> MarkupContent
+toMarkupContent (PlainString s) = unmarkedUpContent s
+toMarkupContent (CodeString (LanguageString lang s)) = markedUpContent lang s
 
 -- -------------------------------------
 

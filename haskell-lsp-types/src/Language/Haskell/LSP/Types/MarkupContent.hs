@@ -11,7 +11,6 @@ module Language.Haskell.LSP.Types.MarkupContent where
 
 import           Data.Aeson
 import           Data.Aeson.TH
-import           Data.Semigroup
 import           Data.Text                                      (Text)
 import           Language.Haskell.LSP.Types.Constants
 
@@ -141,5 +140,8 @@ instance Semigroup MarkupContent where
   MarkupContent MkPlainText s1 <> MarkupContent MkPlainText s2 = MarkupContent MkPlainText (s1 <> s2)
   MarkupContent MkMarkdown  s1 <> MarkupContent _           s2 = MarkupContent MkMarkdown  (s1 <> s2)
   MarkupContent _           s1 <> MarkupContent MkMarkdown  s2 = MarkupContent MkMarkdown  (s1 <> s2)
+
+instance Monoid MarkupContent where
+  mempty = MarkupContent MkPlainText ""
 
 -- ---------------------------------------------------------------------
