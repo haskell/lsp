@@ -1,6 +1,6 @@
 # Revision history for haskell-lsp
 
-## 0.8.3.0
+## 0.9.0.0
 
 * Add `MarkupContent` to `HoverResponse`, and (some) json roundtrip tests.
 
