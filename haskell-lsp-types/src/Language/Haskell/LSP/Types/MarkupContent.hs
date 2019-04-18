@@ -12,7 +12,6 @@ module Language.Haskell.LSP.Types.MarkupContent where
 
 import           Data.Aeson
 import           Data.Aeson.TH
--- import           Data.Monoid
 import           Data.Semigroup
 import           Data.Text                                      (Text)
 import           Language.Haskell.LSP.Types.Constants
@@ -138,6 +137,7 @@ unmarkedUpContent :: Text -> MarkupContent
 unmarkedUpContent str = MarkupContent MkPlainText str
 
 -- ---------------------------------------------------------------------
+
 #if __GLASGOW_HASKELL__ >= 804
 instance Semigroup MarkupContent where
   (<>) = mappend

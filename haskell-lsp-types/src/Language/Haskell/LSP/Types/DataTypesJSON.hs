@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP                        #-}
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE DeriveTraversable          #-}
 {-# LANGUAGE DuplicateRecordFields      #-}
@@ -14,7 +15,6 @@ import           Control.Applicative
 import qualified Data.Aeson                                 as A
 import           Data.Aeson.TH
 import           Data.Aeson.Types
-import           Data.Semigroup
 import           Data.Text                                  (Text)
 import qualified Data.Text                                  as T
 import           Language.Haskell.LSP.Types.ClientCapabilities
@@ -1807,7 +1807,7 @@ instance ToJSON HoverContents where
   toJSON (HoverContentsEmpty) = A.Null
 instance FromJSON HoverContents where
   parseJSON v@(A.String _) = HoverContentsMS <$> parseJSON v
-  parseJSON v@(A.Null)     = pure HoverContentsEmpty
+  parseJSON   (A.Null)     = pure HoverContentsEmpty
   parseJSON v@(A.Array _)  = HoverContentsMS <$> parseJSON v
   parseJSON v@(A.Object o) = do
     mk <- o .:? "kind" :: Parser (Maybe MarkupKind)
@@ -1818,14 +1818,20 @@ instance FromJSON HoverContents where
 
 -- -------------------------------------
 
+#if __GLASGOW_HASKELL__ >= 804
 instance Semigroup HoverContents where
-  HoverContentsEmpty <> hc = hc
-  hc <> HoverContentsEmpty = hc
-  HoverContents h1 <> HoverContents h2 = HoverContents (h1 <> h2)
-  HoverContents h1 <> HoverContentsMS (List h2s) = HoverContents (mconcat (h1: (map toMarkupContent h2s)))
+  (<>) = mappend
+#endif
 
 instance Monoid HoverContents where
   mempty = HoverContentsEmpty
+
+  HoverContentsEmpty `mappend` hc = hc
+  hc `mappend` HoverContentsEmpty = hc
+  HoverContents h1   `mappend` HoverContents         h2   = HoverContents (h1 `mappend` h2)
+  HoverContents h1   `mappend` HoverContentsMS (List h2s) = HoverContents (mconcat (h1: (map toMarkupContent h2s)))
+  HoverContentsMS (List h1s) `mappend` HoverContents         h2    = HoverContents (mconcat ((map toMarkupContent h1s) ++ [h2]))
+  HoverContentsMS (List h1s) `mappend` HoverContentsMS (List h2s) = HoverContentsMS (List (h1s `mappend` h2s))
 
 toMarkupContent :: MarkedString -> MarkupContent
 toMarkupContent (PlainString s) = unmarkedUpContent s
