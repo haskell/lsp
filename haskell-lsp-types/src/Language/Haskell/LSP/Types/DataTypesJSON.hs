@@ -1809,7 +1809,7 @@ instance FromJSON HoverContents where
   parseJSON v@(A.String _) = HoverContentsMS <$> parseJSON v
   parseJSON   (A.Null)     = pure HoverContentsEmpty
   parseJSON v@(A.Array _)  = HoverContentsMS <$> parseJSON v
-  parseJSON v@(A.Object o) = HoverContents   <$> parseJSON v
+  parseJSON v@(A.Object _) = HoverContents   <$> parseJSON v
                          <|> HoverContentsMS <$> parseJSON v
   parseJSON _ = mempty
 
