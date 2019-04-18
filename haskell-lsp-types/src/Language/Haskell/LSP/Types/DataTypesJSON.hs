@@ -1809,12 +1809,9 @@ instance FromJSON HoverContents where
   parseJSON v@(A.String _) = HoverContentsMS <$> parseJSON v
   parseJSON   (A.Null)     = pure HoverContentsEmpty
   parseJSON v@(A.Array _)  = HoverContentsMS <$> parseJSON v
-  parseJSON v@(A.Object o) = do
-    mk <- o .:? "kind" :: Parser (Maybe MarkupKind)
-    case mk of
-      Nothing -> HoverContentsMS <$> parseJSON v
-      _       -> HoverContents   <$> parseJSON v
-  parseJSON _ = fail "HoverContents"
+  parseJSON v@(A.Object o) = HoverContents   <$> parseJSON v
+                         <|> HoverContentsMS <$> parseJSON v
+  parseJSON _ = mempty
 
 -- -------------------------------------
 
