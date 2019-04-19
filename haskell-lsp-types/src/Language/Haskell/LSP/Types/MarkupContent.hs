@@ -138,6 +138,12 @@ unmarkedUpContent str = MarkupContent MkPlainText str
 
 -- ---------------------------------------------------------------------
 
+-- | Markdown for a section separator in Markdown, being a horizontal line
+sectionSeparator :: Text
+sectionSeparator = "*\t*\t*\n"
+
+-- ---------------------------------------------------------------------
+
 #if __GLASGOW_HASKELL__ >= 804
 instance Semigroup MarkupContent where
   (<>) = mappend
