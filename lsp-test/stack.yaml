@@ -1,4 +1,6 @@
 resolver: lts-13.15
 packages:
   - .
-
+extra-deps:
+- haskell-lsp-0.9.0.0
+- haskell-lsp-types-0.9.0.0
