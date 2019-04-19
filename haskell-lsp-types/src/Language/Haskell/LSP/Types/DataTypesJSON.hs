@@ -5,7 +5,6 @@
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE FunctionalDependencies     #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE TypeSynonymInstances       #-}
@@ -18,14 +17,15 @@ import           Data.Aeson.TH
 import           Data.Aeson.Types
 import           Data.Text                                  (Text)
 import qualified Data.Text                                  as T
+import           Language.Haskell.LSP.Types.ClientCapabilities
 import           Language.Haskell.LSP.Types.Command
 import           Language.Haskell.LSP.Types.Constants
-import           Language.Haskell.LSP.Types.ClientCapabilities
 import           Language.Haskell.LSP.Types.Diagnostic
 import           Language.Haskell.LSP.Types.DocumentFilter
 import           Language.Haskell.LSP.Types.List
-import           Language.Haskell.LSP.Types.Message
 import           Language.Haskell.LSP.Types.Location
+import           Language.Haskell.LSP.Types.MarkupContent
+import           Language.Haskell.LSP.Types.Message
 import           Language.Haskell.LSP.Types.Symbol
 import           Language.Haskell.LSP.Types.TextDocument
 import           Language.Haskell.LSP.Types.Uri
@@ -499,7 +499,7 @@ interface ServerCapabilities {
          *
          * Since 3.10.0
          */
-        foldingRangeProvider?: boolean | FoldingRangeProviderOptions | (FoldingRangeProviderOptions & TextDocumentRegistrationOptions & StaticRegistrationOptions);     
+        foldingRangeProvider?: boolean | FoldingRangeProviderOptions | (FoldingRangeProviderOptions & TextDocumentRegistrationOptions & StaticRegistrationOptions);
         /**
          * The server provides execute command support.
          */
@@ -544,7 +544,7 @@ data TDS = TDSOptions TextDocumentSyncOptions
 
 instance FromJSON TDS where
     parseJSON x = TDSOptions <$> parseJSON x <|> TDSKind <$> parseJSON x
-    
+
 instance ToJSON TDS where
     toJSON (TDSOptions x) = toJSON x
     toJSON (TDSKind x) = toJSON x
@@ -553,7 +553,7 @@ data GotoOptions = GotoOptionsStatic Bool
                  | GotoOptionsDynamic
                     { -- | A document selector to identify the scope of the registration. If set to null
                       -- the document selector provided on the client side will be used.
-                      _documentSelector :: Maybe DocumentSelector 
+                      _documentSelector :: Maybe DocumentSelector
                       -- | The id used to register the request. The id can be used to deregister
                       -- the request again. See also Registration#id.
                     , _id :: Maybe Text
@@ -624,7 +624,7 @@ data WorkspaceOptions =
   deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''WorkspaceOptions
-      
+
 data InitializeResponseCapabilitiesInner =
   InitializeResponseCapabilitiesInner
     { -- | Defines how text documents are synced. Is either a detailed structure
@@ -1232,19 +1232,19 @@ Request:
 method: ‘workspace/configuration’
 params: ConfigurationParams defined as follows
 export interface ConfigurationParams {
-	items: ConfigurationItem[];
+        items: ConfigurationItem[];
 }
 
 export interface ConfigurationItem {
-	/**
-	 * The scope to get the configuration section for.
-	 */
-	scopeUri?: string;
+        /**
+         * The scope to get the configuration section for.
+         */
+        scopeUri?: string;
 
-	/**
-	 * The configuration section asked for.
-	 */
-	section?: string;
+        /**
+         * The configuration section asked for.
+         */
+        section?: string;
 }
 Response:
 
@@ -1731,26 +1731,28 @@ Response
 
     result: Hover | null defined as follows:
 
+
 /**
- * The result of a hove request.
+ * The result of a hover request.
  */
 interface Hover {
-    /**
-     * The hover's content
-     */
-    contents: MarkedString | MarkedString[];
+        /**
+         * The hover's content
+         */
+        contents: MarkedString | MarkedString[] | MarkupContent;
 
-    /**
-     * An optional range
-     */
-    range?: Range;
+        /**
+         * An optional range is a range inside a text document
+         * that is used to visualize a hover, e.g. by changing the background color.
+         */
+        range?: Range;
 }
 
-Where MarkedString is defined as follows:
+
 /**
  * MarkedString can be used to render human readable text. It is either a markdown string
  * or a code-block that provides a language and a code snippet. The language identifier
- * is sematically equal to the optional language identifier in fenced code blocks in GitHub
+ * is semantically equal to the optional language identifier in fenced code blocks in GitHub
  * issues. See https://help.github.com/articles/creating-and-highlighting-code-blocks/#syntax-highlighting
  *
  * The pair of a language and a value is an equivalent to markdown:
@@ -1759,7 +1761,8 @@ Where MarkedString is defined as follows:
  * ```
  *
  * Note that markdown strings will be sanitized - that means html will be escaped.
- */
+* @deprecated use MarkupContent instead.
+*/
 type MarkedString = string | { language: string; value: string };
 
     error: code and message set in case an exception happens during the hover
@@ -1777,6 +1780,7 @@ data LanguageString =
 
 deriveJSON lspOptions ''LanguageString
 
+{-# DEPRECATED MarkedString, PlainString, CodeString "Use MarkupContent instead, since 3.3.0 (11/24/2017)" #-}
 data MarkedString =
     PlainString T.Text
   | CodeString LanguageString
@@ -1789,9 +1793,52 @@ instance FromJSON MarkedString where
   parseJSON (A.String t) = pure $ PlainString t
   parseJSON o            = CodeString <$> parseJSON o
 
+-- -------------------------------------
+
+data HoverContents =
+    HoverContentsMS (List MarkedString)
+  | HoverContents   MarkupContent
+  | HoverContentsEmpty
+  deriving (Read,Show,Eq)
+
+instance ToJSON HoverContents where
+  toJSON (HoverContentsMS  x) = toJSON x
+  toJSON (HoverContents    x) = toJSON x
+  toJSON (HoverContentsEmpty) = A.Null
+instance FromJSON HoverContents where
+  parseJSON v@(A.String _) = HoverContentsMS <$> parseJSON v
+  parseJSON   (A.Null)     = pure HoverContentsEmpty
+  parseJSON v@(A.Array _)  = HoverContentsMS <$> parseJSON v
+  parseJSON v@(A.Object _) = HoverContents   <$> parseJSON v
+                         <|> HoverContentsMS <$> parseJSON v
+  parseJSON _ = mempty
+
+-- -------------------------------------
+
+#if __GLASGOW_HASKELL__ >= 804
+instance Semigroup HoverContents where
+  (<>) = mappend
+#endif
+
+instance Monoid HoverContents where
+  mempty = HoverContentsEmpty
+
+  HoverContentsEmpty `mappend` hc = hc
+  hc `mappend` HoverContentsEmpty = hc
+  HoverContents h1   `mappend` HoverContents         h2   = HoverContents (h1 `mappend` h2)
+  HoverContents h1   `mappend` HoverContentsMS (List h2s) = HoverContents (mconcat (h1: (map toMarkupContent h2s)))
+  HoverContentsMS (List h1s) `mappend` HoverContents         h2    = HoverContents (mconcat ((map toMarkupContent h1s) ++ [h2]))
+  HoverContentsMS (List h1s) `mappend` HoverContentsMS (List h2s) = HoverContentsMS (List (h1s `mappend` h2s))
+
+toMarkupContent :: MarkedString -> MarkupContent
+toMarkupContent (PlainString s) = unmarkedUpContent s
+toMarkupContent (CodeString (LanguageString lang s)) = markedUpContent lang s
+
+-- -------------------------------------
+
 data Hover =
   Hover
-    { _contents :: List MarkedString
+    { _contents :: HoverContents
     , _range    :: Maybe Range
     } deriving (Read,Show,Eq)
 
@@ -2852,4 +2899,3 @@ data TraceNotification =
   } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''TraceNotification
-

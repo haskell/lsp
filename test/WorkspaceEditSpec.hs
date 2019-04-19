@@ -20,6 +20,6 @@ spec = do
   describe "editTextEdit" $
     it "edits a multiline text edit" $
       let orig = TextEdit (Range (Position 1 1) (Position 2 2)) "hello\nworld"
-          inner = TextEdit (Range (Position 0 3) (Position 1 3)) "ios\ngo" 
+          inner = TextEdit (Range (Position 0 3) (Position 1 3)) "ios\ngo"
           expected = TextEdit (Range (Position 1 1) (Position 2 2)) "helios\ngold"
          in editTextEdit orig inner `shouldBe` expected

@@ -1,5 +1,9 @@
 # Revision history for haskell-lsp
 
+## 0.9.0.0
+
+* Add `MarkupContent` to `HoverResponse`, and (some) json roundtrip tests.
+
 ## 0.8.2.0 -- 2019-04-11
 
 * Add `applyTextEdit` and `editTextEdit` helpers

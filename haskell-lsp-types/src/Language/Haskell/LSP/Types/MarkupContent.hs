@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP                        #-}
 {-# LANGUAGE DuplicateRecordFields      #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE TemplateHaskell            #-}
@@ -11,6 +12,7 @@ module Language.Haskell.LSP.Types.MarkupContent where
 
 import           Data.Aeson
 import           Data.Aeson.TH
+import           Data.Semigroup
 import           Data.Text                                      (Text)
 import           Language.Haskell.LSP.Types.Constants
 
@@ -23,15 +25,15 @@ import           Language.Haskell.LSP.Types.Constants
  * are reserved for internal usage.
  */
 export namespace MarkupKind {
-	/**
-	 * Plain text is supported as a content format
-	 */
-	export const PlainText: 'plaintext' = 'plaintext';
+        /**
+         * Plain text is supported as a content format
+         */
+        export const PlainText: 'plaintext' = 'plaintext';
 
-	/**
-	 * Markdown is supported as a content format
-	 */
-	export const Markdown: 'markdown' = 'markdown';
+        /**
+         * Markdown is supported as a content format
+         */
+        export const Markdown: 'markdown' = 'markdown';
 }
 export type MarkupKind = 'plaintext' | 'markdown';
 -}
@@ -78,15 +80,15 @@ instance FromJSON MarkupKind where
  * remove HTML from the markdown to avoid script execution.
  */
 export interface MarkupContent {
-	/**
-	 * The type of the Markup
-	 */
-	kind: MarkupKind;
+        /**
+         * The type of the Markup
+         */
+        kind: MarkupKind;
 
-	/**
-	 * The content itself
-	 */
-	value: string;
+        /**
+         * The content itself
+         */
+        value: string;
 }
 -}
 
@@ -120,3 +122,37 @@ data MarkupContent =
   deriving (Read, Show, Eq)
 
 deriveJSON lspOptions ''MarkupContent
+
+-- ---------------------------------------------------------------------
+
+-- | Create a 'MarkupContent' containing a quoted language string only.
+markedUpContent :: Text -> Text -> MarkupContent
+markedUpContent lang quote
+ = MarkupContent MkMarkdown ("```" <> lang <> "\n" <> quote <> "\n```\n")
+
+-- ---------------------------------------------------------------------
+
+-- | Create a 'MarkupContent' containing unquoted text
+unmarkedUpContent :: Text -> MarkupContent
+unmarkedUpContent str = MarkupContent MkPlainText str
+
+-- ---------------------------------------------------------------------
+
+-- | Markdown for a section separator in Markdown, being a horizontal line
+sectionSeparator :: Text
+sectionSeparator = "*\t*\t*\n"
+
+-- ---------------------------------------------------------------------
+
+#if __GLASGOW_HASKELL__ >= 804
+instance Semigroup MarkupContent where
+  (<>) = mappend
+#endif
+
+instance Monoid MarkupContent where
+  mempty = MarkupContent MkPlainText ""
+  MarkupContent MkPlainText s1 `mappend` MarkupContent MkPlainText s2 = MarkupContent MkPlainText (s1 `mappend` s2)
+  MarkupContent MkMarkdown  s1 `mappend` MarkupContent _           s2 = MarkupContent MkMarkdown  (s1 `mappend` s2)
+  MarkupContent _           s1 `mappend` MarkupContent MkMarkdown  s2 = MarkupContent MkMarkdown  (s1 `mappend` s2)
+
+-- ---------------------------------------------------------------------
