@@ -214,6 +214,7 @@ data ServerMethod =
     WindowShowMessage
   | WindowShowMessageRequest
   | WindowLogMessage
+  | WindowProgress
   | TelemetryEvent
   -- Client
   | ClientRegisterCapability
@@ -233,6 +234,7 @@ instance A.FromJSON ServerMethod where
   parseJSON (A.String "window/showMessage")              = return WindowShowMessage
   parseJSON (A.String "window/showMessageRequest")       = return WindowShowMessageRequest
   parseJSON (A.String "window/logMessage")               = return WindowLogMessage
+  parseJSON (A.String "window/progress")                 = return WindowProgress
   parseJSON (A.String "telemetry/event")                 = return TelemetryEvent
   -- Client
   parseJSON (A.String "client/registerCapability")       = return ClientRegisterCapability
@@ -252,6 +254,7 @@ instance A.ToJSON ServerMethod where
   toJSON WindowShowMessage        = A.String "window/showMessage"
   toJSON WindowShowMessageRequest = A.String "window/showMessageRequest"
   toJSON WindowLogMessage         = A.String "window/logMessage"
+  toJSON WindowProgress           = A.String "window/progress"
   toJSON TelemetryEvent           = A.String "telemetry/event"
   -- Client
   toJSON ClientRegisterCapability   = A.String "client/registerCapability"

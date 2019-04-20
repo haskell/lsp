@@ -18,6 +18,7 @@ import           Language.Haskell.LSP.Types.Message
 import           Language.Haskell.LSP.Types.Location
 import           Language.Haskell.LSP.Types.Symbol
 import           Language.Haskell.LSP.Types.TextDocument
+import           Language.Haskell.LSP.Types.Window
 import           Language.Haskell.LSP.Types.WorkspaceEdit
 import           Language.Haskell.LSP.Types.WorkspaceFolders
 import           Control.Lens.TH
@@ -75,6 +76,7 @@ makeFieldsNoPrefix ''WorkspaceOptions
 makeFieldsNoPrefix ''InitializeResponseCapabilitiesInner
 makeFieldsNoPrefix ''InitializeResponseCapabilities
 makeFieldsNoPrefix ''ShowMessageParams
+makeFieldsNoPrefix ''ProgressParams
 makeFieldsNoPrefix ''MessageActionItem
 makeFieldsNoPrefix ''ShowMessageRequestParams
 makeFieldsNoPrefix ''LogMessageParams
