@@ -1,8 +1,8 @@
 name:                lsp-test
-version:             0.5.0.2
+version:             0.5.1.1
 synopsis:            Functional test framework for LSP servers.
 description:
-  A test framework for writing tests against 
+  A test framework for writing tests against
   <https://microsoft.github.io/language-server-protocol/ Language Server Protocol servers>.
   @Language.Haskell.LSP.Test@ launches your server as a subprocess and allows you to simulate a session
   down to the wire, and @Language.Haskell.LSP.Test@ can replay captured sessions from
@@ -15,13 +15,13 @@ author:              Luke Lau
 maintainer:          luke_lau@icloud.com
 stability:           experimental
 bug-reports:         https://github.com/Bubba/haskell-lsp-test/issues
-copyright:           2018 Luke Lau
+copyright:           2019 Luke Lau
 category:            Testing
 build-type:          Simple
 cabal-version:       2.0
 extra-source-files:  README.md
                    , ChangeLog.md
-tested-with:         GHC == 8.2.2 , GHC == 8.4.2 , GHC == 8.4.3
+tested-with:         GHC == 8.2.2 , GHC == 8.4.2 , GHC == 8.4.3, GHC == 8.6.4
 
 source-repository head
   type:     git
@@ -35,8 +35,8 @@ library
                      , haskell-lsp:Language.Haskell.LSP.Types.Capabilities
                      , parser-combinators:Control.Applicative.Combinators
   default-language:    Haskell2010
-  build-depends:       base >= 4.7 && < 5
-                     , haskell-lsp >= 0.8 && < 0.9
+  build-depends:       base >= 4.10 && < 5
+                     , haskell-lsp >= 0.8 && < 0.10
                      , aeson
                      , aeson-pretty
                      , ansi-terminal
@@ -75,14 +75,13 @@ test-suite tests
   main-is:             Test.hs
   hs-source-dirs:      test
   ghc-options:         -W
-  build-depends:       base >= 4.7 && < 5
+  build-depends:       base >= 4.10 && < 5
                      , hspec
                      , lens
-                     , haskell-lsp >= 0.8 && < 0.9
+                     , haskell-lsp >= 0.8 && < 0.10
                      , lsp-test
                      , data-default
                      , aeson
                      , unordered-containers
                      , text
   default-language:    Haskell2010
-
