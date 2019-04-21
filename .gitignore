@@ -4,6 +4,7 @@
 /ctags
 /tags
 /cabal.project.local
+/cabal.project.local~
 .stack-work
 /.dir-locals.el
 /.vscode

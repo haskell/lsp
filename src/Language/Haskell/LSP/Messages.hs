@@ -103,6 +103,7 @@ data FromServerMessage = ReqRegisterCapability       RegisterCapabilityRequest
                        | NotPublishDiagnostics       PublishDiagnosticsNotification
                        | NotLogMessage               LogMessageNotification
                        | NotShowMessage              ShowMessageNotification
+                       | NotProgress                 ProgressNotification
                        | NotTelemetry                TelemetryNotification
                        -- A cancel request notification is duplex!
                        | NotCancelRequestFromServer  CancelNotificationServer
