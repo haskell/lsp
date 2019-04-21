@@ -11,6 +11,7 @@ module Language.Haskell.LSP.Core (
   , Handler
   , InitializeCallback
   , LspFuncs(..)
+  , Progress
   , SendFunc
   , Handlers(..)
   , Options(..)
@@ -27,6 +28,7 @@ module Language.Haskell.LSP.Core (
 import           Control.Concurrent.STM
 import qualified Control.Exception as E
 import           Control.Monad
+import           Control.Monad.IO.Class
 import           Control.Lens ( (<&>), (^.) )
 import qualified Data.Aeson as J
 import qualified Data.ByteString.Lazy as BSL
@@ -80,6 +82,7 @@ data LanguageContextData a =
   , resLspFuncs            :: LspFuncs a -- NOTE: Cannot be strict, lazy initialization
   , resCaptureFile         :: !(Maybe FilePath)
   , resWorkspaceFolders    :: ![J.WorkspaceFolder]
+  , resNextProgressId      :: !Int
   }
 
 -- ---------------------------------------------------------------------
@@ -118,6 +121,10 @@ type PublishDiagnosticsFunc = Int -- Max number of diagnostics to send
 type FlushDiagnosticsBySourceFunc = Int -- Max number of diagnostics to send
                                   -> Maybe J.DiagnosticSource -> IO ()
 
+-- | A package indicating the perecentage of progress complete and a
+-- an optional message to go with it during a 'withProgress'
+data Progress = Progress (Maybe Double) (Maybe Text)
+
 -- | Returned to the server on startup, providing ways to interact with the client.
 data LspFuncs c =
   LspFuncs
@@ -132,6 +139,13 @@ data LspFuncs c =
     , getNextReqId                 :: !(IO J.LspId)
     , rootPath                     :: !(Maybe FilePath)
     , getWorkspaceFolders          :: !(IO (Maybe [J.WorkspaceFolder]))
+    , withProgress                 :: !(forall m a. MonadIO m => Text -> ((Progress -> m ()) -> m a) -> m a)
+      -- ^ Wrapper for reporting progress to the client during a long running
+      -- task.
+      -- `withProgress title f` starts a new progress reporting session, and
+      -- finishes it once f is completed.
+      -- f is provided with an update function that allows it to report on
+      -- the progress during the session.
     }
 
 -- | The function in the LSP process that is called once the 'initialize'
@@ -407,7 +421,7 @@ _ERR_MSG_URL = [ "`stack update` and install new haskell-lsp."
 --
 defaultLanguageContextData :: Handlers -> Options -> LspFuncs c -> TVar Int -> SendFunc -> Maybe FilePath -> LanguageContextData c
 defaultLanguageContextData h o lf tv sf cf =
-  LanguageContextData _INITIAL_RESPONSE_SEQUENCE h o sf mempty mempty Nothing tv lf cf mempty
+  LanguageContextData _INITIAL_RESPONSE_SEQUENCE h o sf mempty mempty Nothing tv lf cf mempty 0
 
 -- ---------------------------------------------------------------------
 
@@ -565,12 +579,43 @@ initializeRequestHandler' (_configHandler,dispatcherProc) mHandler tvarCtx req@(
         return $ J.IdInt cid
 
       clientSupportsWfs = fromMaybe False $ do
-        let (C.ClientCapabilities mw _ _) = params ^. J.capabilities
+        let (C.ClientCapabilities mw _ _ _) = params ^. J.capabilities
         (C.WorkspaceClientCapabilities _ _ _ _ _ _ mwf _) <- mw
         mwf
       getWfs tvc
         | clientSupportsWfs = atomically $ Just . resWorkspaceFolders <$> readTVar tvc
         | otherwise = return Nothing
+
+      clientSupportsProgress = fromMaybe False $ do
+        let (C.ClientCapabilities _ _ wc _) = params ^. J.capabilities
+        (C.WindowClientCapabilities mProgress) <- wc
+        mProgress
+      reportProgress :: (forall m. MonadIO m => Text -> ((Progress -> m ()) -> m a) -> m a)
+      reportProgress title f
+        | clientSupportsProgress = do
+          sf <- liftIO $ resSendResponse <$> readTVarIO tvarCtx
+
+          -- Get a new id for  the progress session and make a new one
+          progId <- fmap (T.pack . show) $ liftIO $ atomically $ do
+            x <- resNextProgressId <$> readTVar tvarCtx
+            modifyTVar tvarCtx (\ctx -> ctx { resNextProgressId = x + 1})
+            return x
+
+          -- Send initial notification
+          liftIO $ sf $ NotProgress $ fmServerProgressNotification $
+            J.ProgressParams progId title Nothing Nothing (Just False)
+
+          res <- f (updater progId sf)
+
+          -- Send done notification
+          liftIO $ sf $ NotProgress $ fmServerProgressNotification $
+            J.ProgressParams progId title Nothing Nothing (Just True)
+          
+          return res
+        | otherwise = f (const $ return ())
+        where updater progId sf (Progress percentage msg) = liftIO $
+                sf $ NotProgress $ fmServerProgressNotification $
+                  J.ProgressParams progId title msg percentage (Just False)
 
     -- Launch the given process once the project root directory has been set
     let lspFuncs = LspFuncs (getCapabilities params)
@@ -582,6 +627,7 @@ initializeRequestHandler' (_configHandler,dispatcherProc) mHandler tvarCtx req@(
                             (getLspId $ resLspId ctx0)
                             rootDir
                             (getWfs tvarCtx)
+                            reportProgress
     let ctx = ctx0 { resLspFuncs = lspFuncs }
     atomically $ writeTVar tvarCtx ctx
 
