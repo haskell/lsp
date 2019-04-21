@@ -590,8 +590,8 @@ initializeRequestHandler' (_configHandler,dispatcherProc) mHandler tvarCtx req@(
         let (C.ClientCapabilities _ _ wc _) = params ^. J.capabilities
         (C.WindowClientCapabilities mProgress) <- wc
         mProgress
-      reportProgress :: (forall m. MonadIO m => Text -> ((Progress -> m ()) -> m a) -> m a)
-      reportProgress title f
+      withProgress :: (forall m. MonadIO m => Text -> ((Progress -> m ()) -> m a) -> m a)
+      withProgress title f
         | clientSupportsProgress = do
           sf <- liftIO $ resSendResponse <$> readTVarIO tvarCtx
 
@@ -627,7 +627,7 @@ initializeRequestHandler' (_configHandler,dispatcherProc) mHandler tvarCtx req@(
                             (getLspId $ resLspId ctx0)
                             rootDir
                             (getWfs tvarCtx)
-                            reportProgress
+                            withProgress
     let ctx = ctx0 { resLspFuncs = lspFuncs }
     atomically $ writeTVar tvarCtx ctx
 
