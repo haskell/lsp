@@ -17,6 +17,7 @@ module Language.Haskell.LSP.Types.MessageFuncs (
   , fmServerShowMessageNotification
   , fmServerShowMessageRequest
   , fmServerLogMessageNotification
+  , fmServerProgressNotification
   , fmServerTelemetryNotification
 
   -- * Client
@@ -127,6 +128,13 @@ fmServerShowMessageRequest rid params
 fmServerLogMessageNotification :: J.MessageType -> Text -> J.LogMessageNotification
 fmServerLogMessageNotification mt msg
   = J.NotificationMessage "2.0" J.WindowLogMessage (J.LogMessageParams mt msg)
+
+-- ----------------------------------------------------------------------
+-- * :arrow_left: [window/logMessage](#window_logMessage)
+
+fmServerProgressNotification :: J.ProgressParams -> J.ProgressNotification
+fmServerProgressNotification params
+  = J.NotificationMessage "2.0" J.WindowProgress params
 
 -- ----------------------------------------------------------------------
 -- * :arrow_left: [telemetry/event](#telemetry_event)
