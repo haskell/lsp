@@ -449,7 +449,7 @@ applyEdit doc edit = do
   caps <- asks sessionCapabilities
 
   let supportsDocChanges = fromMaybe False $ do
-        let C.ClientCapabilities mWorkspace _ _ = caps
+        let mWorkspace = C._workspace caps
         C.WorkspaceClientCapabilities _ mEdit _ _ _ _ _ _ <- mWorkspace
         C.WorkspaceEditClientCapabilities mDocChanges <- mEdit
         mDocChanges
