@@ -142,7 +142,7 @@ data LspFuncs c =
     , withProgress                 :: !(forall m a. MonadIO m => Text -> ((Progress -> m ()) -> m a) -> m a)
       -- ^ Wrapper for reporting progress to the client during a long running
       -- task.
-      -- `withProgress title f` starts a new progress reporting session, and
+      -- 'withProgress' @title f@ starts a new progress reporting session, and
       -- finishes it once f is completed.
       -- f is provided with an update function that allows it to report on
       -- the progress during the session.
