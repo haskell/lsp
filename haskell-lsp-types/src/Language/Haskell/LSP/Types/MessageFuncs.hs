@@ -17,6 +17,10 @@ module Language.Haskell.LSP.Types.MessageFuncs (
   , fmServerShowMessageNotification
   , fmServerShowMessageRequest
   , fmServerLogMessageNotification
+  , fmServerProgressStartNotification
+  , fmServerProgressReportNotification
+  , fmServerProgressDoneNotification
+  , fmServerProgressCancelNotification
   , fmServerTelemetryNotification
 
   -- * Client
@@ -127,6 +131,30 @@ fmServerShowMessageRequest rid params
 fmServerLogMessageNotification :: J.MessageType -> Text -> J.LogMessageNotification
 fmServerLogMessageNotification mt msg
   = J.NotificationMessage "2.0" J.WindowLogMessage (J.LogMessageParams mt msg)
+
+-- ----------------------------------------------------------------------
+
+fmServerProgressStartNotification :: J.ProgressStartParams -> J.ProgressStartNotification
+fmServerProgressStartNotification params
+  = J.NotificationMessage "2.0" J.WindowProgressStart params
+
+-- ----------------------------------------------------------------------
+
+fmServerProgressReportNotification :: J.ProgressReportParams -> J.ProgressReportNotification
+fmServerProgressReportNotification params
+  = J.NotificationMessage "2.0" J.WindowProgressReport params
+
+-- ----------------------------------------------------------------------
+
+fmServerProgressDoneNotification :: J.ProgressDoneParams -> J.ProgressDoneNotification
+fmServerProgressDoneNotification params
+  = J.NotificationMessage "2.0" J.WindowProgressDone params
+
+-- ----------------------------------------------------------------------
+
+fmServerProgressCancelNotification :: J.ProgressCancelParams -> J.ProgressCancelNotification
+fmServerProgressCancelNotification params
+  = J.NotificationMessage "2.0" J.WindowProgressCancel params
 
 -- ----------------------------------------------------------------------
 -- * :arrow_left: [telemetry/event](#telemetry_event)

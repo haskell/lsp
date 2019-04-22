@@ -1003,6 +1003,20 @@ instance Default TextDocumentClientCapabilities where
                                        def def def def
 
 -- ---------------------------------------------------------------------
+
+-- | Window specific client capabilities.
+data WindowClientCapabilities = 
+  WindowClientCapabilities
+    { -- | Whether client supports handling progress notifications.
+      _progress :: Maybe Bool
+    } deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''WindowClientCapabilities)
+
+instance Default WindowClientCapabilities where
+  def = WindowClientCapabilities def
+
+-- ---------------------------------------------------------------------
 {-
 New in 3.0
 
@@ -1042,6 +1056,11 @@ interface ClientCapabilities {
          * Experimental client capabilities.
          */
         experimental?: any;
+
+        /**
+         * Window specific client capabilities.
+	       */
+	      window?: WindowClientCapabilities;
 }
 -}
 
@@ -1049,10 +1068,12 @@ data ClientCapabilities =
   ClientCapabilities
     { _workspace    :: Maybe WorkspaceClientCapabilities
     , _textDocument :: Maybe TextDocumentClientCapabilities
+    -- | Capabilities specific to `window/progress` requests. Experimental, @since 0.10.0.0
+    , _window :: Maybe WindowClientCapabilities
     , _experimental :: Maybe A.Object
     } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''ClientCapabilities)
 
 instance Default ClientCapabilities where
-  def = ClientCapabilities def def def
+  def = ClientCapabilities def def def def

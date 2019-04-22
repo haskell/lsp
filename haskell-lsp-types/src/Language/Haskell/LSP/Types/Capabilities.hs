@@ -28,7 +28,7 @@ data LSPVersion = LSPVersion Int Int -- ^ Construct a major.minor version
 -- * 3.4 extended completion item and symbol item kinds
 -- * 3.0 dynamic registration
 capsForVersion :: LSPVersion -> ClientCapabilities
-capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) Nothing
+capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) Nothing Nothing
   where
     w = WorkspaceClientCapabilities
           (Just True)

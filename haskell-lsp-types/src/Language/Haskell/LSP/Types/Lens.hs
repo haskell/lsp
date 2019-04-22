@@ -75,11 +75,6 @@ makeFieldsNoPrefix ''WorkspaceFolderOptions
 makeFieldsNoPrefix ''WorkspaceOptions
 makeFieldsNoPrefix ''InitializeResponseCapabilitiesInner
 makeFieldsNoPrefix ''InitializeResponseCapabilities
-makeFieldsNoPrefix ''ShowMessageParams
-makeFieldsNoPrefix ''ProgressParams
-makeFieldsNoPrefix ''MessageActionItem
-makeFieldsNoPrefix ''ShowMessageRequestParams
-makeFieldsNoPrefix ''LogMessageParams
 makeFieldsNoPrefix ''Registration
 makeFieldsNoPrefix ''RegistrationParams
 makeFieldsNoPrefix ''TextDocumentRegistrationOptions
@@ -192,3 +187,13 @@ makeFieldsNoPrefix ''ColorPresentation
 -- Folding Range
 makeFieldsNoPrefix ''FoldingRange
 makeFieldsNoPrefix ''FoldingRangeParams
+
+-- Window
+makeFieldsNoPrefix ''ShowMessageParams
+makeFieldsNoPrefix ''MessageActionItem
+makeFieldsNoPrefix ''ShowMessageRequestParams
+makeFieldsNoPrefix ''LogMessageParams
+makeFieldsNoPrefix ''ProgressStartParams
+makeFieldsNoPrefix ''ProgressReportParams
+makeFieldsNoPrefix ''ProgressDoneParams
+makeFieldsNoPrefix ''ProgressCancelParams

@@ -197,73 +197,204 @@ type LogMessageNotification = NotificationMessage ServerMethod LogMessageParams
 
 -- ---------------------------------------------------------------------
 {-
-Progress Notification
+Progress Start Notification
 
-https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#logmessage-notification
-
-The progress notification is sent from the server to the client to ask the
-client to indicate progress.
+The window/progress/start notification is sent from the server to the client to ask the client to start progress.
 
 Notification:
 
-    method: 'window/progress'
-    params: ProgressParams defined as follows:
+method: 'window/progress/start'
+params: ProgressStartParams defined as follows:
+export interface ProgressStartParams {
 
-interface ProgressParams {
+  /**
+   * A unique identifier to associate multiple progress notifications with
+   * the same progress.
+   */
+  id: string;
+
+  /**
+   * Mandatory title of the progress operation. Used to briefly inform about
+   * the kind of operation being performed.
+   *
+   * Examples: "Indexing" or "Linking dependencies".
+   */
+  title: string;
+
+  /**
+   * Controls if a cancel button should show to allow the user to cancel the
+   * long running operation. Clients that don't support cancellation are allowed
+   * to ignore the setting.
+   */
+  cancellable?: boolean;
+
+  /**
+   * Optional, more detailed associated progress message. Contains
+   * complementary information to the `title`.
+   *
+   * Examples: "3/25 files", "project/src/module2", "node_modules/some_dep".
+   * If unset, the previous progress message (if any) is still valid.
+   */
+  message?: string;
+
+  /**
+   * Optional progress percentage to display (value 100 is considered 100%).
+   * If not provided infinite progress is assumed and clients are allowed
+   * to ignore the `percentage` value in subsequent in report notifications.
+   *
+   * The value should be steadily rising. Clients are free to ignore values
+   * that are not following this rule.
+   */
+  percentage?: number;
+}
+-}
+
+data ProgressStartParams =
+  ProgressStartParams {
+  -- | A unique identifier to associate multiple progress
+  -- notifications with the same progress. 
+    _id   :: Text
+  -- | Mandatory title of the progress operation.
+  -- Used to briefly inform about the kind of operation being
+  -- performed. Examples: "Indexing" or "Linking dependencies". 
+  , _title :: Text
+  -- | Controls if a cancel button should show to allow the user to cancel the
+  -- long running operation. Clients that don't support cancellation are allowed
+  -- to ignore the setting.
+  , _cancellable :: Maybe Bool 
+  -- | Optional, more detailed associated progress
+  -- message. Contains complementary information to the
+  -- `title`. Examples: "3/25 files",
+  -- "project/src/module2", "node_modules/some_dep". If
+  -- unset, the previous progress message (if any) is
+  -- still valid.
+  , _message :: Maybe Text 
+  -- | Optional progress percentage to display (value 100 is considered 100%).
+  -- If not provided infinite progress is assumed and clients are allowed
+  -- to ignore the `percentage` value in subsequent in report notifications.
+  --
+  -- The value should be steadily rising. Clients are free to ignore values
+  -- that are not following this rule.
+  , _percentage :: Maybe Double
+  } deriving (Show, Read, Eq)
+
+deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''ProgressStartParams
+
+type ProgressStartNotification = NotificationMessage ServerMethod ProgressStartParams
+
+
+{-
+Progress Report Notification
+
+The window/progress/report notification is sent from the server to the client to report progress for a previously started progress.
+
+Notification:
+
+method: 'window/progress/report'
+params: ProgressReportParams defined as follows:
+export interface ProgressReportParams {
+
   /**
    * A unique identifier to associate multiple progress notifications with the same progress.
    */
   id: string;
 
   /**
-   * The title of the progress.
-   * This should be the same for all ProgressParams with the same id.
-   */
-  title: string;
-
-  /**
-   * Optional progress message to display.
+   * Optional, more detailed associated progress message. Contains
+   * complementary information to the `title`.
+   *
+   * Examples: "3/25 files", "project/src/module2", "node_modules/some_dep".
    * If unset, the previous progress message (if any) is still valid.
    */
   message?: string;
 
   /**
-   * Optional progress percentage to display.
-   * If unset, the previous progress percentage (if any) is still valid.
+   * Optional progress percentage to display (value 100 is considered 100%).
+   * If infinite progress was indicated in the start notification client
+   * are allowed to ignore the value. In addition the value should be steadily
+   * rising. Clients are free to ignore values that are not following this rule.
    */
   percentage?: number;
-
-  /**
-   * Set to true on the final progress update.
-   * No more progress notifications with the same ID should be sent.
-   */
-  done?: boolean;
 }
 
 -}
 
-data ProgressParams =
-  ProgressParams {
-    _id   :: Text -- ^ A unique identifier to associate multiple progress
-                  -- notifications with the same progress.
-  , _title :: Text -- ^ Mandatory title of the progress operation.
-                   -- Used to briefly inform about the kind of operation being
-                   -- performed. Examples: "Indexing" or "Linking dependencies".
-  , _message :: Maybe Text -- ^ Optional, more detailed associated progress
-                           -- message. Contains complementary information to the
-                           -- `title`. Examples: "3/25 files",
-                           -- "project/src/module2", "node_modules/some_dep". If
-                           -- unset, the previous progress message (if any) is
-                           -- still valid.
-  , _percentage :: Maybe Double -- ^ Optional progress percentage to display
-                                -- (value 100 is considered 100%). If unset, the
-                                -- previous progress percentage (if any) is
-                                -- still valid.
-  , _done :: Maybe Bool -- ^ Set to true on the final progress update. No more
-                        -- progress notifications with the same ID should be sent.
+data ProgressReportParams =
+  ProgressReportParams {
+  -- | A unique identifier to associate multiple progress
+  -- notifications with the same progress. 
+    _id   :: Text
+  -- | Optional, more detailed associated progress
+  -- message. Contains complementary information to the
+  -- `title`. Examples: "3/25 files",
+  -- "project/src/module2", "node_modules/some_dep". If
+  -- unset, the previous progress message (if any) is
+  -- still valid.
+  , _message :: Maybe Text 
+  -- | Optional progress percentage to display (value 100 is considered 100%).
+  -- If infinite progress was indicated in the start notification client
+  -- are allowed to ignore the value. In addition the value should be steadily
+  -- rising. Clients are free to ignore values that are not following this rule.
+  , _percentage :: Maybe Double
   } deriving (Show, Read, Eq)
 
-deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''ProgressParams
+deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''ProgressReportParams
 
-type ProgressNotification = NotificationMessage ServerMethod ProgressParams
+type ProgressReportNotification = NotificationMessage ServerMethod ProgressReportParams
 
+{-
+Progress Done Notification
+
+The window/progress/done notification is sent from the server to the client to stop a previously started progress.
+
+Notification:
+
+method: 'window/progress/done'
+params: ProgressDoneParams defined as follows:
+export interface ProgressDoneParams {
+  /**
+   * A unique identifier to associate multiple progress notifications with the same progress.
+   */
+  id: string;
+}
+-}
+
+data ProgressDoneParams =
+  ProgressDoneParams {
+  -- | A unique identifier to associate multiple progress
+  -- notifications with the same progress. 
+    _id   :: Text
+  } deriving (Show, Read, Eq)
+
+deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''ProgressDoneParams
+
+type ProgressDoneNotification = NotificationMessage ServerMethod ProgressDoneParams
+
+{-
+Progress Cancel Notification
+
+The window/progress/cancel notification is sent from the client to the server to inform the server that the user has pressed the cancel button on the progress UX. A server receiving a cancel request must still close a progress using the done notification.
+
+Notification:
+
+method: 'window/progress/cancel'
+params: ProgressCancelParams defined as follows:
+export interface ProgressCancelParams {
+  /**
+   * A unique identifier to associate multiple progress notifications with the same progress.
+   */
+  id: string;
+}
+
+-}
+
+data ProgressCancelParams =
+  ProgressCancelParams {
+  -- | A unique identifier to associate multiple progress
+  -- notifications with the same progress. 
+    _id   :: Text
+  } deriving (Show, Read, Eq)
+
+deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''ProgressCancelParams
+
+type ProgressCancelNotification = NotificationMessage ServerMethod ProgressCancelParams
