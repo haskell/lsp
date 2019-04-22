@@ -1,5 +1,10 @@
 # Revision history for haskell-lsp
 
+## 0.10.0.0 -- 2019-04-22
+
+* Add `withProgress` and `withIndefiniteProgress` functions for sending
+  `window/progress` notifications.
+
 ## 0.9.0.0
 
 * Add `MarkupContent` to `HoverResponse`, and (some) json roundtrip tests.
