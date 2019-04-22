@@ -991,7 +991,9 @@ data TextDocumentClientCapabilities =
       -- | Capabilities specific to `textDocument/publishDiagnostics`
     , _publishDiagnostics :: Maybe PublishDiagnosticsClientCapabilities
 
-      -- | Capabilities specific to `textDocument/foldingRange` requests. Since LSP 3.10, @since 0.7.0.0
+      -- | Capabilities specific to `textDocument/foldingRange` requests. Since LSP 3.10.
+      --
+      -- @since 0.7.0.0
     , _foldingRange :: Maybe FoldingRangeClientCapabilities
     } deriving (Show, Read, Eq)
 
@@ -1068,7 +1070,9 @@ data ClientCapabilities =
   ClientCapabilities
     { _workspace    :: Maybe WorkspaceClientCapabilities
     , _textDocument :: Maybe TextDocumentClientCapabilities
-    -- | Capabilities specific to `window/progress` requests. Experimental, @since 0.10.0.0
+    -- | Capabilities specific to `window/progress` requests. Experimental.
+    --
+    -- @since 0.10.0.0
     , _window :: Maybe WindowClientCapabilities
     , _experimental :: Maybe A.Object
     } deriving (Show, Read, Eq)

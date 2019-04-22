@@ -119,7 +119,9 @@ data InitializeParams =
   -- This property is only available if the client supports workspace folders.
   -- It can be `null` if the client supports workspace folders but none are
   -- configured.
-  -- Since LSP 3.6, @since 0.7.0.0
+  -- Since LSP 3.6
+  --
+  -- @since 0.7.0.0
   , _workspaceFolders      :: Maybe (List WorkspaceFolder)
   } deriving (Show, Read, Eq)
 
@@ -618,7 +620,9 @@ deriveJSON lspOptions ''WorkspaceFolderOptions
 
 data WorkspaceOptions =
   WorkspaceOptions
-    { -- |The server supports workspace folder. Since LSP 3.6, @since 0.7.0.0
+    { -- |The server supports workspace folder. Since LSP 3.6
+      --
+      -- @since 0.7.0.0
       _workspaceFolders :: Maybe WorkspaceFolderOptions
     }
   deriving (Show, Read, Eq)
@@ -640,10 +644,14 @@ data InitializeResponseCapabilitiesInner =
     , _signatureHelpProvider            :: Maybe SignatureHelpOptions
       -- | The server provides goto definition support.
     , _definitionProvider               :: Maybe Bool
-      -- | The server provides Goto Type Definition support. Since LSP 3.6, @since 0.7.0.0
+      -- | The server provides Goto Type Definition support. Since LSP 3.6
+      --
+      -- @since 0.7.0.0
     , _typeDefinitionProvider           :: Maybe GotoOptions
       -- | The server provides Goto Implementation support.
-      -- Since LSP 3.6, @since 0.7.0.0
+      -- Since LSP 3.6
+      --
+      -- @since 0.7.0.0
     , _implementationProvider           :: Maybe GotoOptions
       -- | The server provides find references support.
     , _referencesProvider               :: Maybe Bool
@@ -667,9 +675,13 @@ data InitializeResponseCapabilitiesInner =
     , _renameProvider                   :: Maybe Bool
       -- | The server provides document link support.
     , _documentLinkProvider             :: Maybe DocumentLinkOptions
-      -- | The server provides color provider support. Since LSP 3.6, @since 0.7.0.0
+      -- | The server provides color provider support. Since LSP 3.6
+      --
+      -- @since 0.7.0.0
     , _colorProvider                    :: Maybe ColorOptions
-      -- | The server provides folding provider support. Since LSP 3.10, @since 0.7.0.0
+      -- | The server provides folding provider support. Since LSP 3.10
+      --
+      -- @since 0.7.0.0
     , _foldingRangeProvider             :: Maybe FoldingRangeOptions
       -- | The server provides execute command support.
     , _executeCommandProvider           :: Maybe ExecuteCommandOptions

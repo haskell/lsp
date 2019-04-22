@@ -230,7 +230,7 @@ export interface ProgressStartParams {
 
   /**
    * Optional, more detailed associated progress message. Contains
-   * complementary information to the `title`.
+   * complementary information to the '_title'.
    *
    * Examples: "3/25 files", "project/src/module2", "node_modules/some_dep".
    * If unset, the previous progress message (if any) is still valid.
@@ -240,7 +240,7 @@ export interface ProgressStartParams {
   /**
    * Optional progress percentage to display (value 100 is considered 100%).
    * If not provided infinite progress is assumed and clients are allowed
-   * to ignore the `percentage` value in subsequent in report notifications.
+   * to ignore the '_percentage' value in subsequent in report notifications.
    *
    * The value should be steadily rising. Clients are free to ignore values
    * that are not following this rule.
@@ -250,6 +250,7 @@ export interface ProgressStartParams {
 -}
 
 -- | Parameters for 'ProgressStartNotification'.
+--
 -- @since 0.10.0.0
 data ProgressStartParams =
   ProgressStartParams {
@@ -266,14 +267,14 @@ data ProgressStartParams =
   , _cancellable :: Maybe Bool 
   -- | Optional, more detailed associated progress
   -- message. Contains complementary information to the
-  -- `title`. Examples: "3/25 files",
+  -- '_title'. Examples: "3/25 files",
   -- "project/src/module2", "node_modules/some_dep". If
   -- unset, the previous progress message (if any) is
   -- still valid.
   , _message :: Maybe Text 
   -- | Optional progress percentage to display (value 100 is considered 100%).
   -- If not provided infinite progress is assumed and clients are allowed
-  -- to ignore the `percentage` value in subsequent in report notifications.
+  -- to ignore the '_percentage' value in subsequent in report notifications.
   --
   -- The value should be steadily rising. Clients are free to ignore values
   -- that are not following this rule.
@@ -284,6 +285,7 @@ deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''ProgressStartPara
 
 -- | The window/progress/start notification is sent from the server to the
 -- client to ask the client to start progress.
+--
 -- @since 0.10.0.0
 type ProgressStartNotification = NotificationMessage ServerMethod ProgressStartParams
 
@@ -306,7 +308,7 @@ export interface ProgressReportParams {
 
   /**
    * Optional, more detailed associated progress message. Contains
-   * complementary information to the `title`.
+   * complementary information to the '_title'.
    *
    * Examples: "3/25 files", "project/src/module2", "node_modules/some_dep".
    * If unset, the previous progress message (if any) is still valid.
@@ -325,6 +327,7 @@ export interface ProgressReportParams {
 -}
 
 -- | Parameters for 'ProgressReportNotification'
+--
 -- @since 0.10.0.0
 data ProgressReportParams =
   ProgressReportParams {
@@ -333,7 +336,7 @@ data ProgressReportParams =
     _id   :: Text
   -- | Optional, more detailed associated progress
   -- message. Contains complementary information to the
-  -- `title`. Examples: "3/25 files",
+  -- '_title'. Examples: "3/25 files",
   -- "project/src/module2", "node_modules/some_dep". If
   -- unset, the previous progress message (if any) is
   -- still valid.
@@ -349,6 +352,7 @@ deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''ProgressReportPar
 
 -- | The window/progress/report notification is sent from the server to the
 -- client to report progress for a previously started progress.
+--
 -- @since 0.10.0.0
 type ProgressReportNotification = NotificationMessage ServerMethod ProgressReportParams
 
@@ -370,6 +374,7 @@ export interface ProgressDoneParams {
 -}
 
 -- | Parameters for 'ProgressDoneNotification'.
+--
 -- @since 0.10.0.0
 data ProgressDoneParams =
   ProgressDoneParams {
@@ -382,6 +387,7 @@ deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''ProgressDoneParam
 
 -- | The window/progress/done notification is sent from the server to the
 -- client to stop a previously started progress.
+--
 -- @since 0.10.0.0
 type ProgressDoneNotification = NotificationMessage ServerMethod ProgressDoneParams
 
@@ -404,6 +410,7 @@ export interface ProgressCancelParams {
 -}
 
 -- | Parameters for 'ProgressCancelNotification'.
+-- 
 -- @since 0.10.0.0
 data ProgressCancelParams =
   ProgressCancelParams {
@@ -417,5 +424,6 @@ deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''ProgressCancelPar
 -- | The window/progress/cancel notification is sent from the client to the server
 -- to inform the server that the user has pressed the cancel button on the progress UX.
 -- A server receiving a cancel request must still close a progress using the done notification.
+-- 
 -- @since 0.10.0.0
 type ProgressCancelNotification = NotificationMessage ServerMethod ProgressCancelParams
