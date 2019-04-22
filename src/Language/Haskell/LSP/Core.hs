@@ -146,9 +146,11 @@ data LspFuncs c =
       -- finishes it once f is completed.
       -- f is provided with an update function that allows it to report on
       -- the progress during the session.
+      -- @since 0.10.0.0
     , withIndefiniteProgress       :: !(forall m a. MonadIO m => Text -> m a -> m a)
     -- ^ Same as 'withProgress' but for processes that do not report the
     -- precentage complete
+    -- @since 0.10.0.0
     }
 
 -- | The function in the LSP process that is called once the 'initialize'

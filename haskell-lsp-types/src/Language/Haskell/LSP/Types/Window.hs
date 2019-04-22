@@ -249,6 +249,8 @@ export interface ProgressStartParams {
 }
 -}
 
+-- | Parameters for 'ProgressStartNotification'.
+-- @since 0.10.0.0
 data ProgressStartParams =
   ProgressStartParams {
   -- | A unique identifier to associate multiple progress
@@ -280,6 +282,9 @@ data ProgressStartParams =
 
 deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''ProgressStartParams
 
+-- | The window/progress/start notification is sent from the server to the
+-- client to ask the client to start progress.
+-- @since 0.10.0.0
 type ProgressStartNotification = NotificationMessage ServerMethod ProgressStartParams
 
 
@@ -319,6 +324,8 @@ export interface ProgressReportParams {
 
 -}
 
+-- | Parameters for 'ProgressReportNotification'
+-- @since 0.10.0.0
 data ProgressReportParams =
   ProgressReportParams {
   -- | A unique identifier to associate multiple progress
@@ -340,6 +347,9 @@ data ProgressReportParams =
 
 deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''ProgressReportParams
 
+-- | The window/progress/report notification is sent from the server to the
+-- client to report progress for a previously started progress.
+-- @since 0.10.0.0
 type ProgressReportNotification = NotificationMessage ServerMethod ProgressReportParams
 
 {-
@@ -359,6 +369,8 @@ export interface ProgressDoneParams {
 }
 -}
 
+-- | Parameters for 'ProgressDoneNotification'.
+-- @since 0.10.0.0
 data ProgressDoneParams =
   ProgressDoneParams {
   -- | A unique identifier to associate multiple progress
@@ -368,6 +380,9 @@ data ProgressDoneParams =
 
 deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''ProgressDoneParams
 
+-- | The window/progress/done notification is sent from the server to the
+-- client to stop a previously started progress.
+-- @since 0.10.0.0
 type ProgressDoneNotification = NotificationMessage ServerMethod ProgressDoneParams
 
 {-
@@ -388,6 +403,8 @@ export interface ProgressCancelParams {
 
 -}
 
+-- | Parameters for 'ProgressCancelNotification'.
+-- @since 0.10.0.0
 data ProgressCancelParams =
   ProgressCancelParams {
   -- | A unique identifier to associate multiple progress
@@ -397,4 +414,8 @@ data ProgressCancelParams =
 
 deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''ProgressCancelParams
 
+-- | The window/progress/cancel notification is sent from the client to the server
+-- to inform the server that the user has pressed the cancel button on the progress UX.
+-- A server receiving a cancel request must still close a progress using the done notification.
+-- @since 0.10.0.0
 type ProgressCancelNotification = NotificationMessage ServerMethod ProgressCancelParams
