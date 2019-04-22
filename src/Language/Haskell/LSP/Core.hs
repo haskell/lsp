@@ -11,7 +11,7 @@ module Language.Haskell.LSP.Core (
   , Handler
   , InitializeCallback
   , LspFuncs(..)
-  , Progress
+  , Progress(..)
   , SendFunc
   , Handlers(..)
   , Options(..)
