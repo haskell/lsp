@@ -139,7 +139,7 @@ data LspFuncs c =
     , getNextReqId                 :: !(IO J.LspId)
     , rootPath                     :: !(Maybe FilePath)
     , getWorkspaceFolders          :: !(IO (Maybe [J.WorkspaceFolder]))
-    , withProgress                 :: !(forall m a. MonadIO m => Text -> ((Progress -> m ()) -> m a) -> m a)
+    , withProgress                 :: !(forall m a. MonadIO m => Text -> ((Progress -> IO ()) -> m a) -> m a)
       -- ^ Wrapper for reporting progress to the client during a long running
       -- task.
       -- 'withProgress' @title f@ starts a new progress reporting session, and
@@ -605,7 +605,7 @@ initializeRequestHandler' (_configHandler,dispatcherProc) mHandler tvarCtx req@(
         modifyTVar tvarCtx (\ctx -> ctx { resNextProgressId = x + 1})
         return x
       
-      withProgress' :: (forall m. MonadIO m => Text -> ((Progress -> m ()) -> m a) -> m a)
+      withProgress' :: (forall m. MonadIO m => Text -> ((Progress -> IO ()) -> m a) -> m a)
       withProgress' title f
         | clientSupportsProgress = do
           sf <- liftIO $ resSendResponse <$> readTVarIO tvarCtx
@@ -624,7 +624,7 @@ initializeRequestHandler' (_configHandler,dispatcherProc) mHandler tvarCtx req@(
           
           return res
         | otherwise = f (const $ return ())
-          where updater progId sf (Progress percentage msg) = liftIO $
+          where updater progId sf (Progress percentage msg) =
                   sf $ NotProgressReport $ fmServerProgressReportNotification $
                     J.ProgressReportParams progId msg percentage
         
