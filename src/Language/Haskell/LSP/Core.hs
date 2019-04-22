@@ -146,6 +146,9 @@ data LspFuncs c =
       -- finishes it once f is completed.
       -- f is provided with an update function that allows it to report on
       -- the progress during the session.
+    , withIndefiniteProgress       :: !(forall m a. MonadIO m => Text -> m a -> m a)
+    -- ^ Same as 'withProgress' but for processes that do not report the
+    -- precentage complete
     }
 
 -- | The function in the LSP process that is called once the 'initialize'
@@ -590,32 +593,56 @@ initializeRequestHandler' (_configHandler,dispatcherProc) mHandler tvarCtx req@(
         let (C.ClientCapabilities _ _ wc _) = params ^. J.capabilities
         (C.WindowClientCapabilities mProgress) <- wc
         mProgress
-      withProgress :: (forall m. MonadIO m => Text -> ((Progress -> m ()) -> m a) -> m a)
-      withProgress title f
+      
+      -- Get a new id for the progress session and make a new one
+      getNewProgressId :: MonadIO m => m Text
+      getNewProgressId = fmap (T.pack . show) $ liftIO $ atomically $ do
+        x <- resNextProgressId <$> readTVar tvarCtx
+        modifyTVar tvarCtx (\ctx -> ctx { resNextProgressId = x + 1})
+        return x
+      
+      withProgress' :: (forall m. MonadIO m => Text -> ((Progress -> m ()) -> m a) -> m a)
+      withProgress' title f
         | clientSupportsProgress = do
           sf <- liftIO $ resSendResponse <$> readTVarIO tvarCtx
 
-          -- Get a new id for  the progress session and make a new one
-          progId <- fmap (T.pack . show) $ liftIO $ atomically $ do
-            x <- resNextProgressId <$> readTVar tvarCtx
-            modifyTVar tvarCtx (\ctx -> ctx { resNextProgressId = x + 1})
-            return x
+          progId <- getNewProgressId
 
           -- Send initial notification
-          liftIO $ sf $ NotProgress $ fmServerProgressNotification $
-            J.ProgressParams progId title Nothing Nothing (Just False)
+          liftIO $ sf $ NotProgressStart $ fmServerProgressStartNotification $
+            J.ProgressStartParams progId title (Just False) Nothing (Just 0)
 
           res <- f (updater progId sf)
 
           -- Send done notification
-          liftIO $ sf $ NotProgress $ fmServerProgressNotification $
-            J.ProgressParams progId title Nothing Nothing (Just True)
+          liftIO $ sf $ NotProgressDone $ fmServerProgressDoneNotification $
+            J.ProgressDoneParams progId
           
           return res
         | otherwise = f (const $ return ())
-        where updater progId sf (Progress percentage msg) = liftIO $
-                sf $ NotProgress $ fmServerProgressNotification $
-                  J.ProgressParams progId title msg percentage (Just False)
+          where updater progId sf (Progress percentage msg) = liftIO $
+                  sf $ NotProgressReport $ fmServerProgressReportNotification $
+                    J.ProgressReportParams progId msg percentage
+        
+      withIndefiniteProgress' :: (forall m. MonadIO m => Text -> m a -> m a)
+      withIndefiniteProgress' title f
+        | clientSupportsProgress = do
+          sf <- liftIO $ resSendResponse <$> readTVarIO tvarCtx
+
+          progId <- getNewProgressId
+
+          -- Send initial notification
+          liftIO $ sf $ NotProgressStart $ fmServerProgressStartNotification $
+            J.ProgressStartParams progId title (Just False) Nothing Nothing
+
+          res <- f
+
+          -- Send done notification
+          liftIO $ sf $ NotProgressDone $ fmServerProgressDoneNotification $
+            J.ProgressDoneParams progId
+          
+          return res
+        | otherwise = f
 
     -- Launch the given process once the project root directory has been set
     let lspFuncs = LspFuncs (getCapabilities params)
@@ -627,7 +654,8 @@ initializeRequestHandler' (_configHandler,dispatcherProc) mHandler tvarCtx req@(
                             (getLspId $ resLspId ctx0)
                             rootDir
                             (getWfs tvarCtx)
-                            withProgress
+                            withProgress'
+                            withIndefiniteProgress'
     let ctx = ctx0 { resLspFuncs = lspFuncs }
     atomically $ writeTVar tvarCtx ctx
 

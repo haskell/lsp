@@ -269,10 +269,12 @@ data ProgressStartParams =
   -- unset, the previous progress message (if any) is
   -- still valid.
   , _message :: Maybe Text 
-  -- | Optional progress percentage to display
-  -- (value 100 is considered 100%). If unset, the
-  -- previous progress percentage (if any) is
-  -- still valid.
+  -- | Optional progress percentage to display (value 100 is considered 100%).
+	-- If not provided infinite progress is assumed and clients are allowed
+	-- to ignore the `percentage` value in subsequent in report notifications.
+	--
+	-- The value should be steadily rising. Clients are free to ignore values
+	-- that are not following this rule.
   , _percentage :: Maybe Double
   } deriving (Show, Read, Eq)
 
@@ -329,10 +331,10 @@ data ProgressReportParams =
   -- unset, the previous progress message (if any) is
   -- still valid.
   , _message :: Maybe Text 
-  -- | Optional progress percentage to display
-  -- (value 100 is considered 100%). If unset, the
-  -- previous progress percentage (if any) is
-  -- still valid.
+  -- | Optional progress percentage to display (value 100 is considered 100%).
+	-- If infinite progress was indicated in the start notification client
+	-- are allowed to ignore the value. In addition the value should be steadily
+	-- rising. Clients are free to ignore values that are not following this rule.
   , _percentage :: Maybe Double
   } deriving (Show, Read, Eq)
 
