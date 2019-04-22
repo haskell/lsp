@@ -131,6 +131,10 @@ decodeFromServerMsg reqMap bytes =
         WindowShowMessage              -> NotShowMessage $ fromJust $ decode bytes
         WindowLogMessage               -> NotLogMessage $ fromJust $ decode bytes
         CancelRequestServer            -> NotCancelRequestFromServer $ fromJust $ decode bytes
+        WindowProgressStart            -> NotProgressStart $ fromJust $ decode bytes
+        WindowProgressReport           -> NotProgressReport $ fromJust $ decode bytes
+        WindowProgressDone             -> NotProgressDone $ fromJust $ decode bytes
+        WindowProgressCancel           -> NotProgressCancel $ fromJust $ decode bytes
         TelemetryEvent                 -> NotTelemetry $ fromJust $ decode bytes
         WindowShowMessageRequest       -> ReqShowMessage $ fromJust $ decode bytes
         ClientRegisterCapability       -> ReqRegisterCapability $ fromJust $ decode bytes

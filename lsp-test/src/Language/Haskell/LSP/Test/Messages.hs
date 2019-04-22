@@ -90,6 +90,10 @@ handleServerMessage request response notification msg = case msg of
     (NotPublishDiagnostics       m) -> notification m
     (NotLogMessage               m) -> notification m
     (NotShowMessage              m) -> notification m
+    (NotProgressStart            m) -> notification m
+    (NotProgressReport           m) -> notification m
+    (NotProgressDone             m) -> notification m
+    (NotProgressCancel           m) -> notification m
     (NotTelemetry                m) -> notification m
     (NotCancelRequestFromServer  m) -> notification m
 

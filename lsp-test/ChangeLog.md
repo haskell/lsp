@@ -1,5 +1,9 @@
 # Revision history for lsp-test
 
+## 0.5.1.0 -- 2019-04-22
+
+* Fix unhandled `window/progress` server notifications
+
 ## 0.5.1.0 -- 2019-04-07
 
 * Add getTypeDefinitions (@fendor) 
