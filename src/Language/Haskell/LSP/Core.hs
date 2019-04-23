@@ -306,7 +306,7 @@ handlerMap _ h J.TextDocumentColorPresentation   = hh nop ReqColorPresentation $
 handlerMap _ h J.TextDocumentDocumentLink        = hh nop ReqDocumentLink $ documentLinkHandler h
 handlerMap _ h J.DocumentLinkResolve             = hh nop ReqDocumentLinkResolve $ documentLinkResolveHandler h
 handlerMap _ h J.TextDocumentRename              = hh nop ReqRename $ renameHandler h
-handlerMap _ h J.TextDocumentFoldingRanges       = hh nop ReqFoldingRange $ foldingRangeHandler h
+handlerMap _ h J.TextDocumentFoldingRange        = hh nop ReqFoldingRange $ foldingRangeHandler h
 handlerMap _ _ (J.Misc x)   = helper f
   where f ::  TVar (LanguageContextData c) -> J.Value -> IO ()
         f tvarDat n = do
