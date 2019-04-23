@@ -112,7 +112,7 @@ data ClientMethod =
  | TextDocumentRangeFormatting
  | TextDocumentOnTypeFormatting
  | TextDocumentRename
- | TextDocumentFoldingRanges
+ | TextDocumentFoldingRange
  -- Messages of the form $/message
  -- Implementation Dependent, can be ignored
  | Misc Text
@@ -159,7 +159,7 @@ instance A.FromJSON ClientMethod where
   parseJSON (A.String "textDocument/rangeFormatting")     = return TextDocumentRangeFormatting
   parseJSON (A.String "textDocument/onTypeFormatting")    = return TextDocumentOnTypeFormatting
   parseJSON (A.String "textDocument/rename")              = return TextDocumentRename
-  parseJSON (A.String "textDocument/foldingRanges")       = return TextDocumentFoldingRanges
+  parseJSON (A.String "textDocument/foldingRange")        = return TextDocumentFoldingRange
   parseJSON (A.String x)                                  = if T.isPrefixOf "$/" x
                                                                then return $ Misc (T.drop 2 x)
                                                             else mempty
@@ -204,7 +204,7 @@ instance A.ToJSON ClientMethod where
   toJSON TextDocumentRangeFormatting     = A.String "textDocument/rangeFormatting"
   toJSON TextDocumentOnTypeFormatting    = A.String "textDocument/onTypeFormatting"
   toJSON TextDocumentRename              = A.String "textDocument/rename"
-  toJSON TextDocumentFoldingRanges       = A.String "textDocument/foldingRanges"
+  toJSON TextDocumentFoldingRange        = A.String "textDocument/foldingRange"
   toJSON TextDocumentDocumentLink        = A.String "textDocument/documentLink"
   toJSON DocumentLinkResolve             = A.String "documentLink/resolve"
   toJSON (Misc xs)                       = A.String $ "$/" <> xs
