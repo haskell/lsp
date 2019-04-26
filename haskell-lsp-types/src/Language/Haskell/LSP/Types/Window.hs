@@ -426,4 +426,4 @@ deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''ProgressCancelPar
 -- A server receiving a cancel request must still close a progress using the done notification.
 --
 -- @since 0.10.0.0
-type ProgressCancelNotification = NotificationMessage ServerMethod ProgressCancelParams
+type ProgressCancelNotification = NotificationMessage ClientMethod ProgressCancelParams
