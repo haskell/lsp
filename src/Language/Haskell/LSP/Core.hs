@@ -26,6 +26,7 @@ module Language.Haskell.LSP.Core (
   ) where
 
 import           Control.Concurrent.STM
+import           Control.Concurrent.Async
 import qualified Control.Exception as E
 import           Control.Monad
 import           Control.Monad.IO.Class
@@ -76,14 +77,18 @@ data LanguageContextData a =
   , resOptions             :: !Options
   , resSendResponse        :: !SendFunc
   , resVFS                 :: !VFS
+  , reverseMap             :: !(Map.Map FilePath FilePath)
   , resDiagnostics         :: !DiagnosticStore
   , resConfig              :: !(Maybe a)
   , resLspId               :: !(TVar Int)
   , resLspFuncs            :: LspFuncs a -- NOTE: Cannot be strict, lazy initialization
   , resCaptureFile         :: !(Maybe FilePath)
   , resWorkspaceFolders    :: ![J.WorkspaceFolder]
-  , resNextProgressId      :: !Int
+  , resProgressData        :: !ProgressData
   }
+
+data ProgressData = ProgressData { progressNextId :: !Int
+                                 , progressCancel :: !(Map.Map Text (IO ())) }
 
 -- ---------------------------------------------------------------------
 
@@ -308,6 +313,7 @@ handlerMap _ h J.TextDocumentDocumentLink        = hh nop ReqDocumentLink $ docu
 handlerMap _ h J.DocumentLinkResolve             = hh nop ReqDocumentLinkResolve $ documentLinkResolveHandler h
 handlerMap _ h J.TextDocumentRename              = hh nop ReqRename $ renameHandler h
 handlerMap _ h J.TextDocumentFoldingRanges       = hh nop ReqFoldingRange $ foldingRangeHandler h
+handlerMap _ _ J.WindowProgressCancel            = helper progressCancelHandler
 handlerMap _ _ (J.Misc x)   = helper f
   where f ::  TVar (LanguageContextData c) -> J.Value -> IO ()
         f tvarDat n = do
@@ -429,7 +435,11 @@ _ERR_MSG_URL = [ "`stack update` and install new haskell-lsp."
 --
 defaultLanguageContextData :: Handlers -> Options -> LspFuncs c -> TVar Int -> SendFunc -> Maybe FilePath -> LanguageContextData c
 defaultLanguageContextData h o lf tv sf cf =
-  LanguageContextData _INITIAL_RESPONSE_SEQUENCE h o sf mempty mempty Nothing tv lf cf mempty 0
+  LanguageContextData _INITIAL_RESPONSE_SEQUENCE h o sf mempty mempty mempty
+                      Nothing tv lf cf mempty defaultProgressData
+
+defaultProgressData :: ProgressData
+defaultProgressData = ProgressData 0 Map.empty
 
 -- ---------------------------------------------------------------------
 
@@ -598,12 +608,20 @@ initializeRequestHandler' (_configHandler,dispatcherProc) mHandler tvarCtx req@(
         let (C.ClientCapabilities _ _ wc _) = params ^. J.capabilities
         (C.WindowClientCapabilities mProgress) <- wc
         mProgress
-      
+
+      storeProgress :: Text -> Async a -> IO ()
+      storeProgress n a = atomically $ do
+        pd <- resProgressData <$> readTVar tvarCtx
+        let x = progressCancel pd
+            x' = Map.insert n (cancel a) x
+        modifyTVar tvarCtx (\ctx -> ctx { resProgressData = pd { progressCancel = x' }})
+
       -- Get a new id for the progress session and make a new one
       getNewProgressId :: MonadIO m => m Text
       getNewProgressId = fmap (T.pack . show) $ liftIO $ atomically $ do
-        x <- resNextProgressId <$> readTVar tvarCtx
-        modifyTVar tvarCtx (\ctx -> ctx { resNextProgressId = x + 1})
+        pd <- resProgressData <$> readTVar tvarCtx
+        let x = progressNextId pd
+        modifyTVar tvarCtx (\ctx -> ctx { resProgressData = pd { progressNextId = x + 1 }})
         return x
 
 
@@ -618,7 +636,9 @@ initializeRequestHandler' (_configHandler,dispatcherProc) mHandler tvarCtx req@(
           liftIO $ sf $ NotProgressStart $ fmServerProgressStartNotification $
             J.ProgressStartParams progId title (Just False) Nothing (Just 0)
 
-          res <- f (updater progId sf)
+          aid <- async $ f (updater progId sf)
+          storeProgress progId aid
+          res <- wait aid
 
           -- Send done notification
           liftIO $ sf $ NotProgressDone $ fmServerProgressDoneNotification $
@@ -729,6 +749,14 @@ initializeRequestHandler' (_configHandler,dispatcherProc) mHandler tvarCtx req@(
           res  = J.ResponseMessage "2.0" (J.responseId origId) (Just $ J.InitializeResponseCapabilities capa) Nothing
 
         sendResponse tvarCtx $ RspInitialize res
+
+progressCancelHandler :: TVar (LanguageContextData c) -> J.ProgressCancelParams -> IO ()
+progressCancelHandler tvarCtx (J.ProgressCancelParams tid) = do
+  mact <- Map.lookup tid . progressCancel . resProgressData <$> readTVarIO tvarCtx
+  case mact of
+    Nothing -> return ()
+    Just cancelAction -> cancelAction
+
 
 -- |
 --
