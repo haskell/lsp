@@ -139,7 +139,8 @@ data LspFuncs c =
     , getNextReqId                 :: !(IO J.LspId)
     , rootPath                     :: !(Maybe FilePath)
     , getWorkspaceFolders          :: !(IO (Maybe [J.WorkspaceFolder]))
-    , withProgress                 :: !(forall m a. MonadIO m => Text -> ((Progress -> m ()) -> m a) -> m a)
+    , withProgress                 :: !(forall a . Text
+                                        -> ((Progress -> IO ()) -> IO a) -> IO a)
       -- ^ Wrapper for reporting progress to the client during a long running
       -- task.
       -- 'withProgress' @title f@ starts a new progress reporting session, and
@@ -148,7 +149,7 @@ data LspFuncs c =
       -- the progress during the session.
       --
       -- @since 0.10.0.0
-    , withIndefiniteProgress       :: !(forall m a. MonadIO m => Text -> m a -> m a)
+    , withIndefiniteProgress       :: !(forall a . Text -> IO a -> IO a)
     -- ^ Same as 'withProgress' but for processes that do not report the
     -- precentage complete
     --
@@ -604,8 +605,9 @@ initializeRequestHandler' (_configHandler,dispatcherProc) mHandler tvarCtx req@(
         x <- resNextProgressId <$> readTVar tvarCtx
         modifyTVar tvarCtx (\ctx -> ctx { resNextProgressId = x + 1})
         return x
-      
-      withProgress' :: (forall m. MonadIO m => Text -> ((Progress -> m ()) -> m a) -> m a)
+
+
+      withProgress' :: (Text -> ((Progress -> IO ()) -> IO a) -> IO a)
       withProgress' title f
         | clientSupportsProgress = do
           sf <- liftIO $ resSendResponse <$> readTVarIO tvarCtx
@@ -621,30 +623,30 @@ initializeRequestHandler' (_configHandler,dispatcherProc) mHandler tvarCtx req@(
           -- Send done notification
           liftIO $ sf $ NotProgressDone $ fmServerProgressDoneNotification $
             J.ProgressDoneParams progId
-          
+
           return res
         | otherwise = f (const $ return ())
           where updater progId sf (Progress percentage msg) = liftIO $
                   sf $ NotProgressReport $ fmServerProgressReportNotification $
                     J.ProgressReportParams progId msg percentage
-        
-      withIndefiniteProgress' :: (forall m. MonadIO m => Text -> m a -> m a)
+
+      withIndefiniteProgress' :: (Text -> IO a -> IO a)
       withIndefiniteProgress' title f
         | clientSupportsProgress = do
-          sf <- liftIO $ resSendResponse <$> readTVarIO tvarCtx
+          sf <- resSendResponse <$> readTVarIO tvarCtx
 
           progId <- getNewProgressId
 
           -- Send initial notification
-          liftIO $ sf $ NotProgressStart $ fmServerProgressStartNotification $
+          sf $ NotProgressStart $ fmServerProgressStartNotification $
             J.ProgressStartParams progId title (Just False) Nothing Nothing
 
           res <- f
 
           -- Send done notification
-          liftIO $ sf $ NotProgressDone $ fmServerProgressDoneNotification $
+          sf $ NotProgressDone $ fmServerProgressDoneNotification $
             J.ProgressDoneParams progId
-          
+
           return res
         | otherwise = f
 
