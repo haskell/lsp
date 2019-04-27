@@ -12,6 +12,7 @@ module Language.Haskell.LSP.Core (
   , InitializeCallback
   , LspFuncs(..)
   , Progress(..)
+  , ProgressCancelledException
   , SendFunc
   , Handlers(..)
   , Options(..)
@@ -130,6 +131,10 @@ type FlushDiagnosticsBySourceFunc = Int -- Max number of diagnostics to send
 -- an optional message to go with it during a 'withProgress'
 data Progress = Progress (Maybe Double) (Maybe Text)
 
+data ProgressCancelledException = ProgressCancelledException
+  deriving Show
+instance E.Exception ProgressCancelledException
+
 -- | Returned to the server on startup, providing ways to interact with the client.
 data LspFuncs c =
   LspFuncs
@@ -152,6 +157,8 @@ data LspFuncs c =
       -- finishes it once f is completed.
       -- f is provided with an update function that allows it to report on
       -- the progress during the session.
+      -- Whenever the user cancels an in progress notification,
+      -- @f@ will be thrown a 'ProgressCancelledException'.
       --
       -- @since 0.10.0.0
     , withIndefiniteProgress       :: !(forall a . Text -> IO a -> IO a)
@@ -612,12 +619,12 @@ initializeRequestHandler' (_configHandler,dispatcherProc) mHandler tvarCtx req@(
       storeProgress :: Text -> Async a -> IO ()
       storeProgress n a = atomically $ do
         pd <- resProgressData <$> readTVar tvarCtx
-        let x = progressCancel pd
-            x' = Map.insert n (cancel a) x
-        modifyTVar tvarCtx (\ctx -> ctx { resProgressData = pd { progressCancel = x' }})
+        let pc = progressCancel pd
+            pc' = Map.insert n (cancelWith a ProgressCancelledException) pc
+        modifyTVar tvarCtx (\ctx -> ctx { resProgressData = pd { progressCancel = pc' }})
 
       -- Get a new id for the progress session and make a new one
-      getNewProgressId :: MonadIO m => m Text
+      getNewProgressId :: IO Text
       getNewProgressId = fmap (T.pack . show) $ liftIO $ atomically $ do
         pd <- resProgressData <$> readTVar tvarCtx
         let x = progressNextId pd
