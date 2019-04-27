@@ -327,7 +327,7 @@ handlerMap _ h J.TextDocumentColorPresentation   = hh nop ReqColorPresentation $
 handlerMap _ h J.TextDocumentDocumentLink        = hh nop ReqDocumentLink $ documentLinkHandler h
 handlerMap _ h J.DocumentLinkResolve             = hh nop ReqDocumentLinkResolve $ documentLinkResolveHandler h
 handlerMap _ h J.TextDocumentRename              = hh nop ReqRename $ renameHandler h
-handlerMap _ h J.TextDocumentFoldingRanges       = hh nop ReqFoldingRange $ foldingRangeHandler h
+handlerMap _ h J.TextDocumentFoldingRange        = hh nop ReqFoldingRange $ foldingRangeHandler h
 handlerMap _ _ J.WindowProgressCancel            = helper progressCancelHandler
 handlerMap _ _ (J.Misc x)   = helper f
   where f ::  TVar (LanguageContextData c) -> J.Value -> IO ()
@@ -649,7 +649,7 @@ initializeRequestHandler' (_configHandler,dispatcherProc) mHandler tvarCtx req@(
 
           let initialPercentage
                 | indefinite = Nothing
-                | otherwise = (Just 0)
+                | otherwise = Just 0
               cancellable' = case cancellable of
                               Cancellable -> True
                               NotCancellable -> False
@@ -669,7 +669,7 @@ initializeRequestHandler' (_configHandler,dispatcherProc) mHandler tvarCtx req@(
 
           return res
         | otherwise = f (const $ return ())
-          where updater progId sf (Progress percentage msg) = liftIO $
+          where updater progId sf (Progress percentage msg) =
                   sf $ NotProgressReport $ fmServerProgressReportNotification $
                     J.ProgressReportParams progId msg percentage
 
