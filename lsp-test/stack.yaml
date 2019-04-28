@@ -3,5 +3,5 @@ packages:
   - .
 
 extra-deps:
-  - haskell-lsp-0.10.0.0
-  - haskell-lsp-types-0.10.0.0
+  - haskell-lsp-0.11.0.0
+  - haskell-lsp-types-0.11.0.0

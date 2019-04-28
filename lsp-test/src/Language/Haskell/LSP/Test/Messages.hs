@@ -93,7 +93,6 @@ handleServerMessage request response notification msg = case msg of
     (NotProgressStart            m) -> notification m
     (NotProgressReport           m) -> notification m
     (NotProgressDone             m) -> notification m
-    (NotProgressCancel           m) -> notification m
     (NotTelemetry                m) -> notification m
     (NotCancelRequestFromServer  m) -> notification m
 
@@ -145,4 +144,5 @@ handleClientMessage request response notification msg = case msg of
  (NotDidSaveTextDocument      m) -> notification m
  (NotDidChangeWatchedFiles    m) -> notification m
  (NotDidChangeWorkspaceFolders m) -> notification m
+ (NotProgressCancel           m) -> notification m
  (UnknownFromClientMessage    m) -> error $ "Unknown message sent from client: " ++ show m

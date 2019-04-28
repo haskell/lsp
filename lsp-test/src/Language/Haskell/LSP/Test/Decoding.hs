@@ -46,7 +46,7 @@ addHeader content = B.concat
 
 getHeaders :: Handle -> IO [(String, String)]
 getHeaders h = do
-  l <- catch (hGetLine h) eofHandler 
+  l <- catch (hGetLine h) eofHandler
   let (name, val) = span (/= ':') l
   if null val then return [] else ((name, drop 2 val) :) <$> getHeaders h
   where eofHandler e
@@ -134,7 +134,6 @@ decodeFromServerMsg reqMap bytes =
         WindowProgressStart            -> NotProgressStart $ fromJust $ decode bytes
         WindowProgressReport           -> NotProgressReport $ fromJust $ decode bytes
         WindowProgressDone             -> NotProgressDone $ fromJust $ decode bytes
-        WindowProgressCancel           -> NotProgressCancel $ fromJust $ decode bytes
         TelemetryEvent                 -> NotTelemetry $ fromJust $ decode bytes
         WindowShowMessageRequest       -> ReqShowMessage $ fromJust $ decode bytes
         ClientRegisterCapability       -> ReqRegisterCapability $ fromJust $ decode bytes
