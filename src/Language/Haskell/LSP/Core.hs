@@ -760,8 +760,8 @@ initializeRequestHandler' (_configHandler,dispatcherProc) mHandler tvarCtx req@(
 
         sendResponse tvarCtx $ RspInitialize res
 
-progressCancelHandler :: TVar (LanguageContextData c) -> J.ProgressCancelParams -> IO ()
-progressCancelHandler tvarCtx (J.ProgressCancelParams tid) = do
+progressCancelHandler :: TVar (LanguageContextData c) -> J.ProgressCancelNotification -> IO ()
+progressCancelHandler tvarCtx (J.NotificationMessage _ _ (J.ProgressCancelParams tid)) = do
   mact <- Map.lookup tid . progressCancel . resProgressData <$> readTVarIO tvarCtx
   case mact of
     Nothing -> return ()
