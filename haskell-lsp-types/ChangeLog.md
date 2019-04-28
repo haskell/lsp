@@ -4,6 +4,7 @@
 
 * Fix `window/progress/cancel` notification being a from server
   notification when it should be a from client notification
+* Fix typo in FoldingRange request name
 
 ## 0.10.0.0 -- 2019-04-22
 
