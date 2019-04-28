@@ -5,7 +5,8 @@
 
 module Language.Haskell.LSP.Test.Parsing
   ( -- $receiving
-    message
+    satisfy
+  , message
   , anyRequest
   , anyResponse
   , anyNotification
@@ -34,7 +35,7 @@ import Language.Haskell.LSP.Test.Session
 
 -- $receiving
 -- To receive a message, just specify the type that expect:
--- 
+--
 -- @
 -- msg1 <- message :: Session ApplyWorkspaceEditRequest
 -- msg2 <- message :: Session HoverResponse
@@ -47,22 +48,25 @@ import Language.Haskell.LSP.Test.Session
 --
 -- For example, if you wanted to match either a definition or
 -- references request:
--- 
+--
 -- > defOrImpl = (message :: Session DefinitionRequest)
 -- >          <|> (message :: Session ReferencesRequest)
 --
 -- If you wanted to match any number of telemetry
 -- notifications immediately followed by a response:
--- 
+--
 -- @
 -- logThenDiags =
 --  skipManyTill (message :: Session TelemetryNotification)
---               anyResponse 
+--               anyResponse
 -- @
 
+-- | Consumes and returns the next message, if it satisfies the specified predicate.
+--
+-- @since 0.5.2.0
 satisfy :: (FromServerMessage -> Bool) -> Session FromServerMessage
 satisfy pred = do
-  
+
   skipTimeout <- overridingTimeout <$> get
   timeoutId <- curTimeoutId <$> get
   unless skipTimeout $ do
@@ -85,7 +89,7 @@ satisfy pred = do
       return x
     else empty
 
--- | Matches a message of type 'a'.
+-- | Matches a message of type @a@.
 message :: forall a. (Typeable a, FromJSON a) => Session a
 message =
   let parser = decode . encodeMsg :: FromServerMessage -> Maybe a

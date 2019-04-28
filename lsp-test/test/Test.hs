@@ -53,7 +53,7 @@ main = hspec $ do
           -- wait just a bit longer than 5 seconds so we have time
           -- to open the document
           in timeout 6000000 sesh `shouldThrow` anySessionException
-          
+
       it "doesn't time out" $
         let sesh = runSession "hie" fullCaps "test/data/renamePass" $ do
                     openDoc "Desktop/simple.hs" "haskell"
@@ -215,12 +215,12 @@ main = hspec $ do
     it "increments the version" $ runSession "hie" docChangesCaps "test/data/renamePass" $ do
       doc <- openDoc "Desktop/simple.hs" "haskell"
       VersionedTextDocumentIdentifier _ (Just oldVersion) <- getVersionedDoc doc
-      let edit = TextEdit (Range (Position 1 1) (Position 1 3)) "foo" 
+      let edit = TextEdit (Range (Position 1 1) (Position 1 3)) "foo"
       VersionedTextDocumentIdentifier _ (Just newVersion) <- applyEdit doc edit
       liftIO $ newVersion `shouldBe` oldVersion + 1
     it "changes the document contents" $ runSession "hie" fullCaps "test/data/renamePass" $ do
       doc <- openDoc "Desktop/simple.hs" "haskell"
-      let edit = TextEdit (Range (Position 0 0) (Position 0 2)) "foo" 
+      let edit = TextEdit (Range (Position 0 0) (Position 0 2)) "foo"
       applyEdit doc edit
       contents <- documentContents doc
       liftIO $ contents `shouldSatisfy` T.isPrefixOf "foodule"
@@ -318,6 +318,13 @@ main = hspec $ do
               -- need to evaluate to throw
               documentContents doc >>= liftIO . print
       in sesh `shouldThrow` anyException
+
+  describe "satisfy" $
+    it "works" $ runSession "hie" fullCaps "test/data" $ do
+      openDoc "Format.hs" "haskell"
+      let pred (NotLogMessage _) = True
+          pred _ = False
+      void $ satisfy pred
 
 mkRange sl sc el ec = Range (Position sl sc) (Position el ec)
 

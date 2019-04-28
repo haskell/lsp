@@ -67,10 +67,11 @@ import System.Directory
 import System.IO
 
 -- | A session representing one instance of launching and connecting to a server.
--- 
--- You can send and receive messages to the server within 'Session' via 'getMessage',
--- 'sendRequest' and 'sendNotification'.
 --
+-- You can send and receive messages to the server within 'Session' via
+-- 'Language.Haskell.LSP.Test.message',
+-- 'Language.Haskell.LSP.Test.sendRequest' and
+-- 'Language.Haskell.LSP.Test.sendNotification'.
 
 type Session = ParserStateReader FromServerMessage SessionState SessionContext IO
 
@@ -296,7 +297,7 @@ sendMessage msg = do
   logMsg LogClient msg
   liftIO $ B.hPut h (addHeader $ encode msg)
 
--- | Execute a block f that will throw a 'TimeoutException'
+-- | Execute a block f that will throw a 'Timeout' exception
 -- after duration seconds. This will override the global timeout
 -- for waiting for messages to arrive defined in 'SessionConfig'.
 withTimeout :: Int -> Session a -> Session a

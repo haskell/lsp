@@ -1,12 +1,16 @@
 # Revision history for lsp-test
 
+## 0.5.2.0 -- 2019-04-28
+
+* Add `satisfy` parser combinator
+
 ## 0.5.1.0 -- 2019-04-22
 
 * Fix unhandled `window/progress` server notifications
 
 ## 0.5.1.0 -- 2019-04-07
 
-* Add getTypeDefinitions (@fendor) 
+* Add getTypeDefinitions (@fendor)
 
 ## 0.5.0.2 -- 2018-12-05
 
