@@ -1,5 +1,13 @@
 # Revision history for haskell-lsp
 
+## 0.11.0.0 -- 2019-04-28
+
+* Add support for cancellable requests within `withProgress` and
+  `withIndefiniteProgress`
+* Align `withProgress` and `withIndefiniteProgress` types to be in `IO`
+  like the rest of the library. (Look at using `monad-control` and
+  `unliftio` if you need to use them with a Monad transformer stack)
+
 ## 0.10.0.0 -- 2019-04-22
 
 * Add `withProgress` and `withIndefiniteProgress` functions for sending

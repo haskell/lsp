@@ -1,5 +1,5 @@
 name:                haskell-lsp-types
-version:             0.10.0.0
+version:             0.11.0.0
 synopsis:            Haskell library for the Microsoft Language Server Protocol, data types
 
 description:         An implementation of the types to allow language implementors to

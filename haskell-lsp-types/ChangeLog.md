@@ -1,5 +1,10 @@
 # Revision history for haskell-lsp-types
 
+## 0.11.0.0 -- 2019-04-28
+
+* Fix `window/progress/cancel` notification being a from server
+  notification when it should be a from client notification
+
 ## 0.10.0.0 -- 2019-04-22
 
 * Add types for `window/progress` notifications.

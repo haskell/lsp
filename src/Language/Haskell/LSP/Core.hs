@@ -130,15 +130,21 @@ type FlushDiagnosticsBySourceFunc = Int -- Max number of diagnostics to send
 
 -- | A package indicating the perecentage of progress complete and a
 -- an optional message to go with it during a 'withProgress'
+--
+-- @since 0.10.0.0
 data Progress = Progress (Maybe Double) (Maybe Text)
 
 -- | Thrown if the user cancels a 'Cancellable' 'withProgress'/'withIndefiniteProgress'/ session
+--
+-- @since 0.11.0.0
 data ProgressCancelledException = ProgressCancelledException
   deriving Show
 instance E.Exception ProgressCancelledException
 
 -- | Whether or not the user should be able to cancel a 'withProgress'/'withIndefiniteProgress'
 -- session
+--
+-- @since 0.11.0.0
 data ProgressCancellable = Cancellable | NotCancellable
 
 -- | Returned to the server on startup, providing ways to interact with the client.
