@@ -78,7 +78,7 @@ test-suite tests
   build-depends:       base >= 4.10 && < 5
                      , hspec
                      , lens
-                     , haskell-lsp >= 0.10 && < 0.12
+                     , haskell-lsp == 0.11.*
                      , lsp-test
                      , data-default
                      , aeson
