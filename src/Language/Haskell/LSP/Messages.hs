@@ -60,6 +60,7 @@ data FromClientMessage = ReqInitialize               InitializeRequest
                        | NotDidSaveTextDocument          DidSaveTextDocumentNotification
                        | NotDidChangeWatchedFiles        DidChangeWatchedFilesNotification
                        | NotDidChangeWorkspaceFolders    DidChangeWorkspaceFoldersNotification
+                       | NotProgressCancel               ProgressCancelNotification
                        -- Unknown (The client sends something we don't understand)
                        | UnknownFromClientMessage        Value
   deriving (Eq,Read,Show,Generic,ToJSON,FromJSON)
@@ -106,7 +107,6 @@ data FromServerMessage = ReqRegisterCapability       RegisterCapabilityRequest
                        | NotProgressStart            ProgressStartNotification
                        | NotProgressReport           ProgressReportNotification
                        | NotProgressDone             ProgressDoneNotification
-                       | NotProgressCancel           ProgressCancelNotification
                        | NotTelemetry                TelemetryNotification
                        -- A cancel request notification is duplex!
                        | NotCancelRequestFromServer  CancelNotificationServer

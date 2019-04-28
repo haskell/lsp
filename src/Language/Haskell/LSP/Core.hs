@@ -12,6 +12,8 @@ module Language.Haskell.LSP.Core (
   , InitializeCallback
   , LspFuncs(..)
   , Progress(..)
+  , ProgressCancellable(..)
+  , ProgressCancelledException
   , SendFunc
   , Handlers(..)
   , Options(..)
@@ -26,6 +28,7 @@ module Language.Haskell.LSP.Core (
   ) where
 
 import           Control.Concurrent.STM
+import           Control.Concurrent.Async
 import qualified Control.Exception as E
 import           Control.Monad
 import           Control.Monad.IO.Class
@@ -76,14 +79,18 @@ data LanguageContextData a =
   , resOptions             :: !Options
   , resSendResponse        :: !SendFunc
   , resVFS                 :: !VFS
+  , reverseMap             :: !(Map.Map FilePath FilePath)
   , resDiagnostics         :: !DiagnosticStore
   , resConfig              :: !(Maybe a)
   , resLspId               :: !(TVar Int)
   , resLspFuncs            :: LspFuncs a -- NOTE: Cannot be strict, lazy initialization
   , resCaptureFile         :: !(Maybe FilePath)
   , resWorkspaceFolders    :: ![J.WorkspaceFolder]
-  , resNextProgressId      :: !Int
+  , resProgressData        :: !ProgressData
   }
+
+data ProgressData = ProgressData { progressNextId :: !Int
+                                 , progressCancel :: !(Map.Map Text (IO ())) }
 
 -- ---------------------------------------------------------------------
 
@@ -125,6 +132,15 @@ type FlushDiagnosticsBySourceFunc = Int -- Max number of diagnostics to send
 -- an optional message to go with it during a 'withProgress'
 data Progress = Progress (Maybe Double) (Maybe Text)
 
+-- | Thrown if the user cancels a 'Cancellable' 'withProgress'/'withIndefiniteProgress'/ session
+data ProgressCancelledException = ProgressCancelledException
+  deriving Show
+instance E.Exception ProgressCancelledException
+
+-- | Whether or not the user should be able to cancel a 'withProgress'/'withIndefiniteProgress'
+-- session
+data ProgressCancellable = Cancellable | NotCancellable
+
 -- | Returned to the server on startup, providing ways to interact with the client.
 data LspFuncs c =
   LspFuncs
@@ -139,19 +155,24 @@ data LspFuncs c =
     , getNextReqId                 :: !(IO J.LspId)
     , rootPath                     :: !(Maybe FilePath)
     , getWorkspaceFolders          :: !(IO (Maybe [J.WorkspaceFolder]))
-    , withProgress                 :: !(forall m a. MonadIO m => Text -> ((Progress -> IO ()) -> m a) -> m a)
+    , withProgress                 :: !(forall a . Text -> ProgressCancellable
+                                        -> ((Progress -> IO ()) -> IO a) -> IO a)
       -- ^ Wrapper for reporting progress to the client during a long running
       -- task.
-      -- 'withProgress' @title f@ starts a new progress reporting session, and
-      -- finishes it once f is completed.
+      -- 'withProgress' @title cancellable f@ starts a new progress reporting
+      -- session, and finishes it once f is completed.
       -- f is provided with an update function that allows it to report on
       -- the progress during the session.
-      -- 
+      -- If @cancellable@ is 'Cancellable', @f@ will be thrown a
+      -- 'ProgressCancelledException' if the user cancels the action in
+      -- progress.
+      --
       -- @since 0.10.0.0
-    , withIndefiniteProgress       :: !(forall m a. MonadIO m => Text -> m a -> m a)
-    -- ^ Same as 'withProgress' but for processes that do not report the
-    -- precentage complete
-    -- 
+    , withIndefiniteProgress       :: !(forall a . Text -> ProgressCancellable
+                                        -> IO a -> IO a)
+    -- ^ Same as 'withProgress', but for processes that do not report the
+    -- precentage complete.
+    --
     -- @since 0.10.0.0
     }
 
@@ -307,6 +328,7 @@ handlerMap _ h J.TextDocumentDocumentLink        = hh nop ReqDocumentLink $ docu
 handlerMap _ h J.DocumentLinkResolve             = hh nop ReqDocumentLinkResolve $ documentLinkResolveHandler h
 handlerMap _ h J.TextDocumentRename              = hh nop ReqRename $ renameHandler h
 handlerMap _ h J.TextDocumentFoldingRange        = hh nop ReqFoldingRange $ foldingRangeHandler h
+handlerMap _ _ J.WindowProgressCancel            = helper progressCancelHandler
 handlerMap _ _ (J.Misc x)   = helper f
   where f ::  TVar (LanguageContextData c) -> J.Value -> IO ()
         f tvarDat n = do
@@ -428,7 +450,11 @@ _ERR_MSG_URL = [ "`stack update` and install new haskell-lsp."
 --
 defaultLanguageContextData :: Handlers -> Options -> LspFuncs c -> TVar Int -> SendFunc -> Maybe FilePath -> LanguageContextData c
 defaultLanguageContextData h o lf tv sf cf =
-  LanguageContextData _INITIAL_RESPONSE_SEQUENCE h o sf mempty mempty Nothing tv lf cf mempty 0
+  LanguageContextData _INITIAL_RESPONSE_SEQUENCE h o sf mempty mempty mempty
+                      Nothing tv lf cf mempty defaultProgressData
+
+defaultProgressData :: ProgressData
+defaultProgressData = ProgressData 0 Map.empty
 
 -- ---------------------------------------------------------------------
 
@@ -597,56 +623,62 @@ initializeRequestHandler' (_configHandler,dispatcherProc) mHandler tvarCtx req@(
         let (C.ClientCapabilities _ _ wc _) = params ^. J.capabilities
         (C.WindowClientCapabilities mProgress) <- wc
         mProgress
-      
+
+      storeProgress :: Text -> Async a -> IO ()
+      storeProgress n a = atomically $ do
+        pd <- resProgressData <$> readTVar tvarCtx
+        let pc = progressCancel pd
+            pc' = Map.insert n (cancelWith a ProgressCancelledException) pc
+        modifyTVar tvarCtx (\ctx -> ctx { resProgressData = pd { progressCancel = pc' }})
+
       -- Get a new id for the progress session and make a new one
-      getNewProgressId :: MonadIO m => m Text
+      getNewProgressId :: IO Text
       getNewProgressId = fmap (T.pack . show) $ liftIO $ atomically $ do
-        x <- resNextProgressId <$> readTVar tvarCtx
-        modifyTVar tvarCtx (\ctx -> ctx { resNextProgressId = x + 1})
+        pd <- resProgressData <$> readTVar tvarCtx
+        let x = progressNextId pd
+        modifyTVar tvarCtx (\ctx -> ctx { resProgressData = pd { progressNextId = x + 1 }})
         return x
-      
-      withProgress' :: (forall m. MonadIO m => Text -> ((Progress -> IO ()) -> m a) -> m a)
-      withProgress' title f
+
+      withProgressBase :: Bool -> (Text -> ProgressCancellable
+                    -> ((Progress -> IO ()) -> IO a) -> IO a)
+      withProgressBase indefinite title cancellable f
         | clientSupportsProgress = do
           sf <- liftIO $ resSendResponse <$> readTVarIO tvarCtx
 
           progId <- getNewProgressId
 
+          let initialPercentage
+                | indefinite = Nothing
+                | otherwise = Just 0
+              cancellable' = case cancellable of
+                              Cancellable -> True
+                              NotCancellable -> False
+
           -- Send initial notification
           liftIO $ sf $ NotProgressStart $ fmServerProgressStartNotification $
-            J.ProgressStartParams progId title (Just False) Nothing (Just 0)
+            J.ProgressStartParams progId title (Just cancellable')
+              Nothing initialPercentage
 
-          res <- f (updater progId sf)
+          aid <- async $ f (updater progId sf)
+          storeProgress progId aid
+          res <- wait aid
 
           -- Send done notification
           liftIO $ sf $ NotProgressDone $ fmServerProgressDoneNotification $
             J.ProgressDoneParams progId
-          
+
           return res
         | otherwise = f (const $ return ())
           where updater progId sf (Progress percentage msg) =
                   sf $ NotProgressReport $ fmServerProgressReportNotification $
                     J.ProgressReportParams progId msg percentage
-        
-      withIndefiniteProgress' :: (forall m. MonadIO m => Text -> m a -> m a)
-      withIndefiniteProgress' title f
-        | clientSupportsProgress = do
-          sf <- liftIO $ resSendResponse <$> readTVarIO tvarCtx
 
-          progId <- getNewProgressId
+      withProgress' :: Text -> ProgressCancellable -> ((Progress -> IO ()) -> IO a) -> IO a
+      withProgress' = withProgressBase False
 
-          -- Send initial notification
-          liftIO $ sf $ NotProgressStart $ fmServerProgressStartNotification $
-            J.ProgressStartParams progId title (Just False) Nothing Nothing
-
-          res <- f
-
-          -- Send done notification
-          liftIO $ sf $ NotProgressDone $ fmServerProgressDoneNotification $
-            J.ProgressDoneParams progId
-          
-          return res
-        | otherwise = f
+      withIndefiniteProgress' :: Text -> ProgressCancellable -> IO a -> IO a
+      withIndefiniteProgress' title cancellable f =
+        withProgressBase True title cancellable (const f)
 
     -- Launch the given process once the project root directory has been set
     let lspFuncs = LspFuncs (getCapabilities params)
@@ -727,6 +759,14 @@ initializeRequestHandler' (_configHandler,dispatcherProc) mHandler tvarCtx req@(
           res  = J.ResponseMessage "2.0" (J.responseId origId) (Just $ J.InitializeResponseCapabilities capa) Nothing
 
         sendResponse tvarCtx $ RspInitialize res
+
+progressCancelHandler :: TVar (LanguageContextData c) -> J.ProgressCancelNotification -> IO ()
+progressCancelHandler tvarCtx (J.NotificationMessage _ _ (J.ProgressCancelParams tid)) = do
+  mact <- Map.lookup tid . progressCancel . resProgressData <$> readTVarIO tvarCtx
+  case mact of
+    Nothing -> return ()
+    Just cancelAction -> cancelAction
+
 
 -- |
 --

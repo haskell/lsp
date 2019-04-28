@@ -84,6 +84,8 @@ data ClientMethod =
  | WorkspaceDidChangeWatchedFiles
  | WorkspaceSymbol
  | WorkspaceExecuteCommand
+ -- Progress
+ | WindowProgressCancel
  -- Document
  | TextDocumentDidOpen
  | TextDocumentDidChange
@@ -160,6 +162,7 @@ instance A.FromJSON ClientMethod where
   parseJSON (A.String "textDocument/onTypeFormatting")    = return TextDocumentOnTypeFormatting
   parseJSON (A.String "textDocument/rename")              = return TextDocumentRename
   parseJSON (A.String "textDocument/foldingRange")        = return TextDocumentFoldingRange
+  parseJSON (A.String "window/progress/cancel")           = return WindowProgressCancel
   parseJSON (A.String x)                                  = if T.isPrefixOf "$/" x
                                                                then return $ Misc (T.drop 2 x)
                                                             else mempty
@@ -207,6 +210,7 @@ instance A.ToJSON ClientMethod where
   toJSON TextDocumentFoldingRange        = A.String "textDocument/foldingRange"
   toJSON TextDocumentDocumentLink        = A.String "textDocument/documentLink"
   toJSON DocumentLinkResolve             = A.String "documentLink/resolve"
+  toJSON WindowProgressCancel            = A.String "window/progress/cancel"
   toJSON (Misc xs)                       = A.String $ "$/" <> xs
 
 data ServerMethod =
@@ -217,7 +221,6 @@ data ServerMethod =
   | WindowProgressStart
   | WindowProgressReport
   | WindowProgressDone
-  | WindowProgressCancel
   | TelemetryEvent
   -- Client
   | ClientRegisterCapability
@@ -240,7 +243,6 @@ instance A.FromJSON ServerMethod where
   parseJSON (A.String "window/progress/start")           = return WindowProgressStart
   parseJSON (A.String "window/progress/report")          = return WindowProgressReport
   parseJSON (A.String "window/progress/done")            = return WindowProgressDone
-  parseJSON (A.String "window/progress/cancel")          = return WindowProgressCancel
   parseJSON (A.String "telemetry/event")                 = return TelemetryEvent
   -- Client
   parseJSON (A.String "client/registerCapability")       = return ClientRegisterCapability
@@ -263,7 +265,6 @@ instance A.ToJSON ServerMethod where
   toJSON WindowProgressStart      = A.String "window/progress/start"
   toJSON WindowProgressReport     = A.String "window/progress/report"
   toJSON WindowProgressDone       = A.String "window/progress/done"
-  toJSON WindowProgressCancel     = A.String "window/progress/cancel"
   toJSON TelemetryEvent           = A.String "telemetry/event"
   -- Client
   toJSON ClientRegisterCapability   = A.String "client/registerCapability"

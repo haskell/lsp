@@ -20,7 +20,6 @@ module Language.Haskell.LSP.Types.MessageFuncs (
   , fmServerProgressStartNotification
   , fmServerProgressReportNotification
   , fmServerProgressDoneNotification
-  , fmServerProgressCancelNotification
   , fmServerTelemetryNotification
 
   -- * Client
@@ -149,12 +148,6 @@ fmServerProgressReportNotification params
 fmServerProgressDoneNotification :: J.ProgressDoneParams -> J.ProgressDoneNotification
 fmServerProgressDoneNotification params
   = J.NotificationMessage "2.0" J.WindowProgressDone params
-
--- ----------------------------------------------------------------------
-
-fmServerProgressCancelNotification :: J.ProgressCancelParams -> J.ProgressCancelNotification
-fmServerProgressCancelNotification params
-  = J.NotificationMessage "2.0" J.WindowProgressCancel params
 
 -- ----------------------------------------------------------------------
 -- * :arrow_left: [telemetry/event](#telemetry_event)

@@ -255,23 +255,23 @@ export interface ProgressStartParams {
 data ProgressStartParams =
   ProgressStartParams {
   -- | A unique identifier to associate multiple progress
-  -- notifications with the same progress. 
+  -- notifications with the same progress.
     _id   :: Text
   -- | Mandatory title of the progress operation.
   -- Used to briefly inform about the kind of operation being
-  -- performed. Examples: "Indexing" or "Linking dependencies". 
+  -- performed. Examples: "Indexing" or "Linking dependencies".
   , _title :: Text
   -- | Controls if a cancel button should show to allow the user to cancel the
   -- long running operation. Clients that don't support cancellation are allowed
   -- to ignore the setting.
-  , _cancellable :: Maybe Bool 
+  , _cancellable :: Maybe Bool
   -- | Optional, more detailed associated progress
   -- message. Contains complementary information to the
   -- '_title'. Examples: "3/25 files",
   -- "project/src/module2", "node_modules/some_dep". If
   -- unset, the previous progress message (if any) is
   -- still valid.
-  , _message :: Maybe Text 
+  , _message :: Maybe Text
   -- | Optional progress percentage to display (value 100 is considered 100%).
   -- If not provided infinite progress is assumed and clients are allowed
   -- to ignore the '_percentage' value in subsequent in report notifications.
@@ -332,7 +332,7 @@ export interface ProgressReportParams {
 data ProgressReportParams =
   ProgressReportParams {
   -- | A unique identifier to associate multiple progress
-  -- notifications with the same progress. 
+  -- notifications with the same progress.
     _id   :: Text
   -- | Optional, more detailed associated progress
   -- message. Contains complementary information to the
@@ -340,7 +340,7 @@ data ProgressReportParams =
   -- "project/src/module2", "node_modules/some_dep". If
   -- unset, the previous progress message (if any) is
   -- still valid.
-  , _message :: Maybe Text 
+  , _message :: Maybe Text
   -- | Optional progress percentage to display (value 100 is considered 100%).
   -- If infinite progress was indicated in the start notification client
   -- are allowed to ignore the value. In addition the value should be steadily
@@ -379,7 +379,7 @@ export interface ProgressDoneParams {
 data ProgressDoneParams =
   ProgressDoneParams {
   -- | A unique identifier to associate multiple progress
-  -- notifications with the same progress. 
+  -- notifications with the same progress.
     _id   :: Text
   } deriving (Show, Read, Eq)
 
@@ -410,12 +410,12 @@ export interface ProgressCancelParams {
 -}
 
 -- | Parameters for 'ProgressCancelNotification'.
--- 
+--
 -- @since 0.10.0.0
 data ProgressCancelParams =
   ProgressCancelParams {
   -- | A unique identifier to associate multiple progress
-  -- notifications with the same progress. 
+  -- notifications with the same progress.
     _id   :: Text
   } deriving (Show, Read, Eq)
 
@@ -424,6 +424,6 @@ deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''ProgressCancelPar
 -- | The window/progress/cancel notification is sent from the client to the server
 -- to inform the server that the user has pressed the cancel button on the progress UX.
 -- A server receiving a cancel request must still close a progress using the done notification.
--- 
+--
 -- @since 0.10.0.0
-type ProgressCancelNotification = NotificationMessage ServerMethod ProgressCancelParams
+type ProgressCancelNotification = NotificationMessage ClientMethod ProgressCancelParams
