@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module TypesSpec where
 
-import           Data.Monoid
+import           Data.Monoid ((<>))
 import qualified Language.Haskell.LSP.Types as J
 import           Test.Hspec
 

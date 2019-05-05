@@ -14,7 +14,7 @@ license:             MIT
 license-file:        LICENSE
 author:              Alan Zimmerman
 maintainer:          alan.zimm@gmail.com
-copyright:           Alan Zimmerman, 2016-2018
+copyright:           Alan Zimmerman, 2016-2019
 category:            Development
 build-type:          Simple
 extra-source-files:  ChangeLog.md, README.md
@@ -50,13 +50,13 @@ library
                      , mtl
                      , network-uri
                      , parsec
+                     , rope-utf16-splay >= 0.2
                      , sorted-list == 0.2.1.*
                      , stm
                      , temporary
                      , text
                      , time
                      , unordered-containers
-                     , yi-rope
   hs-source-dirs:      src
   default-language:    Haskell2010
 
@@ -79,13 +79,13 @@ executable lsp-hello
                      , mtl
                      , network-uri
                      , parsec
+                     , rope-utf16-splay >= 0.2
                      , stm
                      , text
                      , time
                      , transformers
                      , unordered-containers
                      , vector
-                     , yi-rope
                      -- the package library. Comment this out if you want repl changes to propagate
                      , haskell-lsp
 
@@ -120,10 +120,10 @@ test-suite haskell-lsp-test
                      , lens >= 4.15.2
                      , network-uri
                      , quickcheck-instances
+                     , rope-utf16-splay >= 0.2
                      , sorted-list == 0.2.1.*
                      , stm
                      , text
-                     , yi-rope
   build-tool-depends:  hspec-discover:hspec-discover
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N -Wall
   default-language:    Haskell2010

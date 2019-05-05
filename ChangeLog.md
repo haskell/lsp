@@ -1,5 +1,10 @@
 # Revision history for haskell-lsp
 
+## 0.12.0.0 -- 2019-05-05
+
+* Added A NFData instance for Diagnostics (@DavidM-D/@ndmitchell)
+* Switch to using the rope-utf16-splay library for ropes (@ollef)
+
 ## 0.11.0.0 -- 2019-04-28
 
 * Add support for cancellable requests within `withProgress` and

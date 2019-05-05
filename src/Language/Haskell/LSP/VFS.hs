@@ -22,9 +22,7 @@ module Language.Haskell.LSP.VFS
   -- * for tests
   , applyChanges
   , applyChange
-  , deleteChars , addChars
   , changeChars
-  , yiSplitAt
   ) where
 
 import           Control.Lens
@@ -39,10 +37,11 @@ import           System.IO.Temp
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map as Map
 import           Data.Maybe
+import           Data.Rope.UTF16 ( Rope )
+import qualified Data.Rope.UTF16 as Rope
 import qualified Language.Haskell.LSP.Types           as J
 import qualified Language.Haskell.LSP.Types.Lens      as J
 import           Language.Haskell.LSP.Utility
-import qualified Yi.Rope as Yi
 
 -- ---------------------------------------------------------------------
 {-# ANN module ("hlint: ignore Eta reduce" :: String) #-}
@@ -52,7 +51,7 @@ import qualified Yi.Rope as Yi
 data VirtualFile =
   VirtualFile {
       _version :: Int
-    , _text    :: Yi.YiString
+    , _text    :: Rope
     , _tmp_file :: Maybe FilePath
     } deriving (Show)
 
@@ -64,7 +63,7 @@ openVFS :: VFS -> J.DidOpenTextDocumentNotification -> IO VFS
 openVFS vfs (J.NotificationMessage _ _ params) = do
   let J.DidOpenTextDocumentParams
          (J.TextDocumentItem uri _ version text) = params
-  return $ Map.insert uri (VirtualFile version (Yi.fromText text) Nothing) vfs
+  return $ Map.insert uri (VirtualFile version (Rope.fromText text) Nothing) vfs
 
 -- ---------------------------------------------------------------------
 
@@ -124,7 +123,7 @@ persistFileVFS vfs uri =
       case tfile of
         Just tfn -> return (tfn, vfs)
         Nothing  -> do
-          fn <- writeSystemTempFile "VFS.hs" (Yi.toString txt)
+          fn <- writeSystemTempFile "VFS.hs" (Rope.toString txt)
           return (fn, Map.insert uri (VirtualFile v txt (Just fn)) vfs)
 
 -- ---------------------------------------------------------------------
@@ -148,87 +147,33 @@ data TextDocumentContentChangeEvent =
 -- | Apply the list of changes.
 -- Changes should be applied in the order that they are
 -- received from the client.
-applyChanges :: Yi.YiString -> [J.TextDocumentContentChangeEvent] -> Yi.YiString
+applyChanges :: Rope -> [J.TextDocumentContentChangeEvent] -> Rope
 applyChanges = foldl' applyChange
 
 -- ---------------------------------------------------------------------
 
-applyChange :: Yi.YiString -> J.TextDocumentContentChangeEvent -> Yi.YiString
+applyChange :: Rope -> J.TextDocumentContentChangeEvent -> Rope
 applyChange _ (J.TextDocumentContentChangeEvent Nothing Nothing str)
-  = Yi.fromText str
-applyChange str (J.TextDocumentContentChangeEvent (Just (J.Range fm _to)) (Just len) txt) =
-  if txt == ""
-    then -- delete len chars from fm
-      deleteChars str fm len
-    else -- add or change, based on length
-      if len == 0
-        then addChars str fm txt
-             -- Note: changeChars comes from applyEdit, emacs will split it into a
-             -- delete and an add
-        else changeChars str fm len txt
-applyChange str (J.TextDocumentContentChangeEvent (Just r@(J.Range (J.Position sl sc) (J.Position el ec))) Nothing txt)
-  = applyChange str (J.TextDocumentContentChangeEvent (Just r) (Just len) txt)
-    where len = Yi.length region
-          (beforeEnd, afterEnd) = Yi.splitAtLine el str
-          lastLine = Yi.take ec afterEnd
-          lastLine' | sl == el = Yi.drop sc lastLine
-                    | otherwise = lastLine
-          (_beforeStart, afterStartBeforeEnd) = Yi.splitAtLine sl beforeEnd
-          region = Yi.drop sc afterStartBeforeEnd <> lastLine'
+  = Rope.fromText str
+applyChange str (J.TextDocumentContentChangeEvent (Just (J.Range (J.Position sl sc) _to)) (Just len) txt)
+  = changeChars str start len txt
+  where
+    start = Rope.rowColumnCodeUnits (Rope.RowColumn sl sc) str
+applyChange str (J.TextDocumentContentChangeEvent (Just (J.Range (J.Position sl sc) (J.Position el ec))) Nothing txt)
+  = changeChars str start len txt
+  where
+    start = Rope.rowColumnCodeUnits (Rope.RowColumn sl sc) str
+    end = Rope.rowColumnCodeUnits (Rope.RowColumn el ec) str
+    len = end - start
 applyChange str (J.TextDocumentContentChangeEvent Nothing (Just _) _txt)
   = str
 
 -- ---------------------------------------------------------------------
 
-deleteChars :: Yi.YiString -> J.Position -> Int -> Yi.YiString
-deleteChars str (J.Position l c) len = str'
+changeChars :: Rope -> Int -> Int -> Text -> Rope
+changeChars str start len new = mconcat [before, Rope.fromText new, after']
   where
-    (before,after) = Yi.splitAtLine l str
-    -- after contains the area we care about, starting with the selected line.
-    -- Due to LSP zero-based coordinates
-    beforeOnLine = Yi.take c after
-    after' = Yi.drop (c + len) after
-    str' = Yi.append before (Yi.append beforeOnLine after')
-
--- ---------------------------------------------------------------------
-
-addChars :: Yi.YiString -> J.Position -> Text -> Yi.YiString
-addChars str (J.Position l c) new = str'
-  where
-    (before,after) = Yi.splitAtLine l str
-    -- after contains the area we care about, starting with the selected line.
-    -- Due to LSP zero-based coordinates
-    beforeOnLine = Yi.take c after
-    after' = Yi.drop c after
-    str' = Yi.concat [before, beforeOnLine, (Yi.fromText new), after']
-
--- ---------------------------------------------------------------------
-
-changeChars :: Yi.YiString -> J.Position -> Int -> Text -> Yi.YiString
-changeChars str (J.Position ls cs) len new = str'
-  where
-    (before,after) = yiSplitAt ls cs str
-    after' = Yi.drop len after
-
-    str' = Yi.concat [before, (Yi.fromText new), after']
-
--- changeChars :: Yi.YiString -> J.Position -> J.Position -> String -> Yi.YiString
--- changeChars str (J.Position ls cs) (J.Position le ce) new = str'
---   where
---     (before,_after) = yiSplitAt ls cs str
---     (_before,after) = yiSplitAt le ce str
-
---     str' = Yi.concat [before, (Yi.fromString new), after]
---     -- str' = Yi.concat [before]
---     -- str' = Yi.concat [_before]
-
--- ---------------------------------------------------------------------
-
-yiSplitAt :: Int -> Int -> Yi.YiString -> (Yi.YiString, Yi.YiString)
-yiSplitAt l c str = (before,after)
-  where
-    (b,a) = Yi.splitAtLine l str
-    before = Yi.concat [b,Yi.take c a]
-    after = Yi.drop c a
+    (before, after) = Rope.splitAt start str
+    after' = Rope.drop len after
 
 -- ---------------------------------------------------------------------
