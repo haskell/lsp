@@ -108,7 +108,7 @@ import Language.Haskell.LSP.Test.Server
 import System.IO
 import System.Directory
 import System.FilePath
-import qualified Yi.Rope as Rope
+import qualified Data.Rope.UTF16 as Rope
 
 -- | Starts a new session.
 --

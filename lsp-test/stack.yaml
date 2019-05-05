@@ -1,7 +1,8 @@
-resolver: lts-13.15
+resolver: nightly-2019-05-05
 packages:
   - .
 
 extra-deps:
-  - haskell-lsp-0.11.0.0
-  - haskell-lsp-types-0.11.0.0
+  - haskell-lsp-0.12.0.0
+  - haskell-lsp-types-0.12.0.0
+  - rope-utf16-splay-0.2.0.0
