@@ -264,7 +264,7 @@ main = hspec $ do
       doc <- openDoc "Desktop/simple.hs" "haskell"
       let pos = Position 20 23  -- Quit value
       defs <- getTypeDefinitions doc pos
-      liftIO $ defs `shouldBe` [Location (doc ^. uri) (mkRange 10 0 15 19)]  -- Type definition
+      liftIO $ defs `shouldBe` [Location (doc ^. uri) (mkRange 10 0 14 19)]  -- Type definition
 
   describe "waitForDiagnosticsSource" $
     it "works" $ runSession "hie" fullCaps "test/data" $ do
