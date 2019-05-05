@@ -419,6 +419,10 @@ hwf h tvarDat json = do
 getVirtualFile :: TVar (LanguageContextData c) -> J.Uri -> IO (Maybe VirtualFile)
 getVirtualFile tvarDat uri = Map.lookup uri . resVFS <$> readTVarIO tvarDat
 
+-- TODO:AZ:this does not do a fresh dump if the VFS has changed since
+-- the prior dump
+-- | Dump the current text for a given VFS file to a temporary file,
+-- and return the path to the file.
 persistVirtualFile :: TVar (LanguageContextData c) -> J.Uri -> IO FilePath
 persistVirtualFile tvarDat uri = do
   st <- readTVarIO tvarDat
@@ -437,13 +441,15 @@ persistVirtualFile tvarDat uri = do
                                             , reverseMap = revMap' })
   return fn
 
+-- TODO: should this function return a URI?
+-- | If the contents of a VFS has been dumped to a temporary file, map
+-- the temporary file name back to the original one.
 reverseFileMap :: TVar (LanguageContextData c)
                -> IO (FilePath -> FilePath)
 reverseFileMap tvarDat = do
   revMap <- reverseMap <$> readTVarIO tvarDat
   let f fp = fromMaybe fp $ Map.lookup fp revMap
   return f
-
 
 -- ---------------------------------------------------------------------
 

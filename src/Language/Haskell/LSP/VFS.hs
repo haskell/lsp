@@ -125,7 +125,7 @@ persistFileVFS vfs uri =
         Just tfn -> return (tfn, vfs)
         Nothing  -> do
           fn <- writeSystemTempFile "VFS.hs" (Yi.toString txt)
-          return $ (fn, Map.insert uri (VirtualFile v txt (Just fn)) vfs)
+          return (fn, Map.insert uri (VirtualFile v txt (Just fn)) vfs)
 
 -- ---------------------------------------------------------------------
 
