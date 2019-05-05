@@ -1,5 +1,5 @@
 name:                haskell-lsp
-version:             0.11.0.0
+version:             0.12.0.0
 synopsis:            Haskell library for the Microsoft Language Server Protocol
 
 description:         An implementation of the types, and basic message server to
@@ -14,7 +14,7 @@ license:             MIT
 license-file:        LICENSE
 author:              Alan Zimmerman
 maintainer:          alan.zimm@gmail.com
-copyright:           Alan Zimmerman, 2016-2018
+copyright:           Alan Zimmerman, 2016-2019
 category:            Development
 build-type:          Simple
 extra-source-files:  ChangeLog.md, README.md
@@ -45,7 +45,7 @@ library
                      , filepath
                      , hslogger
                      , hashable
-                     , haskell-lsp-types == 0.11.*
+                     , haskell-lsp-types == 0.12.*
                      , lens >= 4.15.2
                      , mtl
                      , network-uri
