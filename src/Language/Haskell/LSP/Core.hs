@@ -419,8 +419,6 @@ hwf h tvarDat json = do
 getVirtualFile :: TVar (LanguageContextData c) -> J.Uri -> IO (Maybe VirtualFile)
 getVirtualFile tvarDat uri = Map.lookup uri . resVFS <$> readTVarIO tvarDat
 
--- TODO:AZ:this does not do a fresh dump if the VFS has changed since
--- the prior dump
 -- | Dump the current text for a given VFS file to a temporary file,
 -- and return the path to the file.
 persistVirtualFile :: TVar (LanguageContextData c) -> J.Uri -> IO FilePath
