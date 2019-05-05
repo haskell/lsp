@@ -1,5 +1,5 @@
 name:                haskell-lsp
-version:             0.11.0.0
+version:             0.12.0.0
 synopsis:            Haskell library for the Microsoft Language Server Protocol
 
 description:         An implementation of the types, and basic message server to
@@ -45,13 +45,14 @@ library
                      , filepath
                      , hslogger
                      , hashable
-                     , haskell-lsp-types == 0.11.*
+                     , haskell-lsp-types == 0.12.*
                      , lens >= 4.15.2
                      , mtl
                      , network-uri
                      , parsec
                      , sorted-list == 0.2.1.*
                      , stm
+                     , temporary
                      , text
                      , time
                      , unordered-containers

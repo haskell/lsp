@@ -16,6 +16,7 @@ module Language.Haskell.LSP.VFS
   , openVFS
   , changeFromClientVFS
   , changeFromServerVFS
+  , persistFileVFS
   , closeVFS
 
   -- * for tests
@@ -34,6 +35,7 @@ import           Data.Ord
 #if __GLASGOW_HASKELL__ < 804
 import           Data.Monoid
 #endif
+import           System.IO.Temp
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map as Map
 import           Data.Maybe
@@ -51,6 +53,7 @@ data VirtualFile =
   VirtualFile {
       _version :: Int
     , _text    :: Yi.YiString
+    , _tmp_file :: Maybe FilePath
     } deriving (Show)
 
 type VFS = Map.Map J.Uri VirtualFile
@@ -61,7 +64,7 @@ openVFS :: VFS -> J.DidOpenTextDocumentNotification -> IO VFS
 openVFS vfs (J.NotificationMessage _ _ params) = do
   let J.DidOpenTextDocumentParams
          (J.TextDocumentItem uri _ version text) = params
-  return $ Map.insert uri (VirtualFile version (Yi.fromText text)) vfs
+  return $ Map.insert uri (VirtualFile version (Yi.fromText text) Nothing) vfs
 
 -- ---------------------------------------------------------------------
 
@@ -71,10 +74,10 @@ changeFromClientVFS vfs (J.NotificationMessage _ _ params) = do
     J.DidChangeTextDocumentParams vid (J.List changes) = params
     J.VersionedTextDocumentIdentifier uri version = vid
   case Map.lookup uri vfs of
-    Just (VirtualFile _ str) -> do
+    Just (VirtualFile _ str _) -> do
       let str' = applyChanges str changes
       -- the client shouldn't be sending over a null version, only the server.
-      return $ Map.insert uri (VirtualFile (fromMaybe 0 version) str') vfs
+      return $ Map.insert uri (VirtualFile (fromMaybe 0 version) str' Nothing) vfs
     Nothing -> do
       logs $ "haskell-lsp:changeVfs:can't find uri:" ++ show uri
       return vfs
@@ -108,8 +111,21 @@ changeFromServerVFS initVfs (J.RequestMessage _ _ _ params) = do
           ps = J.DidChangeTextDocumentParams vid (J.List changeEvents)
           notif = J.NotificationMessage "" J.TextDocumentDidChange ps
       changeFromClientVFS vfs notif
-  
+
     editToChangeEvent (J.TextEdit range text) = J.TextDocumentContentChangeEvent (Just range) Nothing text
+
+-- ---------------------------------------------------------------------
+
+persistFileVFS :: VFS -> J.Uri -> IO (FilePath, VFS)
+persistFileVFS vfs uri =
+  case Map.lookup uri vfs of
+    Nothing -> error ("File not found in VFS: " ++ show uri ++ show vfs)
+    Just (VirtualFile v txt tfile) ->
+      case tfile of
+        Just tfn -> return (tfn, vfs)
+        Nothing  -> do
+          fn <- writeSystemTempFile "VFS.hs" (Yi.toString txt)
+          return $ (fn, Map.insert uri (VirtualFile v txt (Just fn)) vfs)
 
 -- ---------------------------------------------------------------------
 
