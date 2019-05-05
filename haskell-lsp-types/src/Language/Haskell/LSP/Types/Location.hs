@@ -1,7 +1,10 @@
 {-# LANGUAGE TemplateHaskell            #-}
+{-# LANGUAGE DeriveGeneric              #-}
 module Language.Haskell.LSP.Types.Location where
 
+import           Control.DeepSeq
 import           Data.Aeson.TH
+import           GHC.Generics
 import           Language.Haskell.LSP.Types.Constants
 import           Language.Haskell.LSP.Types.Uri
 
@@ -39,8 +42,9 @@ data Position =
   Position
     { _line      :: Int
     , _character :: Int
-    } deriving (Show, Read, Eq, Ord)
+    } deriving (Show, Read, Eq, Ord, Generic)
 
+instance NFData Position
 deriveJSON lspOptions ''Position
 
 -- ---------------------------------------------------------------------
@@ -68,8 +72,9 @@ data Range =
   Range
     { _start :: Position
     , _end   :: Position
-    } deriving (Show, Read, Eq, Ord)
+    } deriving (Show, Read, Eq, Ord, Generic)
 
+instance NFData Range
 deriveJSON lspOptions ''Range
 
 -- ---------------------------------------------------------------------
@@ -88,6 +93,7 @@ data Location =
   Location
     { _uri   :: Uri
     , _range :: Range
-    } deriving (Show, Read, Eq, Ord)
+    } deriving (Show, Read, Eq, Ord, Generic)
 
+instance NFData Location
 deriveJSON lspOptions ''Location

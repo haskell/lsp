@@ -49,6 +49,7 @@ library
                      , aeson >=1.0.0.0
                      , bytestring
                      , data-default
+                     , deepseq
                      , filepath
                      , hashable
                      , lens >= 4.15.2

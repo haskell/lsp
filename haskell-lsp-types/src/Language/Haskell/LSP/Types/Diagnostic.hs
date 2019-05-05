@@ -1,11 +1,14 @@
 {-# LANGUAGE DuplicateRecordFields      #-}
 {-# LANGUAGE TemplateHaskell            #-}
+{-# LANGUAGE DeriveGeneric              #-}
 
 module Language.Haskell.LSP.Types.Diagnostic where
 
+import           Control.DeepSeq
 import qualified Data.Aeson                                 as A
 import           Data.Aeson.TH
 import           Data.Text
+import           GHC.Generics
 import           Language.Haskell.LSP.Types.Constants
 import           Language.Haskell.LSP.Types.List
 import           Language.Haskell.LSP.Types.Location
@@ -38,7 +41,9 @@ data DiagnosticSeverity
   | DsWarning -- ^ Warning = 2,
   | DsInfo    -- ^ Info = 3,
   | DsHint    -- ^ Hint = 4
-  deriving (Eq,Ord,Show,Read)
+  deriving (Eq,Ord,Show,Read, Generic)
+
+instance NFData DiagnosticSeverity
 
 instance A.ToJSON DiagnosticSeverity where
   toJSON DsError   = A.Number 1
@@ -76,7 +81,9 @@ data DiagnosticRelatedInformation =
   DiagnosticRelatedInformation
     { _location :: Location
     , _message  :: Text
-    } deriving (Show, Read, Eq, Ord)
+    } deriving (Show, Read, Eq, Ord, Generic)
+
+instance NFData DiagnosticRelatedInformation
 
 deriveJSON lspOptions ''DiagnosticRelatedInformation
 
@@ -134,6 +141,8 @@ data Diagnostic =
     , _source             :: Maybe DiagnosticSource
     , _message            :: Text
     , _relatedInformation :: Maybe (List DiagnosticRelatedInformation)
-    } deriving (Show, Read, Eq, Ord)
+    } deriving (Show, Read, Eq, Ord, Generic)
+
+instance NFData Diagnostic
 
 deriveJSON lspOptions ''Diagnostic
