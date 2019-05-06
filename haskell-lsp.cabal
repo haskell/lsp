@@ -53,6 +53,7 @@ library
                      , rope-utf16-splay >= 0.2
                      , sorted-list == 0.2.1.*
                      , stm
+                     , temporary
                      , text
                      , time
                      , unordered-containers

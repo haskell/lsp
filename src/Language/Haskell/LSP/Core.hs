@@ -156,6 +156,8 @@ data LspFuncs c =
       -- server-provided function.
     , sendFunc                     :: !SendFunc
     , getVirtualFileFunc           :: !(J.Uri -> IO (Maybe VirtualFile))
+    , persistVirtualFileFunc       :: !(J.Uri -> IO FilePath)
+    , reverseFileMapFunc           :: !(IO (FilePath -> FilePath))
     , publishDiagnosticsFunc       :: !PublishDiagnosticsFunc
     , flushDiagnosticsBySourceFunc :: !FlushDiagnosticsBySourceFunc
     , getNextReqId                 :: !(IO J.LspId)
@@ -416,6 +418,36 @@ hwf h tvarDat json = do
 
 getVirtualFile :: TVar (LanguageContextData c) -> J.Uri -> IO (Maybe VirtualFile)
 getVirtualFile tvarDat uri = Map.lookup uri . resVFS <$> readTVarIO tvarDat
+
+-- | Dump the current text for a given VFS file to a temporary file,
+-- and return the path to the file.
+persistVirtualFile :: TVar (LanguageContextData c) -> J.Uri -> IO FilePath
+persistVirtualFile tvarDat uri = do
+  st <- readTVarIO tvarDat
+  let vfs = resVFS st
+      revMap = reverseMap st
+
+  (fn, new_vfs) <- persistFileVFS vfs uri
+  let revMap' =
+        -- TODO: Does the VFS make sense for URIs which are not files?
+        -- The reverse map should perhaps be (FilePath -> URI)
+        case J.uriToFilePath uri of
+          Just uri_fp -> Map.insert fn uri_fp revMap
+          Nothing -> revMap
+
+  atomically $ modifyTVar' tvarDat (\d -> d { resVFS = new_vfs
+                                            , reverseMap = revMap' })
+  return fn
+
+-- TODO: should this function return a URI?
+-- | If the contents of a VFS has been dumped to a temporary file, map
+-- the temporary file name back to the original one.
+reverseFileMap :: TVar (LanguageContextData c)
+               -> IO (FilePath -> FilePath)
+reverseFileMap tvarDat = do
+  revMap <- reverseMap <$> readTVarIO tvarDat
+  let f fp = fromMaybe fp $ Map.lookup fp revMap
+  return f
 
 -- ---------------------------------------------------------------------
 
@@ -691,6 +723,8 @@ initializeRequestHandler' (_configHandler,dispatcherProc) mHandler tvarCtx req@(
                             (getConfig tvarCtx)
                             (resSendResponse ctx0)
                             (getVirtualFile tvarCtx)
+                            (persistVirtualFile tvarCtx)
+                            (reverseFileMap tvarCtx)
                             (publishDiagnostics tvarCtx)
                             (flushDiagnosticsBySource tvarCtx)
                             (getLspId $ resLspId ctx0)

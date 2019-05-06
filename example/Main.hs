@@ -194,7 +194,7 @@ reactor lf inp = do
                                  . J.uri
         mdoc <- liftIO $ Core.getVirtualFileFunc lf doc
         case mdoc of
-          Just (VirtualFile _version str) -> do
+          Just (VirtualFile _version str _) -> do
             liftIO $ U.logs $ "reactor:processing NotDidChangeTextDocument: vf got:" ++ (show $ Rope.toString str)
           Nothing -> do
             liftIO $ U.logs "reactor:processing NotDidChangeTextDocument: vf returned Nothing"
