@@ -19,6 +19,12 @@ module Language.Haskell.LSP.VFS
   , persistFileVFS
   , closeVFS
 
+  -- * manipulating the file contents
+  , splitAtLine
+  , rangeLinesFromVfs
+  , PosPrefixInfo(..)
+  , getCompletionPrefix
+
   -- * for tests
   , applyChanges
   , applyChange
@@ -27,7 +33,9 @@ module Language.Haskell.LSP.VFS
 
 import           Control.Lens
 import           Control.Monad
+import           Data.Char (isUpper, isAlphaNum)
 import           Data.Text ( Text )
+import qualified Data.Text as T
 import           Data.List
 import           Data.Ord
 #if __GLASGOW_HASKELL__ < 804
@@ -175,5 +183,71 @@ changeChars str start len new = mconcat [before, Rope.fromText new, after']
   where
     (before, after) = Rope.splitAt start str
     after' = Rope.drop len after
+
+-- ---------------------------------------------------------------------
+
+splitAtLine :: Int -> Rope.Rope -> (Rope.Rope, Rope.Rope)
+splitAtLine n r = Rope.splitAt codeUnit r
+  where
+    codeUnit = Rope.rowColumnCodeUnits (Rope.RowColumn n 0) r
+
+-- ---------------------------------------------------------------------
+
+-- TODO:AZ:move this to somewhere sane
+-- | Describes the line at the current cursor position
+data PosPrefixInfo = PosPrefixInfo
+  { fullLine :: T.Text
+    -- ^ The full contents of the line the cursor is at
+
+  , prefixModule :: T.Text
+    -- ^ If any, the module name that was typed right before the cursor position.
+    --  For example, if the user has typed "Data.Maybe.from", then this property
+    --  will be "Data.Maybe"
+
+  , prefixText :: T.Text
+    -- ^ The word right before the cursor position, after removing the module part.
+    -- For example if the user has typed "Data.Maybe.from",
+    -- then this property will be "from"
+  , cursorPos :: J.Position
+    -- ^ The cursor position
+  }
+
+getCompletionPrefix :: (Monad m) => J.Position -> VirtualFile -> m (Maybe PosPrefixInfo)
+getCompletionPrefix pos@(J.Position l c) (VirtualFile _ yitext _) =
+      return $ Just $ fromMaybe (PosPrefixInfo "" "" "" pos) $ do -- Maybe monad
+        let headMaybe [] = Nothing
+            headMaybe (x:_) = Just x
+            lastMaybe [] = Nothing
+            lastMaybe xs = Just $ last xs
+        -- curLine <- headMaybe $ Yi.lines $ snd $ Yi.splitAtLine l yitext
+        -- let beforePos = Yi.take c curLine
+        -- curWord <- case Yi.last beforePos of
+        --              Just ' ' -> Just "" -- don't count abc as the curword in 'abc '
+        --              _ -> Yi.toText <$> lastMaybe (Yi.words beforePos)
+
+        let curLine = Rope.toText $ fst $ splitAtLine 1 $ snd $ splitAtLine l yitext
+        let beforePos = T.take c curLine
+        curWord <- case T.last beforePos of
+                     ' ' -> return "" -- don't count abc as the curword in 'abc '
+                     _ -> lastMaybe (T.words beforePos)
+
+        let parts = T.split (=='.')
+                      $ T.takeWhileEnd (\x -> isAlphaNum x || x `elem` ("._'"::String)) curWord
+        case reverse parts of
+          [] -> Nothing
+          (x:xs) -> do
+            let modParts = dropWhile (not . isUpper . T.head)
+                                $ reverse $ filter (not .T.null) xs
+                modName = T.intercalate "." modParts
+            return $ PosPrefixInfo curLine modName x pos
+
+-- ---------------------------------------------------------------------
+
+rangeLinesFromVfs :: VirtualFile -> J.Range -> T.Text
+rangeLinesFromVfs (VirtualFile _ yitext _) (J.Range (J.Position lf _cf) (J.Position lt _ct)) = r
+  where
+    (_ ,s1) = splitAtLine lf yitext
+    (s2, _) = splitAtLine (lt - lf) s1
+    r = Rope.toText s2
 
 -- ---------------------------------------------------------------------

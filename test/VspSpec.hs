@@ -266,3 +266,39 @@ vspSpec = do
           [ "a𐐀b"
           , "𐐀𐐀b"
           ]
+
+    -- ---------------------------------
+
+  describe "LSP utilities" $ do
+    it "splits at a line" $ do
+      let
+        orig = unlines
+          [ "module Foo where"
+          , "-- fooo"
+          , "foo :: Int"
+          , "foo = bb"
+          , ""
+          , "bb = 5"
+          , ""
+          , "baz = do"
+          , "  putStrLn \"hello world\""
+          ]
+        (left,right) = splitAtLine 4 (fromString orig)
+
+      lines (Rope.toString left) `shouldBe`
+          [ "module Foo where"
+          , "-- fooo"
+          , "foo :: Int"
+          , "foo = bb"
+          ]
+      lines (Rope.toString right) `shouldBe`
+          [ ""
+          , "bb = 5"
+          , ""
+          , "baz = do"
+          , "  putStrLn \"hello world\""
+          ]
+
+    it "getCompletionPrefix" $ do
+      "write this test" `shouldBe` ""
+
