@@ -58,7 +58,7 @@ platformAwareFilePathToUri systemOS fp = Uri . T.pack . show $ URI
 
 platformAdjustToUriPath :: SystemOS -> FilePath -> String
 platformAdjustToUriPath systemOS srcPath =
-  if systemOS /= windowsOS then srcPath
+  if systemOS /= windowsOS || null srcPath then srcPath
     else let
       drive:rest = FPW.splitDirectories srcPath
       leaveCharUnescaped = (/= ':')
