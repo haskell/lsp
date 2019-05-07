@@ -31,7 +31,7 @@ module Language.Haskell.LSP.VFS
   , changeChars
   ) where
 
-import           Control.Lens
+import           Control.Lens hiding ( parts )
 import           Control.Monad
 import           Data.Char (isUpper, isAlphaNum)
 import           Data.Text ( Text )
@@ -210,7 +210,7 @@ data PosPrefixInfo = PosPrefixInfo
     -- then this property will be "from"
   , cursorPos :: J.Position
     -- ^ The cursor position
-  }
+  } deriving (Show,Eq)
 
 getCompletionPrefix :: (Monad m) => J.Position -> VirtualFile -> m (Maybe PosPrefixInfo)
 getCompletionPrefix pos@(J.Position l c) (VirtualFile _ yitext _) =
@@ -225,7 +225,7 @@ getCompletionPrefix pos@(J.Position l c) (VirtualFile _ yitext _) =
         --              Just ' ' -> Just "" -- don't count abc as the curword in 'abc '
         --              _ -> Yi.toText <$> lastMaybe (Yi.words beforePos)
 
-        let curLine = Rope.toText $ fst $ splitAtLine 1 $ snd $ splitAtLine l yitext
+        curLine <- headMaybe $ T.lines $ Rope.toText $ fst $ splitAtLine 1 $ snd $ splitAtLine l yitext
         let beforePos = T.take c curLine
         curWord <- case T.last beforePos of
                      ' ' -> return "" -- don't count abc as the curword in 'abc '
