@@ -256,7 +256,7 @@ updateState (ReqApplyWorkspaceEdit r) = do
   forM_ bumpedVersions $ \(VersionedTextDocumentIdentifier uri v) ->
     modify $ \s ->
       let oldVFS = vfs s
-          update (VirtualFile oldV t) = VirtualFile (fromMaybe oldV v) t
+          update (VirtualFile oldV t mf) = VirtualFile (fromMaybe oldV v) t mf
           newVFS = Map.adjust update uri oldVFS
       in s { vfs = newVFS }
 
