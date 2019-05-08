@@ -1623,16 +1623,13 @@ instance FromJSON MarkedString where
 data HoverContents =
     HoverContentsMS (List MarkedString)
   | HoverContents   MarkupContent
-  | HoverContentsEmpty
   deriving (Read,Show,Eq)
 
 instance ToJSON HoverContents where
   toJSON (HoverContentsMS  x) = toJSON x
   toJSON (HoverContents    x) = toJSON x
-  toJSON (HoverContentsEmpty) = A.Null
 instance FromJSON HoverContents where
   parseJSON v@(A.String _) = HoverContentsMS <$> parseJSON v
-  parseJSON   (A.Null)     = pure HoverContentsEmpty
   parseJSON v@(A.Array _)  = HoverContentsMS <$> parseJSON v
   parseJSON v@(A.Object _) = HoverContents   <$> parseJSON v
                          <|> HoverContentsMS <$> parseJSON v
@@ -1646,10 +1643,8 @@ instance Semigroup HoverContents where
 #endif
 
 instance Monoid HoverContents where
-  mempty = HoverContentsEmpty
+  mempty = HoverContentsMS (List [])
 
-  HoverContentsEmpty `mappend` hc = hc
-  hc `mappend` HoverContentsEmpty = hc
   HoverContents h1   `mappend` HoverContents         h2   = HoverContents (h1 `mappend` h2)
   HoverContents h1   `mappend` HoverContentsMS (List h2s) = HoverContents (mconcat (h1: (map toMarkupContent h2s)))
   HoverContentsMS (List h1s) `mappend` HoverContents         h2    = HoverContents (mconcat ((map toMarkupContent h1s) ++ [h2]))
