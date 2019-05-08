@@ -1,5 +1,26 @@
 # Revision history for haskell-lsp
 
+## 0.12.1.0 -- 2019-05-08
+
+* Bring over functions from @mpickering's hie-bios.
+  So `LspFuncs` now includes
+
+```haskell
+    , persistVirtualFileFunc       :: !(J.Uri -> IO FilePath)
+    , reverseFileMapFunc           :: !(IO (FilePath -> FilePath))
+ ```
+
+* Fix exception on empty filepaths
+
+* Migrate some utility functions from `haskell-ide-engine`, for the
+  benefit of other language servers.
+  - `rangeLinesFromVfs`
+  - `PosPrefixInfo(..)`
+  - `getCompletionPrefix`
+
+* Remove `HoverContentsEmpty`. It is unnecessary, and generated
+  illegal JSON on the wire.
+
 ## 0.12.0.0 -- 2019-05-05
 
 * Added A NFData instance for Diagnostics (@DavidM-D/@ndmitchell)
