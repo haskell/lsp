@@ -211,11 +211,6 @@ getCompletionPrefix pos@(J.Position l c) (VirtualFile _ yitext _) =
             headMaybe (x:_) = Just x
             lastMaybe [] = Nothing
             lastMaybe xs = Just $ last xs
-        -- curLine <- headMaybe $ Yi.lines $ snd $ Yi.splitAtLine l yitext
-        -- let beforePos = Yi.take c curLine
-        -- curWord <- case Yi.last beforePos of
-        --              Just ' ' -> Just "" -- don't count abc as the curword in 'abc '
-        --              _ -> Yi.toText <$> lastMaybe (Yi.words beforePos)
 
         curLine <- headMaybe $ T.lines $ Rope.toText
                              $ fst $ Rope.splitAtLine 1 $ snd $ Rope.splitAtLine l yitext
