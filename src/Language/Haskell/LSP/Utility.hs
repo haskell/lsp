@@ -43,7 +43,6 @@ str2lbs = TLE.encodeUtf8 . TL.pack
 lbs2str :: LBS.ByteString -> String
 lbs2str = TL.unpack. TLE.decodeUtf8
 
-
 -- ---------------------------------------------------------------------
 
 logs :: String -> IO ()
@@ -51,4 +50,3 @@ logs s = debugM _LOG_NAME s
 
 logm :: B.ByteString -> IO ()
 logm str = logs (lbs2str str)
-

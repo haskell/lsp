@@ -6,6 +6,7 @@ import           Data.String
 import qualified Data.Rope.UTF16 as Rope
 import           Language.Haskell.LSP.VFS
 import qualified Language.Haskell.LSP.Types as J
+import qualified Data.Text as T
 
 import           Test.Hspec
 
@@ -28,6 +29,9 @@ spec = describe "VSP functions" vspSpec
 
 mkRange :: Int -> Int -> Int -> Int -> Maybe J.Range
 mkRange ls cs le ce = Just $ J.Range (J.Position ls cs) (J.Position le ce)
+
+vfsFromText :: T.Text -> VirtualFile
+vfsFromText text = VirtualFile 0 (Rope.fromText text) Nothing
 
 -- ---------------------------------------------------------------------
 
@@ -266,3 +270,55 @@ vspSpec = do
           [ "a𐐀b"
           , "𐐀𐐀b"
           ]
+
+    -- ---------------------------------
+
+  describe "LSP utilities" $ do
+    it "splits at a line" $ do
+      let
+        orig = unlines
+          [ "module Foo where"
+          , "-- fooo"
+          , "foo :: Int"
+          , "foo = bb"
+          , ""
+          , "bb = 5"
+          , ""
+          , "baz = do"
+          , "  putStrLn \"hello world\""
+          ]
+        (left,right) = Rope.splitAtLine 4 (fromString orig)
+
+      lines (Rope.toString left) `shouldBe`
+          [ "module Foo where"
+          , "-- fooo"
+          , "foo :: Int"
+          , "foo = bb"
+          ]
+      lines (Rope.toString right) `shouldBe`
+          [ ""
+          , "bb = 5"
+          , ""
+          , "baz = do"
+          , "  putStrLn \"hello world\""
+          ]
+
+    -- ---------------------------------
+
+    it "getCompletionPrefix" $ do
+      let
+        orig = T.unlines
+          [ "{-# ings #-}"
+          , "import Data.List"
+          ]
+      pp4 <- getCompletionPrefix (J.Position 0 4) (vfsFromText orig)
+      pp4 `shouldBe` Just (PosPrefixInfo "{-# ings #-}" "" "" (J.Position 0 4))
+
+      pp5 <- getCompletionPrefix (J.Position 0 5) (vfsFromText orig)
+      pp5 `shouldBe` Just (PosPrefixInfo "{-# ings #-}" "" "i" (J.Position 0 5))
+
+      pp6 <- getCompletionPrefix (J.Position 0 6) (vfsFromText orig)
+      pp6 `shouldBe` Just (PosPrefixInfo "{-# ings #-}" "" "in" (J.Position 0 6))
+
+      pp14 <- getCompletionPrefix (J.Position 1 14) (vfsFromText orig)
+      pp14 `shouldBe` Just (PosPrefixInfo "import Data.List" "Data" "Li" (J.Position 1 14))
