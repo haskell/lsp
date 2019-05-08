@@ -20,7 +20,6 @@ module Language.Haskell.LSP.VFS
   , closeVFS
 
   -- * manipulating the file contents
-  , splitAtLine
   , rangeLinesFromVfs
   , PosPrefixInfo(..)
   , getCompletionPrefix
@@ -186,13 +185,6 @@ changeChars str start len new = mconcat [before, Rope.fromText new, after']
 
 -- ---------------------------------------------------------------------
 
-splitAtLine :: Int -> Rope.Rope -> (Rope.Rope, Rope.Rope)
-splitAtLine n r = Rope.splitAt codeUnit r
-  where
-    codeUnit = Rope.rowColumnCodeUnits (Rope.RowColumn n 0) r
-
--- ---------------------------------------------------------------------
-
 -- TODO:AZ:move this to somewhere sane
 -- | Describes the line at the current cursor position
 data PosPrefixInfo = PosPrefixInfo
@@ -225,7 +217,8 @@ getCompletionPrefix pos@(J.Position l c) (VirtualFile _ yitext _) =
         --              Just ' ' -> Just "" -- don't count abc as the curword in 'abc '
         --              _ -> Yi.toText <$> lastMaybe (Yi.words beforePos)
 
-        curLine <- headMaybe $ T.lines $ Rope.toText $ fst $ splitAtLine 1 $ snd $ splitAtLine l yitext
+        curLine <- headMaybe $ T.lines $ Rope.toText
+                             $ fst $ Rope.splitAtLine 1 $ snd $ Rope.splitAtLine l yitext
         let beforePos = T.take c curLine
         curWord <- case T.last beforePos of
                      ' ' -> return "" -- don't count abc as the curword in 'abc '
@@ -246,8 +239,8 @@ getCompletionPrefix pos@(J.Position l c) (VirtualFile _ yitext _) =
 rangeLinesFromVfs :: VirtualFile -> J.Range -> T.Text
 rangeLinesFromVfs (VirtualFile _ yitext _) (J.Range (J.Position lf _cf) (J.Position lt _ct)) = r
   where
-    (_ ,s1) = splitAtLine lf yitext
-    (s2, _) = splitAtLine (lt - lf) s1
+    (_ ,s1) = Rope.splitAtLine lf yitext
+    (s2, _) = Rope.splitAtLine (lt - lf) s1
     r = Rope.toText s2
 
 -- ---------------------------------------------------------------------

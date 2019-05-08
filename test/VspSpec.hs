@@ -287,7 +287,7 @@ vspSpec = do
           , "baz = do"
           , "  putStrLn \"hello world\""
           ]
-        (left,right) = splitAtLine 4 (fromString orig)
+        (left,right) = Rope.splitAtLine 4 (fromString orig)
 
       lines (Rope.toString left) `shouldBe`
           [ "module Foo where"
