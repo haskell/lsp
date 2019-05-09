@@ -3,6 +3,6 @@ packages:
   - .
 
 extra-deps:
-  - haskell-lsp-0.12.0.0
-  - haskell-lsp-types-0.12.0.0
+  - haskell-lsp-0.12.1.0
+  - haskell-lsp-types-0.12.1.0
   - rope-utf16-splay-0.2.0.0
