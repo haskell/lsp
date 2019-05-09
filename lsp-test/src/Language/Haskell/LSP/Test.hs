@@ -436,7 +436,7 @@ getVersionedDoc (TextDocumentIdentifier uri) = do
   fs <- vfs <$> get
   let ver =
         case fs Map.!? uri of
-          Just (VirtualFile v _) -> Just v
+          Just (VirtualFile v _ _) -> Just v
           _ -> Nothing
   return (VersionedTextDocumentIdentifier uri ver)
 
