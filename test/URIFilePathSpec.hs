@@ -23,6 +23,9 @@ testPosixUri = Uri $ pack "file:///home/myself/example.hs"
 testPosixFilePath :: FilePath
 testPosixFilePath = "/home/myself/example.hs"
 
+relativePosixFilePath :: FilePath
+relativePosixFilePath = "myself/example.hs"
+
 testWindowsUri :: Uri
 testWindowsUri = Uri $ pack "file:///c%3A/Users/myself/example.hs"
 
@@ -71,5 +74,11 @@ filePathUriSpec = do
       ,"/Functional.hs"
       ,""
       ,"")
-    Just "/Functional.hs" `shouldBe` platformAwareUriToFilePath "posix" theFilePath
+    Just "./Functional.hs" `shouldBe` platformAwareUriToFilePath "posix" theFilePath
 
+
+  it "converts a relative POSIX file path to a URI and back" $ do
+    let uri = platformAwareFilePathToUri "posix" relativePosixFilePath
+    uri `shouldBe` Uri "file://myself/example.hs"
+    let back = platformAwareUriToFilePath "posix" uri
+    back `shouldBe` Just relativePosixFilePath
