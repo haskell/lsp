@@ -1,5 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE RecordWildCards #-}
 module Language.Haskell.LSP.Types.Uri where
 
 import           Control.DeepSeq
@@ -31,13 +32,21 @@ uriToFilePath = platformAwareUriToFilePath System.Info.os
 
 platformAwareUriToFilePath :: String -> Uri -> Maybe FilePath
 platformAwareUriToFilePath systemOS (Uri uri) = do
-  parsedUri <- parseURI $ T.unpack uri
-  if uriScheme parsedUri == fileScheme
-    then return $ (platformAdjustFromUriPath systemOS . unEscapeString . uriPath) parsedUri
+  URI{..} <- parseURI $ T.unpack uri
+  if uriScheme == fileScheme
+    then return $
+      platformAdjustFromUriPath systemOS (uriRegName <$> uriAuthority) $ unEscapeString uriPath
     else Nothing
 
-platformAdjustFromUriPath :: SystemOS -> String -> FilePath
-platformAdjustFromUriPath systemOS srcPath =
+-- | We pull in the authority because in relative file paths the Uri likes to put everything before the slash
+--   into the authority field
+platformAdjustFromUriPath ::
+    SystemOS ->
+    Maybe String -> -- ^ authority
+    String -> -- ^ path
+    FilePath
+platformAdjustFromUriPath systemOS authority srcPath =
+  (maybe id (++) authority) $
   if systemOS /= windowsOS || null srcPath then srcPath
     else let
       firstSegment:rest = (FPP.splitDirectories . tail) srcPath  -- Drop leading '/' for absolute Windows paths

@@ -74,7 +74,7 @@ filePathUriSpec = do
       ,"/Functional.hs"
       ,""
       ,"")
-    Just "/Functional.hs" `shouldBe` platformAwareUriToFilePath "posix" theFilePath
+    Just "./Functional.hs" `shouldBe` platformAwareUriToFilePath "posix" theFilePath
 
 
   it "converts a relative POSIX file path to a URI and back" $ do
