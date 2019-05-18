@@ -128,7 +128,7 @@ deriveJSON lspOptions ''MarkupContent
 -- | Create a 'MarkupContent' containing a quoted language string only.
 markedUpContent :: Text -> Text -> MarkupContent
 markedUpContent lang quote
- = MarkupContent MkMarkdown ("```" <> lang <> "\n" <> quote <> "\n```\n")
+ = MarkupContent MkMarkdown ("\n```" <> lang <> "\n" <> quote <> "\n```\n")
 
 -- ---------------------------------------------------------------------
 
