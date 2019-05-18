@@ -1,4 +1,4 @@
-[![CircleCI](https://img.shields.io/circleci/project/github/alanz/haskell-lsp.svg)](https://circleci.com/gh/alanz/haskell-lsp)
+[![CircleCI](https://circleci.com/gh/alanz/haskell-lsp/tree/master.svg?style=svg)](https://circleci.com/gh/alanz/haskell-lsp/tree/master)
 [![Hackage](https://img.shields.io/hackage/v/haskell-lsp.svg)](https://hackage.haskell.org/package/haskell-lsp)
 
 # haskell-lsp

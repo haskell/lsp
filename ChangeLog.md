@@ -1,5 +1,10 @@
 # Revision history for haskell-lsp
 
+## 0.13.0.0 -- 2019-05-18
+
+* Fix relative posix URIs (@DavidM-D)
+* Make sure that markedUpContent always starts on a newline (@alanz)
+
 ## 0.12.1.0 -- 2019-05-08
 
 * Bring over functions from @mpickering's hie-bios.
