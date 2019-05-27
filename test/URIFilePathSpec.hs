@@ -1,11 +1,17 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE OverloadedStrings #-}
 module URIFilePathSpec where
 
+import Data.List
+import Data.Monoid ((<>))
 import Data.Text                              (pack)
 import Language.Haskell.LSP.Types
 
 import           Network.URI
+import qualified System.FilePath.Windows as FPW
 import Test.Hspec
+import Test.QuickCheck
+
 
 -- ---------------------------------------------------------------------
 
@@ -27,7 +33,7 @@ relativePosixFilePath :: FilePath
 relativePosixFilePath = "myself/example.hs"
 
 testWindowsUri :: Uri
-testWindowsUri = Uri $ pack "file:///c%3A/Users/myself/example.hs"
+testWindowsUri = Uri $ pack "file:///c:/Users/myself/example.hs"
 
 testWindowsFilePath :: FilePath
 testWindowsFilePath = "c:\\Users\\myself\\example.hs"
@@ -61,8 +67,8 @@ filePathUriSpec = do
     theFilePath `shouldBe` (Uri "file:///./Functional.hs")
 
   it "converts a Windows file path to a URI" $ do
-    let theFilePath = platformAwareFilePathToUri windowsOS "c:./Functional.hs"
-    theFilePath `shouldBe` (Uri "file:///c%3A/./Functional.hs")
+    let theFilePath = platformAwareFilePathToUri windowsOS "c:/Functional.hs"
+    theFilePath `shouldBe` (Uri "file:///c:/Functional.hs")
 
   it "converts a POSIX file path to a URI and back" $ do
     let theFilePath = platformAwareFilePathToUri "posix" "./Functional.hs"
@@ -76,9 +82,35 @@ filePathUriSpec = do
       ,"")
     Just "./Functional.hs" `shouldBe` platformAwareUriToFilePath "posix" theFilePath
 
+  it "converts a Posix file path to a URI and back" $ property $ forAll genPosixFilePath $ \fp -> do
+      let uri = platformAwareFilePathToUri "posix" fp
+      platformAwareUriToFilePath "posix" uri `shouldBe` Just fp
+
+  it "converts a Windows file path to a URI and back" $ property $ forAll genWindowsFilePath $ \fp -> do
+      let uri = platformAwareFilePathToUri windowsOS fp
+      -- We normalise to account for changes in the path separator.
+      platformAwareUriToFilePath windowsOS uri `shouldBe` Just (FPW.normalise fp)
 
   it "converts a relative POSIX file path to a URI and back" $ do
     let uri = platformAwareFilePathToUri "posix" relativePosixFilePath
     uri `shouldBe` Uri "file://myself/example.hs"
     let back = platformAwareUriToFilePath "posix" uri
     back `shouldBe` Just relativePosixFilePath
+
+genWindowsFilePath :: Gen FilePath
+genWindowsFilePath = do
+    segments <- listOf pathSegment
+    pathSep <- elements ['/', '\\']
+    pure ("C:" <> [pathSep] <> intercalate [pathSep] segments)
+  where pathSegment = listOf1 (arbitraryASCIIChar `suchThat` (`notElem` ['/', '\\', '.', ':']))
+
+genPosixFilePath :: Gen FilePath
+genPosixFilePath = do
+    segments <- listOf pathSegment
+    pure ("/" <> intercalate "/" segments)
+  where pathSegment = listOf1 (arbitraryASCIIChar `suchThat` (`notElem` ['/', '.']))
+
+#if !MIN_VERSION_QuickCheck(2,10,0)
+arbitraryASCIIChar :: Gen Char
+arbitraryASCIIChar = arbitrary
+#endif

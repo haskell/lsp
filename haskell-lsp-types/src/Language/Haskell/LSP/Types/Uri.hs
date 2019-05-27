@@ -66,11 +66,24 @@ platformAwareFilePathToUri systemOS fp = Uri . T.pack . show $ URI
   }
 
 platformAdjustToUriPath :: SystemOS -> FilePath -> String
-platformAdjustToUriPath systemOS srcPath =
-  if systemOS /= windowsOS || null srcPath then srcPath
-    else let
-      drive:rest = FPW.splitDirectories srcPath
-      leaveCharUnescaped = (/= ':')
-      removePathSeparator = filter (not . FPW.isPathSeparator)
-      escapedDrive = removePathSeparator $ escapeURIString leaveCharUnescaped drive
-      in '/' : FPP.joinPath (escapedDrive : rest)
+platformAdjustToUriPath systemOS srcPath
+  | systemOS == windowsOS = '/' : escapedPath
+  | otherwise = escapedPath
+  where
+    (splitDirectories, splitDrive)
+      | systemOS == windowsOS = (FPW.splitDirectories, FPW.splitDrive)
+      | otherwise = (FPP.splitDirectories, FPP.splitDrive)
+    escapedPath =
+        case splitDrive srcPath of
+            (drv, rest) ->
+                convertDrive drv `FPP.joinDrive`
+                FPP.joinPath (map (escapeURIString unescaped) $ splitDirectories rest)
+    -- splitDirectories does not remove the path separator after the drive so
+    -- we do a final replacement of \ to /
+    convertDrive drv
+      | systemOS == windowsOS && FPW.hasTrailingPathSeparator drv =
+        FPP.addTrailingPathSeparator (init drv)
+      | otherwise = drv
+    unescaped c
+      | systemOS == windowsOS = isUnreserved c || c `elem` [':', '\\', '/']
+      | otherwise = isUnreserved c || c == '/'
