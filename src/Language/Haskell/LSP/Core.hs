@@ -254,6 +254,10 @@ data Handlers =
     , initializeRequestHandler                 :: !(Maybe (Handler J.InitializeRequest))
     -- Will default to terminating `exitMessage` if Nothing
     , exitNotificationHandler                  :: !(Maybe (Handler J.ExitNotification))
+
+    , customRequestHandler                     :: !(Maybe (Handler J.CustomClientRequest))
+    , customNotificationHandler                :: !(Maybe (Handler J.CustomClientNotification))
+
     }
 
 instance Default Handlers where
@@ -261,7 +265,7 @@ instance Default Handlers where
                  Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
                  Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
                  Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
-                 Nothing Nothing
+                 Nothing Nothing Nothing Nothing
 
 -- ---------------------------------------------------------------------
 nop :: a -> b -> IO a
@@ -337,17 +341,13 @@ handlerMap _ h J.DocumentLinkResolve             = hh nop ReqDocumentLinkResolve
 handlerMap _ h J.TextDocumentRename              = hh nop ReqRename $ renameHandler h
 handlerMap _ h J.TextDocumentFoldingRange        = hh nop ReqFoldingRange $ foldingRangeHandler h
 handlerMap _ _ J.WindowProgressCancel            = helper progressCancelHandler
-handlerMap _ _ (J.Misc x)   = helper f
-  where f ::  TVar (LanguageContextData c) -> J.Value -> IO ()
-        f tvarDat n = do
-          let msg = "haskell-lsp:Got " ++ T.unpack x ++ " ignoring"
-          logm (B.pack msg)
-
-          ctx <- readTVarIO tvarDat
-
-          captureFromClient (UnknownFromClientMessage n) (resCaptureFile ctx)
-
-          sendErrorLog tvarDat (T.pack msg)
+handlerMap _ h (J.CustomClientMethod _)          = \ctxData val ->
+    case val of
+        J.Object o | "id" `HM.member` o ->
+            -- Custom request
+            hh nop ReqCustomClient (customRequestHandler h) ctxData val
+        _ -> -- Custom notification
+            hh nop NotCustomClient (customNotificationHandler h) ctxData val
 
 -- ---------------------------------------------------------------------
 

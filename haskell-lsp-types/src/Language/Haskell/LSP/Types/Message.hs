@@ -8,9 +8,7 @@ import           Data.Aeson.TH
 import           Data.Aeson.Types
 import           Data.Hashable
 -- For <= 8.2.2
-import           Data.Monoid                                ((<>))
 import           Data.Text                                  (Text)
-import qualified Data.Text                                  as T
 import           Language.Haskell.LSP.Types.Constants
 
 
@@ -115,9 +113,8 @@ data ClientMethod =
  | TextDocumentOnTypeFormatting
  | TextDocumentRename
  | TextDocumentFoldingRange
- -- Messages of the form $/message
- -- Implementation Dependent, can be ignored
- | Misc Text
+ -- A custom message type. It is not enforced that this starts with $/.
+ | CustomClientMethod Text
    deriving (Eq,Ord,Read,Show)
 
 instance A.FromJSON ClientMethod where
@@ -163,9 +160,7 @@ instance A.FromJSON ClientMethod where
   parseJSON (A.String "textDocument/rename")              = return TextDocumentRename
   parseJSON (A.String "textDocument/foldingRange")        = return TextDocumentFoldingRange
   parseJSON (A.String "window/progress/cancel")           = return WindowProgressCancel
-  parseJSON (A.String x)                                  = if T.isPrefixOf "$/" x
-                                                               then return $ Misc (T.drop 2 x)
-                                                            else mempty
+  parseJSON (A.String x)                                  = return (CustomClientMethod x)
   parseJSON _                                             = mempty
 
 instance A.ToJSON ClientMethod where
@@ -211,7 +206,7 @@ instance A.ToJSON ClientMethod where
   toJSON TextDocumentDocumentLink        = A.String "textDocument/documentLink"
   toJSON DocumentLinkResolve             = A.String "documentLink/resolve"
   toJSON WindowProgressCancel            = A.String "window/progress/cancel"
-  toJSON (Misc xs)                       = A.String $ "$/" <> xs
+  toJSON (CustomClientMethod xs)         = A.String xs
 
 data ServerMethod =
   -- Window
@@ -233,6 +228,7 @@ data ServerMethod =
   | TextDocumentPublishDiagnostics
   -- Cancelling
   | CancelRequestServer
+  | CustomServerMethod Text
    deriving (Eq,Ord,Read,Show)
 
 instance A.FromJSON ServerMethod where
@@ -255,6 +251,7 @@ instance A.FromJSON ServerMethod where
   parseJSON (A.String "textDocument/publishDiagnostics") = return TextDocumentPublishDiagnostics
   -- Cancelling
   parseJSON (A.String "$/cancelRequest")                 = return CancelRequestServer
+  parseJSON (A.String m)                                 = return (CustomServerMethod m)
   parseJSON _                                            = mempty
 
 instance A.ToJSON ServerMethod where
@@ -277,6 +274,7 @@ instance A.ToJSON ServerMethod where
   toJSON TextDocumentPublishDiagnostics = A.String "textDocument/publishDiagnostics"
   -- Cancelling
   toJSON CancelRequestServer = A.String "$/cancelRequest"
+  toJSON (CustomServerMethod m) = A.String m
 
 data RequestMessage m req resp =
   RequestMessage
