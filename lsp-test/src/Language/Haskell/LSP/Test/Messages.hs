@@ -59,6 +59,7 @@ handleServerMessage request response notification msg = case msg of
     (ReqApplyWorkspaceEdit       m) -> request m
     (ReqShowMessage              m) -> request m
     (ReqUnregisterCapability     m) -> request m
+    (ReqCustomServer             m) -> request m
     (RspInitialize               m) -> response m
     (RspShutdown                 m) -> response m
     (RspHover                    m) -> response m
@@ -87,6 +88,7 @@ handleServerMessage request response notification msg = case msg of
     (RspDocumentColor            m) -> response m
     (RspColorPresentation        m) -> response m
     (RspFoldingRange             m) -> response m
+    (RspCustomServer             m) -> response m
     (NotPublishDiagnostics       m) -> notification m
     (NotLogMessage               m) -> notification m
     (NotShowMessage              m) -> notification m
@@ -95,6 +97,7 @@ handleServerMessage request response notification msg = case msg of
     (NotProgressDone             m) -> notification m
     (NotTelemetry                m) -> notification m
     (NotCancelRequestFromServer  m) -> notification m
+    (NotCustomServer             m) -> notification m
 
 handleClientMessage
     :: forall a.
@@ -145,4 +148,5 @@ handleClientMessage request response notification msg = case msg of
  (NotDidChangeWatchedFiles    m) -> notification m
  (NotDidChangeWorkspaceFolders m) -> notification m
  (NotProgressCancel           m) -> notification m
- (UnknownFromClientMessage    m) -> error $ "Unknown message sent from client: " ++ show m
+ (ReqCustomClient             m) -> request m
+ (NotCustomClient             m) -> notification m

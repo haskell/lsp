@@ -3,6 +3,9 @@ packages:
   - .
 
 extra-deps:
-  - haskell-lsp-0.13.0.0
-  - haskell-lsp-types-0.13.0.0
+  - git: https://github.com/alanz/haskell-lsp.git
+    commit: 491d8d2e33572b3868078f57a3375b2ac621f958
+    subdirs:
+      - .
+      - haskell-lsp-types
   - rope-utf16-splay-0.3.1.0
