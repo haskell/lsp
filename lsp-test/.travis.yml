@@ -23,7 +23,7 @@ before_install:
   - git init
   - git remote add origin https://github.com/haskell/haskell-ide-engine.git
   - git pull origin master
-  - git checkout 4c64789597cec9e73c9aeb901d9f6d0bb58251d9
+  - git checkout 47b5281d9d8ffe7348f7f7fcb3ce36b4eabd4f06
   - git submodule init
   - git submodule sync
   - git submodule update --init
