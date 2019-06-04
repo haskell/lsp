@@ -41,7 +41,9 @@ module Language.Haskell.LSP.Test
   , initializeResponse
   -- ** Documents
   , openDoc
+  , openDoc'
   , closeDoc
+  , changeDoc
   , documentContents
   , getDocumentEdit
   , getDocUri
@@ -283,6 +285,15 @@ sendNotification TextDocumentDidClose params = do
   modify (\s -> s { vfs = newVFS })
   sendMessage n
 
+sendNotification TextDocumentDidChange params = do
+    let params' = fromJust $ decode $ encode params
+        n :: DidChangeTextDocumentNotification
+        n = NotificationMessage "2.0" TextDocumentDidChange params'
+    oldVFS <- vfs <$> get
+    newVFS <- liftIO $ changeFromClientVFS oldVFS n
+    modify (\s -> s { vfs = newVFS })
+    sendMessage n
+
 sendNotification method params = sendMessage (NotificationMessage "2.0" method params)
 
 -- | Sends a response to the server.
@@ -298,19 +309,20 @@ initializeResponse = initRsp <$> ask >>= (liftIO . readMVar)
 -- | Opens a text document and sends a notification to the client.
 openDoc :: FilePath -> String -> Session TextDocumentIdentifier
 openDoc file languageId = do
-  item <- getDocItem file languageId
+  context <- ask
+  let fp = rootDir context </> file
+  contents <- liftIO $ T.readFile fp
+  openDoc' file languageId contents
+
+-- | This is a variant of `openDoc` that takes the file content as an argument.
+openDoc' :: FilePath -> String -> T.Text -> Session TextDocumentIdentifier
+openDoc' file languageId contents = do
+  context <- ask
+  let fp = rootDir context </> file
+      uri = filePathToUri fp
+      item = TextDocumentItem uri (T.pack languageId) 0 contents
   sendNotification TextDocumentDidOpen (DidOpenTextDocumentParams item)
-  TextDocumentIdentifier <$> getDocUri file
-  where
-  -- | Reads in a text document as the first version.
-  getDocItem :: FilePath -- ^ The path to the text document to read in.
-            -> String -- ^ The language ID, e.g "haskell" for .hs files.
-            -> Session TextDocumentItem
-  getDocItem file languageId = do
-    context <- ask
-    let fp = rootDir context </> file
-    contents <- liftIO $ T.readFile fp
-    return $ TextDocumentItem (filePathToUri fp) (T.pack languageId) 0 contents
+  pure $ TextDocumentIdentifier uri
 
 -- | Closes a text document and sends a notification to the client.
 closeDoc :: TextDocumentIdentifier -> Session ()
@@ -318,10 +330,12 @@ closeDoc docId = do
   let params = DidCloseTextDocumentParams (TextDocumentIdentifier (docId ^. uri))
   sendNotification TextDocumentDidClose params
 
-  oldVfs <- vfs <$> get
-  let notif = NotificationMessage "" TextDocumentDidClose params
-  newVfs <- liftIO $ closeVFS oldVfs notif
-  modify $ \s -> s { vfs = newVfs }
+-- | Changes a text document and sends a notification to the client
+changeDoc :: TextDocumentIdentifier -> [TextDocumentContentChangeEvent] -> Session ()
+changeDoc docId changes = do
+  verDoc <- getVersionedDoc docId
+  let params = DidChangeTextDocumentParams (verDoc & version . non 0 +~ 1) (List changes)
+  sendNotification TextDocumentDidChange params
 
 -- | Gets the Uri for the file corrected to the session directory.
 getDocUri :: FilePath -> Session Uri
