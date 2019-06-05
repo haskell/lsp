@@ -197,6 +197,10 @@ runSessionWithHandles serverIn serverOut serverHandler config caps rootDir sessi
 
   hSetBuffering serverIn  NoBuffering
   hSetBuffering serverOut NoBuffering
+  -- This is required to make sure that we don’t get any
+  -- newline conversion or weird encoding issues.
+  hSetBinaryMode serverIn True
+  hSetBinaryMode serverOut True
 
   reqMap <- newMVar newRequestMap
   messageChan <- newChan
