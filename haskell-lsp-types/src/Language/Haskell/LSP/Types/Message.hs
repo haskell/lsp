@@ -384,7 +384,16 @@ data ResponseMessage a =
     , _error   :: Maybe ResponseError
     } deriving (Read,Show,Eq)
 
-deriveJSON lspOptions ''ResponseMessage
+deriveToJSON lspOptions ''ResponseMessage
+
+instance FromJSON a => FromJSON (ResponseMessage a) where
+  parseJSON = withObject "Response" $ \o ->
+    ResponseMessage
+      <$> o .: "jsonrpc"
+      <*> o .: "id"
+      -- It is important to use .:! so that result = null gets decoded as Just Nothing
+      <*> o .:! "result"
+      <*> o .:! "error"
 
 type ErrorResponse = ResponseMessage ()
 
