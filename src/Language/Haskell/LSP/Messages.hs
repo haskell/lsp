@@ -61,8 +61,12 @@ data FromClientMessage = ReqInitialize               InitializeRequest
                        | NotDidChangeWatchedFiles        DidChangeWatchedFilesNotification
                        | NotDidChangeWorkspaceFolders    DidChangeWorkspaceFoldersNotification
                        | NotProgressCancel               ProgressCancelNotification
-                       -- Unknown (The client sends something we don't understand)
-                       | UnknownFromClientMessage        Value
+
+                       -- It is common for language servers to add custom message types so these
+                       -- three constructors can be used to handle custom request, response or notification
+                       -- types.
+                       | ReqCustomClient                 CustomClientRequest
+                       | NotCustomClient                 CustomClientNotification
   deriving (Eq,Read,Show,Generic,ToJSON,FromJSON)
 
 -- | A wrapper around a message that originates from the server
@@ -110,4 +114,11 @@ data FromServerMessage = ReqRegisterCapability       RegisterCapabilityRequest
                        | NotTelemetry                TelemetryNotification
                        -- A cancel request notification is duplex!
                        | NotCancelRequestFromServer  CancelNotificationServer
+
+                       -- It is common for language servers to add custom message types so these
+                       -- three constructors can be used to handle custom request, response or notification
+                       -- types.
+                       | ReqCustomServer             CustomServerRequest
+                       | RspCustomServer             CustomResponse
+                       | NotCustomServer             CustomServerNotification
   deriving (Eq,Read,Show,Generic,ToJSON,FromJSON)

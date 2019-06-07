@@ -841,6 +841,14 @@ Notification:
 
 type TelemetryNotification = NotificationMessage ServerMethod A.Value
 
+type CustomClientNotification = NotificationMessage ClientMethod A.Value
+type CustomServerNotification = NotificationMessage ServerMethod A.Value
+
+type CustomClientRequest = RequestMessage ClientMethod A.Value A.Value
+type CustomServerRequest = RequestMessage ServerMethod A.Value A.Value
+
+type CustomResponse = ResponseMessage A.Value
+
 -- ---------------------------------------------------------------------
 {-
 New in 3.0
