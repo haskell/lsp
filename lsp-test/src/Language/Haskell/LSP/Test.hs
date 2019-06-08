@@ -92,6 +92,7 @@ import qualified Data.Text.IO as T
 import Data.Aeson
 import Data.Default
 import qualified Data.HashMap.Strict as HashMap
+import Data.IORef
 import qualified Data.Map as Map
 import Data.Maybe
 import Language.Haskell.LSP.Types
@@ -135,6 +136,8 @@ runSessionWithConfig :: SessionConfig -- ^ Configuration options for the session
                      -> Session a -- ^ The session to run.
                      -> IO a
 runSessionWithConfig config serverExe caps rootDir session = do
+  -- We use this IORef to make exception non-fatal when the server is supposed to shutdown.
+  exitOk <- newIORef False
   pid <- getCurrentProcessID
   absRootDir <- canonicalizePath rootDir
 
@@ -146,7 +149,7 @@ runSessionWithConfig config serverExe caps rootDir session = do
                                           (Just TraceOff)
                                           Nothing
   withServer serverExe (logStdErr config) $ \serverIn serverOut _ ->
-    runSessionWithHandles serverIn serverOut listenServer config caps rootDir $ do
+    runSessionWithHandles serverIn serverOut (\h c -> catchWhenTrue exitOk $ listenServer h c) config caps rootDir $ do
 
       -- Wrap the session around initialize and shutdown calls
       initRspMsg <- request Initialize initializeParams :: Session InitializeResponse
@@ -165,12 +168,22 @@ runSessionWithConfig config serverExe caps rootDir session = do
       -- Run the actual test
       result <- session
 
+      liftIO $ atomicWriteIORef exitOk True
       sendNotification Exit ExitParams
 
       return result
   where
+  catchWhenTrue :: IORef Bool -> IO () -> IO ()
+  catchWhenTrue exitOk a =
+      a `catch` (\e -> do
+          x <- readIORef exitOk
+          unless x $ throw (e :: SomeException))
+
   -- | Listens to the server output, makes sure it matches the record and
   -- signals any semaphores
+  -- Note that on Windows, we cannot kill a thread stuck in getNextMessage.
+  -- So we have to wait for the exit notification to kill the process first
+  -- and then getNextMessage will fail.
   listenServer :: Handle -> SessionContext -> IO ()
   listenServer serverOut context = do
     msgBytes <- getNextMessage serverOut

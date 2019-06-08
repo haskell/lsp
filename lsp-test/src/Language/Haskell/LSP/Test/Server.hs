@@ -1,7 +1,6 @@
 module Language.Haskell.LSP.Test.Server (withServer) where
 
-import Control.Concurrent
-import Control.Exception
+import Control.Concurrent.Async
 import Control.Monad
 import Language.Haskell.LSP.Test.Compat
 import System.IO
@@ -13,15 +12,12 @@ withServer serverExe logStdErr f = do
   -- separate command and arguments
   let cmd:args = words serverExe
       createProc = (proc cmd args) { std_in = CreatePipe, std_out = CreatePipe, std_err = CreatePipe }
-  (Just serverIn, Just serverOut, Just serverErr, serverProc) <- createProcess createProc
-
-  -- Need to continuously consume to stderr else it gets blocked
-  -- Can't pass NoStream either to std_err
-  hSetBuffering serverErr NoBuffering
-  errSinkThread <- forkIO $ forever $ hGetLine serverErr >>= when logStdErr . putStrLn
-
-  pid <- getProcessID serverProc
-
-  finally (f serverIn serverOut pid) $ do
-    killThread errSinkThread
-    terminateProcess serverProc
+  withCreateProcess createProc $ \(Just serverIn) (Just serverOut) (Just serverErr) serverProc -> do
+    -- Need to continuously consume to stderr else it gets blocked
+    -- Can't pass NoStream either to std_err
+    hSetBuffering serverErr NoBuffering
+    hSetBinaryMode serverErr True
+    let errSinkThread = forever $ hGetLine serverErr >>= when logStdErr . putStrLn
+    withAsync errSinkThread $ \_ -> do
+      pid <- getProcessID serverProc
+      f serverIn serverOut pid
