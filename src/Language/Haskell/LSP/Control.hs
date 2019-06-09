@@ -17,6 +17,10 @@ import           Control.Concurrent.STM.TVar
 import           Control.Monad
 import           Control.Monad.STM
 import qualified Data.Aeson as J
+import qualified Data.Attoparsec.ByteString as Attoparsec
+import Data.Attoparsec.ByteString.Char8
+import qualified Data.ByteString as BS
+import Data.ByteString.Builder.Extra (defaultChunkSize)
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as B
 import           Data.Time.Clock
@@ -30,7 +34,6 @@ import           Language.Haskell.LSP.Messages
 import           Language.Haskell.LSP.Utility
 import           System.IO
 import           System.FilePath
-import           Text.Parsec
 
 -- ---------------------------------------------------------------------
 
@@ -94,40 +97,27 @@ ioLoop :: (Show c) => Handle
                    -> Core.InitializeCallback c
                    -> TVar (Core.LanguageContextData c)
                    -> IO ()
-ioLoop hin dispatcherProc tvarDat = go BSL.empty
+ioLoop hin dispatcherProc tvarDat = do
+  go (parse parser "")
   where
-    go :: BSL.ByteString -> IO ()
-    go buf = do
-      c <- BSL.hGet hin 1
-
-      if c == BSL.empty
-        then do
-          logm $ B.pack "\nhaskell-lsp:Got EOF, exiting 1 ...\n"
-          return ()
-        else do
-          -- logs $ "ioLoop: got" ++ show c
-          let newBuf = BSL.append buf c
-          case readContentLength (lbs2str newBuf) of
-            Left _ -> go newBuf
-            Right len -> do
-              cnt <- BSL.hGet hin len
-
-              if cnt == BSL.empty
-                then do
-                  logm $ B.pack "\nhaskell-lsp:Got EOF, exiting 1 ...\n"
-                  return ()
-                else do
-                  logm $ B.pack "---> " <> cnt
-                  Core.handleMessage dispatcherProc tvarDat newBuf cnt
-                  ioLoop hin dispatcherProc tvarDat
-      where
-        readContentLength :: String -> Either ParseError Int
-        readContentLength = parse parser "readContentLength"
-
-        parser = do
-          _ <- string "Content-Length: "
-          len <- manyTill digit (string _TWO_CRLF)
-          return . read $ len
+    go :: Result BS.ByteString -> IO ()
+    go (Fail _ ctxs err) = logm $ B.pack
+      "\nhaskell-lsp: Failed to parse message header:\n" <> B.intercalate " > " (map str2lbs ctxs) <> ": " <>
+      str2lbs err <> "\n exiting 1 ...\n"
+    go (Partial c) = do
+      bs <- BS.hGetSome hin defaultChunkSize
+      if BS.null bs
+        then logm $ B.pack "\nhaskell-lsp:Got EOF, exiting 1 ...\n"
+        else go (c bs)
+    go (Done remainder msg) = do
+      logm $ B.pack "---> " <> BSL.fromStrict msg
+      Core.handleMessage dispatcherProc tvarDat (BSL.fromStrict msg)
+      go (parse parser remainder)
+    parser = do
+      _ <- string "Content-Length: "
+      len <- decimal
+      _ <- string _TWO_CRLF
+      Attoparsec.take len
 
 -- ---------------------------------------------------------------------
 
@@ -144,7 +134,7 @@ sendServer msgChan clientH captureFp =
 
     let out = BSL.concat
                  [ str2lbs $ "Content-Length: " ++ show (BSL.length str)
-                 , str2lbs _TWO_CRLF
+                 , BSL.fromStrict _TWO_CRLF
                  , str ]
 
     BSL.hPut clientH out
@@ -156,7 +146,7 @@ sendServer msgChan clientH captureFp =
 -- |
 --
 --
-_TWO_CRLF :: String
+_TWO_CRLF :: BS.ByteString
 _TWO_CRLF = "\r\n\r\n"
 
 
