@@ -19,6 +19,19 @@ newtype Uri = Uri { getUri :: Text }
 
 instance NFData Uri
 
+-- | When URIs are supposed to be used as keys, it is important to normalize
+-- the percent encoding in the URI since URIs that only differ
+-- when it comes to the percent-encoding should be treated as equivalent.
+newtype NormalizedUri = NormalizedUri Text
+  deriving (Eq,Ord,Read,Show,Generic,Hashable)
+
+toNormalizedUri :: Uri -> NormalizedUri
+toNormalizedUri (Uri t) =
+    NormalizedUri $ T.pack $ escapeURIString isUnescapedInURI $ unEscapeString $ T.unpack t
+
+fromNormalizedUri :: NormalizedUri -> Uri
+fromNormalizedUri (NormalizedUri t) = Uri t
+
 fileScheme :: String
 fileScheme = "file:"
 

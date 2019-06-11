@@ -122,7 +122,7 @@ instance Default Options where
 -- 'textDocument/publishDiagnostics' notification with the total (limited by the
 -- first parameter) whenever it is updated.
 type PublishDiagnosticsFunc = Int -- Max number of diagnostics to send
-                            -> J.Uri -> J.TextDocumentVersion -> DiagnosticsBySource -> IO ()
+                            -> J.NormalizedUri -> J.TextDocumentVersion -> DiagnosticsBySource -> IO ()
 
 -- | A function to remove all diagnostics from a particular source, and send the updates to the client.
 type FlushDiagnosticsBySourceFunc = Int -- Max number of diagnostics to send
@@ -155,8 +155,8 @@ data LspFuncs c =
       -- ^ Derived from the DidChangeConfigurationNotification message via a
       -- server-provided function.
     , sendFunc                     :: !SendFunc
-    , getVirtualFileFunc           :: !(J.Uri -> IO (Maybe VirtualFile))
-    , persistVirtualFileFunc       :: !(J.Uri -> IO FilePath)
+    , getVirtualFileFunc           :: !(J.NormalizedUri -> IO (Maybe VirtualFile))
+    , persistVirtualFileFunc       :: !(J.NormalizedUri -> IO FilePath)
     , reverseFileMapFunc           :: !(IO (FilePath -> FilePath))
     , publishDiagnosticsFunc       :: !PublishDiagnosticsFunc
     , flushDiagnosticsBySourceFunc :: !FlushDiagnosticsBySourceFunc
@@ -416,12 +416,12 @@ hwf h tvarDat json = do
 
 -- ---------------------------------------------------------------------
 
-getVirtualFile :: TVar (LanguageContextData c) -> J.Uri -> IO (Maybe VirtualFile)
+getVirtualFile :: TVar (LanguageContextData c) -> J.NormalizedUri -> IO (Maybe VirtualFile)
 getVirtualFile tvarDat uri = Map.lookup uri . resVFS <$> readTVarIO tvarDat
 
 -- | Dump the current text for a given VFS file to a temporary file,
 -- and return the path to the file.
-persistVirtualFile :: TVar (LanguageContextData c) -> J.Uri -> IO FilePath
+persistVirtualFile :: TVar (LanguageContextData c) -> J.NormalizedUri -> IO FilePath
 persistVirtualFile tvarDat uri = do
   st <- readTVarIO tvarDat
   let vfs = resVFS st
@@ -431,7 +431,7 @@ persistVirtualFile tvarDat uri = do
   let revMap' =
         -- TODO: Does the VFS make sense for URIs which are not files?
         -- The reverse map should perhaps be (FilePath -> URI)
-        case J.uriToFilePath uri of
+        case J.uriToFilePath (J.fromNormalizedUri uri) of
           Just uri_fp -> Map.insert fn uri_fp revMap
           Nothing -> revMap
 
