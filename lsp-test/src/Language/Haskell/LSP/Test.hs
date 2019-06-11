@@ -79,6 +79,8 @@ module Language.Haskell.LSP.Test
   , formatRange
   -- ** Edits
   , applyEdit
+  -- ** Code lenses
+  , getCodeLenses
   ) where
 
 import Control.Applicative.Combinators
@@ -518,9 +520,12 @@ getReferences doc pos inclDecl =
 getDefinitions :: TextDocumentIdentifier -- ^ The document the term is in.
                -> Position -- ^ The position the term is at.
                -> Session [Location] -- ^ The location(s) of the definitions
-getDefinitions doc pos =
+getDefinitions doc pos = do
   let params = TextDocumentPositionParams doc pos
-  in getResponseResult <$> request TextDocumentDefinition params
+  rsp <- request TextDocumentDefinition params :: Session DefinitionResponse
+  case getResponseResult rsp of
+      SingleLoc loc -> pure [loc]
+      MultiLoc locs -> pure locs
 
 -- | Returns the type definition(s) for the term at the specified position.
 getTypeDefinitions :: TextDocumentIdentifier -- ^ The document the term is in.
@@ -577,3 +582,10 @@ applyTextEdits doc edits =
   let wEdit = WorkspaceEdit (Just (HashMap.singleton (doc ^. uri) edits)) Nothing
       req = RequestMessage "" (IdInt 0) WorkspaceApplyEdit (ApplyWorkspaceEditParams wEdit)
   in updateState (ReqApplyWorkspaceEdit req)
+
+-- | Returns the code lenses for the specified document.
+getCodeLenses :: TextDocumentIdentifier -> Session [CodeLens]
+getCodeLenses tId = do
+    rsp <- request TextDocumentCodeLens (CodeLensParams tId) :: Session CodeLensResponse
+    case getResponseResult rsp of
+        List res -> pure res
