@@ -497,8 +497,8 @@ defaultProgressData = ProgressData 0 Map.empty
 -- ---------------------------------------------------------------------
 
 handleMessage :: (Show c) => InitializeCallback c
-              -> TVar (LanguageContextData c) -> BSL.ByteString -> BSL.ByteString -> IO ()
-handleMessage dispatcherProc tvarDat contLenStr jsonStr = do
+              -> TVar (LanguageContextData c) -> BSL.ByteString -> IO ()
+handleMessage dispatcherProc tvarDat jsonStr = do
   {-
   Message Types we must handle are the following
 
@@ -510,7 +510,7 @@ handleMessage dispatcherProc tvarDat contLenStr jsonStr = do
 
   case J.eitherDecode jsonStr :: Either String J.Object of
     Left  err -> do
-      let msg =  T.pack $ unwords [ "haskell-lsp:incoming message parse error.", lbs2str contLenStr, lbs2str jsonStr, show err]
+      let msg =  T.pack $ unwords [ "haskell-lsp:incoming message parse error.", lbs2str jsonStr, show err]
               ++ L.intercalate "\n" ("" : "" : _ERR_MSG_URL)
               ++ "\n"
       sendErrorLog tvarDat msg
@@ -522,7 +522,7 @@ handleMessage dispatcherProc tvarDat contLenStr jsonStr = do
                                    J.Success m -> handle (J.Object o) m
                                    J.Error _ -> do
                                      let msg = T.pack $ unwords ["haskell-lsp:unknown message received:method='"
-                                                                 ++ T.unpack s ++ "',", lbs2str contLenStr, lbs2str jsonStr]
+                                                                 ++ T.unpack s ++ "',", lbs2str jsonStr]
                                      sendErrorLog tvarDat msg
         Just oops -> logs $ "haskell-lsp:got strange method param, ignoring:" ++ show oops
         Nothing -> do

@@ -5,7 +5,6 @@ module WorkspaceFoldersSpec where
 import Control.Concurrent.MVar
 import Control.Concurrent.STM
 import Data.Aeson
-import qualified Data.ByteString.Lazy.Char8 as BSL
 import Data.Default
 import Language.Haskell.LSP.Core
 import Language.Haskell.LSP.Types
@@ -28,8 +27,7 @@ spec = describe "workspace folders" $
 
     let putMsg msg =
           let jsonStr = encode msg
-              clStr = BSL.pack $ "Content-Length: " ++ show (BSL.length jsonStr)
-            in handleMessage initCb tvarCtx clStr jsonStr
+            in handleMessage initCb tvarCtx jsonStr
 
     let starterWorkspaces = List [wf0]
         initParams = InitializeParams

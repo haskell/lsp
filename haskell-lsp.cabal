@@ -38,6 +38,7 @@ library
   build-depends:       base >=4.9 && <4.13
                      , async
                      , aeson >=1.0.0.0
+                     , attoparsec
                      , bytestring
                      , containers
                      , directory
@@ -49,7 +50,6 @@ library
                      , lens >= 4.15.2
                      , mtl
                      , network-uri
-                     , parsec
                      , rope-utf16-splay >= 0.3.1.0
                      , sorted-list == 0.2.1.*
                      , stm
@@ -78,7 +78,6 @@ executable lsp-hello
                      , lens >= 4.15.2
                      , mtl
                      , network-uri
-                     , parsec
                      , rope-utf16-splay >= 0.2
                      , stm
                      , text
