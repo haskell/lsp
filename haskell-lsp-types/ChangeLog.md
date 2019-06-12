@@ -1,5 +1,10 @@
 # Revision history for haskell-lsp-types
 
+## 0.14.0.0 -- 2019-06-13
+
+* Add support for custom request and notification methods
+  (@cocreature)
+
 ## 0.11.0.0 -- 2019-04-28
 
 * Fix `window/progress/cancel` notification being a from server

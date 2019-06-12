@@ -1,5 +1,12 @@
 # Revision history for haskell-lsp
 
+## 0.14.0.0 -- 2019-06-13
+
+* Add support for custom request and notification methods
+  (@cocreature)
+* Use attoparsec to parse message headers incrementally (@cocreature)
+* Only build lsp-hello when -fdemo flag is set (@bubba)
+
 ## 0.13.0.0 -- 2019-05-18
 
 * Fix relative posix URIs (@DavidM-D)
