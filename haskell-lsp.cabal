@@ -88,6 +88,13 @@ executable lsp-hello
                      , vector
                      -- the package library. Comment this out if you want repl changes to propagate
                      , haskell-lsp
+  if !flag(demo)
+    buildable:         False
+
+flag demo {
+  description: Build the lsp-hello demo executable
+  default:     False
+}
 
 test-suite haskell-lsp-test
   type:                exitcode-stdio-1.0

@@ -36,7 +36,7 @@ It can also be used with emacs, see https://github.com/emacs-lsp/lsp-haskell
 
 ## Using the example server
 
-    stack install
+    stack install :lsp-hello --flag haskell-lsp:demo
 
 will generate a `lsp-hello` executable.
 
