@@ -31,16 +31,17 @@ jsonSpec :: Spec
 jsonSpec = do
   describe "General JSON instances round trip" $ do
   -- DataTypesJSON
-    prop "LanguageString"    (propertyJsonRoundtrip :: LanguageString -> Bool)
-    prop "MarkedString"      (propertyJsonRoundtrip :: MarkedString -> Bool)
-    prop "MarkupContent"     (propertyJsonRoundtrip :: MarkupContent -> Bool)
-    prop "HoverContents"     (propertyJsonRoundtrip :: HoverContents -> Bool)
+    prop "LanguageString"    (propertyJsonRoundtrip :: LanguageString -> Property)
+    prop "MarkedString"      (propertyJsonRoundtrip :: MarkedString -> Property)
+    prop "MarkupContent"     (propertyJsonRoundtrip :: MarkupContent -> Property)
+    prop "HoverContents"     (propertyJsonRoundtrip :: HoverContents -> Property)
+    prop "ResponseMessage"   (propertyJsonRoundtrip :: ResponseMessage (Maybe ()) -> Property)
 
 
 -- ---------------------------------------------------------------------
 
-propertyJsonRoundtrip :: (Eq a, ToJSON a, FromJSON a) => a -> Bool
-propertyJsonRoundtrip a = Success a == fromJSON (toJSON a)
+propertyJsonRoundtrip :: (Eq a, Show a, ToJSON a, FromJSON a) => a -> Property
+propertyJsonRoundtrip a = Success a === fromJSON (toJSON a)
 
 -- ---------------------------------------------------------------------
 
@@ -60,6 +61,35 @@ instance Arbitrary HoverContents where
   arbitrary = oneof [ HoverContentsMS <$> arbitrary
                     , HoverContents <$> arbitrary
                     ]
+
+instance Arbitrary a => Arbitrary (ResponseMessage a) where
+  arbitrary =
+    ResponseMessage
+      <$> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+
+instance Arbitrary LspIdRsp where
+  arbitrary = oneof [IdRspInt <$> arbitrary, IdRspString <$> arbitrary, pure IdRspNull]
+
+instance Arbitrary ResponseError where
+  arbitrary = ResponseError <$> arbitrary <*> arbitrary <*> pure Nothing
+
+instance Arbitrary ErrorCode where
+  arbitrary =
+    elements
+      [ ParseError
+      , InvalidRequest
+      , MethodNotFound
+      , InvalidParams
+      , InternalError
+      , ServerErrorStart
+      , ServerErrorEnd
+      , ServerNotInitialized
+      , UnknownErrorCode
+      , RequestCancelled
+      ]
 
 -- | make lists of maximum length 3 for test performance
 smallList :: Gen a -> Gen [a]
