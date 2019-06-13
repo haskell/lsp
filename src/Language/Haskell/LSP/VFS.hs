@@ -3,6 +3,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ViewPatterns #-}
 
 {-
 
@@ -62,7 +63,7 @@ data VirtualFile =
     , _tmp_file :: Maybe FilePath
     } deriving (Show)
 
-type VFS = Map.Map J.Uri VirtualFile
+type VFS = Map.Map J.NormalizedUri VirtualFile
 
 -- ---------------------------------------------------------------------
 
@@ -70,7 +71,7 @@ openVFS :: VFS -> J.DidOpenTextDocumentNotification -> IO VFS
 openVFS vfs (J.NotificationMessage _ _ params) = do
   let J.DidOpenTextDocumentParams
          (J.TextDocumentItem uri _ version text) = params
-  return $ Map.insert uri (VirtualFile version (Rope.fromText text) Nothing) vfs
+  return $ Map.insert (J.toNormalizedUri uri) (VirtualFile version (Rope.fromText text) Nothing) vfs
 
 -- ---------------------------------------------------------------------
 
@@ -78,7 +79,7 @@ changeFromClientVFS :: VFS -> J.DidChangeTextDocumentNotification -> IO VFS
 changeFromClientVFS vfs (J.NotificationMessage _ _ params) = do
   let
     J.DidChangeTextDocumentParams vid (J.List changes) = params
-    J.VersionedTextDocumentIdentifier uri version = vid
+    J.VersionedTextDocumentIdentifier (J.toNormalizedUri -> uri) version = vid
   case Map.lookup uri vfs of
     Just (VirtualFile _ str _) -> do
       let str' = applyChanges str changes
@@ -122,7 +123,7 @@ changeFromServerVFS initVfs (J.RequestMessage _ _ _ params) = do
 
 -- ---------------------------------------------------------------------
 
-persistFileVFS :: VFS -> J.Uri -> IO (FilePath, VFS)
+persistFileVFS :: VFS -> J.NormalizedUri -> IO (FilePath, VFS)
 persistFileVFS vfs uri =
   case Map.lookup uri vfs of
     Nothing -> error ("File not found in VFS: " ++ show uri ++ show vfs)
@@ -138,7 +139,7 @@ persistFileVFS vfs uri =
 closeVFS :: VFS -> J.DidCloseTextDocumentNotification -> IO VFS
 closeVFS vfs (J.NotificationMessage _ _ params) = do
   let J.DidCloseTextDocumentParams (J.TextDocumentIdentifier uri) = params
-  return $ Map.delete uri vfs
+  return $ Map.delete (J.toNormalizedUri uri) vfs
 
 -- ---------------------------------------------------------------------
 {-

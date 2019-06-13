@@ -22,6 +22,7 @@ spec :: Spec
 spec = do
   describe "URI file path functions" uriFilePathSpec
   describe "file path URI functions" filePathUriSpec
+  describe "URI normalization functions" uriNormalizeSpec
 
 testPosixUri :: Uri
 testPosixUri = Uri $ pack "file:///home/myself/example.hs"
@@ -96,6 +97,12 @@ filePathUriSpec = do
     uri `shouldBe` Uri "file://myself/example.hs"
     let back = platformAwareUriToFilePath "posix" uri
     back `shouldBe` Just relativePosixFilePath
+
+uriNormalizeSpec :: Spec
+uriNormalizeSpec = do
+  it "ignores differences in percent-encoding" $ property $ \uri -> do
+    toNormalizedUri (Uri $ pack $ escapeURIString isUnescapedInURI uri) `shouldBe`
+        toNormalizedUri (Uri $ pack $ escapeURIString (const False) uri)
 
 genWindowsFilePath :: Gen FilePath
 genWindowsFilePath = do

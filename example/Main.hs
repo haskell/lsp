@@ -104,7 +104,7 @@ reactorSend msg = do
 
 -- ---------------------------------------------------------------------
 
-publishDiagnostics :: Int -> J.Uri -> J.TextDocumentVersion -> DiagnosticsBySource -> R () ()
+publishDiagnostics :: Int -> J.NormalizedUri -> J.TextDocumentVersion -> DiagnosticsBySource -> R () ()
 publishDiagnostics maxToPublish uri v diags = do
   lf <- ask
   liftIO $ (Core.publishDiagnosticsFunc lf) maxToPublish uri v diags
@@ -183,15 +183,16 @@ reactor lf inp = do
                                  . J.uri
             fileName =  J.uriToFilePath doc
         liftIO $ U.logs $ "********* fileName=" ++ show fileName
-        sendDiagnostics doc (Just 0)
+        sendDiagnostics (J.toNormalizedUri doc) (Just 0)
 
       -- -------------------------------
 
       HandlerRequest (NotDidChangeTextDocument notification) -> do
-        let doc :: J.Uri
+        let doc :: J.NormalizedUri
             doc  = notification ^. J.params
                                  . J.textDocument
                                  . J.uri
+                                 . to J.toNormalizedUri
         mdoc <- liftIO $ Core.getVirtualFileFunc lf doc
         case mdoc of
           Just (VirtualFile _version str _) -> do
@@ -211,7 +212,7 @@ reactor lf inp = do
                                  . J.uri
             fileName = J.uriToFilePath doc
         liftIO $ U.logs $ "********* fileName=" ++ show fileName
-        sendDiagnostics doc Nothing
+        sendDiagnostics (J.toNormalizedUri doc) Nothing
 
       -- -------------------------------
 
@@ -308,7 +309,7 @@ toWorkspaceEdit _ = Nothing
 
 -- | Analyze the file and send any diagnostics to the client in a
 -- "textDocument/publishDiagnostics" notification
-sendDiagnostics :: J.Uri -> Maybe Int -> R () ()
+sendDiagnostics :: J.NormalizedUri -> Maybe Int -> R () ()
 sendDiagnostics fileUri version = do
   let
     diags = [J.Diagnostic

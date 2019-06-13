@@ -39,7 +39,7 @@ all prior entries for the Uri.
 
 -}
 
-type DiagnosticStore = Map.Map J.Uri StoreItem
+type DiagnosticStore = Map.Map J.NormalizedUri StoreItem
 
 data StoreItem
   = StoreItem J.TextDocumentVersion DiagnosticsBySource
@@ -63,7 +63,7 @@ flushBySource store (Just source) = Map.map remove store
 -- ---------------------------------------------------------------------
 
 updateDiagnostics :: DiagnosticStore
-                  -> J.Uri -> J.TextDocumentVersion -> DiagnosticsBySource
+                  -> J.NormalizedUri -> J.TextDocumentVersion -> DiagnosticsBySource
                   -> DiagnosticStore
 updateDiagnostics store uri mv newDiagsBySource = r
   where
@@ -86,11 +86,11 @@ updateDiagnostics store uri mv newDiagsBySource = r
 
 -- ---------------------------------------------------------------------
 
-getDiagnosticParamsFor :: Int -> DiagnosticStore -> J.Uri -> Maybe J.PublishDiagnosticsParams
+getDiagnosticParamsFor :: Int -> DiagnosticStore -> J.NormalizedUri -> Maybe J.PublishDiagnosticsParams
 getDiagnosticParamsFor maxDiagnostics ds uri =
   case Map.lookup uri ds of
     Nothing -> Nothing
     Just (StoreItem _ diags) ->
-      Just $ J.PublishDiagnosticsParams uri (J.List (take maxDiagnostics $ SL.fromSortedList $ mconcat $ Map.elems diags))
+      Just $ J.PublishDiagnosticsParams (J.fromNormalizedUri uri) (J.List (take maxDiagnostics $ SL.fromSortedList $ mconcat $ Map.elems diags))
 
 -- ---------------------------------------------------------------------
