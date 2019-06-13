@@ -263,11 +263,19 @@ data Handlers =
     }
 
 instance Default Handlers where
-  def = Handlers Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
-                 Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
-                 Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
-                 Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
-                 Nothing Nothing Nothing Nothing
+  -- These already implicitly do stuff to the VFS, so silence warnings about no handler
+  def = nothings { didChangeTextDocumentNotificationHandler = Just ignore
+                 , didOpenTextDocumentNotificationHandler   = Just ignore
+                 , didCloseTextDocumentNotificationHandler  = Just ignore
+                 }
+    where ignore = const (pure ())
+          nothings = Handlers Nothing Nothing Nothing Nothing Nothing Nothing
+                              Nothing Nothing Nothing Nothing Nothing Nothing
+                              Nothing Nothing Nothing Nothing Nothing Nothing
+                              Nothing Nothing Nothing Nothing Nothing Nothing
+                              Nothing Nothing Nothing Nothing Nothing Nothing
+                              Nothing Nothing Nothing Nothing Nothing Nothing
+                              Nothing Nothing Nothing Nothing
 
 -- ---------------------------------------------------------------------
 nop :: a -> b -> IO a
