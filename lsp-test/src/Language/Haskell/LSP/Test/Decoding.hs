@@ -123,7 +123,7 @@ matchResponseMsgType req = case req of
 
 decodeFromServerMsg :: RequestMap -> B.ByteString -> FromServerMessage
 decodeFromServerMsg reqMap bytes =
-  case HM.lookup "method" (fromJust $ decode bytes :: Object) of
+  case HM.lookup "method" obj of
     Just methodStr -> case fromJSON methodStr of
       Success method -> case method of
         -- We can work out the type of the message
@@ -141,6 +141,10 @@ decodeFromServerMsg reqMap bytes =
         WorkspaceApplyEdit             -> ReqApplyWorkspaceEdit $ fromJust $ decode bytes
         WorkspaceWorkspaceFolders      -> error "ReqWorkspaceFolders not supported yet"
         WorkspaceConfiguration         -> error "ReqWorkspaceConfiguration not supported yet"
+        CustomServerMethod _
+            | "id" `HM.member` obj && "method" `HM.member` obj -> ReqCustomServer $ fromJust $ decode bytes
+            | "id" `HM.member` obj -> RspCustomServer $ fromJust $ decode bytes
+            | otherwise -> NotCustomServer $ fromJust $ decode bytes
 
       Error e -> error e
 
@@ -149,3 +153,4 @@ decodeFromServerMsg reqMap bytes =
         Just req -> matchResponseMsgType req bytes -- try to decode it to more specific type
         Nothing  -> error "Couldn't match up response with request"
       Nothing -> error "Couldn't decode message"
+    where obj = fromJust $ decode bytes :: Object
