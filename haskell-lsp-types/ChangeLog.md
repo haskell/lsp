@@ -1,5 +1,9 @@
 # Revision history for haskell-lsp-types
 
+## 0.14.0.1 -- 2019-06-13
+
+* Fix Haddock error
+
 ## 0.14.0.0 -- 2019-06-13
 
 * Add support for custom request and notification methods

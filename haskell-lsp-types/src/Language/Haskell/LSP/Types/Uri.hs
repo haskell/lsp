@@ -40,11 +40,10 @@ platformAwareUriToFilePath systemOS (Uri uri) = do
 
 -- | We pull in the authority because in relative file paths the Uri likes to put everything before the slash
 --   into the authority field
-platformAdjustFromUriPath ::
-    SystemOS ->
-    Maybe String -> -- ^ authority
-    String -> -- ^ path
-    FilePath
+platformAdjustFromUriPath :: SystemOS
+                          -> Maybe String -- ^ authority
+                          -> String -- ^ path
+                          -> FilePath
 platformAdjustFromUriPath systemOS authority srcPath =
   (maybe id (++) authority) $
   if systemOS /= windowsOS || null srcPath then srcPath
