@@ -5,10 +5,12 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE ViewPatterns #-}
 
-{-
-
-Manage the J.TextDocumentDidChange messages to keep a local copy of the files
-in the client workspace, so that tools at the server can operate on them.
+{-|
+Handles the "Language.Haskell.LSP.Types.TextDocumentDidChange" \/
+"Language.Haskell.LSP.Types.TextDocumentDidOpen" \/
+"Language.Haskell.LSP.Types.TextDocumentDidClose" messages to keep an in-memory
+`filesystem` of the current client workspace.  The server can access and edit
+files in the client workspace by operating on the "VFS" in "LspFuncs".
 -}
 module Language.Haskell.LSP.VFS
   (

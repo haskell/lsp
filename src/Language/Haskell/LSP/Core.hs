@@ -234,6 +234,8 @@ data Handlers =
     , didChangeConfigurationParamsHandler      :: !(Maybe (Handler J.DidChangeConfigurationNotification))
     , didOpenTextDocumentNotificationHandler   :: !(Maybe (Handler J.DidOpenTextDocumentNotification))
     , didChangeTextDocumentNotificationHandler :: !(Maybe (Handler J.DidChangeTextDocumentNotification))
+    -- ^ Note: If you need to keep track of document changes,
+    -- "Language.Haskell.LSP.VFS" will take care of these messages for you!
     , didCloseTextDocumentNotificationHandler  :: !(Maybe (Handler J.DidCloseTextDocumentNotification))
     , didSaveTextDocumentNotificationHandler   :: !(Maybe (Handler J.DidSaveTextDocumentNotification))
     , didChangeWatchedFilesNotificationHandler :: !(Maybe (Handler J.DidChangeWatchedFilesNotification))
@@ -261,11 +263,19 @@ data Handlers =
     }
 
 instance Default Handlers where
-  def = Handlers Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
-                 Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
-                 Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
-                 Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
-                 Nothing Nothing Nothing Nothing
+  -- These already implicitly do stuff to the VFS, so silence warnings about no handler
+  def = nothings { didChangeTextDocumentNotificationHandler = Just ignore
+                 , didOpenTextDocumentNotificationHandler   = Just ignore
+                 , didCloseTextDocumentNotificationHandler  = Just ignore
+                 }
+    where ignore = const (pure ())
+          nothings = Handlers Nothing Nothing Nothing Nothing Nothing Nothing
+                              Nothing Nothing Nothing Nothing Nothing Nothing
+                              Nothing Nothing Nothing Nothing Nothing Nothing
+                              Nothing Nothing Nothing Nothing Nothing Nothing
+                              Nothing Nothing Nothing Nothing Nothing Nothing
+                              Nothing Nothing Nothing Nothing Nothing Nothing
+                              Nothing Nothing Nothing Nothing
 
 -- ---------------------------------------------------------------------
 nop :: a -> b -> IO a
