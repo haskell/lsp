@@ -38,7 +38,7 @@ import           System.FilePath
 -- ---------------------------------------------------------------------
 
 -- | Convenience function for 'runWithHandles stdin stdout'.
-run :: (Show c) => Core.InitializeCallback c
+run :: (Show configs) => Core.InitializeCallbacks configs
                 -- ^ function to be called once initialize has
                 -- been received from the client. Further message
                 -- processing will start only after this returns.
@@ -51,17 +51,17 @@ run = runWithHandles stdin stdout
 
 -- | Starts listening and sending requests and responses
 -- at the specified handles.
-runWithHandles :: (Show c) =>
+runWithHandles :: (Show config) =>
        Handle
     -- ^ Handle to read client input from.
     -> Handle
     -- ^ Handle to write output to.
-    -> Core.InitializeCallback c
+    -> Core.InitializeCallbacks config
     -> Core.Handlers
     -> Core.Options
     -> Maybe FilePath
     -> IO Int         -- exit code
-runWithHandles hin hout dp h o captureFp = do
+runWithHandles hin hout initializeCallbacks h o captureFp = do
 
   logm $ B.pack "\n\n\n\n\nhaskell-lsp:Starting up server ..."
   hSetBuffering hin NoBuffering
@@ -86,18 +86,18 @@ runWithHandles hin hout dp h o captureFp = do
 
   tvarDat <- atomically $ newTVar $ Core.defaultLanguageContextData h o lf tvarId sendFunc timestampCaptureFp
 
-  ioLoop hin dp tvarDat
+  ioLoop hin initializeCallbacks tvarDat
 
   return 1
 
 
 -- ---------------------------------------------------------------------
 
-ioLoop :: (Show c) => Handle
-                   -> Core.InitializeCallback c
-                   -> TVar (Core.LanguageContextData c)
+ioLoop :: (Show config) => Handle
+                   -> Core.InitializeCallbacks config
+                   -> TVar (Core.LanguageContextData config)
                    -> IO ()
-ioLoop hin dispatcherProc tvarDat = do
+ioLoop hin dispatcherProc tvarDat =
   go (parse parser "")
   where
     go :: Result BS.ByteString -> IO ()

@@ -1,3 +1,4 @@
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE GADTs               #-}
 {-# LANGUAGE MultiWayIf          #-}
 {-# LANGUAGE BinaryLiterals      #-}
@@ -9,7 +10,7 @@ module Language.Haskell.LSP.Core (
     handleMessage
   , LanguageContextData(..)
   , Handler
-  , InitializeCallback
+  , InitializeCallbacks(..)
   , LspFuncs(..)
   , Progress(..)
   , ProgressCancellable(..)
@@ -72,7 +73,7 @@ import qualified System.Log.Logger as L
 type SendFunc = FromServerMessage -> IO ()
 
 -- | state used by the LSP dispatcher to manage the message loop
-data LanguageContextData a =
+data LanguageContextData config =
   LanguageContextData {
     resSeqDebugContextData :: !Int
   , resHandlers            :: !Handlers
@@ -81,9 +82,9 @@ data LanguageContextData a =
   , resVFS                 :: !VFS
   , reverseMap             :: !(Map.Map FilePath FilePath)
   , resDiagnostics         :: !DiagnosticStore
-  , resConfig              :: !(Maybe a)
+  , resConfig              :: !(Maybe config)
   , resLspId               :: !(TVar Int)
-  , resLspFuncs            :: LspFuncs a -- NOTE: Cannot be strict, lazy initialization
+  , resLspFuncs            :: LspFuncs config -- NOTE: Cannot be strict, lazy initialization
   , resCaptureFile         :: !(Maybe FilePath)
   , resWorkspaceFolders    :: ![J.WorkspaceFolder]
   , resProgressData        :: !ProgressData
@@ -184,11 +185,26 @@ data LspFuncs c =
     -- @since 0.10.0.0
     }
 
--- | The function in the LSP process that is called once the 'initialize'
--- message is received. Message processing will only continue once this returns,
--- so it should create whatever processes are needed.
-type InitializeCallback c = ( J.DidChangeConfigurationNotification-> Either T.Text c
-                            , LspFuncs c -> IO (Maybe J.ResponseError))
+-- | Contains all the callbacks to use for initialized the language server.
+-- it is parameterized over a config type variable representing the type for the
+-- specific configuration data the language server needs to use.
+data InitializeCallbacks config =
+  InitializeCallbacks
+    { onInitialConfiguration :: J.InitializeRequest -> Either T.Text config
+      -- ^ Invoked on the first message from the language client, containg the client configuration
+      -- This callback should return either the parsed configuration data or an error indicating
+      -- what went wrong. The parsed configuration object will be stored internally and passed to
+      -- hanlder functions as context.
+    , onConfigurationChange :: J.DidChangeConfigurationNotification-> Either T.Text config
+      -- ^ Invoked whenever the clients sends a message with a changed client configuration.
+      -- This callback should return either the parsed configuration data or an error indicating
+      -- what went wrong. The parsed configuration object will be stored internally and passed to
+      -- hanlder functions as context.
+    , onStartup :: LspFuncs config -> IO (Maybe J.ResponseError)
+      -- ^ Once the initial configuration has been received, this callback will be invoked to offer
+      -- the language server implementation the chance to create any processes or start new threads
+      -- that may be necesary for the server lifecycle.
+    }
 
 -- | The Handler type captures a function that receives local read-only state
 -- 'a', a function to send a reply message once encoded as a ByteString, and a
@@ -282,7 +298,7 @@ nop :: a -> b -> IO a
 nop = const . return
 
 
-helper :: J.FromJSON a => (TVar (LanguageContextData c) -> a -> IO ()) -> (TVar (LanguageContextData c) -> J.Value -> IO ())
+helper :: J.FromJSON a => (TVar (LanguageContextData config) -> a -> IO ()) -> (TVar (LanguageContextData config) -> J.Value -> IO ())
 helper requestHandler tvarDat json =
   case J.fromJSON json of
     J.Success req -> requestHandler tvarDat req
@@ -297,10 +313,10 @@ helper requestHandler tvarDat json =
           _ -> failLog
         _ -> failLog
 
-handlerMap :: (Show c) => InitializeCallback c
-           -> Handlers -> J.ClientMethod -> (TVar (LanguageContextData c) -> J.Value -> IO ())
+handlerMap :: (Show config) => InitializeCallbacks config
+           -> Handlers -> J.ClientMethod -> (TVar (LanguageContextData config) -> J.Value -> IO ())
 -- General
-handlerMap i h J.Initialize                      = helper (initializeRequestHandler' i (initializeRequestHandler h))
+handlerMap i h J.Initialize                      = handleInitialConfig i (initializeRequestHandler h)
 handlerMap _ h J.Initialized                     = hh nop NotInitialized $ initializedHandler h
 handlerMap _ _ J.Shutdown                        = helper shutdownRequestHandler
 handlerMap _ h J.Exit                            =
@@ -363,8 +379,8 @@ handlerMap _ h (J.CustomClientMethod _)          = \ctxData val ->
 
 -- | Adapter from the normal handlers exposed to the library users and the
 -- internal message loop
-hh :: forall b c. (J.FromJSON b)
-   => (VFS -> b -> IO VFS) -> (b -> FromClientMessage) -> Maybe (Handler b) -> TVar (LanguageContextData c) -> J.Value -> IO ()
+hh :: forall b config. (J.FromJSON b)
+   => (VFS -> b -> IO VFS) -> (b -> FromClientMessage) -> Maybe (Handler b) -> TVar (LanguageContextData config) -> J.Value -> IO ()
 hh getVfs wrapper mh tvarDat json = do
       case J.fromJSON json of
         J.Success req -> do
@@ -383,33 +399,75 @@ hh getVfs wrapper mh tvarDat json = do
           let msg = T.pack $ unwords $ ["haskell-lsp:parse error.", show json, show err] ++ _ERR_MSG_URL
           sendErrorLog tvarDat msg
 
-hc :: (Show c) => InitializeCallback c -> Maybe (Handler J.DidChangeConfigurationNotification)
-   -> TVar (LanguageContextData c) -> J.Value -> IO ()
-hc (c,_) mh tvarDat json = do
-      -- logs $ "haskell-lsp:hc DidChangeConfigurationNotification entered"
-      case J.fromJSON json of
-        J.Success req -> do
-          ctx <- readTVarIO tvarDat
+handleInitialConfig
+  :: (Show config)
+  => InitializeCallbacks config
+  -> Maybe (Handler J.InitializeRequest)
+  -> TVar (LanguageContextData config)
+  -> J.Value
+  -> IO ()
+handleInitialConfig (InitializeCallbacks { onInitialConfiguration, onStartup }) mh tvarDat json
+  = handleMessageWithConfigChange ReqInitialize
+                                  onInitialConfiguration
+                                  (Just $ initializeRequestHandler' onStartup mh tvarDat)
+                                  tvarDat
+                                  json
 
-          captureFromClient (NotDidChangeConfiguration req) (resCaptureFile ctx)
 
-          case c req of
-            Left err -> do
-              let msg = T.pack $ unwords ["haskell-lsp:didChangeConfiguration error.", show req, show err]
-              sendErrorLog tvarDat msg
-            Right newConfig -> do
-              -- logs $ "haskell-lsp:hc DidChangeConfigurationNotification got newConfig:" ++ show newConfig
-              let ctx' = ctx { resConfig = Just newConfig }
-              atomically $ modifyTVar' tvarDat (const ctx')
-          case mh of
-            Just h -> h req
-            Nothing -> return ()
-        J.Error  err -> do
-          let msg = T.pack $ unwords $ ["haskell-lsp:parse error.", show json, show err] ++ _ERR_MSG_URL
+hc
+  :: (Show config)
+  => InitializeCallbacks config
+  -> Maybe (Handler J.DidChangeConfigurationNotification)
+  -> TVar (LanguageContextData config)
+  -> J.Value
+  -> IO ()
+hc (InitializeCallbacks { onConfigurationChange }) mh tvarDat json =
+  handleMessageWithConfigChange NotDidChangeConfiguration
+                                onConfigurationChange
+                                mh
+                                tvarDat
+                                json
+
+handleMessageWithConfigChange
+  :: (J.FromJSON reqParams, Show reqParams, Show err)
+  => (reqParams -> FromClientMessage) -- ^ The notification message from the client to expect
+  -> (reqParams -> Either err config) -- ^ A function to parse the config out of the request
+  -> Maybe (reqParams -> IO ()) -- ^ The upstream handler for the client request
+  -> TVar (LanguageContextData config) -- ^ The context data containing the current configuration
+  -> J.Value -- ^ The raw reqeust data
+  -> IO ()
+handleMessageWithConfigChange notification parseConfig mh tvarDat json =
+  -- logs $ "haskell-lsp:hc DidChangeConfigurationNotification entered"
+  case J.fromJSON json of
+    J.Success req -> do
+      ctx <- readTVarIO tvarDat
+
+      captureFromClient (notification req) (resCaptureFile ctx)
+
+      case parseConfig req of
+        Left err -> do
+          let
+            msg =
+              T.pack $ unwords
+                ["haskell-lsp:configuration parse error.", show req, show err]
           sendErrorLog tvarDat msg
+        Right newConfig -> do
+          -- logs $ "haskell-lsp:hc DidChangeConfigurationNotification got newConfig:" ++ show newConfig
+          let ctx' = ctx { resConfig = Just newConfig }
+          atomically $ modifyTVar' tvarDat (const ctx')
+      case mh of
+        Just h  -> h req
+        Nothing -> return ()
+    J.Error err -> do
+      let msg =
+            T.pack
+              $  unwords
+              $  ["haskell-lsp:parse error.", show json, show err]
+              ++ _ERR_MSG_URL
+      sendErrorLog tvarDat msg
 
 -- | Updates the list of workspace folders and then delegates back to 'hh'
-hwf :: Maybe (Handler J.DidChangeWorkspaceFoldersNotification) -> TVar (LanguageContextData c) -> J.Value -> IO ()
+hwf :: Maybe (Handler J.DidChangeWorkspaceFoldersNotification) -> TVar (LanguageContextData config) -> J.Value -> IO ()
 hwf h tvarDat json = do
   case J.fromJSON json :: J.Result J.DidChangeWorkspaceFoldersNotification of
     J.Success (J.NotificationMessage _ _ params) -> atomically $ do
@@ -426,12 +484,12 @@ hwf h tvarDat json = do
 
 -- ---------------------------------------------------------------------
 
-getVirtualFile :: TVar (LanguageContextData c) -> J.NormalizedUri -> IO (Maybe VirtualFile)
+getVirtualFile :: TVar (LanguageContextData config) -> J.NormalizedUri -> IO (Maybe VirtualFile)
 getVirtualFile tvarDat uri = Map.lookup uri . resVFS <$> readTVarIO tvarDat
 
 -- | Dump the current text for a given VFS file to a temporary file,
 -- and return the path to the file.
-persistVirtualFile :: TVar (LanguageContextData c) -> J.NormalizedUri -> IO FilePath
+persistVirtualFile :: TVar (LanguageContextData config) -> J.NormalizedUri -> IO FilePath
 persistVirtualFile tvarDat uri = do
   st <- readTVarIO tvarDat
   let vfs = resVFS st
@@ -452,7 +510,7 @@ persistVirtualFile tvarDat uri = do
 -- TODO: should this function return a URI?
 -- | If the contents of a VFS has been dumped to a temporary file, map
 -- the temporary file name back to the original one.
-reverseFileMap :: TVar (LanguageContextData c)
+reverseFileMap :: TVar (LanguageContextData config)
                -> IO (FilePath -> FilePath)
 reverseFileMap tvarDat = do
   revMap <- reverseMap <$> readTVarIO tvarDat
@@ -461,7 +519,7 @@ reverseFileMap tvarDat = do
 
 -- ---------------------------------------------------------------------
 
-getConfig :: TVar (LanguageContextData c) -> IO (Maybe c)
+getConfig :: TVar (LanguageContextData config) -> IO (Maybe config)
 getConfig tvar = resConfig <$> readTVarIO tvar
 
 -- ---------------------------------------------------------------------
@@ -496,7 +554,7 @@ _ERR_MSG_URL = [ "`stack update` and install new haskell-lsp."
 -- |
 --
 --
-defaultLanguageContextData :: Handlers -> Options -> LspFuncs c -> TVar Int -> SendFunc -> Maybe FilePath -> LanguageContextData c
+defaultLanguageContextData :: Handlers -> Options -> LspFuncs config -> TVar Int -> SendFunc -> Maybe FilePath -> LanguageContextData config
 defaultLanguageContextData h o lf tv sf cf =
   LanguageContextData _INITIAL_RESPONSE_SEQUENCE h o sf mempty mempty mempty
                       Nothing tv lf cf mempty defaultProgressData
@@ -506,8 +564,8 @@ defaultProgressData = ProgressData 0 Map.empty
 
 -- ---------------------------------------------------------------------
 
-handleMessage :: (Show c) => InitializeCallback c
-              -> TVar (LanguageContextData c) -> BSL.ByteString -> IO ()
+handleMessage :: (Show config) => InitializeCallbacks config
+              -> TVar (LanguageContextData config) -> BSL.ByteString -> IO ()
 handleMessage dispatcherProc tvarDat jsonStr = do
   {-
   Message Types we must handle are the following
@@ -565,12 +623,12 @@ makeResponseError origId err = J.ResponseMessage "2.0" origId Nothing (Just err)
 -- ---------------------------------------------------------------------
 -- |
 --
-sendEvent :: TVar (LanguageContextData c) -> FromServerMessage -> IO ()
+sendEvent :: TVar (LanguageContextData config) -> FromServerMessage -> IO ()
 sendEvent tvarCtx msg = sendResponse tvarCtx msg
 
 -- |
 --
-sendResponse :: TVar (LanguageContextData c) -> FromServerMessage -> IO ()
+sendResponse :: TVar (LanguageContextData config) -> FromServerMessage -> IO ()
 sendResponse tvarCtx msg = do
   ctx <- readTVarIO tvarCtx
   resSendResponse ctx msg
@@ -580,7 +638,7 @@ sendResponse tvarCtx msg = do
 -- |
 --
 --
-sendErrorResponse :: TVar (LanguageContextData c) -> J.LspIdRsp -> Text -> IO ()
+sendErrorResponse :: TVar (LanguageContextData config) -> J.LspIdRsp -> Text -> IO ()
 sendErrorResponse tv origId msg = sendErrorResponseS (sendEvent tv) origId J.InternalError msg
 
 sendErrorResponseS ::  SendFunc -> J.LspIdRsp -> J.ErrorCode -> Text -> IO ()
@@ -588,7 +646,7 @@ sendErrorResponseS sf origId err msg = do
   sf $ RspError (J.ResponseMessage "2.0" origId Nothing
                   (Just $ J.ResponseError err msg Nothing) :: J.ErrorResponse)
 
-sendErrorLog :: TVar (LanguageContextData c) -> Text -> IO ()
+sendErrorLog :: TVar (LanguageContextData config) -> Text -> IO ()
 sendErrorLog tv msg = sendErrorLogS (sendEvent tv) msg
 
 sendErrorLogS :: SendFunc -> Text -> IO ()
@@ -604,7 +662,7 @@ sendErrorShowS sf msg =
 
 -- ---------------------------------------------------------------------
 
-defaultErrorHandlers :: (Show a) => TVar (LanguageContextData c) -> J.LspIdRsp -> a -> [E.Handler ()]
+defaultErrorHandlers :: (Show a) => TVar (LanguageContextData config) -> J.LspIdRsp -> a -> [E.Handler ()]
 defaultErrorHandlers tvarDat origId req = [ E.Handler someExcept ]
   where
     someExcept (e :: E.SomeException) = do
@@ -619,12 +677,14 @@ defaultErrorHandlers tvarDat origId req = [ E.Handler someExcept ]
 
 -- |
 --
-initializeRequestHandler' :: (Show c) => InitializeCallback c
-                         -> Maybe (Handler J.InitializeRequest)
-                         -> TVar (LanguageContextData c)
-                         -> J.InitializeRequest
-                         -> IO ()
-initializeRequestHandler' (_configHandler,dispatcherProc) mHandler tvarCtx req@(J.RequestMessage _ origId _ params) =
+initializeRequestHandler'
+  :: (Show config)
+  => (LspFuncs config -> IO (Maybe J.ResponseError))
+  -> Maybe (Handler J.InitializeRequest)
+  -> TVar (LanguageContextData config)
+  -> J.InitializeRequest
+  -> IO ()
+initializeRequestHandler' onStartup mHandler tvarCtx req@(J.RequestMessage _ origId _ params) =
   flip E.catches (defaultErrorHandlers tvarCtx (J.responseId origId) req) $ do
 
     case mHandler of
@@ -638,10 +698,6 @@ initializeRequestHandler' (_configHandler,dispatcherProc) mHandler tvarCtx req@(
     atomically $ modifyTVar' tvarCtx (\c -> c { resWorkspaceFolders = wfs })
 
     ctx0 <- readTVarIO tvarCtx
-
-    -- capture initialize request
-    captureFromClient (ReqInitialize req) (resCaptureFile ctx0)
-
     let rootDir = getFirst $ foldMap First [ params ^. J.rootUri  >>= J.uriToFilePath
                                            , params ^. J.rootPath <&> T.unpack ]
 
@@ -745,7 +801,7 @@ initializeRequestHandler' (_configHandler,dispatcherProc) mHandler tvarCtx req@(
     let ctx = ctx0 { resLspFuncs = lspFuncs }
     atomically $ writeTVar tvarCtx ctx
 
-    initializationResult <- dispatcherProc lspFuncs
+    initializationResult <- onStartup lspFuncs
 
     case initializationResult of
       Just errResp -> do
@@ -810,7 +866,7 @@ initializeRequestHandler' (_configHandler,dispatcherProc) mHandler tvarCtx req@(
 
         sendResponse tvarCtx $ RspInitialize res
 
-progressCancelHandler :: TVar (LanguageContextData c) -> J.ProgressCancelNotification -> IO ()
+progressCancelHandler :: TVar (LanguageContextData config) -> J.ProgressCancelNotification -> IO ()
 progressCancelHandler tvarCtx (J.NotificationMessage _ _ (J.ProgressCancelParams tid)) = do
   mact <- Map.lookup tid . progressCancel . resProgressData <$> readTVarIO tvarCtx
   case mact of
@@ -820,7 +876,7 @@ progressCancelHandler tvarCtx (J.NotificationMessage _ _ (J.ProgressCancelParams
 
 -- |
 --
-shutdownRequestHandler :: TVar (LanguageContextData c) -> J.ShutdownRequest -> IO ()
+shutdownRequestHandler :: TVar (LanguageContextData config) -> J.ShutdownRequest -> IO ()
 shutdownRequestHandler tvarCtx req@(J.RequestMessage _ origId _ _) =
   flip E.catches (defaultErrorHandlers tvarCtx (J.responseId origId) req) $ do
   let res  = makeResponseMessage req "ok"
@@ -831,7 +887,7 @@ shutdownRequestHandler tvarCtx req@(J.RequestMessage _ origId _ _) =
 
 -- | Take the new diagnostics, update the stored diagnostics for the given file
 -- and version, and publish the total to the client.
-publishDiagnostics :: TVar (LanguageContextData c) -> PublishDiagnosticsFunc
+publishDiagnostics :: TVar (LanguageContextData config) -> PublishDiagnosticsFunc
 publishDiagnostics tvarDat maxDiagnosticCount uri version diags = do
   ctx <- readTVarIO tvarDat
   let ds = updateDiagnostics (resDiagnostics ctx) uri version diags
@@ -847,7 +903,7 @@ publishDiagnostics tvarDat maxDiagnosticCount uri version diags = do
 
 -- | Take the new diagnostics, update the stored diagnostics for the given file
 -- and version, and publish the total to the client.
-flushDiagnosticsBySource :: TVar (LanguageContextData c) -> FlushDiagnosticsBySourceFunc
+flushDiagnosticsBySource :: TVar (LanguageContextData config) -> FlushDiagnosticsBySourceFunc
 flushDiagnosticsBySource tvarDat maxDiagnosticCount msource = do
   -- logs $ "haskell-lsp:flushDiagnosticsBySource:source=" ++ show source
   ctx <- readTVarIO tvarDat

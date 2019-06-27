@@ -12,18 +12,25 @@ import Language.Haskell.LSP.Types.Capabilities
 import Test.Hspec
 
 spec :: Spec
-spec = describe "workspace folders" $
-  it "keeps track of open workspace folders" $ do
+spec =
+  describe "workspace folders" $ it "keeps track of open workspace folders" $ do
 
     lfVar <- newEmptyMVar
 
-    let initCb :: InitializeCallback ()
-        initCb = (const $ Left "", \lf -> putMVar lfVar lf >> return Nothing)
+    let initCb :: InitializeCallbacks ()
+        initCb = InitializeCallbacks
+          (const $ Left "")
+          (const $ Left "")
+          (\lf -> putMVar lfVar lf >> return Nothing)
         handlers = def
 
     tvarLspId <- newTVarIO 0
-    tvarCtx <- newTVarIO $
-      defaultLanguageContextData handlers def undefined tvarLspId (const $ return ()) Nothing
+    tvarCtx   <- newTVarIO $ defaultLanguageContextData handlers
+                                                        def
+                                                        undefined
+                                                        tvarLspId
+                                                        (const $ return ())
+                                                        Nothing
 
     let putMsg msg =
           let jsonStr = encode msg

@@ -111,6 +111,7 @@ test-suite haskell-lsp-test
                        VspSpec
                        WorkspaceEditSpec
                        WorkspaceFoldersSpec
+                       InitialConfigurationSpec
   build-depends:       base
                      , QuickCheck
                      , aeson
