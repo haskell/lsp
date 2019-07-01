@@ -1,5 +1,12 @@
 # Revision history for haskell-lsp
 
+## 0.15.0.0 -- 2019-07-01
+
+* Fix decoding of `ResponseMessage` to account for `null` messages (@cocreature)
+* Normalize URIs to avoid issues with percent encoding (@cocreature)
+* Changed the initial callbacks type to also capture initial config (@lorenzo)
+* Improved documentation (@bubba)
+
 ## 0.14.0.0 -- 2019-06-13
 
 * Add support for custom request and notification methods

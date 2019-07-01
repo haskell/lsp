@@ -1,5 +1,9 @@
 # Revision history for haskell-lsp-types
 
+## 0.15.0.0 -- 2019-07-01
+
+* Normalize URIs to avoid issues with percent encoding (@cocreature)
+
 ## 0.14.0.1 -- 2019-06-13
 
 * Fix Haddock error
