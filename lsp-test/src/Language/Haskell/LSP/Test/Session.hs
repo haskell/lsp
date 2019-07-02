@@ -128,7 +128,7 @@ data SessionState = SessionState
   {
     curReqId :: LspId
   , vfs :: VFS
-  , curDiagnostics :: Map.Map Uri [Diagnostic]
+  , curDiagnostics :: Map.Map NormalizedUri [Diagnostic]
   , curTimeoutId :: Int
   , overridingTimeout :: Bool
   -- ^ The last received message from the server.
@@ -227,7 +227,7 @@ updateState (NotPublishDiagnostics n) = do
   let List diags = n ^. params . diagnostics
       doc = n ^. params . uri
   modify (\s ->
-    let newDiags = Map.insert doc diags (curDiagnostics s)
+    let newDiags = Map.insert (toNormalizedUri doc) diags (curDiagnostics s)
       in s { curDiagnostics = newDiags })
 
 updateState (ReqApplyWorkspaceEdit r) = do
@@ -246,7 +246,7 @@ updateState (ReqApplyWorkspaceEdit r) = do
     newVFS <- liftIO $ changeFromServerVFS (vfs s) r
     return $ s { vfs = newVFS }
 
-  let groupedParams = groupBy (\a b -> (a ^. textDocument == b ^. textDocument)) allChangeParams
+  let groupedParams = groupBy (\a b -> a ^. textDocument == b ^. textDocument) allChangeParams
       mergedParams = map mergeParams groupedParams
 
   -- TODO: Don't do this when replaying a session
@@ -261,7 +261,7 @@ updateState (ReqApplyWorkspaceEdit r) = do
     modify $ \s ->
       let oldVFS = vfs s
           update (VirtualFile oldV t mf) = VirtualFile (fromMaybe oldV v) t mf
-          newVFS = Map.adjust update uri oldVFS
+          newVFS = Map.adjust update (toNormalizedUri uri) oldVFS
       in s { vfs = newVFS }
 
   where checkIfNeedsOpened uri = do
@@ -269,7 +269,7 @@ updateState (ReqApplyWorkspaceEdit r) = do
           ctx <- ask
 
           -- if its not open, open it
-          unless (uri `Map.member` oldVFS) $ do
+          unless (toNormalizedUri uri `Map.member` oldVFS) $ do
             let fp = fromJust $ uriToFilePath uri
             contents <- liftIO $ T.readFile fp
             let item = TextDocumentItem (filePathToUri fp) "" 0 contents
