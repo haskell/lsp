@@ -1,5 +1,9 @@
 # Revision history for lsp-test
 
+## 0.6.0.0 -- 2019-07-04
+
+* Update to haskell-lsp-0.15.0.0 (@lorenzo)
+
 ## 0.5.4.0 -- 2019-06-13
 
 * Fix `getDefinitions` for SingleLoc (@cocreature)
