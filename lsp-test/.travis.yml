@@ -61,7 +61,7 @@ before_install:
 - git init
 - git remote add origin https://github.com/haskell/haskell-ide-engine.git
 - git pull origin master
-- git checkout abdb097f39e135deaf321a604c95f16cbda32678
+- git checkout 0f697c8919747effca54be8a9b494896aea7d947
 - git submodule update --init
 - cabal v2-update
 - |
@@ -96,7 +96,7 @@ jobs:
           password:
             secure: M95r2TETDB9ndhqV0xCA9XSRw9k3tBj1xgTTAvB9b/aK3198XekZTak24a+etDNeq8cUke8wmWbN7UfBBlXiDmYYK+DfUFj5ilrkNRO+cAHQzx6TQ+yGr4GhTGhu76zA0g9PZLwMoaZdUELdOkNtRDh0EjC/PVMIp84ZKn2hBLJrptkeBbI5XDArd9I6gvu9mEuPjQ595GdHkKQdQJNEDyr1BQ9BwqUxCHj3HbUjkkfpdgujxE93wzj82/HMzGncYxeH5m5YWvK3ayX22cY3ZXK3D6jgZFB/wdp3uGwoUl1HGaVjAl6XbyV0ALMQkGTWOPrfI3HWqOtOcs349poMckDFseG1LmTXtWa3cG+8bcdzZtCbbo4pLu57e6DULivmvOw64R/tPPUx/evBRhstYVevYLrN0hJLwP3jWYl4BheHSCoDsv8cTFPaNYI/f0LgHF2NaUNBK89pOiR8kmue7oGoCUF/gBRKgqswG0xEji0YvkSIfPV/7qmfL2uoLFCZ/YpMQ8F80KjxsaA5qA3ktt0fVj14QNtsHl4+Qkwj5dtalre2zw5eHyZTe8svlD9Fp4pBaHMuazLDDyv/Aor4JYfInlfIR6oTtn6ty09eX0KjA2OhFi4hE4/jClt6ASDm3Dfv7bnFJJEBQLxfwFcQCFmAsI0EyUrAFmLON07hsm4=
           on:
-            tags: true  
+            tags: true
             branch: master
             repo: bubba/lsp-test
         - provider: github
