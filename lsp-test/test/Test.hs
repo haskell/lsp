@@ -284,6 +284,18 @@ main = hspec $ do
       rename doc (Position 1 0) "bar"
       documentContents doc >>= liftIO . shouldBe "main = bar\nbar = return 42\n"
 
+  describe "rename suggestion" $
+    it "works" $ runSession "hie" fullCaps "test/data" $ do
+      doc <- openDoc "RenameSuggestion.hs" "haskell"
+
+      _ <- waitForDiagnosticsSource "ghcmod"
+
+      CACodeAction cmd:_ <- getAllCodeActions doc
+      executeCodeAction cmd
+
+      x:_ <- T.lines <$> documentContents doc
+      liftIO $ x `shouldBe` "main = putStrLn \"hello\""
+
   describe "getHover" $
     it "works" $ runSession "hie" fullCaps "test/data/renamePass" $ do
       doc <- openDoc "Desktop/simple.hs" "haskell"
