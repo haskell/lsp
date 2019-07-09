@@ -211,10 +211,12 @@ runSessionWithHandles serverIn serverOut serverHandler config caps rootDir sessi
   let context = SessionContext serverIn absRootDir messageChan reqMap initRsp config caps
       initState = SessionState (IdInt 0) mempty mempty 0 False Nothing
       launchServerHandler = forkIO $ catch (serverHandler serverOut context)
-                                           (throwTo mainThreadId :: SessionException -> IO ())
-  (result, _) <- bracket launchServerHandler killThread $
-    const $ runSession context initState session
-
+                                           (throwTo mainThreadId :: SessionException -> IO())
+  (result, _) <- bracket
+                   launchServerHandler
+                   (\tid -> do runSession context initState sendExitMessage
+                               killThread tid)
+                   (const $ runSession context initState session)
   return result
 
 updateStateC :: ConduitM FromServerMessage FromServerMessage (StateT SessionState (ReaderT SessionContext IO)) ()
@@ -300,6 +302,9 @@ sendMessage msg = do
   h <- serverIn <$> ask
   logMsg LogClient msg
   liftIO $ B.hPut h (addHeader $ encode msg)
+
+sendExitMessage :: (MonadIO m, HasReader SessionContext m) => m ()
+sendExitMessage = sendMessage (NotificationMessage "2.0" Exit ExitParams)
 
 -- | Execute a block f that will throw a 'Timeout' exception
 -- after duration seconds. This will override the global timeout
