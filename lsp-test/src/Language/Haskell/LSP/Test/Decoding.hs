@@ -32,7 +32,7 @@ getNextMessage :: Handle -> IO B.ByteString
 getNextMessage h = do
   headers <- getHeaders h
   case read . init <$> lookup "Content-Length" headers of
-    Nothing   -> error "Couldn't read Content-Length header"
+    Nothing   -> throw NoContentLengthHeader
     Just size -> B.hGet h size
 
 addHeader :: B.ByteString -> B.ByteString
