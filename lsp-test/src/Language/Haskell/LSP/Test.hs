@@ -137,7 +137,7 @@ runSessionWithConfig :: SessionConfig -- ^ Configuration options for the session
                      -> Session a -- ^ The session to run.
                      -> IO a
 runSessionWithConfig config serverExe caps rootDir session = do
-  -- We use this IORef to make exception non-fatal when the server is supposed to shutdown.
+  
   pid <- getCurrentProcessID
   absRootDir <- canonicalizePath rootDir
 
