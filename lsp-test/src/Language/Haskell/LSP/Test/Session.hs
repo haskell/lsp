@@ -48,6 +48,7 @@ import Data.Conduit as Conduit
 import Data.Conduit.Parser as Parser
 import Data.Default
 import Data.Foldable
+import Data.IORef
 import Data.List
 import qualified Data.Map as Map
 import qualified Data.Text as T
@@ -193,6 +194,10 @@ runSessionWithHandles :: Handle -- ^ Server in
                       -> Session a
                       -> IO a
 runSessionWithHandles serverIn serverOut serverHandler config caps rootDir session = do
+  -- We use this IORef to make exception non-fatal when the server is supposed to shutdown.
+
+  exitOk <- newIORef False
+  
   absRootDir <- canonicalizePath rootDir
 
   hSetBuffering serverIn  NoBuffering
@@ -210,12 +215,14 @@ runSessionWithHandles serverIn serverOut serverHandler config caps rootDir sessi
 
   let context = SessionContext serverIn absRootDir messageChan reqMap initRsp config caps
       initState = SessionState (IdInt 0) mempty mempty 0 False Nothing
-      launchServerHandler = forkIO $ catch (serverHandler serverOut context)
-                                           (throwTo mainThreadId :: SessionException -> IO())
+      errorHandler ex = do x <- readIORef exitOk 
+                           unless x $ throwTo mainThreadId (ex :: SessionException)
+      launchServerHandler = forkIO $ catch (serverHandler serverOut context) errorHandler
   (result, _) <- bracket
                    launchServerHandler
                    (\tid -> do runSession context initState sendExitMessage
-                               killThread tid)
+                               killThread tid
+                               atomicWriteIORef exitOk True)
                    (const $ runSession context initState session)
   return result
 
