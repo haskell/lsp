@@ -65,6 +65,7 @@ import Language.Haskell.LSP.Test.Exceptions
 import System.Console.ANSI
 import System.Directory
 import System.IO
+import System.Timeout
 
 -- | A session representing one instance of launching and connecting to a server.
 --
@@ -216,7 +217,8 @@ runSessionWithHandles serverIn serverOut serverHandler config caps rootDir exitS
       
       errorHandler = throwTo mainThreadId :: SessionException -> IO()
       serverLauncher = forkIO $ catch (serverHandler serverOut context) errorHandler
-      serverFinalizer tid = runSession' exitServer >> killThread tid
+      serverFinalizer tid = finally (timeout 60000000 (runSession' exitServer))
+                                    (killThread tid)
       
   (result, _) <- bracket serverLauncher serverFinalizer (const $ runSession' session)
   return result
