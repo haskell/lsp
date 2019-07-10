@@ -37,8 +37,9 @@ module Language.Haskell.LSP.Test
   , module Language.Haskell.LSP.Test.Parsing
   -- * Utilities
   -- | Quick helper functions for common tasks.
-  -- ** Initialization
+  -- ** Lifecycle
   , initializeResponse
+  , exitServer
   -- ** Documents
   , openDoc
   , openDoc'
@@ -149,7 +150,7 @@ runSessionWithConfig config serverExe caps rootDir session = do
                                           (Just TraceOff)
                                           Nothing
   withServer serverExe (logStdErr config) $ \serverIn serverOut _ ->
-    runSessionWithHandles serverIn serverOut (\h c -> listenServer h c) config caps rootDir $ do
+    runSessionWithHandles serverIn serverOut listenServer config caps rootDir exitServer $ do
       -- Wrap the session around initialize and shutdown calls
       initRspMsg <- request Initialize initializeParams :: Session InitializeResponse
 
@@ -157,7 +158,6 @@ runSessionWithConfig config serverExe caps rootDir session = do
 
       initRspVar <- initRsp <$> ask
       liftIO $ putMVar initRspVar initRspMsg
-
       sendNotification Initialized InitializedParams
 
       case lspConfig config of
@@ -168,11 +168,8 @@ runSessionWithConfig config serverExe caps rootDir session = do
       result <- session
       return result
   where
-  -- | Listens to the server output, makes sure it matches the record and
-  -- signals any semaphores
-  -- Note that on Windows, we cannot kill a thread stuck in getNextMessage.
-  -- So we have to wait for the exit notification to kill the process first
-  -- and then getNextMessage will fail.
+  -- | Listens to the server output until the shutdown ack,
+  -- makes sure it matches the record and signals any semaphores
   listenServer :: Handle -> SessionContext -> IO ()
   listenServer serverOut context = do
     msgBytes <- getNextMessage serverOut
@@ -182,7 +179,9 @@ runSessionWithConfig config serverExe caps rootDir session = do
     let msg = decodeFromServerMsg reqMap msgBytes
     writeChan (messageChan context) (ServerMessage msg)
 
-    listenServer serverOut context
+    case msg of
+      (RspShutdown _) -> return ()
+      _               -> listenServer serverOut context
 
 -- | The current text contents of a document.
 documentContents :: TextDocumentIdentifier -> Session T.Text
@@ -576,3 +575,7 @@ getCodeLenses tId = do
     rsp <- request TextDocumentCodeLens (CodeLensParams tId) :: Session CodeLensResponse
     case getResponseResult rsp of
         List res -> pure res
+        
+-- | Exit the server after request its shutdown
+exitServer :: Session()
+exitServer = request_ Shutdown (Nothing :: Maybe Value) >> sendNotification Exit ExitParams

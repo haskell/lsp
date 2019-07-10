@@ -65,6 +65,7 @@ replaySession serverExe sessionDir = do
                             def
                             fullCaps
                             sessionDir
+                            exitServer
                             (sendMessages clientMsgs reqSema rspSema)
     takeMVar passSema
     killThread sessionThread
