@@ -104,7 +104,7 @@ main = hspec $ do
 
       it "don't throw when no time out" $ runSessionWithConfig (def {messageTimeout = 5}) "hie" fullCaps "test/data/renamePass" $ do
         loggingNotification
-        liftIO $ threadDelay 10
+        liftIO $ threadDelay $ 10 * 1000000
         _ <- openDoc "Desktop/simple.hs" "haskell"
         return ()
 
