@@ -94,7 +94,7 @@ getRequestMap = foldl helper HM.empty
 matchResponseMsgType :: ClientMethod -> B.ByteString -> FromServerMessage
 matchResponseMsgType req = case req of
   Initialize                    -> RspInitialize . decoded
-  Shutdown                      -> RspShutdown . decoded
+  Shutdown                      -> RspShutdown . decoded . removeNullResult
   TextDocumentHover             -> RspHover . decoded
   TextDocumentCompletion        -> RspCompletion . decoded
   CompletionItemResolve         -> RspCompletionItemResolve . decoded
@@ -120,6 +120,7 @@ matchResponseMsgType req = case req of
   where decoded x = fromMaybe (error $ "Couldn't decode response for the request type: "
                                         ++ show req ++ "\n" ++ show x)
                               (decode x)
+        removeNullResult x = maybe x (<> "}") (B.stripSuffix ",\"result\":null}" x)
 
 decodeFromServerMsg :: RequestMap -> B.ByteString -> FromServerMessage
 decodeFromServerMsg reqMap bytes =
