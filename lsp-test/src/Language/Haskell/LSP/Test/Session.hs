@@ -65,6 +65,7 @@ import Language.Haskell.LSP.Test.Exceptions
 import System.Console.ANSI
 import System.Directory
 import System.IO
+import System.Process
 import System.Timeout
 
 -- | A session representing one instance of launching and connecting to a server.
@@ -187,14 +188,15 @@ runSession context state session = runReaderT (runStateT conduit state) context
 -- It also does not automatically send initialize and exit messages.
 runSessionWithHandles :: Handle -- ^ Server in
                       -> Handle -- ^ Server out
+                      -> ProcessHandle -- ^ Server process
                       -> (Handle -> SessionContext -> IO ()) -- ^ Server listener
                       -> SessionConfig
                       -> ClientCapabilities
                       -> FilePath -- ^ Root directory
-                      -> Session () -- ^ To exit Server
+                      -> Session () -- ^ To exit the Server properly
                       -> Session a
                       -> IO a
-runSessionWithHandles serverIn serverOut serverHandler config caps rootDir exitServer session = do
+runSessionWithHandles serverIn serverOut serverProc serverHandler config caps rootDir exitServer session = do
   
   absRootDir <- canonicalizePath rootDir
 
@@ -217,8 +219,10 @@ runSessionWithHandles serverIn serverOut serverHandler config caps rootDir exitS
       
       errorHandler = throwTo mainThreadId :: SessionException -> IO()
       serverLauncher = forkIO $ catch (serverHandler serverOut context) errorHandler
-      serverFinalizer tid = finally (timeout 60000000 (runSession' exitServer))
-                                    (killThread tid)
+      server = (Just serverIn, Just serverOut, Nothing, serverProc)
+      serverFinalizer tid = finally (timeout (messageTimeout config * 1000000)
+                                             (runSession' exitServer))
+                                    (cleanupProcess server >> killThread tid)
       
   (result, _) <- bracket serverLauncher serverFinalizer (const $ runSession' session)
   return result

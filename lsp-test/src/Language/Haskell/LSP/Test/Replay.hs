@@ -23,6 +23,7 @@ import           Control.Monad
 import           System.FilePath
 import           System.IO
 import           Language.Haskell.LSP.Test
+import           Language.Haskell.LSP.Test.Compat
 import           Language.Haskell.LSP.Test.Files
 import           Language.Haskell.LSP.Test.Decoding
 import           Language.Haskell.LSP.Test.Messages
@@ -43,8 +44,9 @@ replaySession serverExe sessionDir = do
   -- decode session
   let unswappedEvents = map (fromJust . decode) entries
 
-  withServer serverExe False $ \serverIn serverOut pid -> do
+  withServer serverExe False $ \serverIn serverOut serverProc -> do
 
+    pid <- getProcessID serverProc
     events <- swapCommands pid <$> swapFiles sessionDir unswappedEvents
 
     let clientEvents = filter isClientMsg events
@@ -59,8 +61,7 @@ replaySession serverExe sessionDir = do
     mainThread <- myThreadId
 
     sessionThread <- liftIO $ forkIO $
-      runSessionWithHandles serverIn
-                            serverOut
+      runSessionWithHandles serverIn serverOut serverProc
                             (listenServer serverMsgs requestMap reqSema rspSema passSema mainThread)
                             def
                             fullCaps

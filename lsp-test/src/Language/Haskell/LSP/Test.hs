@@ -149,8 +149,8 @@ runSessionWithConfig config serverExe caps rootDir session = do
                                           caps
                                           (Just TraceOff)
                                           Nothing
-  withServer serverExe (logStdErr config) $ \serverIn serverOut _ ->
-    runSessionWithHandles serverIn serverOut listenServer config caps rootDir exitServer $ do
+  withServer serverExe (logStdErr config) $ \serverIn serverOut serverProc ->
+    runSessionWithHandles serverIn serverOut serverProc listenServer config caps rootDir exitServer $ do
       -- Wrap the session around initialize and shutdown calls
       initRspMsg <- request Initialize initializeParams :: Session InitializeResponse
 
