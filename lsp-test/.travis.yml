@@ -84,13 +84,9 @@ before_install:
 install:
 - cabal v2-build
 script:
-# until cabal v2-test supports streaming results
-- |
-  if [[ "$TRAVIS_OS_NAME" == "windows" ]]; then
-    cabal v2-run lsp-test:test:tests -- --skip="manual javascript session passes a test"
-  else
-    cabal v2-run lsp-test:test:tests
-  fi
+# until cabal v2-test supports streaming results we use v2-run
+# skipping for now testing the manual javascript session
+- cabal v2-run lsp-test:test:tests -- --skip="manual javascript session passes a test"
 
 jobs:
   include:
