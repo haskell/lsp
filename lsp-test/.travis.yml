@@ -61,7 +61,8 @@ before_install:
 - git init
 - git remote add origin https://github.com/haskell/haskell-ide-engine.git
 - git pull origin master
-- git checkout 0.11.0.0
+# Release 0.11.0.0
+- git checkout 0c83fe02058b2d1f4dd0d6a22dca53a4b641d38c
 - git submodule update --init
 - cabal v2-update
 - |
