@@ -85,8 +85,6 @@ data ShowMessageParams =
 
 deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''ShowMessageParams
 
-type ShowMessageNotification = NotificationMessage ServerMethod ShowMessageParams
-
 -- ---------------------------------------------------------------------
 {-
 ShowMessage Request
@@ -152,9 +150,6 @@ data ShowMessageRequestParams =
 
 deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''ShowMessageRequestParams
 
-type ShowMessageRequest = RequestMessage ServerMethod ShowMessageRequestParams Text
-type ShowMessageResponse = ResponseMessage Text
-
 -- ---------------------------------------------------------------------
 {-
 LogMessage Notification
@@ -191,10 +186,6 @@ data LogMessageParams =
   } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''LogMessageParams
-
-
-type LogMessageNotification = NotificationMessage ServerMethod LogMessageParams
-
 -- ---------------------------------------------------------------------
 {-
 Progress Start Notification
@@ -283,13 +274,6 @@ data ProgressStartParams =
 
 deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''ProgressStartParams
 
--- | The window/progress/start notification is sent from the server to the
--- client to ask the client to start progress.
---
--- @since 0.10.0.0
-type ProgressStartNotification = NotificationMessage ServerMethod ProgressStartParams
-
-
 {-
 Progress Report Notification
 
@@ -350,12 +334,6 @@ data ProgressReportParams =
 
 deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''ProgressReportParams
 
--- | The window/progress/report notification is sent from the server to the
--- client to report progress for a previously started progress.
---
--- @since 0.10.0.0
-type ProgressReportNotification = NotificationMessage ServerMethod ProgressReportParams
-
 {-
 Progress Done Notification
 
@@ -384,12 +362,6 @@ data ProgressDoneParams =
   } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''ProgressDoneParams
-
--- | The window/progress/done notification is sent from the server to the
--- client to stop a previously started progress.
---
--- @since 0.10.0.0
-type ProgressDoneNotification = NotificationMessage ServerMethod ProgressDoneParams
 
 {-
 Progress Cancel Notification
@@ -421,9 +393,3 @@ data ProgressCancelParams =
 
 deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''ProgressCancelParams
 
--- | The window/progress/cancel notification is sent from the client to the server
--- to inform the server that the user has pressed the cancel button on the progress UX.
--- A server receiving a cancel request must still close a progress using the done notification.
---
--- @since 0.10.0.0
-type ProgressCancelNotification = NotificationMessage ClientMethod ProgressCancelParams

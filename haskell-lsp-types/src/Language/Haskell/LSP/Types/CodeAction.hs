@@ -288,6 +288,3 @@ instance FromJSON CAResult where
 instance ToJSON CAResult where
   toJSON (CACommand x) = toJSON x
   toJSON (CACodeAction x) = toJSON x
-
-type CodeActionRequest  = RequestMessage ClientMethod CodeActionParams (List CAResult)
-type CodeActionResponse = ResponseMessage (List CAResult)

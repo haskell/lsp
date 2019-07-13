@@ -29,7 +29,6 @@ library
                      , Language.Haskell.LSP.Core
                      , Language.Haskell.LSP.Control
                      , Language.Haskell.LSP.Diagnostics
-                     , Language.Haskell.LSP.Messages
                      , Language.Haskell.LSP.Utility
                      , Language.Haskell.LSP.VFS
   -- other-modules:
@@ -43,6 +42,7 @@ library
                      , containers
                      , directory
                      , data-default
+                     , dependent-map
                      , filepath
                      , hslogger
                      , hashable

@@ -58,10 +58,6 @@ data WorkspaceFolder =
     } deriving (Read, Show, Eq)
 
 deriveJSON lspOptions ''WorkspaceFolder
-
-type WorkspaceFoldersRequest = RequestMessage ServerMethod () (Maybe (List WorkspaceFolder))
-type WorkspaceFoldersResponse = ResponseMessage (Maybe (List WorkspaceFolder))
-
 {-
 DidChangeWorkspaceFolders Notification (:arrow_right:)
 Since version 3.6.0
@@ -125,5 +121,4 @@ data DidChangeWorkspaceFoldersParams =
 
 deriveJSON lspOptions ''DidChangeWorkspaceFoldersParams
 
-type DidChangeWorkspaceFoldersNotification =
-  NotificationMessage ClientMethod DidChangeWorkspaceFoldersParams
+

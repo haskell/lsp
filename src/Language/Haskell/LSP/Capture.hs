@@ -7,24 +7,23 @@ import Data.Aeson
 import Data.ByteString.Lazy.Char8 as BSL
 import Data.Time.Clock
 import GHC.Generics
-import Language.Haskell.LSP.Messages
 
-data Event = FromClient UTCTime FromClientMessage
-           | FromServer UTCTime FromServerMessage
+data Event = FromClient UTCTime Value
+           | FromServer UTCTime Value
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
-captureFromServer :: FromServerMessage -> Maybe FilePath -> IO ()
+captureFromServer :: ToJSON a => a -> Maybe FilePath -> IO ()
 captureFromServer _ Nothing = return ()
 captureFromServer msg (Just fp) = do
   time <- getCurrentTime
-  let entry = FromServer time msg
+  let entry = FromServer time $ toJSON msg
   
   BSL.appendFile fp $ BSL.append (encode entry) "\n"
 
-captureFromClient :: FromClientMessage -> Maybe FilePath -> IO ()
+captureFromClient :: ToJSON a => a -> Maybe FilePath -> IO ()
 captureFromClient _ Nothing = return ()
 captureFromClient msg (Just fp) = do
   time <- getCurrentTime
-  let entry = FromClient time msg
+  let entry = FromClient time $ toJSON msg
   
   BSL.appendFile fp $ BSL.append (encode entry) "\n"

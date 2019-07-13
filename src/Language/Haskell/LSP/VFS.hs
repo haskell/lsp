@@ -53,6 +53,8 @@ import qualified Language.Haskell.LSP.Types           as J
 import qualified Language.Haskell.LSP.Types.Lens      as J
 import           Language.Haskell.LSP.Utility
 
+import Data.Time.Clock
+
 -- ---------------------------------------------------------------------
 {-# ANN module ("hlint: ignore Eta reduce" :: String) #-}
 {-# ANN module ("hlint: ignore Redundant do" :: String) #-}
@@ -63,6 +65,7 @@ data VirtualFile =
       _version :: Int
     , _text    :: Rope
     , _tmp_file :: Maybe FilePath
+    , _modtime :: UTCTime
     } deriving (Show)
 
 type VFS = Map.Map J.NormalizedUri VirtualFile
@@ -73,7 +76,8 @@ openVFS :: VFS -> J.DidOpenTextDocumentNotification -> IO VFS
 openVFS vfs (J.NotificationMessage _ _ params) = do
   let J.DidOpenTextDocumentParams
          (J.TextDocumentItem uri _ version text) = params
-  return $ Map.insert (J.toNormalizedUri uri) (VirtualFile version (Rope.fromText text) Nothing) vfs
+  time <- getCurrentTime
+  return $ Map.insert (J.toNormalizedUri uri) (VirtualFile version (Rope.fromText text) Nothing time) vfs
 
 -- ---------------------------------------------------------------------
 
@@ -83,10 +87,11 @@ changeFromClientVFS vfs (J.NotificationMessage _ _ params) = do
     J.DidChangeTextDocumentParams vid (J.List changes) = params
     J.VersionedTextDocumentIdentifier (J.toNormalizedUri -> uri) version = vid
   case Map.lookup uri vfs of
-    Just (VirtualFile _ str _) -> do
+    Just (VirtualFile _ str _ _) -> do
       let str' = applyChanges str changes
       -- the client shouldn't be sending over a null version, only the server.
-      return $ Map.insert uri (VirtualFile (fromMaybe 0 version) str' Nothing) vfs
+      time <- getCurrentTime
+      return $ Map.insert uri (VirtualFile (fromMaybe 0 version) str' Nothing time) vfs
     Nothing -> do
       logs $ "haskell-lsp:changeVfs:can't find uri:" ++ show uri
       return vfs
@@ -118,7 +123,7 @@ changeFromServerVFS initVfs (J.RequestMessage _ _ _ params) = do
       let sortedEdits = sortOn (Down . (^. J.range)) edits
           changeEvents = map editToChangeEvent sortedEdits
           ps = J.DidChangeTextDocumentParams vid (J.List changeEvents)
-          notif = J.NotificationMessage "" J.TextDocumentDidChange ps
+          notif = J.NotificationMessage "" J.STextDocumentDidChange ps
       changeFromClientVFS vfs notif
 
     editToChangeEvent (J.TextEdit range text) = J.TextDocumentContentChangeEvent (Just range) Nothing text
@@ -129,12 +134,12 @@ persistFileVFS :: VFS -> J.NormalizedUri -> IO (FilePath, VFS)
 persistFileVFS vfs uri =
   case Map.lookup uri vfs of
     Nothing -> error ("File not found in VFS: " ++ show uri ++ show vfs)
-    Just (VirtualFile v txt tfile) ->
+    Just (VirtualFile v txt tfile time) ->
       case tfile of
         Just tfn -> return (tfn, vfs)
         Nothing  -> do
           fn <- writeSystemTempFile "VFS.hs" (Rope.toString txt)
-          return (fn, Map.insert uri (VirtualFile v txt (Just fn)) vfs)
+          return (fn, Map.insert uri (VirtualFile v txt (Just fn) time) vfs)
 
 -- ---------------------------------------------------------------------
 
@@ -208,7 +213,7 @@ data PosPrefixInfo = PosPrefixInfo
   } deriving (Show,Eq)
 
 getCompletionPrefix :: (Monad m) => J.Position -> VirtualFile -> m (Maybe PosPrefixInfo)
-getCompletionPrefix pos@(J.Position l c) (VirtualFile _ yitext _) =
+getCompletionPrefix pos@(J.Position l c) (VirtualFile _ yitext _ _) =
       return $ Just $ fromMaybe (PosPrefixInfo "" "" "" pos) $ do -- Maybe monad
         let headMaybe [] = Nothing
             headMaybe (x:_) = Just x
@@ -235,7 +240,7 @@ getCompletionPrefix pos@(J.Position l c) (VirtualFile _ yitext _) =
 -- ---------------------------------------------------------------------
 
 rangeLinesFromVfs :: VirtualFile -> J.Range -> T.Text
-rangeLinesFromVfs (VirtualFile _ yitext _) (J.Range (J.Position lf _cf) (J.Position lt _ct)) = r
+rangeLinesFromVfs (VirtualFile _ yitext _ _) (J.Range (J.Position lf _cf) (J.Position lt _ct)) = r
   where
     (_ ,s1) = Rope.splitAtLine lf yitext
     (s2, _) = Rope.splitAtLine (lt - lf) s1

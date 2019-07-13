@@ -103,10 +103,6 @@ data DocumentColorParams =
 
 deriveJSON lspOptions ''DocumentColorParams
 
-type DocumentColorRequest =
-  RequestMessage ClientMethod DocumentColorParams (List ColorInformation)
-type DocumentColorResponse = ResponseMessage (List ColorInformation)
-
 {-
 Color Presentation Request (:leftwards_arrow_with_hook:)
 Since version 3.6.0
@@ -195,6 +191,4 @@ data ColorPresentation =
 
 deriveJSON lspOptions ''ColorPresentation
 
-type ColorPresentationRequest = 
-  RequestMessage ClientMethod ColorPresentationParams (List ColorPresentation)
-type ColorPresentationResponse = ResponseMessage (List ColorPresentation)
+

@@ -267,5 +267,3 @@ instance ToJSON DSResult where
   toJSON (DSSymbolInformation x) = toJSON x
 
 
-type DocumentSymbolRequest = RequestMessage ClientMethod DocumentSymbolParams DSResult
-type DocumentSymbolsResponse = ResponseMessage DSResult

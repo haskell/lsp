@@ -30,7 +30,6 @@ import           Data.Monoid
 #endif
 import           Language.Haskell.LSP.Capture
 import qualified Language.Haskell.LSP.Core as Core
-import           Language.Haskell.LSP.Messages
 import           Language.Haskell.LSP.Utility
 import           System.IO
 import           System.FilePath
@@ -74,12 +73,12 @@ runWithHandles hin hout initializeCallbacks h o captureFp = do
   let timestampCaptureFp = fmap (\f -> dropExtension f ++ timestamp ++ takeExtension f)
                                 captureFp
 
-  cout <- atomically newTChan :: IO (TChan FromServerMessage)
+  cout <- atomically newTChan :: IO (TChan J.Value)
   _rhpid <- forkIO $ sendServer cout hout timestampCaptureFp
 
 
   let sendFunc :: Core.SendFunc
-      sendFunc msg = atomically $ writeTChan cout msg
+      sendFunc msg = atomically $ writeTChan cout $ J.toJSON msg
   let lf = error "LifeCycle error, ClientCapabilities not set yet via initialize maessage"
 
   tvarId <- atomically $ newTVar 0
@@ -122,15 +121,14 @@ ioLoop hin dispatcherProc tvarDat =
 -- ---------------------------------------------------------------------
 
 -- | Simple server to make sure all output is serialised
-sendServer :: TChan FromServerMessage -> Handle -> Maybe FilePath -> IO ()
+sendServer :: TChan J.Value -> Handle -> Maybe FilePath -> IO ()
 sendServer msgChan clientH captureFp =
   forever $ do
     msg <- atomically $ readTChan msgChan
 
     -- We need to make sure we only send over the content of the message,
     -- and no other tags/wrapper stuff
-    let str = J.encode $
-                J.genericToJSON (J.defaultOptions { J.sumEncoding = J.UntaggedValue }) msg
+    let str = J.encode msg
 
     let out = BSL.concat
                  [ str2lbs $ "Content-Length: " ++ show (BSL.length str)

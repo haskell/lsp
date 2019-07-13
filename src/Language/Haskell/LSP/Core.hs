@@ -5,19 +5,28 @@
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE TypeFamilies        #-}
+{-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE ViewPatterns        #-}
+{-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
 module Language.Haskell.LSP.Core (
     handleMessage
   , LanguageContextData(..)
-  , Handler
+  , Handler(..)
   , InitializeCallbacks(..)
   , LspFuncs(..)
   , Progress(..)
   , ProgressCancellable(..)
   , ProgressCancelledException
+  , ServerMessageFunc
   , SendFunc
-  , Handlers(..)
+  , SomeServerMessageWithResponse(..)
+  , Handlers
   , Options(..)
+  , ClientResponseHandler
+  , ServerResponseHandler
   , defaultLanguageContextData
   , makeResponseMessage
   , makeResponseError
@@ -38,6 +47,8 @@ import qualified Data.Aeson as J
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as B
 import           Data.Default
+import qualified Data.Dependent.Map as DM
+import           Data.Dependent.Map ( DMap )
 import qualified Data.HashMap.Strict as HM
 import qualified Data.List as L
 import qualified Data.Map as Map
@@ -47,7 +58,7 @@ import qualified Data.Text as T
 import           Data.Text ( Text )
 import           Language.Haskell.LSP.Capture
 import           Language.Haskell.LSP.Constant
-import           Language.Haskell.LSP.Messages
+import           Language.Haskell.LSP.Types.MessageFuncs
 import qualified Language.Haskell.LSP.Types.Capabilities    as C
 import qualified Language.Haskell.LSP.Types                 as J
 import qualified Language.Haskell.LSP.Types.Lens            as J
@@ -70,7 +81,7 @@ import qualified System.Log.Logger as L
 -- ---------------------------------------------------------------------
 
 -- | A function to send a message to the client
-type SendFunc = FromServerMessage -> IO ()
+type SendFunc = forall a. J.ToJSON a => a -> IO ()
 
 -- | state used by the LSP dispatcher to manage the message loop
 data LanguageContextData config =
@@ -88,6 +99,7 @@ data LanguageContextData config =
   , resCaptureFile         :: !(Maybe FilePath)
   , resWorkspaceFolders    :: ![J.WorkspaceFolder]
   , resProgressData        :: !ProgressData
+  , resPendingResponses    :: !(Map.Map J.LspId SomeServerResponseHandler)
   }
 
 data ProgressData = ProgressData { progressNextId :: !Int
@@ -148,6 +160,16 @@ instance E.Exception ProgressCancelledException
 -- @since 0.11.0.0
 data ProgressCancellable = Cancellable | NotCancellable
 
+data SomeServerMessageWithResponse where
+  SomeServerMessageWithResponse
+    :: (J.ToJSON (J.ServerMessage m))
+    => J.SServerMethod m
+    -> J.ServerMessage m
+    -> ServerResponseHandler m
+    -> SomeServerMessageWithResponse
+
+type ServerMessageFunc = SomeServerMessageWithResponse -> IO ()
+
 -- | Returned to the server on startup, providing ways to interact with the client.
 data LspFuncs c =
   LspFuncs
@@ -155,8 +177,9 @@ data LspFuncs c =
     , config                       :: !(IO (Maybe c))
       -- ^ Derived from the DidChangeConfigurationNotification message via a
       -- server-provided function.
-    , sendFunc                     :: !SendFunc
+    , sendFunc                     :: !ServerMessageFunc
     , getVirtualFileFunc           :: !(J.NormalizedUri -> IO (Maybe VirtualFile))
+    , getVirtualFilesFunc          :: !(IO VFS)
     , persistVirtualFileFunc       :: !(J.NormalizedUri -> IO FilePath)
     , reverseFileMapFunc           :: !(IO (FilePath -> FilePath))
     , publishDiagnosticsFunc       :: !PublishDiagnosticsFunc
@@ -206,92 +229,54 @@ data InitializeCallbacks config =
       -- that may be necesary for the server lifecycle.
     }
 
+type family ResponseHandlerFunc t where
+  ResponseHandlerFunc (J.RequestMessage m req rsp) = Either J.ResponseError rsp -> IO ()
+  ResponseHandlerFunc (J.SomeMessage m) = Maybe (Either J.ResponseError J.Value -> IO ())
+  ResponseHandlerFunc _ = ()
+
+type ClientResponseHandler m = ResponseHandlerFunc (J.ClientMessage m)
+type ServerResponseHandler m = ResponseHandlerFunc (J.ServerMessage m)
+
+mkClientResponseHandler :: J.SClientMethod m -> J.ClientMessage m -> TVar (LanguageContextData config) -> ClientResponseHandler m
+mkClientResponseHandler m cm tvarDat =
+  case J.splitClientMethod m of
+    J.IsClientNot -> ()
+    J.IsClientReq -> \mrsp -> case mrsp of
+      Left err -> sendErrorResponseE tvarDat (J.responseId $ cm ^. J.id) err
+      Right rsp -> sendResponse tvarDat $ makeResponseMessage cm rsp
+    J.IsClientEither -> case cm of
+      J.NotMess _ -> Nothing
+      J.ReqMess req -> Just $ \mrsp -> case mrsp of
+        Left err -> sendErrorResponseE tvarDat (J.responseId $ req ^. J.id) err
+        Right rsp -> sendResponse tvarDat $ makeResponseMessage req rsp
+
+data SomeServerResponseHandler where
+  SomeServerResponseHandler :: J.SServerMethod m -> ServerResponseHandler m -> SomeServerResponseHandler
+
+addResponseHandler :: TVar (LanguageContextData config) -> J.LspId -> SomeServerResponseHandler -> IO ()
+addResponseHandler tv lid h = atomically $ modifyTVar' tv $ \ctx ->
+  ctx { resPendingResponses = Map.insert lid h (resPendingResponses ctx) }
+
+mkServerRequestFunc :: TVar (LanguageContextData config) -> SomeServerMessageWithResponse -> IO ()
+mkServerRequestFunc tvarDat (SomeServerMessageWithResponse m msg resHandler) =
+  case J.splitServerMethod m of
+    J.IsServerNot -> sendEvent tvarDat msg
+    J.IsServerReq -> do
+      addResponseHandler tvarDat (msg ^. J.id) (SomeServerResponseHandler m resHandler)
+      sendEvent tvarDat msg
+    J.IsServerEither -> case msg of
+      J.NotMess ntf -> sendEvent tvarDat ntf
+      J.ReqMess req -> do
+        addResponseHandler tvarDat (req ^. J.id) (SomeServerResponseHandler m resHandler)
+        sendEvent tvarDat req
+
+
 -- | The Handler type captures a function that receives local read-only state
 -- 'a', a function to send a reply message once encoded as a ByteString, and a
 -- received message of type 'b'
-type Handler b =  b -> IO ()
+newtype Handler m = Handler {runHandler :: J.ClientMessage m -> ClientResponseHandler m -> IO ()}
 
--- | Callbacks from the language server to the language handler
-data Handlers =
-  Handlers
-    {
-    -- Capability-advertised handlers
-      hoverHandler                   :: !(Maybe (Handler J.HoverRequest))
-    , completionHandler              :: !(Maybe (Handler J.CompletionRequest))
-    , completionResolveHandler       :: !(Maybe (Handler J.CompletionItemResolveRequest))
-    , signatureHelpHandler           :: !(Maybe (Handler J.SignatureHelpRequest))
-    , definitionHandler              :: !(Maybe (Handler J.DefinitionRequest))
-    , typeDefinitionHandler          :: !(Maybe (Handler J.TypeDefinitionRequest))
-    , implementationHandler          :: !(Maybe (Handler J.ImplementationRequest))
-    , referencesHandler              :: !(Maybe (Handler J.ReferencesRequest))
-    , documentHighlightHandler       :: !(Maybe (Handler J.DocumentHighlightRequest))
-    , documentSymbolHandler          :: !(Maybe (Handler J.DocumentSymbolRequest))
-    , workspaceSymbolHandler         :: !(Maybe (Handler J.WorkspaceSymbolRequest))
-    , codeActionHandler              :: !(Maybe (Handler J.CodeActionRequest))
-    , codeLensHandler                :: !(Maybe (Handler J.CodeLensRequest))
-    , codeLensResolveHandler         :: !(Maybe (Handler J.CodeLensResolveRequest))
-    , documentColorHandler           :: !(Maybe (Handler J.DocumentColorRequest))
-    , colorPresentationHandler       :: !(Maybe (Handler J.ColorPresentationRequest))
-    , documentFormattingHandler      :: !(Maybe (Handler J.DocumentFormattingRequest))
-    , documentRangeFormattingHandler :: !(Maybe (Handler J.DocumentRangeFormattingRequest))
-    , documentTypeFormattingHandler  :: !(Maybe (Handler J.DocumentOnTypeFormattingRequest))
-    , renameHandler                  :: !(Maybe (Handler J.RenameRequest))
-    , foldingRangeHandler            :: !(Maybe (Handler J.FoldingRangeRequest))
-    -- new in 3.0
-    , documentLinkHandler            :: !(Maybe (Handler J.DocumentLinkRequest))
-    , documentLinkResolveHandler     :: !(Maybe (Handler J.DocumentLinkResolveRequest))
-    , executeCommandHandler          :: !(Maybe (Handler J.ExecuteCommandRequest))
-    -- Next 2 go from server -> client
-    -- , registerCapabilityHandler      :: !(Maybe (Handler J.RegisterCapabilityRequest))
-    -- , unregisterCapabilityHandler    :: !(Maybe (Handler J.UnregisterCapabilityRequest))
-    , willSaveWaitUntilTextDocHandler:: !(Maybe (Handler J.WillSaveWaitUntilTextDocumentRequest))
-
-    -- Notifications from the client
-    , didChangeConfigurationParamsHandler      :: !(Maybe (Handler J.DidChangeConfigurationNotification))
-    , didOpenTextDocumentNotificationHandler   :: !(Maybe (Handler J.DidOpenTextDocumentNotification))
-    , didChangeTextDocumentNotificationHandler :: !(Maybe (Handler J.DidChangeTextDocumentNotification))
-    -- ^ Note: If you need to keep track of document changes,
-    -- "Language.Haskell.LSP.VFS" will take care of these messages for you!
-    , didCloseTextDocumentNotificationHandler  :: !(Maybe (Handler J.DidCloseTextDocumentNotification))
-    , didSaveTextDocumentNotificationHandler   :: !(Maybe (Handler J.DidSaveTextDocumentNotification))
-    , didChangeWatchedFilesNotificationHandler :: !(Maybe (Handler J.DidChangeWatchedFilesNotification))
-    , didChangeWorkspaceFoldersNotificationHandler :: !(Maybe (Handler J.DidChangeWorkspaceFoldersNotification))
-    -- new in 3.0
-    , initializedHandler                       :: !(Maybe (Handler J.InitializedNotification))
-    , willSaveTextDocumentNotificationHandler  :: !(Maybe (Handler J.WillSaveTextDocumentNotification))
-    , cancelNotificationHandler                :: !(Maybe (Handler J.CancelNotification))
-
-    -- Responses to Request messages originated from the server
-    -- TODO: Properly decode response types and replace them with actual handlers
-    , responseHandler                    :: !(Maybe (Handler J.BareResponseMessage))
-    -- , registerCapabilityHandler                :: !(Maybe (Handler J.RegisterCapabilityResponse))
-    -- , unregisterCapabilityHandler              :: !(Maybe (Handler J.RegisterCapabilityResponse))
-    -- , showMessageHandler                       :: !(Maybe (Handler J.ShowMessageResponse))
-
-    -- Initialization request on startup
-    , initializeRequestHandler                 :: !(Maybe (Handler J.InitializeRequest))
-    -- Will default to terminating `exitMessage` if Nothing
-    , exitNotificationHandler                  :: !(Maybe (Handler J.ExitNotification))
-
-    , customRequestHandler                     :: !(Maybe (Handler J.CustomClientRequest))
-    , customNotificationHandler                :: !(Maybe (Handler J.CustomClientNotification))
-
-    }
-
-instance Default Handlers where
-  -- These already implicitly do stuff to the VFS, so silence warnings about no handler
-  def = nothings { didChangeTextDocumentNotificationHandler = Just ignore
-                 , didOpenTextDocumentNotificationHandler   = Just ignore
-                 , didCloseTextDocumentNotificationHandler  = Just ignore
-                 }
-    where ignore = const (pure ())
-          nothings = Handlers Nothing Nothing Nothing Nothing Nothing Nothing
-                              Nothing Nothing Nothing Nothing Nothing Nothing
-                              Nothing Nothing Nothing Nothing Nothing Nothing
-                              Nothing Nothing Nothing Nothing Nothing Nothing
-                              Nothing Nothing Nothing Nothing Nothing Nothing
-                              Nothing Nothing Nothing Nothing Nothing Nothing
-                              Nothing Nothing Nothing Nothing
+type Handlers = DMap J.SClientMethod Handler
 
 -- ---------------------------------------------------------------------
 nop :: a -> b -> IO a
@@ -314,84 +299,47 @@ helper requestHandler tvarDat json =
         _ -> failLog
 
 handlerMap :: (Show config) => InitializeCallbacks config
-           -> Handlers -> J.ClientMethod -> (TVar (LanguageContextData config) -> J.Value -> IO ())
--- General
-handlerMap i h J.Initialize                      = handleInitialConfig i (initializeRequestHandler h)
-handlerMap _ h J.Initialized                     = hh nop NotInitialized $ initializedHandler h
-handlerMap _ _ J.Shutdown                        = helper shutdownRequestHandler
-handlerMap _ h J.Exit                            =
-  case exitNotificationHandler h of
-    Just _ -> hh nop NotExit $ exitNotificationHandler h
-    Nothing -> \ctxVar v -> do
-      ctx <- readTVarIO ctxVar
-      -- Capture exit notification
-      case J.fromJSON v :: J.Result J.ExitNotification of
-        J.Success n -> captureFromClient (NotExit n) (resCaptureFile ctx)
-        J.Error _ -> return ()
-      logm $ B.pack "haskell-lsp:Got exit, exiting"
-      exitSuccess
-handlerMap _ h J.CancelRequest                   = hh nop NotCancelRequestFromClient $ cancelNotificationHandler h
--- Workspace
-handlerMap _ h J.WorkspaceDidChangeWorkspaceFolders = hwf $ didChangeWorkspaceFoldersNotificationHandler h
-handlerMap i h J.WorkspaceDidChangeConfiguration = hc i $ didChangeConfigurationParamsHandler h
-handlerMap _ h J.WorkspaceDidChangeWatchedFiles  = hh nop NotDidChangeWatchedFiles $ didChangeWatchedFilesNotificationHandler h
-handlerMap _ h J.WorkspaceSymbol                 = hh nop ReqWorkspaceSymbols $ workspaceSymbolHandler h
-handlerMap _ h J.WorkspaceExecuteCommand         = hh nop ReqExecuteCommand $ executeCommandHandler h
--- Document
-handlerMap _ h J.TextDocumentDidOpen             = hh openVFS NotDidOpenTextDocument $ didOpenTextDocumentNotificationHandler h
-handlerMap _ h J.TextDocumentDidChange           = hh changeFromClientVFS NotDidChangeTextDocument $ didChangeTextDocumentNotificationHandler h
-handlerMap _ h J.TextDocumentWillSave            = hh nop NotWillSaveTextDocument $ willSaveTextDocumentNotificationHandler h
-handlerMap _ h J.TextDocumentWillSaveWaitUntil   = hh nop ReqWillSaveWaitUntil $ willSaveWaitUntilTextDocHandler h
-handlerMap _ h J.TextDocumentDidSave             = hh nop NotDidSaveTextDocument $ didSaveTextDocumentNotificationHandler h
-handlerMap _ h J.TextDocumentDidClose            = hh closeVFS NotDidCloseTextDocument $ didCloseTextDocumentNotificationHandler h
-handlerMap _ h J.TextDocumentCompletion          = hh nop ReqCompletion $ completionHandler h
-handlerMap _ h J.CompletionItemResolve           = hh nop ReqCompletionItemResolve $ completionResolveHandler h
-handlerMap _ h J.TextDocumentHover               = hh nop ReqHover $ hoverHandler h
-handlerMap _ h J.TextDocumentSignatureHelp       = hh nop ReqSignatureHelp $ signatureHelpHandler h
-handlerMap _ h J.TextDocumentDefinition          = hh nop ReqDefinition $ definitionHandler h
-handlerMap _ h J.TextDocumentTypeDefinition      = hh nop ReqTypeDefinition $ typeDefinitionHandler h
-handlerMap _ h J.TextDocumentImplementation      = hh nop ReqImplementation $ implementationHandler h
-handlerMap _ h J.TextDocumentReferences          = hh nop ReqFindReferences $ referencesHandler h
-handlerMap _ h J.TextDocumentDocumentHighlight   = hh nop ReqDocumentHighlights $ documentHighlightHandler h
-handlerMap _ h J.TextDocumentDocumentSymbol      = hh nop ReqDocumentSymbols $ documentSymbolHandler h
-handlerMap _ h J.TextDocumentFormatting          = hh nop ReqDocumentFormatting $ documentFormattingHandler h
-handlerMap _ h J.TextDocumentRangeFormatting     = hh nop ReqDocumentRangeFormatting $ documentRangeFormattingHandler h
-handlerMap _ h J.TextDocumentOnTypeFormatting    = hh nop ReqDocumentOnTypeFormatting $ documentTypeFormattingHandler h
-handlerMap _ h J.TextDocumentCodeAction          = hh nop ReqCodeAction $ codeActionHandler h
-handlerMap _ h J.TextDocumentCodeLens            = hh nop ReqCodeLens $ codeLensHandler h
-handlerMap _ h J.CodeLensResolve                 = hh nop ReqCodeLensResolve $ codeLensResolveHandler h
-handlerMap _ h J.TextDocumentDocumentColor       = hh nop ReqDocumentColor $ documentColorHandler h
-handlerMap _ h J.TextDocumentColorPresentation   = hh nop ReqColorPresentation $ colorPresentationHandler h
-handlerMap _ h J.TextDocumentDocumentLink        = hh nop ReqDocumentLink $ documentLinkHandler h
-handlerMap _ h J.DocumentLinkResolve             = hh nop ReqDocumentLinkResolve $ documentLinkResolveHandler h
-handlerMap _ h J.TextDocumentRename              = hh nop ReqRename $ renameHandler h
-handlerMap _ h J.TextDocumentFoldingRange        = hh nop ReqFoldingRange $ foldingRangeHandler h
-handlerMap _ _ J.WindowProgressCancel            = helper progressCancelHandler
-handlerMap _ h (J.CustomClientMethod _)          = \ctxData val ->
-    case val of
-        J.Object o | "id" `HM.member` o ->
-            -- Custom request
-            hh nop ReqCustomClient (customRequestHandler h) ctxData val
-        _ -> -- Custom notification
-            hh nop NotCustomClient (customNotificationHandler h) ctxData val
+           -> Handlers -> J.SomeClientMethod -> (TVar (LanguageContextData config) -> J.Value -> IO ())
+handlerMap i hm (J.SomeClientMethod c) = case c of
+  J.SInitialize -> handleInitialConfig i h
+  J.SShutdown -> helper shutdownRequestHandler
+  J.SExit ->
+    case h of
+      Just _ -> hh c nop h
+      Nothing -> \ctxVar v -> do
+        ctx <- readTVarIO ctxVar
+        -- Capture exit notification
+        case J.fromJSON v :: J.Result J.ExitNotification of
+          J.Success n -> captureFromClient n (resCaptureFile ctx)
+          J.Error _ -> return ()
+        logm $ B.pack "haskell-lsp:Got exit, exiting"
+        exitSuccess
+  J.SWorkspaceDidChangeWorkspaceFolders -> hwf h
+  J.SWorkspaceDidChangeConfiguration -> hc i h
+  J.STextDocumentDidOpen -> hh c openVFS h
+  J.STextDocumentDidChange -> hh c changeFromClientVFS h
+  J.STextDocumentDidClose -> hh c closeVFS h
+  J.SWindowProgressCancel -> helper progressCancelHandler
+  _ -> J.clientMethodJSON c $ hh c nop $ h
+  where h = DM.lookup c hm
 
 -- ---------------------------------------------------------------------
 
 -- | Adapter from the normal handlers exposed to the library users and the
 -- internal message loop
-hh :: forall b config. (J.FromJSON b)
-   => (VFS -> b -> IO VFS) -> (b -> FromClientMessage) -> Maybe (Handler b) -> TVar (LanguageContextData config) -> J.Value -> IO ()
-hh getVfs wrapper mh tvarDat json = do
+hh :: forall m b config. (J.FromJSON b, J.ToJSON b, b ~ J.ClientMessage m)
+   => J.SClientMethod m -> (VFS -> b -> IO VFS) -> Maybe (Handler m) -> TVar (LanguageContextData config) -> J.Value -> IO ()
+hh m getVfs mh tvarDat json = do
       case J.fromJSON json of
         J.Success req -> do
           ctx <- readTVarIO tvarDat
           vfs' <- getVfs (resVFS ctx) req
           atomically $ modifyTVar' tvarDat (\c -> c {resVFS = vfs'})
 
-          captureFromClient (wrapper req) (resCaptureFile ctx)
+          captureFromClient req (resCaptureFile ctx)
 
           case mh of
-            Just h -> h req
+            Just h -> runHandler h req (mkClientResponseHandler m req tvarDat)
             Nothing -> do
               let msg = T.pack $ unwords ["haskell-lsp:no handler for.", show json]
               sendErrorLog tvarDat msg
@@ -402,13 +350,12 @@ hh getVfs wrapper mh tvarDat json = do
 handleInitialConfig
   :: (Show config)
   => InitializeCallbacks config
-  -> Maybe (Handler J.InitializeRequest)
+  -> Maybe (Handler J.Initialize)
   -> TVar (LanguageContextData config)
   -> J.Value
   -> IO ()
 handleInitialConfig (InitializeCallbacks { onInitialConfiguration, onStartup }) mh tvarDat json
-  = handleMessageWithConfigChange ReqInitialize
-                                  onInitialConfiguration
+  = handleMessageWithConfigChange J.SInitialize onInitialConfiguration
                                   (Just $ initializeRequestHandler' onStartup mh tvarDat)
                                   tvarDat
                                   json
@@ -417,32 +364,31 @@ handleInitialConfig (InitializeCallbacks { onInitialConfiguration, onStartup }) 
 hc
   :: (Show config)
   => InitializeCallbacks config
-  -> Maybe (Handler J.DidChangeConfigurationNotification)
+  -> Maybe (Handler J.WorkspaceDidChangeConfiguration)
   -> TVar (LanguageContextData config)
   -> J.Value
   -> IO ()
 hc (InitializeCallbacks { onConfigurationChange }) mh tvarDat json =
-  handleMessageWithConfigChange NotDidChangeConfiguration
-                                onConfigurationChange
+  handleMessageWithConfigChange J.SWorkspaceDidChangeConfiguration onConfigurationChange
                                 mh
                                 tvarDat
                                 json
 
 handleMessageWithConfigChange
-  :: (J.FromJSON reqParams, Show reqParams, Show err)
-  => (reqParams -> FromClientMessage) -- ^ The notification message from the client to expect
+  :: (J.FromJSON reqParams, J.ToJSON reqParams, Show reqParams, Show err, J.ClientMessage m ~ reqParams)
+  => J.SClientMethod m
   -> (reqParams -> Either err config) -- ^ A function to parse the config out of the request
-  -> Maybe (reqParams -> IO ()) -- ^ The upstream handler for the client request
+  -> Maybe (Handler m) -- ^ The upstream handler for the client request
   -> TVar (LanguageContextData config) -- ^ The context data containing the current configuration
   -> J.Value -- ^ The raw reqeust data
   -> IO ()
-handleMessageWithConfigChange notification parseConfig mh tvarDat json =
+handleMessageWithConfigChange m parseConfig mh tvarDat json =
   -- logs $ "haskell-lsp:hc DidChangeConfigurationNotification entered"
   case J.fromJSON json of
     J.Success req -> do
       ctx <- readTVarIO tvarDat
 
-      captureFromClient (notification req) (resCaptureFile ctx)
+      captureFromClient req (resCaptureFile ctx)
 
       case parseConfig req of
         Left err -> do
@@ -456,7 +402,7 @@ handleMessageWithConfigChange notification parseConfig mh tvarDat json =
           let ctx' = ctx { resConfig = Just newConfig }
           atomically $ modifyTVar' tvarDat (const ctx')
       case mh of
-        Just h  -> h req
+        Just h  -> runHandler h req (mkClientResponseHandler m req tvarDat)
         Nothing -> return ()
     J.Error err -> do
       let msg =
@@ -467,7 +413,7 @@ handleMessageWithConfigChange notification parseConfig mh tvarDat json =
       sendErrorLog tvarDat msg
 
 -- | Updates the list of workspace folders and then delegates back to 'hh'
-hwf :: Maybe (Handler J.DidChangeWorkspaceFoldersNotification) -> TVar (LanguageContextData config) -> J.Value -> IO ()
+hwf :: Maybe (Handler J.WorkspaceDidChangeWorkspaceFolders) -> TVar (LanguageContextData config) -> J.Value -> IO ()
 hwf h tvarDat json = do
   case J.fromJSON json :: J.Result J.DidChangeWorkspaceFoldersNotification of
     J.Success (J.NotificationMessage _ _ params) -> atomically $ do
@@ -480,12 +426,15 @@ hwf h tvarDat json = do
 
       modifyTVar' tvarDat (\c -> c {resWorkspaceFolders = wfs1})
     _ -> return ()
-  hh nop NotDidChangeWorkspaceFolders h tvarDat json
+  hh J.SWorkspaceDidChangeWorkspaceFolders nop h tvarDat json
 
 -- ---------------------------------------------------------------------
 
 getVirtualFile :: TVar (LanguageContextData config) -> J.NormalizedUri -> IO (Maybe VirtualFile)
 getVirtualFile tvarDat uri = Map.lookup uri . resVFS <$> readTVarIO tvarDat
+
+getVirtualFiles :: TVar (LanguageContextData config) -> IO VFS
+getVirtualFiles tvarDat = resVFS <$> readTVarIO tvarDat
 
 -- | Dump the current text for a given VFS file to a temporary file,
 -- and return the path to the file.
@@ -557,7 +506,7 @@ _ERR_MSG_URL = [ "`stack update` and install new haskell-lsp."
 defaultLanguageContextData :: Handlers -> Options -> LspFuncs config -> TVar Int -> SendFunc -> Maybe FilePath -> LanguageContextData config
 defaultLanguageContextData h o lf tv sf cf =
   LanguageContextData _INITIAL_RESPONSE_SEQUENCE h o sf mempty mempty mempty
-                      Nothing tv lf cf mempty defaultProgressData
+                      Nothing tv lf cf mempty defaultProgressData mempty
 
 defaultProgressData :: ProgressData
 defaultProgressData = ProgressData 0 Map.empty
@@ -595,17 +544,57 @@ handleMessage dispatcherProc tvarDat jsonStr = do
         Just oops -> logs $ "haskell-lsp:got strange method param, ignoring:" ++ show oops
         Nothing -> do
           logs $ "haskell-lsp:Got reply message:" ++ show jsonStr
-          handleResponse (J.Object o)
+          case J.fromJSON $ J.Object o of
+            J.Success m -> handleResponse m
+            J.Error err -> do
+               let msg = T.pack $ unwords ["haskell-lsp: could not decode response ", lbs2str jsonStr, ": ", err]
+               sendErrorLog tvarDat msg
 
   where
-    handleResponse json = do
-      ctx <- readTVarIO tvarDat
-      case responseHandler $ resHandlers ctx of
-        Nothing -> sendErrorLog tvarDat $ T.pack $ "haskell-lsp: responseHandler is not defined, ignoring response " ++ lbs2str jsonStr
-        Just h -> case J.fromJSON json of
-          J.Success res -> h res
-          J.Error err -> let msg = T.pack $ unwords $ ["haskell-lsp:response parse error.", lbs2str jsonStr, show err] ++ _ERR_MSG_URL
-                           in sendErrorLog tvarDat msg
+    handleResponse :: J.ResponseMessage J.Value -> IO ()
+    handleResponse res =
+      case res ^. J.id of
+        J.IdRspNull ->
+          sendErrorLog tvarDat $ T.pack $ "haskell-lsp: got response with null id" ++ (show res)
+        (J.requestId -> rid) -> do
+          resHandler <- atomically $ do
+            ctx <- readTVar tvarDat
+            let (handler, newMap) = Map.updateLookupWithKey (\_ _ -> Nothing) rid (resPendingResponses ctx)
+            modifyTVar' tvarDat (\c -> c { resPendingResponses = newMap })
+            return handler
+          case resHandler of
+            Nothing -> sendErrorLog tvarDat $ T.pack $ "haskell-lsp: No handler for " ++ (show res)
+            Just h -> case h of
+              SomeServerResponseHandler m f -> case J.splitServerMethod m of
+                J.IsServerNot ->
+                  error $ "haskell-lsp: impossible! Got response AND handler for notification message: "
+                       ++ (show res) ++ " with method: " ++ show m
+                J.IsServerReq -> case res ^. J.error of
+                  Just err -> f (Left err)
+                  Nothing -> case res ^. J.result of
+                    Nothing -> do
+                      let msg = T.pack $ unwords ["haskell-lsp: Got neither a result nor an error in response: ", show res]
+                      sendErrorLog tvarDat msg
+                      f (Left $ J.ResponseError J.ParseError msg Nothing)
+                    Just result -> case J.fromJSON result of
+                      J.Success x -> f (Right x)
+                      J.Error err -> do
+                        let msg = T.pack $ unwords ["haskell-lsp: could not decode response ", show res, ": ", err]
+                        sendErrorLog tvarDat msg
+                        f (Left $ J.ResponseError J.ParseError msg Nothing)
+                J.IsServerEither -> case f of
+                  Nothing ->
+                    sendErrorLog tvarDat $
+                      T.pack $ "haskell-lsp: No handler for "
+                            ++ (show res) ++ " with method" ++ (show m)
+                  Just f' -> case res ^. J.error of
+                    Just err -> f' (Left err)
+                    Nothing -> case res ^. J.result of
+                      Just result -> f' (Right result)
+                      Nothing -> do
+                        let msg = T.pack $ unwords ["haskell-lsp: Got neither a result nor an error in response: ", show res]
+                        sendErrorLog tvarDat msg
+                        f' (Left $ J.ResponseError J.ParseError msg Nothing)
     -- capability based handlers
     handle json cmd = do
       ctx <- readTVarIO tvarDat
@@ -614,7 +603,7 @@ handleMessage dispatcherProc tvarDat jsonStr = do
 
 -- ---------------------------------------------------------------------
 
-makeResponseMessage :: J.RequestMessage J.ClientMethod req resp -> resp -> J.ResponseMessage resp
+makeResponseMessage :: J.RequestMessage (J.SClientMethod m) req resp -> resp -> J.ResponseMessage resp
 makeResponseMessage req result = J.ResponseMessage "2.0" (J.responseId $ req ^. J.id) (Just result) Nothing
 
 makeResponseError :: J.LspIdRsp -> J.ResponseError -> J.ResponseMessage ()
@@ -623,12 +612,12 @@ makeResponseError origId err = J.ResponseMessage "2.0" origId Nothing (Just err)
 -- ---------------------------------------------------------------------
 -- |
 --
-sendEvent :: TVar (LanguageContextData config) -> FromServerMessage -> IO ()
+sendEvent :: J.ToJSON a => TVar (LanguageContextData config) -> a -> IO ()
 sendEvent tvarCtx msg = sendResponse tvarCtx msg
 
 -- |
 --
-sendResponse :: TVar (LanguageContextData config) -> FromServerMessage -> IO ()
+sendResponse :: J.ToJSON a => TVar (LanguageContextData config) -> a -> IO ()
 sendResponse tvarCtx msg = do
   ctx <- readTVarIO tvarCtx
   resSendResponse ctx msg
@@ -643,22 +632,26 @@ sendErrorResponse tv origId msg = sendErrorResponseS (sendEvent tv) origId J.Int
 
 sendErrorResponseS ::  SendFunc -> J.LspIdRsp -> J.ErrorCode -> Text -> IO ()
 sendErrorResponseS sf origId err msg = do
-  sf $ RspError (J.ResponseMessage "2.0" origId Nothing
+  sf $ (J.ResponseMessage "2.0" origId Nothing
                   (Just $ J.ResponseError err msg Nothing) :: J.ErrorResponse)
+
+sendErrorResponseE ::  TVar (LanguageContextData config) -> J.LspIdRsp -> J.ResponseError -> IO ()
+sendErrorResponseE sf origId err = do
+  sendEvent sf $ (J.ResponseMessage "2.0" origId Nothing (Just err) :: J.ErrorResponse)
 
 sendErrorLog :: TVar (LanguageContextData config) -> Text -> IO ()
 sendErrorLog tv msg = sendErrorLogS (sendEvent tv) msg
 
 sendErrorLogS :: SendFunc -> Text -> IO ()
 sendErrorLogS sf msg =
-  sf $ NotLogMessage $ fmServerLogMessageNotification J.MtError msg
+  sf $ fmServerLogMessageNotification J.MtError msg
 
 -- sendErrorShow :: String -> IO ()
 -- sendErrorShow msg = sendErrorShowS sendEvent msg
 
 sendErrorShowS :: SendFunc -> Text -> IO ()
 sendErrorShowS sf msg =
-  sf $ NotShowMessage $ fmServerShowMessageNotification J.MtError msg
+  sf $ fmServerShowMessageNotification J.MtError msg
 
 -- ---------------------------------------------------------------------
 
@@ -680,15 +673,14 @@ defaultErrorHandlers tvarDat origId req = [ E.Handler someExcept ]
 initializeRequestHandler'
   :: (Show config)
   => (LspFuncs config -> IO (Maybe J.ResponseError))
-  -> Maybe (Handler J.InitializeRequest)
+  -> Maybe (Handler J.Initialize)
   -> TVar (LanguageContextData config)
-  -> J.InitializeRequest
-  -> IO ()
-initializeRequestHandler' onStartup mHandler tvarCtx req@(J.RequestMessage _ origId _ params) =
+  -> Handler J.Initialize
+initializeRequestHandler' onStartup mHandler tvarCtx = Handler $ \req@(J.RequestMessage _ origId _ params) sendResp ->
   flip E.catches (defaultErrorHandlers tvarCtx (J.responseId origId) req) $ do
 
     case mHandler of
-      Just handler -> handler req
+      Just handler -> runHandler handler req sendResp
       Nothing -> return ()
 
     let wfs = case params ^. J.workspaceFolders of
@@ -747,7 +739,8 @@ initializeRequestHandler' onStartup mHandler tvarCtx req@(J.RequestMessage _ ori
                     -> ((Progress -> IO ()) -> IO a) -> IO a)
       withProgressBase indefinite title cancellable f
         | clientSupportsProgress = do
-          sf <- liftIO $ resSendResponse <$> readTVarIO tvarCtx
+          let sf :: forall a. J.ToJSON a => a -> IO ()
+              sf = sendResponse tvarCtx
 
           progId <- getNewProgressId
 
@@ -759,7 +752,7 @@ initializeRequestHandler' onStartup mHandler tvarCtx req@(J.RequestMessage _ ori
                               NotCancellable -> False
 
           -- Send initial notification
-          liftIO $ sf $ NotProgressStart $ fmServerProgressStartNotification $
+          liftIO $ sf $ fmServerProgressStartNotification $
             J.ProgressStartParams progId title (Just cancellable')
               Nothing initialPercentage
 
@@ -768,13 +761,13 @@ initializeRequestHandler' onStartup mHandler tvarCtx req@(J.RequestMessage _ ori
           res <- wait aid
 
           -- Send done notification
-          liftIO $ sf $ NotProgressDone $ fmServerProgressDoneNotification $
+          liftIO $ sf $ fmServerProgressDoneNotification $
             J.ProgressDoneParams progId
 
           return res
         | otherwise = f (const $ return ())
           where updater progId sf (Progress percentage msg) =
-                  sf $ NotProgressReport $ fmServerProgressReportNotification $
+                  sf $ fmServerProgressReportNotification $
                     J.ProgressReportParams progId msg percentage
 
       withProgress' :: Text -> ProgressCancellable -> ((Progress -> IO ()) -> IO a) -> IO a
@@ -787,8 +780,9 @@ initializeRequestHandler' onStartup mHandler tvarCtx req@(J.RequestMessage _ ori
     -- Launch the given process once the project root directory has been set
     let lspFuncs = LspFuncs (getCapabilities params)
                             (getConfig tvarCtx)
-                            (resSendResponse ctx0)
+                            (mkServerRequestFunc tvarCtx)
                             (getVirtualFile tvarCtx)
+                            (getVirtualFiles tvarCtx)
                             (persistVirtualFile tvarCtx)
                             (reverseFileMap tvarCtx)
                             (publishDiagnostics tvarCtx)
@@ -805,7 +799,7 @@ initializeRequestHandler' onStartup mHandler tvarCtx req@(J.RequestMessage _ ori
 
     case initializationResult of
       Just errResp -> do
-        sendResponse tvarCtx $ RspError $ makeResponseError (J.responseId origId) errResp
+        sendResp $ Left errResp
 
       Nothing -> do
 
@@ -813,8 +807,8 @@ initializeRequestHandler' onStartup mHandler tvarCtx req@(J.RequestMessage _ ori
           h = resHandlers ctx
           o = resOptions  ctx
 
-          supported (Just _) = Just True
-          supported Nothing   = Nothing
+          supported :: forall m. J.SClientMethod m -> Maybe Bool
+          supported m = Just $ DM.member m h
 
           -- If a dynamic setting is provided use it, else set a
           -- static True if there is a handler.
@@ -827,7 +821,7 @@ initializeRequestHandler' onStartup mHandler tvarCtx req@(J.RequestMessage _ ori
                   Nothing -> Nothing
 
           workspace = J.WorkspaceOptions workspaceFolder
-          workspaceFolder = case didChangeWorkspaceFoldersNotificationHandler h of
+          workspaceFolder = case DM.lookup J.SWorkspaceDidChangeWorkspaceFolders h of
             Just _ -> Just $
               -- sign up to receive notifications
               J.WorkspaceFolderOptions (Just True) (Just (J.WorkspaceFolderChangeNotificationsBool True))
@@ -836,22 +830,22 @@ initializeRequestHandler' onStartup mHandler tvarCtx req@(J.RequestMessage _ ori
           capa =
             J.InitializeResponseCapabilitiesInner
               { J._textDocumentSync                 = sync
-              , J._hoverProvider                    = supported (hoverHandler h)
+              , J._hoverProvider                    = supported J.STextDocumentHover
               , J._completionProvider               = completionProvider o
               , J._signatureHelpProvider            = signatureHelpProvider o
-              , J._definitionProvider               = supported (definitionHandler h)
-              , J._typeDefinitionProvider           = static (typeDefinitionProvider o) (typeDefinitionHandler h)
+              , J._definitionProvider               = supported J.STextDocumentDefinition
+              , J._typeDefinitionProvider           = static (typeDefinitionProvider o) (supported J.STextDocumentTypeDefinition)
               , J._implementationProvider           = implementationProvider o
-              , J._referencesProvider               = supported (referencesHandler h)
-              , J._documentHighlightProvider        = supported (documentHighlightHandler h)
-              , J._documentSymbolProvider           = supported (documentSymbolHandler h)
-              , J._workspaceSymbolProvider          = supported (workspaceSymbolHandler h)
-              , J._codeActionProvider               = supported (codeActionHandler h)
+              , J._referencesProvider               = supported J.STextDocumentReferences
+              , J._documentHighlightProvider        = supported J.STextDocumentDocumentHighlight
+              , J._documentSymbolProvider           = supported J.STextDocumentDocumentSymbol
+              , J._workspaceSymbolProvider          = supported J.SWorkspaceSymbol
+              , J._codeActionProvider               = supported J.STextDocumentCodeAction
               , J._codeLensProvider                 = codeLensProvider o
-              , J._documentFormattingProvider       = supported (documentFormattingHandler h)
-              , J._documentRangeFormattingProvider  = supported (documentRangeFormattingHandler h)
+              , J._documentFormattingProvider       = supported J.STextDocumentFormatting
+              , J._documentRangeFormattingProvider  = supported J.STextDocumentRangeFormatting
               , J._documentOnTypeFormattingProvider = documentOnTypeFormattingProvider o
-              , J._renameProvider                   = supported (renameHandler h)
+              , J._renameProvider                   = supported J.STextDocumentRename
               , J._documentLinkProvider             = documentLinkProvider o
               , J._colorProvider                    = colorProvider o
               , J._foldingRangeProvider             = foldingRangeProvider o
@@ -862,9 +856,9 @@ initializeRequestHandler' onStartup mHandler tvarCtx req@(J.RequestMessage _ ori
               }
 
           -- TODO: wrap this up into a fn to create a response message
-          res  = J.ResponseMessage "2.0" (J.responseId origId) (Just $ J.InitializeResponseCapabilities capa) Nothing
+          res  = Right (J.InitializeResponseCapabilities capa)
 
-        sendResponse tvarCtx $ RspInitialize res
+        sendResp res
 
 progressCancelHandler :: TVar (LanguageContextData config) -> J.ProgressCancelNotification -> IO ()
 progressCancelHandler tvarCtx (J.NotificationMessage _ _ (J.ProgressCancelParams tid)) = do
@@ -879,9 +873,9 @@ progressCancelHandler tvarCtx (J.NotificationMessage _ _ (J.ProgressCancelParams
 shutdownRequestHandler :: TVar (LanguageContextData config) -> J.ShutdownRequest -> IO ()
 shutdownRequestHandler tvarCtx req@(J.RequestMessage _ origId _ _) =
   flip E.catches (defaultErrorHandlers tvarCtx (J.responseId origId) req) $ do
-  let res  = makeResponseMessage req "ok"
+  let res  = makeResponseMessage req ("ok" :: Text)
 
-  sendResponse tvarCtx $ RspShutdown res
+  sendResponse tvarCtx res
 
 -- ---------------------------------------------------------------------
 
@@ -896,8 +890,7 @@ publishDiagnostics tvarDat maxDiagnosticCount uri version diags = do
   case mdp of
     Nothing -> return ()
     Just params -> do
-      resSendResponse ctx $ NotPublishDiagnostics
-        $ J.NotificationMessage "2.0" J.TextDocumentPublishDiagnostics params
+      resSendResponse ctx $ J.NotificationMessage "2.0" J.STextDocumentPublishDiagnostics params
 
 -- ---------------------------------------------------------------------
 
@@ -916,8 +909,7 @@ flushDiagnosticsBySource tvarDat maxDiagnosticCount msource = do
     case mdp of
       Nothing -> return ()
       Just params -> do
-        resSendResponse ctx $ NotPublishDiagnostics
-          $ J.NotificationMessage "2.0" J.TextDocumentPublishDiagnostics params
+        resSendResponse ctx $ J.NotificationMessage "2.0" J.STextDocumentPublishDiagnostics params
 
 -- |=====================================================================
 --

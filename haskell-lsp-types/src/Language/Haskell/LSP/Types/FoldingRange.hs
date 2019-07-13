@@ -65,6 +65,3 @@ data FoldingRange =
   deriving (Read, Show, Eq)
 
 deriveJSON lspOptions ''FoldingRange
-
-type FoldingRangeRequest = RequestMessage ClientMethod FoldingRangeParams (List FoldingRange)
-type FoldingRangeResponse = ResponseMessage (List FoldingRange)

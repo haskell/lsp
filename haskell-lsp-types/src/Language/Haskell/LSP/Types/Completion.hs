@@ -440,9 +440,6 @@ data CompletionParams =
 
 deriveJSON lspOptions ''CompletionParams
 
-type CompletionResponse = ResponseMessage CompletionResponseResult
-type CompletionRequest = RequestMessage ClientMethod CompletionParams CompletionResponseResult
-
 -- -------------------------------------
 {-
 New in 3.0
@@ -491,6 +488,3 @@ Response
     result: CompletionItem
     error: code and message set in case an exception happens during the completion resolve request.
 -}
-
-type CompletionItemResolveRequest  = RequestMessage ClientMethod CompletionItem CompletionItem
-type CompletionItemResolveResponse = ResponseMessage CompletionItem

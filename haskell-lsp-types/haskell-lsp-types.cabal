@@ -38,6 +38,7 @@ library
                      , Language.Haskell.LSP.Types.Message
                      , Language.Haskell.LSP.Types.Symbol
                      , Language.Haskell.LSP.Types.TextDocument
+                     , Language.Haskell.LSP.Types.Types
                      , Language.Haskell.LSP.Types.Uri
                      , Language.Haskell.LSP.Types.Window
                      , Language.Haskell.LSP.Types.WorkspaceEdit
@@ -50,6 +51,8 @@ library
                      , bytestring
                      , data-default
                      , deepseq
+                     , dependent-sum
+                     , dependent-sum-template
                      , filepath
                      , hashable
                      , lens >= 4.15.2

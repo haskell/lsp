@@ -1,12 +1,22 @@
 {-# LANGUAGE DuplicateRecordFields      #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE TemplateHaskell            #-}
+{-# LANGUAGE DataKinds                  #-}
+{-# LANGUAGE GADTs                      #-}
+{-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE TypeInType                 #-}
+{-# LANGUAGE KindSignatures             #-}
+{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE StandaloneDeriving         #-}
+{-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 module Language.Haskell.LSP.Types.Message where
 
 import qualified Data.Aeson                                 as A
 import           Data.Aeson.TH
 import           Data.Aeson.Types
 import           Data.Hashable
+import           Data.GADT.Compare
+import           Data.GADT.Compare.TH
 -- For <= 8.2.2
 import           Data.Text                                  (Text)
 import           Language.Haskell.LSP.Types.Constants
@@ -114,99 +124,399 @@ data ClientMethod =
  | TextDocumentRename
  | TextDocumentFoldingRange
  -- A custom message type. It is not enforced that this starts with $/.
- | CustomClientMethod Text
+ | CustomClientMethod
    deriving (Eq,Ord,Read,Show)
 
-instance A.FromJSON ClientMethod where
-  -- General
-  parseJSON (A.String "initialize")                       = return Initialize
-  parseJSON (A.String "initialized")                      = return Initialized
-  parseJSON (A.String "shutdown")                         = return Shutdown
-  parseJSON (A.String "exit")                             = return Exit
-  parseJSON (A.String "$/cancelRequest")                  = return CancelRequest
- -- Workspace
-  parseJSON (A.String "workspace/didChangeWorkspaceFolders") = return WorkspaceDidChangeWorkspaceFolders
-  parseJSON (A.String "workspace/didChangeConfiguration") = return WorkspaceDidChangeConfiguration
-  parseJSON (A.String "workspace/didChangeWatchedFiles")  = return WorkspaceDidChangeWatchedFiles
-  parseJSON (A.String "workspace/symbol")                 = return WorkspaceSymbol
-  parseJSON (A.String "workspace/executeCommand")         = return WorkspaceExecuteCommand
- -- Document
-  parseJSON (A.String "textDocument/didOpen")             = return TextDocumentDidOpen
-  parseJSON (A.String "textDocument/didChange")           = return TextDocumentDidChange
-  parseJSON (A.String "textDocument/willSave")            = return TextDocumentWillSave
-  parseJSON (A.String "textDocument/willSaveWaitUntil")   = return TextDocumentWillSaveWaitUntil
-  parseJSON (A.String "textDocument/didSave")             = return TextDocumentDidSave
-  parseJSON (A.String "textDocument/didClose")            = return TextDocumentDidClose
-  parseJSON (A.String "textDocument/completion")          = return TextDocumentCompletion
-  parseJSON (A.String "completionItem/resolve")           = return CompletionItemResolve
-  parseJSON (A.String "textDocument/hover")               = return TextDocumentHover
-  parseJSON (A.String "textDocument/signatureHelp")       = return TextDocumentSignatureHelp
-  parseJSON (A.String "textDocument/definition")          = return TextDocumentDefinition
-  parseJSON (A.String "textDocument/typeDefinition")      = return TextDocumentTypeDefinition
-  parseJSON (A.String "textDocument/implementation")      = return TextDocumentImplementation
-  parseJSON (A.String "textDocument/references")          = return TextDocumentReferences
-  parseJSON (A.String "textDocument/documentHighlight")   = return TextDocumentDocumentHighlight
-  parseJSON (A.String "textDocument/documentSymbol")      = return TextDocumentDocumentSymbol
-  parseJSON (A.String "textDocument/codeAction")          = return TextDocumentCodeAction
-  parseJSON (A.String "textDocument/codeLens")            = return TextDocumentCodeLens
-  parseJSON (A.String "codeLens/resolve")                 = return CodeLensResolve
-  parseJSON (A.String "textDocument/documentLink")        = return TextDocumentDocumentLink
-  parseJSON (A.String "documentLink/resolve")             = return DocumentLinkResolve
-  parseJSON (A.String "textDocument/documentColor")       = return TextDocumentDocumentColor
-  parseJSON (A.String "textDocument/colorPresentation")   = return TextDocumentColorPresentation
-  parseJSON (A.String "textDocument/formatting")          = return TextDocumentFormatting
-  parseJSON (A.String "textDocument/rangeFormatting")     = return TextDocumentRangeFormatting
-  parseJSON (A.String "textDocument/onTypeFormatting")    = return TextDocumentOnTypeFormatting
-  parseJSON (A.String "textDocument/rename")              = return TextDocumentRename
-  parseJSON (A.String "textDocument/foldingRange")        = return TextDocumentFoldingRange
-  parseJSON (A.String "window/progress/cancel")           = return WindowProgressCancel
-  parseJSON (A.String x)                                  = return (CustomClientMethod x)
-  parseJSON _                                             = mempty
+data SClientMethod (m :: ClientMethod) where
+  SInitialize                         :: SClientMethod Initialize
+  SInitialized                        :: SClientMethod Initialized
+  SShutdown                           :: SClientMethod Shutdown
+  SExit                               :: SClientMethod Exit
+  SCancelRequest                      :: SClientMethod CancelRequest
+  SWorkspaceDidChangeWorkspaceFolders :: SClientMethod WorkspaceDidChangeWorkspaceFolders
+  SWorkspaceDidChangeConfiguration    :: SClientMethod WorkspaceDidChangeConfiguration
+  SWorkspaceDidChangeWatchedFiles     :: SClientMethod WorkspaceDidChangeWatchedFiles
+  SWorkspaceSymbol                    :: SClientMethod WorkspaceSymbol
+  SWorkspaceExecuteCommand            :: SClientMethod WorkspaceExecuteCommand
+  SWindowProgressCancel               :: SClientMethod WindowProgressCancel
+  STextDocumentDidOpen                :: SClientMethod TextDocumentDidOpen
+  STextDocumentDidChange              :: SClientMethod TextDocumentDidChange
+  STextDocumentWillSave               :: SClientMethod TextDocumentWillSave
+  STextDocumentWillSaveWaitUntil      :: SClientMethod TextDocumentWillSaveWaitUntil
+  STextDocumentDidSave                :: SClientMethod TextDocumentDidSave
+  STextDocumentDidClose               :: SClientMethod TextDocumentDidClose
+  STextDocumentCompletion             :: SClientMethod TextDocumentCompletion
+  SCompletionItemResolve              :: SClientMethod CompletionItemResolve
+  STextDocumentHover                  :: SClientMethod TextDocumentHover
+  STextDocumentSignatureHelp          :: SClientMethod TextDocumentSignatureHelp
+  STextDocumentDefinition             :: SClientMethod TextDocumentDefinition
+  STextDocumentTypeDefinition         :: SClientMethod TextDocumentTypeDefinition
+  STextDocumentImplementation         :: SClientMethod TextDocumentImplementation
+  STextDocumentReferences             :: SClientMethod TextDocumentReferences
+  STextDocumentDocumentHighlight      :: SClientMethod TextDocumentDocumentHighlight
+  STextDocumentDocumentSymbol         :: SClientMethod TextDocumentDocumentSymbol
+  STextDocumentCodeAction             :: SClientMethod TextDocumentCodeAction
+  STextDocumentCodeLens               :: SClientMethod TextDocumentCodeLens
+  SCodeLensResolve                    :: SClientMethod CodeLensResolve
+  STextDocumentDocumentLink           :: SClientMethod TextDocumentDocumentLink
+  SDocumentLinkResolve                :: SClientMethod DocumentLinkResolve
+  STextDocumentDocumentColor          :: SClientMethod TextDocumentDocumentColor
+  STextDocumentColorPresentation      :: SClientMethod TextDocumentColorPresentation
+  STextDocumentFormatting             :: SClientMethod TextDocumentFormatting
+  STextDocumentRangeFormatting        :: SClientMethod TextDocumentRangeFormatting
+  STextDocumentOnTypeFormatting       :: SClientMethod TextDocumentOnTypeFormatting
+  STextDocumentRename                 :: SClientMethod TextDocumentRename
+  STextDocumentFoldingRange           :: SClientMethod TextDocumentFoldingRange
+  SCustomClientMethod                 :: Text -> SClientMethod CustomClientMethod
 
-instance A.ToJSON ClientMethod where
+deriving instance Eq   (SClientMethod m)
+deriving instance Ord  (SClientMethod m)
+deriving instance Show (SClientMethod m)
+
+deriveGEq ''SClientMethod
+deriveGCompare ''SClientMethod
+
+data SomeClientMethod = forall m. SomeClientMethod (SClientMethod m)
+
+deriving instance Show SomeClientMethod
+instance Eq SomeClientMethod where
+  (SomeClientMethod a) == (SomeClientMethod b) = defaultEq a b
+instance Ord SomeClientMethod where
+  (SomeClientMethod a) `compare` (SomeClientMethod b) = defaultCompare a b
+
+instance A.FromJSON SomeClientMethod where
   -- General
-  toJSON Initialize                      = A.String "initialize"
-  toJSON Initialized                     = A.String "initialized"
-  toJSON Shutdown                        = A.String "shutdown"
-  toJSON Exit                            = A.String "exit"
-  toJSON CancelRequest                   = A.String "$/cancelRequest"
+  parseJSON (A.String "initialize")                          = return $ SomeClientMethod SInitialize
+  parseJSON (A.String "initialized")                         = return $ SomeClientMethod SInitialized
+  parseJSON (A.String "shutdown")                            = return $ SomeClientMethod SShutdown
+  parseJSON (A.String "exit")                                = return $ SomeClientMethod SExit
+  parseJSON (A.String "$/cancelRequest")                     = return $ SomeClientMethod SCancelRequest
+ -- Workspace
+  parseJSON (A.String "workspace/didChangeWorkspaceFolders") = return $ SomeClientMethod SWorkspaceDidChangeWorkspaceFolders
+  parseJSON (A.String "workspace/didChangeConfiguration")    = return $ SomeClientMethod SWorkspaceDidChangeConfiguration
+  parseJSON (A.String "workspace/didChangeWatchedFiles")     = return $ SomeClientMethod SWorkspaceDidChangeWatchedFiles
+  parseJSON (A.String "workspace/symbol")                    = return $ SomeClientMethod SWorkspaceSymbol
+  parseJSON (A.String "workspace/executeCommand")            = return $ SomeClientMethod SWorkspaceExecuteCommand
+ -- Document
+  parseJSON (A.String "textDocument/didOpen")                = return $ SomeClientMethod STextDocumentDidOpen
+  parseJSON (A.String "textDocument/didChange")              = return $ SomeClientMethod STextDocumentDidChange
+  parseJSON (A.String "textDocument/willSave")               = return $ SomeClientMethod STextDocumentWillSave
+  parseJSON (A.String "textDocument/willSaveWaitUntil")      = return $ SomeClientMethod STextDocumentWillSaveWaitUntil
+  parseJSON (A.String "textDocument/didSave")                = return $ SomeClientMethod STextDocumentDidSave
+  parseJSON (A.String "textDocument/didClose")               = return $ SomeClientMethod STextDocumentDidClose
+  parseJSON (A.String "textDocument/completion")             = return $ SomeClientMethod STextDocumentCompletion
+  parseJSON (A.String "completionItem/resolve")              = return $ SomeClientMethod SCompletionItemResolve
+  parseJSON (A.String "textDocument/hover")                  = return $ SomeClientMethod STextDocumentHover
+  parseJSON (A.String "textDocument/signatureHelp")          = return $ SomeClientMethod STextDocumentSignatureHelp
+  parseJSON (A.String "textDocument/definition")             = return $ SomeClientMethod STextDocumentDefinition
+  parseJSON (A.String "textDocument/typeDefinition")         = return $ SomeClientMethod STextDocumentTypeDefinition
+  parseJSON (A.String "textDocument/implementation")         = return $ SomeClientMethod STextDocumentImplementation
+  parseJSON (A.String "textDocument/references")             = return $ SomeClientMethod STextDocumentReferences
+  parseJSON (A.String "textDocument/documentHighlight")      = return $ SomeClientMethod STextDocumentDocumentHighlight
+  parseJSON (A.String "textDocument/documentSymbol")         = return $ SomeClientMethod STextDocumentDocumentSymbol
+  parseJSON (A.String "textDocument/codeAction")             = return $ SomeClientMethod STextDocumentCodeAction
+  parseJSON (A.String "textDocument/codeLens")               = return $ SomeClientMethod STextDocumentCodeLens
+  parseJSON (A.String "codeLens/resolve")                    = return $ SomeClientMethod SCodeLensResolve
+  parseJSON (A.String "textDocument/documentLink")           = return $ SomeClientMethod STextDocumentDocumentLink
+  parseJSON (A.String "documentLink/resolve")                = return $ SomeClientMethod SDocumentLinkResolve
+  parseJSON (A.String "textDocument/documentColor")          = return $ SomeClientMethod STextDocumentDocumentColor
+  parseJSON (A.String "textDocument/colorPresentation")      = return $ SomeClientMethod STextDocumentColorPresentation
+  parseJSON (A.String "textDocument/formatting")             = return $ SomeClientMethod STextDocumentFormatting
+  parseJSON (A.String "textDocument/rangeFormatting")        = return $ SomeClientMethod STextDocumentRangeFormatting
+  parseJSON (A.String "textDocument/onTypeFormatting")       = return $ SomeClientMethod STextDocumentOnTypeFormatting
+  parseJSON (A.String "textDocument/rename")                 = return $ SomeClientMethod STextDocumentRename
+  parseJSON (A.String "textDocument/foldingRange")           = return $ SomeClientMethod STextDocumentFoldingRange
+  parseJSON (A.String "window/progress/cancel")              = return $ SomeClientMethod SWindowProgressCancel
+  parseJSON (A.String x)                                     = return $ SomeClientMethod (SCustomClientMethod x)
+  parseJSON _                                                = mempty
+
+instance A.FromJSON (SClientMethod Initialize) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeClientMethod SInitialize -> pure $ SInitialize
+      _ -> mempty
+instance A.FromJSON (SClientMethod Initialized) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeClientMethod SInitialized -> pure $ SInitialized
+      _ -> mempty
+instance A.FromJSON (SClientMethod Shutdown) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeClientMethod SShutdown -> pure $ SShutdown
+      _ -> mempty
+instance A.FromJSON (SClientMethod Exit) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeClientMethod SExit -> pure $ SExit
+      _ -> mempty
+instance A.FromJSON (SClientMethod CancelRequest) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeClientMethod SCancelRequest -> pure $ SCancelRequest
+      _ -> mempty
+instance A.FromJSON (SClientMethod WorkspaceDidChangeWorkspaceFolders) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeClientMethod SWorkspaceDidChangeWorkspaceFolders -> pure $ SWorkspaceDidChangeWorkspaceFolders
+      _ -> mempty
+instance A.FromJSON (SClientMethod WorkspaceDidChangeConfiguration) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeClientMethod SWorkspaceDidChangeConfiguration -> pure $ SWorkspaceDidChangeConfiguration
+      _ -> mempty
+instance A.FromJSON (SClientMethod WorkspaceDidChangeWatchedFiles) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeClientMethod SWorkspaceDidChangeWatchedFiles -> pure $ SWorkspaceDidChangeWatchedFiles
+      _ -> mempty
+instance A.FromJSON (SClientMethod WorkspaceSymbol) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeClientMethod SWorkspaceSymbol -> pure $ SWorkspaceSymbol
+      _ -> mempty
+instance A.FromJSON (SClientMethod WorkspaceExecuteCommand) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeClientMethod SWorkspaceExecuteCommand -> pure $ SWorkspaceExecuteCommand
+      _ -> mempty
+instance A.FromJSON (SClientMethod WindowProgressCancel) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeClientMethod SWindowProgressCancel -> pure $ SWindowProgressCancel
+      _ -> mempty
+instance A.FromJSON (SClientMethod TextDocumentDidOpen) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeClientMethod STextDocumentDidOpen -> pure $ STextDocumentDidOpen
+      _ -> mempty
+instance A.FromJSON (SClientMethod TextDocumentDidChange) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeClientMethod STextDocumentDidChange -> pure $ STextDocumentDidChange
+      _ -> mempty
+instance A.FromJSON (SClientMethod TextDocumentWillSave) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeClientMethod STextDocumentWillSave -> pure $ STextDocumentWillSave
+      _ -> mempty
+instance A.FromJSON (SClientMethod TextDocumentWillSaveWaitUntil) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeClientMethod STextDocumentWillSaveWaitUntil -> pure $ STextDocumentWillSaveWaitUntil
+      _ -> mempty
+instance A.FromJSON (SClientMethod TextDocumentDidSave) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeClientMethod STextDocumentDidSave -> pure $ STextDocumentDidSave
+      _ -> mempty
+instance A.FromJSON (SClientMethod TextDocumentDidClose) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeClientMethod STextDocumentDidClose -> pure $ STextDocumentDidClose
+      _ -> mempty
+instance A.FromJSON (SClientMethod TextDocumentCompletion) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeClientMethod STextDocumentCompletion -> pure $ STextDocumentCompletion
+      _ -> mempty
+instance A.FromJSON (SClientMethod CompletionItemResolve) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeClientMethod SCompletionItemResolve -> pure $ SCompletionItemResolve
+      _ -> mempty
+instance A.FromJSON (SClientMethod TextDocumentHover) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeClientMethod STextDocumentHover -> pure $ STextDocumentHover
+      _ -> mempty
+instance A.FromJSON (SClientMethod TextDocumentSignatureHelp) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeClientMethod STextDocumentSignatureHelp -> pure $ STextDocumentSignatureHelp
+      _ -> mempty
+instance A.FromJSON (SClientMethod TextDocumentDefinition) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeClientMethod STextDocumentDefinition -> pure $ STextDocumentDefinition
+      _ -> mempty
+instance A.FromJSON (SClientMethod TextDocumentTypeDefinition) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeClientMethod STextDocumentTypeDefinition -> pure $ STextDocumentTypeDefinition
+      _ -> mempty
+instance A.FromJSON (SClientMethod TextDocumentImplementation) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeClientMethod STextDocumentImplementation -> pure $ STextDocumentImplementation
+      _ -> mempty
+instance A.FromJSON (SClientMethod TextDocumentReferences) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeClientMethod STextDocumentReferences -> pure $ STextDocumentReferences
+      _ -> mempty
+instance A.FromJSON (SClientMethod TextDocumentDocumentHighlight) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeClientMethod STextDocumentDocumentHighlight -> pure $ STextDocumentDocumentHighlight
+      _ -> mempty
+instance A.FromJSON (SClientMethod TextDocumentDocumentSymbol) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeClientMethod STextDocumentDocumentSymbol -> pure $ STextDocumentDocumentSymbol
+      _ -> mempty
+instance A.FromJSON (SClientMethod TextDocumentCodeAction) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeClientMethod STextDocumentCodeAction -> pure $ STextDocumentCodeAction
+      _ -> mempty
+instance A.FromJSON (SClientMethod TextDocumentCodeLens) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeClientMethod STextDocumentCodeLens -> pure $ STextDocumentCodeLens
+      _ -> mempty
+instance A.FromJSON (SClientMethod CodeLensResolve) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeClientMethod SCodeLensResolve -> pure $ SCodeLensResolve
+      _ -> mempty
+instance A.FromJSON (SClientMethod TextDocumentDocumentLink) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeClientMethod STextDocumentDocumentLink -> pure $ STextDocumentDocumentLink
+      _ -> mempty
+instance A.FromJSON (SClientMethod DocumentLinkResolve) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeClientMethod SDocumentLinkResolve -> pure $ SDocumentLinkResolve
+      _ -> mempty
+instance A.FromJSON (SClientMethod TextDocumentDocumentColor) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeClientMethod STextDocumentDocumentColor -> pure $ STextDocumentDocumentColor
+      _ -> mempty
+instance A.FromJSON (SClientMethod TextDocumentColorPresentation) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeClientMethod STextDocumentColorPresentation -> pure $ STextDocumentColorPresentation
+      _ -> mempty
+instance A.FromJSON (SClientMethod TextDocumentFormatting) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeClientMethod STextDocumentFormatting -> pure $ STextDocumentFormatting
+      _ -> mempty
+instance A.FromJSON (SClientMethod TextDocumentRangeFormatting) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeClientMethod STextDocumentRangeFormatting -> pure $ STextDocumentRangeFormatting
+      _ -> mempty
+instance A.FromJSON (SClientMethod TextDocumentOnTypeFormatting) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeClientMethod STextDocumentOnTypeFormatting -> pure $ STextDocumentOnTypeFormatting
+      _ -> mempty
+instance A.FromJSON (SClientMethod TextDocumentRename) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeClientMethod STextDocumentRename -> pure $ STextDocumentRename
+      _ -> mempty
+instance A.FromJSON (SClientMethod TextDocumentFoldingRange) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeClientMethod STextDocumentFoldingRange -> pure $ STextDocumentFoldingRange
+      _ -> mempty
+instance A.FromJSON (SClientMethod CustomClientMethod) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeClientMethod (SCustomClientMethod cm) -> pure $ SCustomClientMethod cm
+      _ -> mempty
+
+instance A.ToJSON SomeClientMethod where
+  toJSON (SomeClientMethod x) = toJSON x
+instance A.ToJSON (SClientMethod m) where
+  -- General
+  toJSON SInitialize                      = A.String "initialize"
+  toJSON SInitialized                     = A.String "initialized"
+  toJSON SShutdown                        = A.String "shutdown"
+  toJSON SExit                            = A.String "exit"
+  toJSON SCancelRequest                   = A.String "$/cancelRequest"
   -- Workspace
-  toJSON WorkspaceDidChangeWorkspaceFolders = A.String "workspace/didChangeWorkspaceFolders"
-  toJSON WorkspaceDidChangeConfiguration = A.String "workspace/didChangeConfiguration"
-  toJSON WorkspaceDidChangeWatchedFiles  = A.String "workspace/didChangeWatchedFiles"
-  toJSON WorkspaceSymbol                 = A.String "workspace/symbol"
-  toJSON WorkspaceExecuteCommand         = A.String "workspace/executeCommand"
+  toJSON SWorkspaceDidChangeWorkspaceFolders = A.String "workspace/didChangeWorkspaceFolders"
+  toJSON SWorkspaceDidChangeConfiguration = A.String "workspace/didChangeConfiguration"
+  toJSON SWorkspaceDidChangeWatchedFiles  = A.String "workspace/didChangeWatchedFiles"
+  toJSON SWorkspaceSymbol                 = A.String "workspace/symbol"
+  toJSON SWorkspaceExecuteCommand         = A.String "workspace/executeCommand"
   -- Document
-  toJSON TextDocumentDidOpen             = A.String "textDocument/didOpen"
-  toJSON TextDocumentDidChange           = A.String "textDocument/didChange"
-  toJSON TextDocumentWillSave            = A.String "textDocument/willSave"
-  toJSON TextDocumentWillSaveWaitUntil   = A.String "textDocument/willSaveWaitUntil"
-  toJSON TextDocumentDidSave             = A.String "textDocument/didSave"
-  toJSON TextDocumentDidClose            = A.String "textDocument/didClose"
-  toJSON TextDocumentCompletion          = A.String "textDocument/completion"
-  toJSON CompletionItemResolve           = A.String "completionItem/resolve"
-  toJSON TextDocumentHover               = A.String "textDocument/hover"
-  toJSON TextDocumentSignatureHelp       = A.String "textDocument/signatureHelp"
-  toJSON TextDocumentReferences          = A.String "textDocument/references"
-  toJSON TextDocumentDocumentHighlight   = A.String "textDocument/documentHighlight"
-  toJSON TextDocumentDocumentSymbol      = A.String "textDocument/documentSymbol"
-  toJSON TextDocumentDefinition          = A.String "textDocument/definition"
-  toJSON TextDocumentTypeDefinition      = A.String "textDocument/typeDefinition"
-  toJSON TextDocumentImplementation      = A.String "textDocument/implementation"
-  toJSON TextDocumentCodeAction          = A.String "textDocument/codeAction"
-  toJSON TextDocumentCodeLens            = A.String "textDocument/codeLens"
-  toJSON CodeLensResolve                 = A.String "codeLens/resolve"
-  toJSON TextDocumentDocumentColor       = A.String "textDocument/documentColor"
-  toJSON TextDocumentColorPresentation   = A.String "textDocument/colorPresentation"
-  toJSON TextDocumentFormatting          = A.String "textDocument/formatting"
-  toJSON TextDocumentRangeFormatting     = A.String "textDocument/rangeFormatting"
-  toJSON TextDocumentOnTypeFormatting    = A.String "textDocument/onTypeFormatting"
-  toJSON TextDocumentRename              = A.String "textDocument/rename"
-  toJSON TextDocumentFoldingRange        = A.String "textDocument/foldingRange"
-  toJSON TextDocumentDocumentLink        = A.String "textDocument/documentLink"
-  toJSON DocumentLinkResolve             = A.String "documentLink/resolve"
-  toJSON WindowProgressCancel            = A.String "window/progress/cancel"
-  toJSON (CustomClientMethod xs)         = A.String xs
+  toJSON STextDocumentDidOpen             = A.String "textDocument/didOpen"
+  toJSON STextDocumentDidChange           = A.String "textDocument/didChange"
+  toJSON STextDocumentWillSave            = A.String "textDocument/willSave"
+  toJSON STextDocumentWillSaveWaitUntil   = A.String "textDocument/willSaveWaitUntil"
+  toJSON STextDocumentDidSave             = A.String "textDocument/didSave"
+  toJSON STextDocumentDidClose            = A.String "textDocument/didClose"
+  toJSON STextDocumentCompletion          = A.String "textDocument/completion"
+  toJSON SCompletionItemResolve           = A.String "completionItem/resolve"
+  toJSON STextDocumentHover               = A.String "textDocument/hover"
+  toJSON STextDocumentSignatureHelp       = A.String "textDocument/signatureHelp"
+  toJSON STextDocumentReferences          = A.String "textDocument/references"
+  toJSON STextDocumentDocumentHighlight   = A.String "textDocument/documentHighlight"
+  toJSON STextDocumentDocumentSymbol      = A.String "textDocument/documentSymbol"
+  toJSON STextDocumentDefinition          = A.String "textDocument/definition"
+  toJSON STextDocumentTypeDefinition      = A.String "textDocument/typeDefinition"
+  toJSON STextDocumentImplementation      = A.String "textDocument/implementation"
+  toJSON STextDocumentCodeAction          = A.String "textDocument/codeAction"
+  toJSON STextDocumentCodeLens            = A.String "textDocument/codeLens"
+  toJSON SCodeLensResolve                 = A.String "codeLens/resolve"
+  toJSON STextDocumentDocumentColor       = A.String "textDocument/documentColor"
+  toJSON STextDocumentColorPresentation   = A.String "textDocument/colorPresentation"
+  toJSON STextDocumentFormatting          = A.String "textDocument/formatting"
+  toJSON STextDocumentRangeFormatting     = A.String "textDocument/rangeFormatting"
+  toJSON STextDocumentOnTypeFormatting    = A.String "textDocument/onTypeFormatting"
+  toJSON STextDocumentRename              = A.String "textDocument/rename"
+  toJSON STextDocumentFoldingRange        = A.String "textDocument/foldingRange"
+  toJSON STextDocumentDocumentLink        = A.String "textDocument/documentLink"
+  toJSON SDocumentLinkResolve             = A.String "documentLink/resolve"
+  toJSON SWindowProgressCancel            = A.String "window/progress/cancel"
+  toJSON (SCustomClientMethod xs)         = A.String xs
 
 data ServerMethod =
   -- Window
@@ -228,53 +538,178 @@ data ServerMethod =
   | TextDocumentPublishDiagnostics
   -- Cancelling
   | CancelRequestServer
-  | CustomServerMethod Text
+  -- Custom
+  | CustomServerMethod
    deriving (Eq,Ord,Read,Show)
 
-instance A.FromJSON ServerMethod where
+data SServerMethod (m :: ServerMethod) where
+  SWindowShowMessage :: SServerMethod WindowShowMessage
+  SWindowShowMessageRequest :: SServerMethod WindowShowMessageRequest
+  SWindowLogMessage :: SServerMethod WindowLogMessage
+  SWindowProgressStart :: SServerMethod WindowProgressStart
+  SWindowProgressReport :: SServerMethod WindowProgressReport
+  SWindowProgressDone :: SServerMethod WindowProgressDone
+  STelemetryEvent :: SServerMethod TelemetryEvent
+  SClientRegisterCapability :: SServerMethod ClientRegisterCapability
+  SClientUnregisterCapability :: SServerMethod ClientUnregisterCapability
+  SWorkspaceWorkspaceFolders :: SServerMethod WorkspaceWorkspaceFolders
+  SWorkspaceConfiguration :: SServerMethod WorkspaceConfiguration
+  SWorkspaceApplyEdit :: SServerMethod WorkspaceApplyEdit
+  STextDocumentPublishDiagnostics :: SServerMethod TextDocumentPublishDiagnostics
+  SCancelRequestServer :: SServerMethod CancelRequestServer
+  SCustomServerMethod :: Text -> SServerMethod CustomServerMethod
+
+deriving instance Eq   (SServerMethod m)
+deriving instance Ord  (SServerMethod m)
+deriving instance Show (SServerMethod m)
+
+deriveGEq ''SServerMethod
+deriveGCompare ''SServerMethod
+
+data SomeServerMethod = forall m. SomeServerMethod (SServerMethod m)
+
+instance Eq SomeServerMethod where
+  (SomeServerMethod a) == (SomeServerMethod b) = defaultEq a b
+instance Ord SomeServerMethod where
+  (SomeServerMethod a) `compare` (SomeServerMethod b) = defaultCompare a b
+
+instance A.FromJSON SomeServerMethod where
   -- Window
-  parseJSON (A.String "window/showMessage")              = return WindowShowMessage
-  parseJSON (A.String "window/showMessageRequest")       = return WindowShowMessageRequest
-  parseJSON (A.String "window/logMessage")               = return WindowLogMessage
-  parseJSON (A.String "window/progress/start")           = return WindowProgressStart
-  parseJSON (A.String "window/progress/report")          = return WindowProgressReport
-  parseJSON (A.String "window/progress/done")            = return WindowProgressDone
-  parseJSON (A.String "telemetry/event")                 = return TelemetryEvent
+  parseJSON (A.String "window/showMessage")              = return $ SomeServerMethod SWindowShowMessage
+  parseJSON (A.String "window/showMessageRequest")       = return $ SomeServerMethod SWindowShowMessageRequest
+  parseJSON (A.String "window/logMessage")               = return $ SomeServerMethod SWindowLogMessage
+  parseJSON (A.String "window/progress/start")           = return $ SomeServerMethod SWindowProgressStart
+  parseJSON (A.String "window/progress/report")          = return $ SomeServerMethod SWindowProgressReport
+  parseJSON (A.String "window/progress/done")            = return $ SomeServerMethod SWindowProgressDone
+  parseJSON (A.String "telemetry/event")                 = return $ SomeServerMethod STelemetryEvent
   -- Client
-  parseJSON (A.String "client/registerCapability")       = return ClientRegisterCapability
-  parseJSON (A.String "client/unregisterCapability")     = return ClientUnregisterCapability
+  parseJSON (A.String "client/registerCapability")       = return $ SomeServerMethod SClientRegisterCapability
+  parseJSON (A.String "client/unregisterCapability")     = return $ SomeServerMethod SClientUnregisterCapability
   -- Workspace
-  parseJSON (A.String "workspace/workspaceFolders")      = return WorkspaceWorkspaceFolders
-  parseJSON (A.String "workspace/configuration")         = return WorkspaceConfiguration
-  parseJSON (A.String "workspace/applyEdit")             = return WorkspaceApplyEdit
+  parseJSON (A.String "workspace/workspaceFolders")      = return $ SomeServerMethod SWorkspaceWorkspaceFolders
+  parseJSON (A.String "workspace/configuration")         = return $ SomeServerMethod SWorkspaceConfiguration
+  parseJSON (A.String "workspace/applyEdit")             = return $ SomeServerMethod SWorkspaceApplyEdit
   -- Document
-  parseJSON (A.String "textDocument/publishDiagnostics") = return TextDocumentPublishDiagnostics
+  parseJSON (A.String "textDocument/publishDiagnostics") = return $ SomeServerMethod STextDocumentPublishDiagnostics
   -- Cancelling
-  parseJSON (A.String "$/cancelRequest")                 = return CancelRequestServer
-  parseJSON (A.String m)                                 = return (CustomServerMethod m)
+  parseJSON (A.String "$/cancelRequest")                 = return $ SomeServerMethod SCancelRequestServer
+  parseJSON (A.String m)                                 = return $ SomeServerMethod (SCustomServerMethod m)
   parseJSON _                                            = mempty
 
-instance A.ToJSON ServerMethod where
+instance A.ToJSON SomeServerMethod where
+  toJSON (SomeServerMethod m) = toJSON m
+instance A.ToJSON (SServerMethod m) where
   -- Window
-  toJSON WindowShowMessage        = A.String "window/showMessage"
-  toJSON WindowShowMessageRequest = A.String "window/showMessageRequest"
-  toJSON WindowLogMessage         = A.String "window/logMessage"
-  toJSON WindowProgressStart      = A.String "window/progress/start"
-  toJSON WindowProgressReport     = A.String "window/progress/report"
-  toJSON WindowProgressDone       = A.String "window/progress/done"
-  toJSON TelemetryEvent           = A.String "telemetry/event"
+  toJSON SWindowShowMessage              = A.String "window/showMessage"
+  toJSON SWindowShowMessageRequest       = A.String "window/showMessageRequest"
+  toJSON SWindowLogMessage               = A.String "window/logMessage"
+  toJSON SWindowProgressStart            = A.String "window/progress/start"
+  toJSON SWindowProgressReport           = A.String "window/progress/report"
+  toJSON SWindowProgressDone             = A.String "window/progress/done"
+  toJSON STelemetryEvent                 = A.String "telemetry/event"
   -- Client
-  toJSON ClientRegisterCapability   = A.String "client/registerCapability"
-  toJSON ClientUnregisterCapability = A.String "client/unregisterCapability"
+  toJSON SClientRegisterCapability       = A.String "client/registerCapability"
+  toJSON SClientUnregisterCapability     = A.String "client/unregisterCapability"
   -- Workspace
-  toJSON WorkspaceWorkspaceFolders = A.String "workspace/workspaceFolders"
-  toJSON WorkspaceConfiguration    = A.String "workspace/configuration"
-  toJSON WorkspaceApplyEdit        = A.String "workspace/applyEdit"
+  toJSON SWorkspaceWorkspaceFolders      = A.String "workspace/workspaceFolders"
+  toJSON SWorkspaceConfiguration         = A.String "workspace/configuration"
+  toJSON SWorkspaceApplyEdit             = A.String "workspace/applyEdit"
   -- Document
-  toJSON TextDocumentPublishDiagnostics = A.String "textDocument/publishDiagnostics"
+  toJSON STextDocumentPublishDiagnostics = A.String "textDocument/publishDiagnostics"
   -- Cancelling
-  toJSON CancelRequestServer = A.String "$/cancelRequest"
-  toJSON (CustomServerMethod m) = A.String m
+  toJSON SCancelRequestServer            = A.String "$/cancelRequest"
+  toJSON (SCustomServerMethod m)         = A.String m
+
+instance A.FromJSON (SServerMethod WindowShowMessage) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeServerMethod SWindowShowMessage -> pure SWindowShowMessage
+      _ -> mempty
+instance A.FromJSON (SServerMethod WindowShowMessageRequest) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeServerMethod SWindowShowMessageRequest -> pure SWindowShowMessageRequest
+      _ -> mempty
+instance A.FromJSON (SServerMethod WindowLogMessage) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeServerMethod SWindowLogMessage -> pure SWindowLogMessage
+      _ -> mempty
+instance A.FromJSON (SServerMethod WindowProgressStart) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeServerMethod SWindowProgressStart -> pure SWindowProgressStart
+      _ -> mempty
+instance A.FromJSON (SServerMethod WindowProgressReport) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeServerMethod SWindowProgressReport -> pure SWindowProgressReport
+      _ -> mempty
+instance A.FromJSON (SServerMethod WindowProgressDone) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeServerMethod SWindowProgressDone -> pure SWindowProgressDone
+      _ -> mempty
+instance A.FromJSON (SServerMethod TelemetryEvent) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeServerMethod STelemetryEvent -> pure STelemetryEvent
+      _ -> mempty
+instance A.FromJSON (SServerMethod ClientRegisterCapability) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeServerMethod SClientRegisterCapability -> pure SClientRegisterCapability
+      _ -> mempty
+instance A.FromJSON (SServerMethod ClientUnregisterCapability) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeServerMethod SClientUnregisterCapability -> pure SClientUnregisterCapability
+      _ -> mempty
+instance A.FromJSON (SServerMethod WorkspaceWorkspaceFolders) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeServerMethod SWorkspaceWorkspaceFolders -> pure SWorkspaceWorkspaceFolders
+      _ -> mempty
+instance A.FromJSON (SServerMethod WorkspaceConfiguration) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeServerMethod SWorkspaceConfiguration -> pure SWorkspaceConfiguration
+      _ -> mempty
+instance A.FromJSON (SServerMethod WorkspaceApplyEdit) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeServerMethod SWorkspaceApplyEdit -> pure SWorkspaceApplyEdit
+      _ -> mempty
+instance A.FromJSON (SServerMethod TextDocumentPublishDiagnostics) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeServerMethod STextDocumentPublishDiagnostics -> pure STextDocumentPublishDiagnostics
+      _ -> mempty
+instance A.FromJSON (SServerMethod CancelRequestServer) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeServerMethod SCancelRequestServer -> pure SCancelRequestServer
+      _ -> mempty
+instance A.FromJSON (SServerMethod CustomServerMethod) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeServerMethod (SCustomServerMethod cm) -> pure (SCustomServerMethod cm)
+      _ -> mempty
 
 data RequestMessage m req resp =
   RequestMessage
@@ -421,41 +856,17 @@ data NotificationMessage m a =
 deriveJSON lspOptions ''NotificationMessage
 
 -- ---------------------------------------------------------------------
-{-
-Cancellation Support
 
-https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#cancellation-support
+data SomeMessage m = ReqMess (RequestMessage m A.Value A.Value) | NotMess (NotificationMessage m A.Value)
+  deriving (Eq,Show)
 
-    New: The base protocol now offers support for request cancellation. To
-    cancel a request, a notification message with the following properties is
-    sent:
+instance (ToJSON m) => ToJSON (SomeMessage m) where
+  toJSON (ReqMess a) = toJSON a
+  toJSON (NotMess a) = toJSON a
 
-Notification:
-
-    method: '$/cancelRequest'
-    params: CancelParams defined as follows:
-
-interface CancelParams {
-    /**
-     * The request id to cancel.
-     */
-    id: number | string;
-}
-
-A request that got canceled still needs to return from the server and send a
-response back. It can not be left open / hanging. This is in line with the JSON
-RPC protocol that requires that every request sends a response back. In addition
-it allows for returning partial results on cancel.
--}
-
-data CancelParams =
-  CancelParams
-    { _id :: LspId
-    } deriving (Read,Show,Eq)
-
-deriveJSON lspOptions ''CancelParams
-
-type CancelNotification = NotificationMessage ClientMethod CancelParams
-type CancelNotificationServer = NotificationMessage ServerMethod CancelParams
-
--- ---------------------------------------------------------------------
+instance (FromJSON m) => FromJSON (SomeMessage m) where
+  parseJSON = withObject "SomeMessage" $ \o -> do
+    mid <- o .:? "id"
+    case (mid :: Maybe LspId) of
+      Just _ -> ReqMess <$> parseJSON (A.Object o)
+      _ -> NotMess <$> parseJSON (A.Object o)
