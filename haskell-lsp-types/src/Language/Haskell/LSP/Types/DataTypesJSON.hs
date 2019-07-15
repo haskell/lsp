@@ -2588,6 +2588,37 @@ type RenameResponse = ResponseMessage WorkspaceEdit
 
 -- ---------------------------------------------------------------------
 {-
+Prepare Rename Request
+
+Since version 3.12.0
+
+The prepare rename request is sent from the client to the server to setup
+and test the validity of a rename operation at a given location.
+
+Request:
+
+    method: ‘textDocument/prepareRename’
+    params: TextDocumentPositionParams
+
+Response:
+
+    result: Range | { range: Range, placeholder: string } | null describing
+            the range of the string to rename and optionally a placeholder
+            text of the string content to be renamed. If null is returned
+            then it is deemed that a ‘textDocument/rename’ request is not
+            valid at the given position.
+    error: code and message set in case an exception happens during the
+           prepare rename request.
+
+-}
+
+-- {\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"textDocument/rename\",\"params\":{\"textDocument\":{\"uri\":\"file:///home/alanz/mysrc/github/alanz/haskell-lsp/src/HieVscode.hs\"},\"position\":{\"line\":37,\"character\":17},\"newName\":\"getArgs'\"}}
+
+type PrepareRenameRequest  = RequestMessage ClientMethod TextDocumentPositionParams Range
+type PrepareRenameResponse = ResponseMessage Range
+
+-- ---------------------------------------------------------------------
+{-
 New in 3.0
 ----------
 

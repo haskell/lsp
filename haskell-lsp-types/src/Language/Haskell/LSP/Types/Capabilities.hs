@@ -99,7 +99,7 @@ capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) Noth
           (Just (CodeLensClientCapabilities dynamicReg))
           (Just (DocumentLinkClientCapabilities dynamicReg))
           (since 3 6 (ColorProviderClientCapabilities dynamicReg))
-          (Just (RenameClientCapabilities dynamicReg))
+          (Just (RenameClientCapabilities dynamicReg Nothing))
           (Just (PublishDiagnosticsClientCapabilities (since 3 7 True)))
           (since 3 10 foldingRangeCapability)
     sync =

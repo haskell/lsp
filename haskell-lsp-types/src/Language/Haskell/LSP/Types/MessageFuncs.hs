@@ -329,3 +329,7 @@ fmClientRenameRequest :: J.LspId -> J.RenameParams -> J.RenameRequest
 fmClientRenameRequest rid params
   = J.RequestMessage "2.0" rid J.TextDocumentRename params
 
+-- * :leftwards_arrow_with_hook: [textDocument/prepareRename](#textDocument_prepareRename)
+fmClientPrepareRenameRequest :: J.LspId -> J.TextDocumentPositionParams -> J.PrepareRenameRequest
+fmClientPrepareRenameRequest rid params
+  = J.RequestMessage "2.0" rid J.TextDocumentPrepareRename params

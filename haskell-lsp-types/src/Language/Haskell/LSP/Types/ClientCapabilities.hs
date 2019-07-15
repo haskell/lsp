@@ -564,6 +564,11 @@ export interface TextDocumentClientCapabilities {
                  * Whether rename supports dynamic registration.
                  */
                 dynamicRegistration?: boolean;
+		/**
+		 * The client supports testing for validity of rename operations
+		 * before execution.
+		 */
+		prepareSupport?: boolean;
         };
 
         /**
@@ -896,6 +901,7 @@ $(deriveJSON lspOptions ''ColorProviderClientCapabilities)
 data RenameClientCapabilities =
   RenameClientCapabilities
     { _dynamicRegistration :: Maybe Bool
+    , _prepareSupport :: Maybe Bool
     } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''RenameClientCapabilities)
