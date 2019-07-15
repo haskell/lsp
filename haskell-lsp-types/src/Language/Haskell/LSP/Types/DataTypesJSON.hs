@@ -18,6 +18,7 @@ import           Data.Aeson.Types
 import           Data.Text                                  (Text)
 import qualified Data.Text                                  as T
 import           Language.Haskell.LSP.Types.ClientCapabilities
+import           Language.Haskell.LSP.Types.CodeAction
 import           Language.Haskell.LSP.Types.Command
 import           Language.Haskell.LSP.Types.Constants
 import           Language.Haskell.LSP.Types.Diagnostic
@@ -262,6 +263,30 @@ deriveJSON lspOptions ''CodeLensOptions
 -- ---------------------------------------------------------------------
 {-
 /**
+ * Code Action options.
+ */
+export interface CodeActionOptions {
+    /**
+     * CodeActionKinds that this server may return.
+     *
+     * The list of kinds may be generic, such as `CodeActionKind.Refactor`, or the server
+     * may list out every specific kind they provide.
+     */
+    codeActionKinds?: CodeActionKind[];
+}
+-}
+
+data CodeActionOptions =
+  CodeActionOptionsStatic Bool
+  | CodeActionOptions
+    { _codeActionKinds :: [CodeActionKind]
+    } deriving (Read,Show,Eq)
+
+deriveJSON (lspOptions { sumEncoding = A.UntaggedValue }) ''CodeActionOptions
+
+-- ---------------------------------------------------------------------
+{-
+/**
  * Format document on type options
  */
 interface DocumentOnTypeFormattingOptions {
@@ -463,9 +488,11 @@ interface ServerCapabilities {
          */
         workspaceSymbolProvider?: boolean;
         /**
-         * The server provides code actions.
+         * The server provides code actions. The `CodeActionOptions` return type is only
+         * valid if the client signals code action literal support via the property
+         * `textDocument.codeAction.codeActionLiteralSupport`.
          */
-        codeActionProvider?: boolean;
+        codeActionProvider?: boolean | CodeActionOptions;
         /**
          * The server provides code lens.
          */
@@ -662,7 +689,7 @@ data InitializeResponseCapabilitiesInner =
       -- | The server provides workspace symbol support.
     , _workspaceSymbolProvider          :: Maybe Bool
       -- | The server provides code actions.
-    , _codeActionProvider               :: Maybe Bool
+    , _codeActionProvider               :: Maybe CodeActionOptions
       -- | The server provides code lens.
     , _codeLensProvider                 :: Maybe CodeLensOptions
       -- | The server provides document formatting.
