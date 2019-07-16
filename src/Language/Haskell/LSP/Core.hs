@@ -107,6 +107,7 @@ data Options =
     , implementationProvider           :: Maybe J.GotoOptions
     , codeLensProvider                 :: Maybe J.CodeLensOptions
     , documentOnTypeFormattingProvider :: Maybe J.DocumentOnTypeFormattingOptions
+    , renameProvider                   :: Maybe J.RenameOptions
     , documentLinkProvider             :: Maybe J.DocumentLinkOptions
     , colorProvider                    :: Maybe J.ColorOptions
     , foldingRangeProvider             :: Maybe J.FoldingRangeOptions
@@ -116,7 +117,7 @@ data Options =
 instance Default Options where
   def = Options Nothing Nothing Nothing Nothing Nothing
                 Nothing Nothing Nothing Nothing Nothing
-                Nothing
+                Nothing Nothing
 
 -- | A function to publish diagnostics. It aggregates all diagnostics pertaining
 -- to a particular version of a document, by source, and sends a
@@ -851,7 +852,7 @@ initializeRequestHandler' onStartup mHandler tvarCtx req@(J.RequestMessage _ ori
               , J._documentFormattingProvider       = supported (documentFormattingHandler h)
               , J._documentRangeFormattingProvider  = supported (documentRangeFormattingHandler h)
               , J._documentOnTypeFormattingProvider = documentOnTypeFormattingProvider o
-              , J._renameProvider                   = supported (renameHandler h)
+              , J._renameProvider                   = renameProvider o
               , J._documentLinkProvider             = documentLinkProvider o
               , J._colorProvider                    = colorProvider o
               , J._foldingRangeProvider             = foldingRangeProvider o

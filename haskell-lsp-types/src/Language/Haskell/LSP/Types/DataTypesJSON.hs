@@ -308,6 +308,31 @@ data DocumentLinkOptions =
 deriveJSON lspOptions ''DocumentLinkOptions
 
 -- ---------------------------------------------------------------------
+{-
+New in 3.12
+----------
+
+/**
+ * Rename options
+ */
+export interface RenameOptions {
+        /**
+         * Renames should be checked and tested before being executed.
+         */
+        prepareProvider?: boolean;
+}
+-}
+
+data RenameOptions =
+  RenameOptionsStatic Bool
+  | RenameOptions
+    { -- |Renames should be checked and tested before being executed.
+      _prepareProvider :: Maybe Bool
+    } deriving (Show, Read, Eq)
+
+deriveJSON lspOptions { sumEncoding = A.UntaggedValue } ''RenameOptions
+
+-- ---------------------------------------------------------------------
 
 {-
 New in 3.0
@@ -672,7 +697,7 @@ data InitializeResponseCapabilitiesInner =
       -- | The server provides document formatting on typing.
     , _documentOnTypeFormattingProvider :: Maybe DocumentOnTypeFormattingOptions
       -- | The server provides rename support.
-    , _renameProvider                   :: Maybe Bool
+    , _renameProvider                   :: Maybe RenameOptions
       -- | The server provides document link support.
     , _documentLinkProvider             :: Maybe DocumentLinkOptions
       -- | The server provides color provider support. Since LSP 3.6
