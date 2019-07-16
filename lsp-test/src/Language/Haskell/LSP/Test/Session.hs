@@ -222,7 +222,9 @@ runSessionWithHandles serverIn serverOut serverProc serverHandler config caps ro
       server = (Just serverIn, Just serverOut, Nothing, serverProc)
       serverFinalizer tid = finally (timeout (messageTimeout config * 1000000)
                                              (runSession' exitServer))
-                                    (cleanupProcess server >> killThread tid)
+                                    (terminateProcess serverProc
+                                      >> hClose serverOut
+                                      >> killThread tid)
       
   (result, _) <- bracket serverLauncher serverFinalizer (const $ runSession' session)
   return result
