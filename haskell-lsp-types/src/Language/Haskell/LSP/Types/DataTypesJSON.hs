@@ -279,7 +279,7 @@ export interface CodeActionOptions {
 data CodeActionOptions =
   CodeActionOptionsStatic Bool
   | CodeActionOptions
-    { _codeActionKinds :: [CodeActionKind]
+    { _codeActionKinds :: Maybe [CodeActionKind]
     } deriving (Read,Show,Eq)
 
 deriveJSON (lspOptions { sumEncoding = A.UntaggedValue }) ''CodeActionOptions
