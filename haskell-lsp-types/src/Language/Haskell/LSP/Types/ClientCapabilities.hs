@@ -567,6 +567,8 @@ export interface TextDocumentClientCapabilities {
 		/**
 		 * The client supports testing for validity of rename operations
 		 * before execution.
+                 *
+                 * Since 3.12.0
 		 */
 		prepareSupport?: boolean;
         };
