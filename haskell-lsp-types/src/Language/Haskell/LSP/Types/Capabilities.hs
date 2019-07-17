@@ -21,6 +21,9 @@ data LSPVersion = LSPVersion Int Int -- ^ Construct a major.minor version
 -- | Capabilities for full conformance to the LSP specification up until a version.
 -- Some important milestones:
 --
+-- * 3.12 textDocument/prepareRename request
+-- * 3.11 CodeActionOptions provided by the server
+-- * 3.10 hierarchical document symbols, folding ranges
 -- * 3.9 completion item preselect
 -- * 3.8 codeAction literals
 -- * 3.7 related information in diagnostics
@@ -99,7 +102,7 @@ capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) Noth
           (Just (CodeLensClientCapabilities dynamicReg))
           (Just (DocumentLinkClientCapabilities dynamicReg))
           (since 3 6 (ColorProviderClientCapabilities dynamicReg))
-          (Just (RenameClientCapabilities dynamicReg Nothing))
+          (Just (RenameClientCapabilities dynamicReg (since 3 12 True)))
           (Just (PublishDiagnosticsClientCapabilities (since 3 7 True)))
           (since 3 10 foldingRangeCapability)
     sync =
