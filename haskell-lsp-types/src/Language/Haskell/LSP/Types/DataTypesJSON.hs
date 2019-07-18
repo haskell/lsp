@@ -2639,8 +2639,22 @@ Response:
 
 -- {\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"textDocument/rename\",\"params\":{\"textDocument\":{\"uri\":\"file:///home/alanz/mysrc/github/alanz/haskell-lsp/src/HieVscode.hs\"},\"position\":{\"line\":37,\"character\":17},\"newName\":\"getArgs'\"}}
 
+data RangeWithPlaceholder =
+  RangeWithPlaceholder
+    {
+    _range :: Range
+    , _placeholder :: Text
+    }
+
+deriveJSON lspOptions { sumEncoding = A.UntaggedValue } ''RangeWithPlaceholder
+
+data RangeOrRangeWithPlaceholder = RangeWithPlaceholderValue RangeWithPlaceholder
+                                 | RangeValue Range
+
+deriveJSON lspOptions { sumEncoding = A.UntaggedValue } ''RangeOrRangeWithPlaceholder
+
 type PrepareRenameRequest  = RequestMessage ClientMethod TextDocumentPositionParams Range
-type PrepareRenameResponse = ResponseMessage Range
+type PrepareRenameResponse = ResponseMessage (Maybe RangeOrRangeWithPlaceholder)
 
 -- ---------------------------------------------------------------------
 {-
