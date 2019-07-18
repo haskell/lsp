@@ -60,12 +60,13 @@ import Language.Haskell.LSP.Types.Capabilities
 import Language.Haskell.LSP.Types
 import Language.Haskell.LSP.Types.Lens hiding (error)
 import Language.Haskell.LSP.VFS
+import Language.Haskell.LSP.Test.Compat
 import Language.Haskell.LSP.Test.Decoding
 import Language.Haskell.LSP.Test.Exceptions
 import System.Console.ANSI
 import System.Directory
 import System.IO
-import System.Process
+import System.Process (ProcessHandle())
 import System.Timeout
 
 -- | A session representing one instance of launching and connecting to a server.
@@ -222,7 +223,7 @@ runSessionWithHandles serverIn serverOut serverProc serverHandler config caps ro
       server = (Just serverIn, Just serverOut, Nothing, serverProc)
       serverFinalizer tid = finally (timeout (messageTimeout config * 1000000)
                                              (runSession' exitServer))
-                                    (cleanupProcess server >> killThread tid)
+                                    (cleanupRunningProcess server >> killThread tid)
       
   (result, _) <- bracket serverLauncher serverFinalizer (const $ runSession' session)
   return result

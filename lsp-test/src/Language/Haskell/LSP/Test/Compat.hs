@@ -6,10 +6,11 @@
 module Language.Haskell.LSP.Test.Compat where
 
 import Data.Maybe
+import System.IO
 
 #if MIN_VERSION_process(1,6,3)
-import System.Process hiding (getPid)
-import qualified System.Process (getPid)
+import System.Process hiding (getPid, cleanupProcess)
+import qualified System.Process (getPid, cleanupProcess)
 #else
 import System.Process
 import System.Process.Internals
@@ -51,4 +52,25 @@ getProcessID p = fromIntegral . fromJust <$> getProcessID' p
       OpenHandle pid -> return $ Just pid
 #endif
       _ -> return Nothing
+#endif
+
+cleanupRunningProcess :: (Maybe Handle, Maybe Handle, Maybe Handle, ProcessHandle) -> IO ()
+cleanupRunningProcess p@(_, _, _, ph) =
+  getProcessExitCode ph >>= maybe (cleanupProcess p) (const $ return ())
+
+cleanupProcess :: (Maybe Handle, Maybe Handle, Maybe Handle, ProcessHandle) -> IO ()
+#if MIN_VERSION_process(1,6,3)
+cleanupProcess = System.Process.cleanupProcess
+#else
+cleanupProcess (mb_stdin, mb_stdout, mb_stderr, ph) = do
+
+    terminateProcess ph
+    -- Note, it's important that other threads that might be reading/writing
+    -- these handles also get killed off, since otherwise they might be holding
+    -- the handle lock and prevent us from closing, leading to deadlock.
+    maybe (return ()) hClose mb_stdin
+    maybe (return ()) hClose mb_stdout
+    maybe (return ()) hClose mb_stderr
+
+    return ()
 #endif
