@@ -9,8 +9,13 @@ import Data.Maybe
 import System.IO
 
 #if MIN_VERSION_process(1,6,3)
+# if MIN_VERSION_process(1,6,4)
 import System.Process hiding (getPid, cleanupProcess)
 import qualified System.Process (getPid, cleanupProcess)
+# else
+import System.Process hiding (getPid)
+import qualified System.Process (getPid)
+# endif
 #else
 import System.Process
 import System.Process.Internals
@@ -59,7 +64,7 @@ cleanupRunningProcess p@(_, _, _, ph) =
   getProcessExitCode ph >>= maybe (cleanupProcess p) (const $ return ())
 
 cleanupProcess :: (Maybe Handle, Maybe Handle, Maybe Handle, ProcessHandle) -> IO ()
-#if MIN_VERSION_process(1,6,3)
+#if MIN_VERSION_process(1,6,4)
 cleanupProcess = System.Process.cleanupProcess
 #else
 cleanupProcess (mb_stdin, mb_stdout, mb_stderr, ph) = do
