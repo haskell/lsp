@@ -37,9 +37,8 @@ module Language.Haskell.LSP.Test
   , module Language.Haskell.LSP.Test.Parsing
   -- * Utilities
   -- | Quick helper functions for common tasks.
-  -- ** Lifecycle
+  -- ** Initialization
   , initializeResponse
-  , exitServer
   -- ** Documents
   , openDoc
   , openDoc'
@@ -138,7 +137,6 @@ runSessionWithConfig :: SessionConfig -- ^ Configuration options for the session
                      -> Session a -- ^ The session to run.
                      -> IO a
 runSessionWithConfig config serverExe caps rootDir session = do
-  
   pid <- getCurrentProcessID
   absRootDir <- canonicalizePath rootDir
 
@@ -168,6 +166,10 @@ runSessionWithConfig config serverExe caps rootDir session = do
       result <- session
       return result
   where
+  -- | Asks the server to shutdown and exit politely
+  exitServer :: Session ()
+  exitServer = request_ Shutdown (Nothing :: Maybe Value) >> sendNotification Exit ExitParams
+
   -- | Listens to the server output until the shutdown ack,
   -- makes sure it matches the record and signals any semaphores
   listenServer :: Handle -> SessionContext -> IO ()
@@ -575,7 +577,3 @@ getCodeLenses tId = do
     rsp <- request TextDocumentCodeLens (CodeLensParams tId) :: Session CodeLensResponse
     case getResponseResult rsp of
         List res -> pure res
-        
--- | Exit the server after request its shutdown
-exitServer :: Session()
-exitServer = request_ Shutdown (Nothing :: Maybe Value) >> sendNotification Exit ExitParams

@@ -198,7 +198,6 @@ runSessionWithHandles :: Handle -- ^ Server in
                       -> Session a
                       -> IO a
 runSessionWithHandles serverIn serverOut serverProc serverHandler config caps rootDir exitServer session = do
-  
   absRootDir <- canonicalizePath rootDir
 
   hSetBuffering serverIn  NoBuffering
@@ -217,14 +216,14 @@ runSessionWithHandles serverIn serverOut serverProc serverHandler config caps ro
   let context = SessionContext serverIn absRootDir messageChan reqMap initRsp config caps
       initState = SessionState (IdInt 0) mempty mempty 0 False Nothing
       runSession' = runSession context initState
-      
+
       errorHandler = throwTo mainThreadId :: SessionException -> IO()
       serverLauncher = forkIO $ catch (serverHandler serverOut context) errorHandler
       server = (Just serverIn, Just serverOut, Nothing, serverProc)
       serverFinalizer tid = finally (timeout (messageTimeout config * 1000000)
                                              (runSession' exitServer))
                                     (cleanupRunningProcess server >> killThread tid)
-      
+
   (result, _) <- bracket serverLauncher serverFinalizer (const $ runSession' session)
   return result
 

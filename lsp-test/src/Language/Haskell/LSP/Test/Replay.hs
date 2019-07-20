@@ -12,7 +12,7 @@ import qualified Data.ByteString.Lazy.Char8    as B
 import qualified Data.Text                     as T
 import           Language.Haskell.LSP.Capture
 import           Language.Haskell.LSP.Messages
-import           Language.Haskell.LSP.Types 
+import           Language.Haskell.LSP.Types
 import           Language.Haskell.LSP.Types.Lens as LSP hiding (error)
 import           Data.Aeson
 import           Data.Default
@@ -30,7 +30,7 @@ import           Language.Haskell.LSP.Test.Messages
 import           Language.Haskell.LSP.Test.Server
 import           Language.Haskell.LSP.Test.Session
 
--- | Replays a captured client output and 
+-- | Replays a captured client output and
 -- makes sure it matches up with an expected response.
 -- The session directory should have a captured session file in it
 -- named "session.log".
@@ -66,7 +66,7 @@ replaySession serverExe sessionDir = do
                             def
                             fullCaps
                             sessionDir
-                            exitServer
+                            (return ()) -- No finalizer cleanup
                             (sendMessages clientMsgs reqSema rspSema)
     takeMVar passSema
     killThread sessionThread
