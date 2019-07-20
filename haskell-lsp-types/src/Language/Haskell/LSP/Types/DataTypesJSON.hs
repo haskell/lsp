@@ -794,8 +794,8 @@ Response
 
 -}
 
-type ShutdownRequest  = RequestMessage ClientMethod (Maybe A.Value) Text
-type ShutdownResponse = ResponseMessage Text
+type ShutdownRequest  = RequestMessage ClientMethod (Maybe A.Value) (Maybe ())
+type ShutdownResponse = ResponseMessage (Maybe ())
 
 -- ---------------------------------------------------------------------
 {-
