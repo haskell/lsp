@@ -879,7 +879,7 @@ progressCancelHandler tvarCtx (J.NotificationMessage _ _ (J.ProgressCancelParams
 shutdownRequestHandler :: TVar (LanguageContextData config) -> J.ShutdownRequest -> IO ()
 shutdownRequestHandler tvarCtx req@(J.RequestMessage _ origId _ _) =
   flip E.catches (defaultErrorHandlers tvarCtx (J.responseId origId) req) $ do
-  let res  = makeResponseMessage req "ok"
+  let res  = makeResponseMessage req Nothing
 
   sendResponse tvarCtx $ RspShutdown res
 
