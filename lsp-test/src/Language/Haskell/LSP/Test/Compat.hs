@@ -16,12 +16,20 @@ import System.Process hiding (getPid, cleanupProcess)
 # if MIN_VERSION_process(1,6,4)
 import qualified System.Process (getPid, cleanupProcess)
 # else
+import Foreign.C.Error
+import GHC.IO.Exception ( IOErrorType(..), IOException(..) )
+
 import qualified System.Process (getPid)
+import qualified Control.Exception as C
 # endif
 #else
+import Control.Concurrent.MVar
+import Foreign.C.Error
+import GHC.IO.Exception ( IOErrorType(..), IOException(..) )
 import System.Process
 import System.Process.Internals
-import Control.Concurrent.MVar
+
+import qualified Control.Exception as C
 #endif
 
 #ifdef mingw32_HOST_OS
@@ -75,9 +83,16 @@ cleanupProcess (mb_stdin, mb_stdout, mb_stderr, ph) = do
     -- Note, it's important that other threads that might be reading/writing
     -- these handles also get killed off, since otherwise they might be holding
     -- the handle lock and prevent us from closing, leading to deadlock.
-    maybe (return ()) hClose mb_stdin
+    maybe (return ()) (ignoreSigPipe . hClose) mb_stdin
     maybe (return ()) hClose mb_stdout
     maybe (return ()) hClose mb_stderr
 
     return ()
+
+ignoreSigPipe :: IO () -> IO ()
+ignoreSigPipe = C.handle $ \e -> case e of
+                                   IOError { ioe_type  = ResourceVanished
+                                           , ioe_errno = Just ioe }
+                                     | Errno ioe == ePIPE -> return ()
+                                   _ -> C.throwIO e
 #endif
