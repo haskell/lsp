@@ -9,11 +9,13 @@ import Data.Maybe
 import System.IO
 
 #if MIN_VERSION_process(1,6,3)
-# if MIN_VERSION_process(1,6,4)
+-- We have to hide cleanupProcess for process-1.6.3.0
+-- cause it is in the public api for 1.6.3.0 versions
+-- shipped with ghc >= 8.6 and < 8.6.4
 import System.Process hiding (getPid, cleanupProcess)
+# if MIN_VERSION_process(1,6,4)
 import qualified System.Process (getPid, cleanupProcess)
 # else
-import System.Process hiding (getPid)
 import qualified System.Process (getPid)
 # endif
 #else
