@@ -2,8 +2,9 @@ module Language.Haskell.LSP.Test.Server (withServer) where
 
 import Control.Concurrent.Async
 import Control.Monad
+import Language.Haskell.LSP.Test.Compat
 import System.IO
-import System.Process
+import System.Process hiding (withCreateProcess)
 
 withServer :: String -> Bool -> (Handle -> Handle -> ProcessHandle -> IO a) -> IO a
 withServer serverExe logStdErr f = do

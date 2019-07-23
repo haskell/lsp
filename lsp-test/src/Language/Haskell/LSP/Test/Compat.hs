@@ -12,9 +12,9 @@ import System.IO
 -- We have to hide cleanupProcess for process-1.6.3.0
 -- cause it is in the public api for 1.6.3.0 versions
 -- shipped with ghc >= 8.6 and < 8.6.4
-import System.Process hiding (getPid, cleanupProcess)
+import System.Process hiding (getPid, cleanupProcess, withCreateProcess)
 # if MIN_VERSION_process(1,6,4)
-import qualified System.Process (getPid, cleanupProcess)
+import qualified System.Process (getPid, cleanupProcess, withCreateProcess)
 # else
 import Foreign.C.Error
 import GHC.IO.Exception ( IOErrorType(..), IOException(..) )
@@ -26,7 +26,7 @@ import qualified Control.Exception as C
 import Control.Concurrent.MVar
 import Foreign.C.Error
 import GHC.IO.Exception ( IOErrorType(..), IOException(..) )
-import System.Process
+import System.Process hiding (withCreateProcess)
 import System.Process.Internals
 
 import qualified Control.Exception as C
@@ -73,13 +73,26 @@ cleanupRunningProcess :: (Maybe Handle, Maybe Handle, Maybe Handle, ProcessHandl
 cleanupRunningProcess p@(_, _, _, ph) =
   getProcessExitCode ph >>= maybe (cleanupProcess p) (const $ return ())
 
-cleanupProcess :: (Maybe Handle, Maybe Handle, Maybe Handle, ProcessHandle) -> IO ()
-#if MIN_VERSION_process(1,6,4)
-cleanupProcess = System.Process.cleanupProcess
-#else
-cleanupProcess (mb_stdin, mb_stdout, mb_stderr, ph) = do
+cleanupProcess
+  :: (Maybe Handle, Maybe Handle, Maybe Handle, ProcessHandle) -> IO ()
 
-    terminateProcess ph
+withCreateProcess
+  :: CreateProcess
+  -> (Maybe Handle -> Maybe Handle -> Maybe Handle -> ProcessHandle -> IO a)
+  -> IO a
+
+#if MIN_VERSION_process(1,6,4)
+
+cleanupProcess = System.Process.cleanupProcess
+
+withCreateProcess = System.Process.withCreateProcess
+
+#else
+
+cleanupProcess (mb_stdin, mb_stdout, mb_stderr, ph) = do
+    -- We ignore the spurious "permission denied" error in windows:
+    --   see https://github.com/haskell/process/issues/110
+    ignorePermDenied $ terminateProcess ph
     -- Note, it's important that other threads that might be reading/writing
     -- these handles also get killed off, since otherwise they might be holding
     -- the handle lock and prevent us from closing, leading to deadlock.
@@ -88,11 +101,19 @@ cleanupProcess (mb_stdin, mb_stdout, mb_stderr, ph) = do
     maybe (return ()) hClose mb_stderr
 
     return ()
+  where ignoreSigPipe = ignoreIOError ResourceVanished ePIPE
+        ignorePermDenied = ignoreIOError PermissionDenied ePERM
+    
+ignoreIOError :: IOErrorType -> Errno -> IO () -> IO ()
+ignoreIOError ioErrorType errno =
+  C.handle $ \e -> case e of
+                     IOError { ioe_type  = iot
+                             , ioe_errno = Just ioe }
+                       | iot == ioErrorType && Errno ioe == errno -> return ()
+                     _ -> C.throwIO e
 
-ignoreSigPipe :: IO () -> IO ()
-ignoreSigPipe = C.handle $ \e -> case e of
-                                   IOError { ioe_type  = ResourceVanished
-                                           , ioe_errno = Just ioe }
-                                     | Errno ioe == ePIPE -> return ()
-                                   _ -> C.throwIO e
+withCreateProcess c action =
+  C.bracket (createProcess c) cleanupProcess
+            (\(m_in, m_out, m_err, ph) -> action m_in m_out m_err ph)
+
 #endif
