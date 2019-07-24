@@ -69,10 +69,6 @@ getProcessID p = fromIntegral . fromJust <$> getProcessID' p
       _ -> return Nothing
 #endif
 
-cleanupRunningProcess :: (Maybe Handle, Maybe Handle, Maybe Handle, ProcessHandle) -> IO ()
-cleanupRunningProcess p@(_, _, _, ph) =
-  getProcessExitCode ph >>= maybe (cleanupProcess p) (const $ return ())
-
 cleanupProcess
   :: (Maybe Handle, Maybe Handle, Maybe Handle, ProcessHandle) -> IO ()
 
@@ -102,7 +98,7 @@ cleanupProcess (mb_stdin, mb_stdout, mb_stderr, ph) = do
 
     return ()
   where ignoreSigPipe = ignoreIOError ResourceVanished ePIPE
-        ignorePermDenied = ignoreIOError PermissionDenied ePERM
+        ignorePermDenied = ignoreIOError PermissionDenied eACCES
     
 ignoreIOError :: IOErrorType -> Errno -> IO () -> IO ()
 ignoreIOError ioErrorType errno =

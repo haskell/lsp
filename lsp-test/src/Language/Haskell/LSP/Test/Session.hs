@@ -218,13 +218,16 @@ runSessionWithHandles serverIn serverOut serverProc serverHandler config caps ro
       runSession' = runSession context initState
 
       errorHandler = throwTo mainThreadId :: SessionException -> IO()
-      serverLauncher = forkIO $ catch (serverHandler serverOut context) errorHandler
+      serverListenerLauncher =
+        forkIO $ catch (serverHandler serverOut context) errorHandler
       server = (Just serverIn, Just serverOut, Nothing, serverProc)
-      serverFinalizer tid = finally (timeout (messageTimeout config * 1000000)
-                                             (runSession' exitServer))
-                                    (cleanupRunningProcess server >> killThread tid)
+      serverAndListenerFinalizer tid =
+        finally (timeout (messageTimeout config * 1000000)
+                         (runSession' exitServer))
+                (cleanupProcess server >> killThread tid)
 
-  (result, _) <- bracket serverLauncher serverFinalizer (const $ runSession' session)
+  (result, _) <- bracket serverListenerLauncher serverAndListenerFinalizer
+                         (const $ runSession' session)
   return result
 
 updateStateC :: ConduitM FromServerMessage FromServerMessage (StateT SessionState (ReaderT SessionContext IO)) ()
