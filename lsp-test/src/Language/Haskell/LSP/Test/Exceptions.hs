@@ -12,6 +12,7 @@ import qualified Data.ByteString.Lazy.Char8 as B
 
 -- | An exception that can be thrown during a 'Haskell.LSP.Test.Session.Session'
 data SessionException = Timeout
+                      | NoContentLengthHeader
                       | UnexpectedMessage String FromServerMessage
                       | ReplayOutOfOrder FromServerMessage [FromServerMessage]
                       | UnexpectedDiagnostics
@@ -24,6 +25,7 @@ instance Exception SessionException
 
 instance Show SessionException where
   show Timeout = "Timed out waiting to receive a message from the server."
+  show NoContentLengthHeader = "Couldn't read Content-Length header from the server."
   show (UnexpectedMessage expected lastMsg) =
     "Received an unexpected message from the server:\n" ++
     "Was parsing: " ++ expected ++ "\n" ++

@@ -4,9 +4,9 @@ import Control.Concurrent.Async
 import Control.Monad
 import Language.Haskell.LSP.Test.Compat
 import System.IO
-import System.Process
+import System.Process hiding (withCreateProcess)
 
-withServer :: String -> Bool -> (Handle -> Handle -> Int -> IO a) -> IO a
+withServer :: String -> Bool -> (Handle -> Handle -> ProcessHandle -> IO a) -> IO a
 withServer serverExe logStdErr f = do
   -- TODO Probably should just change runServer to accept
   -- separate command and arguments
@@ -19,5 +19,4 @@ withServer serverExe logStdErr f = do
     hSetBinaryMode serverErr True
     let errSinkThread = forever $ hGetLine serverErr >>= when logStdErr . putStrLn
     withAsync errSinkThread $ \_ -> do
-      pid <- getProcessID serverProc
-      f serverIn serverOut pid
+      f serverIn serverOut serverProc

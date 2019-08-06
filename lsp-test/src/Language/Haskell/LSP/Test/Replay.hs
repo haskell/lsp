@@ -12,7 +12,7 @@ import qualified Data.ByteString.Lazy.Char8    as B
 import qualified Data.Text                     as T
 import           Language.Haskell.LSP.Capture
 import           Language.Haskell.LSP.Messages
-import           Language.Haskell.LSP.Types 
+import           Language.Haskell.LSP.Types
 import           Language.Haskell.LSP.Types.Lens as LSP hiding (error)
 import           Data.Aeson
 import           Data.Default
@@ -23,13 +23,14 @@ import           Control.Monad
 import           System.FilePath
 import           System.IO
 import           Language.Haskell.LSP.Test
+import           Language.Haskell.LSP.Test.Compat
 import           Language.Haskell.LSP.Test.Files
 import           Language.Haskell.LSP.Test.Decoding
 import           Language.Haskell.LSP.Test.Messages
 import           Language.Haskell.LSP.Test.Server
 import           Language.Haskell.LSP.Test.Session
 
--- | Replays a captured client output and 
+-- | Replays a captured client output and
 -- makes sure it matches up with an expected response.
 -- The session directory should have a captured session file in it
 -- named "session.log".
@@ -43,8 +44,9 @@ replaySession serverExe sessionDir = do
   -- decode session
   let unswappedEvents = map (fromJust . decode) entries
 
-  withServer serverExe False $ \serverIn serverOut pid -> do
+  withServer serverExe False $ \serverIn serverOut serverProc -> do
 
+    pid <- getProcessID serverProc
     events <- swapCommands pid <$> swapFiles sessionDir unswappedEvents
 
     let clientEvents = filter isClientMsg events
@@ -59,12 +61,12 @@ replaySession serverExe sessionDir = do
     mainThread <- myThreadId
 
     sessionThread <- liftIO $ forkIO $
-      runSessionWithHandles serverIn
-                            serverOut
+      runSessionWithHandles serverIn serverOut serverProc
                             (listenServer serverMsgs requestMap reqSema rspSema passSema mainThread)
                             def
                             fullCaps
                             sessionDir
+                            (return ()) -- No finalizer cleanup
                             (sendMessages clientMsgs reqSema rspSema)
     takeMVar passSema
     killThread sessionThread

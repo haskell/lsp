@@ -6,14 +6,30 @@
 module Language.Haskell.LSP.Test.Compat where
 
 import Data.Maybe
+import System.IO
 
 #if MIN_VERSION_process(1,6,3)
-import System.Process hiding (getPid)
+-- We have to hide cleanupProcess for process-1.6.3.0
+-- cause it is in the public api for 1.6.3.0 versions
+-- shipped with ghc >= 8.6 and < 8.6.4
+import System.Process hiding (getPid, cleanupProcess, withCreateProcess)
+# if MIN_VERSION_process(1,6,4)
+import qualified System.Process (getPid, cleanupProcess, withCreateProcess)
+# else
+import Foreign.C.Error
+import GHC.IO.Exception ( IOErrorType(..), IOException(..) )
+
 import qualified System.Process (getPid)
+import qualified Control.Exception as C
+# endif
 #else
-import System.Process
-import System.Process.Internals
 import Control.Concurrent.MVar
+import Foreign.C.Error
+import GHC.IO.Exception ( IOErrorType(..), IOException(..) )
+import System.Process hiding (withCreateProcess)
+import System.Process.Internals
+
+import qualified Control.Exception as C
 #endif
 
 #ifdef mingw32_HOST_OS
@@ -51,4 +67,49 @@ getProcessID p = fromIntegral . fromJust <$> getProcessID' p
       OpenHandle pid -> return $ Just pid
 #endif
       _ -> return Nothing
+#endif
+
+cleanupProcess
+  :: (Maybe Handle, Maybe Handle, Maybe Handle, ProcessHandle) -> IO ()
+
+withCreateProcess
+  :: CreateProcess
+  -> (Maybe Handle -> Maybe Handle -> Maybe Handle -> ProcessHandle -> IO a)
+  -> IO a
+
+#if MIN_VERSION_process(1,6,4)
+
+cleanupProcess = System.Process.cleanupProcess
+
+withCreateProcess = System.Process.withCreateProcess
+
+#else
+
+cleanupProcess (mb_stdin, mb_stdout, mb_stderr, ph) = do
+    -- We ignore the spurious "permission denied" error in windows:
+    --   see https://github.com/haskell/process/issues/110
+    ignorePermDenied $ terminateProcess ph
+    -- Note, it's important that other threads that might be reading/writing
+    -- these handles also get killed off, since otherwise they might be holding
+    -- the handle lock and prevent us from closing, leading to deadlock.
+    maybe (return ()) (ignoreSigPipe . hClose) mb_stdin
+    maybe (return ()) hClose mb_stdout
+    maybe (return ()) hClose mb_stderr
+
+    return ()
+  where ignoreSigPipe = ignoreIOError ResourceVanished ePIPE
+        ignorePermDenied = ignoreIOError PermissionDenied eACCES
+    
+ignoreIOError :: IOErrorType -> Errno -> IO () -> IO ()
+ignoreIOError ioErrorType errno =
+  C.handle $ \e -> case e of
+                     IOError { ioe_type  = iot
+                             , ioe_errno = Just ioe }
+                       | iot == ioErrorType && Errno ioe == errno -> return ()
+                     _ -> C.throwIO e
+
+withCreateProcess c action =
+  C.bracket (createProcess c) cleanupProcess
+            (\(m_in, m_out, m_err, ph) -> action m_in m_out m_err ph)
+
 #endif

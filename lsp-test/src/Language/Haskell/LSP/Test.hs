@@ -94,7 +94,6 @@ import qualified Data.Text.IO as T
 import Data.Aeson
 import Data.Default
 import qualified Data.HashMap.Strict as HashMap
-import Data.IORef
 import qualified Data.Map as Map
 import Data.Maybe
 import Language.Haskell.LSP.Types
@@ -138,8 +137,6 @@ runSessionWithConfig :: SessionConfig -- ^ Configuration options for the session
                      -> Session a -- ^ The session to run.
                      -> IO a
 runSessionWithConfig config serverExe caps rootDir session = do
-  -- We use this IORef to make exception non-fatal when the server is supposed to shutdown.
-  exitOk <- newIORef False
   pid <- getCurrentProcessID
   absRootDir <- canonicalizePath rootDir
 
@@ -150,9 +147,8 @@ runSessionWithConfig config serverExe caps rootDir session = do
                                           caps
                                           (Just TraceOff)
                                           Nothing
-  withServer serverExe (logStdErr config) $ \serverIn serverOut _ ->
-    runSessionWithHandles serverIn serverOut (\h c -> catchWhenTrue exitOk $ listenServer h c) config caps rootDir $ do
-
+  withServer serverExe (logStdErr config) $ \serverIn serverOut serverProc ->
+    runSessionWithHandles serverIn serverOut serverProc listenServer config caps rootDir exitServer $ do
       -- Wrap the session around initialize and shutdown calls
       initRspMsg <- request Initialize initializeParams :: Session InitializeResponse
 
@@ -160,7 +156,6 @@ runSessionWithConfig config serverExe caps rootDir session = do
 
       initRspVar <- initRsp <$> ask
       liftIO $ putMVar initRspVar initRspMsg
-
       sendNotification Initialized InitializedParams
 
       case lspConfig config of
@@ -169,23 +164,14 @@ runSessionWithConfig config serverExe caps rootDir session = do
 
       -- Run the actual test
       result <- session
-
-      liftIO $ atomicWriteIORef exitOk True
-      sendNotification Exit ExitParams
-
       return result
   where
-  catchWhenTrue :: IORef Bool -> IO () -> IO ()
-  catchWhenTrue exitOk a =
-      a `catch` (\e -> do
-          x <- readIORef exitOk
-          unless x $ throw (e :: SomeException))
+  -- | Asks the server to shutdown and exit politely
+  exitServer :: Session ()
+  exitServer = request_ Shutdown (Nothing :: Maybe Value) >> sendNotification Exit ExitParams
 
-  -- | Listens to the server output, makes sure it matches the record and
-  -- signals any semaphores
-  -- Note that on Windows, we cannot kill a thread stuck in getNextMessage.
-  -- So we have to wait for the exit notification to kill the process first
-  -- and then getNextMessage will fail.
+  -- | Listens to the server output until the shutdown ack,
+  -- makes sure it matches the record and signals any semaphores
   listenServer :: Handle -> SessionContext -> IO ()
   listenServer serverOut context = do
     msgBytes <- getNextMessage serverOut
@@ -195,7 +181,9 @@ runSessionWithConfig config serverExe caps rootDir session = do
     let msg = decodeFromServerMsg reqMap msgBytes
     writeChan (messageChan context) (ServerMessage msg)
 
-    listenServer serverOut context
+    case msg of
+      (RspShutdown _) -> return ()
+      _               -> listenServer serverOut context
 
 -- | The current text contents of a document.
 documentContents :: TextDocumentIdentifier -> Session T.Text

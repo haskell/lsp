@@ -60,11 +60,14 @@ import Language.Haskell.LSP.Types.Capabilities
 import Language.Haskell.LSP.Types
 import Language.Haskell.LSP.Types.Lens hiding (error)
 import Language.Haskell.LSP.VFS
+import Language.Haskell.LSP.Test.Compat
 import Language.Haskell.LSP.Test.Decoding
 import Language.Haskell.LSP.Test.Exceptions
 import System.Console.ANSI
 import System.Directory
 import System.IO
+import System.Process (ProcessHandle())
+import System.Timeout
 
 -- | A session representing one instance of launching and connecting to a server.
 --
@@ -186,13 +189,15 @@ runSession context state session = runReaderT (runStateT conduit state) context
 -- It also does not automatically send initialize and exit messages.
 runSessionWithHandles :: Handle -- ^ Server in
                       -> Handle -- ^ Server out
+                      -> ProcessHandle -- ^ Server process
                       -> (Handle -> SessionContext -> IO ()) -- ^ Server listener
                       -> SessionConfig
                       -> ClientCapabilities
                       -> FilePath -- ^ Root directory
+                      -> Session () -- ^ To exit the Server properly
                       -> Session a
                       -> IO a
-runSessionWithHandles serverIn serverOut serverHandler config caps rootDir session = do
+runSessionWithHandles serverIn serverOut serverProc serverHandler config caps rootDir exitServer session = do
   absRootDir <- canonicalizePath rootDir
 
   hSetBuffering serverIn  NoBuffering
@@ -210,11 +215,19 @@ runSessionWithHandles serverIn serverOut serverHandler config caps rootDir sessi
 
   let context = SessionContext serverIn absRootDir messageChan reqMap initRsp config caps
       initState = SessionState (IdInt 0) mempty mempty 0 False Nothing
-      launchServerHandler = forkIO $ catch (serverHandler serverOut context)
-                                           (throwTo mainThreadId :: SessionException -> IO ())
-  (result, _) <- bracket launchServerHandler killThread $
-    const $ runSession context initState session
+      runSession' = runSession context initState
 
+      errorHandler = throwTo mainThreadId :: SessionException -> IO()
+      serverListenerLauncher =
+        forkIO $ catch (serverHandler serverOut context) errorHandler
+      server = (Just serverIn, Just serverOut, Nothing, serverProc)
+      serverAndListenerFinalizer tid =
+        finally (timeout (messageTimeout config * 1000000)
+                         (runSession' exitServer))
+                (cleanupProcess server >> killThread tid)
+
+  (result, _) <- bracket serverListenerLauncher serverAndListenerFinalizer
+                         (const $ runSession' session)
   return result
 
 updateStateC :: ConduitM FromServerMessage FromServerMessage (StateT SessionState (ReaderT SessionContext IO)) ()
