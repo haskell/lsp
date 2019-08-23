@@ -24,7 +24,6 @@ import Control.Monad
 import Data.Aeson
 import qualified Data.ByteString.Lazy.Char8 as B
 import Data.Conduit.Parser
-import Data.Maybe
 import qualified Data.Text as T
 import Data.Typeable
 import Language.Haskell.LSP.Messages
@@ -65,7 +64,13 @@ import Language.Haskell.LSP.Test.Session
 --
 -- @since 0.5.2.0
 satisfy :: (FromServerMessage -> Bool) -> Session FromServerMessage
-satisfy pred = do
+satisfy pred = satisfyMaybe (\msg -> if pred msg then Just msg else Nothing)
+
+-- | Consumes and returns the result of the specified predicate if it returns `Just`.
+--
+-- @since 0.5.3.0
+satisfyMaybe :: (FromServerMessage -> Maybe a) -> Session a
+satisfyMaybe pred = do
 
   skipTimeout <- overridingTimeout <$> get
   timeoutId <- curTimeoutId <$> get
@@ -83,18 +88,18 @@ satisfy pred = do
 
   modify $ \s -> s { lastReceivedMessage = Just x }
 
-  if pred x
-    then do
+  case pred x of
+    Just a -> do
       logMsg LogServer x
-      return x
-    else empty
+      return a
+    Nothing -> empty
 
 -- | Matches a message of type @a@.
 message :: forall a. (Typeable a, FromJSON a) => Session a
 message =
   let parser = decode . encodeMsg :: FromServerMessage -> Maybe a
   in named (T.pack $ show $ head $ snd $ splitTyConApp $ last $ typeRepArgs $ typeOf parser) $
-    castMsg <$> satisfy (isJust . parser)
+     satisfyMaybe parser
 
 -- | Matches if the message is a notification.
 anyNotification :: Session FromServerMessage
@@ -112,16 +117,14 @@ anyResponse = named "Any response" $ satisfy isServerResponse
 responseForId :: forall a. FromJSON a => LspId -> Session (ResponseMessage a)
 responseForId lid = named (T.pack $ "Response for id: " ++ show lid) $ do
   let parser = decode . encodeMsg :: FromServerMessage -> Maybe (ResponseMessage a)
-  x <- satisfy (maybe False (\z -> z ^. LSP.id == responseId lid) . parser)
-  return $ castMsg x
+  satisfyMaybe $ \msg -> do
+    z <- parser msg
+    guard (z ^. LSP.id == responseId lid)
+    pure z
 
 -- | Matches any type of message.
 anyMessage :: Session FromServerMessage
 anyMessage = satisfy (const True)
-
--- | A stupid method for getting out the inner message.
-castMsg :: FromJSON a => FromServerMessage -> a
-castMsg = fromMaybe (error "Failed casting a message") . decode . encodeMsg
 
 -- | A version of encode that encodes FromServerMessages as if they
 -- weren't wrapped.
@@ -140,8 +143,7 @@ loggingNotification = named "Logging notification" $ satisfy shouldSkip
 -- | Matches a 'Language.Haskell.LSP.Test.PublishDiagnosticsNotification'
 -- (textDocument/publishDiagnostics) notification.
 publishDiagnosticsNotification :: Session PublishDiagnosticsNotification
-publishDiagnosticsNotification = named "Publish diagnostics notification" $ do
-  NotPublishDiagnostics diags <- satisfy test
-  return diags
-  where test (NotPublishDiagnostics _) = True
-        test _ = False
+publishDiagnosticsNotification = named "Publish diagnostics notification" $
+  satisfyMaybe $ \msg -> case msg of
+    NotPublishDiagnostics diags -> Just diags
+    _ -> Nothing
