@@ -1,0 +1,26 @@
+name: Haskell CI
+
+on: [push]
+
+jobs:
+  build:
+   
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Install dependencies
+      run: cabal install --only-dependencies --enable-tests
+    - name: Install HIE
+      run: |
+        pushd $HOME
+        git clone https://github.com/haskell/haskell-ide-engine --recurse-submodules
+        cd haskell-ide-engine
+        cabal v2-install hie
+        cabal v2-install hoogle
+        hoogle generate
+        popd
+    - name: Build
+      run: cabal v2-build
+    - name: Run tests
+      run: cabal v2-test
