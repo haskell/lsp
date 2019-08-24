@@ -68,7 +68,7 @@ satisfy pred = satisfyMaybe (\msg -> if pred msg then Just msg else Nothing)
 
 -- | Consumes and returns the result of the specified predicate if it returns `Just`.
 --
--- @since 0.5.3.0
+-- @since 0.6.1.0
 satisfyMaybe :: (FromServerMessage -> Maybe a) -> Session a
 satisfyMaybe pred = do
 
