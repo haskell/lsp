@@ -39,6 +39,7 @@ data FromClientMessage = ReqInitialize               InitializeRequest
                        | ReqDocumentRangeFormatting  DocumentRangeFormattingRequest
                        | ReqDocumentOnTypeFormatting DocumentOnTypeFormattingRequest
                        | ReqRename                   RenameRequest
+                       | ReqPrepareRename            PrepareRenameRequest
                        | ReqFoldingRange             FoldingRangeRequest
                        | ReqExecuteCommand           ExecuteCommandRequest
                        | ReqWillSaveWaitUntil        WillSaveWaitUntilTextDocumentRequest

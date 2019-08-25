@@ -118,7 +118,7 @@ data Options =
 instance Default Options where
   def = Options Nothing Nothing Nothing Nothing Nothing
                 Nothing Nothing Nothing Nothing Nothing
-                Nothing Nothing
+                Nothing Nothing Nothing
 
 -- | A function to publish diagnostics. It aggregates all diagnostics pertaining
 -- to a particular version of a document, by source, and sends a
@@ -238,6 +238,7 @@ data Handlers =
     , documentRangeFormattingHandler :: !(Maybe (Handler J.DocumentRangeFormattingRequest))
     , documentTypeFormattingHandler  :: !(Maybe (Handler J.DocumentOnTypeFormattingRequest))
     , renameHandler                  :: !(Maybe (Handler J.RenameRequest))
+    , prepareRenameHandler           :: !(Maybe (Handler J.PrepareRenameRequest))
     , foldingRangeHandler            :: !(Maybe (Handler J.FoldingRangeRequest))
     -- new in 3.0
     , documentLinkHandler            :: !(Maybe (Handler J.DocumentLinkRequest))
@@ -293,7 +294,7 @@ instance Default Handlers where
                               Nothing Nothing Nothing Nothing Nothing Nothing
                               Nothing Nothing Nothing Nothing Nothing Nothing
                               Nothing Nothing Nothing Nothing Nothing Nothing
-                              Nothing Nothing Nothing Nothing
+                              Nothing Nothing Nothing Nothing Nothing
 
 -- ---------------------------------------------------------------------
 nop :: a -> b -> IO a
@@ -367,6 +368,7 @@ handlerMap _ h J.TextDocumentColorPresentation   = hh nop ReqColorPresentation $
 handlerMap _ h J.TextDocumentDocumentLink        = hh nop ReqDocumentLink $ documentLinkHandler h
 handlerMap _ h J.DocumentLinkResolve             = hh nop ReqDocumentLinkResolve $ documentLinkResolveHandler h
 handlerMap _ h J.TextDocumentRename              = hh nop ReqRename $ renameHandler h
+handlerMap _ h J.TextDocumentPrepareRename       = hh nop ReqPrepareRename $ prepareRenameHandler h
 handlerMap _ h J.TextDocumentFoldingRange        = hh nop ReqFoldingRange $ foldingRangeHandler h
 handlerMap _ _ J.WindowProgressCancel            = helper progressCancelHandler
 handlerMap _ h (J.CustomClientMethod _)          = \ctxData val ->
