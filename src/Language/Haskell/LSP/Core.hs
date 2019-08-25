@@ -105,6 +105,7 @@ data Options =
     , signatureHelpProvider            :: Maybe J.SignatureHelpOptions
     , typeDefinitionProvider           :: Maybe J.GotoOptions
     , implementationProvider           :: Maybe J.GotoOptions
+    , codeActionProvider               :: Maybe J.CodeActionOptions
     , codeLensProvider                 :: Maybe J.CodeLensOptions
     , documentOnTypeFormattingProvider :: Maybe J.DocumentOnTypeFormattingOptions
     , documentLinkProvider             :: Maybe J.DocumentLinkOptions
@@ -116,7 +117,7 @@ data Options =
 instance Default Options where
   def = Options Nothing Nothing Nothing Nothing Nothing
                 Nothing Nothing Nothing Nothing Nothing
-                Nothing
+                Nothing Nothing
 
 -- | A function to publish diagnostics. It aggregates all diagnostics pertaining
 -- to a particular version of a document, by source, and sends a
@@ -846,7 +847,7 @@ initializeRequestHandler' onStartup mHandler tvarCtx req@(J.RequestMessage _ ori
               , J._documentHighlightProvider        = supported (documentHighlightHandler h)
               , J._documentSymbolProvider           = supported (documentSymbolHandler h)
               , J._workspaceSymbolProvider          = supported (workspaceSymbolHandler h)
-              , J._codeActionProvider               = supported (codeActionHandler h)
+              , J._codeActionProvider               = codeActionProvider o
               , J._codeLensProvider                 = codeLensProvider o
               , J._documentFormattingProvider       = supported (documentFormattingHandler h)
               , J._documentRangeFormattingProvider  = supported (documentRangeFormattingHandler h)
