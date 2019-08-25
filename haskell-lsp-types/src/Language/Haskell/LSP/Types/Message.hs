@@ -112,6 +112,7 @@ data ClientMethod =
  | TextDocumentRangeFormatting
  | TextDocumentOnTypeFormatting
  | TextDocumentRename
+ | TextDocumentPrepareRename
  | TextDocumentFoldingRange
  -- A custom message type. It is not enforced that this starts with $/.
  | CustomClientMethod Text
@@ -158,6 +159,7 @@ instance A.FromJSON ClientMethod where
   parseJSON (A.String "textDocument/rangeFormatting")     = return TextDocumentRangeFormatting
   parseJSON (A.String "textDocument/onTypeFormatting")    = return TextDocumentOnTypeFormatting
   parseJSON (A.String "textDocument/rename")              = return TextDocumentRename
+  parseJSON (A.String "textDocument/prepareRename")       = return TextDocumentPrepareRename
   parseJSON (A.String "textDocument/foldingRange")        = return TextDocumentFoldingRange
   parseJSON (A.String "window/progress/cancel")           = return WindowProgressCancel
   parseJSON (A.String x)                                  = return (CustomClientMethod x)
@@ -202,6 +204,7 @@ instance A.ToJSON ClientMethod where
   toJSON TextDocumentRangeFormatting     = A.String "textDocument/rangeFormatting"
   toJSON TextDocumentOnTypeFormatting    = A.String "textDocument/onTypeFormatting"
   toJSON TextDocumentRename              = A.String "textDocument/rename"
+  toJSON TextDocumentPrepareRename       = A.String "textDocument/prepareRename"
   toJSON TextDocumentFoldingRange        = A.String "textDocument/foldingRange"
   toJSON TextDocumentDocumentLink        = A.String "textDocument/documentLink"
   toJSON DocumentLinkResolve             = A.String "documentLink/resolve"

@@ -333,6 +333,31 @@ data DocumentLinkOptions =
 deriveJSON lspOptions ''DocumentLinkOptions
 
 -- ---------------------------------------------------------------------
+{-
+New in 3.12
+----------
+
+/**
+ * Rename options
+ */
+export interface RenameOptions {
+        /**
+         * Renames should be checked and tested before being executed.
+         */
+        prepareProvider?: boolean;
+}
+-}
+
+data RenameOptions =
+  RenameOptionsStatic Bool
+  | RenameOptions
+    { -- |Renames should be checked and tested before being executed.
+      _prepareProvider :: Maybe Bool
+    } deriving (Show, Read, Eq)
+
+deriveJSON lspOptions { sumEncoding = A.UntaggedValue } ''RenameOptions
+
+-- ---------------------------------------------------------------------
 
 {-
 New in 3.0
@@ -699,7 +724,7 @@ data InitializeResponseCapabilitiesInner =
       -- | The server provides document formatting on typing.
     , _documentOnTypeFormattingProvider :: Maybe DocumentOnTypeFormattingOptions
       -- | The server provides rename support.
-    , _renameProvider                   :: Maybe Bool
+    , _renameProvider                   :: Maybe RenameOptions
       -- | The server provides document link support.
     , _documentLinkProvider             :: Maybe DocumentLinkOptions
       -- | The server provides color provider support. Since LSP 3.6
@@ -2612,6 +2637,51 @@ deriveJSON lspOptions ''RenameParams
 
 type RenameRequest  = RequestMessage ClientMethod RenameParams WorkspaceEdit
 type RenameResponse = ResponseMessage WorkspaceEdit
+
+-- ---------------------------------------------------------------------
+{-
+Prepare Rename Request
+
+Since version 3.12.0
+
+The prepare rename request is sent from the client to the server to setup
+and test the validity of a rename operation at a given location.
+
+Request:
+
+    method: ‘textDocument/prepareRename’
+    params: TextDocumentPositionParams
+
+Response:
+
+    result: Range | { range: Range, placeholder: string } | null describing
+            the range of the string to rename and optionally a placeholder
+            text of the string content to be renamed. If null is returned
+            then it is deemed that a ‘textDocument/rename’ request is not
+            valid at the given position.
+    error: code and message set in case an exception happens during the
+           prepare rename request.
+
+-}
+
+-- {\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"textDocument/rename\",\"params\":{\"textDocument\":{\"uri\":\"file:///home/alanz/mysrc/github/alanz/haskell-lsp/src/HieVscode.hs\"},\"position\":{\"line\":37,\"character\":17},\"newName\":\"getArgs'\"}}
+
+data RangeWithPlaceholder =
+  RangeWithPlaceholder
+    {
+    _range :: Range
+    , _placeholder :: Text
+    }
+
+deriveJSON lspOptions { sumEncoding = A.UntaggedValue } ''RangeWithPlaceholder
+
+data RangeOrRangeWithPlaceholder = RangeWithPlaceholderValue RangeWithPlaceholder
+                                 | RangeValue Range
+
+deriveJSON lspOptions { sumEncoding = A.UntaggedValue } ''RangeOrRangeWithPlaceholder
+
+type PrepareRenameRequest  = RequestMessage ClientMethod TextDocumentPositionParams Range
+type PrepareRenameResponse = ResponseMessage (Maybe RangeOrRangeWithPlaceholder)
 
 -- ---------------------------------------------------------------------
 {-
