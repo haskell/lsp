@@ -34,7 +34,7 @@ import Control.Lens hiding (List)
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Except
-#if __GLASGOW_HASKELL__ >= 806
+#if __GLASGOW_HASKELL__ == 806
 import Control.Monad.Fail
 #endif
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)

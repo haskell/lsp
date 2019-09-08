@@ -12,19 +12,19 @@ packages:
   original:
     hackage: rope-utf16-splay-0.3.1.0
 - completed:
-    hackage: haskell-lsp-0.15.0.0@sha256:26791d3ed01ca5be1fab16a450fec751616acac8aa87c5a3a3921aea0d2bbfc2,5260
+    hackage: haskell-lsp-0.16.0.0@sha256:6ac4b58e6caef43546a3c115f1aaaae0e23d30f0e37b8c4e94525468e9982d09,5264
     pantry-tree:
       size: 1725
-      sha256: a08c3c4f25717c54f3c0adaefb3cd054c6a0a16f4b53d01617d6fc5a2e2798b0
+      sha256: 31b245f4da5b5b844be9802bb2bfd397c90c0a50b063e5bae26648c6220aaf7f
   original:
-    hackage: haskell-lsp-0.15.0.0
+    hackage: haskell-lsp-0.16.0.0
 - completed:
-    hackage: haskell-lsp-types-0.15.0.0@sha256:75698e3af3c9c0f8494121a2bdd47bb4ccc423afb58fecfa43e9ffbcd8721b3c,2880
+    hackage: haskell-lsp-types-0.16.0.0@sha256:57729b32b1ca65d4869e1e518fa4df749d4488ec5f11e23b50c2b89417f5f211,2882
     pantry-tree:
       size: 2369
-      sha256: 04b8321fc9e60796cfecc0487f35c32208908f1ce7b7e2d75bc8347a1d91bcee
+      sha256: cc24c23f741e777b9c01ccd700af034e2258e560f5fdb271d08befd4b03196b7
   original:
-    hackage: haskell-lsp-types-0.15.0.0
+    hackage: haskell-lsp-types-0.16.0.0
 snapshots:
 - completed:
     size: 499889
