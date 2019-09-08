@@ -1,5 +1,9 @@
 # Revision history for haskell-lsp-types
 
+## 0.15.0.1 -- 2019-09-07
+
+* Relax base constraints for GHC 8.8
+
 ## 0.15.0.0 -- 2019-07-01
 
 * Normalize URIs to avoid issues with percent encoding (@cocreature)

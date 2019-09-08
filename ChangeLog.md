@@ -1,5 +1,9 @@
 # Revision history for haskell-lsp
 
+## 0.15.0.1 -- 2019-09-07
+
+* Relax base constraints for GHC 8.8
+
 ## 0.15.0.0 -- 2019-07-01
 
 * Fix decoding of `ResponseMessage` to account for `null` messages (@cocreature)
