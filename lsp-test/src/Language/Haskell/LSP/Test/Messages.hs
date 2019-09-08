@@ -124,6 +124,7 @@ handleClientMessage request response notification msg = case msg of
  (ReqDocumentFormatting       m) -> request m
  (ReqDocumentRangeFormatting  m) -> request m
  (ReqDocumentOnTypeFormatting m) -> request m
+ (ReqPrepareRename            m) -> request m
  (ReqRename                   m) -> request m
  (ReqExecuteCommand           m) -> request m
  (ReqDocumentLink             m) -> request m

@@ -21,7 +21,7 @@ build-type:          Simple
 cabal-version:       2.0
 extra-source-files:  README.md
                    , ChangeLog.md
-tested-with:         GHC == 8.2.2 , GHC == 8.4.2 , GHC == 8.4.3, GHC == 8.6.4, GHC == 8.6.5
+tested-with:         GHC == 8.2.2 , GHC == 8.4.2 , GHC == 8.4.3, GHC == 8.6.4, GHC == 8.6.5, GHC == 8.8.1
 
 source-repository head
   type:     git
@@ -36,7 +36,7 @@ library
                      , parser-combinators:Control.Applicative.Combinators
   default-language:    Haskell2010
   build-depends:       base >= 4.10 && < 5
-                     , haskell-lsp == 0.15.*
+                     , haskell-lsp == 0.17.*
                      , aeson
                      , aeson-pretty
                      , ansi-terminal
