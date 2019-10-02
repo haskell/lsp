@@ -739,6 +739,13 @@ initializeRequestHandler' onStartup mHandler tvarCtx req@(J.RequestMessage _ ori
             pc' = Map.insert n (cancelWith a ProgressCancelledException) pc
         modifyTVar tvarCtx (\ctx -> ctx { resProgressData = pd { progressCancel = pc' }})
 
+      deleteProgress :: Text -> IO ()
+      deleteProgress n = atomically $ do
+        pd <- resProgressData <$> readTVar tvarCtx
+        let x = progressCancel pd
+            x' = Map.delete n x
+        modifyTVar tvarCtx (\ctx -> ctx { resProgressData = pd { progressCancel = x' }})
+
       -- Get a new id for the progress session and make a new one
       getNewProgressId :: IO Text
       getNewProgressId = fmap (T.pack . show) $ liftIO $ atomically $ do
@@ -774,6 +781,10 @@ initializeRequestHandler' onStartup mHandler tvarCtx req@(J.RequestMessage _ ori
           -- Send done notification
           liftIO $ sf $ NotProgressDone $ fmServerProgressDoneNotification $
             J.ProgressDoneParams progId
+          -- Delete the progress cancellation from the map
+          -- If we don't do this then it's easy to leak things as the map contains any IO action.
+          deleteProgress progId
+
 
           return res
         | otherwise = f (const $ return ())
