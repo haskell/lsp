@@ -81,7 +81,7 @@ satisfyMaybe pred = do
       threadDelay (timeout * 1000000)
       writeChan chan (TimeoutMessage timeoutId)
 
-  x <- await
+  x <- Session await
 
   unless skipTimeout $
     modify $ \s -> s { curTimeoutId = timeoutId + 1 }
@@ -98,24 +98,23 @@ satisfyMaybe pred = do
 message :: forall a. (Typeable a, FromJSON a) => Session a
 message =
   let parser = decode . encodeMsg :: FromServerMessage -> Maybe a
-  in named (T.pack $ show $ head $ snd $ splitTyConApp $ last $ typeRepArgs $ typeOf parser) $
-     satisfyMaybe parser
+  in satisfyMaybe parser
 
 -- | Matches if the message is a notification.
 anyNotification :: Session FromServerMessage
-anyNotification = named "Any notification" $ satisfy isServerNotification
+anyNotification = satisfy isServerNotification
 
 -- | Matches if the message is a request.
 anyRequest :: Session FromServerMessage
-anyRequest = named "Any request" $ satisfy isServerRequest
+anyRequest = satisfy isServerRequest
 
 -- | Matches if the message is a response.
 anyResponse :: Session FromServerMessage
-anyResponse = named "Any response" $ satisfy isServerResponse
+anyResponse = satisfy isServerResponse
 
 -- | Matches a response for a specific id.
 responseForId :: forall a. FromJSON a => LspId -> Session (ResponseMessage a)
-responseForId lid = named (T.pack $ "Response for id: " ++ show lid) $ do
+responseForId lid = do
   let parser = decode . encodeMsg :: FromServerMessage -> Maybe (ResponseMessage a)
   satisfyMaybe $ \msg -> do
     z <- parser msg
@@ -133,7 +132,7 @@ encodeMsg = encode . genericToJSON (defaultOptions { sumEncoding = UntaggedValue
 
 -- | Matches if the message is a log message notification or a show message notification/request.
 loggingNotification :: Session FromServerMessage
-loggingNotification = named "Logging notification" $ satisfy shouldSkip
+loggingNotification = satisfy shouldSkip
   where
     shouldSkip (NotLogMessage _) = True
     shouldSkip (NotShowMessage _) = True
@@ -143,7 +142,7 @@ loggingNotification = named "Logging notification" $ satisfy shouldSkip
 -- | Matches a 'Language.Haskell.LSP.Test.PublishDiagnosticsNotification'
 -- (textDocument/publishDiagnostics) notification.
 publishDiagnosticsNotification :: Session PublishDiagnosticsNotification
-publishDiagnosticsNotification = named "Publish diagnostics notification" $
-  satisfyMaybe $ \msg -> case msg of
+publishDiagnosticsNotification = satisfyMaybe $
+  \msg -> case msg of
     NotPublishDiagnostics diags -> Just diags
     _ -> Nothing

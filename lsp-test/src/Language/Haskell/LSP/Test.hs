@@ -8,7 +8,7 @@ Module      : Language.Haskell.LSP.Test
 Description : A functional testing framework for LSP servers.
 Maintainer  : luke_lau@icloud.com
 Stability   : experimental
-Portability : POSIX
+Portability : non-portable
 
 Provides the framework to start functionally testing
 <https://github.com/Microsoft/language-server-protocol Language Server Protocol servers>.
