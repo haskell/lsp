@@ -8,6 +8,7 @@ import           Language.Haskell.LSP.Types.Constants
 import           Language.Haskell.LSP.Types.List
 import           Language.Haskell.LSP.Types.Location
 import           Language.Haskell.LSP.Types.Message
+import           Language.Haskell.LSP.Types.Progress
 import           Language.Haskell.LSP.Types.TextDocument
 import           Language.Haskell.LSP.Types.WorkspaceEdit
 
@@ -99,6 +100,7 @@ deriveJSON lspOptions ''ColorInformation
 data DocumentColorParams =
   DocumentColorParams
     { _textDocument :: TextDocumentIdentifier -- ^ The text document.
+    , _workDoneToken :: Maybe ProgressToken -- ^ An optional token that a server can use to report work done progress.
     } deriving (Read, Show, Eq)
 
 deriveJSON lspOptions ''DocumentColorParams
@@ -173,6 +175,7 @@ data ColorPresentationParams =
       -- | The range where the color would be inserted.
       -- Serves as a context.
     , _range        :: Range
+    , _workDoneToken :: Maybe ProgressToken -- ^ An optional token that a server can use to report work done progress.
     } deriving (Read, Show, Eq)
 
 deriveJSON lspOptions ''ColorPresentationParams

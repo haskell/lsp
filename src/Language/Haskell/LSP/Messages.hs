@@ -61,7 +61,7 @@ data FromClientMessage = ReqInitialize               InitializeRequest
                        | NotDidSaveTextDocument          DidSaveTextDocumentNotification
                        | NotDidChangeWatchedFiles        DidChangeWatchedFilesNotification
                        | NotDidChangeWorkspaceFolders    DidChangeWorkspaceFoldersNotification
-                       | NotProgressCancel               ProgressCancelNotification
+                       | NotWorkDoneProgressCancel       WorkDoneProgressCancelNotification
 
                        -- It is common for language servers to add custom message types so these
                        -- three constructors can be used to handle custom request, response or notification
@@ -76,6 +76,7 @@ data FromServerMessage = ReqRegisterCapability       RegisterCapabilityRequest
                        | ReqUnregisterCapability     UnregisterCapabilityRequest
                        | ReqApplyWorkspaceEdit       ApplyWorkspaceEditRequest
                        | ReqShowMessage              ShowMessageRequest
+                       | ReqWorkDoneProgressCreate   WorkDoneProgressCreateRequest
                        -- Responses
                        | RspInitialize               InitializeResponse
                        | RspShutdown                 ShutdownResponse
@@ -109,9 +110,9 @@ data FromServerMessage = ReqRegisterCapability       RegisterCapabilityRequest
                        | NotPublishDiagnostics       PublishDiagnosticsNotification
                        | NotLogMessage               LogMessageNotification
                        | NotShowMessage              ShowMessageNotification
-                       | NotProgressStart            ProgressStartNotification
-                       | NotProgressReport           ProgressReportNotification
-                       | NotProgressDone             ProgressDoneNotification
+                       | NotWorkDoneProgressBegin    WorkDoneProgressBeginNotification
+                       | NotWorkDoneProgressReport   WorkDoneProgressReportNotification
+                       | NotWorkDoneProgressEnd      WorkDoneProgressEndNotification
                        | NotTelemetry                TelemetryNotification
                        -- A cancel request notification is duplex!
                        | NotCancelRequestFromServer  CancelNotificationServer

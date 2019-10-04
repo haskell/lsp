@@ -1018,7 +1018,7 @@ instance Default TextDocumentClientCapabilities where
 data WindowClientCapabilities = 
   WindowClientCapabilities
     { -- | Whether client supports handling progress notifications.
-      _progress :: Maybe Bool
+      _workDoneProgress :: Maybe Bool
     } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''WindowClientCapabilities)
