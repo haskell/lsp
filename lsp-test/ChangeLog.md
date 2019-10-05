@@ -1,5 +1,9 @@
 # Revision history for lsp-test
 
+## 0.8.0.0 -- 2019-10-06
+
+* Make `Session` a newtype
+
 ## 0.7.0.0 -- 2019-09-08
 
 * Update for haskell-lsp-0.16.0.0
