@@ -78,8 +78,6 @@ import System.Timeout
 -- 'Language.Haskell.LSP.Test.sendRequest' and
 -- 'Language.Haskell.LSP.Test.sendNotification'.
 
--- newtype Session a = Session (ParserStateReader FromServerMessage SessionState SessionContext IO a)
-
 newtype Session a = Session (ConduitParser FromServerMessage (StateT SessionState (ReaderT SessionContext IO)) a)
   deriving (Functor, Applicative, Monad, MonadIO, Alternative)
 
