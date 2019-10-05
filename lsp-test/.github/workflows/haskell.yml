@@ -9,18 +9,24 @@ jobs:
 
     steps:
     - uses: actions/checkout@v1
-    - name: Install dependencies
-      run: cabal install --only-dependencies --enable-tests
+    - uses: actions/setup-haskell@v1
+      with:
+        ghc-version: '8.6.5'
+        cabal-version: '3.0'
+    - run: cabal update
     - name: Install HIE
       run: |
         pushd $HOME
         git clone https://github.com/haskell/haskell-ide-engine --recurse-submodules
         cd haskell-ide-engine
-        cabal v2-install hie
-        cabal v2-install hoogle
+        cabal install hie
+        cabal install hoogle
+        export PATH=$PATH:$HOME/.cabal/bin
         hoogle generate
         popd
     - name: Build
-      run: cabal v2-build
-    - name: Run tests
-      run: cabal v2-test
+      run: cabal build
+    - name: Test
+      run: |
+        export PATH=$PATH:$HOME/.cabal/bin
+        cabal test
