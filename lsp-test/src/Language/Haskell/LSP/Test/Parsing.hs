@@ -24,7 +24,6 @@ import Control.Monad
 import Data.Aeson
 import qualified Data.ByteString.Lazy.Char8 as B
 import Data.Conduit.Parser
-import qualified Data.Text as T
 import Data.Typeable
 import Language.Haskell.LSP.Messages
 import Language.Haskell.LSP.Types
