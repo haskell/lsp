@@ -23,7 +23,9 @@ import Control.Monad.IO.Class
 import Control.Monad
 import Data.Aeson
 import qualified Data.ByteString.Lazy.Char8 as B
-import Data.Conduit.Parser
+import Data.Conduit.Parser hiding (named)
+import qualified Data.Conduit.Parser (named)
+import qualified Data.Text as T
 import Data.Typeable
 import Language.Haskell.LSP.Messages
 import Language.Haskell.LSP.Types
@@ -93,27 +95,31 @@ satisfyMaybe pred = do
       return a
     Nothing -> empty
 
+named :: T.Text -> Session a -> Session a
+named s (Session x) = Session (Data.Conduit.Parser.named s x)
+
 -- | Matches a message of type @a@.
 message :: forall a. (Typeable a, FromJSON a) => Session a
 message =
   let parser = decode . encodeMsg :: FromServerMessage -> Maybe a
-  in satisfyMaybe parser
+  in named (T.pack $ show $ head $ snd $ splitTyConApp $ last $ typeRepArgs $ typeOf parser) $
+     satisfyMaybe parser
 
 -- | Matches if the message is a notification.
 anyNotification :: Session FromServerMessage
-anyNotification = satisfy isServerNotification
+anyNotification = named "Any notification" $ satisfy isServerNotification
 
 -- | Matches if the message is a request.
 anyRequest :: Session FromServerMessage
-anyRequest = satisfy isServerRequest
+anyRequest = named "Any request" $ satisfy isServerRequest
 
 -- | Matches if the message is a response.
 anyResponse :: Session FromServerMessage
-anyResponse = satisfy isServerResponse
+anyResponse = named "Any response" $ satisfy isServerResponse
 
 -- | Matches a response for a specific id.
 responseForId :: forall a. FromJSON a => LspId -> Session (ResponseMessage a)
-responseForId lid = do
+responseForId lid = named (T.pack $ "Response for id: " ++ show lid) $ do
   let parser = decode . encodeMsg :: FromServerMessage -> Maybe (ResponseMessage a)
   satisfyMaybe $ \msg -> do
     z <- parser msg
@@ -131,7 +137,7 @@ encodeMsg = encode . genericToJSON (defaultOptions { sumEncoding = UntaggedValue
 
 -- | Matches if the message is a log message notification or a show message notification/request.
 loggingNotification :: Session FromServerMessage
-loggingNotification = satisfy shouldSkip
+loggingNotification = named "Logging notification" $ satisfy shouldSkip
   where
     shouldSkip (NotLogMessage _) = True
     shouldSkip (NotShowMessage _) = True
@@ -141,7 +147,7 @@ loggingNotification = satisfy shouldSkip
 -- | Matches a 'Language.Haskell.LSP.Test.PublishDiagnosticsNotification'
 -- (textDocument/publishDiagnostics) notification.
 publishDiagnosticsNotification :: Session PublishDiagnosticsNotification
-publishDiagnosticsNotification = satisfyMaybe $
-  \msg -> case msg of
+publishDiagnosticsNotification = named "Publish diagnostics notification" $
+  satisfyMaybe $ \msg -> case msg of
     NotPublishDiagnostics diags -> Just diags
     _ -> Nothing

@@ -163,8 +163,7 @@ runSessionWithConfig config serverExe caps rootDir session = do
         Nothing -> return ()
 
       -- Run the actual test
-      result <- session
-      return result
+      session
   where
   -- | Asks the server to shutdown and exit politely
   exitServer :: Session ()
