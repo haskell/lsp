@@ -1,12 +1,13 @@
 {-# LANGUAGE CPP               #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
 
 module Language.Haskell.LSP.Test.Session
-  ( Session
+  ( Session(..)
   , SessionConfig(..)
   , defaultConfig
   , SessionMessage(..)
@@ -28,6 +29,7 @@ module Language.Haskell.LSP.Test.Session
 
 where
 
+import Control.Applicative
 import Control.Concurrent hiding (yield)
 import Control.Exception
 import Control.Lens hiding (List)
@@ -40,7 +42,7 @@ import Control.Monad.Fail
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import qualified Control.Monad.Trans.Reader as Reader (ask)
 import Control.Monad.Trans.State (StateT, runStateT)
-import qualified Control.Monad.Trans.State as State (get, put)
+import qualified Control.Monad.Trans.State as State
 import qualified Data.ByteString.Lazy.Char8 as B
 import Data.Aeson
 import Data.Aeson.Encode.Pretty
@@ -76,7 +78,8 @@ import System.Timeout
 -- 'Language.Haskell.LSP.Test.sendRequest' and
 -- 'Language.Haskell.LSP.Test.sendNotification'.
 
-type Session = ParserStateReader FromServerMessage SessionState SessionContext IO
+newtype Session a = Session (ConduitParser FromServerMessage (StateT SessionState (ReaderT SessionContext IO)) a)
+  deriving (Functor, Applicative, Monad, MonadIO, Alternative)
 
 #if __GLASGOW_HASKELL__ >= 806
 instance MonadFail Session where
@@ -121,10 +124,10 @@ class Monad m => HasReader r m where
   asks :: (r -> b) -> m b
   asks f = f <$> ask
 
-instance Monad m => HasReader r (ParserStateReader a s r m) where
-  ask = lift $ lift Reader.ask
+instance HasReader SessionContext Session where
+  ask  = Session (lift $ lift Reader.ask)
 
-instance Monad m => HasReader SessionContext (ConduitM a b (StateT s (ReaderT SessionContext m))) where
+instance Monad m => HasReader r (ConduitM a b (StateT s (ReaderT r m))) where
   ask = lift $ lift Reader.ask
 
 data SessionState = SessionState
@@ -150,19 +153,22 @@ class Monad m => HasState s m where
   modifyM :: (HasState s m, Monad m) => (s -> m s) -> m ()
   modifyM f = get >>= f >>= put
 
-instance Monad m => HasState s (ParserStateReader a s r m) where
-  get = lift State.get
-  put = lift . State.put
+instance HasState SessionState Session where
+  get = Session (lift State.get)
+  put = Session . lift . State.put
 
-instance Monad m => HasState SessionState (ConduitM a b (StateT SessionState m))
+instance Monad m => HasState s (ConduitM a b (StateT s m))
  where
   get = lift State.get
   put = lift . State.put
 
-type ParserStateReader a s r m = ConduitParser a (StateT s (ReaderT r m))
+instance Monad m => HasState s (ConduitParser a (StateT s m))
+ where
+  get = lift State.get
+  put = lift . State.put
 
 runSession :: SessionContext -> SessionState -> Session a -> IO (a, SessionState)
-runSession context state session = runReaderT (runStateT conduit state) context
+runSession context state (Session session) = runReaderT (runStateT conduit state) context
   where
     conduit = runConduit $ chanSource .| watchdog .| updateStateC .| runConduitParser (catchError session handler)
 
@@ -235,7 +241,8 @@ updateStateC = awaitForever $ \msg -> do
   updateState msg
   yield msg
 
-updateState :: (MonadIO m, HasReader SessionContext m, HasState SessionState m) => FromServerMessage -> m ()
+updateState :: (MonadIO m, HasReader SessionContext m, HasState SessionState m)
+            => FromServerMessage -> m ()
 updateState (NotPublishDiagnostics n) = do
   let List diags = n ^. params . diagnostics
       doc = n ^. params . uri

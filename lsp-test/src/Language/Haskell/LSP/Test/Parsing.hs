@@ -23,7 +23,8 @@ import Control.Monad.IO.Class
 import Control.Monad
 import Data.Aeson
 import qualified Data.ByteString.Lazy.Char8 as B
-import Data.Conduit.Parser
+import Data.Conduit.Parser hiding (named)
+import qualified Data.Conduit.Parser (named)
 import qualified Data.Text as T
 import Data.Typeable
 import Language.Haskell.LSP.Messages
@@ -81,7 +82,7 @@ satisfyMaybe pred = do
       threadDelay (timeout * 1000000)
       writeChan chan (TimeoutMessage timeoutId)
 
-  x <- await
+  x <- Session await
 
   unless skipTimeout $
     modify $ \s -> s { curTimeoutId = timeoutId + 1 }
@@ -93,6 +94,9 @@ satisfyMaybe pred = do
       logMsg LogServer x
       return a
     Nothing -> empty
+
+named :: T.Text -> Session a -> Session a
+named s (Session x) = Session (Data.Conduit.Parser.named s x)
 
 -- | Matches a message of type @a@.
 message :: forall a. (Typeable a, FromJSON a) => Session a
