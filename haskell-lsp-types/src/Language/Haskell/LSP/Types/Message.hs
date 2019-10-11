@@ -83,7 +83,7 @@ data ClientMethod =
  | WorkspaceSymbol
  | WorkspaceExecuteCommand
  -- Progress
- | WindowProgressCancel
+ | WorkDoneProgressCancel
  -- Document
  | TextDocumentDidOpen
  | TextDocumentDidChange
@@ -161,7 +161,7 @@ instance A.FromJSON ClientMethod where
   parseJSON (A.String "textDocument/rename")              = return TextDocumentRename
   parseJSON (A.String "textDocument/prepareRename")       = return TextDocumentPrepareRename
   parseJSON (A.String "textDocument/foldingRange")        = return TextDocumentFoldingRange
-  parseJSON (A.String "window/progress/cancel")           = return WindowProgressCancel
+  parseJSON (A.String "window/workDoneProgress/cancel")   = return WorkDoneProgressCancel
   parseJSON (A.String x)                                  = return (CustomClientMethod x)
   parseJSON _                                             = mempty
 
@@ -208,7 +208,7 @@ instance A.ToJSON ClientMethod where
   toJSON TextDocumentFoldingRange        = A.String "textDocument/foldingRange"
   toJSON TextDocumentDocumentLink        = A.String "textDocument/documentLink"
   toJSON DocumentLinkResolve             = A.String "documentLink/resolve"
-  toJSON WindowProgressCancel            = A.String "window/progress/cancel"
+  toJSON WorkDoneProgressCancel          = A.String "window/workDoneProgress/cancel"
   toJSON (CustomClientMethod xs)         = A.String xs
 
 data ServerMethod =
@@ -216,9 +216,8 @@ data ServerMethod =
     WindowShowMessage
   | WindowShowMessageRequest
   | WindowLogMessage
-  | WindowProgressStart
-  | WindowProgressReport
-  | WindowProgressDone
+  | WindowWorkDoneProgressCreate
+  | Progress
   | TelemetryEvent
   -- Client
   | ClientRegisterCapability
@@ -239,9 +238,8 @@ instance A.FromJSON ServerMethod where
   parseJSON (A.String "window/showMessage")              = return WindowShowMessage
   parseJSON (A.String "window/showMessageRequest")       = return WindowShowMessageRequest
   parseJSON (A.String "window/logMessage")               = return WindowLogMessage
-  parseJSON (A.String "window/progress/start")           = return WindowProgressStart
-  parseJSON (A.String "window/progress/report")          = return WindowProgressReport
-  parseJSON (A.String "window/progress/done")            = return WindowProgressDone
+  parseJSON (A.String "window/workDoneProgress/create")  = return WindowWorkDoneProgressCreate
+  parseJSON (A.String "$/progress")                      = return Progress
   parseJSON (A.String "telemetry/event")                 = return TelemetryEvent
   -- Client
   parseJSON (A.String "client/registerCapability")       = return ClientRegisterCapability
@@ -262,9 +260,8 @@ instance A.ToJSON ServerMethod where
   toJSON WindowShowMessage        = A.String "window/showMessage"
   toJSON WindowShowMessageRequest = A.String "window/showMessageRequest"
   toJSON WindowLogMessage         = A.String "window/logMessage"
-  toJSON WindowProgressStart      = A.String "window/progress/start"
-  toJSON WindowProgressReport     = A.String "window/progress/report"
-  toJSON WindowProgressDone       = A.String "window/progress/done"
+  toJSON WindowWorkDoneProgressCreate = A.String "window/workDoneProgress/create"
+  toJSON Progress                 = A.String "$/progress"
   toJSON TelemetryEvent           = A.String "telemetry/event"
   -- Client
   toJSON ClientRegisterCapability   = A.String "client/registerCapability"

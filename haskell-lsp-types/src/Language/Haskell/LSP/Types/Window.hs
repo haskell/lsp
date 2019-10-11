@@ -1,12 +1,17 @@
+{-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE DuplicateRecordFields      #-}
+{-# LANGUAGE RecordWildCards            #-}
 {-# LANGUAGE TemplateHaskell            #-}
 module Language.Haskell.LSP.Types.Window where
 
+import           Control.Monad (unless)
 import qualified Data.Aeson                                 as A
 import           Data.Aeson.TH
+import           Data.Maybe (catMaybes)
 import           Data.Text                                  (Text)
 import           Language.Haskell.LSP.Types.Constants
 import           Language.Haskell.LSP.Types.Message
+import           Language.Haskell.LSP.Types.Progress
 
 -- ---------------------------------------------------------------------
 {-
@@ -195,72 +200,68 @@ deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''LogMessageParams
 
 type LogMessageNotification = NotificationMessage ServerMethod LogMessageParams
 
--- ---------------------------------------------------------------------
 {-
-Progress Start Notification
+Progress Begin Notification
 
-The window/progress/start notification is sent from the server to the client to ask the client to start progress.
+To start progress reporting a $/progress notification with the following payload must be sent:
 
-Notification:
+export interface WorkDoneProgressBegin {
 
-method: 'window/progress/start'
-params: ProgressStartParams defined as follows:
-export interface ProgressStartParams {
+	kind: 'begin';
 
-  /**
-   * A unique identifier to associate multiple progress notifications with
-   * the same progress.
-   */
-  id: string;
+	/**
+	 * Mandatory title of the progress operation. Used to briefly inform about
+	 * the kind of operation being performed.
+	 *
+	 * Examples: "Indexing" or "Linking dependencies".
+	 */
+	title: string;
 
-  /**
-   * Mandatory title of the progress operation. Used to briefly inform about
-   * the kind of operation being performed.
-   *
-   * Examples: "Indexing" or "Linking dependencies".
-   */
-  title: string;
+	/**
+	 * Controls if a cancel button should show to allow the user to cancel the
+	 * long running operation. Clients that don't support cancellation are allowed
+	 * to ignore the setting.
+	 */
+	cancellable?: boolean;
 
-  /**
-   * Controls if a cancel button should show to allow the user to cancel the
-   * long running operation. Clients that don't support cancellation are allowed
-   * to ignore the setting.
-   */
-  cancellable?: boolean;
+	/**
+	 * Optional, more detailed associated progress message. Contains
+	 * complementary information to the `title`.
+	 *
+	 * Examples: "3/25 files", "project/src/module2", "node_modules/some_dep".
+	 * If unset, the previous progress message (if any) is still valid.
+	 */
+	message?: string;
 
-  /**
-   * Optional, more detailed associated progress message. Contains
-   * complementary information to the '_title'.
-   *
-   * Examples: "3/25 files", "project/src/module2", "node_modules/some_dep".
-   * If unset, the previous progress message (if any) is still valid.
-   */
-  message?: string;
-
-  /**
-   * Optional progress percentage to display (value 100 is considered 100%).
-   * If not provided infinite progress is assumed and clients are allowed
-   * to ignore the '_percentage' value in subsequent in report notifications.
-   *
-   * The value should be steadily rising. Clients are free to ignore values
-   * that are not following this rule.
-   */
-  percentage?: number;
-}
+	/**
+	 * Optional progress percentage to display (value 100 is considered 100%).
+	 * If not provided infinite progress is assumed and clients are allowed
+	 * to ignore the `percentage` value in subsequent in report notifications.
+	 *
+	 * The value should be steadily rising. Clients are free to ignore values
+	 * that are not following this rule.
+	 */
+	percentage?: number;
 -}
 
--- | Parameters for 'ProgressStartNotification'.
+-- | Parameters for a $/progress notification.
+data ProgressParams t =
+    ProgressParams {
+      _token :: ProgressToken
+    , _value :: t
+    } deriving (Show, Read, Eq)
+
+deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''ProgressParams
+
+-- | Parameters for 'WorkDoneProgressBeginNotification'.
 --
 -- @since 0.10.0.0
-data ProgressStartParams =
-  ProgressStartParams {
-  -- | A unique identifier to associate multiple progress
-  -- notifications with the same progress.
-    _id   :: Text
+data WorkDoneProgressBeginParams =
+  WorkDoneProgressBeginParams {
   -- | Mandatory title of the progress operation.
   -- Used to briefly inform about the kind of operation being
   -- performed. Examples: "Indexing" or "Linking dependencies".
-  , _title :: Text
+   _title :: Text
   -- | Controls if a cancel button should show to allow the user to cancel the
   -- long running operation. Clients that don't support cancellation are allowed
   -- to ignore the setting.
@@ -281,59 +282,77 @@ data ProgressStartParams =
   , _percentage :: Maybe Double
   } deriving (Show, Read, Eq)
 
-deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''ProgressStartParams
+instance A.ToJSON WorkDoneProgressBeginParams where
+    toJSON WorkDoneProgressBeginParams{..} =
+        A.object $ catMaybes
+            [ Just $ "kind" A..= ("begin" :: Text)
+            , Just $ "title" A..= _title
+            , ("cancellable" A..=) <$> _cancellable
+            , ("message" A..=) <$> _message
+            , ("percentage" A..=) <$> _percentage
+            ]
 
--- | The window/progress/start notification is sent from the server to the
+instance A.FromJSON WorkDoneProgressBeginParams where
+    parseJSON = A.withObject "WorkDoneProgressBegin" $ \o -> do
+        kind <- o A..: "kind"
+        unless (kind == ("begin" :: Text)) $ fail $ "Expected kind \"begin\" but got " ++ show kind
+        _title <- o A..: "title"
+        _cancellable <- o A..:? "cancellable"
+        _message <- o A..:? "message"
+        _percentage <- o A..:? "percentage"
+        pure WorkDoneProgressBeginParams{..}
+
+-- | The $/progress begin notification is sent from the server to the
 -- client to ask the client to start progress.
 --
 -- @since 0.10.0.0
-type ProgressStartNotification = NotificationMessage ServerMethod ProgressStartParams
-
+type WorkDoneProgressBeginNotification = NotificationMessage ServerMethod (ProgressParams WorkDoneProgressBeginParams)
 
 {-
 Progress Report Notification
 
-The window/progress/report notification is sent from the server to the client to report progress for a previously started progress.
+Reporting progress is done using the following payload:
 
-Notification:
+export interface WorkDoneProgressReport {
 
-method: 'window/progress/report'
-params: ProgressReportParams defined as follows:
-export interface ProgressReportParams {
+	kind: 'report';
 
-  /**
-   * A unique identifier to associate multiple progress notifications with the same progress.
-   */
-  id: string;
+	/**
+	 * Controls enablement state of a cancel button. This property is only valid if a cancel
+	 * button got requested in the `WorkDoneProgressStart` payload.
+	 *
+	 * Clients that don't support cancellation or don't support control the button's
+	 * enablement state are allowed to ignore the setting.
+	 */
+	cancellable?: boolean;
 
-  /**
-   * Optional, more detailed associated progress message. Contains
-   * complementary information to the '_title'.
-   *
-   * Examples: "3/25 files", "project/src/module2", "node_modules/some_dep".
-   * If unset, the previous progress message (if any) is still valid.
-   */
-  message?: string;
+	/**
+	 * Optional, more detailed associated progress message. Contains
+	 * complementary information to the `title`.
+	 *
+	 * Examples: "3/25 files", "project/src/module2", "node_modules/some_dep".
+	 * If unset, the previous progress message (if any) is still valid.
+	 */
+	message?: string;
 
-  /**
-   * Optional progress percentage to display (value 100 is considered 100%).
-   * If infinite progress was indicated in the start notification client
-   * are allowed to ignore the value. In addition the value should be steadily
-   * rising. Clients are free to ignore values that are not following this rule.
-   */
-  percentage?: number;
+	/**
+	 * Optional progress percentage to display (value 100 is considered 100%).
+	 * If not provided infinite progress is assumed and clients are allowed
+	 * to ignore the `percentage` value in subsequent in report notifications.
+	 *
+	 * The value should be steadily rising. Clients are free to ignore values
+	 * that are not following this rule.
+	 */
+	percentage?: number;
 }
-
 -}
 
--- | Parameters for 'ProgressReportNotification'
+-- | Parameters for 'WorkDoneProgressReportNotification'
 --
 -- @since 0.10.0.0
-data ProgressReportParams =
-  ProgressReportParams {
-  -- | A unique identifier to associate multiple progress
-  -- notifications with the same progress.
-    _id   :: Text
+data WorkDoneProgressReportParams =
+  WorkDoneProgressReportParams {
+    _cancellable :: Maybe Bool
   -- | Optional, more detailed associated progress
   -- message. Contains complementary information to the
   -- '_title'. Examples: "3/25 files",
@@ -348,82 +367,116 @@ data ProgressReportParams =
   , _percentage :: Maybe Double
   } deriving (Show, Read, Eq)
 
-deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''ProgressReportParams
+instance A.ToJSON WorkDoneProgressReportParams where
+  toJSON WorkDoneProgressReportParams{..} =
+    A.object $ catMaybes
+      [ Just $ "kind" A..= ("report" :: Text)
+      , ("cancellable" A..=) <$> _cancellable
+      , ("message" A..=) <$> _message
+      , ("percentage" A..=) <$> _percentage
+      ]
 
--- | The window/progress/report notification is sent from the server to the
+instance A.FromJSON WorkDoneProgressReportParams where
+  parseJSON = A.withObject "WorkDoneProgressReport" $ \o -> do
+    kind <- o A..: "kind"
+    unless (kind == ("report" :: Text)) $ fail $ "Expected kind \"report\" but got " ++ show kind
+    _cancellable <- o A..:? "cancellable"
+    _message <- o A..:? "message"
+    _percentage <- o A..:? "percentage"
+    pure WorkDoneProgressReportParams{..}
+
+-- | The workdone $/progress report notification is sent from the server to the
 -- client to report progress for a previously started progress.
 --
 -- @since 0.10.0.0
-type ProgressReportNotification = NotificationMessage ServerMethod ProgressReportParams
+type WorkDoneProgressReportNotification = NotificationMessage ServerMethod (ProgressParams WorkDoneProgressReportParams)
 
 {-
-Progress Done Notification
+Progress End Notification
 
-The window/progress/done notification is sent from the server to the client to stop a previously started progress.
+Signaling the end of a progress reporting is done using the following payload:
 
-Notification:
+export interface WorkDoneProgressEnd {
 
-method: 'window/progress/done'
-params: ProgressDoneParams defined as follows:
-export interface ProgressDoneParams {
-  /**
-   * A unique identifier to associate multiple progress notifications with the same progress.
-   */
-  id: string;
+	kind: 'end';
+
+	/**
+	 * Optional, a final message indicating to for example indicate the outcome
+	 * of the operation.
+	 */
+	message?: string;
 }
 -}
 
--- | Parameters for 'ProgressDoneNotification'.
+-- | Parameters for 'WorkDoneProgressEndNotification'.
 --
 -- @since 0.10.0.0
-data ProgressDoneParams =
-  ProgressDoneParams {
-  -- | A unique identifier to associate multiple progress
-  -- notifications with the same progress.
-    _id   :: Text
+data WorkDoneProgressEndParams =
+  WorkDoneProgressEndParams {
+    _message   :: Maybe Text
   } deriving (Show, Read, Eq)
 
-deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''ProgressDoneParams
+instance A.ToJSON WorkDoneProgressEndParams where
+  toJSON WorkDoneProgressEndParams{..} =
+    A.object $ catMaybes
+      [ Just $ "kind" A..= ("end" :: Text)
+      , ("message" A..=) <$> _message
+      ]
 
--- | The window/progress/done notification is sent from the server to the
+instance A.FromJSON WorkDoneProgressEndParams where
+  parseJSON = A.withObject "WorkDoneProgressEnd" $ \o -> do
+    kind <- o A..: "kind"
+    unless (kind == ("end" :: Text)) $ fail $ "Expected kind \"end\" but got " ++ show kind
+    _message <- o A..:? "message"
+    pure WorkDoneProgressEndParams{..}
+
+-- | The $/progress end notification is sent from the server to the
 -- client to stop a previously started progress.
 --
 -- @since 0.10.0.0
-type ProgressDoneNotification = NotificationMessage ServerMethod ProgressDoneParams
+type WorkDoneProgressEndNotification = NotificationMessage ServerMethod (ProgressParams WorkDoneProgressEndParams)
 
 {-
 Progress Cancel Notification
 
-The window/progress/cancel notification is sent from the client to the server to inform the server that the user has pressed the cancel button on the progress UX. A server receiving a cancel request must still close a progress using the done notification.
+The window/workDoneProgress/cancel notification is sent from the client to the server to inform the server that the user has pressed the cancel button on the progress UX. A server receiving a cancel request must still close a progress using the done notification.
 
 Notification:
 
-method: 'window/progress/cancel'
-params: ProgressCancelParams defined as follows:
-export interface ProgressCancelParams {
-  /**
-   * A unique identifier to associate multiple progress notifications with the same progress.
-   */
-  id: string;
+method: 'window/workDoneProgress/cancel'
+params: WorkDoneProgressCancelParams defined as follows:
+export interface WorkDoneProgressCancelParams {
+	/**
+	 * The token to be used to report progress.
+	 */
+	token: ProgressToken;
 }
-
 -}
 
--- | Parameters for 'ProgressCancelNotification'.
+-- | Parameters for 'WorkDoneProgressCancelNotification'.
 --
 -- @since 0.10.0.0
-data ProgressCancelParams =
-  ProgressCancelParams {
+data WorkDoneProgressCancelParams =
+  WorkDoneProgressCancelParams {
   -- | A unique identifier to associate multiple progress
   -- notifications with the same progress.
-    _id   :: Text
+    _token   :: ProgressToken
   } deriving (Show, Read, Eq)
 
-deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''ProgressCancelParams
+deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''WorkDoneProgressCancelParams
 
--- | The window/progress/cancel notification is sent from the client to the server
+-- | The window/workDoneProgress/cancel notification is sent from the client to the server
 -- to inform the server that the user has pressed the cancel button on the progress UX.
 -- A server receiving a cancel request must still close a progress using the done notification.
 --
 -- @since 0.10.0.0
-type ProgressCancelNotification = NotificationMessage ClientMethod ProgressCancelParams
+type WorkDoneProgressCancelNotification = NotificationMessage ClientMethod WorkDoneProgressCancelParams
+
+data WorkDoneProgressCreateParams =
+    WorkDoneProgressCreateParams {
+      _token :: ProgressToken
+    } deriving (Show, Read, Eq)
+
+deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''WorkDoneProgressCreateParams
+
+type WorkDoneProgressCreateRequest = RequestMessage ServerMethod WorkDoneProgressCreateParams ()

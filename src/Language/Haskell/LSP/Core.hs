@@ -91,7 +91,7 @@ data LanguageContextData config =
   }
 
 data ProgressData = ProgressData { progressNextId :: !Int
-                                 , progressCancel :: !(Map.Map Text (IO ())) }
+                                 , progressCancel :: !(Map.Map J.ProgressToken (IO ())) }
 
 -- ---------------------------------------------------------------------
 
@@ -370,7 +370,7 @@ handlerMap _ h J.DocumentLinkResolve             = hh nop ReqDocumentLinkResolve
 handlerMap _ h J.TextDocumentRename              = hh nop ReqRename $ renameHandler h
 handlerMap _ h J.TextDocumentPrepareRename       = hh nop ReqPrepareRename $ prepareRenameHandler h
 handlerMap _ h J.TextDocumentFoldingRange        = hh nop ReqFoldingRange $ foldingRangeHandler h
-handlerMap _ _ J.WindowProgressCancel            = helper progressCancelHandler
+handlerMap _ _ J.WorkDoneProgressCancel          = helper progressCancelHandler
 handlerMap _ h (J.CustomClientMethod _)          = \ctxData val ->
     case val of
         J.Object o | "id" `HM.member` o ->
@@ -732,14 +732,14 @@ initializeRequestHandler' onStartup mHandler tvarCtx req@(J.RequestMessage _ ori
         (C.WindowClientCapabilities mProgress) <- wc
         mProgress
 
-      storeProgress :: Text -> Async a -> IO ()
+      storeProgress :: J.ProgressToken -> Async a -> IO ()
       storeProgress n a = atomically $ do
         pd <- resProgressData <$> readTVar tvarCtx
         let pc = progressCancel pd
             pc' = Map.insert n (cancelWith a ProgressCancelledException) pc
         modifyTVar tvarCtx (\ctx -> ctx { resProgressData = pd { progressCancel = pc' }})
 
-      deleteProgress :: Text -> IO ()
+      deleteProgress :: J.ProgressToken -> IO ()
       deleteProgress n = atomically $ do
         pd <- resProgressData <$> readTVar tvarCtx
         let x = progressCancel pd
@@ -747,12 +747,12 @@ initializeRequestHandler' onStartup mHandler tvarCtx req@(J.RequestMessage _ ori
         modifyTVar tvarCtx (\ctx -> ctx { resProgressData = pd { progressCancel = x' }})
 
       -- Get a new id for the progress session and make a new one
-      getNewProgressId :: IO Text
-      getNewProgressId = fmap (T.pack . show) $ liftIO $ atomically $ do
+      getNewProgressId :: IO J.ProgressToken
+      getNewProgressId = liftIO $ atomically $ do
         pd <- resProgressData <$> readTVar tvarCtx
         let x = progressNextId pd
         modifyTVar tvarCtx (\ctx -> ctx { resProgressData = pd { progressNextId = x + 1 }})
-        return x
+        return $ J.ProgressNumericToken x
 
       withProgressBase :: Bool -> (Text -> ProgressCancellable
                     -> ((Progress -> IO ()) -> IO a) -> IO a)
@@ -769,18 +769,25 @@ initializeRequestHandler' onStartup mHandler tvarCtx req@(J.RequestMessage _ ori
                               Cancellable -> True
                               NotCancellable -> False
 
+          rId <- getLspId $ resLspId ctx0
+
+          -- Create progress token
+          liftIO $ sf $ ReqWorkDoneProgressCreate $
+            fmServerWorkDoneProgressCreateRequest rId $ J.WorkDoneProgressCreateParams progId
+
           -- Send initial notification
-          liftIO $ sf $ NotProgressStart $ fmServerProgressStartNotification $
-            J.ProgressStartParams progId title (Just cancellable')
-              Nothing initialPercentage
+          liftIO $ sf $ NotWorkDoneProgressBegin $ fmServerWorkDoneProgressBeginNotification $
+            J.ProgressParams progId $
+            J.WorkDoneProgressBeginParams title (Just cancellable') Nothing initialPercentage
 
           aid <- async $ f (updater progId sf)
           storeProgress progId aid
           res <- wait aid
 
           -- Send done notification
-          liftIO $ sf $ NotProgressDone $ fmServerProgressDoneNotification $
-            J.ProgressDoneParams progId
+          liftIO $ sf $ NotWorkDoneProgressEnd $ fmServerWorkDoneProgressEndNotification $
+            J.ProgressParams progId $
+            J.WorkDoneProgressEndParams Nothing
           -- Delete the progress cancellation from the map
           -- If we don't do this then it's easy to leak things as the map contains any IO action.
           deleteProgress progId
@@ -789,8 +796,9 @@ initializeRequestHandler' onStartup mHandler tvarCtx req@(J.RequestMessage _ ori
           return res
         | otherwise = f (const $ return ())
           where updater progId sf (Progress percentage msg) =
-                  sf $ NotProgressReport $ fmServerProgressReportNotification $
-                    J.ProgressReportParams progId msg percentage
+                  sf $ NotWorkDoneProgressReport $ fmServerWorkDoneProgressReportNotification $
+                    J.ProgressParams progId $
+                    J.WorkDoneProgressReportParams Nothing msg percentage
 
       withProgress' :: Text -> ProgressCancellable -> ((Progress -> IO ()) -> IO a) -> IO a
       withProgress' = withProgressBase False
@@ -881,8 +889,8 @@ initializeRequestHandler' onStartup mHandler tvarCtx req@(J.RequestMessage _ ori
 
         sendResponse tvarCtx $ RspInitialize res
 
-progressCancelHandler :: TVar (LanguageContextData config) -> J.ProgressCancelNotification -> IO ()
-progressCancelHandler tvarCtx (J.NotificationMessage _ _ (J.ProgressCancelParams tid)) = do
+progressCancelHandler :: TVar (LanguageContextData config) -> J.WorkDoneProgressCancelNotification -> IO ()
+progressCancelHandler tvarCtx (J.NotificationMessage _ _ (J.WorkDoneProgressCancelParams tid)) = do
   mact <- Map.lookup tid . progressCancel . resProgressData <$> readTVarIO tvarCtx
   case mact of
     Nothing -> return ()
