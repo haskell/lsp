@@ -27,6 +27,7 @@ import           Language.Haskell.LSP.Types.List
 import           Language.Haskell.LSP.Types.Location
 import           Language.Haskell.LSP.Types.MarkupContent
 import           Language.Haskell.LSP.Types.Message
+import           Language.Haskell.LSP.Types.Progress
 import           Language.Haskell.LSP.Types.Symbol
 import           Language.Haskell.LSP.Types.TextDocument
 import           Language.Haskell.LSP.Types.Uri
@@ -2151,7 +2152,8 @@ Response
 
 data WorkspaceSymbolParams =
   WorkspaceSymbolParams
-    { _query :: Text
+    { _query :: Text -- ^ A query string to filter symbols by. Clients may send an empty string here to request all symbols.
+    , _workDoneToken :: Maybe ProgressToken -- ^ An optional token that a server can use to report work done progress.
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''WorkspaceSymbolParams
@@ -2736,8 +2738,9 @@ export interface ExecuteCommandRegistrationOptions {
 
 data ExecuteCommandParams =
   ExecuteCommandParams
-    { _command   :: Text
-    , _arguments :: Maybe (List A.Value)
+    { _command   :: Text -- ^ The identifier of the actual command handler.
+    , _arguments :: Maybe (List A.Value) -- ^ Arguments that the command should be invoked with.
+    , _workDoneToken :: Maybe ProgressToken -- ^ An optional token that a server can use to report work done progress.
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''ExecuteCommandParams
