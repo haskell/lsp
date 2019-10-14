@@ -60,6 +60,7 @@ handleServerMessage request response notification msg = case msg of
     (ReqShowMessage              m) -> request m
     (ReqUnregisterCapability     m) -> request m
     (ReqCustomServer             m) -> request m
+    (ReqWorkDoneProgressCreate   m) -> request m
     (RspInitialize               m) -> response m
     (RspShutdown                 m) -> response m
     (RspHover                    m) -> response m
@@ -92,9 +93,9 @@ handleServerMessage request response notification msg = case msg of
     (NotPublishDiagnostics       m) -> notification m
     (NotLogMessage               m) -> notification m
     (NotShowMessage              m) -> notification m
-    (NotProgressStart            m) -> notification m
-    (NotProgressReport           m) -> notification m
-    (NotProgressDone             m) -> notification m
+    (NotWorkDoneProgressBegin    m) -> notification m
+    (NotWorkDoneProgressReport   m) -> notification m
+    (NotWorkDoneProgressEnd      m) -> notification m
     (NotTelemetry                m) -> notification m
     (NotCancelRequestFromServer  m) -> notification m
     (NotCustomServer             m) -> notification m
@@ -148,6 +149,6 @@ handleClientMessage request response notification msg = case msg of
  (NotDidSaveTextDocument      m) -> notification m
  (NotDidChangeWatchedFiles    m) -> notification m
  (NotDidChangeWorkspaceFolders m) -> notification m
- (NotProgressCancel           m) -> notification m
+ (NotWorkDoneProgressCancel    m) -> notification m
  (ReqCustomClient             m) -> request m
  (NotCustomClient             m) -> notification m

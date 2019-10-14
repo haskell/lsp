@@ -12,19 +12,37 @@ packages:
   original:
     hackage: rope-utf16-splay-0.3.1.0
 - completed:
-    hackage: haskell-lsp-0.16.0.0@sha256:6ac4b58e6caef43546a3c115f1aaaae0e23d30f0e37b8c4e94525468e9982d09,5264
+    size: 85195
+    subdir: .
+    url: https://github.com/alanz/haskell-lsp/archive/fefcae8b44aaf7658e0f90d5530832efe0b32053.tar.gz
+    cabal-file:
+      size: 5264
+      sha256: 6ac4b58e6caef43546a3c115f1aaaae0e23d30f0e37b8c4e94525468e9982d09
+    name: haskell-lsp
+    version: 0.16.0.0
+    sha256: 410af26154494735694ae323b3431d6a6ccb49ab6f028b56656039b5662de7d6
     pantry-tree:
-      size: 1725
-      sha256: 31b245f4da5b5b844be9802bb2bfd397c90c0a50b063e5bae26648c6220aaf7f
+      size: 5563
+      sha256: 4da14c5ad9e2e214d4c52edca1f8d24390f24f60375c00c99ade0e55a75821fa
   original:
-    hackage: haskell-lsp-0.16.0.0
+    subdir: .
+    url: https://github.com/alanz/haskell-lsp/archive/fefcae8b44aaf7658e0f90d5530832efe0b32053.tar.gz
 - completed:
-    hackage: haskell-lsp-types-0.16.0.0@sha256:57729b32b1ca65d4869e1e518fa4df749d4488ec5f11e23b50c2b89417f5f211,2882
+    size: 85195
+    subdir: haskell-lsp-types
+    url: https://github.com/alanz/haskell-lsp/archive/fefcae8b44aaf7658e0f90d5530832efe0b32053.tar.gz
+    cabal-file:
+      size: 2941
+      sha256: d5e3a1c45e2d8e6df35fa77122c396330546a5a7afe9b5d5c3393d937e18a66f
+    name: haskell-lsp-types
+    version: 0.16.0.0
+    sha256: 410af26154494735694ae323b3431d6a6ccb49ab6f028b56656039b5662de7d6
     pantry-tree:
-      size: 2369
-      sha256: cc24c23f741e777b9c01ccd700af034e2258e560f5fdb271d08befd4b03196b7
+      size: 2501
+      sha256: 409560d414a6618591d3bed1aaf046ba549a12c202a85e0ef9642004639399c5
   original:
-    hackage: haskell-lsp-types-0.16.0.0
+    subdir: haskell-lsp-types
+    url: https://github.com/alanz/haskell-lsp/archive/fefcae8b44aaf7658e0f90d5530832efe0b32053.tar.gz
 snapshots:
 - completed:
     size: 499889
