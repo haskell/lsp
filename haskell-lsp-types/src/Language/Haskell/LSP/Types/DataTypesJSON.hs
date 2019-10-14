@@ -2009,9 +2009,10 @@ deriveJSON lspOptions ''ReferenceContext
 
 data ReferenceParams =
   ReferenceParams
-    { _textDocument :: TextDocumentIdentifier
-    , _position     :: Position
-    , _context      :: ReferenceContext
+    { _textDocument  :: TextDocumentIdentifier
+    , _position      :: Position
+    , _context       :: ReferenceContext
+    , _workDoneToken :: Maybe ProgressToken -- ^ An optional token that a server can use to report work done progress.
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''ReferenceParams
