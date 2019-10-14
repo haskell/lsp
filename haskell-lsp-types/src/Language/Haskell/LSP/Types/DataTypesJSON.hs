@@ -2218,6 +2218,7 @@ interface CodeLens {
 data CodeLensParams =
   CodeLensParams
     { _textDocument :: TextDocumentIdentifier
+    , _workDoneToken :: Maybe ProgressToken -- ^ An optional token that a server can use to report work done progress.
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''CodeLensParams
@@ -2340,6 +2341,7 @@ export interface DocumentLinkRegistrationOptions extends TextDocumentRegistratio
 data DocumentLinkParams =
   DocumentLinkParams
     { _textDocument :: TextDocumentIdentifier
+    , _workDoneToken :: Maybe ProgressToken -- ^ An optional token that a server can use to report work done progress.
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''DocumentLinkParams
@@ -2448,6 +2450,7 @@ data DocumentFormattingParams =
   DocumentFormattingParams
     { _textDocument :: TextDocumentIdentifier
     , _options      :: FormattingOptions
+    , _workDoneToken :: Maybe ProgressToken -- ^ An optional token that a server can use to report work done progress.
     } deriving (Show,Read,Eq)
 
 deriveJSON lspOptions ''DocumentFormattingParams
@@ -2499,6 +2502,7 @@ data DocumentRangeFormattingParams =
     { _textDocument :: TextDocumentIdentifier
     , _range        :: Range
     , _options      :: FormattingOptions
+    , _workDoneToken :: Maybe ProgressToken -- ^ An optional token that a server can use to report work done progress.
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''DocumentRangeFormattingParams
@@ -2630,6 +2634,7 @@ data RenameParams =
     { _textDocument :: TextDocumentIdentifier
     , _position     :: Position
     , _newName      :: Text
+    , _workDoneToken :: Maybe ProgressToken -- ^ An optional token that a server can use to report work done progress.
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''RenameParams
