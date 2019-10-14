@@ -1,5 +1,9 @@
 # Revision history for haskell-lsp
 
+## 0.17.0.0 -- unreleased
+
+* Update progress reporting to match the LSP 3.15 specification.
+
 ## 0.16.0.0 -- 2019-09-07
 
 * Add support for CodeActionOptions (@thomasjm)
