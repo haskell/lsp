@@ -3,10 +3,12 @@
 {-# LANGUAGE TemplateHaskell            #-}
 module Language.Haskell.LSP.Types.Message where
 
+import           Control.Monad
 import qualified Data.Aeson                                 as A
 import           Data.Aeson.TH
 import           Data.Aeson.Types
 import           Data.Hashable
+import           Data.Maybe
 -- For <= 8.2.2
 import           Data.Text                                  (Text)
 import           Language.Haskell.LSP.Types.Constants
@@ -374,6 +376,7 @@ deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''ResponseError
 
 -- ---------------------------------------------------------------------
 
+-- | Either result or error must be Just.
 data ResponseMessage a =
   ResponseMessage
     { _jsonrpc :: Text
@@ -385,13 +388,18 @@ data ResponseMessage a =
 deriveToJSON lspOptions ''ResponseMessage
 
 instance FromJSON a => FromJSON (ResponseMessage a) where
-  parseJSON = withObject "Response" $ \o ->
-    ResponseMessage
+  parseJSON = withObject "Response" $ \o -> do
+    rsp <- ResponseMessage
       <$> o .: "jsonrpc"
       <*> o .: "id"
       -- It is important to use .:! so that result = null gets decoded as Just Nothing
       <*> o .:! "result"
       <*> o .:! "error"
+    -- We make sure that one of them is present. Without this check we can end up
+    -- parsing a Request as a ResponseMessage.
+    unless (isJust (_result rsp) || isJust (_error rsp)) $
+      fail "ResponseMessage must either have a result or an error"
+    pure rsp
 
 type ErrorResponse = ResponseMessage ()
 
