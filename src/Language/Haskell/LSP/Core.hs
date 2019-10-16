@@ -844,6 +844,10 @@ initializeRequestHandler' onStartup mHandler tvarCtx req@(J.RequestMessage _ ori
           static (Just d) _ = Just d
           static _ (Just _) = Just (J.GotoOptionsStatic True)
           static _ Nothing  = Nothing
+          
+          static' (Just d) (Just _) = Just d
+          static' _ (Just _) = Just (J.CodeActionOptionsStatic True)
+          static' _ _  = Nothing
 
           sync = case textDocumentSync o of
                   Just x -> Just (J.TDSOptions x)
@@ -869,7 +873,7 @@ initializeRequestHandler' onStartup mHandler tvarCtx req@(J.RequestMessage _ ori
               , J._documentHighlightProvider        = supported (documentHighlightHandler h)
               , J._documentSymbolProvider           = supported (documentSymbolHandler h)
               , J._workspaceSymbolProvider          = supported (workspaceSymbolHandler h)
-              , J._codeActionProvider               = codeActionProvider o
+              , J._codeActionProvider               = static' (codeActionProvider o) (codeActionHandler h)
               , J._codeLensProvider                 = codeLensProvider o
               , J._documentFormattingProvider       = supported (documentFormattingHandler h)
               , J._documentRangeFormattingProvider  = supported (documentRangeFormattingHandler h)
