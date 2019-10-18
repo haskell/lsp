@@ -1,5 +1,10 @@
 # Revision history for haskell-lsp-types
 
+## 0.17.0.0 -- 2019-10-18
+
+* Update progress reporting to match the LSP 3.15 specification (@cocreature)
+* Ensure ResponseMessage has either a result or an error (@cocreature)
+
 ## 0.16.0.0 -- 2019-09-07
 
 * Add support for CodeActionOptions (@thomasjm)

@@ -1,8 +1,12 @@
 # Revision history for haskell-lsp
 
-## 0.17.0.0 -- unreleased
+## 0.17.0.0 -- 2019-10-18
 
-* Update progress reporting to match the LSP 3.15 specification.
+* Update progress reporting to match the LSP 3.15 specification (@cocreature)
+* Fix progress cancellation action being retained (@mpickering)
+* Respect both codeActionProvider and codeActionHandler in server
+  capabilities (@fendor)
+* Ensure ResponseMessage has either a result or an error (@cocreature)
 
 ## 0.16.0.0 -- 2019-09-07
 

@@ -4,7 +4,6 @@
 module Language.Haskell.LSP.Types.CodeAction where
 
 import           Control.Applicative
-import qualified Data.Aeson                    as A
 import           Data.Aeson.TH
 import           Data.Aeson.Types
 import           Data.Text                      ( Text )
