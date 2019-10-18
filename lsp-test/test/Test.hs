@@ -118,7 +118,7 @@ main = hspec $ do
               selector _ = False
               sesh = do
                 doc <- openDoc "Desktop/simple.hs" "haskell"
-                sendRequest TextDocumentDocumentSymbol (DocumentSymbolParams doc)
+                sendRequest TextDocumentDocumentSymbol (DocumentSymbolParams doc Nothing)
                 skipMany anyNotification
                 message :: Session RenameResponse -- the wrong type
             in runSession "hie" fullCaps "test/data/renamePass" sesh
@@ -154,7 +154,7 @@ main = hspec $ do
         let args = toJSON $ AOP (doc ^. uri)
                                 (Position 1 14)
                                 "Redundant bracket"
-            reqParams = ExecuteCommandParams "applyrefact:applyOne" (Just (List [args]))
+            reqParams = ExecuteCommandParams "applyrefact:applyOne" (Just (List [args])) Nothing
         request_ WorkspaceExecuteCommand reqParams
 
         editReq <- message :: Session ApplyWorkspaceEditRequest
@@ -177,7 +177,7 @@ main = hspec $ do
         let args = toJSON $ AOP (doc ^. uri)
                                 (Position 1 14)
                                 "Redundant bracket"
-            reqParams = ExecuteCommandParams "applyrefact:applyOne" (Just (List [args]))
+            reqParams = ExecuteCommandParams "applyrefact:applyOne" (Just (List [args])) Nothing
         request_ WorkspaceExecuteCommand reqParams
         contents <- getDocumentEdit doc
         liftIO $ contents `shouldBe` "main :: IO Int\nmain = return 42\n"
