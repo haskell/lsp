@@ -3,6 +3,7 @@ module Language.Haskell.LSP.Test.Decoding where
 
 import           Prelude                 hiding ( id )
 import           Data.Aeson
+import           Data.Foldable
 import           Control.Exception
 import           Control.Lens
 import qualified Data.ByteString.Lazy.Char8    as B
@@ -131,9 +132,9 @@ decodeFromServerMsg reqMap bytes =
         WindowShowMessage              -> NotShowMessage $ fromJust $ decode bytes
         WindowLogMessage               -> NotLogMessage $ fromJust $ decode bytes
         CancelRequestServer            -> NotCancelRequestFromServer $ fromJust $ decode bytes
-        WindowProgressStart            -> NotProgressStart $ fromJust $ decode bytes
-        WindowProgressReport           -> NotProgressReport $ fromJust $ decode bytes
-        WindowProgressDone             -> NotProgressDone $ fromJust $ decode bytes
+        Progress                       ->
+          fromJust $ asum [NotWorkDoneProgressBegin <$> decode bytes, NotWorkDoneProgressReport <$> decode bytes, NotWorkDoneProgressEnd <$> decode bytes]
+        WindowWorkDoneProgressCreate   -> ReqWorkDoneProgressCreate $ fromJust $ decode bytes
         TelemetryEvent                 -> NotTelemetry $ fromJust $ decode bytes
         WindowShowMessageRequest       -> ReqShowMessage $ fromJust $ decode bytes
         ClientRegisterCapability       -> ReqRegisterCapability $ fromJust $ decode bytes

@@ -377,7 +377,7 @@ noDiagnostics = do
 -- | Returns the symbols in a document.
 getDocumentSymbols :: TextDocumentIdentifier -> Session (Either [DocumentSymbol] [SymbolInformation])
 getDocumentSymbols doc = do
-  ResponseMessage _ rspLid mRes mErr <- request TextDocumentDocumentSymbol (DocumentSymbolParams doc) :: Session DocumentSymbolsResponse
+  ResponseMessage _ rspLid mRes mErr <- request TextDocumentDocumentSymbol (DocumentSymbolParams doc Nothing) :: Session DocumentSymbolsResponse
   maybe (return ()) (throw . UnexpectedResponseError rspLid) mErr
   case mRes of
     Just (DSDocumentSymbols (List xs)) -> return (Left xs)
@@ -388,7 +388,7 @@ getDocumentSymbols doc = do
 getCodeActions :: TextDocumentIdentifier -> Range -> Session [CAResult]
 getCodeActions doc range = do
   ctx <- getCodeActionContext doc
-  rsp <- request TextDocumentCodeAction (CodeActionParams doc range ctx)
+  rsp <- request TextDocumentCodeAction (CodeActionParams doc range ctx Nothing)
 
   case rsp ^. result of
     Just (List xs) -> return xs
@@ -406,7 +406,7 @@ getAllCodeActions doc = do
   where
     go :: CodeActionContext -> [CAResult] -> Diagnostic -> Session [CAResult]
     go ctx acc diag = do
-      ResponseMessage _ rspLid mRes mErr <- request TextDocumentCodeAction (CodeActionParams doc (diag ^. range) ctx)
+      ResponseMessage _ rspLid mRes mErr <- request TextDocumentCodeAction (CodeActionParams doc (diag ^. range) ctx Nothing)
 
       case mErr of
         Just e -> throw (UnexpectedResponseError rspLid e)
@@ -428,7 +428,7 @@ getCurrentDiagnostics doc = fromMaybe [] . Map.lookup (toNormalizedUri $ doc ^. 
 executeCommand :: Command -> Session ()
 executeCommand cmd = do
   let args = decode $ encode $ fromJust $ cmd ^. arguments
-      execParams = ExecuteCommandParams (cmd ^. command) args
+      execParams = ExecuteCommandParams (cmd ^. command) args Nothing
   request_ WorkspaceExecuteCommand execParams
 
 -- | Executes a code action.
@@ -487,7 +487,7 @@ applyEdit doc edit = do
 -- | Returns the completions for the position in the document.
 getCompletions :: TextDocumentIdentifier -> Position -> Session [CompletionItem]
 getCompletions doc pos = do
-  rsp <- request TextDocumentCompletion (TextDocumentPositionParams doc pos)
+  rsp <- request TextDocumentCompletion (TextDocumentPositionParams doc pos Nothing)
 
   case getResponseResult rsp of
     Completions (List items) -> return items
@@ -500,7 +500,7 @@ getReferences :: TextDocumentIdentifier -- ^ The document to lookup in.
               -> Session [Location] -- ^ The locations of the references.
 getReferences doc pos inclDecl =
   let ctx = ReferenceContext inclDecl
-      params = ReferenceParams doc pos ctx
+      params = ReferenceParams doc pos ctx Nothing
   in getResponseResult <$> request TextDocumentReferences params
 
 -- | Returns the definition(s) for the term at the specified position.
@@ -508,7 +508,7 @@ getDefinitions :: TextDocumentIdentifier -- ^ The document the term is in.
                -> Position -- ^ The position the term is at.
                -> Session [Location] -- ^ The location(s) of the definitions
 getDefinitions doc pos = do
-  let params = TextDocumentPositionParams doc pos
+  let params = TextDocumentPositionParams doc pos Nothing
   rsp <- request TextDocumentDefinition params :: Session DefinitionResponse
   case getResponseResult rsp of
       SingleLoc loc -> pure [loc]
@@ -519,13 +519,13 @@ getTypeDefinitions :: TextDocumentIdentifier -- ^ The document the term is in.
                -> Position -- ^ The position the term is at.
                -> Session [Location] -- ^ The location(s) of the definitions
 getTypeDefinitions doc pos =
-  let params = TextDocumentPositionParams doc pos
+  let params = TextDocumentPositionParams doc pos Nothing
   in getResponseResult <$> request TextDocumentTypeDefinition params
 
 -- | Renames the term at the specified position.
 rename :: TextDocumentIdentifier -> Position -> String -> Session ()
 rename doc pos newName = do
-  let params = RenameParams doc pos (T.pack newName)
+  let params = RenameParams doc pos (T.pack newName) Nothing
   rsp <- request TextDocumentRename params :: Session RenameResponse
   let wEdit = getResponseResult rsp
       req = RequestMessage "" (IdInt 0) WorkspaceApplyEdit (ApplyWorkspaceEditParams wEdit)
@@ -534,13 +534,13 @@ rename doc pos newName = do
 -- | Returns the hover information at the specified position.
 getHover :: TextDocumentIdentifier -> Position -> Session (Maybe Hover)
 getHover doc pos =
-  let params = TextDocumentPositionParams doc pos
+  let params = TextDocumentPositionParams doc pos Nothing
   in getResponseResult <$> request TextDocumentHover params
 
 -- | Returns the highlighted occurences of the term at the specified position
 getHighlights :: TextDocumentIdentifier -> Position -> Session [DocumentHighlight]
 getHighlights doc pos =
-  let params = TextDocumentPositionParams doc pos
+  let params = TextDocumentPositionParams doc pos Nothing
   in getResponseResult <$> request TextDocumentDocumentHighlight params
 
 -- | Checks the response for errors and throws an exception if needed.
@@ -553,14 +553,14 @@ getResponseResult rsp = fromMaybe exc (rsp ^. result)
 -- | Applies formatting to the specified document.
 formatDoc :: TextDocumentIdentifier -> FormattingOptions -> Session ()
 formatDoc doc opts = do
-  let params = DocumentFormattingParams doc opts
+  let params = DocumentFormattingParams doc opts Nothing
   edits <- getResponseResult <$> request TextDocumentFormatting params
   applyTextEdits doc edits
 
 -- | Applies formatting to the specified range in a document.
 formatRange :: TextDocumentIdentifier -> FormattingOptions -> Range -> Session ()
 formatRange doc opts range = do
-  let params = DocumentRangeFormattingParams doc range opts
+  let params = DocumentRangeFormattingParams doc range opts Nothing
   edits <- getResponseResult <$> request TextDocumentRangeFormatting params
   applyTextEdits doc edits
 
@@ -573,6 +573,6 @@ applyTextEdits doc edits =
 -- | Returns the code lenses for the specified document.
 getCodeLenses :: TextDocumentIdentifier -> Session [CodeLens]
 getCodeLenses tId = do
-    rsp <- request TextDocumentCodeLens (CodeLensParams tId) :: Session CodeLensResponse
+    rsp <- request TextDocumentCodeLens (CodeLensParams tId Nothing) :: Session CodeLensResponse
     case getResponseResult rsp of
         List res -> pure res
