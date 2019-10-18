@@ -12,37 +12,37 @@ packages:
   original:
     hackage: rope-utf16-splay-0.3.1.0
 - completed:
-    size: 85195
+    size: 86224
     subdir: .
-    url: https://github.com/alanz/haskell-lsp/archive/fefcae8b44aaf7658e0f90d5530832efe0b32053.tar.gz
+    url: https://github.com/alanz/haskell-lsp/archive/2aacc5ca706bcce111e976a1af4a95a376137c5e.tar.gz
     cabal-file:
       size: 5264
-      sha256: 6ac4b58e6caef43546a3c115f1aaaae0e23d30f0e37b8c4e94525468e9982d09
+      sha256: ddfcc2798f04bcb1ec20fafc02c03faa197322192578e879cef5852aba43ebcb
     name: haskell-lsp
-    version: 0.16.0.0
-    sha256: 410af26154494735694ae323b3431d6a6ccb49ab6f028b56656039b5662de7d6
+    version: 0.17.0.0
+    sha256: fbbc3ebdbb2c0f6eacdb9f3c8a3550e71617aff9df279da175c8b99c422ddeb9
     pantry-tree:
-      size: 5563
-      sha256: 4da14c5ad9e2e214d4c52edca1f8d24390f24f60375c00c99ade0e55a75821fa
+      size: 5675
+      sha256: 80539460483f0459786fce73d842b203eef003fd1c657281daec8aea2957db3f
   original:
     subdir: .
-    url: https://github.com/alanz/haskell-lsp/archive/fefcae8b44aaf7658e0f90d5530832efe0b32053.tar.gz
+    url: https://github.com/alanz/haskell-lsp/archive/2aacc5ca706bcce111e976a1af4a95a376137c5e.tar.gz
 - completed:
-    size: 85195
+    size: 86224
     subdir: haskell-lsp-types
-    url: https://github.com/alanz/haskell-lsp/archive/fefcae8b44aaf7658e0f90d5530832efe0b32053.tar.gz
+    url: https://github.com/alanz/haskell-lsp/archive/2aacc5ca706bcce111e976a1af4a95a376137c5e.tar.gz
     cabal-file:
       size: 2941
-      sha256: d5e3a1c45e2d8e6df35fa77122c396330546a5a7afe9b5d5c3393d937e18a66f
+      sha256: 9078237412d0596a7d09d432389c8fa21d6f3e21ed2ed761b3093a21607d6c28
     name: haskell-lsp-types
-    version: 0.16.0.0
-    sha256: 410af26154494735694ae323b3431d6a6ccb49ab6f028b56656039b5662de7d6
+    version: 0.17.0.0
+    sha256: fbbc3ebdbb2c0f6eacdb9f3c8a3550e71617aff9df279da175c8b99c422ddeb9
     pantry-tree:
       size: 2501
-      sha256: 409560d414a6618591d3bed1aaf046ba549a12c202a85e0ef9642004639399c5
+      sha256: a575ce26976bd31d34a9db27e20e8e34d9b50b8d2e34a2e3772b3236b8cf778c
   original:
     subdir: haskell-lsp-types
-    url: https://github.com/alanz/haskell-lsp/archive/fefcae8b44aaf7658e0f90d5530832efe0b32053.tar.gz
+    url: https://github.com/alanz/haskell-lsp/archive/2aacc5ca706bcce111e976a1af4a95a376137c5e.tar.gz
 snapshots:
 - completed:
     size: 499889
