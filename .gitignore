@@ -6,6 +6,7 @@
 /cabal.project.local
 /cabal.project.local~
 .stack-work
+stack*.yaml.lock
 /.dir-locals.el
 /.vscode
 /.ghc.environment*
