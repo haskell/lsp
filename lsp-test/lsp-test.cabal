@@ -52,7 +52,7 @@ library
                      , lens
                      , mtl
                      , parser-combinators
-                     , process
+                     , process >= 1.6
                      , rope-utf16-splay
                      , text
                      , transformers
