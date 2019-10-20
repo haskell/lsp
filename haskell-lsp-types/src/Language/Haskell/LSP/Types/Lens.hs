@@ -197,3 +197,5 @@ makeFieldsNoPrefix ''ProgressParams
 makeFieldsNoPrefix ''WorkDoneProgressBeginParams
 makeFieldsNoPrefix ''WorkDoneProgressReportParams
 makeFieldsNoPrefix ''WorkDoneProgressEndParams
+makeFieldsNoPrefix ''WorkDoneProgressCancelParams
+makeFieldsNoPrefix ''WorkDoneProgressCreateParams
