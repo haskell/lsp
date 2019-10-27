@@ -96,9 +96,8 @@ data ProgressData = ProgressData { progressNextId :: !Int
 
 -- ---------------------------------------------------------------------
 
--- | Language Server Protocol options supported by the given language server.
--- These are automatically turned into capabilities reported to the client
--- during initialization.
+-- | Language Server Protocol options that the server may configure.
+-- If you set handlers for some requests, you may need to set some of these options.
 data Options =
   Options
     { textDocumentSync                 :: Maybe J.TextDocumentSyncOptions
@@ -118,15 +117,17 @@ data Options =
     -- The list of kinds may be generic, such as `CodeActionKind.Refactor`, or the server
     -- may list out every specific kind they provide.
     , codeActionKinds                  :: Maybe [J.CodeActionKind]
+    -- | The list of characters that triggers on type formatting.
+    -- If you set `documentOnTypeFormattingHandler`, you **must** set this.
     , documentOnTypeFormattingTriggerCharacters :: Maybe (NonEmpty Char)
-    , colorProvider                    :: Maybe J.ColorOptions
-    , foldingRangeProvider             :: Maybe J.FoldingRangeOptions
-    , executeCommandProvider           :: Maybe J.ExecuteCommandOptions
+    -- | The commands to be executed on the server.
+    -- If you set `executeCommandHandler`, you **must** set this.
+    , executeCommandCommands           :: Maybe [Text]
     }
 
 instance Default Options where
   def = Options Nothing Nothing Nothing Nothing Nothing
-                Nothing Nothing Nothing Nothing Nothing
+                Nothing Nothing Nothing
 
 -- | A function to publish diagnostics. It aggregates all diagnostics pertaining
 -- to a particular version of a document, by source, and sends a
@@ -839,88 +840,94 @@ initializeRequestHandler' onStartup mHandler tvarCtx req@(J.RequestMessage _ ori
         sendResponse tvarCtx $ RspError $ makeResponseError (J.responseId origId) errResp
 
       Nothing -> do
-
-        let
-          h = resHandlers ctx
-          o = resOptions  ctx
-
-          supported (Just _) = Just True
-          supported Nothing   = Nothing
-
-          singleton :: a -> [a]
-          singleton x = [x]
-
-          completionProvider
-            | isJust $ completionHandler h = Just $
-                J.CompletionOptions
-                  (Just $ isJust $ completionResolveHandler h)
-                  (map singleton <$> completionTriggerCharacters o)
-                  (map singleton <$> completionAllCommitCharacters o)
-            | otherwise = Nothing
-
-          codeActionProvider
-            | isJust $ codeActionHandler h = Just (J.CodeActionOptions (codeActionKinds o))
-            | otherwise = Just (J.CodeActionOptionsStatic False)
-
-          signatureHelpProvider
-            | isJust $ signatureHelpHandler h = Just $
-                J.SignatureHelpOptions
-                  (map singleton <$> signatureHelpTriggerCharacters o)
-                  (map singleton <$> signatureHelpRetriggerCharacters o)
-            | otherwise = Nothing
-
-          documentOnTypeFormattingProvider
-            | isJust $ documentOnTypeFormattingHandler h
-            , Just (first :| rest) <- documentOnTypeFormattingTriggerCharacters o = Just $
-                J.DocumentOnTypeFormattingOptions (T.pack [first]) (Just (map (T.pack . singleton) rest))
-            | isJust $ documentOnTypeFormattingHandler h
-            , Nothing <- documentOnTypeFormattingTriggerCharacters o =
-                error "documentOnTypeFormattingTriggerCharacters needs to be set if a documentOnTypeFormattingHandler is set"
-            | otherwise = Nothing
-
-          sync = case textDocumentSync o of
-                  Just x -> Just (J.TDSOptions x)
-                  Nothing -> Nothing
-
-          workspace = J.WorkspaceOptions workspaceFolder
-          workspaceFolder = case didChangeWorkspaceFoldersNotificationHandler h of
-            Just _ -> Just $
-              -- sign up to receive notifications
-              J.WorkspaceFolderOptions (Just True) (Just (J.WorkspaceFolderChangeNotificationsBool True))
-            Nothing -> Nothing
-
-          capa =
-            J.InitializeResponseCapabilitiesInner
-              { J._textDocumentSync                 = sync
-              , J._hoverProvider                    = supported (hoverHandler h)
-              , J._completionProvider               = completionProvider
-              , J._signatureHelpProvider            = signatureHelpProvider
-              , J._definitionProvider               = supported (definitionHandler h)
-              , J._typeDefinitionProvider           = Just $ J.GotoOptionsStatic $ isJust $ typeDefinitionHandler h
-              , J._implementationProvider           = Just $ J.GotoOptionsStatic $ isJust $ typeDefinitionHandler h
-              , J._referencesProvider               = supported (referencesHandler h)
-              , J._documentHighlightProvider        = supported (documentHighlightHandler h)
-              , J._documentSymbolProvider           = supported (documentSymbolHandler h)
-              , J._workspaceSymbolProvider          = supported (workspaceSymbolHandler h)
-              , J._codeActionProvider               = codeActionProvider
-              , J._codeLensProvider                 = Just $ J.CodeLensOptions $ supported $ codeLensResolveHandler h
-              , J._documentFormattingProvider       = supported (documentFormattingHandler h)
-              , J._documentRangeFormattingProvider  = supported (documentRangeFormattingHandler h)
-              , J._documentOnTypeFormattingProvider = documentOnTypeFormattingProvider
-              , J._renameProvider                   = Just $ J.RenameOptionsStatic $ isJust $ renameHandler h
-              , J._documentLinkProvider             = Just $ J.DocumentLinkOptions $ Just $ isJust $ documentLinkResolveHandler h
-              , J._colorProvider                    = colorProvider o
-              , J._foldingRangeProvider             = foldingRangeProvider o
-              , J._executeCommandProvider           = executeCommandProvider o
-              , J._workspace                        = Just workspace
-              -- TODO: Add something for experimental
-              , J._experimental                     = Nothing :: Maybe J.Value
-              }
-
-          -- TODO: wrap this up into a fn to create a response message
-          res  = J.ResponseMessage "2.0" (J.responseId origId) (Just $ J.InitializeResponseCapabilities capa) Nothing
+        let capa = serverCapabilities (resOptions ctx) (resHandlers ctx)
+            -- TODO: wrap this up into a fn to create a response message
+            res  = J.ResponseMessage "2.0" (J.responseId origId) (Just $ J.InitializeResponseCapabilities capa) Nothing
 
         sendResponse tvarCtx $ RspInitialize res
+
+-- | Infers the capabilities based on register handlers, and sets the appropriate options.
+serverCapabilities :: Options -> Handlers -> J.InitializeResponseCapabilitiesInner
+serverCapabilities o h =
+  J.InitializeResponseCapabilitiesInner
+    { J._textDocumentSync                 = sync
+    , J._hoverProvider                    = supported (hoverHandler h)
+    , J._completionProvider               = completionProvider
+    , J._signatureHelpProvider            = signatureHelpProvider
+    , J._definitionProvider               = supported (definitionHandler h)
+    , J._typeDefinitionProvider           = Just $ J.GotoOptionsStatic $ isJust $ typeDefinitionHandler h
+    , J._implementationProvider           = Just $ J.GotoOptionsStatic $ isJust $ typeDefinitionHandler h
+    , J._referencesProvider               = supported (referencesHandler h)
+    , J._documentHighlightProvider        = supported (documentHighlightHandler h)
+    , J._documentSymbolProvider           = supported (documentSymbolHandler h)
+    , J._workspaceSymbolProvider          = supported (workspaceSymbolHandler h)
+    , J._codeActionProvider               = codeActionProvider
+    , J._codeLensProvider                 = Just $ J.CodeLensOptions $ supported $ codeLensResolveHandler h
+    , J._documentFormattingProvider       = supported (documentFormattingHandler h)
+    , J._documentRangeFormattingProvider  = supported (documentRangeFormattingHandler h)
+    , J._documentOnTypeFormattingProvider = documentOnTypeFormattingProvider
+    , J._renameProvider                   = Just $ J.RenameOptionsStatic $ isJust $ renameHandler h
+    , J._documentLinkProvider             = Just $ J.DocumentLinkOptions $ Just $ isJust $ documentLinkResolveHandler h
+    , J._colorProvider                    = Just $ J.ColorOptionsStatic $ isJust $ documentColorHandler h
+    , J._foldingRangeProvider             = Just $ J.FoldingRangeOptionsStatic $ isJust $ foldingRangeHandler h
+    , J._executeCommandProvider           = executeCommandProvider
+    , J._workspace                        = Just workspace
+    -- TODO: Add something for experimental
+    , J._experimental                     = Nothing :: Maybe J.Value
+    }
+  where
+    supported (Just _) = Just True
+    supported Nothing   = Nothing
+
+    singleton :: a -> [a]
+    singleton x = [x]
+
+    completionProvider
+      | isJust $ completionHandler h = Just $
+          J.CompletionOptions
+            (Just $ isJust $ completionResolveHandler h)
+            (map singleton <$> completionTriggerCharacters o)
+            (map singleton <$> completionAllCommitCharacters o)
+      | otherwise = Nothing
+
+    codeActionProvider
+      | isJust $ codeActionHandler h = Just (J.CodeActionOptions (codeActionKinds o))
+      | otherwise = Just (J.CodeActionOptionsStatic False)
+
+    signatureHelpProvider
+      | isJust $ signatureHelpHandler h = Just $
+          J.SignatureHelpOptions
+            (map singleton <$> signatureHelpTriggerCharacters o)
+            (map singleton <$> signatureHelpRetriggerCharacters o)
+      | otherwise = Nothing
+
+    documentOnTypeFormattingProvider
+      | isJust $ documentOnTypeFormattingHandler h
+      , Just (first :| rest) <- documentOnTypeFormattingTriggerCharacters o = Just $
+          J.DocumentOnTypeFormattingOptions (T.pack [first]) (Just (map (T.pack . singleton) rest))
+      | isJust $ documentOnTypeFormattingHandler h
+      , Nothing <- documentOnTypeFormattingTriggerCharacters o =
+          error "documentOnTypeFormattingTriggerCharacters needs to be set if a documentOnTypeFormattingHandler is set"
+      | otherwise = Nothing
+
+    executeCommandProvider
+      | isJust $ executeCommandHandler h
+      , Just cmds <- executeCommandCommands o = Just (J.ExecuteCommandOptions (J.List cmds))
+      | isJust $ executeCommandHandler h
+      , Nothing <- executeCommandCommands o =
+          error "executeCommandCommands needs to be set if a executeCommandHandler is set"
+      | otherwise = Nothing
+
+    sync = case textDocumentSync o of
+            Just x -> Just (J.TDSOptions x)
+            Nothing -> Nothing
+
+    workspace = J.WorkspaceOptions workspaceFolder
+    workspaceFolder = case didChangeWorkspaceFoldersNotificationHandler h of
+      Just _ -> Just $
+        -- sign up to receive notifications
+        J.WorkspaceFolderOptions (Just True) (Just (J.WorkspaceFolderChangeNotificationsBool True))
+      Nothing -> Nothing
 
 progressCancelHandler :: TVar (LanguageContextData config) -> J.WorkDoneProgressCancelNotification -> IO ()
 progressCancelHandler tvarCtx (J.NotificationMessage _ _ (J.WorkDoneProgressCancelParams tid)) = do

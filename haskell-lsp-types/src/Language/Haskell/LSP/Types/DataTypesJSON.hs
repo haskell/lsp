@@ -487,7 +487,7 @@ data TextDocumentSyncOptions =
       -- | Will save wait until requests are sent to the server.
     , _willSaveWaitUntil :: Maybe Bool
 
-      -- |Save notifications are sent to the server.
+      -- | Save notifications are sent to the server.
     , _save              :: Maybe SaveOptions
     } deriving (Show, Read, Eq)
 
