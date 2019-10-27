@@ -846,7 +846,7 @@ initializeRequestHandler' onStartup mHandler tvarCtx req@(J.RequestMessage _ ori
 
         sendResponse tvarCtx $ RspInitialize res
 
--- | Infers the capabilities based on register handlers, and sets the appropriate options.
+-- | Infers the capabilities based on registered handlers, and sets the appropriate options.
 serverCapabilities :: Options -> Handlers -> J.InitializeResponseCapabilitiesInner
 serverCapabilities o h =
   J.InitializeResponseCapabilitiesInner
