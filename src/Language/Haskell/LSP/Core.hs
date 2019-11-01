@@ -29,7 +29,6 @@ module Language.Haskell.LSP.Core (
   ) where
 
 import           Control.Concurrent.STM
-import           Control.Concurrent
 import           Control.Concurrent.Async
 import qualified Control.Exception as E
 import           Control.Monad
@@ -64,7 +63,6 @@ import qualified System.Log.Handler as LH
 import qualified System.Log.Handler.Simple as LHS
 import           System.Log.Logger
 import qualified System.Log.Logger as L
-import Data.Hashable
 
 -- ---------------------------------------------------------------------
 {-# ANN module ("HLint: ignore Eta reduce"         :: String) #-}

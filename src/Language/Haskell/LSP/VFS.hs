@@ -67,7 +67,6 @@ data VirtualFile =
   VirtualFile {
       _version :: Int
     , _text    :: Rope
-    , _tmp_file :: Maybe FilePath
     } deriving (Show)
 
 type VFSMap = Map.Map J.NormalizedUri VirtualFile
@@ -87,7 +86,7 @@ openVFS :: VFS -> J.DidOpenTextDocumentNotification -> IO VFS
 openVFS vfs (J.NotificationMessage _ _ params) = do
   let J.DidOpenTextDocumentParams
          (J.TextDocumentItem uri _ version text) = params
-  return $ updateVFS (Map.insert (J.toNormalizedUri uri) (VirtualFile version (Rope.fromText text) Nothing)) vfs
+  return $ updateVFS (Map.insert (J.toNormalizedUri uri) (VirtualFile version (Rope.fromText text))) vfs
 
 -- ---------------------------------------------------------------------
 
@@ -97,13 +96,13 @@ changeFromClientVFS vfs@VFS{vfsMap} (J.NotificationMessage _ _ params) = do
     J.DidChangeTextDocumentParams vid (J.List changes) = params
     J.VersionedTextDocumentIdentifier (J.toNormalizedUri -> uri) version = vid
   case Map.lookup uri vfsMap of
-    Just (VirtualFile _ str _) -> do
+    Just (VirtualFile _ str) -> do
       traceEventIO "START applyChanges"
       let str' = applyChanges str changes
       -- the client shouldn't be sending over a null version, only the server.
       logs $ "Apply changes:" ++ show changes ++ " to " ++ show uri
       traceEventIO "STOP applyChanges"
-      return $ updateVFS (Map.insert uri (VirtualFile (fromMaybe 0 version) str' Nothing)) vfs
+      return $ updateVFS (Map.insert uri (VirtualFile (fromMaybe 0 version) str')) vfs
     Nothing -> do
       logs $ "haskell-lsp:changeVfs:can't find uri:" ++ show uri
       return vfs
@@ -145,14 +144,14 @@ changeFromServerVFS initVfs (J.RequestMessage _ _ _ params) = do
 
 -- ---------------------------------------------------------------------
 virtualFileName :: FilePath -> J.NormalizedUri -> VirtualFile -> FilePath
-virtualFileName prefix uri (VirtualFile ver _ _) =
+virtualFileName prefix uri (VirtualFile ver _) =
   prefix </> show (hash (J.fromNormalizedUri uri)) ++ "-" ++ show ver ++ ".hs"
 
 persistFileVFS :: VFS -> J.NormalizedUri -> (FilePath, IO ())
 persistFileVFS vfs uri =
   case Map.lookup uri (vfsMap vfs) of
     Nothing -> error ("File not found in VFS: " ++ show uri ++ show vfs)
-    Just vf@(VirtualFile _v txt tfile) ->
+    Just vf@(VirtualFile _v txt) ->
       let tfn = virtualFileName (vfsTempDir vfs) uri vf
           action = do
             exists <- doesFileExist tfn
@@ -231,7 +230,7 @@ data PosPrefixInfo = PosPrefixInfo
   } deriving (Show,Eq)
 
 getCompletionPrefix :: (Monad m) => J.Position -> VirtualFile -> m (Maybe PosPrefixInfo)
-getCompletionPrefix pos@(J.Position l c) (VirtualFile _ yitext _) =
+getCompletionPrefix pos@(J.Position l c) (VirtualFile _ ropetext) =
       return $ Just $ fromMaybe (PosPrefixInfo "" "" "" pos) $ do -- Maybe monad
         let headMaybe [] = Nothing
             headMaybe (x:_) = Just x
@@ -239,7 +238,7 @@ getCompletionPrefix pos@(J.Position l c) (VirtualFile _ yitext _) =
             lastMaybe xs = Just $ last xs
 
         curLine <- headMaybe $ T.lines $ Rope.toText
-                             $ fst $ Rope.splitAtLine 1 $ snd $ Rope.splitAtLine l yitext
+                             $ fst $ Rope.splitAtLine 1 $ snd $ Rope.splitAtLine l ropetext
         let beforePos = T.take c curLine
         curWord <- case T.last beforePos of
                      ' ' -> return "" -- don't count abc as the curword in 'abc '
@@ -258,10 +257,9 @@ getCompletionPrefix pos@(J.Position l c) (VirtualFile _ yitext _) =
 -- ---------------------------------------------------------------------
 
 rangeLinesFromVfs :: VirtualFile -> J.Range -> T.Text
-rangeLinesFromVfs (VirtualFile _ yitext _) (J.Range (J.Position lf _cf) (J.Position lt _ct)) = r
+rangeLinesFromVfs (VirtualFile _ ropetext) (J.Range (J.Position lf _cf) (J.Position lt _ct)) = r
   where
-    (_ ,s1) = Rope.splitAtLine lf yitext
+    (_ ,s1) = Rope.splitAtLine lf ropetext
     (s2, _) = Rope.splitAtLine (lt - lf) s1
     r = Rope.toText s2
-
 -- ---------------------------------------------------------------------
