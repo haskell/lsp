@@ -70,6 +70,7 @@ import System.Directory
 import System.IO
 import System.Process (ProcessHandle())
 import System.Timeout
+import System.IO.Temp
 
 -- | A session representing one instance of launching and connecting to a server.
 --
@@ -220,8 +221,10 @@ runSessionWithHandles serverIn serverOut serverProc serverHandler config caps ro
   mainThreadId <- myThreadId
 
   let context = SessionContext serverIn absRootDir messageChan reqMap initRsp config caps
-      initState = SessionState (IdInt 0) mempty mempty 0 False Nothing
-      runSession' = runSession context initState
+      initState tmp_dir = SessionState (IdInt 0) (VFS mempty tmp_dir)
+                                       mempty 0 False Nothing
+      runSession' ses = withSystemTempDirectory "lsp-test" $ \tmp_dir ->
+                      runSession context (initState tmp_dir) ses
 
       errorHandler = throwTo mainThreadId :: SessionException -> IO()
       serverListenerLauncher =
@@ -280,8 +283,8 @@ updateState (ReqApplyWorkspaceEdit r) = do
   forM_ bumpedVersions $ \(VersionedTextDocumentIdentifier uri v) ->
     modify $ \s ->
       let oldVFS = vfs s
-          update (VirtualFile oldV t mf) = VirtualFile (fromMaybe oldV v) t mf
-          newVFS = Map.adjust update (toNormalizedUri uri) oldVFS
+          update (VirtualFile oldV t) = VirtualFile (fromMaybe oldV v) t
+          newVFS = updateVFS (Map.adjust update (toNormalizedUri uri)) oldVFS
       in s { vfs = newVFS }
 
   where checkIfNeedsOpened uri = do
@@ -289,7 +292,7 @@ updateState (ReqApplyWorkspaceEdit r) = do
           ctx <- ask
 
           -- if its not open, open it
-          unless (toNormalizedUri uri `Map.member` oldVFS) $ do
+          unless (toNormalizedUri uri `Map.member` (vfsMap oldVFS)) $ do
             let fp = fromJust $ uriToFilePath uri
             contents <- liftIO $ T.readFile fp
             let item = TextDocumentItem (filePathToUri fp) "" 0 contents
