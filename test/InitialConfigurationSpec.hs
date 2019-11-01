@@ -8,12 +8,13 @@ import           Data.Aeson
 import           Data.Default
 import           Language.Haskell.LSP.Core
 import           Language.Haskell.LSP.Types
+import           Language.Haskell.LSP.VFS
 import           Language.Haskell.LSP.Types.Capabilities
 import           Test.Hspec
 
 spec :: Spec
 spec =
-  describe "initial configuration" $ it "stores initial configuration data" $ do
+  describe "initial configuration" $ it "stores initial configuration data" $ initVFS $ \vfs -> do
 
     lfVar <- newEmptyMVar
 
@@ -40,6 +41,7 @@ spec =
                                                         tvarLspId
                                                         (const $ return ())
                                                         Nothing
+                                                        vfs
 
     let putMsg msg =
           let jsonStr = encode msg in handleMessage initCb tvarCtx jsonStr

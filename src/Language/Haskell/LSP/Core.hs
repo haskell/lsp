@@ -29,6 +29,7 @@ module Language.Haskell.LSP.Core (
   ) where
 
 import           Control.Concurrent.STM
+import           Control.Concurrent
 import           Control.Concurrent.Async
 import qualified Control.Exception as E
 import           Control.Monad
@@ -63,6 +64,7 @@ import qualified System.Log.Handler as LH
 import qualified System.Log.Handler.Simple as LHS
 import           System.Log.Logger
 import qualified System.Log.Logger as L
+import Data.Hashable
 
 -- ---------------------------------------------------------------------
 {-# ANN module ("HLint: ignore Eta reduce"         :: String) #-}
@@ -498,17 +500,18 @@ hwf h tvarDat json = do
 -- ---------------------------------------------------------------------
 
 getVirtualFile :: TVar (LanguageContextData config) -> J.NormalizedUri -> IO (Maybe VirtualFile)
-getVirtualFile tvarDat uri = Map.lookup uri . resVFS <$> readTVarIO tvarDat
+getVirtualFile tvarDat uri = Map.lookup uri . vfsMap . resVFS <$> readTVarIO tvarDat
+
 
 -- | Dump the current text for a given VFS file to a temporary file,
 -- and return the path to the file.
 persistVirtualFile :: TVar (LanguageContextData config) -> J.NormalizedUri -> IO FilePath
-persistVirtualFile tvarDat uri = do
-  st <- readTVarIO tvarDat
+persistVirtualFile tvarDat uri = join $ atomically $ do
+  st <- readTVar tvarDat
   let vfs = resVFS st
       revMap = reverseMap st
 
-  (fn, new_vfs) <- persistFileVFS vfs uri
+  let (fn, write) = persistFileVFS vfs uri
   let revMap' =
         -- TODO: Does the VFS make sense for URIs which are not files?
         -- The reverse map should perhaps be (FilePath -> URI)
@@ -516,9 +519,8 @@ persistVirtualFile tvarDat uri = do
           Just uri_fp -> Map.insert fn uri_fp revMap
           Nothing -> revMap
 
-  atomically $ modifyTVar' tvarDat (\d -> d { resVFS = new_vfs
-                                            , reverseMap = revMap' })
-  return fn
+  modifyTVar' tvarDat (\d -> d { reverseMap = revMap' })
+  return (fn <$ write)
 
 -- TODO: should this function return a URI?
 -- | If the contents of a VFS has been dumped to a temporary file, map
@@ -567,9 +569,9 @@ _ERR_MSG_URL = [ "`stack update` and install new haskell-lsp."
 -- |
 --
 --
-defaultLanguageContextData :: Handlers -> Options -> LspFuncs config -> TVar Int -> SendFunc -> Maybe FilePath -> LanguageContextData config
-defaultLanguageContextData h o lf tv sf cf =
-  LanguageContextData _INITIAL_RESPONSE_SEQUENCE h o sf mempty mempty mempty
+defaultLanguageContextData :: Handlers -> Options -> LspFuncs config -> TVar Int -> SendFunc -> Maybe FilePath -> VFS -> LanguageContextData config
+defaultLanguageContextData h o lf tv sf cf vfs =
+  LanguageContextData _INITIAL_RESPONSE_SEQUENCE h o sf vfs mempty mempty
                       Nothing tv lf cf mempty defaultProgressData
 
 defaultProgressData :: ProgressData

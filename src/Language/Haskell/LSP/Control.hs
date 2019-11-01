@@ -31,6 +31,7 @@ import           Data.Monoid
 import           Language.Haskell.LSP.Capture
 import qualified Language.Haskell.LSP.Core as Core
 import           Language.Haskell.LSP.Messages
+import           Language.Haskell.LSP.VFS
 import           Language.Haskell.LSP.Utility
 import           System.IO
 import           System.FilePath
@@ -83,10 +84,10 @@ runWithHandles hin hout initializeCallbacks h o captureFp = do
   let lf = error "LifeCycle error, ClientCapabilities not set yet via initialize maessage"
 
   tvarId <- atomically $ newTVar 0
+  initVFS $ \vfs -> do
+    tvarDat <- atomically $ newTVar $ Core.defaultLanguageContextData h o lf tvarId sendFunc timestampCaptureFp vfs
 
-  tvarDat <- atomically $ newTVar $ Core.defaultLanguageContextData h o lf tvarId sendFunc timestampCaptureFp
-
-  ioLoop hin initializeCallbacks tvarDat
+    ioLoop hin initializeCallbacks tvarDat
 
   return 1
 
