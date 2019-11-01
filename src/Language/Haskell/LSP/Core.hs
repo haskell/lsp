@@ -33,7 +33,7 @@ import           Control.Concurrent.Async
 import qualified Control.Exception as E
 import           Control.Monad
 import           Control.Monad.IO.Class
-import           Control.Lens ( (<&>), (^.) )
+import           Control.Lens ( (<&>), (^.), (^?), _Just )
 import qualified Data.Aeson as J
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as B
@@ -840,15 +840,17 @@ initializeRequestHandler' onStartup mHandler tvarCtx req@(J.RequestMessage _ ori
         sendResponse tvarCtx $ RspError $ makeResponseError (J.responseId origId) errResp
 
       Nothing -> do
-        let capa = serverCapabilities (resOptions ctx) (resHandlers ctx)
+        let capa = serverCapabilities (getCapabilities params) (resOptions ctx) (resHandlers ctx)
             -- TODO: wrap this up into a fn to create a response message
             res  = J.ResponseMessage "2.0" (J.responseId origId) (Just $ J.InitializeResponseCapabilities capa) Nothing
 
         sendResponse tvarCtx $ RspInitialize res
 
 -- | Infers the capabilities based on registered handlers, and sets the appropriate options.
-serverCapabilities :: Options -> Handlers -> J.InitializeResponseCapabilitiesInner
-serverCapabilities o h =
+-- A provider should be set to Nothing if the server does not support it, unless it is a
+-- static option.
+serverCapabilities :: C.ClientCapabilities -> Options -> Handlers -> J.InitializeResponseCapabilitiesInner
+serverCapabilities clientCaps o h =
   J.InitializeResponseCapabilitiesInner
     { J._textDocumentSync                 = sync
     , J._hoverProvider                    = supported (hoverHandler h)
@@ -862,12 +864,14 @@ serverCapabilities o h =
     , J._documentSymbolProvider           = supported (documentSymbolHandler h)
     , J._workspaceSymbolProvider          = supported (workspaceSymbolHandler h)
     , J._codeActionProvider               = codeActionProvider
-    , J._codeLensProvider                 = Just $ J.CodeLensOptions $ supported $ codeLensResolveHandler h
+    , J._codeLensProvider                 = supported' (codeLensHandler h) $ J.CodeLensOptions $
+                                              supported (codeLensResolveHandler h)
     , J._documentFormattingProvider       = supported (documentFormattingHandler h)
     , J._documentRangeFormattingProvider  = supported (documentRangeFormattingHandler h)
     , J._documentOnTypeFormattingProvider = documentOnTypeFormattingProvider
     , J._renameProvider                   = Just $ J.RenameOptionsStatic $ isJust $ renameHandler h
-    , J._documentLinkProvider             = Just $ J.DocumentLinkOptions $ Just $ isJust $ documentLinkResolveHandler h
+    , J._documentLinkProvider             = supported' (documentLinkHandler h) $ J.DocumentLinkOptions $
+                                              Just $ isJust $ documentLinkResolveHandler h
     , J._colorProvider                    = Just $ J.ColorOptionsStatic $ isJust $ documentColorHandler h
     , J._foldingRangeProvider             = Just $ J.FoldingRangeOptionsStatic $ isJust $ foldingRangeHandler h
     , J._executeCommandProvider           = executeCommandProvider
@@ -876,8 +880,10 @@ serverCapabilities o h =
     , J._experimental                     = Nothing :: Maybe J.Value
     }
   where
-    supported (Just _) = Just True
-    supported Nothing   = Nothing
+    supported x = supported' x True
+
+    supported' (Just _) = Just
+    supported' Nothing = const Nothing
 
     singleton :: a -> [a]
     singleton x = [x]
@@ -890,8 +896,13 @@ serverCapabilities o h =
             (map singleton <$> completionAllCommitCharacters o)
       | otherwise = Nothing
 
+    clientSupportsCodeActionKinds = isJust $
+      clientCaps ^? J.textDocument . _Just . J.codeAction . _Just . J.codeActionLiteralSupport
+
     codeActionProvider
-      | isJust $ codeActionHandler h = Just (J.CodeActionOptions (codeActionKinds o))
+      | clientSupportsCodeActionKinds
+      , isJust $ codeActionHandler h = Just $ maybe (J.CodeActionOptionsStatic True) (J.CodeActionOptions . Just) (codeActionKinds o)
+      | isJust $ codeActionHandler h = Just (J.CodeActionOptionsStatic True)
       | otherwise = Just (J.CodeActionOptionsStatic False)
 
     signatureHelpProvider
