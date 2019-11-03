@@ -18,3 +18,6 @@ stack*.yaml.lock
 .hspec-failures
 /haskell-lsp-types/dist/
 /haskell-lsp-types/dist-newstyle/
+/haskell-lsp-types/TAGS
+/haskell-lsp-types/tags
+/haskell-lsp-types/ctags
