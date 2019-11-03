@@ -69,27 +69,30 @@ type VFS = Map.Map J.NormalizedUri VirtualFile
 
 -- ---------------------------------------------------------------------
 
-openVFS :: VFS -> J.DidOpenTextDocumentNotification -> IO VFS
-openVFS vfs (J.NotificationMessage _ _ params) = do
+openVFS :: VFS -> J.DidOpenTextDocumentNotification -> (VFS, [String])
+openVFS vfs (J.NotificationMessage _ _ params) =
   let J.DidOpenTextDocumentParams
          (J.TextDocumentItem uri _ version text) = params
-  return $ Map.insert (J.toNormalizedUri uri) (VirtualFile version (Rope.fromText text) Nothing) vfs
+  in (Map.insert (J.toNormalizedUri uri) (VirtualFile version (Rope.fromText text) Nothing) vfs
+     , [])
 
 -- ---------------------------------------------------------------------
 
-changeFromClientVFS :: VFS -> J.DidChangeTextDocumentNotification -> IO VFS
-changeFromClientVFS vfs (J.NotificationMessage _ _ params) = do
+changeFromClientVFS :: VFS -> J.DidChangeTextDocumentNotification -> (VFS,[String])
+changeFromClientVFS vfs (J.NotificationMessage _ _ params) =
   let
     J.DidChangeTextDocumentParams vid (J.List changes) = params
     J.VersionedTextDocumentIdentifier (J.toNormalizedUri -> uri) version = vid
-  case Map.lookup uri vfs of
-    Just (VirtualFile _ str _) -> do
-      let str' = applyChanges str changes
-      -- the client shouldn't be sending over a null version, only the server.
-      return $ Map.insert uri (VirtualFile (fromMaybe 0 version) str' Nothing) vfs
-    Nothing -> do
-      logs $ "haskell-lsp:changeVfs:can't find uri:" ++ show uri
-      return vfs
+  in
+    case Map.lookup uri vfs of
+      Just (VirtualFile _ str _) ->
+        let str' = applyChanges str changes
+        -- the client shouldn't be sending over a null version, only the server.
+        in (Map.insert uri (VirtualFile (fromMaybe 0 version) str' Nothing) vfs, [])
+      Nothing ->
+        -- logs $ "haskell-lsp:changeVfs:can't find uri:" ++ show uri
+        -- return vfs
+        (vfs, ["haskell-lsp:changeVfs:can't find uri:" ++ show uri])
 
 -- ---------------------------------------------------------------------
 
@@ -110,8 +113,11 @@ changeFromServerVFS initVfs (J.RequestMessage _ _ _ params) = do
     changeToTextDocumentEdit acc uri edits =
       acc ++ [J.TextDocumentEdit (J.VersionedTextDocumentIdentifier uri (Just 0)) edits]
 
+    -- applyEdits :: [J.TextDocumentEdit] -> VFS
+    applyEdits :: [J.TextDocumentEdit] -> IO VFS
     applyEdits = foldM f initVfs . sortOn (^. J.textDocument . J.version)
 
+    f :: VFS -> J.TextDocumentEdit -> IO VFS
     f vfs (J.TextDocumentEdit vid (J.List edits)) = do
       -- all edits are supposed to be applied at once
       -- so apply from bottom up so they don't affect others
@@ -119,7 +125,9 @@ changeFromServerVFS initVfs (J.RequestMessage _ _ _ params) = do
           changeEvents = map editToChangeEvent sortedEdits
           ps = J.DidChangeTextDocumentParams vid (J.List changeEvents)
           notif = J.NotificationMessage "" J.TextDocumentDidChange ps
-      changeFromClientVFS vfs notif
+      let (vfs',ls) = changeFromClientVFS vfs notif
+      mapM_ logs ls
+      return vfs'
 
     editToChangeEvent (J.TextEdit range text) = J.TextDocumentContentChangeEvent (Just range) Nothing text
 
@@ -138,10 +146,10 @@ persistFileVFS vfs uri =
 
 -- ---------------------------------------------------------------------
 
-closeVFS :: VFS -> J.DidCloseTextDocumentNotification -> IO VFS
-closeVFS vfs (J.NotificationMessage _ _ params) = do
+closeVFS :: VFS -> J.DidCloseTextDocumentNotification -> (VFS, [String])
+closeVFS vfs (J.NotificationMessage _ _ params) =
   let J.DidCloseTextDocumentParams (J.TextDocumentIdentifier uri) = params
-  return $ Map.delete (J.toNormalizedUri uri) vfs
+  in (Map.delete (J.toNormalizedUri uri) vfs,[])
 
 -- ---------------------------------------------------------------------
 {-

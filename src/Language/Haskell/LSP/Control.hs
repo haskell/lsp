@@ -83,8 +83,9 @@ runWithHandles hin hout initializeCallbacks h o captureFp = do
   let lf = error "LifeCycle error, ClientCapabilities not set yet via initialize maessage"
 
   tvarId <- atomically $ newTVar 0
+  mv <- newMVar (Core.VFSData mempty mempty)
 
-  tvarDat <- atomically $ newTVar $ Core.defaultLanguageContextData h o lf tvarId sendFunc timestampCaptureFp
+  tvarDat <- atomically $ newTVar $ Core.defaultLanguageContextData h o lf tvarId sendFunc mv timestampCaptureFp
 
   ioLoop hin initializeCallbacks tvarDat
 
