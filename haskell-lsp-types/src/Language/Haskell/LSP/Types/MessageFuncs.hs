@@ -59,6 +59,7 @@ module Language.Haskell.LSP.Types.MessageFuncs (
   , fmClientDocumentLinkRequest
   , fmClientDocumentLinkResolveRequest
   , fmClientRenameRequest
+  , fmClientPrepareRenameRequest
   ) where
 
 import qualified Data.Aeson as J
