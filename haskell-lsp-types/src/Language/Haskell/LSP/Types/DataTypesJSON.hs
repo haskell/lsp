@@ -211,13 +211,32 @@ interface CompletionOptions {
      * The characters that trigger completion automatically.
      */
     triggerCharacters?: string[];
+
+    /**
+     * The list of all possible characters that commit a completion. This field can be used
+     * if clients don't support individual commmit characters per completion item. See
+     * `ClientCapabilities.textDocument.completion.completionItem.commitCharactersSupport`.
+     *
+     * If a server provides both `allCommitCharacters` and commit characters on an individual
+     * completion item the once on the completion item win.
+     *
+     * @since 3.2.0
+     */
+    allCommitCharacters?: string[];
 }
 -}
 
 data CompletionOptions =
   CompletionOptions
-    { _resolveProvider   :: Maybe Bool
-    , _triggerCharacters :: Maybe [String]
+    { _resolveProvider     :: Maybe Bool
+    -- | The characters that trigger completion automatically.
+    , _triggerCharacters   :: Maybe [String]
+    -- | The list of all possible characters that commit a completion. This field can be used
+    -- if clients don't support individual commmit characters per completion item. See
+    -- `_commitCharactersSupport`.
+    -- Since LSP 3.2.0
+    -- @since 0.18.0.0
+    , _allCommitCharacters :: Maybe [String]
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions {omitNothingFields = True } ''CompletionOptions
@@ -232,11 +251,28 @@ interface SignatureHelpOptions {
      * The characters that trigger signature help automatically.
      */
     triggerCharacters?: string[];
+    /**
+     * List of characters that re-trigger signature help.
+     *
+     * These trigger characters are only active when signature help is already showing. All trigger characters
+     * are also counted as re-trigger characters.
+     *
+     * @since 3.15.0
+     */
 -}
 
 data SignatureHelpOptions =
   SignatureHelpOptions
-    { _triggerCharacters :: Maybe [String]
+    { -- | The characters that trigger signature help automatically.
+      _triggerCharacters   :: Maybe [String]
+
+    -- | List of characters that re-trigger signature help.
+    -- These trigger characters are only active when signature help is already showing. All trigger characters
+    -- are also counted as re-trigger characters.
+    --
+    -- Since LSP 3.15.0
+    -- @since 0.18.0.0
+    , _retriggerCharacters :: Maybe [String]
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''SignatureHelpOptions
@@ -304,7 +340,7 @@ interface DocumentOnTypeFormattingOptions {
 data DocumentOnTypeFormattingOptions =
   DocumentOnTypeFormattingOptions
     { _firstTriggerCharacter :: Text
-    , _moreTriggerCharacter  :: Maybe [String]
+    , _moreTriggerCharacter  :: Maybe [Text]
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''DocumentOnTypeFormattingOptions
@@ -327,7 +363,7 @@ export interface DocumentLinkOptions {
 
 data DocumentLinkOptions =
   DocumentLinkOptions
-    { -- |Document links have a resolve provider as well.
+    { -- | Document links have a resolve provider as well.
       _resolveProvider :: Maybe Bool
     } deriving (Show, Read, Eq)
 
@@ -352,7 +388,7 @@ export interface RenameOptions {
 data RenameOptions =
   RenameOptionsStatic Bool
   | RenameOptions
-    { -- |Renames should be checked and tested before being executed.
+    { -- | Renames should be checked and tested before being executed.
       _prepareProvider :: Maybe Bool
     } deriving (Show, Read, Eq)
 
@@ -451,7 +487,7 @@ data TextDocumentSyncOptions =
       -- | Will save wait until requests are sent to the server.
     , _willSaveWaitUntil :: Maybe Bool
 
-      -- |Save notifications are sent to the server.
+      -- | Save notifications are sent to the server.
     , _save              :: Maybe SaveOptions
     } deriving (Show, Read, Eq)
 
@@ -673,7 +709,7 @@ deriveJSON lspOptions ''WorkspaceFolderOptions
 
 data WorkspaceOptions =
   WorkspaceOptions
-    { -- |The server supports workspace folder. Since LSP 3.6
+    { -- | The server supports workspace folder. Since LSP 3.6
       --
       -- @since 0.7.0.0
       _workspaceFolders :: Maybe WorkspaceFolderOptions
