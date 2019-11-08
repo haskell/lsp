@@ -26,13 +26,11 @@ spec =
         handlers = def
 
     tvarLspId <- newTVarIO 0
-    mvarVfs <- newMVar (VFSData mempty mempty)
     tvarCtx   <- newTVarIO $ defaultLanguageContextData handlers
                                                         def
                                                         undefined
                                                         tvarLspId
                                                         (const $ return ())
-                                                        mvarVfs
                                                         Nothing
                                                         vfs
 

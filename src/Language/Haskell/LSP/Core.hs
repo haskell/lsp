@@ -96,7 +96,7 @@ data ProgressData = ProgressData { progressNextId :: !Int
 
 data VFSData =
   VFSData
-    { vfs :: !VFS
+    { vfsData :: !VFS
     , reverseMap :: !(Map.Map FilePath FilePath)
     }
 
@@ -521,7 +521,7 @@ modifyVFSData tvarDat f = do
 
 -- | Return the 'VirtualFile' associated with a given 'NormalizedUri', if there is one.
 getVirtualFile :: TVar (LanguageContextData config) -> J.NormalizedUri -> IO (Maybe VirtualFile)
-getVirtualFile tvarDat uri = Map.lookup uri . vfsMap . vfs . resVFS <$> readTVarIO tvarDat
+getVirtualFile tvarDat uri = Map.lookup uri . vfsMap . vfsData . resVFS <$> readTVarIO tvarDat
 
 -- | Dump the current text for a given VFS file to a temporary file,
 -- and return the path to the file.
@@ -529,7 +529,7 @@ persistVirtualFile :: TVar (LanguageContextData config) -> J.NormalizedUri -> IO
 persistVirtualFile tvarDat uri = join $ atomically $ do
   st <- readTVar tvarDat
   let vfs_data = resVFS st
-      cur_vfs = vfs vfs_data
+      cur_vfs = vfsData vfs_data
       revMap = reverseMap vfs_data
 
   let (fn, write) = persistFileVFS cur_vfs uri
@@ -916,6 +916,7 @@ serverCapabilities clientCaps o h =
           J.CompletionOptions
             (Just $ isJust $ completionResolveHandler h)
             (map singleton <$> completionTriggerCharacters o)
+            (map singleton <$> completionAllCommitCharacters o)
       | otherwise = Nothing
 
     clientSupportsCodeActionKinds = isJust $
@@ -931,12 +932,13 @@ serverCapabilities clientCaps o h =
       | isJust $ signatureHelpHandler h = Just $
           J.SignatureHelpOptions
             (map singleton <$> signatureHelpTriggerCharacters o)
+            (map singleton <$> signatureHelpRetriggerCharacters o)
       | otherwise = Nothing
 
     documentOnTypeFormattingProvider
       | isJust $ documentOnTypeFormattingHandler h
       , Just (first :| rest) <- documentOnTypeFormattingTriggerCharacters o = Just $
-          J.DocumentOnTypeFormattingOptions (T.pack [first]) (Just (map singleton rest))
+          J.DocumentOnTypeFormattingOptions (T.pack [first]) (Just (map (T.pack . singleton) rest))
       | isJust $ documentOnTypeFormattingHandler h
       , Nothing <- documentOnTypeFormattingTriggerCharacters o =
           error "documentOnTypeFormattingTriggerCharacters needs to be set if a documentOnTypeFormattingHandler is set"
