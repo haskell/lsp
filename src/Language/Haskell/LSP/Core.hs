@@ -1000,13 +1000,13 @@ publishDiagnostics tvarDat maxDiagnosticCount uri version diags = do
 -- | Take the new diagnostics, update the stored diagnostics for the given file
 -- and version, and publish the total to the client.
 flushDiagnosticsBySource :: TVar (LanguageContextData config) -> FlushDiagnosticsBySourceFunc
-flushDiagnosticsBySource tvarDat maxDiagnosticCount msource = do
+flushDiagnosticsBySource tvarDat maxDiagnosticCount msource = join $ atomically $ do
   -- logs $ "haskell-lsp:flushDiagnosticsBySource:source=" ++ show source
-  ctx <- readTVarIO tvarDat
+  ctx <- readTVar tvarDat
   let ds = flushBySource (resDiagnostics ctx) msource
-  atomically $ writeTVar tvarDat $ ctx {resDiagnostics = ds}
+  writeTVar tvarDat $ ctx {resDiagnostics = ds}
   -- Send the updated diagnostics to the client
-  forM_ (Map.keys ds) $ \uri -> do
+  return $ forM_ (Map.keys ds) $ \uri -> do
     -- logs $ "haskell-lsp:flushDiagnosticsBySource:uri=" ++ show uri
     let mdp = getDiagnosticParamsFor maxDiagnosticCount ds uri
     case mdp of
