@@ -851,8 +851,9 @@ initializeRequestHandler' onStartup mHandler tvarCtx req@(J.RequestMessage _ ori
                             (getWfs tvarCtx)
                             withProgress'
                             withIndefiniteProgress'
-    let ctx = ctx0 { resLspFuncs = lspFuncs }
-    atomically $ writeTVar tvarCtx ctx
+    atomically $ modifyTVar tvarCtx (\cur_ctx -> cur_ctx { resLspFuncs = lspFuncs })
+
+    ctx <- readTVarIO tvarCtx
 
     initializationResult <- onStartup lspFuncs
 
