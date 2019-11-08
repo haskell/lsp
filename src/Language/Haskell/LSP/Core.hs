@@ -478,10 +478,8 @@ handleMessageWithConfigChange notification parseConfig mh tvarDat json =
               T.pack $ unwords
                 ["haskell-lsp:configuration parse error.", show req, show err]
           sendErrorLog tvarDat msg
-        Right newConfig -> do
-          -- logs $ "haskell-lsp:hc DidChangeConfigurationNotification got newConfig:" ++ show newConfig
-          let ctx' = ctx { resConfig = Just newConfig }
-          atomically $ modifyTVar' tvarDat (const ctx')
+        Right newConfig ->
+          atomically $ modifyTVar' tvarDat (\ctx' -> ctx' { resConfig = Just newConfig })
       case mh of
         Just h  -> h req
         Nothing -> return ()
