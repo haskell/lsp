@@ -9,6 +9,7 @@
 module Language.Haskell.LSP.Core (
     handleMessage
   , LanguageContextData(..)
+  , VFSData(..)
   , Handler
   , InitializeCallbacks(..)
   , LspFuncs(..)
@@ -28,8 +29,8 @@ module Language.Haskell.LSP.Core (
   , reverseSortEdit
   ) where
 
-import           Control.Concurrent.STM
 import           Control.Concurrent.Async
+import           Control.Concurrent.STM
 import qualified Control.Exception as E
 import           Control.Monad
 import           Control.Monad.IO.Class
@@ -80,8 +81,7 @@ data LanguageContextData config =
   , resHandlers            :: !Handlers
   , resOptions             :: !Options
   , resSendResponse        :: !SendFunc
-  , resVFS                 :: !VFS
-  , reverseMap             :: !(Map.Map FilePath FilePath)
+  , resVFS                 :: !VFSData
   , resDiagnostics         :: !DiagnosticStore
   , resConfig              :: !(Maybe config)
   , resLspId               :: !(TVar Int)
@@ -93,6 +93,12 @@ data LanguageContextData config =
 
 data ProgressData = ProgressData { progressNextId :: !Int
                                  , progressCancel :: !(Map.Map J.ProgressToken (IO ())) }
+
+data VFSData =
+  VFSData
+    { vfs :: !VFS
+    , reverseMap :: !(Map.Map FilePath FilePath)
+    }
 
 -- ---------------------------------------------------------------------
 
@@ -168,6 +174,8 @@ data LspFuncs c =
       -- server-provided function.
     , sendFunc                     :: !SendFunc
     , getVirtualFileFunc           :: !(J.NormalizedUri -> IO (Maybe VirtualFile))
+      -- ^ Function to return the 'VirtualFile' associated with a
+      -- given 'NormalizedUri', if there is one.
     , persistVirtualFileFunc       :: !(J.NormalizedUri -> IO FilePath)
     , reverseFileMapFunc           :: !(IO (FilePath -> FilePath))
     , publishDiagnosticsFunc       :: !PublishDiagnosticsFunc
@@ -306,8 +314,8 @@ instance Default Handlers where
                               Nothing Nothing Nothing Nothing Nothing
 
 -- ---------------------------------------------------------------------
-nop :: a -> b -> IO a
-nop = const . return
+nop :: Maybe (a -> b -> (a,[String]))
+nop = Nothing
 
 
 helper :: J.FromJSON a => (TVar (LanguageContextData config) -> a -> IO ()) -> (TVar (LanguageContextData config) -> J.Value -> IO ())
@@ -325,8 +333,9 @@ helper requestHandler tvarDat json =
           _ -> failLog
         _ -> failLog
 
-handlerMap :: (Show config) => InitializeCallbacks config
-           -> Handlers -> J.ClientMethod -> (TVar (LanguageContextData config) -> J.Value -> IO ())
+handlerMap :: (Show config)
+           => InitializeCallbacks config -> Handlers -> J.ClientMethod
+           -> (TVar (LanguageContextData config) -> J.Value -> IO ())
 -- General
 handlerMap i h J.Initialize                      = handleInitialConfig i (initializeRequestHandler h)
 handlerMap _ h J.Initialized                     = hh nop NotInitialized $ initializedHandler h
@@ -350,12 +359,12 @@ handlerMap _ h J.WorkspaceDidChangeWatchedFiles  = hh nop NotDidChangeWatchedFil
 handlerMap _ h J.WorkspaceSymbol                 = hh nop ReqWorkspaceSymbols $ workspaceSymbolHandler h
 handlerMap _ h J.WorkspaceExecuteCommand         = hh nop ReqExecuteCommand $ executeCommandHandler h
 -- Document
-handlerMap _ h J.TextDocumentDidOpen             = hh openVFS NotDidOpenTextDocument $ didOpenTextDocumentNotificationHandler h
-handlerMap _ h J.TextDocumentDidChange           = hh changeFromClientVFS NotDidChangeTextDocument $ didChangeTextDocumentNotificationHandler h
+handlerMap _ h J.TextDocumentDidOpen             = hh (Just openVFS) NotDidOpenTextDocument $ didOpenTextDocumentNotificationHandler h
+handlerMap _ h J.TextDocumentDidChange           = hh (Just changeFromClientVFS) NotDidChangeTextDocument $ didChangeTextDocumentNotificationHandler h
 handlerMap _ h J.TextDocumentWillSave            = hh nop NotWillSaveTextDocument $ willSaveTextDocumentNotificationHandler h
 handlerMap _ h J.TextDocumentWillSaveWaitUntil   = hh nop ReqWillSaveWaitUntil $ willSaveWaitUntilTextDocHandler h
 handlerMap _ h J.TextDocumentDidSave             = hh nop NotDidSaveTextDocument $ didSaveTextDocumentNotificationHandler h
-handlerMap _ h J.TextDocumentDidClose            = hh closeVFS NotDidCloseTextDocument $ didCloseTextDocumentNotificationHandler h
+handlerMap _ h J.TextDocumentDidClose            = hh (Just closeVFS) NotDidCloseTextDocument $ didCloseTextDocumentNotificationHandler h
 handlerMap _ h J.TextDocumentCompletion          = hh nop ReqCompletion $ completionHandler h
 handlerMap _ h J.CompletionItemResolve           = hh nop ReqCompletionItemResolve $ completionResolveHandler h
 handlerMap _ h J.TextDocumentHover               = hh nop ReqHover $ hoverHandler h
@@ -393,14 +402,19 @@ handlerMap _ h (J.CustomClientMethod _)          = \ctxData val ->
 -- | Adapter from the normal handlers exposed to the library users and the
 -- internal message loop
 hh :: forall b config. (J.FromJSON b)
-   => (VFS -> b -> IO VFS) -> (b -> FromClientMessage) -> Maybe (Handler b) -> TVar (LanguageContextData config) -> J.Value -> IO ()
-hh getVfs wrapper mh tvarDat json = do
+   => Maybe (VFS -> b -> (VFS, [String])) -> (b -> FromClientMessage) -> Maybe (Handler b)
+   -> TVar (LanguageContextData config) -> J.Value -> IO ()
+hh mVfs wrapper mh tvarDat json = do
       case J.fromJSON json of
         J.Success req -> do
-          ctx <- readTVarIO tvarDat
-          vfs' <- getVfs (resVFS ctx) req
-          atomically $ modifyTVar' tvarDat (\c -> c {resVFS = vfs'})
+          case mVfs of
+            Just modifyVfs -> do
+              join $ atomically $ modifyVFSData tvarDat $ \(VFSData vfs rm) ->
+                let (vfs', ls) = modifyVfs vfs req
+                in (VFSData vfs' rm, mapM_ logs ls)
+            Nothing -> return ()
 
+          ctx <- readTVarIO tvarDat
           captureFromClient (wrapper req) (resCaptureFile ctx)
 
           case mh of
@@ -497,19 +511,28 @@ hwf h tvarDat json = do
 
 -- ---------------------------------------------------------------------
 
-getVirtualFile :: TVar (LanguageContextData config) -> J.NormalizedUri -> IO (Maybe VirtualFile)
-getVirtualFile tvarDat uri = Map.lookup uri . vfsMap . resVFS <$> readTVarIO tvarDat
+modifyVFSData :: TVar (LanguageContextData config) -> (VFSData -> (VFSData, a)) -> STM a
+modifyVFSData tvarDat f = do
+  (vfs', a) <- f . resVFS <$> readTVar tvarDat
+  modifyTVar tvarDat $ \vd -> vd { resVFS = vfs' }
+  return a
 
+-- ---------------------------------------------------------------------
+
+-- | Return the 'VirtualFile' associated with a given 'NormalizedUri', if there is one.
+getVirtualFile :: TVar (LanguageContextData config) -> J.NormalizedUri -> IO (Maybe VirtualFile)
+getVirtualFile tvarDat uri = Map.lookup uri . vfsMap . vfs . resVFS <$> readTVarIO tvarDat
 
 -- | Dump the current text for a given VFS file to a temporary file,
 -- and return the path to the file.
 persistVirtualFile :: TVar (LanguageContextData config) -> J.NormalizedUri -> IO FilePath
 persistVirtualFile tvarDat uri = join $ atomically $ do
   st <- readTVar tvarDat
-  let vfs = resVFS st
-      revMap = reverseMap st
+  let vfs_data = resVFS st
+      cur_vfs = vfs vfs_data
+      revMap = reverseMap vfs_data
 
-  let (fn, write) = persistFileVFS vfs uri
+  let (fn, write) = persistFileVFS cur_vfs uri
   let revMap' =
         -- TODO: Does the VFS make sense for URIs which are not files?
         -- The reverse map should perhaps be (FilePath -> URI)
@@ -517,7 +540,7 @@ persistVirtualFile tvarDat uri = join $ atomically $ do
           Just uri_fp -> Map.insert fn uri_fp revMap
           Nothing -> revMap
 
-  modifyTVar' tvarDat (\d -> d { reverseMap = revMap' })
+  modifyVFSData tvarDat (\d -> (d { reverseMap = revMap' }, ()))
   return (fn <$ write)
 
 -- TODO: should this function return a URI?
@@ -526,9 +549,9 @@ persistVirtualFile tvarDat uri = join $ atomically $ do
 reverseFileMap :: TVar (LanguageContextData config)
                -> IO (FilePath -> FilePath)
 reverseFileMap tvarDat = do
-  revMap <- reverseMap <$> readTVarIO tvarDat
-  let f fp = fromMaybe fp $ Map.lookup fp revMap
-  return f
+    vfs <- resVFS <$> readTVarIO tvarDat
+    let f fp = fromMaybe fp . Map.lookup fp . reverseMap $ vfs
+    return f
 
 -- ---------------------------------------------------------------------
 
@@ -569,7 +592,7 @@ _ERR_MSG_URL = [ "`stack update` and install new haskell-lsp."
 --
 defaultLanguageContextData :: Handlers -> Options -> LspFuncs config -> TVar Int -> SendFunc -> Maybe FilePath -> VFS -> LanguageContextData config
 defaultLanguageContextData h o lf tv sf cf vfs =
-  LanguageContextData _INITIAL_RESPONSE_SEQUENCE h o sf vfs mempty mempty
+  LanguageContextData _INITIAL_RESPONSE_SEQUENCE h o sf (VFSData vfs mempty) mempty
                       Nothing tv lf cf mempty defaultProgressData
 
 defaultProgressData :: ProgressData
@@ -893,7 +916,6 @@ serverCapabilities clientCaps o h =
           J.CompletionOptions
             (Just $ isJust $ completionResolveHandler h)
             (map singleton <$> completionTriggerCharacters o)
-            (map singleton <$> completionAllCommitCharacters o)
       | otherwise = Nothing
 
     clientSupportsCodeActionKinds = isJust $
@@ -909,13 +931,12 @@ serverCapabilities clientCaps o h =
       | isJust $ signatureHelpHandler h = Just $
           J.SignatureHelpOptions
             (map singleton <$> signatureHelpTriggerCharacters o)
-            (map singleton <$> signatureHelpRetriggerCharacters o)
       | otherwise = Nothing
 
     documentOnTypeFormattingProvider
       | isJust $ documentOnTypeFormattingHandler h
       , Just (first :| rest) <- documentOnTypeFormattingTriggerCharacters o = Just $
-          J.DocumentOnTypeFormattingOptions (T.pack [first]) (Just (map (T.pack . singleton) rest))
+          J.DocumentOnTypeFormattingOptions (T.pack [first]) (Just (map singleton rest))
       | isJust $ documentOnTypeFormattingHandler h
       , Nothing <- documentOnTypeFormattingTriggerCharacters o =
           error "documentOnTypeFormattingTriggerCharacters needs to be set if a documentOnTypeFormattingHandler is set"
