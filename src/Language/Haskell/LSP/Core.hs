@@ -788,7 +788,7 @@ initializeRequestHandler' onStartup mHandler tvarCtx req@(J.RequestMessage _ ori
                     -> ((Progress -> IO ()) -> IO a) -> IO a)
       withProgressBase indefinite title cancellable f
         | clientSupportsProgress = do
-          sf <- liftIO $ resSendResponse <$> readTVarIO tvarCtx
+          let sf = sendResponse tvarCtx
 
           progId <- getNewProgressId
 
@@ -984,15 +984,16 @@ shutdownRequestHandler tvarCtx req@(J.RequestMessage _ origId _ _) =
 -- and version, and publish the total to the client.
 publishDiagnostics :: TVar (LanguageContextData config) -> PublishDiagnosticsFunc
 publishDiagnostics tvarDat maxDiagnosticCount uri version diags = do
-  ctx <- readTVarIO tvarDat
-  let ds = updateDiagnostics (resDiagnostics ctx) uri version diags
-  atomically $ writeTVar tvarDat $ ctx{resDiagnostics = ds}
-  let mdp = getDiagnosticParamsFor maxDiagnosticCount ds uri
-  case mdp of
-    Nothing -> return ()
-    Just params -> do
-      resSendResponse ctx $ NotPublishDiagnostics
-        $ J.NotificationMessage "2.0" J.TextDocumentPublishDiagnostics params
+  join $ atomically $ do
+    ctx <- readTVar tvarDat
+    let ds = updateDiagnostics (resDiagnostics ctx) uri version diags
+    writeTVar tvarDat $ ctx{resDiagnostics = ds}
+    let mdp = getDiagnosticParamsFor maxDiagnosticCount ds uri
+    return $ case mdp of
+      Nothing -> return ()
+      Just params ->
+        resSendResponse ctx $ NotPublishDiagnostics
+          $ J.NotificationMessage "2.0" J.TextDocumentPublishDiagnostics params
 
 -- ---------------------------------------------------------------------
 
