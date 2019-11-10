@@ -221,10 +221,9 @@ runSessionWithHandles serverIn serverOut serverProc serverHandler config caps ro
   mainThreadId <- myThreadId
 
   let context = SessionContext serverIn absRootDir messageChan reqMap initRsp config caps
-      initState tmp_dir = SessionState (IdInt 0) (VFS mempty tmp_dir)
+      initState vfs = SessionState (IdInt 0) vfs
                                        mempty 0 False Nothing
-      runSession' ses = withSystemTempDirectory "lsp-test" $ \tmp_dir ->
-                      runSession context (initState tmp_dir) ses
+      runSession' ses = initVFS $ \vfs -> runSession context (initState vfs) ses
 
       errorHandler = throwTo mainThreadId :: SessionException -> IO()
       serverListenerLauncher =
