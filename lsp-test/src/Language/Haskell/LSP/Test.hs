@@ -273,7 +273,7 @@ sendNotification TextDocumentDidOpen params = do
       n :: DidOpenTextDocumentNotification
       n = NotificationMessage "2.0" TextDocumentDidOpen params'
   oldVFS <- vfs <$> get
-  newVFS <- liftIO $ openVFS oldVFS n
+  let (newVFS,_) = openVFS oldVFS n
   modify (\s -> s { vfs = newVFS })
   sendMessage n
 
@@ -283,7 +283,7 @@ sendNotification TextDocumentDidClose params = do
       n :: DidCloseTextDocumentNotification
       n = NotificationMessage "2.0" TextDocumentDidClose params'
   oldVFS <- vfs <$> get
-  newVFS <- liftIO $ closeVFS oldVFS n
+  let (newVFS,_) = closeVFS oldVFS n
   modify (\s -> s { vfs = newVFS })
   sendMessage n
 
@@ -292,7 +292,7 @@ sendNotification TextDocumentDidChange params = do
         n :: DidChangeTextDocumentNotification
         n = NotificationMessage "2.0" TextDocumentDidChange params'
     oldVFS <- vfs <$> get
-    newVFS <- liftIO $ changeFromClientVFS oldVFS n
+    let (newVFS,_) = changeFromClientVFS oldVFS n
     modify (\s -> s { vfs = newVFS })
     sendMessage n
 
