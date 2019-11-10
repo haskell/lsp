@@ -8,12 +8,13 @@ import Data.Aeson
 import Data.Default
 import Language.Haskell.LSP.Core
 import Language.Haskell.LSP.Types
+import Language.Haskell.LSP.VFS
 import Language.Haskell.LSP.Types.Capabilities
 import Test.Hspec
 
 spec :: Spec
 spec =
-  describe "workspace folders" $ it "keeps track of open workspace folders" $ do
+  describe "workspace folders" $ it "keeps track of open workspace folders" $ initVFS $ \vfs -> do
 
     lfVar <- newEmptyMVar
 
@@ -31,6 +32,7 @@ spec =
                                                         tvarLspId
                                                         (const $ return ())
                                                         Nothing
+                                                        vfs
 
     let putMsg msg =
           let jsonStr = encode msg
