@@ -46,3 +46,6 @@ The tests are integration tests, so make sure you have the following language se
 `npm i -g javascript-typescript-langserver`
 
 Then run the tests with `stack test` or `cabal new-test`.
+
+## Troubleshooting
+Seeing funny stuff when running lsp-test via stack? If your server is built upon Haskell tooling, [keep in mind that stack sets some environment variables related to GHC, and you may want to unset them.](https://github.com/alanz/haskell-ide-engine/blob/bfb16324d396da71000ef81d51acbebbdaa854ab/test/utils/TestUtils.hs#L290-L298)
