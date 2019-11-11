@@ -56,7 +56,6 @@ library
                      , rope-utf16-splay
                      , text
                      , transformers
-                     , temporary
                      , unordered-containers
   if os(windows)
     build-depends:     Win32

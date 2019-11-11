@@ -70,7 +70,6 @@ import System.Directory
 import System.IO
 import System.Process (ProcessHandle())
 import System.Timeout
-import System.IO.Temp
 
 -- | A session representing one instance of launching and connecting to a server.
 --
