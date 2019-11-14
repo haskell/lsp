@@ -1,5 +1,13 @@
 # Revision history for haskell-lsp
 
+## 0.18.0.0 -- 2019-11-14
+
+* Virtual file fixes, removing race conditions and other cleanups (@mpickering)
+* Add missing fmClientPrepareRenameRequest to MessageFuncs export (@alanz)
+* Make explicit GHC 8.6.5 stack file (@alanz)
+* Rework Core.Options and infer all server capabilities from handlers (@bubba)
+* Generate lenses for WorkDoneProgress data types (@alanz)
+
 ## 0.17.0.0 -- 2019-10-18
 
 * Update progress reporting to match the LSP 3.15 specification (@cocreature)
