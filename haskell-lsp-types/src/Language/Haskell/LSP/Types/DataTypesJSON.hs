@@ -2319,8 +2319,8 @@ Response
 
 -}
 
-type CodeLensResolveRequest  = RequestMessage ClientMethod CodeLens (List CodeLens)
-type CodeLensResolveResponse = ResponseMessage (List CodeLens)
+type CodeLensResolveRequest  = RequestMessage ClientMethod CodeLens CodeLens
+type CodeLensResolveResponse = ResponseMessage CodeLens
 
 -- ---------------------------------------------------------------------
 {-
