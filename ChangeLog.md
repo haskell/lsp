@@ -1,7 +1,9 @@
 # Revision history for haskell-lsp
 
-## 0.18.0.0 -- 2019-11-14
+## 0.18.0.0 -- 2019-11-16
 
+* Fix response type for CodeLensResolve, add the ContentModified error
+  code (@SquidDev)
 * Virtual file fixes, removing race conditions and other cleanups (@mpickering)
 * Add missing fmClientPrepareRenameRequest to MessageFuncs export (@alanz)
 * Make explicit GHC 8.6.5 stack file (@alanz)

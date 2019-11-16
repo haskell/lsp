@@ -1,7 +1,9 @@
 # Revision history for haskell-lsp-types
 
-## 0.18.0.0 -- 2019-11-14
+## 0.18.0.0 -- 2019-11-16
 
+* Fix response type for CodeLensResolve, add the ContentModified error
+  code (@SquidDev)
 * Add missing fmClientPrepareRenameRequest to MessageFuncs export (@alanz)
 * Rework Core.Options and infer all server capabilities from handlers (@bubba)
 * Generate lenses for WorkDoneProgress data types (@alanz)
