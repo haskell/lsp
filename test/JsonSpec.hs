@@ -96,6 +96,7 @@ instance Arbitrary ErrorCode where
       , ServerNotInitialized
       , UnknownErrorCode
       , RequestCancelled
+      , ContentModified
       ]
 
 -- | make lists of maximum length 3 for test performance

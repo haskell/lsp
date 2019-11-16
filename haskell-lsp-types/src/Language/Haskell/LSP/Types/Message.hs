@@ -322,6 +322,7 @@ export namespace ErrorCodes {
 
         // Defined by the protocol.
         export const RequestCancelled: number = -32800;
+        export const ContentModified: number = -32801;
 }
 -}
 
@@ -335,6 +336,7 @@ data ErrorCode = ParseError
                | ServerNotInitialized
                | UnknownErrorCode
                | RequestCancelled
+               | ContentModified
                -- ^ Note: server error codes are reserved from -32099 to -32000
                deriving (Read,Show,Eq)
 
@@ -349,6 +351,7 @@ instance A.ToJSON ErrorCode where
   toJSON ServerNotInitialized = A.Number (-32002)
   toJSON UnknownErrorCode     = A.Number (-32001)
   toJSON RequestCancelled     = A.Number (-32800)
+  toJSON ContentModified      = A.Number (-32801)
 
 instance A.FromJSON ErrorCode where
   parseJSON (A.Number (-32700)) = pure ParseError
@@ -361,6 +364,7 @@ instance A.FromJSON ErrorCode where
   parseJSON (A.Number (-32002)) = pure ServerNotInitialized
   parseJSON (A.Number (-32001)) = pure UnknownErrorCode
   parseJSON (A.Number (-32800)) = pure RequestCancelled
+  parseJSON (A.Number (-32801)) = pure ContentModified
   parseJSON _                   = mempty
 
 -- -------------------------------------
