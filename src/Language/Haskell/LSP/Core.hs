@@ -125,6 +125,7 @@ data Options =
     , codeActionKinds                  :: Maybe [J.CodeActionKind]
     -- | The list of characters that triggers on type formatting.
     -- If you set `documentOnTypeFormattingHandler`, you **must** set this.
+    -- The first character is mandatory, so a 'NonEmpty' should be passed.
     , documentOnTypeFormattingTriggerCharacters :: Maybe (NonEmpty Char)
     -- | The commands to be executed on the server.
     -- If you set `executeCommandHandler`, you **must** set this.
