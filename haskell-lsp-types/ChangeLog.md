@@ -1,5 +1,11 @@
 # Revision history for haskell-lsp-types
 
+## 0.18.0.0 -- 2019-11-14
+
+* Add missing fmClientPrepareRenameRequest to MessageFuncs export (@alanz)
+* Rework Core.Options and infer all server capabilities from handlers (@bubba)
+* Generate lenses for WorkDoneProgress data types (@alanz)
+
 ## 0.17.0.0 -- 2019-10-18
 
 * Update progress reporting to match the LSP 3.15 specification (@cocreature)
