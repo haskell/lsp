@@ -1,5 +1,9 @@
 # Revision history for lsp-test
 
+## 0.8.2.0 -- 2019-11-17
+
+* Expose `satisfyMaybe` (@cocreature)
+
 ## 0.8.1.0 -- 2019-11-17
 
 * Update to haskell-lsp-0.18.0.0 (@mpickering, @alanz)
