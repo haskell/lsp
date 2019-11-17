@@ -1,7 +1,9 @@
 # Revision history for haskell-lsp
 
-## 0.18.0.0 -- 2019-11-16
+## 0.18.0.0 -- 2019-11-17
 
+* Explain the use of NonEmpty in
+  documentOnTypeFormattingTriggerCharacters (@bubba)
 * Fix response type for CodeLensResolve, add the ContentModified error
   code (@SquidDev)
 * Virtual file fixes, removing race conditions and other cleanups (@mpickering)

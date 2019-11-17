@@ -1,6 +1,6 @@
 # Revision history for haskell-lsp-types
 
-## 0.18.0.0 -- 2019-11-16
+## 0.18.0.0 -- 2019-11-17
 
 * Fix response type for CodeLensResolve, add the ContentModified error
   code (@SquidDev)
