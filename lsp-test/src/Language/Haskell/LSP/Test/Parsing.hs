@@ -6,6 +6,7 @@
 module Language.Haskell.LSP.Test.Parsing
   ( -- $receiving
     satisfy
+  , satisfyMaybe
   , message
   , anyRequest
   , anyResponse
