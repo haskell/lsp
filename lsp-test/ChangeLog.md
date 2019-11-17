@@ -1,5 +1,10 @@
 # Revision history for lsp-test
 
+## 0.8.1.0 -- 2019-11-17
+
+* Update to haskell-lsp-0.18.0.0 (@mpickering, @alanz)
+* Tests now require hie-bios based hie
+
 ## 0.8.0.0 -- 2019-10-18
 
 * Make `Session` a newtype

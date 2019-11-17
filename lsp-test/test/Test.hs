@@ -238,7 +238,8 @@ main = hspec $ do
       noDiagnostics
       noDiagnostics
 
-      item:_ <- getCompletions doc (Position 5 5)
+      comps <- getCompletions doc (Position 5 5)
+      let item = head (filter (\x -> x ^. label == "interactWithUser") comps)
       liftIO $ do
         item ^. label `shouldBe` "interactWithUser"
         item ^. kind `shouldBe` Just CiFunction
@@ -273,10 +274,10 @@ main = hspec $ do
   describe "waitForDiagnosticsSource" $
     it "works" $ runSession "hie" fullCaps "test/data" $ do
       openDoc "Error.hs" "haskell"
-      [diag] <- waitForDiagnosticsSource "ghcmod"
+      [diag] <- waitForDiagnosticsSource "bios"
       liftIO $ do
         diag ^. severity `shouldBe` Just DsError
-        diag ^. source `shouldBe` Just "ghcmod"
+        diag ^. source `shouldBe` Just "bios"
 
   describe "rename" $
     it "works" $ runSession "hie" fullCaps "test/data" $ do
