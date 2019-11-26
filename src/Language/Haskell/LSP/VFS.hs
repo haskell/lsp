@@ -154,23 +154,24 @@ virtualFileName :: FilePath -> J.NormalizedUri -> VirtualFile -> FilePath
 virtualFileName prefix uri (VirtualFile ver _) =
   prefix </> show (hash (J.fromNormalizedUri uri)) ++ "-" ++ show ver ++ ".hs"
 
-persistFileVFS :: VFS -> J.NormalizedUri -> (FilePath, IO ())
+-- | Write a virtual file to a temporary file if it exists in the VFS.
+persistFileVFS :: VFS -> J.NormalizedUri -> Maybe (FilePath, IO ())
 persistFileVFS vfs uri =
   case Map.lookup uri (vfsMap vfs) of
-    Nothing -> error ("File not found in VFS: " ++ show uri ++ show vfs)
+    Nothing -> Nothing
     Just vf@(VirtualFile _v txt) ->
       let tfn = virtualFileName (vfsTempDir vfs) uri vf
           action = do
             exists <- doesFileExist tfn
             unless exists (writeFile tfn (Rope.toString txt))
-      in (tfn, action)
+      in Just (tfn, action)
 
 -- ---------------------------------------------------------------------
 
 closeVFS :: VFS -> J.DidCloseTextDocumentNotification -> (VFS, [String])
 closeVFS vfs (J.NotificationMessage _ _ params) =
   let J.DidCloseTextDocumentParams (J.TextDocumentIdentifier uri) = params
-  in (updateVFS (Map.delete (J.toNormalizedUri uri)) vfs,[])
+  in (updateVFS (Map.delete (J.toNormalizedUri uri)) vfs,["Closed: " ++ show uri])
 
 -- ---------------------------------------------------------------------
 {-
