@@ -34,10 +34,13 @@ relativePosixFilePath :: FilePath
 relativePosixFilePath = "myself/example.hs"
 
 testWindowsUri :: Uri
-testWindowsUri = Uri $ pack "file:///c:/Users/myself/example.hs"
+testWindowsUri = Uri $ pack "file:///C:/Users/myself/example.hs"
 
 testWindowsFilePath :: FilePath
-testWindowsFilePath = "c:\\Users\\myself\\example.hs"
+testWindowsFilePath = "C:\\Users\\myself\\example.hs"
+
+testWindowsFilePathDriveLowerCase :: FilePath
+testWindowsFilePathDriveLowerCase = "c:\\Users\\myself\\example.hs"
 
 uriFilePathSpec :: Spec
 uriFilePathSpec = do
@@ -57,6 +60,10 @@ uriFilePathSpec = do
     let theUri = platformAwareFilePathToUri windowsOS testWindowsFilePath
     theUri `shouldBe` testWindowsUri
 
+  it "make the drive letter upper case when converting a Windows file path to a URI" $ do
+    let theUri = platformAwareFilePathToUri windowsOS testWindowsFilePathDriveLowerCase
+    theUri `shouldBe` testWindowsUri
+
 filePathUriSpec :: Spec
 filePathUriSpec = do
   it "converts a POSIX file path to a URI" $ do
@@ -69,7 +76,7 @@ filePathUriSpec = do
 
   it "converts a Windows file path to a URI" $ do
     let theFilePath = platformAwareFilePathToUri windowsOS "c:/Functional.hs"
-    theFilePath `shouldBe` (Uri "file:///c:/Functional.hs")
+    theFilePath `shouldBe` (Uri "file:///C:/Functional.hs")
 
   it "converts a POSIX file path to a URI and back" $ do
     let theFilePath = platformAwareFilePathToUri "posix" "./Functional.hs"
@@ -108,7 +115,8 @@ genWindowsFilePath :: Gen FilePath
 genWindowsFilePath = do
     segments <- listOf pathSegment
     pathSep <- elements ['/', '\\']
-    pure ("C:" <> [pathSep] <> intercalate [pathSep] segments)
+    driveLetter <- elements ["C:", "c:"]
+    pure (driveLetter <> [pathSep] <> intercalate [pathSep] segments)
   where pathSegment = listOf1 (arbitraryASCIIChar `suchThat` (`notElem` ['/', '\\', '.', ':']))
 
 genPosixFilePath :: Gen FilePath
