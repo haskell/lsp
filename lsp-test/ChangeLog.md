@@ -1,5 +1,9 @@
 # Revision history for lsp-test
 
+## 0.9.0.0 -- ???
+
+* Add `ignoreLogNotifications` config option
+
 ## 0.8.2.0 -- 2019-11-17
 
 * Expose `satisfyMaybe` (@cocreature)

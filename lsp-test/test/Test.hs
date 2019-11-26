@@ -333,6 +333,12 @@ main = hspec $ do
           pred _ = False
       void $ satisfy pred
 
+  describe "ignoreLogNotifications" $
+    it "works" $
+      runSessionWithConfig (defaultConfig { ignoreLogNotifications = True }) "hie"  fullCaps "test/data" $ do
+        openDoc "Format.hs" "haskell"
+        void publishDiagnosticsNotification
+
 mkRange sl sc el ec = Range (Position sl sc) (Position el ec)
 
 didChangeCaps :: ClientCapabilities

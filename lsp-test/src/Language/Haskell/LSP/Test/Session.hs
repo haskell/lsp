@@ -95,11 +95,14 @@ data SessionConfig = SessionConfig
   , logMessages    :: Bool -- ^ Trace the messages sent and received to stdout, defaults to False.
   , logColor       :: Bool -- ^ Add ANSI color to the logged messages, defaults to True.
   , lspConfig      :: Maybe Value -- ^ The initial LSP config as JSON value, defaults to Nothing.
+  -- ^ Whether or not to ignore 'ShowMessageNotification' and 'LogMessageNotification', defaults to False.
+  -- @since 0.9.0.0
+  , ignoreLogNotifications :: Bool
   }
 
 -- | The configuration used in 'Language.Haskell.LSP.Test.runSession'.
 defaultConfig :: SessionConfig
-defaultConfig = SessionConfig 60 False False True Nothing
+defaultConfig = SessionConfig 60 False False True Nothing False
 
 instance Default SessionConfig where
   def = defaultConfig
@@ -181,8 +184,13 @@ runSession context state (Session session) = runReaderT (runStateT conduit state
 
     chanSource = do
       msg <- liftIO $ readChan (messageChan context)
-      yield msg
+      unless (ignoreLogNotifications (config context) && isLogNotification msg) $
+        yield msg
       chanSource
+
+    isLogNotification (ServerMessage (NotShowMessage _)) = True
+    isLogNotification (ServerMessage (NotLogMessage _)) = True
+    isLogNotification _ = False
 
     watchdog :: ConduitM SessionMessage FromServerMessage (StateT SessionState (ReaderT SessionContext IO)) ()
     watchdog = Conduit.awaitForever $ \msg -> do
@@ -361,4 +369,5 @@ logMsg t msg = do
           | otherwise       = Cyan
 
         showPretty = B.unpack . encodePretty
+
 
