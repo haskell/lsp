@@ -63,8 +63,8 @@ import           System.IO.Temp
 
 data VirtualFile =
   VirtualFile {
-      _version :: Int
-    , _text    :: Rope
+      _version :: Int   -- ^ The LSP version of the document
+    , _text    :: Rope  -- ^ The full contents of the document
     } deriving (Show)
 
 type VFSMap = Map.Map J.NormalizedUri VirtualFile
@@ -80,6 +80,7 @@ initVFS k = withSystemTempDirectory "haskell-lsp" $ \temp_dir -> k (VFS mempty t
 
 -- ---------------------------------------------------------------------
 
+-- ^ Applies the changes from a 'DidOpenTextDocumentNotification' to the 'VFS'
 openVFS :: VFS -> J.DidOpenTextDocumentNotification -> (VFS, [String])
 openVFS vfs (J.NotificationMessage _ _ params) =
   let J.DidOpenTextDocumentParams
@@ -90,6 +91,7 @@ openVFS vfs (J.NotificationMessage _ _ params) =
 
 -- ---------------------------------------------------------------------
 
+-- ^ Applies a 'DidChangeTextDocumentNotification' to the 'VFS'
 changeFromClientVFS :: VFS -> J.DidChangeTextDocumentNotification -> (VFS,[String])
 changeFromClientVFS vfs (J.NotificationMessage _ _ params) =
   let
@@ -111,6 +113,7 @@ updateVFS f vfs@VFS{vfsMap} = vfs { vfsMap = f vfsMap }
 
 -- ---------------------------------------------------------------------
 
+-- ^ Applies the changes from a 'ApplyWorkspaceEditRequest' to the 'VFS'
 changeFromServerVFS :: VFS -> J.ApplyWorkspaceEditRequest -> IO VFS
 changeFromServerVFS initVfs (J.RequestMessage _ _ _ params) = do
   let J.ApplyWorkspaceEditParams edit = params
