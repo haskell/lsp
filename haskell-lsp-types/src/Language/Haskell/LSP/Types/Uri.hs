@@ -86,6 +86,8 @@ platformAdjustToUriPath systemOS srcPath
     (splitDirectories, splitDrive)
       | systemOS == windowsOS =
           (FPW.splitDirectories, (\(f,s)-> (map toUpper f, s)) . FPW.splitDrive)
+          -- We ensure the driver letter is upper case for windows to make `c:\` and `C:\` equivalent
+          -- See https://tools.ietf.org/html/rfc8089#page-13
       | otherwise =
           (FPP.splitDirectories, FPP.splitDrive)
     escapedPath =
