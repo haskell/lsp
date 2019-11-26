@@ -91,7 +91,9 @@ main = hspec $ do
                 getDocumentSymbols doc
                 -- should now timeout
                 skipManyTill anyMessage message :: Session ApplyWorkspaceEditRequest
-        in sesh `shouldThrow` (== Timeout)
+            isTimeout (Timeout _) = True
+            isTimeout _ = False
+        in sesh `shouldThrow` isTimeout
 
 
     describe "SessionException" $ do
