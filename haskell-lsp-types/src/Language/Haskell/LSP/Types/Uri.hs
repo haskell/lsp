@@ -5,6 +5,7 @@ module Language.Haskell.LSP.Types.Uri where
 
 import           Control.DeepSeq
 import qualified Data.Aeson                                 as A
+import           Data.Char                                  (toUpper)
 import           Data.Hashable
 import           Data.Text                                  (Text)
 import qualified Data.Text                                  as T
@@ -83,8 +84,10 @@ platformAdjustToUriPath systemOS srcPath
   | otherwise = escapedPath
   where
     (splitDirectories, splitDrive)
-      | systemOS == windowsOS = (FPW.splitDirectories, FPW.splitDrive)
-      | otherwise = (FPP.splitDirectories, FPP.splitDrive)
+      | systemOS == windowsOS =
+          (FPW.splitDirectories, (\(f,s)-> (map toUpper f, s)) . FPW.splitDrive)
+      | otherwise =
+          (FPP.splitDirectories, FPP.splitDrive)
     escapedPath =
         case splitDrive srcPath of
             (drv, rest) ->
@@ -94,7 +97,7 @@ platformAdjustToUriPath systemOS srcPath
     -- we do a final replacement of \ to /
     convertDrive drv
       | systemOS == windowsOS && FPW.hasTrailingPathSeparator drv =
-        FPP.addTrailingPathSeparator (init drv)
+          FPP.addTrailingPathSeparator (init drv)
       | otherwise = drv
     unescaped c
       | systemOS == windowsOS = isUnreserved c || c `elem` [':', '\\', '/']
