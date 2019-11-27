@@ -166,7 +166,9 @@ changeFromServerVFS initVfs (J.RequestMessage _ _ _ params) = do
 -- ---------------------------------------------------------------------
 virtualFileName :: FilePath -> J.NormalizedUri -> VirtualFile -> FilePath
 virtualFileName prefix uri (VirtualFile _ file_ver _) =
-  prefix </> show (hash (J.fromNormalizedUri uri)) ++ "-" ++ show file_ver ++ ".hs"
+  let uri_raw = J.fromNormalizedUri uri
+      basename = maybe "" takeFileName (J.uriToFilePath uri_raw)
+  in prefix </> show (hash uri_raw) ++ "-" ++ show file_ver ++ "-" ++ basename ++ ".hs"
 
 -- | Write a virtual file to a temporary file if it exists in the VFS.
 persistFileVFS :: VFS -> J.NormalizedUri -> Maybe (FilePath, IO ())
