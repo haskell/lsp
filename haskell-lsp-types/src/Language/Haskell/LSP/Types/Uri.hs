@@ -27,8 +27,10 @@ newtype NormalizedUri = NormalizedUri Text
   deriving (Eq,Ord,Read,Show,Generic,Hashable)
 
 toNormalizedUri :: Uri -> NormalizedUri
-toNormalizedUri (Uri t) =
+toNormalizedUri uri =
     NormalizedUri $ T.pack $ escapeURIString isUnescapedInURI $ unEscapeString $ T.unpack t
+  where (Uri t) = maybe uri filePathToUri (uriToFilePath uri)
+        -- To ensure all `Uri`s have the file path like the created ones by `filePathToUri`
 
 fromNormalizedUri :: NormalizedUri -> Uri
 fromNormalizedUri (NormalizedUri t) = Uri t
