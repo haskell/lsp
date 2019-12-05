@@ -12,7 +12,7 @@ import qualified System.FilePath.Windows as FPW
 import Test.Hspec
 import Test.QuickCheck
 #if !MIN_VERSION_QuickCheck(2,10,0)
-import Data.Char                               (GeneralCategory(..), generalCategory)
+import Data.Char                              (GeneralCategory(..), generalCategory)
 #endif
 
 -- ---------------------------------------------------------------------

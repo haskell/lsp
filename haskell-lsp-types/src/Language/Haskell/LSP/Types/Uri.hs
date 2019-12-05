@@ -5,13 +5,11 @@ module Language.Haskell.LSP.Types.Uri where
 
 import           Control.DeepSeq
 import qualified Data.Aeson                                 as A
-import           Data.Char                                  (toUpper)
 import           Data.Hashable
 import           Data.Text                                  (Text)
 import qualified Data.Text                                  as T
 import           GHC.Generics
 import           Network.URI hiding (authority)
-import qualified System.FilePath                            as FP
 import qualified System.FilePath.Posix                      as FPP
 import qualified System.FilePath.Windows                    as FPW
 import qualified System.Info
