@@ -133,7 +133,9 @@ genWindowsFilePath = do
     pathSep <- elements ['/', '\\']
     driveLetter <- elements ["C:", "c:"]
     pure (driveLetter <> [pathSep] <> intercalate [pathSep] segments)
-  where pathSegment = listOf1 (arbitraryUnicodeChar `suchThat` (`notElem` ['/', '\\', ':']))
+  where pathSegment = listOf1 (validUnicodeChar `suchThat` (`notElem` ['/', '\\', ':']))
+        validUnicodeChar = arbitraryUnicodeChar `suchThat` isValidUnicodeChar
+        isValidUnicodeChar x = x /= '\65534' && x /= '\65535'
 
 genPosixFilePath :: Gen FilePath
 genPosixFilePath = do
