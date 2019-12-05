@@ -11,7 +11,9 @@ import           Network.URI
 import qualified System.FilePath.Windows as FPW
 import Test.Hspec
 import Test.QuickCheck
-
+#if !MIN_VERSION_QuickCheck(2,10,0)
+import Data.Char                               (GeneralCategory(..), generalCategory)
+#endif
 
 -- ---------------------------------------------------------------------
 
@@ -33,6 +35,9 @@ testPosixFilePath = "/home/myself/example.hs"
 relativePosixFilePath :: FilePath
 relativePosixFilePath = "myself/example.hs"
 
+withCurrentDirPosixFilePath :: FilePath
+withCurrentDirPosixFilePath = "/home/./myself/././example.hs"
+
 testWindowsUri :: Uri
 testWindowsUri = Uri $ pack "file:///C:/Users/myself/example.hs"
 
@@ -41,6 +46,9 @@ testWindowsFilePath = "C:\\Users\\myself\\example.hs"
 
 testWindowsFilePathDriveLowerCase :: FilePath
 testWindowsFilePathDriveLowerCase = "c:\\Users\\myself\\example.hs"
+
+withCurrentDirWindowsFilePath :: FilePath
+withCurrentDirWindowsFilePath = "C:\\Users\\.\\myself\\.\\.\\example.hs"
 
 uriFilePathSpec :: Spec
 uriFilePathSpec = do
@@ -60,6 +68,14 @@ uriFilePathSpec = do
     let theUri = platformAwareFilePathToUri windowsOS testWindowsFilePath
     theUri `shouldBe` testWindowsUri
 
+  it "removes unnecesary current directory paths" $ do
+    let theUri = platformAwareFilePathToUri "posix" withCurrentDirPosixFilePath
+    theUri `shouldBe` testPosixUri
+
+  it "removes unnecesary current directory paths in windows" $ do
+    let theUri = platformAwareFilePathToUri windowsOS withCurrentDirWindowsFilePath
+    theUri `shouldBe` testWindowsUri
+
   it "make the drive letter upper case when converting a Windows file path to a URI" $ do
     let theUri = platformAwareFilePathToUri windowsOS testWindowsFilePathDriveLowerCase
     theUri `shouldBe` testWindowsUri
@@ -68,11 +84,11 @@ filePathUriSpec :: Spec
 filePathUriSpec = do
   it "converts a POSIX file path to a URI" $ do
     let theFilePath = platformAwareFilePathToUri "posix" "./Functional.hs"
-    theFilePath `shouldBe` (Uri "file://./Functional.hs")
+    theFilePath `shouldBe` (Uri "file://Functional.hs")
 
   it "converts a Windows file path to a URI" $ do
     let theFilePath = platformAwareFilePathToUri windowsOS "./Functional.hs"
-    theFilePath `shouldBe` (Uri "file:///./Functional.hs")
+    theFilePath `shouldBe` (Uri "file:///Functional.hs")
 
   it "converts a Windows file path to a URI" $ do
     let theFilePath = platformAwareFilePathToUri windowsOS "c:/Functional.hs"
@@ -80,15 +96,15 @@ filePathUriSpec = do
 
   it "converts a POSIX file path to a URI and back" $ do
     let theFilePath = platformAwareFilePathToUri "posix" "./Functional.hs"
-    theFilePath `shouldBe` (Uri "file://./Functional.hs")
-    let Just (URI scheme' auth' path' query' frag') =  parseURI "file://./Functional.hs"
+    theFilePath `shouldBe` (Uri "file://Functional.hs")
+    let Just (URI scheme' auth' path' query' frag') =  parseURI "file://Functional.hs"
     (scheme',auth',path',query',frag') `shouldBe`
       ("file:"
-      ,Just (URIAuth {uriUserInfo = "", uriRegName = ".", uriPort = ""}) -- AZ: Seems odd
-      ,"/Functional.hs"
+      ,Just (URIAuth {uriUserInfo = "", uriRegName = "Functional.hs", uriPort = ""}) -- AZ: Seems odd
+      ,""
       ,""
       ,"")
-    Just "./Functional.hs" `shouldBe` platformAwareUriToFilePath "posix" theFilePath
+    Just "Functional.hs" `shouldBe` platformAwareUriToFilePath "posix" theFilePath
 
   it "converts a Posix file path to a URI and back" $ property $ forAll genPosixFilePath $ \fp -> do
       let uri = platformAwareFilePathToUri "posix" fp
@@ -117,15 +133,18 @@ genWindowsFilePath = do
     pathSep <- elements ['/', '\\']
     driveLetter <- elements ["C:", "c:"]
     pure (driveLetter <> [pathSep] <> intercalate [pathSep] segments)
-  where pathSegment = listOf1 (arbitraryASCIIChar `suchThat` (`notElem` ['/', '\\', '.', ':']))
+  where pathSegment = listOf1 (arbitraryUnicodeChar `suchThat` (`notElem` ['/', '\\', ':']))
 
 genPosixFilePath :: Gen FilePath
 genPosixFilePath = do
     segments <- listOf pathSegment
     pure ("/" <> intercalate "/" segments)
-  where pathSegment = listOf1 (arbitraryASCIIChar `suchThat` (`notElem` ['/', '.']))
+  where pathSegment = listOf1 (arbitraryUnicodeChar `suchThat` (`notElem` ['/']))
 
 #if !MIN_VERSION_QuickCheck(2,10,0)
-arbitraryASCIIChar :: Gen Char
-arbitraryASCIIChar = arbitrary
+arbitraryUnicodeChar :: Gen Char
+arbitraryUnicodeChar =
+  arbitraryBoundedEnum `suchThat` (not . isSurrogate)
+  where
+    isSurrogate c = generalCategory c == Surrogate
 #endif

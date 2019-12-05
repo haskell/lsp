@@ -11,6 +11,7 @@ import           Data.Text                                  (Text)
 import qualified Data.Text                                  as T
 import           GHC.Generics
 import           Network.URI hiding (authority)
+import qualified System.FilePath                            as FP
 import qualified System.FilePath.Posix                      as FPP
 import qualified System.FilePath.Windows                    as FPW
 import qualified System.Info
@@ -85,15 +86,13 @@ platformAdjustToUriPath systemOS srcPath
   | systemOS == windowsOS = '/' : escapedPath
   | otherwise = escapedPath
   where
-    (splitDirectories, splitDrive)
+    (splitDirectories, splitDrive, normalise)
       | systemOS == windowsOS =
-          (FPW.splitDirectories, (\(f,s)-> (map toUpper f, s)) . FPW.splitDrive)
-          -- We ensure the driver letter is upper case for windows to make `c:\` and `C:\` equivalent
-          -- See https://tools.ietf.org/html/rfc8089#page-13
+          (FPW.splitDirectories, FPW.splitDrive, FPW.normalise)
       | otherwise =
-          (FPP.splitDirectories, FPP.splitDrive)
+          (FPP.splitDirectories, FPP.splitDrive, FPP.normalise)
     escapedPath =
-        case splitDrive srcPath of
+        case splitDrive (normalise srcPath) of
             (drv, rest) ->
                 convertDrive drv `FPP.joinDrive`
                 FPP.joinPath (map (escapeURIString unescaped) $ splitDirectories rest)
