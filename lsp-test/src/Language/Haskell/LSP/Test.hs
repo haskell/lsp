@@ -37,6 +37,7 @@ module Language.Haskell.LSP.Test
   , module Language.Haskell.LSP.Test.Parsing
   -- * Utilities
   -- | Quick helper functions for common tasks.
+
   -- ** Initialization
   , initializeResponse
   -- ** Documents
