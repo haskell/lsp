@@ -168,7 +168,14 @@ virtualFileName :: FilePath -> J.NormalizedUri -> VirtualFile -> FilePath
 virtualFileName prefix uri (VirtualFile _ file_ver _) =
   let uri_raw = J.fromNormalizedUri uri
       basename = maybe "" takeFileName (J.uriToFilePath uri_raw)
-  in prefix </> show (hash uri_raw) ++ "-" ++ show file_ver ++ "-" ++ basename ++ ".hs"
+      -- Given a length and a version number, pad the version number to
+      -- the given n. Does nothing if the version number string is longer
+      -- than the given length.
+      padLeft :: Int -> Int -> String
+      padLeft n num =
+        let numString = show num
+        in replicate (n - length numString) '0' ++ numString
+  in prefix </> basename ++ "-" ++ padLeft 5 file_ver ++ "-" ++ show (hash uri_raw) ++ ".hs"
 
 -- | Write a virtual file to a temporary file if it exists in the VFS.
 persistFileVFS :: VFS -> J.NormalizedUri -> Maybe (FilePath, IO ())
