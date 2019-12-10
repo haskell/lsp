@@ -7,7 +7,7 @@ description:         An implementation of the types, and basic message server to
                      Protocol for their specific language.
                      .
                      An example of this is for Haskell via the Haskell IDE
-                     Engine, at https://github.com//haskell-ide-engine
+                     Engine, at https://github.com/haskell/haskell-ide-engine
 
 homepage:            https://github.com/alanz/haskell-lsp
 license:             MIT
