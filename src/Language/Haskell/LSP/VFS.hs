@@ -186,7 +186,11 @@ persistFileVFS vfs uri =
       let tfn = virtualFileName (vfsTempDir vfs) uri vf
           action = do
             exists <- doesFileExist tfn
-            unless exists (writeFile tfn (Rope.toString (_text vf)))
+            unless exists $ do
+               let contents = Rope.toString (_text vf)
+               logs  $ "haskell-lsp:persistFileVFS: Writing virtual file: " 
+                    ++ "uri = " ++ show uri ++ ", virtual file =" ++ show tfn
+               writeFile tfn contents
       in Just (tfn, action)
 
 -- ---------------------------------------------------------------------
