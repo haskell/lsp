@@ -190,7 +190,7 @@ persistFileVFS vfs uri =
             unless exists $ do
                let contents = Rope.toString (_text vf)
                    writeRaw h = do
-                    -- We honour the line endings of the original file
+                    -- We honour original file line endings
                     hSetNewlineMode h noNewlineTranslation
                     hPutStr h contents
                logs  $ "haskell-lsp:persistFileVFS: Writing virtual file: " 
