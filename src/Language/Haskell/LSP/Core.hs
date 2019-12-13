@@ -177,7 +177,7 @@ data LspFuncs c =
     , getVirtualFileFunc           :: !(J.NormalizedUri -> IO (Maybe VirtualFile))
       -- ^ Function to return the 'VirtualFile' associated with a
       -- given 'NormalizedUri', if there is one.
-    , persistVirtualFileFunc       :: !(J.NormalizedUri -> IO FilePath)
+    , persistVirtualFileFunc       :: !(J.NormalizedUri -> IO (Maybe FilePath))
     , reverseFileMapFunc           :: !(IO (FilePath -> FilePath))
     , publishDiagnosticsFunc       :: !PublishDiagnosticsFunc
     , flushDiagnosticsBySourceFunc :: !FlushDiagnosticsBySourceFunc
@@ -524,23 +524,25 @@ getVirtualFile tvarDat uri = Map.lookup uri . vfsMap . vfsData . resVFS <$> read
 
 -- | Dump the current text for a given VFS file to a temporary file,
 -- and return the path to the file.
-persistVirtualFile :: TVar (LanguageContextData config) -> J.NormalizedUri -> IO FilePath
+persistVirtualFile :: TVar (LanguageContextData config) -> J.NormalizedUri -> IO (Maybe FilePath)
 persistVirtualFile tvarDat uri = join $ atomically $ do
   st <- readTVar tvarDat
   let vfs_data = resVFS st
       cur_vfs = vfsData vfs_data
       revMap = reverseMap vfs_data
 
-  let (fn, write) = persistFileVFS cur_vfs uri
-  let revMap' =
+  case persistFileVFS cur_vfs uri of
+    Nothing -> return (return Nothing)
+    Just (fn, write) -> do
+      let revMap' =
         -- TODO: Does the VFS make sense for URIs which are not files?
         -- The reverse map should perhaps be (FilePath -> URI)
-        case J.uriToFilePath (J.fromNormalizedUri uri) of
-          Just uri_fp -> Map.insert fn uri_fp revMap
-          Nothing -> revMap
+            case J.uriToFilePath (J.fromNormalizedUri uri) of
+              Just uri_fp -> Map.insert fn uri_fp revMap
+              Nothing -> revMap
 
-  modifyVFSData tvarDat (\d -> (d { reverseMap = revMap' }, ()))
-  return (fn <$ write)
+      modifyVFSData tvarDat (\d -> (d { reverseMap = revMap' }, ()))
+      return ((Just fn) <$ write)
 
 -- TODO: should this function return a URI?
 -- | If the contents of a VFS has been dumped to a temporary file, map
