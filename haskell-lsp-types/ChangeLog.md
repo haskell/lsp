@@ -1,5 +1,13 @@
 # Revision history for haskell-lsp-types
 
+## 0.19.0.0 -- 2019-12-14
+
+* Fix vfs line endings (@jneira)
+* Fix typo in .cabal (@turion)
+* Normalize file paths before converting to Uri's (@jneira)
+* Fixes to persistVirtualFile (@mpickering)
+* Fix response type for CodeLensResolve (@SquidDev)
+
 ## 0.18.0.0 -- 2019-11-17
 
 * Fix response type for CodeLensResolve, add the ContentModified error
