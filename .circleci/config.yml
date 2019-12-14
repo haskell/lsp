@@ -31,6 +31,10 @@ defaults: &defaults
           key: stack-work-dirs-{{ .Environment.CACHE_VER }}-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ checksum "stack-build.txt" }}
 
     - run:
+        name: Stack upgrade
+        command: stack upgrade
+
+    - run:
         name: Stack setup
         command: stack -j 2 --stack-yaml=${STACK_FILE} setup
 
