@@ -57,6 +57,7 @@ import           Language.Haskell.LSP.Utility
 import           System.FilePath
 import           Data.Hashable
 import           System.Directory
+import           System.IO 
 import           System.IO.Temp
 
 -- ---------------------------------------------------------------------
@@ -186,7 +187,15 @@ persistFileVFS vfs uri =
       let tfn = virtualFileName (vfsTempDir vfs) uri vf
           action = do
             exists <- doesFileExist tfn
-            unless exists (writeFile tfn (Rope.toString (_text vf)))
+            unless exists $ do
+               let contents = Rope.toString (_text vf)
+                   writeRaw h = do
+                    -- We honour original file line endings
+                    hSetNewlineMode h noNewlineTranslation
+                    hPutStr h contents
+               logs  $ "haskell-lsp:persistFileVFS: Writing virtual file: " 
+                    ++ "uri = " ++ show uri ++ ", virtual file = " ++ show tfn
+               withFile tfn WriteMode writeRaw
       in Just (tfn, action)
 
 -- ---------------------------------------------------------------------
