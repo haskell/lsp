@@ -6,7 +6,6 @@
 * Fix typo in .cabal (@turion)
 * Normalize file paths before converting to Uri's (@jneira)
 * Fixes to persistVirtualFile (@mpickering)
-* Fix response type for CodeLensResolve (@SquidDev)
 
 ## 0.18.0.0 -- 2019-11-17
 
