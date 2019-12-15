@@ -91,8 +91,12 @@ instance MonadFail Session where
 -- | Stuff you can configure for a 'Session'.
 data SessionConfig = SessionConfig
   { messageTimeout :: Int  -- ^ Maximum time to wait for a message in seconds, defaults to 60.
-  , logStdErr      :: Bool -- ^ Redirect the server's stderr to this stdout, defaults to False.
-  , logMessages    :: Bool -- ^ Trace the messages sent and received to stdout, defaults to False.
+  , logStdErr      :: Bool
+  -- ^ Redirect the server's stderr to this stdout, defaults to False.
+  -- Can be overriden with @LSP_TEST_LOG_STDERR@.
+  , logMessages    :: Bool
+  -- ^ Trace the messages sent and received to stdout, defaults to False.
+  -- Can be overriden with the environment variable @LSP_TEST_LOG_MESSAGES@.
   , logColor       :: Bool -- ^ Add ANSI color to the logged messages, defaults to True.
   , lspConfig      :: Maybe Value -- ^ The initial LSP config as JSON value, defaults to Nothing.
   -- ^ Whether or not to ignore 'ShowMessageNotification' and 'LogMessageNotification', defaults to False.

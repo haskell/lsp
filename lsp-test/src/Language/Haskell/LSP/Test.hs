@@ -110,6 +110,7 @@ import Language.Haskell.LSP.Test.Exceptions
 import Language.Haskell.LSP.Test.Parsing
 import Language.Haskell.LSP.Test.Session
 import Language.Haskell.LSP.Test.Server
+import System.Environment
 import System.IO
 import System.Directory
 import System.FilePath
@@ -137,9 +138,11 @@ runSessionWithConfig :: SessionConfig -- ^ Configuration options for the session
                      -> FilePath -- ^ The filepath to the root directory for the session.
                      -> Session a -- ^ The session to run.
                      -> IO a
-runSessionWithConfig config serverExe caps rootDir session = do
+runSessionWithConfig config' serverExe caps rootDir session = do
   pid <- getCurrentProcessID
   absRootDir <- canonicalizePath rootDir
+
+  config <- envOverrideConfig config'
 
   let initializeParams = InitializeParams (Just pid)
                                           (Just $ T.pack absRootDir)
@@ -184,6 +187,15 @@ runSessionWithConfig config serverExe caps rootDir session = do
     case msg of
       (RspShutdown _) -> return ()
       _               -> listenServer serverOut context
+
+  -- | Check environment variables to override the config
+  envOverrideConfig :: SessionConfig -> IO SessionConfig
+  envOverrideConfig cfg = do
+    logMessages' <- fromMaybe (logMessages cfg) <$> checkEnv "LSP_TEST_LOG_MESSAGES"
+    logStdErr' <- fromMaybe (logStdErr cfg) <$> checkEnv "LSP_TEST_LOG_STDERR"
+    return $ cfg { logMessages = logMessages', logStdErr = logStdErr' }
+    where checkEnv :: String -> IO (Maybe Bool)
+          checkEnv s = fmap (const True) <$> lookupEnv s
 
 -- | The current text contents of a document.
 documentContents :: TextDocumentIdentifier -> Session T.Text
