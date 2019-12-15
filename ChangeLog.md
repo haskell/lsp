@@ -1,5 +1,12 @@
 # Revision history for haskell-lsp
 
+## 0.19.0.0 -- 2019-12-14
+
+* Fix vfs line endings (@jneira)
+* Fix typo in .cabal (@turion)
+* Normalize file paths before converting to Uri's (@jneira)
+* Fixes to persistVirtualFile (@mpickering)
+
 ## 0.18.0.0 -- 2019-11-17
 
 * Explain the use of NonEmpty in
