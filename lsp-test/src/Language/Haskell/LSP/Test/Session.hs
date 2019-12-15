@@ -99,9 +99,11 @@ data SessionConfig = SessionConfig
   -- Can be overriden with the environment variable @LSP_TEST_LOG_MESSAGES@.
   , logColor       :: Bool -- ^ Add ANSI color to the logged messages, defaults to True.
   , lspConfig      :: Maybe Value -- ^ The initial LSP config as JSON value, defaults to Nothing.
-  -- ^ Whether or not to ignore 'ShowMessageNotification' and 'LogMessageNotification', defaults to False.
-  -- @since 0.9.0.0
   , ignoreLogNotifications :: Bool
+  -- ^ Whether or not to ignore 'Language.Haskell.LSP.Types.ShowMessageNotification' and
+  -- 'Language.Haskell.LSP.Types.LogMessageNotification', defaults to False.
+  --
+  -- @since 0.9.0.0
   }
 
 -- | The configuration used in 'Language.Haskell.LSP.Test.runSession'.
