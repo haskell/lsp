@@ -195,7 +195,9 @@ runSessionWithConfig config' serverExe caps rootDir session = do
     logStdErr' <- fromMaybe (logStdErr cfg) <$> checkEnv "LSP_TEST_LOG_STDERR"
     return $ cfg { logMessages = logMessages', logStdErr = logStdErr' }
     where checkEnv :: String -> IO (Maybe Bool)
-          checkEnv s = fmap (const True) <$> lookupEnv s
+          checkEnv s = fmap convertVal <$> lookupEnv s
+          convertVal "0" = False
+          convertVal _ = True
 
 -- | The current text contents of a document.
 documentContents :: TextDocumentIdentifier -> Session T.Text
