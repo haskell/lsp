@@ -114,7 +114,6 @@ import System.Environment
 import System.IO
 import System.Directory
 import System.FilePath
-import qualified Data.Rope.UTF16 as Rope
 
 -- | Starts a new session.
 --
@@ -204,7 +203,7 @@ documentContents :: TextDocumentIdentifier -> Session T.Text
 documentContents doc = do
   vfs <- vfs <$> get
   let file = vfsMap vfs Map.! toNormalizedUri (doc ^. uri)
-  return $ Rope.toText $ Language.Haskell.LSP.VFS._text file
+  return (virtualFileText file)
 
 -- | Parses an ApplyEditRequest, checks that it is for the passed document
 -- and returns the new content

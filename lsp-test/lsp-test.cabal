@@ -52,7 +52,6 @@ library
                      , mtl
                      , parser-combinators
                      , process >= 1.6
-                     , rope-utf16-splay
                      , text
                      , transformers
                      , unordered-containers
