@@ -193,7 +193,9 @@ makeFieldsNoPrefix ''ShowMessageParams
 makeFieldsNoPrefix ''MessageActionItem
 makeFieldsNoPrefix ''ShowMessageRequestParams
 makeFieldsNoPrefix ''LogMessageParams
-makeFieldsNoPrefix ''ProgressStartParams
-makeFieldsNoPrefix ''ProgressReportParams
-makeFieldsNoPrefix ''ProgressDoneParams
-makeFieldsNoPrefix ''ProgressCancelParams
+makeFieldsNoPrefix ''ProgressParams
+makeFieldsNoPrefix ''WorkDoneProgressBeginParams
+makeFieldsNoPrefix ''WorkDoneProgressReportParams
+makeFieldsNoPrefix ''WorkDoneProgressEndParams
+makeFieldsNoPrefix ''WorkDoneProgressCancelParams
+makeFieldsNoPrefix ''WorkDoneProgressCreateParams

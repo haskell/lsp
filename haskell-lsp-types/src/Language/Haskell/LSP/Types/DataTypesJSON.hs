@@ -20,6 +20,7 @@ import           Data.Aeson.Types
 import           Data.Text                                  (Text)
 import qualified Data.Text                                  as T
 import           Language.Haskell.LSP.Types.ClientCapabilities
+import           Language.Haskell.LSP.Types.CodeAction
 import           Language.Haskell.LSP.Types.Command
 import           Language.Haskell.LSP.Types.Constants
 import           Language.Haskell.LSP.Types.Diagnostic
@@ -28,6 +29,7 @@ import           Language.Haskell.LSP.Types.List
 import           Language.Haskell.LSP.Types.Location
 import           Language.Haskell.LSP.Types.MarkupContent
 import           Language.Haskell.LSP.Types.Message
+import           Language.Haskell.LSP.Types.Progress
 import           Language.Haskell.LSP.Types.Symbol
 import           Language.Haskell.LSP.Types.TextDocument
 import           Language.Haskell.LSP.Types.Uri
@@ -211,13 +213,32 @@ interface CompletionOptions {
      * The characters that trigger completion automatically.
      */
     triggerCharacters?: string[];
+
+    /**
+     * The list of all possible characters that commit a completion. This field can be used
+     * if clients don't support individual commmit characters per completion item. See
+     * `ClientCapabilities.textDocument.completion.completionItem.commitCharactersSupport`.
+     *
+     * If a server provides both `allCommitCharacters` and commit characters on an individual
+     * completion item the once on the completion item win.
+     *
+     * @since 3.2.0
+     */
+    allCommitCharacters?: string[];
 }
 -}
 
 data CompletionOptions =
   CompletionOptions
-    { _resolveProvider   :: Maybe Bool
-    , _triggerCharacters :: Maybe [String]
+    { _resolveProvider     :: Maybe Bool
+    -- | The characters that trigger completion automatically.
+    , _triggerCharacters   :: Maybe [String]
+    -- | The list of all possible characters that commit a completion. This field can be used
+    -- if clients don't support individual commmit characters per completion item. See
+    -- `_commitCharactersSupport`.
+    -- Since LSP 3.2.0
+    -- @since 0.18.0.0
+    , _allCommitCharacters :: Maybe [String]
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions {omitNothingFields = True } ''CompletionOptions
@@ -232,11 +253,28 @@ interface SignatureHelpOptions {
      * The characters that trigger signature help automatically.
      */
     triggerCharacters?: string[];
+    /**
+     * List of characters that re-trigger signature help.
+     *
+     * These trigger characters are only active when signature help is already showing. All trigger characters
+     * are also counted as re-trigger characters.
+     *
+     * @since 3.15.0
+     */
 -}
 
 data SignatureHelpOptions =
   SignatureHelpOptions
-    { _triggerCharacters :: Maybe [String]
+    { -- | The characters that trigger signature help automatically.
+      _triggerCharacters   :: Maybe [String]
+
+    -- | List of characters that re-trigger signature help.
+    -- These trigger characters are only active when signature help is already showing. All trigger characters
+    -- are also counted as re-trigger characters.
+    --
+    -- Since LSP 3.15.0
+    -- @since 0.18.0.0
+    , _retriggerCharacters :: Maybe [String]
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''SignatureHelpOptions
@@ -264,6 +302,30 @@ deriveJSON lspOptions ''CodeLensOptions
 -- ---------------------------------------------------------------------
 {-
 /**
+ * Code Action options.
+ */
+export interface CodeActionOptions {
+    /**
+     * CodeActionKinds that this server may return.
+     *
+     * The list of kinds may be generic, such as `CodeActionKind.Refactor`, or the server
+     * may list out every specific kind they provide.
+     */
+    codeActionKinds?: CodeActionKind[];
+}
+-}
+
+data CodeActionOptions =
+  CodeActionOptionsStatic Bool
+  | CodeActionOptions
+    { _codeActionKinds :: Maybe [CodeActionKind]
+    } deriving (Read,Show,Eq)
+
+deriveJSON (lspOptions { sumEncoding = A.UntaggedValue }) ''CodeActionOptions
+
+-- ---------------------------------------------------------------------
+{-
+/**
  * Format document on type options
  */
 interface DocumentOnTypeFormattingOptions {
@@ -280,7 +342,7 @@ interface DocumentOnTypeFormattingOptions {
 data DocumentOnTypeFormattingOptions =
   DocumentOnTypeFormattingOptions
     { _firstTriggerCharacter :: Text
-    , _moreTriggerCharacter  :: Maybe [String]
+    , _moreTriggerCharacter  :: Maybe [Text]
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''DocumentOnTypeFormattingOptions
@@ -303,11 +365,36 @@ export interface DocumentLinkOptions {
 
 data DocumentLinkOptions =
   DocumentLinkOptions
-    { -- |Document links have a resolve provider as well.
+    { -- | Document links have a resolve provider as well.
       _resolveProvider :: Maybe Bool
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''DocumentLinkOptions
+
+-- ---------------------------------------------------------------------
+{-
+New in 3.12
+----------
+
+/**
+ * Rename options
+ */
+export interface RenameOptions {
+        /**
+         * Renames should be checked and tested before being executed.
+         */
+        prepareProvider?: boolean;
+}
+-}
+
+data RenameOptions =
+  RenameOptionsStatic Bool
+  | RenameOptions
+    { -- | Renames should be checked and tested before being executed.
+      _prepareProvider :: Maybe Bool
+    } deriving (Show, Read, Eq)
+
+deriveJSON lspOptions { sumEncoding = A.UntaggedValue } ''RenameOptions
 
 -- ---------------------------------------------------------------------
 
@@ -402,7 +489,7 @@ data TextDocumentSyncOptions =
       -- | Will save wait until requests are sent to the server.
     , _willSaveWaitUntil :: Maybe Bool
 
-      -- |Save notifications are sent to the server.
+      -- | Save notifications are sent to the server.
     , _save              :: Maybe SaveOptions
     } deriving (Show, Read, Eq)
 
@@ -465,9 +552,11 @@ interface ServerCapabilities {
          */
         workspaceSymbolProvider?: boolean;
         /**
-         * The server provides code actions.
+         * The server provides code actions. The `CodeActionOptions` return type is only
+         * valid if the client signals code action literal support via the property
+         * `textDocument.codeAction.codeActionLiteralSupport`.
          */
-        codeActionProvider?: boolean;
+        codeActionProvider?: boolean | CodeActionOptions;
         /**
          * The server provides code lens.
          */
@@ -622,7 +711,7 @@ deriveJSON lspOptions ''WorkspaceFolderOptions
 
 data WorkspaceOptions =
   WorkspaceOptions
-    { -- |The server supports workspace folder. Since LSP 3.6
+    { -- | The server supports workspace folder. Since LSP 3.6
       --
       -- @since 0.7.0.0
       _workspaceFolders :: Maybe WorkspaceFolderOptions
@@ -664,7 +753,7 @@ data InitializeResponseCapabilitiesInner =
       -- | The server provides workspace symbol support.
     , _workspaceSymbolProvider          :: Maybe Bool
       -- | The server provides code actions.
-    , _codeActionProvider               :: Maybe Bool
+    , _codeActionProvider               :: Maybe CodeActionOptions
       -- | The server provides code lens.
     , _codeLensProvider                 :: Maybe CodeLensOptions
       -- | The server provides document formatting.
@@ -674,7 +763,7 @@ data InitializeResponseCapabilitiesInner =
       -- | The server provides document formatting on typing.
     , _documentOnTypeFormattingProvider :: Maybe DocumentOnTypeFormattingOptions
       -- | The server provides rename support.
-    , _renameProvider                   :: Maybe Bool
+    , _renameProvider                   :: Maybe RenameOptions
       -- | The server provides document link support.
     , _documentLinkProvider             :: Maybe DocumentLinkOptions
       -- | The server provides color provider support. Since LSP 3.6
@@ -1885,9 +1974,10 @@ deriveJSON lspOptions ''ReferenceContext
 
 data ReferenceParams =
   ReferenceParams
-    { _textDocument :: TextDocumentIdentifier
-    , _position     :: Position
-    , _context      :: ReferenceContext
+    { _textDocument  :: TextDocumentIdentifier
+    , _position      :: Position
+    , _context       :: ReferenceContext
+    , _workDoneToken :: Maybe ProgressToken -- ^ An optional token that a server can use to report work done progress.
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''ReferenceParams
@@ -2021,7 +2111,8 @@ Response
 
 data WorkspaceSymbolParams =
   WorkspaceSymbolParams
-    { _query :: Text
+    { _query :: Text -- ^ A query string to filter symbols by. Clients may send an empty string here to request all symbols.
+    , _workDoneToken :: Maybe ProgressToken -- ^ An optional token that a server can use to report work done progress.
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''WorkspaceSymbolParams
@@ -2083,6 +2174,7 @@ interface CodeLens {
 data CodeLensParams =
   CodeLensParams
     { _textDocument :: TextDocumentIdentifier
+    , _workDoneToken :: Maybe ProgressToken -- ^ An optional token that a server can use to report work done progress.
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''CodeLensParams
@@ -2141,6 +2233,7 @@ Response
 
 
 -}
+
 -- ---------------------------------------------------------------------
 {-
 New in 3.0
@@ -2197,6 +2290,7 @@ export interface DocumentLinkRegistrationOptions extends TextDocumentRegistratio
 data DocumentLinkParams =
   DocumentLinkParams
     { _textDocument :: TextDocumentIdentifier
+    , _workDoneToken :: Maybe ProgressToken -- ^ An optional token that a server can use to report work done progress.
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''DocumentLinkParams
@@ -2297,6 +2391,7 @@ data DocumentFormattingParams =
   DocumentFormattingParams
     { _textDocument :: TextDocumentIdentifier
     , _options      :: FormattingOptions
+    , _workDoneToken :: Maybe ProgressToken -- ^ An optional token that a server can use to report work done progress.
     } deriving (Show,Read,Eq)
 
 deriveJSON lspOptions ''DocumentFormattingParams
@@ -2344,6 +2439,7 @@ data DocumentRangeFormattingParams =
     { _textDocument :: TextDocumentIdentifier
     , _range        :: Range
     , _options      :: FormattingOptions
+    , _workDoneToken :: Maybe ProgressToken -- ^ An optional token that a server can use to report work done progress.
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''DocumentRangeFormattingParams
@@ -2469,12 +2565,55 @@ data RenameParams =
     { _textDocument :: TextDocumentIdentifier
     , _position     :: Position
     , _newName      :: Text
+    , _workDoneToken :: Maybe ProgressToken -- ^ An optional token that a server can use to report work done progress.
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''RenameParams
 
 
 -- {\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"textDocument/rename\",\"params\":{\"textDocument\":{\"uri\":\"file:///home/alanz/mysrc/github/alanz/haskell-lsp/src/HieVscode.hs\"},\"position\":{\"line\":37,\"character\":17},\"newName\":\"getArgs'\"}}
+
+-- ---------------------------------------------------------------------
+{-
+Prepare Rename Request
+
+Since version 3.12.0
+
+The prepare rename request is sent from the client to the server to setup
+and test the validity of a rename operation at a given location.
+
+Request:
+
+    method: ‘textDocument/prepareRename’
+    params: TextDocumentPositionParams
+
+Response:
+
+    result: Range | { range: Range, placeholder: string } | null describing
+            the range of the string to rename and optionally a placeholder
+            text of the string content to be renamed. If null is returned
+            then it is deemed that a ‘textDocument/rename’ request is not
+            valid at the given position.
+    error: code and message set in case an exception happens during the
+           prepare rename request.
+
+-}
+
+-- {\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"textDocument/rename\",\"params\":{\"textDocument\":{\"uri\":\"file:///home/alanz/mysrc/github/alanz/haskell-lsp/src/HieVscode.hs\"},\"position\":{\"line\":37,\"character\":17},\"newName\":\"getArgs'\"}}
+
+data RangeWithPlaceholder =
+  RangeWithPlaceholder
+    {
+    _range :: Range
+    , _placeholder :: Text
+    }
+
+deriveJSON lspOptions { sumEncoding = A.UntaggedValue } ''RangeWithPlaceholder
+
+data RangeOrRangeWithPlaceholder = RangeWithPlaceholderValue RangeWithPlaceholder
+                                 | RangeValue Range
+
+deriveJSON lspOptions { sumEncoding = A.UntaggedValue } ''RangeOrRangeWithPlaceholder
 
 -- ---------------------------------------------------------------------
 {-
@@ -2529,8 +2668,9 @@ export interface ExecuteCommandRegistrationOptions {
 
 data ExecuteCommandParams =
   ExecuteCommandParams
-    { _command   :: Text
-    , _arguments :: Maybe (List A.Value)
+    { _command   :: Text -- ^ The identifier of the actual command handler.
+    , _arguments :: Maybe (List A.Value) -- ^ Arguments that the command should be invoked with.
+    , _workDoneToken :: Maybe ProgressToken -- ^ An optional token that a server can use to report work done progress.
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''ExecuteCommandParams

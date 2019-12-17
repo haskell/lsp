@@ -1,5 +1,5 @@
 name:                haskell-lsp-types
-version:             0.15.0.0
+version:             0.19.0.0
 synopsis:            Haskell library for the Microsoft Language Server Protocol, data types
 
 description:         An implementation of the types to allow language implementors to
@@ -36,6 +36,7 @@ library
                      , Language.Haskell.LSP.Types.Location
                      , Language.Haskell.LSP.Types.MarkupContent
                      , Language.Haskell.LSP.Types.Message
+                     , Language.Haskell.LSP.Types.Progress
                      , Language.Haskell.LSP.Types.Symbol
                      , Language.Haskell.LSP.Types.TextDocument
                      , Language.Haskell.LSP.Types.Types
@@ -46,7 +47,7 @@ library
  -- other-extensions:
   ghc-options:         -Wall
   -- ghc-options:         -Werror
-  build-depends:       base >=4.9 && <4.13
+  build-depends:       base >= 4.9 && < 4.14
                      , aeson >=1.2.2.0
                      , bytestring
                      , data-default

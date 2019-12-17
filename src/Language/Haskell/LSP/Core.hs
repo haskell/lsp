@@ -15,6 +15,7 @@ module Language.Haskell.LSP.Core (
     handleMessage
   , LanguageContextData(..)
   , Handler(..)
+  , VFSData(..)
   , InitializeCallbacks(..)
   , LspFuncs(..)
   , Progress(..)
@@ -37,12 +38,12 @@ module Language.Haskell.LSP.Core (
   , reverseSortEdit
   ) where
 
-import           Control.Concurrent.STM
 import           Control.Concurrent.Async
+import           Control.Concurrent.STM
 import qualified Control.Exception as E
 import           Control.Monad
 import           Control.Monad.IO.Class
-import           Control.Lens ( (<&>), (^.) )
+import           Control.Lens ( (<&>), (^.), (^?), _Just )
 import qualified Data.Aeson as J
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as B
@@ -51,6 +52,7 @@ import qualified Data.Dependent.Map as DM
 import           Data.Dependent.Map ( DMap )
 import qualified Data.HashMap.Strict as HM
 import qualified Data.List as L
+import           Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.Map as Map
 import           Data.Maybe
 import           Data.Monoid
@@ -90,8 +92,7 @@ data LanguageContextData config =
   , resHandlers            :: !Handlers
   , resOptions             :: !Options
   , resSendResponse        :: !SendFunc
-  , resVFS                 :: !VFS
-  , reverseMap             :: !(Map.Map FilePath FilePath)
+  , resVFS                 :: !VFSData
   , resDiagnostics         :: !DiagnosticStore
   , resConfig              :: !(Maybe config)
   , resLspId               :: !(TVar Int)
@@ -103,32 +104,49 @@ data LanguageContextData config =
   }
 
 data ProgressData = ProgressData { progressNextId :: !Int
-                                 , progressCancel :: !(Map.Map Text (IO ())) }
+                                 , progressCancel :: !(Map.Map J.ProgressToken (IO ())) }
+
+data VFSData =
+  VFSData
+    { vfsData :: !VFS
+    , reverseMap :: !(Map.Map FilePath FilePath)
+    }
 
 -- ---------------------------------------------------------------------
 
--- | Language Server Protocol options supported by the given language server.
--- These are automatically turned into capabilities reported to the client
--- during initialization.
+-- | Language Server Protocol options that the server may configure.
+-- If you set handlers for some requests, you may need to set some of these options.
 data Options =
   Options
     { textDocumentSync                 :: Maybe J.TextDocumentSyncOptions
-    , completionProvider               :: Maybe J.CompletionOptions
-    , signatureHelpProvider            :: Maybe J.SignatureHelpOptions
-    , typeDefinitionProvider           :: Maybe J.GotoOptions
-    , implementationProvider           :: Maybe J.GotoOptions
-    , codeLensProvider                 :: Maybe J.CodeLensOptions
-    , documentOnTypeFormattingProvider :: Maybe J.DocumentOnTypeFormattingOptions
-    , documentLinkProvider             :: Maybe J.DocumentLinkOptions
-    , colorProvider                    :: Maybe J.ColorOptions
-    , foldingRangeProvider             :: Maybe J.FoldingRangeOptions
-    , executeCommandProvider           :: Maybe J.ExecuteCommandOptions
+    -- |  The characters that trigger completion automatically.
+    , completionTriggerCharacters      :: Maybe [Char]
+    -- | The list of all possible characters that commit a completion. This field can be used
+    -- if clients don't support individual commmit characters per completion item. See
+    -- `_commitCharactersSupport`.
+    , completionAllCommitCharacters    :: Maybe [Char]
+    -- | The characters that trigger signature help automatically.
+    , signatureHelpTriggerCharacters   :: Maybe [Char]
+    -- | List of characters that re-trigger signature help.
+    -- These trigger characters are only active when signature help is already showing. All trigger characters
+    -- are also counted as re-trigger characters.
+    , signatureHelpRetriggerCharacters :: Maybe [Char]
+    -- | CodeActionKinds that this server may return.
+    -- The list of kinds may be generic, such as `CodeActionKind.Refactor`, or the server
+    -- may list out every specific kind they provide.
+    , codeActionKinds                  :: Maybe [J.CodeActionKind]
+    -- | The list of characters that triggers on type formatting.
+    -- If you set `documentOnTypeFormattingHandler`, you **must** set this.
+    -- The first character is mandatory, so a 'NonEmpty' should be passed.
+    , documentOnTypeFormattingTriggerCharacters :: Maybe (NonEmpty Char)
+    -- | The commands to be executed on the server.
+    -- If you set `executeCommandHandler`, you **must** set this.
+    , executeCommandCommands           :: Maybe [Text]
     }
 
 instance Default Options where
   def = Options Nothing Nothing Nothing Nothing Nothing
-                Nothing Nothing Nothing Nothing Nothing
-                Nothing
+                Nothing Nothing Nothing
 
 -- | A function to publish diagnostics. It aggregates all diagnostics pertaining
 -- to a particular version of a document, by source, and sends a
@@ -180,7 +198,9 @@ data LspFuncs c =
     , sendFunc                     :: !ServerMessageFunc
     , getVirtualFileFunc           :: !(J.NormalizedUri -> IO (Maybe VirtualFile))
     , getVirtualFilesFunc          :: !(IO VFS)
-    , persistVirtualFileFunc       :: !(J.NormalizedUri -> IO FilePath)
+      -- ^ Function to return the 'VirtualFile' associated with a
+      -- given 'NormalizedUri', if there is one.
+    , persistVirtualFileFunc       :: !(J.NormalizedUri -> IO (Maybe FilePath))
     , reverseFileMapFunc           :: !(IO (FilePath -> FilePath))
     , publishDiagnosticsFunc       :: !PublishDiagnosticsFunc
     , flushDiagnosticsBySourceFunc :: !FlushDiagnosticsBySourceFunc
@@ -275,12 +295,11 @@ mkServerRequestFunc tvarDat (SomeServerMessageWithResponse m msg resHandler) =
 -- 'a', a function to send a reply message once encoded as a ByteString, and a
 -- received message of type 'b'
 newtype Handler m = Handler {runHandler :: J.ClientMessage m -> ClientResponseHandler m -> IO ()}
-
 type Handlers = DMap J.SClientMethod Handler
 
 -- ---------------------------------------------------------------------
-nop :: a -> b -> IO a
-nop = const . return
+nop :: Maybe (a -> b -> (a,[String]))
+nop = Nothing
 
 
 helper :: J.FromJSON a => (TVar (LanguageContextData config) -> a -> IO ()) -> (TVar (LanguageContextData config) -> J.Value -> IO ())
@@ -327,15 +346,20 @@ handlerMap i hm (J.SomeClientMethod c) = case c of
 
 -- | Adapter from the normal handlers exposed to the library users and the
 -- internal message loop
+<<<<<<< HEAD
 hh :: forall m b config. (J.FromJSON b, J.ToJSON b, b ~ J.ClientMessage m)
-   => J.SClientMethod m -> (VFS -> b -> IO VFS) -> Maybe (Handler m) -> TVar (LanguageContextData config) -> J.Value -> IO ()
-hh m getVfs mh tvarDat json = do
+   => J.SClientMethod m -> Maybe (VFS -> b -> (VFS, [String])) -> Maybe (Handler b)
+   -> TVar (LanguageContextData config) -> J.Value -> IO ()
+hh m mVfs mh tvarDat json = do
       case J.fromJSON json of
         J.Success req -> do
+          case mVfs of
+            Just modifyVfs -> do
+              join $ atomically $ modifyVFSData tvarDat $ \(VFSData vfs rm) ->
+                let (vfs', ls) = modifyVfs vfs req
+                in (VFSData vfs' rm, mapM_ logs ls)
+            Nothing -> return ()
           ctx <- readTVarIO tvarDat
-          vfs' <- getVfs (resVFS ctx) req
-          atomically $ modifyTVar' tvarDat (\c -> c {resVFS = vfs'})
-
           captureFromClient req (resCaptureFile ctx)
 
           case mh of
@@ -397,10 +421,8 @@ handleMessageWithConfigChange m parseConfig mh tvarDat json =
               T.pack $ unwords
                 ["haskell-lsp:configuration parse error.", show req, show err]
           sendErrorLog tvarDat msg
-        Right newConfig -> do
-          -- logs $ "haskell-lsp:hc DidChangeConfigurationNotification got newConfig:" ++ show newConfig
-          let ctx' = ctx { resConfig = Just newConfig }
-          atomically $ modifyTVar' tvarDat (const ctx')
+        Right newConfig ->
+          atomically $ modifyTVar' tvarDat (\ctx' -> ctx' { resConfig = Just newConfig })
       case mh of
         Just h  -> runHandler h req (mkClientResponseHandler m req tvarDat)
         Nothing -> return ()
@@ -430,31 +452,42 @@ hwf h tvarDat json = do
 
 -- ---------------------------------------------------------------------
 
+modifyVFSData :: TVar (LanguageContextData config) -> (VFSData -> (VFSData, a)) -> STM a
+modifyVFSData tvarDat f = do
+  (vfs', a) <- f . resVFS <$> readTVar tvarDat
+  modifyTVar tvarDat $ \vd -> vd { resVFS = vfs' }
+  return a
+
+-- ---------------------------------------------------------------------
+
+-- | Return the 'VirtualFile' associated with a given 'NormalizedUri', if there is one.
 getVirtualFile :: TVar (LanguageContextData config) -> J.NormalizedUri -> IO (Maybe VirtualFile)
-getVirtualFile tvarDat uri = Map.lookup uri . resVFS <$> readTVarIO tvarDat
+getVirtualFile tvarDat uri = Map.lookup uri . vfsMap . vfsData . resVFS <$> readTVarIO tvarDat
 
 getVirtualFiles :: TVar (LanguageContextData config) -> IO VFS
 getVirtualFiles tvarDat = resVFS <$> readTVarIO tvarDat
 
 -- | Dump the current text for a given VFS file to a temporary file,
 -- and return the path to the file.
-persistVirtualFile :: TVar (LanguageContextData config) -> J.NormalizedUri -> IO FilePath
-persistVirtualFile tvarDat uri = do
-  st <- readTVarIO tvarDat
-  let vfs = resVFS st
-      revMap = reverseMap st
+persistVirtualFile :: TVar (LanguageContextData config) -> J.NormalizedUri -> IO (Maybe FilePath)
+persistVirtualFile tvarDat uri = join $ atomically $ do
+  st <- readTVar tvarDat
+  let vfs_data = resVFS st
+      cur_vfs = vfsData vfs_data
+      revMap = reverseMap vfs_data
 
-  (fn, new_vfs) <- persistFileVFS vfs uri
-  let revMap' =
+  case persistFileVFS cur_vfs uri of
+    Nothing -> return (return Nothing)
+    Just (fn, write) -> do
+      let revMap' =
         -- TODO: Does the VFS make sense for URIs which are not files?
         -- The reverse map should perhaps be (FilePath -> URI)
-        case J.uriToFilePath (J.fromNormalizedUri uri) of
-          Just uri_fp -> Map.insert fn uri_fp revMap
-          Nothing -> revMap
+            case J.uriToFilePath (J.fromNormalizedUri uri) of
+              Just uri_fp -> Map.insert fn uri_fp revMap
+              Nothing -> revMap
 
-  atomically $ modifyTVar' tvarDat (\d -> d { resVFS = new_vfs
-                                            , reverseMap = revMap' })
-  return fn
+      modifyVFSData tvarDat (\d -> (d { reverseMap = revMap' }, ()))
+      return ((Just fn) <$ write)
 
 -- TODO: should this function return a URI?
 -- | If the contents of a VFS has been dumped to a temporary file, map
@@ -462,9 +495,9 @@ persistVirtualFile tvarDat uri = do
 reverseFileMap :: TVar (LanguageContextData config)
                -> IO (FilePath -> FilePath)
 reverseFileMap tvarDat = do
-  revMap <- reverseMap <$> readTVarIO tvarDat
-  let f fp = fromMaybe fp $ Map.lookup fp revMap
-  return f
+    vfs <- resVFS <$> readTVarIO tvarDat
+    let f fp = fromMaybe fp . Map.lookup fp . reverseMap $ vfs
+    return f
 
 -- ---------------------------------------------------------------------
 
@@ -503,9 +536,9 @@ _ERR_MSG_URL = [ "`stack update` and install new haskell-lsp."
 -- |
 --
 --
-defaultLanguageContextData :: Handlers -> Options -> LspFuncs config -> TVar Int -> SendFunc -> Maybe FilePath -> LanguageContextData config
-defaultLanguageContextData h o lf tv sf cf =
-  LanguageContextData _INITIAL_RESPONSE_SEQUENCE h o sf mempty mempty mempty
+defaultLanguageContextData :: Handlers -> Options -> LspFuncs config -> TVar Int -> SendFunc -> Maybe FilePath -> VFS -> LanguageContextData config
+defaultLanguageContextData h o lf tv sf cf vfs =
+  LanguageContextData _INITIAL_RESPONSE_SEQUENCE h o sf (VFSData vfs mempty) mempty
                       Nothing tv lf cf mempty defaultProgressData mempty
 
 defaultProgressData :: ProgressData
@@ -720,20 +753,27 @@ initializeRequestHandler' onStartup mHandler tvarCtx = Handler $ \req@(J.Request
         (C.WindowClientCapabilities mProgress) <- wc
         mProgress
 
-      storeProgress :: Text -> Async a -> IO ()
+      storeProgress :: J.ProgressToken -> Async a -> IO ()
       storeProgress n a = atomically $ do
         pd <- resProgressData <$> readTVar tvarCtx
         let pc = progressCancel pd
             pc' = Map.insert n (cancelWith a ProgressCancelledException) pc
         modifyTVar tvarCtx (\ctx -> ctx { resProgressData = pd { progressCancel = pc' }})
 
+      deleteProgress :: J.ProgressToken -> IO ()
+      deleteProgress n = atomically $ do
+        pd <- resProgressData <$> readTVar tvarCtx
+        let x = progressCancel pd
+            x' = Map.delete n x
+        modifyTVar tvarCtx (\ctx -> ctx { resProgressData = pd { progressCancel = x' }})
+
       -- Get a new id for the progress session and make a new one
-      getNewProgressId :: IO Text
-      getNewProgressId = fmap (T.pack . show) $ liftIO $ atomically $ do
+      getNewProgressId :: IO J.ProgressToken
+      getNewProgressId = liftIO $ atomically $ do
         pd <- resProgressData <$> readTVar tvarCtx
         let x = progressNextId pd
         modifyTVar tvarCtx (\ctx -> ctx { resProgressData = pd { progressNextId = x + 1 }})
-        return x
+        return $ J.ProgressNumericToken x
 
       withProgressBase :: Bool -> (Text -> ProgressCancellable
                     -> ((Progress -> IO ()) -> IO a) -> IO a)
@@ -751,24 +791,36 @@ initializeRequestHandler' onStartup mHandler tvarCtx = Handler $ \req@(J.Request
                               Cancellable -> True
                               NotCancellable -> False
 
+          rId <- getLspId $ resLspId ctx0
+
+          -- Create progress token
+          liftIO $ sf $ ReqWorkDoneProgressCreate $
+            fmServerWorkDoneProgressCreateRequest rId $ J.WorkDoneProgressCreateParams progId
+
           -- Send initial notification
-          liftIO $ sf $ fmServerProgressStartNotification $
-            J.ProgressStartParams progId title (Just cancellable')
-              Nothing initialPercentage
+          liftIO $ sf $ fmServerWorkDoneProgressBeginNotification $
+            J.ProgressParams progId $
+            J.WorkDoneProgressBeginParams title (Just cancellable') Nothing initialPercentage
 
           aid <- async $ f (updater progId sf)
           storeProgress progId aid
           res <- wait aid
 
           -- Send done notification
-          liftIO $ sf $ fmServerProgressDoneNotification $
-            J.ProgressDoneParams progId
+          liftIO $ sf $ fmServerWorkDoneProgressEndNotification $
+            J.ProgressParams progId $
+            J.WorkDoneProgressEndParams Nothing
+          -- Delete the progress cancellation from the map
+          -- If we don't do this then it's easy to leak things as the map contains any IO action.
+          deleteProgress progId
+
 
           return res
         | otherwise = f (const $ return ())
           where updater progId sf (Progress percentage msg) =
-                  sf $ fmServerProgressReportNotification $
-                    J.ProgressReportParams progId msg percentage
+                  sf $ fmServerWorkDoneProgressReportNotification $
+                    J.ProgressParams progId $
+                    J.WorkDoneProgressReportParams Nothing msg percentage
 
       withProgress' :: Text -> ProgressCancellable -> ((Progress -> IO ()) -> IO a) -> IO a
       withProgress' = withProgressBase False
@@ -792,8 +844,9 @@ initializeRequestHandler' onStartup mHandler tvarCtx = Handler $ \req@(J.Request
                             (getWfs tvarCtx)
                             withProgress'
                             withIndefiniteProgress'
-    let ctx = ctx0 { resLspFuncs = lspFuncs }
-    atomically $ writeTVar tvarCtx ctx
+    atomically $ modifyTVar tvarCtx (\cur_ctx -> cur_ctx { resLspFuncs = lspFuncs })
+
+    ctx <- readTVarIO tvarCtx
 
     initializationResult <- onStartup lspFuncs
 
@@ -802,66 +855,111 @@ initializeRequestHandler' onStartup mHandler tvarCtx = Handler $ \req@(J.Request
         sendResp $ Left errResp
 
       Nothing -> do
+        let capa = serverCapabilities (getCapabilities params) (resOptions ctx) (resHandlers ctx)
+            -- TODO: wrap this up into a fn to create a response message
+            res  = J.ResponseMessage "2.0" (J.responseId origId) (Just $ J.InitializeResponseCapabilities capa) Nothing
+        sendResponse tvarCtx res
 
-        let
-          h = resHandlers ctx
-          o = resOptions  ctx
+-- | Infers the capabilities based on registered handlers, and sets the appropriate options.
+-- A provider should be set to Nothing if the server does not support it, unless it is a
+-- static option.
+serverCapabilities :: C.ClientCapabilities -> Options -> Handlers -> J.InitializeResponseCapabilitiesInner
+serverCapabilities clientCaps o h =
+  J.InitializeResponseCapabilitiesInner
+    { J._textDocumentSync                 = sync
+    , J._hoverProvider                    = supported J.STextDocumentHover
+    , J._completionProvider               = completionProvider
+    , J._signatureHelpProvider            = signatureHelpProvider
+    , J._definitionProvider               = supported J.STextDocumentDefinition
+    , J._typeDefinitionProvider           = Just $ J.GotoOptionsStatic $ supported_b J.STextDocumentTypeDefinition
+    , J._implementationProvider           = Just $ J.GotoOptionsStatic $ supported_b J.STextDocumentImplementation
+    , J._referencesProvider               = supported J.STextDocumentReferences
+    , J._documentHighlightProvider        = supported J.STextDocumentDocumentHighlight
+    , J._documentSymbolProvider           = supported J.STextDocumentDocumentSymbol
+    , J._workspaceSymbolProvider          = supported J.SWorkspaceSymbol
+    , J._codeActionProvider               = codeActionProvider
+    , J._codeLensProvider                 = supported' J.STextDocumentCodeLens $ J.CodeLensOptions $
+                                              supported J.SCodeLensResolvejj
+    , J._documentFormattingProvider       = supported J.STextDocumentFormatting
+    , J._documentRangeFormattingProvider  = supported J.STextDocumentRangeFormatting
+    , J._documentOnTypeFormattingProvider = documentOnTypeFormattingProvider
+    , J._renameProvider                   = Just $ J.RenameOptionsStatic $ supported_b J.STextDocumentRename
+    , J._documentLinkProvider             = supported' J.STextDocumentDocumentLink $ J.DocumentLinkOptions $
+                                              supported J.SDocumentLinkResolve
+    , J._colorProvider                    = Just $ J.ColorOptionsStatic $ J.supported_b J.STextDocumentDocumentColor
+    , J._foldingRangeProvider             = Just $ J.FoldingRangeOptionsStatic $ J.supported_b J.STextDocumentFoldingRange
+    , J._executeCommandProvider           = executeCommandProvider
+    , J._workspace                        = Just workspace
+    -- TODO: Add something for experimental
+    , J._experimental                     = Nothing :: Maybe J.Value
+    }
+  where
 
-          supported :: forall m. J.SClientMethod m -> Maybe Bool
-          supported m = Just $ DM.member m h
+    supported' m b 
+      | supported_b m = Just b
+      | otherwise = Nothing
 
-          -- If a dynamic setting is provided use it, else set a
-          -- static True if there is a handler.
-          static (Just d) _ = Just d
-          static _ (Just _) = Just (J.GotoOptionsStatic True)
-          static _ Nothing  = Nothing
+    supported :: forall m. J.SClientMethod m -> Maybe Bool
+    supported = Just . supported_b
 
-          sync = case textDocumentSync o of
-                  Just x -> Just (J.TDSOptions x)
-                  Nothing -> Nothing
+    supported_b :: forall m. J.SClientMethod m -> Bool
+    supported_b m = DM.member m h
 
-          workspace = J.WorkspaceOptions workspaceFolder
-          workspaceFolder = case DM.lookup J.SWorkspaceDidChangeWorkspaceFolders h of
-            Just _ -> Just $
-              -- sign up to receive notifications
-              J.WorkspaceFolderOptions (Just True) (Just (J.WorkspaceFolderChangeNotificationsBool True))
+    singleton :: a -> [a]
+    singleton x = [x]
+
+    completionProvider
+      | supported_b J.STextDocumentCompletion = Just $
+          J.CompletionOptions
+            (supported J.SCompletionItemResolve)
+            (map singleton <$> completionTriggerCharacters o)
+            (map singleton <$> completionAllCommitCharacters o)
+      | otherwise = Nothing
+
+    clientSupportsCodeActionKinds = isJust $
+      clientCaps ^? J.textDocument . _Just . J.codeAction . _Just . J.codeActionLiteralSupport
+
+    codeActionProvider
+      | clientSupportsCodeActionKinds
+      , supported_b J.STextDocumentCodeAction = Just $ maybe (J.CodeActionOptionsStatic True) (J.CodeActionOptions . Just) (codeActionKinds o)
+      | supported_b J.STextDocumentCodeAction = Just (J.CodeActionOptionsStatic True)
+      | otherwise = Just (J.CodeActionOptionsStatic False)
+
+    signatureHelpProvider
+      | supported_b J.STextDocumentSignatureHelp = Just $
+          J.SignatureHelpOptions
+            (map singleton <$> signatureHelpTriggerCharacters o)
+            (map singleton <$> signatureHelpRetriggerCharacters o)
+      | otherwise = Nothing
+
+    documentOnTypeFormattingProvider
+      | supported_b J.STextDocumentOnTypeFormatting
+      , Just (first :| rest) <- documentOnTypeFormattingTriggerCharacters o = Just $
+          J.DocumentOnTypeFormattingOptions (T.pack [first]) (Just (map (T.pack . singleton) rest))
+      | supported_b J.STextDocumentOnTypeFormatting
+      , Nothing <- documentOnTypeFormattingTriggerCharacters o =
+          error "documentOnTypeFormattingTriggerCharacters needs to be set if a documentOnTypeFormattingHandler is set"
+      | otherwise = Nothing
+
+    executeCommandProvider
+      | supported_b J.SWorkspaceExecuteCommand
+      , Just cmds <- executeCommandCommands o = Just (J.ExecuteCommandOptions (J.List cmds))
+      | suppported_b J.SWorkspaceExecuteCommand
+      , Nothing <- executeCommandCommands o =
+          error "executeCommandCommands needs to be set if a executeCommandHandler is set"
+      | otherwise = Nothing
+
+    sync = case textDocumentSync o of
+            Just x -> Just (J.TDSOptions x)
             Nothing -> Nothing
 
-          capa =
-            J.InitializeResponseCapabilitiesInner
-              { J._textDocumentSync                 = sync
-              , J._hoverProvider                    = supported J.STextDocumentHover
-              , J._completionProvider               = completionProvider o
-              , J._signatureHelpProvider            = signatureHelpProvider o
-              , J._definitionProvider               = supported J.STextDocumentDefinition
-              , J._typeDefinitionProvider           = static (typeDefinitionProvider o) (supported J.STextDocumentTypeDefinition)
-              , J._implementationProvider           = implementationProvider o
-              , J._referencesProvider               = supported J.STextDocumentReferences
-              , J._documentHighlightProvider        = supported J.STextDocumentDocumentHighlight
-              , J._documentSymbolProvider           = supported J.STextDocumentDocumentSymbol
-              , J._workspaceSymbolProvider          = supported J.SWorkspaceSymbol
-              , J._codeActionProvider               = supported J.STextDocumentCodeAction
-              , J._codeLensProvider                 = codeLensProvider o
-              , J._documentFormattingProvider       = supported J.STextDocumentFormatting
-              , J._documentRangeFormattingProvider  = supported J.STextDocumentRangeFormatting
-              , J._documentOnTypeFormattingProvider = documentOnTypeFormattingProvider o
-              , J._renameProvider                   = supported J.STextDocumentRename
-              , J._documentLinkProvider             = documentLinkProvider o
-              , J._colorProvider                    = colorProvider o
-              , J._foldingRangeProvider             = foldingRangeProvider o
-              , J._executeCommandProvider           = executeCommandProvider o
-              , J._workspace                        = Just workspace
-              -- TODO: Add something for experimental
-              , J._experimental                     = Nothing :: Maybe J.Value
-              }
+    workspace = J.WorkspaceOptions workspaceFolder
+    workspaceFolder = supported' S.SWorkspaceDidChangeWorkspaceFolders $
+        -- sign up to receive notifications
+        J.WorkspaceFolderOptions (Just True) (Just (J.WorkspaceFolderChangeNotificationsBool True))
 
-          -- TODO: wrap this up into a fn to create a response message
-          res  = Right (J.InitializeResponseCapabilities capa)
-
-        sendResp res
-
-progressCancelHandler :: TVar (LanguageContextData config) -> J.ProgressCancelNotification -> IO ()
-progressCancelHandler tvarCtx (J.NotificationMessage _ _ (J.ProgressCancelParams tid)) = do
+progressCancelHandler :: TVar (LanguageContextData config) -> J.WorkDoneProgressCancelNotification -> IO ()
+progressCancelHandler tvarCtx (J.NotificationMessage _ _ (J.WorkDoneProgressCancelParams tid)) = do
   mact <- Map.lookup tid . progressCancel . resProgressData <$> readTVarIO tvarCtx
   case mact of
     Nothing -> return ()
@@ -873,7 +971,7 @@ progressCancelHandler tvarCtx (J.NotificationMessage _ _ (J.ProgressCancelParams
 shutdownRequestHandler :: TVar (LanguageContextData config) -> J.ShutdownRequest -> IO ()
 shutdownRequestHandler tvarCtx req@(J.RequestMessage _ origId _ _) =
   flip E.catches (defaultErrorHandlers tvarCtx (J.responseId origId) req) $ do
-  let res  = makeResponseMessage req ("ok" :: Text)
+  let res  = makeResponseMessage req Nothing
 
   sendResponse tvarCtx res
 
@@ -883,27 +981,28 @@ shutdownRequestHandler tvarCtx req@(J.RequestMessage _ origId _ _) =
 -- and version, and publish the total to the client.
 publishDiagnostics :: TVar (LanguageContextData config) -> PublishDiagnosticsFunc
 publishDiagnostics tvarDat maxDiagnosticCount uri version diags = do
-  ctx <- readTVarIO tvarDat
-  let ds = updateDiagnostics (resDiagnostics ctx) uri version diags
-  atomically $ writeTVar tvarDat $ ctx{resDiagnostics = ds}
-  let mdp = getDiagnosticParamsFor maxDiagnosticCount ds uri
-  case mdp of
-    Nothing -> return ()
-    Just params -> do
-      resSendResponse ctx $ J.NotificationMessage "2.0" J.STextDocumentPublishDiagnostics params
+  join $ atomically $ do
+    ctx <- readTVar tvarDat
+    let ds = updateDiagnostics (resDiagnostics ctx) uri version diags
+    writeTVar tvarDat $ ctx{resDiagnostics = ds}
+    let mdp = getDiagnosticParamsFor maxDiagnosticCount ds uri
+    return $ case mdp of
+      Nothing -> return ()
+      Just params ->
+        resSendResponse ctx $ J.NotificationMessage "2.0" J.TextDocumentPublishDiagnostics params
 
 -- ---------------------------------------------------------------------
 
 -- | Take the new diagnostics, update the stored diagnostics for the given file
 -- and version, and publish the total to the client.
 flushDiagnosticsBySource :: TVar (LanguageContextData config) -> FlushDiagnosticsBySourceFunc
-flushDiagnosticsBySource tvarDat maxDiagnosticCount msource = do
+flushDiagnosticsBySource tvarDat maxDiagnosticCount msource = join $ atomically $ do
   -- logs $ "haskell-lsp:flushDiagnosticsBySource:source=" ++ show source
-  ctx <- readTVarIO tvarDat
+  ctx <- readTVar tvarDat
   let ds = flushBySource (resDiagnostics ctx) msource
-  atomically $ writeTVar tvarDat $ ctx {resDiagnostics = ds}
+  writeTVar tvarDat $ ctx {resDiagnostics = ds}
   -- Send the updated diagnostics to the client
-  forM_ (Map.keys ds) $ \uri -> do
+  return $ forM_ (Map.keys ds) $ \uri -> do
     -- logs $ "haskell-lsp:flushDiagnosticsBySource:uri=" ++ show uri
     let mdp = getDiagnosticParamsFor maxDiagnosticCount ds uri
     case mdp of

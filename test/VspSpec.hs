@@ -31,7 +31,7 @@ mkRange :: Int -> Int -> Int -> Int -> Maybe J.Range
 mkRange ls cs le ce = Just $ J.Range (J.Position ls cs) (J.Position le ce)
 
 vfsFromText :: T.Text -> VirtualFile
-vfsFromText text = VirtualFile 0 (Rope.fromText text) Nothing
+vfsFromText text = VirtualFile 0 0 (Rope.fromText text)
 
 -- ---------------------------------------------------------------------
 

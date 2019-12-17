@@ -7,6 +7,7 @@ module Language.Haskell.LSP.Types.Diagnostic where
 import           Control.DeepSeq
 import qualified Data.Aeson                                 as A
 import           Data.Aeson.TH
+import           Data.Scientific
 import           Data.Text
 import           GHC.Generics
 import           Language.Haskell.LSP.Types.Constants
@@ -132,12 +133,21 @@ interface Diagnostic {
 }
 -}
 
+data NumberOrString =
+  NumberValue Scientific
+  | StringValue Text
+  deriving (Show, Read, Eq, Ord, Generic)
+
+instance NFData NumberOrString
+
+deriveJSON lspOptions { sumEncoding = A.UntaggedValue } ''NumberOrString
+
 type DiagnosticSource = Text
 data Diagnostic =
   Diagnostic
     { _range              :: Range
     , _severity           :: Maybe DiagnosticSeverity
-    , _code               :: Maybe Text -- Note: Protocol allows Int too.
+    , _code               :: Maybe NumberOrString
     , _source             :: Maybe DiagnosticSource
     , _message            :: Text
     , _relatedInformation :: Maybe (List DiagnosticRelatedInformation)

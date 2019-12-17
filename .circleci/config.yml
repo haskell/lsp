@@ -1,7 +1,7 @@
 defaults: &defaults
   working_directory: ~/build
   docker:
-    - image: quay.io/haskell_works/stack-build-icu
+    - image: alanz/haskell-hie-ci
   steps:
     - checkout
     - run:
@@ -29,6 +29,10 @@ defaults: &defaults
 
     - restore_cache:
           key: stack-work-dirs-{{ .Environment.CACHE_VER }}-{{ arch }}-{{ .Environment.CIRCLE_JOB }}-{{ checksum "stack-build.txt" }}
+
+    - run:
+        name: Stack upgrade
+        command: stack upgrade
 
     - run:
         name: Stack setup
@@ -109,6 +113,16 @@ jobs:
       - STACK_FILE: "stack-8.6.4.yaml"
     <<: *defaults
 
+  ghc-8.6.5:
+    environment:
+      - STACK_FILE: "stack-8.6.5.yaml"
+    <<: *defaults
+
+  ghc-8.8.1:
+    environment:
+      - STACK_FILE: "stack-8.8.1.yaml"
+    <<: *defaults
+
 workflows:
   version: 2
   multiple-ghcs:
@@ -121,3 +135,5 @@ workflows:
       - ghc-8.6.1
       - ghc-8.6.3
       - ghc-8.6.4
+      - ghc-8.6.5
+      - ghc-8.8.1

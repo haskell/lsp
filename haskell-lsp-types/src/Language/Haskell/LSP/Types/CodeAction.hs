@@ -4,7 +4,6 @@
 module Language.Haskell.LSP.Types.CodeAction where
 
 import           Control.Applicative
-import qualified Data.Aeson                    as A
 import           Data.Aeson.TH
 import           Data.Aeson.Types
 import           Data.Text                      ( Text )
@@ -14,6 +13,7 @@ import           Language.Haskell.LSP.Types.Diagnostic
 import           Language.Haskell.LSP.Types.List
 import           Language.Haskell.LSP.Types.Location
 import           Language.Haskell.LSP.Types.Message
+import           Language.Haskell.LSP.Types.Progress
 import           Language.Haskell.LSP.Types.TextDocument
 import           Language.Haskell.LSP.Types.WorkspaceEdit
 
@@ -23,7 +23,7 @@ Code Action Request
 
 https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#code-action-request
 
-The code action request is sent from the client to the server tocompute commands
+The code action request is sent from the client to the server to compute commands
 for a given text document and range. These commands are typically code fixes to
 either fix problems or to beautify/refactor code. The result of a
 textDocument/codeAction request is an array of Command literals which are
@@ -256,6 +256,7 @@ data CodeActionParams =
     { _textDocument :: TextDocumentIdentifier
     , _range        :: Range
     , _context      :: CodeActionContext
+    , _workDoneToken :: Maybe ProgressToken -- ^ An optional token that a server can use to report work done progress.
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''CodeActionParams

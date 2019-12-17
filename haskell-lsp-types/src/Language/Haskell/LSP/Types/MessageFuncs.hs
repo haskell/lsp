@@ -17,9 +17,10 @@ module Language.Haskell.LSP.Types.MessageFuncs (
   , fmServerShowMessageNotification
   , fmServerShowMessageRequest
   , fmServerLogMessageNotification
-  , fmServerProgressStartNotification
-  , fmServerProgressReportNotification
-  , fmServerProgressDoneNotification
+  , fmServerWorkDoneProgressBeginNotification
+  , fmServerWorkDoneProgressReportNotification
+  , fmServerWorkDoneProgressEndNotification
+  , fmServerWorkDoneProgressCreateRequest
   , fmServerTelemetryNotification
 
   -- * Client
@@ -58,6 +59,7 @@ module Language.Haskell.LSP.Types.MessageFuncs (
   , fmClientDocumentLinkRequest
   , fmClientDocumentLinkResolveRequest
   , fmClientRenameRequest
+  , fmClientPrepareRenameRequest
   ) where
 
 import qualified Data.Aeson as J
@@ -133,21 +135,25 @@ fmServerLogMessageNotification mt msg
 
 -- ----------------------------------------------------------------------
 
-fmServerProgressStartNotification :: J.ProgressStartParams -> J.ProgressStartNotification
-fmServerProgressStartNotification params
-  = J.NotificationMessage "2.0" J.SWindowProgressStart params
+fmServerWorkDoneProgressBeginNotification :: J.ProgressParams J.WorkDoneProgressBeginParams -> J.WorkDoneProgressBeginNotification
+fmServerWorkDoneProgressBeginNotification params
+  = J.NotificationMessage "2.0" J.SProgress params
 
 -- ----------------------------------------------------------------------
 
-fmServerProgressReportNotification :: J.ProgressReportParams -> J.ProgressReportNotification
-fmServerProgressReportNotification params
-  = J.NotificationMessage "2.0" J.SWindowProgressReport params
+fmServerWorkDoneProgressReportNotification :: J.ProgressParams J.WorkDoneProgressReportParams -> J.WorkDoneProgressReportNotification
+fmServerWorkDoneProgressReportNotification params
+  = J.NotificationMessage "2.0" J.SProgress params
 
 -- ----------------------------------------------------------------------
 
-fmServerProgressDoneNotification :: J.ProgressDoneParams -> J.ProgressDoneNotification
-fmServerProgressDoneNotification params
-  = J.NotificationMessage "2.0" J.SWindowProgressDone params
+fmServerWorkDoneProgressEndNotification :: J.ProgressParams J.WorkDoneProgressEndParams -> J.WorkDoneProgressEndNotification
+fmServerWorkDoneProgressEndNotification params
+  = J.NotificationMessage "2.0" J.SProgress params
+
+fmServerWorkDoneProgressCreateRequest :: J.LspId -> J.WorkDoneProgressCreateParams -> J.WorkDoneProgressCreateRequest
+fmServerWorkDoneProgressCreateRequest rid params
+  = J.RequestMessage "2.0" rid J.WindowWorkDoneProgressCreate params
 
 -- ----------------------------------------------------------------------
 -- * :arrow_left: [telemetry/event](#telemetry_event)
@@ -329,3 +335,7 @@ fmClientRenameRequest :: J.LspId -> J.RenameParams -> J.RenameRequest
 fmClientRenameRequest rid params
   = J.RequestMessage "2.0" rid J.STextDocumentRename params
 
+-- * :leftwards_arrow_with_hook: [textDocument/prepareRename](#textDocument_prepareRename)
+fmClientPrepareRenameRequest :: J.LspId -> J.TextDocumentPositionParams -> J.PrepareRenameRequest
+fmClientPrepareRenameRequest rid params
+  = J.RequestMessage "2.0" rid J.STextDocumentPrepareRename params

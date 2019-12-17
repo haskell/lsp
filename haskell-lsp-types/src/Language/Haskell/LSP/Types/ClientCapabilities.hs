@@ -564,6 +564,13 @@ export interface TextDocumentClientCapabilities {
                  * Whether rename supports dynamic registration.
                  */
                 dynamicRegistration?: boolean;
+		/**
+		 * The client supports testing for validity of rename operations
+		 * before execution.
+                 *
+                 * Since 3.12.0
+		 */
+		prepareSupport?: boolean;
         };
 
         /**
@@ -896,6 +903,7 @@ $(deriveJSON lspOptions ''ColorProviderClientCapabilities)
 data RenameClientCapabilities =
   RenameClientCapabilities
     { _dynamicRegistration :: Maybe Bool
+    , _prepareSupport :: Maybe Bool
     } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''RenameClientCapabilities)
@@ -1010,7 +1018,7 @@ instance Default TextDocumentClientCapabilities where
 data WindowClientCapabilities = 
   WindowClientCapabilities
     { -- | Whether client supports handling progress notifications.
-      _progress :: Maybe Bool
+      _workDoneProgress :: Maybe Bool
     } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''WindowClientCapabilities)

@@ -6,6 +6,7 @@ import           Data.Aeson.TH
 import           Data.Text                      ( Text )
 import           Language.Haskell.LSP.Types.Constants
 import           Language.Haskell.LSP.Types.Location
+import           Language.Haskell.LSP.Types.Progress
 import           Language.Haskell.LSP.Types.Uri
 
 -- ---------------------------------------------------------------------
@@ -98,6 +99,7 @@ data TextDocumentPositionParams =
   TextDocumentPositionParams
     { _textDocument :: TextDocumentIdentifier
     , _position     :: Position
+    , _workDoneToken :: Maybe ProgressToken -- ^ An optional token that a server can use to report work done progress.
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''TextDocumentPositionParams

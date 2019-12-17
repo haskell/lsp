@@ -26,8 +26,10 @@ newtype NormalizedUri = NormalizedUri Text
   deriving (Eq,Ord,Read,Show,Generic,Hashable)
 
 toNormalizedUri :: Uri -> NormalizedUri
-toNormalizedUri (Uri t) =
+toNormalizedUri uri =
     NormalizedUri $ T.pack $ escapeURIString isUnescapedInURI $ unEscapeString $ T.unpack t
+  where (Uri t) = maybe uri filePathToUri (uriToFilePath uri)
+        -- To ensure all `Uri`s have the file path like the created ones by `filePathToUri`
 
 fromNormalizedUri :: NormalizedUri -> Uri
 fromNormalizedUri (NormalizedUri t) = Uri t
@@ -82,11 +84,13 @@ platformAdjustToUriPath systemOS srcPath
   | systemOS == windowsOS = '/' : escapedPath
   | otherwise = escapedPath
   where
-    (splitDirectories, splitDrive)
-      | systemOS == windowsOS = (FPW.splitDirectories, FPW.splitDrive)
-      | otherwise = (FPP.splitDirectories, FPP.splitDrive)
+    (splitDirectories, splitDrive, normalise)
+      | systemOS == windowsOS =
+          (FPW.splitDirectories, FPW.splitDrive, FPW.normalise)
+      | otherwise =
+          (FPP.splitDirectories, FPP.splitDrive, FPP.normalise)
     escapedPath =
-        case splitDrive srcPath of
+        case splitDrive (normalise srcPath) of
             (drv, rest) ->
                 convertDrive drv `FPP.joinDrive`
                 FPP.joinPath (map (escapeURIString unescaped) $ splitDirectories rest)
@@ -94,7 +98,7 @@ platformAdjustToUriPath systemOS srcPath
     -- we do a final replacement of \ to /
     convertDrive drv
       | systemOS == windowsOS && FPW.hasTrailingPathSeparator drv =
-        FPP.addTrailingPathSeparator (init drv)
+          FPP.addTrailingPathSeparator (init drv)
       | otherwise = drv
     unescaped c
       | systemOS == windowsOS = isUnreserved c || c `elem` [':', '\\', '/']

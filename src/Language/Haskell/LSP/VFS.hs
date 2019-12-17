@@ -4,6 +4,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
 {-|
 Handles the "Language.Haskell.LSP.Types.TextDocumentDidChange" \/
@@ -14,13 +15,18 @@ files in the client workspace by operating on the "VFS" in "LspFuncs".
 -}
 module Language.Haskell.LSP.VFS
   (
-    VFS
+    VFS(..)
   , VirtualFile(..)
+  , virtualFileText
+  , virtualFileVersion
+  -- * Managing the VFS
+  , initVFS
   , openVFS
   , changeFromClientVFS
   , changeFromServerVFS
   , persistFileVFS
   , closeVFS
+  , updateVFS
 
   -- * manipulating the file contents
   , rangeLinesFromVfs
@@ -40,10 +46,6 @@ import           Data.Text ( Text )
 import qualified Data.Text as T
 import           Data.List
 import           Data.Ord
-#if __GLASGOW_HASKELL__ < 804
-import           Data.Monoid
-#endif
-import           System.IO.Temp
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map as Map
 import           Data.Maybe
@@ -52,6 +54,11 @@ import qualified Data.Rope.UTF16 as Rope
 import qualified Language.Haskell.LSP.Types           as J
 import qualified Language.Haskell.LSP.Types.Lens      as J
 import           Language.Haskell.LSP.Utility
+import           System.FilePath
+import           Data.Hashable
+import           System.Directory
+import           System.IO 
+import           System.IO.Temp
 
 import Data.Time.Clock
 
@@ -62,42 +69,68 @@ import Data.Time.Clock
 
 data VirtualFile =
   VirtualFile {
-      _version :: Int
-    , _text    :: Rope
-    , _tmp_file :: Maybe FilePath
-    , _modtime :: UTCTime
+      _lsp_version :: !Int  -- ^ The LSP version of the document
+    , _file_version :: !Int -- ^ This number is only incremented whilst the file
+                           -- remains in the map.
+    , _text    :: Rope  -- ^ The full contents of the document
     } deriving (Show)
 
-type VFS = Map.Map J.NormalizedUri VirtualFile
+
+type VFSMap = Map.Map J.NormalizedUri VirtualFile
+
+data VFS = VFS { vfsMap :: Map.Map J.NormalizedUri VirtualFile
+               , vfsTempDir :: FilePath -- ^ This is where all the temporary files will be written to
+               } deriving Show
+
+---
+
+virtualFileText :: VirtualFile -> Text
+virtualFileText vf = Rope.toText (_text  vf)
+
+virtualFileVersion :: VirtualFile -> Int
+virtualFileVersion vf = _lsp_version vf
+
+---
+
+initVFS :: (VFS -> IO r) -> IO r
+initVFS k = withSystemTempDirectory "haskell-lsp" $ \temp_dir -> k (VFS mempty temp_dir)
 
 -- ---------------------------------------------------------------------
 
-openVFS :: VFS -> J.DidOpenTextDocumentNotification -> IO VFS
-openVFS vfs (J.NotificationMessage _ _ params) = do
+-- ^ Applies the changes from a 'DidOpenTextDocumentNotification' to the 'VFS'
+openVFS :: VFS -> J.DidOpenTextDocumentNotification -> (VFS, [String])
+openVFS vfs (J.NotificationMessage _ _ params) =
   let J.DidOpenTextDocumentParams
          (J.TextDocumentItem uri _ version text) = params
-  time <- getCurrentTime
-  return $ Map.insert (J.toNormalizedUri uri) (VirtualFile version (Rope.fromText text) Nothing time) vfs
+  in (updateVFS (Map.insert (J.toNormalizedUri uri) (VirtualFile version 0 (Rope.fromText text))) vfs
+     , [])
+
 
 -- ---------------------------------------------------------------------
 
-changeFromClientVFS :: VFS -> J.DidChangeTextDocumentNotification -> IO VFS
-changeFromClientVFS vfs (J.NotificationMessage _ _ params) = do
+-- ^ Applies a 'DidChangeTextDocumentNotification' to the 'VFS'
+changeFromClientVFS :: VFS -> J.DidChangeTextDocumentNotification -> (VFS,[String])
+changeFromClientVFS vfs (J.NotificationMessage _ _ params) =
   let
     J.DidChangeTextDocumentParams vid (J.List changes) = params
     J.VersionedTextDocumentIdentifier (J.toNormalizedUri -> uri) version = vid
-  case Map.lookup uri vfs of
-    Just (VirtualFile _ str _ _) -> do
-      let str' = applyChanges str changes
-      -- the client shouldn't be sending over a null version, only the server.
-      time <- getCurrentTime
-      return $ Map.insert uri (VirtualFile (fromMaybe 0 version) str' Nothing time) vfs
-    Nothing -> do
-      logs $ "haskell-lsp:changeVfs:can't find uri:" ++ show uri
-      return vfs
+  in
+    case Map.lookup uri (vfsMap vfs) of
+      Just (VirtualFile _ file_ver str) ->
+        let str' = applyChanges str changes
+        -- the client shouldn't be sending over a null version, only the server.
+        in (updateVFS (Map.insert uri (VirtualFile (fromMaybe 0 version) (file_ver + 1) str')) vfs, [])
+      Nothing ->
+        -- logs $ "haskell-lsp:changeVfs:can't find uri:" ++ show uri
+        -- return vfs
+        (vfs, ["haskell-lsp:changeVfs:can't find uri:" ++ show uri])
+
+updateVFS :: (VFSMap -> VFSMap) -> VFS -> VFS
+updateVFS f vfs@VFS{vfsMap} = vfs { vfsMap = f vfsMap }
 
 -- ---------------------------------------------------------------------
 
+-- ^ Applies the changes from a 'ApplyWorkspaceEditRequest' to the 'VFS'
 changeFromServerVFS :: VFS -> J.ApplyWorkspaceEditRequest -> IO VFS
 changeFromServerVFS initVfs (J.RequestMessage _ _ _ params) = do
   let J.ApplyWorkspaceEditParams edit = params
@@ -115,38 +148,65 @@ changeFromServerVFS initVfs (J.RequestMessage _ _ _ params) = do
     changeToTextDocumentEdit acc uri edits =
       acc ++ [J.TextDocumentEdit (J.VersionedTextDocumentIdentifier uri (Just 0)) edits]
 
+    -- applyEdits :: [J.TextDocumentEdit] -> VFS
+    applyEdits :: [J.TextDocumentEdit] -> IO VFS
     applyEdits = foldM f initVfs . sortOn (^. J.textDocument . J.version)
 
+    f :: VFS -> J.TextDocumentEdit -> IO VFS
     f vfs (J.TextDocumentEdit vid (J.List edits)) = do
       -- all edits are supposed to be applied at once
       -- so apply from bottom up so they don't affect others
       let sortedEdits = sortOn (Down . (^. J.range)) edits
           changeEvents = map editToChangeEvent sortedEdits
           ps = J.DidChangeTextDocumentParams vid (J.List changeEvents)
-          notif = J.NotificationMessage "" J.STextDocumentDidChange ps
-      changeFromClientVFS vfs notif
+          notif = J.NotificationMessage "" J.TextDocumentDidChange ps
+      let (vfs',ls) = changeFromClientVFS vfs notif
+      mapM_ logs ls
+      return vfs'
+>>>>>>> 5497e9fc975f47f54fd677fce0c2a8d675ce3aee
 
     editToChangeEvent (J.TextEdit range text) = J.TextDocumentContentChangeEvent (Just range) Nothing text
 
 -- ---------------------------------------------------------------------
+virtualFileName :: FilePath -> J.NormalizedUri -> VirtualFile -> FilePath
+virtualFileName prefix uri (VirtualFile _ file_ver _) =
+  let uri_raw = J.fromNormalizedUri uri
+      basename = maybe "" takeFileName (J.uriToFilePath uri_raw)
+      -- Given a length and a version number, pad the version number to
+      -- the given n. Does nothing if the version number string is longer
+      -- than the given length.
+      padLeft :: Int -> Int -> String
+      padLeft n num =
+        let numString = show num
+        in replicate (n - length numString) '0' ++ numString
+  in prefix </> basename ++ "-" ++ padLeft 5 file_ver ++ "-" ++ show (hash uri_raw) ++ ".hs"
 
-persistFileVFS :: VFS -> J.NormalizedUri -> IO (FilePath, VFS)
+-- | Write a virtual file to a temporary file if it exists in the VFS.
+persistFileVFS :: VFS -> J.NormalizedUri -> Maybe (FilePath, IO ())
 persistFileVFS vfs uri =
-  case Map.lookup uri vfs of
-    Nothing -> error ("File not found in VFS: " ++ show uri ++ show vfs)
-    Just (VirtualFile v txt tfile time) ->
-      case tfile of
-        Just tfn -> return (tfn, vfs)
-        Nothing  -> do
-          fn <- writeSystemTempFile "VFS.hs" (Rope.toString txt)
-          return (fn, Map.insert uri (VirtualFile v txt (Just fn) time) vfs)
+  case Map.lookup uri (vfsMap vfs) of
+    Nothing -> Nothing
+    Just vf ->
+      let tfn = virtualFileName (vfsTempDir vfs) uri vf
+          action = do
+            exists <- doesFileExist tfn
+            unless exists $ do
+               let contents = Rope.toString (_text vf)
+                   writeRaw h = do
+                    -- We honour original file line endings
+                    hSetNewlineMode h noNewlineTranslation
+                    hPutStr h contents
+               logs  $ "haskell-lsp:persistFileVFS: Writing virtual file: " 
+                    ++ "uri = " ++ show uri ++ ", virtual file = " ++ show tfn
+               withFile tfn WriteMode writeRaw
+      in Just (tfn, action)
 
 -- ---------------------------------------------------------------------
 
-closeVFS :: VFS -> J.DidCloseTextDocumentNotification -> IO VFS
-closeVFS vfs (J.NotificationMessage _ _ params) = do
+closeVFS :: VFS -> J.DidCloseTextDocumentNotification -> (VFS, [String])
+closeVFS vfs (J.NotificationMessage _ _ params) =
   let J.DidCloseTextDocumentParams (J.TextDocumentIdentifier uri) = params
-  return $ Map.delete (J.toNormalizedUri uri) vfs
+  in (updateVFS (Map.delete (J.toNormalizedUri uri)) vfs,["Closed: " ++ show uri])
 
 -- ---------------------------------------------------------------------
 {-
@@ -213,7 +273,7 @@ data PosPrefixInfo = PosPrefixInfo
   } deriving (Show,Eq)
 
 getCompletionPrefix :: (Monad m) => J.Position -> VirtualFile -> m (Maybe PosPrefixInfo)
-getCompletionPrefix pos@(J.Position l c) (VirtualFile _ yitext _ _) =
+getCompletionPrefix pos@(J.Position l c) (VirtualFile _ _ ropetext) =
       return $ Just $ fromMaybe (PosPrefixInfo "" "" "" pos) $ do -- Maybe monad
         let headMaybe [] = Nothing
             headMaybe (x:_) = Just x
@@ -221,7 +281,7 @@ getCompletionPrefix pos@(J.Position l c) (VirtualFile _ yitext _ _) =
             lastMaybe xs = Just $ last xs
 
         curLine <- headMaybe $ T.lines $ Rope.toText
-                             $ fst $ Rope.splitAtLine 1 $ snd $ Rope.splitAtLine l yitext
+                             $ fst $ Rope.splitAtLine 1 $ snd $ Rope.splitAtLine l ropetext
         let beforePos = T.take c curLine
         curWord <- case T.last beforePos of
                      ' ' -> return "" -- don't count abc as the curword in 'abc '
@@ -240,10 +300,9 @@ getCompletionPrefix pos@(J.Position l c) (VirtualFile _ yitext _ _) =
 -- ---------------------------------------------------------------------
 
 rangeLinesFromVfs :: VirtualFile -> J.Range -> T.Text
-rangeLinesFromVfs (VirtualFile _ yitext _ _) (J.Range (J.Position lf _cf) (J.Position lt _ct)) = r
+rangeLinesFromVfs (VirtualFile _ _ ropetext) (J.Range (J.Position lf _cf) (J.Position lt _ct)) = r
   where
-    (_ ,s1) = Rope.splitAtLine lf yitext
+    (_ ,s1) = Rope.splitAtLine lf ropetext
     (s2, _) = Rope.splitAtLine (lt - lf) s1
     r = Rope.toText s2
-
 -- ---------------------------------------------------------------------

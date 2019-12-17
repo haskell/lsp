@@ -15,6 +15,7 @@ import           Language.Haskell.LSP.Types.List
 import           Language.Haskell.LSP.Types.Location
 import           Language.Haskell.LSP.Types.MarkupContent
 import           Language.Haskell.LSP.Types.Message
+import           Language.Haskell.LSP.Types.Progress
 import           Language.Haskell.LSP.Types.TextDocument
 import           Language.Haskell.LSP.Types.Utils
 import           Language.Haskell.LSP.Types.WorkspaceEdit
@@ -435,6 +436,7 @@ data CompletionParams =
     , _context      :: Maybe CompletionContext
       -- ^ The completion context. This is only available if the client specifies
       -- to send this using `ClientCapabilities.textDocument.completion.contextSupport === true`
+    , _workDoneToken :: Maybe ProgressToken -- ^ An optional token that a server can use to report work done progress.
     }
   deriving (Read, Show, Eq)
 

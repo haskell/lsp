@@ -64,11 +64,18 @@ instance Arbitrary HoverContents where
 
 instance Arbitrary a => Arbitrary (ResponseMessage a) where
   arbitrary =
-    ResponseMessage
-      <$> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
+    oneof
+      [ ResponseMessage
+          <$> arbitrary
+          <*> arbitrary
+          <*> (Just <$> arbitrary)
+          <*> pure Nothing
+      , ResponseMessage
+          <$> arbitrary
+          <*> arbitrary
+          <*> pure Nothing
+          <*> (Just <$> arbitrary)
+      ]
 
 instance Arbitrary LspIdRsp where
   arbitrary = oneof [IdRspInt <$> arbitrary, IdRspString <$> arbitrary, pure IdRspNull]
@@ -89,6 +96,7 @@ instance Arbitrary ErrorCode where
       , ServerNotInitialized
       , UnknownErrorCode
       , RequestCancelled
+      , ContentModified
       ]
 
 -- | make lists of maximum length 3 for test performance

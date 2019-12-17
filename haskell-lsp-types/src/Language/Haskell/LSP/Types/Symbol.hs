@@ -12,6 +12,7 @@ import           Language.Haskell.LSP.Types.TextDocument
 import           Language.Haskell.LSP.Types.List
 import           Language.Haskell.LSP.Types.Location
 import           Language.Haskell.LSP.Types.Message
+import           Language.Haskell.LSP.Types.Progress
 
 -- ---------------------------------------------------------------------
 {-
@@ -102,6 +103,7 @@ Registration Options: TextDocumentRegistrationOptions
 data DocumentSymbolParams =
   DocumentSymbolParams
     { _textDocument :: TextDocumentIdentifier
+    , _workDoneToken :: Maybe ProgressToken -- ^ An optional token that a server can use to report work done progress.
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''DocumentSymbolParams

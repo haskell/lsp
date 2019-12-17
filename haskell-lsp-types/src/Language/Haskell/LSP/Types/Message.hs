@@ -11,12 +11,14 @@
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 module Language.Haskell.LSP.Types.Message where
 
+import           Control.Monad
 import qualified Data.Aeson                                 as A
 import           Data.Aeson.TH
 import           Data.Aeson.Types
 import           Data.Hashable
 import           Data.GADT.Compare
 import           Data.GADT.Compare.TH
+import           Data.Maybe
 -- For <= 8.2.2
 import           Data.Text                                  (Text)
 import           Language.Haskell.LSP.Types.Constants
@@ -93,7 +95,7 @@ data ClientMethod =
  | WorkspaceSymbol
  | WorkspaceExecuteCommand
  -- Progress
- | WindowProgressCancel
+ | WorkDoneProgressCancel
  -- Document
  | TextDocumentDidOpen
  | TextDocumentDidChange
@@ -122,6 +124,7 @@ data ClientMethod =
  | TextDocumentRangeFormatting
  | TextDocumentOnTypeFormatting
  | TextDocumentRename
+ | TextDocumentPrepareRename
  | TextDocumentFoldingRange
  -- A custom message type. It is not enforced that this starts with $/.
  | CustomClientMethod
@@ -487,6 +490,7 @@ instance A.ToJSON (SClientMethod m) where
   toJSON SWorkspaceSymbol                 = A.String "workspace/symbol"
   toJSON SWorkspaceExecuteCommand         = A.String "workspace/executeCommand"
   -- Document
+<<<<<<< HEAD
   toJSON STextDocumentDidOpen             = A.String "textDocument/didOpen"
   toJSON STextDocumentDidChange           = A.String "textDocument/didChange"
   toJSON STextDocumentWillSave            = A.String "textDocument/willSave"
@@ -523,9 +527,8 @@ data ServerMethod =
     WindowShowMessage
   | WindowShowMessageRequest
   | WindowLogMessage
-  | WindowProgressStart
-  | WindowProgressReport
-  | WindowProgressDone
+  | WindowWorkDoneProgressCreate
+  | Progress
   | TelemetryEvent
   -- Client
   | ClientRegisterCapability
@@ -755,6 +758,7 @@ export namespace ErrorCodes {
 
         // Defined by the protocol.
         export const RequestCancelled: number = -32800;
+        export const ContentModified: number = -32801;
 }
 -}
 
@@ -768,6 +772,7 @@ data ErrorCode = ParseError
                | ServerNotInitialized
                | UnknownErrorCode
                | RequestCancelled
+               | ContentModified
                -- ^ Note: server error codes are reserved from -32099 to -32000
                deriving (Read,Show,Eq)
 
@@ -782,6 +787,7 @@ instance A.ToJSON ErrorCode where
   toJSON ServerNotInitialized = A.Number (-32002)
   toJSON UnknownErrorCode     = A.Number (-32001)
   toJSON RequestCancelled     = A.Number (-32800)
+  toJSON ContentModified      = A.Number (-32801)
 
 instance A.FromJSON ErrorCode where
   parseJSON (A.Number (-32700)) = pure ParseError
@@ -794,6 +800,7 @@ instance A.FromJSON ErrorCode where
   parseJSON (A.Number (-32002)) = pure ServerNotInitialized
   parseJSON (A.Number (-32001)) = pure UnknownErrorCode
   parseJSON (A.Number (-32800)) = pure RequestCancelled
+  parseJSON (A.Number (-32801)) = pure ContentModified
   parseJSON _                   = mempty
 
 -- -------------------------------------
@@ -809,6 +816,7 @@ deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''ResponseError
 
 -- ---------------------------------------------------------------------
 
+-- | Either result or error must be Just.
 data ResponseMessage a =
   ResponseMessage
     { _jsonrpc :: Text
@@ -820,13 +828,18 @@ data ResponseMessage a =
 deriveToJSON lspOptions ''ResponseMessage
 
 instance FromJSON a => FromJSON (ResponseMessage a) where
-  parseJSON = withObject "Response" $ \o ->
-    ResponseMessage
+  parseJSON = withObject "Response" $ \o -> do
+    rsp <- ResponseMessage
       <$> o .: "jsonrpc"
       <*> o .: "id"
       -- It is important to use .:! so that result = null gets decoded as Just Nothing
       <*> o .:! "result"
       <*> o .:! "error"
+    -- We make sure that one of them is present. Without this check we can end up
+    -- parsing a Request as a ResponseMessage.
+    unless (isJust (_result rsp) || isJust (_error rsp)) $
+      fail "ResponseMessage must either have a result or an error"
+    pure rsp
 
 type ErrorResponse = ResponseMessage ()
 

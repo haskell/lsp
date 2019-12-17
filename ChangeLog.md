@@ -1,5 +1,40 @@
 # Revision history for haskell-lsp
 
+## 0.19.0.0 -- 2019-12-14
+
+* Fix vfs line endings (@jneira)
+* Fix typo in .cabal (@turion)
+* Normalize file paths before converting to Uri's (@jneira)
+* Fixes to persistVirtualFile (@mpickering)
+
+## 0.18.0.0 -- 2019-11-17
+
+* Explain the use of NonEmpty in
+  documentOnTypeFormattingTriggerCharacters (@bubba)
+* Fix response type for CodeLensResolve, add the ContentModified error
+  code (@SquidDev)
+* Virtual file fixes, removing race conditions and other cleanups (@mpickering)
+* Add missing fmClientPrepareRenameRequest to MessageFuncs export (@alanz)
+* Make explicit GHC 8.6.5 stack file (@alanz)
+* Rework Core.Options and infer all server capabilities from handlers (@bubba)
+* Generate lenses for WorkDoneProgress data types (@alanz)
+
+## 0.17.0.0 -- 2019-10-18
+
+* Update progress reporting to match the LSP 3.15 specification (@cocreature)
+* Fix progress cancellation action being retained (@mpickering)
+* Respect both codeActionProvider and codeActionHandler in server
+  capabilities (@fendor)
+* Ensure ResponseMessage has either a result or an error (@cocreature)
+
+## 0.16.0.0 -- 2019-09-07
+
+* Add support for CodeActionOptions (@thomasjm)
+* Add support for `textDocument/prepareRename` request (@thomasjm)
+* Fix diagnostic code parsing (@thomasjm)
+* Fix shutdown response type (@bubba)
+* Relax base constraints for GHC 8.8 (@bubba)
+
 ## 0.15.0.0 -- 2019-07-01
 
 * Fix decoding of `ResponseMessage` to account for `null` messages (@cocreature)
