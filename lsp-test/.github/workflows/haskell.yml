@@ -7,11 +7,11 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     env:
-      hieref: cd0d1eb88334c359b8a220f2aebec703d66012ff
+      hieref: 8582a960dc1ca389734707f821b273b00bae54ab
 
     strategy:
       matrix:
-        ghc: ['8.6.5']
+        ghc: ['8.6.5', '8.4.4']
         os: [ubuntu-latest, macOS-latest]
 
     steps:
@@ -25,7 +25,7 @@ jobs:
     - name: Clone HIE
       uses: actions/checkout@v1
       with:
-        repository: mpickering/haskell-ide-engine
+        repository: haskell/haskell-ide-engine
         submodules: recursive
         ref: ${{ env.hieref }}
         path: haskell-ide-engine
