@@ -30,7 +30,6 @@ import           Language.Haskell.LSP.Types.Location
 import           Language.Haskell.LSP.Types.MarkupContent
 import           Language.Haskell.LSP.Types.Message
 import           Language.Haskell.LSP.Types.Progress
-import           Language.Haskell.LSP.Types.Symbol
 import           Language.Haskell.LSP.Types.TextDocument
 import           Language.Haskell.LSP.Types.Uri
 import           Language.Haskell.LSP.Types.WorkspaceEdit
@@ -2606,12 +2605,13 @@ data RangeWithPlaceholder =
     {
     _range :: Range
     , _placeholder :: Text
-    }
+    } deriving Eq
 
 deriveJSON lspOptions { sumEncoding = A.UntaggedValue } ''RangeWithPlaceholder
 
 data RangeOrRangeWithPlaceholder = RangeWithPlaceholderValue RangeWithPlaceholder
                                  | RangeValue Range
+                                 deriving Eq
 
 deriveJSON lspOptions { sumEncoding = A.UntaggedValue } ''RangeOrRangeWithPlaceholder
 

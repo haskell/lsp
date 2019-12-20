@@ -6,7 +6,6 @@ import           Data.Aeson.TH
 import           Data.Text                      ( Text )
 import           Language.Haskell.LSP.Types.Constants
 import           Language.Haskell.LSP.Types.List
-import           Language.Haskell.LSP.Types.Message
 
 {-
 Workspace folders request (:arrow_right_hook:)

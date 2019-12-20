@@ -83,7 +83,7 @@ import qualified System.Log.Logger as L
 -- ---------------------------------------------------------------------
 
 -- | A function to send a message to the client
-type SendFunc = forall a. J.ToJSON a => a -> IO ()
+type SendFunc = J.FromServerMessage -> IO ()
 
 -- | state used by the LSP dispatcher to manage the message loop
 data LanguageContextData config =
@@ -251,7 +251,7 @@ data InitializeCallbacks config =
 
 type family ResponseHandlerFunc t where
   ResponseHandlerFunc (J.RequestMessage m req rsp) = Either J.ResponseError rsp -> IO ()
-  ResponseHandlerFunc (J.SomeMessage m) = Maybe (Either J.ResponseError J.Value -> IO ())
+  ResponseHandlerFunc (J.CustomMessage m) = Maybe (Either J.ResponseError J.Value -> IO ())
   ResponseHandlerFunc _ = ()
 
 type ClientResponseHandler m = ResponseHandlerFunc (J.ClientMessage m)
@@ -263,12 +263,12 @@ mkClientResponseHandler m cm tvarDat =
     J.IsClientNot -> ()
     J.IsClientReq -> \mrsp -> case mrsp of
       Left err -> sendErrorResponseE tvarDat (J.responseId $ cm ^. J.id) err
-      Right rsp -> sendResponse tvarDat $ makeResponseMessage cm rsp
+      Right rsp -> sendResponse tvarDat $ J.FromServerRsp m $ makeResponseMessage cm rsp
     J.IsClientEither -> case cm of
       J.NotMess _ -> Nothing
       J.ReqMess req -> Just $ \mrsp -> case mrsp of
         Left err -> sendErrorResponseE tvarDat (J.responseId $ req ^. J.id) err
-        Right rsp -> sendResponse tvarDat $ makeResponseMessage req rsp
+        Right rsp -> sendResponse tvarDat $ J.FromServerRsp m $ makeResponseMessage req rsp
 
 data SomeServerResponseHandler where
   SomeServerResponseHandler :: J.SServerMethod m -> ServerResponseHandler m -> SomeServerResponseHandler
@@ -280,15 +280,15 @@ addResponseHandler tv lid h = atomically $ modifyTVar' tv $ \ctx ->
 mkServerRequestFunc :: TVar (LanguageContextData config) -> SomeServerMessageWithResponse -> IO ()
 mkServerRequestFunc tvarDat (SomeServerMessageWithResponse m msg resHandler) =
   case J.splitServerMethod m of
-    J.IsServerNot -> sendEvent tvarDat msg
+    J.IsServerNot -> sendEvent tvarDat $ J.FromServerMess m msg
     J.IsServerReq -> do
       addResponseHandler tvarDat (msg ^. J.id) (SomeServerResponseHandler m resHandler)
-      sendEvent tvarDat msg
+      sendEvent tvarDat $ J.FromServerMess m msg
     J.IsServerEither -> case msg of
-      J.NotMess ntf -> sendEvent tvarDat ntf
+      J.NotMess ntf -> sendEvent tvarDat $ J.FromServerMess m msg
       J.ReqMess req -> do
         addResponseHandler tvarDat (req ^. J.id) (SomeServerResponseHandler m resHandler)
-        sendEvent tvarDat req
+        sendEvent tvarDat $ J.FromServerMess m msg
 
 
 -- | The Handler type captures a function that receives local read-only state
@@ -335,10 +335,10 @@ handlerMap i hm (J.SomeClientMethod c) = case c of
         exitSuccess
   J.SWorkspaceDidChangeWorkspaceFolders -> hwf h
   J.SWorkspaceDidChangeConfiguration -> hc i h
-  J.STextDocumentDidOpen -> hh c openVFS h
-  J.STextDocumentDidChange -> hh c changeFromClientVFS h
-  J.STextDocumentDidClose -> hh c closeVFS h
-  J.SWindowProgressCancel -> helper progressCancelHandler
+  J.STextDocumentDidOpen -> hh c (Just openVFS) h
+  J.STextDocumentDidChange -> hh c (Just changeFromClientVFS) h
+  J.STextDocumentDidClose -> hh c (Just closeVFS) h
+  J.SWorkDoneProgressCancel -> helper progressCancelHandler
   _ -> J.clientMethodJSON c $ hh c nop $ h
   where h = DM.lookup c hm
 
@@ -346,9 +346,8 @@ handlerMap i hm (J.SomeClientMethod c) = case c of
 
 -- | Adapter from the normal handlers exposed to the library users and the
 -- internal message loop
-<<<<<<< HEAD
 hh :: forall m b config. (J.FromJSON b, J.ToJSON b, b ~ J.ClientMessage m)
-   => J.SClientMethod m -> Maybe (VFS -> b -> (VFS, [String])) -> Maybe (Handler b)
+   => J.SClientMethod m -> Maybe (VFS -> b -> (VFS, [String])) -> Maybe (Handler m)
    -> TVar (LanguageContextData config) -> J.Value -> IO ()
 hh m mVfs mh tvarDat json = do
       case J.fromJSON json of
@@ -465,7 +464,7 @@ getVirtualFile :: TVar (LanguageContextData config) -> J.NormalizedUri -> IO (Ma
 getVirtualFile tvarDat uri = Map.lookup uri . vfsMap . vfsData . resVFS <$> readTVarIO tvarDat
 
 getVirtualFiles :: TVar (LanguageContextData config) -> IO VFS
-getVirtualFiles tvarDat = resVFS <$> readTVarIO tvarDat
+getVirtualFiles tvarDat = vfsData . resVFS <$> readTVarIO tvarDat
 
 -- | Dump the current text for a given VFS file to a temporary file,
 -- and return the path to the file.
@@ -645,12 +644,12 @@ makeResponseError origId err = J.ResponseMessage "2.0" origId Nothing (Just err)
 -- ---------------------------------------------------------------------
 -- |
 --
-sendEvent :: J.ToJSON a => TVar (LanguageContextData config) -> a -> IO ()
+sendEvent :: TVar (LanguageContextData config) -> J.FromServerMessage -> IO ()
 sendEvent tvarCtx msg = sendResponse tvarCtx msg
 
 -- |
 --
-sendResponse :: J.ToJSON a => TVar (LanguageContextData config) -> a -> IO ()
+sendResponse :: TVar (LanguageContextData config) -> J.FromServerMessage -> IO ()
 sendResponse tvarCtx msg = do
   ctx <- readTVarIO tvarCtx
   resSendResponse ctx msg
@@ -794,7 +793,7 @@ initializeRequestHandler' onStartup mHandler tvarCtx = Handler $ \req@(J.Request
           rId <- getLspId $ resLspId ctx0
 
           -- Create progress token
-          liftIO $ sf $ ReqWorkDoneProgressCreate $
+          liftIO $ sf $
             fmServerWorkDoneProgressCreateRequest rId $ J.WorkDoneProgressCreateParams progId
 
           -- Send initial notification
@@ -879,15 +878,15 @@ serverCapabilities clientCaps o h =
     , J._workspaceSymbolProvider          = supported J.SWorkspaceSymbol
     , J._codeActionProvider               = codeActionProvider
     , J._codeLensProvider                 = supported' J.STextDocumentCodeLens $ J.CodeLensOptions $
-                                              supported J.SCodeLensResolvejj
+                                              supported J.SCodeLensResolve
     , J._documentFormattingProvider       = supported J.STextDocumentFormatting
     , J._documentRangeFormattingProvider  = supported J.STextDocumentRangeFormatting
     , J._documentOnTypeFormattingProvider = documentOnTypeFormattingProvider
     , J._renameProvider                   = Just $ J.RenameOptionsStatic $ supported_b J.STextDocumentRename
     , J._documentLinkProvider             = supported' J.STextDocumentDocumentLink $ J.DocumentLinkOptions $
                                               supported J.SDocumentLinkResolve
-    , J._colorProvider                    = Just $ J.ColorOptionsStatic $ J.supported_b J.STextDocumentDocumentColor
-    , J._foldingRangeProvider             = Just $ J.FoldingRangeOptionsStatic $ J.supported_b J.STextDocumentFoldingRange
+    , J._colorProvider                    = Just $ J.ColorOptionsStatic $ supported_b J.STextDocumentDocumentColor
+    , J._foldingRangeProvider             = Just $ J.FoldingRangeOptionsStatic $ supported_b J.STextDocumentFoldingRange
     , J._executeCommandProvider           = executeCommandProvider
     , J._workspace                        = Just workspace
     -- TODO: Add something for experimental
@@ -944,7 +943,7 @@ serverCapabilities clientCaps o h =
     executeCommandProvider
       | supported_b J.SWorkspaceExecuteCommand
       , Just cmds <- executeCommandCommands o = Just (J.ExecuteCommandOptions (J.List cmds))
-      | suppported_b J.SWorkspaceExecuteCommand
+      | supported_b J.SWorkspaceExecuteCommand
       , Nothing <- executeCommandCommands o =
           error "executeCommandCommands needs to be set if a executeCommandHandler is set"
       | otherwise = Nothing
@@ -954,7 +953,7 @@ serverCapabilities clientCaps o h =
             Nothing -> Nothing
 
     workspace = J.WorkspaceOptions workspaceFolder
-    workspaceFolder = supported' S.SWorkspaceDidChangeWorkspaceFolders $
+    workspaceFolder = supported' J.SWorkspaceDidChangeWorkspaceFolders $
         -- sign up to receive notifications
         J.WorkspaceFolderOptions (Just True) (Just (J.WorkspaceFolderChangeNotificationsBool True))
 
@@ -989,7 +988,7 @@ publishDiagnostics tvarDat maxDiagnosticCount uri version diags = do
     return $ case mdp of
       Nothing -> return ()
       Just params ->
-        resSendResponse ctx $ J.NotificationMessage "2.0" J.TextDocumentPublishDiagnostics params
+        resSendResponse ctx $ J.NotificationMessage "2.0" J.STextDocumentPublishDiagnostics params
 
 -- ---------------------------------------------------------------------
 

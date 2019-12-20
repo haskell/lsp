@@ -2,15 +2,16 @@
 {-# LANGUAGE DuplicateRecordFields      #-}
 {-# LANGUAGE RecordWildCards            #-}
 {-# LANGUAGE TemplateHaskell            #-}
+{-# LANGUAGE DeriveFunctor              #-}
 module Language.Haskell.LSP.Types.Window where
 
+import           Control.Applicative
 import           Control.Monad (unless)
 import qualified Data.Aeson                                 as A
 import           Data.Aeson.TH
 import           Data.Maybe (catMaybes)
 import           Data.Text                                  (Text)
 import           Language.Haskell.LSP.Types.Constants
-import           Language.Haskell.LSP.Types.Message
 import           Language.Haskell.LSP.Types.Progress
 
 -- ---------------------------------------------------------------------
@@ -241,9 +242,26 @@ data ProgressParams t =
     ProgressParams {
       _token :: ProgressToken
     , _value :: t
-    } deriving (Show, Read, Eq)
+    } deriving (Show, Read, Eq, Functor)
 
 deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''ProgressParams
+
+data SomeProgressParams
+  = Begin WorkDoneProgressBeginParams
+  | Report WorkDoneProgressReportParams
+  | End WorkDoneProgressEndParams
+  deriving Eq
+
+instance A.FromJSON SomeProgressParams where
+  parseJSON x =
+       (Begin  <$> A.parseJSON x)
+   <|> (Report <$> A.parseJSON x)
+   <|> (End    <$> A.parseJSON x)
+
+instance A.ToJSON SomeProgressParams where
+  toJSON (Begin  x) = A.toJSON x
+  toJSON (Report x) = A.toJSON x
+  toJSON (End    x) = A.toJSON x
 
 -- | Parameters for 'WorkDoneProgressBeginNotification'.
 --
@@ -456,10 +474,9 @@ deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''WorkDoneProgressC
 -- A server receiving a cancel request must still close a progress using the done notification.
 --
 -- @since 0.10.0.0
-type WorkDoneProgressCancelNotification = NotificationMessage ClientMethod WorkDoneProgressCancelParams
 
 data WorkDoneProgressCreateParams =
-    WorkDoneProgressCreateParams {
+      WorkDoneProgressCreateParams {
       _token :: ProgressToken
     } deriving (Show, Read, Eq)
 

@@ -14,6 +14,7 @@ stack*.yaml.lock
 /haskell-lsp-types/cabal.project.local~
 *.swp
 *.swo
+*.orig
 *.DS_Store
 .hspec-failures
 /haskell-lsp-types/dist/

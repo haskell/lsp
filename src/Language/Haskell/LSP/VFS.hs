@@ -60,8 +60,6 @@ import           System.Directory
 import           System.IO 
 import           System.IO.Temp
 
-import Data.Time.Clock
-
 -- ---------------------------------------------------------------------
 {-# ANN module ("hlint: ignore Eta reduce" :: String) #-}
 {-# ANN module ("hlint: ignore Redundant do" :: String) #-}
@@ -159,11 +157,10 @@ changeFromServerVFS initVfs (J.RequestMessage _ _ _ params) = do
       let sortedEdits = sortOn (Down . (^. J.range)) edits
           changeEvents = map editToChangeEvent sortedEdits
           ps = J.DidChangeTextDocumentParams vid (J.List changeEvents)
-          notif = J.NotificationMessage "" J.TextDocumentDidChange ps
+          notif = J.NotificationMessage "" J.STextDocumentDidChange ps
       let (vfs',ls) = changeFromClientVFS vfs notif
       mapM_ logs ls
       return vfs'
->>>>>>> 5497e9fc975f47f54fd677fce0c2a8d675ce3aee
 
     editToChangeEvent (J.TextEdit range text) = J.TextDocumentContentChangeEvent (Just range) Nothing text
 

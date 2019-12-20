@@ -8,6 +8,7 @@
 {-# LANGUAGE KindSignatures             #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE StandaloneDeriving         #-}
+{-# LANGUAGE ExistentialQuantification  #-}
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 module Language.Haskell.LSP.Types.Message where
 
@@ -141,7 +142,7 @@ data SClientMethod (m :: ClientMethod) where
   SWorkspaceDidChangeWatchedFiles     :: SClientMethod WorkspaceDidChangeWatchedFiles
   SWorkspaceSymbol                    :: SClientMethod WorkspaceSymbol
   SWorkspaceExecuteCommand            :: SClientMethod WorkspaceExecuteCommand
-  SWindowProgressCancel               :: SClientMethod WindowProgressCancel
+  SWorkDoneProgressCancel             :: SClientMethod WorkDoneProgressCancel
   STextDocumentDidOpen                :: SClientMethod TextDocumentDidOpen
   STextDocumentDidChange              :: SClientMethod TextDocumentDidChange
   STextDocumentWillSave               :: SClientMethod TextDocumentWillSave
@@ -169,6 +170,7 @@ data SClientMethod (m :: ClientMethod) where
   STextDocumentRangeFormatting        :: SClientMethod TextDocumentRangeFormatting
   STextDocumentOnTypeFormatting       :: SClientMethod TextDocumentOnTypeFormatting
   STextDocumentRename                 :: SClientMethod TextDocumentRename
+  STextDocumentPrepareRename          :: SClientMethod TextDocumentPrepareRename
   STextDocumentFoldingRange           :: SClientMethod TextDocumentFoldingRange
   SCustomClientMethod                 :: Text -> SClientMethod CustomClientMethod
 
@@ -228,8 +230,9 @@ instance A.FromJSON SomeClientMethod where
   parseJSON (A.String "textDocument/rangeFormatting")        = return $ SomeClientMethod STextDocumentRangeFormatting
   parseJSON (A.String "textDocument/onTypeFormatting")       = return $ SomeClientMethod STextDocumentOnTypeFormatting
   parseJSON (A.String "textDocument/rename")                 = return $ SomeClientMethod STextDocumentRename
+  parseJSON (A.String "textDocument/prepareRename")          = return $ SomeClientMethod STextDocumentPrepareRename
   parseJSON (A.String "textDocument/foldingRange")           = return $ SomeClientMethod STextDocumentFoldingRange
-  parseJSON (A.String "window/progress/cancel")              = return $ SomeClientMethod SWindowProgressCancel
+  parseJSON (A.String "window/workDoneProgress/cancel")              = return $ SomeClientMethod SWorkDoneProgressCancel
   parseJSON (A.String x)                                     = return $ SomeClientMethod (SCustomClientMethod x)
   parseJSON _                                                = mempty
 
@@ -293,11 +296,11 @@ instance A.FromJSON (SClientMethod WorkspaceExecuteCommand) where
     case m of
       SomeClientMethod SWorkspaceExecuteCommand -> pure $ SWorkspaceExecuteCommand
       _ -> mempty
-instance A.FromJSON (SClientMethod WindowProgressCancel) where
+instance A.FromJSON (SClientMethod WorkDoneProgressCancel) where
   parseJSON x = do
     m <- parseJSON x
     case m of
-      SomeClientMethod SWindowProgressCancel -> pure $ SWindowProgressCancel
+      SomeClientMethod SWorkDoneProgressCancel -> pure $ SWorkDoneProgressCancel
       _ -> mempty
 instance A.FromJSON (SClientMethod TextDocumentDidOpen) where
   parseJSON x = do
@@ -461,6 +464,12 @@ instance A.FromJSON (SClientMethod TextDocumentRename) where
     case m of
       SomeClientMethod STextDocumentRename -> pure $ STextDocumentRename
       _ -> mempty
+instance A.FromJSON (SClientMethod TextDocumentPrepareRename) where
+  parseJSON x = do
+    m <- parseJSON x
+    case m of
+      SomeClientMethod STextDocumentPrepareRename -> pure $ STextDocumentPrepareRename
+      _ -> mempty
 instance A.FromJSON (SClientMethod TextDocumentFoldingRange) where
   parseJSON x = do
     m <- parseJSON x
@@ -490,7 +499,6 @@ instance A.ToJSON (SClientMethod m) where
   toJSON SWorkspaceSymbol                 = A.String "workspace/symbol"
   toJSON SWorkspaceExecuteCommand         = A.String "workspace/executeCommand"
   -- Document
-<<<<<<< HEAD
   toJSON STextDocumentDidOpen             = A.String "textDocument/didOpen"
   toJSON STextDocumentDidChange           = A.String "textDocument/didChange"
   toJSON STextDocumentWillSave            = A.String "textDocument/willSave"
@@ -516,10 +524,11 @@ instance A.ToJSON (SClientMethod m) where
   toJSON STextDocumentRangeFormatting     = A.String "textDocument/rangeFormatting"
   toJSON STextDocumentOnTypeFormatting    = A.String "textDocument/onTypeFormatting"
   toJSON STextDocumentRename              = A.String "textDocument/rename"
+  toJSON STextDocumentPrepareRename       = A.String "textDocument/prepareRename"
   toJSON STextDocumentFoldingRange        = A.String "textDocument/foldingRange"
   toJSON STextDocumentDocumentLink        = A.String "textDocument/documentLink"
   toJSON SDocumentLinkResolve             = A.String "documentLink/resolve"
-  toJSON SWindowProgressCancel            = A.String "window/progress/cancel"
+  toJSON SWorkDoneProgressCancel          = A.String "window/workDoneProgress/cancel"
   toJSON (SCustomClientMethod xs)         = A.String xs
 
 data ServerMethod =
@@ -549,9 +558,8 @@ data SServerMethod (m :: ServerMethod) where
   SWindowShowMessage :: SServerMethod WindowShowMessage
   SWindowShowMessageRequest :: SServerMethod WindowShowMessageRequest
   SWindowLogMessage :: SServerMethod WindowLogMessage
-  SWindowProgressStart :: SServerMethod WindowProgressStart
-  SWindowProgressReport :: SServerMethod WindowProgressReport
-  SWindowProgressDone :: SServerMethod WindowProgressDone
+  SWindowWorkDoneProgressCreate :: SServerMethod WindowWorkDoneProgressCreate
+  SProgress :: SServerMethod Progress
   STelemetryEvent :: SServerMethod TelemetryEvent
   SClientRegisterCapability :: SServerMethod ClientRegisterCapability
   SClientUnregisterCapability :: SServerMethod ClientUnregisterCapability
@@ -581,9 +589,8 @@ instance A.FromJSON SomeServerMethod where
   parseJSON (A.String "window/showMessage")              = return $ SomeServerMethod SWindowShowMessage
   parseJSON (A.String "window/showMessageRequest")       = return $ SomeServerMethod SWindowShowMessageRequest
   parseJSON (A.String "window/logMessage")               = return $ SomeServerMethod SWindowLogMessage
-  parseJSON (A.String "window/progress/start")           = return $ SomeServerMethod SWindowProgressStart
-  parseJSON (A.String "window/progress/report")          = return $ SomeServerMethod SWindowProgressReport
-  parseJSON (A.String "window/progress/done")            = return $ SomeServerMethod SWindowProgressDone
+  parseJSON (A.String "window/workDoneProgress/create")  = return $ SomeServerMethod SWindowWorkDoneProgressCreate
+  parseJSON (A.String "$/progress")                      = return $ SomeServerMethod SProgress
   parseJSON (A.String "telemetry/event")                 = return $ SomeServerMethod STelemetryEvent
   -- Client
   parseJSON (A.String "client/registerCapability")       = return $ SomeServerMethod SClientRegisterCapability
@@ -606,9 +613,8 @@ instance A.ToJSON (SServerMethod m) where
   toJSON SWindowShowMessage              = A.String "window/showMessage"
   toJSON SWindowShowMessageRequest       = A.String "window/showMessageRequest"
   toJSON SWindowLogMessage               = A.String "window/logMessage"
-  toJSON SWindowProgressStart            = A.String "window/progress/start"
-  toJSON SWindowProgressReport           = A.String "window/progress/report"
-  toJSON SWindowProgressDone             = A.String "window/progress/done"
+  toJSON SWindowWorkDoneProgressCreate   = A.String "window/workDoneProgress/create"
+  toJSON SProgress                       = A.String "$/progress"
   toJSON STelemetryEvent                 = A.String "telemetry/event"
   -- Client
   toJSON SClientRegisterCapability       = A.String "client/registerCapability"
@@ -641,23 +647,17 @@ instance A.FromJSON (SServerMethod WindowLogMessage) where
     case m of
       SomeServerMethod SWindowLogMessage -> pure SWindowLogMessage
       _ -> mempty
-instance A.FromJSON (SServerMethod WindowProgressStart) where
+instance A.FromJSON (SServerMethod WindowWorkDoneProgressCreate) where
   parseJSON x = do
     m <- parseJSON x
     case m of
-      SomeServerMethod SWindowProgressStart -> pure SWindowProgressStart
+      SomeServerMethod SWindowWorkDoneProgressCreate -> pure SWindowWorkDoneProgressCreate
       _ -> mempty
-instance A.FromJSON (SServerMethod WindowProgressReport) where
+instance A.FromJSON (SServerMethod Progress) where
   parseJSON x = do
     m <- parseJSON x
     case m of
-      SomeServerMethod SWindowProgressReport -> pure SWindowProgressReport
-      _ -> mempty
-instance A.FromJSON (SServerMethod WindowProgressDone) where
-  parseJSON x = do
-    m <- parseJSON x
-    case m of
-      SomeServerMethod SWindowProgressDone -> pure SWindowProgressDone
+      SomeServerMethod SProgress -> pure SProgress
       _ -> mempty
 instance A.FromJSON (SServerMethod TelemetryEvent) where
   parseJSON x = do
@@ -870,15 +870,15 @@ deriveJSON lspOptions ''NotificationMessage
 
 -- ---------------------------------------------------------------------
 
-data SomeMessage m = ReqMess (RequestMessage m A.Value A.Value) | NotMess (NotificationMessage m A.Value)
+data CustomMessage m = ReqMess (RequestMessage m A.Value A.Value) | NotMess (NotificationMessage m A.Value)
   deriving (Eq,Show)
 
-instance (ToJSON m) => ToJSON (SomeMessage m) where
+instance (ToJSON m) => ToJSON (CustomMessage m) where
   toJSON (ReqMess a) = toJSON a
   toJSON (NotMess a) = toJSON a
 
-instance (FromJSON m) => FromJSON (SomeMessage m) where
-  parseJSON = withObject "SomeMessage" $ \o -> do
+instance (FromJSON m) => FromJSON (CustomMessage m) where
+  parseJSON = withObject "CustomMessage" $ \o -> do
     mid <- o .:? "id"
     case (mid :: Maybe LspId) of
       Just _ -> ReqMess <$> parseJSON (A.Object o)

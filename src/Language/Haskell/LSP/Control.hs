@@ -30,7 +30,6 @@ import           Data.Monoid
 #endif
 import           Language.Haskell.LSP.Capture
 import qualified Language.Haskell.LSP.Core as Core
-import           Language.Haskell.LSP.Messages
 import           Language.Haskell.LSP.VFS
 import           Language.Haskell.LSP.Utility
 import           System.IO
@@ -91,6 +90,22 @@ runWithHandles hin hout initializeCallbacks h o captureFp = do
 
   return 1
 
+type RequestMap = HM.HashMap LspId SomeClientMethod
+
+newRequestMap :: RequestMap
+newRequestMap = HM.empty
+
+updateRequestMap :: RequestMap -> LspId -> SomeClientMethod -> RequestMap
+updateRequestMap reqMap id method = HM.insert id method reqMap
+
+getRequestMap :: [FromClientMessage] -> RequestMap
+getRequestMap = foldl helper HM.empty
+ where
+  helper :: RequestMap -> FromClientMessage -> RequestMap
+  helper acc (FromClientMess m val) = case splitClientMethod m of
+    IsClientReq -> HM.insert (val ^. id) (SomeClientMethod m) acc
+    _ -> acc
+  helper acc _ = acc
 
 -- ---------------------------------------------------------------------
 
@@ -124,7 +139,8 @@ ioLoop hin dispatcherProc tvarDat =
 
 -- | Simple server to make sure all output is serialised
 sendServer :: TChan J.Value -> Handle -> Maybe FilePath -> IO ()
-sendServer msgChan clientH captureFp =
+sendServer msgChan clientH captureFp = do
+  rmap <- atomically $ newTVar newRequestMap
   forever $ do
     msg <- atomically $ readTChan msgChan
 
@@ -141,7 +157,7 @@ sendServer msgChan clientH captureFp =
     hFlush clientH
     logm $ B.pack "<--2--" <> str
 
-    captureFromServer msg captureFp
+    captureFromServer rmap msg captureFp
 
 -- |
 --

@@ -6,10 +6,8 @@ import qualified Data.Aeson                    as A
 import           Data.Aeson.TH
 import           Data.Text                    (Text)
 import           Language.Haskell.LSP.Types.Constants
-import           Language.Haskell.LSP.Types.List
 import           Language.Haskell.LSP.Types.Progress
 import           Language.Haskell.LSP.Types.TextDocument
-import           Language.Haskell.LSP.Types.Message
 
 data FoldingRangeParams =
   FoldingRangeParams

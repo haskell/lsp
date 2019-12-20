@@ -27,8 +27,71 @@ import           Language.Haskell.LSP.Types.WorkspaceFolders
 
 import Data.Kind
 import qualified Data.Aeson as A
-import Data.Text (Text)
 import GHC.TypeLits
+import Data.GADT.Compare
+
+data FromServerMessage where
+  FromServerMess :: forall m. SServerMethod m -> ServerMessage m -> FromServerMessage
+  FromServerRsp :: forall m. SClientMethod m -> ServerResponse m -> FromServerMessage
+
+instance Show FromServerMessage where
+  show = show . A.toJSON
+
+instance Eq FromServerMessage where
+  (FromServerMess m1 a) == (FromServerMess m2 b) = case geq m1 m2 of
+    Nothing -> False
+    Just Refl -> case splitServerMethod m1 of
+      IsServerReq -> a == b
+      IsServerNot -> a == b
+      IsServerEither -> a == b
+  (FromServerRsp m1 a) == (FromServerRsp m2 b) = case geq m1 m2 of
+    Nothing -> False
+    Just Refl -> case splitClientMethod m1 of
+      IsClientReq -> a == b
+      IsClientEither -> a == b
+      IsClientNot -> error "impossible"
+  _ == _ = False
+instance A.ToJSON FromServerMessage where
+  toJSON (FromServerMess m x) = case splitServerMethod m of
+      IsServerReq -> A.toJSON x
+      IsServerNot -> A.toJSON x
+      IsServerEither -> A.toJSON x
+  toJSON (FromServerRsp m x) = case splitClientMethod m of
+      IsClientReq -> A.toJSON x
+      IsClientEither -> A.toJSON x
+      IsClientNot -> error "impossible"
+
+data FromClientMessage where
+  FromClientMess :: forall m. SClientMethod m -> ClientMessage m -> FromClientMessage
+  FromClientRsp :: forall m. SServerMethod m -> ClientResponse m -> FromClientMessage
+
+instance Show FromClientMessage where
+  show = show . A.toJSON
+
+instance Eq FromClientMessage where
+  (FromClientMess m1 a) == (FromClientMess m2 b) = case geq m1 m2 of
+    Nothing -> False
+    Just Refl -> case splitClientMethod m1 of
+      IsClientReq -> a == b
+      IsClientNot -> a == b
+      IsClientEither -> a == b
+  (FromClientRsp m1 a) == (FromClientRsp m2 b) = case geq m1 m2 of
+    Nothing -> False
+    Just Refl -> case splitServerMethod m1 of
+      IsServerReq -> a == b
+      IsServerEither -> a == b
+      IsServerNot -> error "impossible"
+  _ == _ = False
+instance A.ToJSON FromClientMessage where
+  toJSON (FromClientMess m x) = case splitClientMethod m of
+      IsClientReq -> A.toJSON x
+      IsClientNot -> A.toJSON x
+      IsClientEither -> A.toJSON x
+  toJSON (FromClientRsp m x) = case splitServerMethod m of
+      IsServerReq -> A.toJSON x
+      IsServerEither -> A.toJSON x
+      IsServerNot -> error "impossible"
+
 
 -- Proof that every ClientMessage has a To/FromJSON instance
 clientMethodJSON :: SClientMethod m -> ((A.FromJSON (ClientMessage m),A.ToJSON (ClientMessage m)) => x) -> x
@@ -38,7 +101,14 @@ clientMethodJSON m x =
     IsClientReq -> x
     IsClientEither -> x
 
-type HasJSON a = (A.ToJSON a,A.FromJSON a)
+serverMethodJSON :: SServerMethod m -> ((A.FromJSON (ServerMessage m),A.ToJSON (ServerMessage m)) => x) -> x
+serverMethodJSON m x =
+  case splitServerMethod m of
+    IsServerNot -> x
+    IsServerReq -> x
+    IsServerEither -> x
+
+type HasJSON a = (A.ToJSON a,A.FromJSON a,Eq a)
 
 -- Reify universal properties about Client/Server Messages
 
@@ -54,7 +124,7 @@ data ClientNotOrReq (m :: ClientMethod) where
     => ClientNotOrReq m
   IsClientEither
     :: ( HasJSON (ClientMessage m)
-       , ClientMessage m ~ SomeMessage (SClientMethod m))
+       , ClientMessage m ~ CustomMessage (SClientMethod m))
     => ClientNotOrReq m
 
 data ServerNotOrReq (m :: ServerMethod) where
@@ -69,7 +139,7 @@ data ServerNotOrReq (m :: ServerMethod) where
     => ServerNotOrReq m
   IsServerEither
     :: ( HasJSON (ServerMessage m)
-       , ServerMessage m ~ SomeMessage (SServerMethod m))
+       , ServerMessage m ~ CustomMessage (SServerMethod m))
     => ServerNotOrReq m
 
 splitClientMethod :: SClientMethod m -> ClientNotOrReq m
@@ -83,7 +153,7 @@ splitClientMethod SWorkspaceDidChangeConfiguration = IsClientNot
 splitClientMethod SWorkspaceDidChangeWatchedFiles = IsClientNot
 splitClientMethod SWorkspaceSymbol = IsClientReq
 splitClientMethod SWorkspaceExecuteCommand = IsClientReq
-splitClientMethod SWindowProgressCancel = IsClientNot
+splitClientMethod SWorkDoneProgressCancel = IsClientNot
 splitClientMethod STextDocumentDidOpen = IsClientNot
 splitClientMethod STextDocumentDidChange = IsClientNot
 splitClientMethod STextDocumentWillSave = IsClientNot
@@ -111,6 +181,7 @@ splitClientMethod STextDocumentFormatting = IsClientReq
 splitClientMethod STextDocumentRangeFormatting = IsClientReq
 splitClientMethod STextDocumentOnTypeFormatting = IsClientReq
 splitClientMethod STextDocumentRename = IsClientReq
+splitClientMethod STextDocumentPrepareRename = IsClientReq
 splitClientMethod STextDocumentFoldingRange = IsClientReq
 splitClientMethod SCustomClientMethod{} = IsClientEither
 
@@ -118,9 +189,8 @@ splitServerMethod :: SServerMethod m -> ServerNotOrReq m
 splitServerMethod SWindowShowMessage = IsServerNot
 splitServerMethod SWindowShowMessageRequest = IsServerReq
 splitServerMethod SWindowLogMessage = IsServerNot
-splitServerMethod SWindowProgressStart = IsServerNot
-splitServerMethod SWindowProgressReport = IsServerNot
-splitServerMethod SWindowProgressDone = IsServerNot
+splitServerMethod SWindowWorkDoneProgressCreate = IsServerReq
+splitServerMethod SProgress = IsServerNot
 splitServerMethod STelemetryEvent = IsServerNot
 splitServerMethod SClientRegisterCapability = IsServerReq
 splitServerMethod SClientUnregisterCapability = IsServerReq
@@ -134,8 +204,13 @@ splitServerMethod SCustomServerMethod{} = IsServerEither
 
 type family Response (t :: Type) :: Type where
   Response (RequestMessage m req rsp) = ResponseMessage rsp
+  Response (CustomMessage m) = ResponseMessage A.Value
   Response a = TypeError ('Text "Messages of type " :<>: ShowType a :<>:
                           'Text " cannot be responded too")
+type family ServerResponse (m :: ClientMethod) :: Type where
+  ServerResponse m = Response (ClientMessage m)
+type family ClientResponse (m :: ServerMethod) :: Type where
+  ClientResponse m = Response (ServerMessage m)
 
 type family ClientMessage (m :: ClientMethod) :: Type where
   --   RequestMessage <method> <params> <response>
@@ -146,7 +221,7 @@ type family ClientMessage (m :: ClientMethod) :: Type where
   ClientMessage Initialized
     = NotificationMessage (SClientMethod Initialized) (Maybe InitializedParams)
   ClientMessage Shutdown
-    = RequestMessage (SClientMethod Shutdown) (Maybe A.Value) Text
+    = RequestMessage (SClientMethod Shutdown) (Maybe A.Value) (Maybe ())
   ClientMessage Exit
     = NotificationMessage (SClientMethod Exit) (Maybe ExitParams)
   ClientMessage CancelRequest
@@ -163,8 +238,8 @@ type family ClientMessage (m :: ClientMethod) :: Type where
   ClientMessage WorkspaceExecuteCommand
     = RequestMessage (SClientMethod WorkspaceExecuteCommand) ExecuteCommandParams A.Value
   -- Progress
-  ClientMessage WindowProgressCancel
-    = NotificationMessage (SClientMethod WindowProgressCancel) ProgressCancelParams
+  ClientMessage WorkDoneProgressCancel
+    = NotificationMessage (SClientMethod WorkDoneProgressCancel) WorkDoneProgressCancelParams
   -- Sync/Document state
   ClientMessage TextDocumentDidOpen
     = NotificationMessage (SClientMethod TextDocumentDidOpen) DidOpenTextDocumentParams
@@ -206,7 +281,7 @@ type family ClientMessage (m :: ClientMethod) :: Type where
   ClientMessage TextDocumentCodeLens
     = RequestMessage (SClientMethod TextDocumentCodeLens) CodeLensParams (List CodeLens)
   ClientMessage CodeLensResolve
-    = RequestMessage (SClientMethod CodeLensResolve) CodeLens (List CodeLens)
+    = RequestMessage (SClientMethod CodeLensResolve) CodeLens CodeLens
   ClientMessage TextDocumentDocumentLink
     = RequestMessage (SClientMethod TextDocumentDocumentLink) DocumentLinkParams (List DocumentLink)
   ClientMessage DocumentLinkResolve
@@ -226,14 +301,16 @@ type family ClientMessage (m :: ClientMethod) :: Type where
   -- Rename
   ClientMessage TextDocumentRename
     = RequestMessage (SClientMethod TextDocumentRename) RenameParams WorkspaceEdit
+  ClientMessage TextDocumentPrepareRename
+    = RequestMessage (SClientMethod TextDocumentPrepareRename) TextDocumentPositionParams (Maybe RangeOrRangeWithPlaceholder)
   -- FoldingRange
   ClientMessage TextDocumentFoldingRange
     = RequestMessage (SClientMethod TextDocumentFoldingRange) FoldingRangeParams (List FoldingRange)
   -- Custom can be either a notification or a message
   ClientMessage CustomClientMethod
-    = SomeMessage (SClientMethod CustomClientMethod)
+    = CustomMessage (SClientMethod CustomClientMethod)
 
-data Empty = Empty
+data Empty = Empty deriving (Eq,Ord,Show)
 instance A.ToJSON Empty where
   toJSON Empty = A.Null
 instance A.FromJSON Empty where
@@ -248,12 +325,10 @@ type family ServerMessage (m :: ServerMethod) :: Type where
     = RequestMessage (SServerMethod WindowShowMessageRequest) ShowMessageRequestParams (Maybe MessageActionItem)
   ServerMessage WindowLogMessage
     = NotificationMessage (SServerMethod WindowLogMessage) LogMessageParams
-  ServerMessage WindowProgressStart
-    = NotificationMessage (SServerMethod WindowProgressStart) ProgressStartParams
-  ServerMessage WindowProgressReport
-    = NotificationMessage (SServerMethod WindowProgressReport) ProgressReportParams
-  ServerMessage WindowProgressDone
-    = NotificationMessage (SServerMethod WindowProgressDone) ProgressDoneParams
+  ServerMessage WindowWorkDoneProgressCreate
+    = RequestMessage (SServerMethod WindowWorkDoneProgressCreate) WorkDoneProgressCreateParams ()
+  ServerMessage Progress
+    = NotificationMessage (SServerMethod Progress) (ProgressParams SomeProgressParams)
   ServerMessage TelemetryEvent
     = NotificationMessage (SServerMethod TelemetryEvent) A.Value
   -- Capability
@@ -276,7 +351,7 @@ type family ServerMessage (m :: ServerMethod) :: Type where
     = NotificationMessage (SServerMethod CancelRequestServer) CancelParams
   -- Custom
   ServerMessage CustomServerMethod
-    = SomeMessage (SServerMethod CustomServerMethod)
+    = CustomMessage (SServerMethod CustomServerMethod)
 
 -- Server Messages
 
@@ -290,19 +365,19 @@ type LogMessageNotification = ServerMessage WindowLogMessage
 -- client to ask the client to start progress.
 --
 -- @since 0.10.0.0
-type ProgressStartNotification = ServerMessage WindowProgressStart
+-- type ProgressStartNotification = ServerMessage WindowProgressStart
 
 -- | The window/progress/report notification is sent from the server to the
 -- client to report progress for a previously started progress.
 --
 -- @since 0.10.0.0
-type ProgressReportNotification = ServerMessage WindowProgressReport
+-- type ProgressReportNotification = ServerMessage WindowProgressReport
 
 -- | The window/progress/done notification is sent from the server to the
 -- client to stop a previously started progress.
 --
 -- @since 0.10.0.0
-type ProgressDoneNotification = ServerMessage WindowProgressDone
+-- type ProgressDoneNotification = ServerMessage WindowProgressDone
 
 type TelemetryNotification = ServerMessage TelemetryEvent
 
@@ -357,7 +432,11 @@ type ExecuteCommandResponse                = Response ExecuteCommandRequest
 -- A server receiving a cancel request must still close a progress using the done notification.
 --
 -- @since 0.10.0.0
-type ProgressCancelNotification = ClientMessage WindowProgressCancel
+type WorkDoneProgressCreateRequest      = ServerMessage WindowWorkDoneProgressCreate
+type WorkDoneProgressCancelNotification = ClientMessage WorkDoneProgressCancel
+type WorkDoneProgressBeginNotification  = ServerMessage Progress
+type WorkDoneProgressReportNotification = ServerMessage Progress
+type WorkDoneProgressEndNotification    = ServerMessage Progress
 
 -- Document/Sync
 type DidOpenTextDocumentNotification       = ClientMessage TextDocumentDidOpen
@@ -431,6 +510,8 @@ type DocumentOnTypeFormattingResponse = Response DocumentOnTypeFormattingRequest
 -- Rename
 type RenameRequest  = ClientMessage TextDocumentRename
 type RenameResponse = Response RenameRequest
+type PrepareRenameRequest  = ClientMessage TextDocumentPrepareRename
+type PrepareRenameResponse = Response PrepareRenameRequest
 
 -- Folding
 type FoldingRangeRequest  = ClientMessage TextDocumentFoldingRange

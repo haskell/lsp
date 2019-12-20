@@ -137,23 +137,23 @@ fmServerLogMessageNotification mt msg
 
 fmServerWorkDoneProgressBeginNotification :: J.ProgressParams J.WorkDoneProgressBeginParams -> J.WorkDoneProgressBeginNotification
 fmServerWorkDoneProgressBeginNotification params
-  = J.NotificationMessage "2.0" J.SProgress params
+  = J.NotificationMessage "2.0" J.SProgress (J.Begin <$> params)
 
 -- ----------------------------------------------------------------------
 
 fmServerWorkDoneProgressReportNotification :: J.ProgressParams J.WorkDoneProgressReportParams -> J.WorkDoneProgressReportNotification
 fmServerWorkDoneProgressReportNotification params
-  = J.NotificationMessage "2.0" J.SProgress params
+  = J.NotificationMessage "2.0" J.SProgress (J.Report <$> params)
 
 -- ----------------------------------------------------------------------
 
 fmServerWorkDoneProgressEndNotification :: J.ProgressParams J.WorkDoneProgressEndParams -> J.WorkDoneProgressEndNotification
 fmServerWorkDoneProgressEndNotification params
-  = J.NotificationMessage "2.0" J.SProgress params
+  = J.NotificationMessage "2.0" J.SProgress (J.End <$> params)
 
 fmServerWorkDoneProgressCreateRequest :: J.LspId -> J.WorkDoneProgressCreateParams -> J.WorkDoneProgressCreateRequest
 fmServerWorkDoneProgressCreateRequest rid params
-  = J.RequestMessage "2.0" rid J.WindowWorkDoneProgressCreate params
+  = J.RequestMessage "2.0" rid J.SWindowWorkDoneProgressCreate params
 
 -- ----------------------------------------------------------------------
 -- * :arrow_left: [telemetry/event](#telemetry_event)
