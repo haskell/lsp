@@ -50,7 +50,7 @@ jobs:
         hoogle generate
         popd
     - name: Install JS Language Server
-      run: npm install -g javascript-typescript-langserver
+      run: npm install javascript-typescript-langserver
     - name: Build
       run: cabal build
     - name: Test
