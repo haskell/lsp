@@ -281,11 +281,18 @@ main = hspec $ do
         diag ^. severity `shouldBe` Just DsError
         diag ^. source `shouldBe` Just "bios"
 
-  describe "rename" $
-    it "works" $ runSession "hie" fullCaps "test/data" $ do
-      doc <- openDoc "Rename.hs" "haskell"
-      rename doc (Position 1 0) "bar"
-      documentContents doc >>= liftIO . shouldBe "main = bar\nbar = return 42\n"
+  describe "rename" $ do
+    it "works" $ pendingWith "HaRe not in hie-bios yet"
+    it "works on javascript" $
+      runSession "javascript-typescript-stdio" fullCaps "test/data/javascriptPass" $ do
+        doc <- openDoc "test.js" "javascript"
+        rename doc (Position 2 11) "bar"
+        documentContents doc >>= liftIO . (`shouldContain` "function bar()") . T.unpack
+
+    -- runSession "hie" fullCaps "test/data" $ do
+    --   doc <- openDoc "Rename.hs" "haskell"
+    --   rename doc (Position 1 0) "bar"
+    --   documentContents doc >>= liftIO . shouldBe "main = bar\nbar = return 42\n"
 
   describe "getHover" $
     it "works" $ runSession "hie" fullCaps "test/data/renamePass" $ do

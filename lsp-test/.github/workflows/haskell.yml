@@ -1,32 +1,61 @@
 name: Haskell CI
 
 on: [push]
-
 jobs:
   build:
    
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+
+    env:
+      hieref: cd0d1eb88334c359b8a220f2aebec703d66012ff
+
+    strategy:
+      matrix:
+        ghc: ['8.6.5']
+        os: [ubuntu-latest, macOS-latest]
 
     steps:
     - uses: actions/checkout@v1
-    - uses: actions/setup-haskell@v1
+    - uses: bubba/setup-haskell@macos-ghcup
       with:
-        ghc-version: '8.6.5'
+        ghc-version: ${{ matrix.ghc }}
         cabal-version: '3.0'
     - run: cabal update
-    - name: Install HIE
+
+    - name: Clone HIE
+      uses: actions/checkout@v1
+      with:
+        repository: mpickering/haskell-ide-engine
+        submodules: recursive
+        ref: ${{ env.hieref }}
+        path: haskell-ide-engine
+
+    # - name: Cache Cabal
+    #   uses: actions/cache@v1
+    #   with:
+    #     path: ~/.cabal
+    #     key: ${{ runner.OS }}-${{ matrix.ghc }}-cabal-${{ hashFiles('../**/*.cabal') }}
+    #     restore-keys: |
+    #       ${{ runner.OS }}-${{ matrix.ghc }}-cabal
+
+    - name: Build HIE
       run: |
-        pushd $HOME
-        git clone https://github.com/haskell/haskell-ide-engine --recurse-submodules
-        cd haskell-ide-engine
+        # if [ -e $HOME/.cabal/bin/hie ]; then
+        #     echo "hie is already built"
+        #     exit 0
+        # fi
+        pushd ../haskell-ide-engine
         cabal install hie
         cabal install hoogle
-        export PATH=$PATH:$HOME/.cabal/bin
         hoogle generate
         popd
+    - name: Install JS Language Server
+      run: npm install -g javascript-typescript-langserver
     - name: Build
       run: cabal build
     - name: Test
       run: |
-        export PATH=$PATH:$HOME/.cabal/bin
+        echo $PATH
+        echo $(npm bin)
+        export PATH=$PATH:$(npm bin) 
         cabal test
