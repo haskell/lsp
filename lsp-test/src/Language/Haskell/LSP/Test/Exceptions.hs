@@ -19,6 +19,7 @@ data SessionException = Timeout (Maybe FromServerMessage)
                       | IncorrectApplyEditRequest String
                       | UnexpectedResponseError LspIdRsp ResponseError
                       | UnexpectedServerTermination
+                      | IllegalInitSequenceMessage FromServerMessage
   deriving Eq
 
 instance Exception SessionException
@@ -50,6 +51,9 @@ instance Show SessionException where
   show (UnexpectedResponseError lid e) = "Received an exepected error in a response for id " ++ show lid ++ ":\n"
                                           ++ show e
   show UnexpectedServerTermination = "Language server unexpectedly terminated"
+  show (IllegalInitSequenceMessage msg) =
+    "Received an illegal message between the initialize request and response:\n"
+      ++  B.unpack (encodePretty msg)
 
 -- | A predicate that matches on any 'SessionException'
 anySessionException :: SessionException -> Bool

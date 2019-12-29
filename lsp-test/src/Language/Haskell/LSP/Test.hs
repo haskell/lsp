@@ -153,7 +153,12 @@ runSessionWithConfig config' serverExe caps rootDir session = do
   withServer serverExe (logStdErr config) $ \serverIn serverOut serverProc ->
     runSessionWithHandles serverIn serverOut serverProc listenServer config caps rootDir exitServer $ do
       -- Wrap the session around initialize and shutdown calls
-      initRspMsg <- request Initialize initializeParams :: Session InitializeResponse
+      -- initRspMsg <- sendRequest Initialize initializeParams :: Session InitializeResponse
+      initReqId <- sendRequest Initialize initializeParams
+
+      -- Because messages can be sent in between the request and response,
+      -- collect them and then...
+      (inBetween, initRspMsg) <- manyTill_ anyMessage (responseForId initReqId)
 
       liftIO $ maybe (return ()) (putStrLn . ("Error while initializing: " ++) . show ) (initRspMsg ^. LSP.error)
 
@@ -164,6 +169,12 @@ runSessionWithConfig config' serverExe caps rootDir session = do
       case lspConfig config of
         Just cfg -> sendNotification WorkspaceDidChangeConfiguration (DidChangeConfigurationParams cfg)
         Nothing -> return ()
+
+      -- ... relay them back to the user Session so they can match on them!
+      -- As long as they are allowed.
+      forM_ inBetween checkLegalBetweenMessage
+      msgChan <- asks messageChan
+      liftIO $ writeList2Chan msgChan (ServerMessage <$> inBetween)
 
       -- Run the actual test
       session
@@ -186,6 +197,16 @@ runSessionWithConfig config' serverExe caps rootDir session = do
     case msg of
       (RspShutdown _) -> return ()
       _               -> listenServer serverOut context
+
+  -- | Is this message allowed to be sent by the server between the intialize
+  -- request and response?
+  -- https://microsoft.github.io/language-server-protocol/specifications/specification-3-15/#initialize
+  checkLegalBetweenMessage :: FromServerMessage -> Session ()
+  checkLegalBetweenMessage (NotShowMessage _) = pure ()
+  checkLegalBetweenMessage (NotLogMessage _) = pure ()
+  checkLegalBetweenMessage (NotTelemetry _) = pure ()
+  checkLegalBetweenMessage (ReqShowMessage _) = pure ()
+  checkLegalBetweenMessage msg = throw (IllegalInitSequenceMessage msg)
 
   -- | Check environment variables to override the config
   envOverrideConfig :: SessionConfig -> IO SessionConfig
