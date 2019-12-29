@@ -1,5 +1,10 @@
 # Revision history for lsp-test
 
+## 0.10.0.0 -- 2019-12-29
+
+* Account for messages received between the initialize request and response.
+  (Though it will throw an exception if the message received is an illegal one)
+
 ## 0.9.0.0 -- 2019-12-1
 
 * Add `ignoreLogNotifications` config option
