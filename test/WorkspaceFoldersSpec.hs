@@ -21,7 +21,6 @@ spec =
     let initCb :: InitializeCallbacks ()
         initCb = InitializeCallbacks
           (const $ Left "")
-          (const $ Left "")
           (\lf -> putMVar lfVar lf >> return Nothing)
         handlers = def
 

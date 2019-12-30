@@ -210,12 +210,7 @@ data LspFuncs c =
 -- specific configuration data the language server needs to use.
 data InitializeCallbacks config =
   InitializeCallbacks
-    { onInitialConfiguration :: J.InitializeRequest -> Either T.Text config
-      -- ^ Invoked on the first message from the language client, containg the client configuration
-      -- This callback should return either the parsed configuration data or an error indicating
-      -- what went wrong. The parsed configuration object will be stored internally and passed to
-      -- hanlder functions as context.
-    , onConfigurationChange :: J.DidChangeConfigurationNotification-> Either T.Text config
+    { onConfigurationChange :: J.DidChangeConfigurationNotification-> Either T.Text config
       -- ^ Invoked whenever the clients sends a message with a changed client configuration.
       -- This callback should return either the parsed configuration data or an error indicating
       -- what went wrong. The parsed configuration object will be stored internally and passed to
@@ -434,13 +429,21 @@ handleInitialConfig
   -> TVar (LanguageContextData config)
   -> J.Value
   -> IO ()
-handleInitialConfig (InitializeCallbacks { onInitialConfiguration, onStartup }) mh tvarDat json
-  = handleMessageWithConfigChange ReqInitialize
-                                  onInitialConfiguration
-                                  (Just $ initializeRequestHandler' onStartup mh tvarDat)
-                                  tvarDat
-                                  json
+handleInitialConfig (InitializeCallbacks { onStartup }) mh tvarDat json
+  = case J.fromJSON json of
+    J.Success req -> do
+      ctx <- readTVarIO tvarDat
+      captureFromClient (ReqInitialize req) (resCaptureFile ctx)
 
+      initializeRequestHandler' onStartup mh tvarDat req
+
+    J.Error err -> do
+      let msg =
+            T.pack
+              $  unwords
+              $  ["haskell-lsp:parse error.", show json, show err]
+              ++ _ERR_MSG_URL
+      sendErrorLog tvarDat msg
 
 hc
   :: (Show config)
@@ -450,29 +453,13 @@ hc
   -> J.Value
   -> IO ()
 hc (InitializeCallbacks { onConfigurationChange }) mh tvarDat json =
-  handleMessageWithConfigChange NotDidChangeConfiguration
-                                onConfigurationChange
-                                mh
-                                tvarDat
-                                json
-
-handleMessageWithConfigChange
-  :: (J.FromJSON reqParams, Show reqParams, Show err)
-  => (reqParams -> FromClientMessage) -- ^ The notification message from the client to expect
-  -> (reqParams -> Either err config) -- ^ A function to parse the config out of the request
-  -> Maybe (reqParams -> IO ()) -- ^ The upstream handler for the client request
-  -> TVar (LanguageContextData config) -- ^ The context data containing the current configuration
-  -> J.Value -- ^ The raw reqeust data
-  -> IO ()
-handleMessageWithConfigChange notification parseConfig mh tvarDat json =
-  -- logs $ "haskell-lsp:hc DidChangeConfigurationNotification entered"
   case J.fromJSON json of
     J.Success req -> do
       ctx <- readTVarIO tvarDat
 
-      captureFromClient (notification req) (resCaptureFile ctx)
+      captureFromClient (NotDidChangeConfiguration req) (resCaptureFile ctx)
 
-      case parseConfig req of
+      case onConfigurationChange req of
         Left err -> do
           let
             msg =
@@ -493,7 +480,8 @@ handleMessageWithConfigChange notification parseConfig mh tvarDat json =
       sendErrorLog tvarDat msg
 
 -- | Updates the list of workspace folders and then delegates back to 'hh'
-hwf :: Maybe (Handler J.DidChangeWorkspaceFoldersNotification) -> TVar (LanguageContextData config) -> J.Value -> IO ()
+hwf :: Maybe (Handler J.DidChangeWorkspaceFoldersNotification)
+    -> TVar (LanguageContextData config) -> J.Value -> IO ()
 hwf h tvarDat json = do
   case J.fromJSON json :: J.Result J.DidChangeWorkspaceFoldersNotification of
     J.Success (J.NotificationMessage _ _ params) -> atomically $ do
