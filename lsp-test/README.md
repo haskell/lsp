@@ -3,7 +3,7 @@ lsp-test is a functional testing framework for Language Server Protocol servers.
 
 ```haskell
 import Language.Haskell.LSP.Test
-runSession "hie" fullCaps "proj/dir" $ do
+main = runSession "hie" fullCaps "proj/dir" $ do
   doc <- openDoc "Foo.hs" "haskell"
   skipMany anyNotification
   symbols <- getDocumentSymbols doc
@@ -34,7 +34,7 @@ count 4 (message :: Session ApplyWorkspaceEditRequest)
 anyRequest <|> anyResponse
 ```
 
-Try out the example tests in the `example` directory with `cabal new-test`.
+Try out the example tests in the `example` directory with `cabal test`.
 For more examples check the [Wiki](https://github.com/bubba/lsp-test/wiki/Introduction)
 
 ## Developing
@@ -45,7 +45,7 @@ The tests are integration tests, so make sure you have the following language se
 ### [javascript-typescript-langserver](https://github.com/sourcegraph/javascript-typescript-langserver)
 `npm i -g javascript-typescript-langserver`
 
-Then run the tests with `stack test` or `cabal new-test`.
+Then run the tests with `cabal test` or `stack test`.
 
 ## Troubleshooting
 Seeing funny stuff when running lsp-test via stack? If your server is built upon Haskell tooling, [keep in mind that stack sets some environment variables related to GHC, and you may want to unset them.](https://github.com/alanz/haskell-ide-engine/blob/bfb16324d396da71000ef81d51acbebbdaa854ab/test/utils/TestUtils.hs#L290-L298)
