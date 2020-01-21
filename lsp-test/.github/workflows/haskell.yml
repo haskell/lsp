@@ -33,32 +33,38 @@ jobs:
         ref: ${{ env.hieref }}
         path: haskell-ide-engine
 
-    # - name: Cache Cabal
-    #   uses: actions/cache@v1
-    #   with:
-    #     path: ~/.cabal
-    #     key: ${{ runner.OS }}-${{ matrix.ghc }}-cabal-${{ hashFiles('../**/*.cabal') }}
-    #     restore-keys: |
-    #       ${{ runner.OS }}-${{ matrix.ghc }}-cabal
+    - name: Cache Cabal
+      uses: actions/cache@v1.1.0
+      with:
+        path: ~/.cabal
+        key: ${{ runner.OS }}-${{ matrix.ghc }}-cabal-${{ env.hieref }}
+        restore-keys: |
+          ${{ runner.OS }}-${{ matrix.ghc }}-cabal
+
+    - name: Cache Hoogle
+      uses: actions/cache@v1.1.0
+      with:
+        path: ~/.hoogle
+        key: ${{ runner.OS }}-${{ matrix.ghc }}-hoogle-${{ env.hieref }}
 
     - name: Build HIE
       run: |
-        # if [ -e $HOME/.cabal/bin/hie ]; then
-        #     echo "hie is already built"
-        #     exit 0
-        # fi
         pushd ../haskell-ide-engine
         cabal install hie
         cabal install hoogle
-        hoogle generate
         popd
+    - name: Generate hoogle database
+      run: |
+        if [ -d $HOME/.hoogle ]; then
+           echo "hoogle database already built"
+           exit 0
+        fi
+        hoogle generate
     - name: Install JS Language Server
       run: npm install javascript-typescript-langserver
     - name: Build
       run: cabal build
     - name: Test
       run: |
-        echo $PATH
-        echo $(npm bin)
         export PATH=$PATH:$(npm bin) 
         cabal test
