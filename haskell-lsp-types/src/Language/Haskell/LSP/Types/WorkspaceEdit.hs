@@ -153,12 +153,12 @@ instance Monoid WorkspaceEdit where
   mempty = WorkspaceEdit Nothing Nothing
   mappend (WorkspaceEdit a b) (WorkspaceEdit c d) = WorkspaceEdit (a <> c) (b <> d)
 
-deriveJSON lspOptions ''WorkspaceEdit
-
 #if __GLASGOW_HASKELL__ >= 804
 instance Semigroup WorkspaceEdit where
   (<>) = mappend
 #endif
+
+deriveJSON lspOptions ''WorkspaceEdit
 
 -- ---------------------------------------------------------------------
 
