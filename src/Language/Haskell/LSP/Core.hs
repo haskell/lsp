@@ -1010,7 +1010,7 @@ flushDiagnosticsBySource tvarDat maxDiagnosticCount msource = join $ atomically 
   let ds = flushBySource (resDiagnostics ctx) msource
   writeTVar tvarDat $ ctx {resDiagnostics = ds}
   -- Send the updated diagnostics to the client
-  return $ forM_ (Map.keys ds) $ \uri -> do
+  return $ forM_ (HM.keys ds) $ \uri -> do
     -- logs $ "haskell-lsp:flushDiagnosticsBySource:uri=" ++ show uri
     let mdp = getDiagnosticParamsFor maxDiagnosticCount ds uri
     case mdp of
