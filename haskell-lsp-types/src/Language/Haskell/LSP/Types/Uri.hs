@@ -25,7 +25,7 @@ instance NFData Uri
 --
 -- If you care about performance then you should use a hash map. The keys
 -- are cached in order to make hashing very fast.
-data NormalizedUri = NormalizedUri Int !Text
+data NormalizedUri = NormalizedUri !Int !Text
   deriving (Read,Show,Generic, Eq)
 
 -- Slow but compares paths alphabetically as you would expect.
