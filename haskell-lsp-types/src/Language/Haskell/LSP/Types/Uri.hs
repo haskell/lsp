@@ -22,17 +22,27 @@ instance NFData Uri
 -- | When URIs are supposed to be used as keys, it is important to normalize
 -- the percent encoding in the URI since URIs that only differ
 -- when it comes to the percent-encoding should be treated as equivalent.
-newtype NormalizedUri = NormalizedUri Text
-  deriving (Eq,Ord,Read,Show,Generic,Hashable)
+--
+-- If you care about performance then you should use a hash map. The keys
+-- are cached in order to make hashing very fast.
+data NormalizedUri = NormalizedUri !Int !Text
+  deriving (Read,Show,Generic, Eq)
+
+-- Slow but compares paths alphabetically as you would expect.
+instance Ord NormalizedUri where
+  compare (NormalizedUri _ u1) (NormalizedUri _ u2) = compare u1 u2
+
+instance Hashable NormalizedUri where
+  hash (NormalizedUri h _) = h
 
 toNormalizedUri :: Uri -> NormalizedUri
-toNormalizedUri uri =
-    NormalizedUri $ T.pack $ escapeURIString isUnescapedInURI $ unEscapeString $ T.unpack t
+toNormalizedUri uri = NormalizedUri (hash norm) norm
   where (Uri t) = maybe uri filePathToUri (uriToFilePath uri)
         -- To ensure all `Uri`s have the file path like the created ones by `filePathToUri`
+        norm = T.pack $ escapeURIString isUnescapedInURI $ unEscapeString $ T.unpack t
 
 fromNormalizedUri :: NormalizedUri -> Uri
-fromNormalizedUri (NormalizedUri t) = Uri t
+fromNormalizedUri (NormalizedUri _ t) = Uri t
 
 fileScheme :: String
 fileScheme = "file:"
