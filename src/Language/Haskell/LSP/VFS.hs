@@ -192,6 +192,7 @@ persistFileVFS vfs uri =
                    writeRaw h = do
                     -- We honour original file line endings
                     hSetNewlineMode h noNewlineTranslation
+                    hSetEncoding h utf8
                     hPutStr h contents
                logs  $ "haskell-lsp:persistFileVFS: Writing virtual file: " 
                     ++ "uri = " ++ show uri ++ ", virtual file = " ++ show tfn
