@@ -416,16 +416,28 @@ hh mVfs wrapper mh tvarDat json = do
             Nothing -> return ()
 
           ctx <- readTVarIO tvarDat
-          captureFromClient (wrapper req) (resCaptureFile ctx)
+          let req' = wrapper req
+          captureFromClient req' (resCaptureFile ctx)
 
           case mh of
             Just h -> h req
-            Nothing -> do
-              let msg = T.pack $ unwords ["haskell-lsp:no handler for.", show json]
-              sendErrorLog tvarDat msg
+            Nothing
+              -- $/ notifications should/could be ignored by server.
+              -- Don't log errors in that case.
+              -- See https://microsoft.github.io/language-server-protocol/specifications/specification-current/#-notifications-and-requests.
+              | isOptionalNotification req' -> return ()
+              | otherwise -> do
+                  let msg = T.pack $ unwords ["haskell-lsp:no handler for.", show json]
+                  sendErrorLog tvarDat msg
         J.Error  err -> do
           let msg = T.pack $ unwords $ ["haskell-lsp:parse error.", show json, show err] ++ _ERR_MSG_URL
           sendErrorLog tvarDat msg
+  where
+    isOptionalNotification req' =
+      case (req', json) of
+        (NotCustomClient _, J.String method)
+          | "$/" `T.isPrefixOf` method -> True
+        _ -> False
 
 handleInitialConfig
   :: (Show config)
