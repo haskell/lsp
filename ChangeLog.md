@@ -1,5 +1,13 @@
 # Revision history for haskell-lsp
 
+## 0.20.0.0
+
+* Don't log errors for '$/' notifications (@jinwoo)
+* Force utf8 encoding when writing vfs temp files (@jneira)
+* Store a hash in a NormalizedUri (@mpickering)
+* Move "Semigroup WorkspaceEdit" instance (@sheaf)
+* Fix vfs line endings (@jneira)
+
 ## 0.19.0.0 -- 2019-12-14
 
 * Fix vfs line endings (@jneira)
@@ -62,7 +70,7 @@
 ```haskell
     , persistVirtualFileFunc       :: !(J.Uri -> IO FilePath)
     , reverseFileMapFunc           :: !(IO (FilePath -> FilePath))
- ```
+```
 
 * Fix exception on empty filepaths
 

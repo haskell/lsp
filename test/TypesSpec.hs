@@ -1,7 +1,10 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE OverloadedStrings #-}
 module TypesSpec where
 
+#if __GLASGOW_HASKELL__ < 808
 import           Data.Monoid ((<>))
+#endif
 import qualified Language.Haskell.LSP.Types as J
 import           Test.Hspec
 

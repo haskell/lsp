@@ -3,7 +3,9 @@
 module URIFilePathSpec where
 
 import Data.List
+#if __GLASGOW_HASKELL__ < 808
 import Data.Monoid ((<>))
+#endif
 import Data.Text                              (pack)
 import Language.Haskell.LSP.Types
 
