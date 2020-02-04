@@ -1,5 +1,9 @@
 # Revision history for lsp-test
 
+## 0.10.1.0 -- 2019-02-04
+
+* Bump constraints for new haskell-lsp
+
 ## 0.10.0.0 -- 2019-12-29
 
 * Account for messages received between the initialize request and response.
