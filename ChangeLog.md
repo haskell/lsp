@@ -6,7 +6,7 @@
 * Force utf8 encoding when writing vfs temp files (@jneira)
 * Store a hash in a NormalizedUri (@mpickering)
 * Move "Semigroup WorkspaceEdit" instance (@sheaf)
-* Fix vfs line endings (@merged)
+* Fix vfs line endings (@jneira)
 
 ## 0.19.0.0 -- 2019-12-14
 
