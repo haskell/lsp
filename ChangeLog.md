@@ -1,5 +1,9 @@
 # Revision history for haskell-lsp
 
+## 0.20.0.1
+
+* Fix Haddock generation syntax error
+
 ## 0.20.0.0
 
 * Don't log errors for '$/' notifications (@jinwoo)

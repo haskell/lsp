@@ -422,7 +422,7 @@ hh mVfs wrapper mh tvarDat json = do
           case mh of
             Just h -> h req
             Nothing
-              -- $/ notifications should/could be ignored by server.
+              -- '$/' notifications should/could be ignored by server.
               -- Don't log errors in that case.
               -- See https://microsoft.github.io/language-server-protocol/specifications/specification-current/#-notifications-and-requests.
               | isOptionalNotification req' -> return ()
@@ -1031,12 +1031,12 @@ flushDiagnosticsBySource tvarDat maxDiagnosticCount msource = join $ atomically 
         resSendResponse ctx $ NotPublishDiagnostics
           $ J.NotificationMessage "2.0" J.TextDocumentPublishDiagnostics params
 
--- |=====================================================================
+-- =====================================================================
 --
 --  utility
 
 
--- |
+-- 
 --  Logger
 --
 setupLogger :: Maybe FilePath -> [String] -> Priority -> IO ()
