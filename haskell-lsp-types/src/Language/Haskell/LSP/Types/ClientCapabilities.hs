@@ -644,7 +644,6 @@ data CompletionItemTagsClientCapabilities =
       _valueSet :: List CompletionItemTag
     } deriving (Show, Read, Eq)
 
-
 $(deriveJSON lspOptions ''CompletionItemTagsClientCapabilities)
 
 data CompletionItemClientCapabilities =
@@ -931,7 +930,6 @@ data PublishDiagnosticsTagsClientCapabilities =
     { -- | The tags supported by the client.
       _valueSet :: List DiagnosticTag
     } deriving (Show, Read, Eq)
-
 
 $(deriveJSON lspOptions ''PublishDiagnosticsTagsClientCapabilities)
 
