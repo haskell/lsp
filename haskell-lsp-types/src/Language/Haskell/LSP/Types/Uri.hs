@@ -140,28 +140,28 @@ platformAdjustToUriPath systemOS srcPath
 --
 -- This is one of the most performance critical parts of ghcide, do not
 -- modify it without profiling.
-data NormalizedFilePath = NormalizedFilePath NormalizedUri !Int !FilePath
+data NormalizedFilePath = NormalizedFilePath NormalizedUri !FilePath
     deriving (Generic, Eq, Ord)
 
 instance NFData NormalizedFilePath
 
 instance Binary NormalizedFilePath where
-  put (NormalizedFilePath _ _ fp) = put fp
+  put (NormalizedFilePath _ fp) = put fp
   get = do
     v <- Data.Binary.get :: Get FilePath
     return (toNormalizedFilePath v)
 
 instance Show NormalizedFilePath where
-  show (NormalizedFilePath _ _ fp) = "NormalizedFilePath " ++ show fp
+  show (NormalizedFilePath _ fp) = "NormalizedFilePath " ++ show fp
 
 instance Hashable NormalizedFilePath where
-  hash (NormalizedFilePath _ h _) = h
+  hash (NormalizedFilePath uri _) = hash uri
 
 instance IsString NormalizedFilePath where
     fromString = toNormalizedFilePath
 
 toNormalizedFilePath :: FilePath -> NormalizedFilePath
-toNormalizedFilePath fp = NormalizedFilePath nuri (hash nfp) nfp
+toNormalizedFilePath fp = NormalizedFilePath nuri nfp
   where nfp | fp == "" = "" 
             -- ghcide want to keep empty paths instead of normalising them to "."
             | otherwise = FP.normalise fp
@@ -170,13 +170,13 @@ toNormalizedFilePath fp = NormalizedFilePath nuri (hash nfp) nfp
         nuri = NormalizedUri (hash nuriStr) nuriStr
 
 fromNormalizedFilePath :: NormalizedFilePath -> FilePath
-fromNormalizedFilePath (NormalizedFilePath _ _ fp) = fp
+fromNormalizedFilePath (NormalizedFilePath _ fp) = fp
 
 normalizedFilePathToUri :: NormalizedFilePath -> NormalizedUri
-normalizedFilePathToUri (NormalizedFilePath uri _ _) = uri
+normalizedFilePathToUri (NormalizedFilePath uri _) = uri
 
 uriToNormalizedFilePath :: NormalizedUri -> Maybe NormalizedFilePath
 uriToNormalizedFilePath nuri = fmap toNormFP mbFilePath
   where mbFilePath = platformAwareUriToFilePath System.Info.os (fromNormalizedUri nuri) 
         -- This file path is already normalized by construction
-        toNormFP nfp = NormalizedFilePath nuri (hash nfp) nfp
+        toNormFP nfp = NormalizedFilePath nuri nfp
