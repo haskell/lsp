@@ -59,6 +59,49 @@ instance A.FromJSON DiagnosticSeverity where
   parseJSON (A.Number 4) = pure DsHint
   parseJSON _            = mempty
 
+{-
+The diagnostic tags.
+
+export namespace DiagnosticTag {
+    /**
+     * Unused or unnecessary code.
+     *
+     * Clients are allowed to render diagnostics with this tag faded out instead of having
+     * an error squiggle.
+     */
+    export const Unnecessary: 1;
+    /**
+     * Deprecated or obsolete code.
+     *
+     * Clients are allowed to rendered diagnostics with this tag strike through.
+     */
+    export const Deprecated: 2;
+}
+-}
+data DiagnosticTag
+  -- | Unused or unnecessary code.
+  --
+  -- Clients are allowed to render diagnostics with this tag faded out
+  -- instead of having an error squiggle.
+  = DtUnnecessary
+  -- | Deprecated or obsolete code.
+  --
+  -- Clients are allowed to rendered diagnostics with this tag strike
+  -- through.
+  | DtDeprecated
+  deriving (Eq, Ord, Show, Read, Generic)
+
+instance NFData DiagnosticTag
+
+instance A.ToJSON DiagnosticTag where
+  toJSON DtUnnecessary = A.Number 1
+  toJSON DtDeprecated  = A.Number 2
+
+instance A.FromJSON DiagnosticTag where
+  parseJSON (A.Number 1) = pure DtUnnecessary
+  parseJSON (A.Number 2) = pure DtDeprecated
+  parseJSON _            = mempty
+
 -- ---------------------------------------------------------------------
 {-
 Represents a related message and source code location for a diagnostic. This should be
@@ -126,6 +169,13 @@ interface Diagnostic {
     message: string;
 
     /**
+     * Additional metadata about the diagnostic.
+     *
+     * @since 3.15.0
+     */
+    tags?: DiagnosticTag[];
+
+    /**
      * An array of related diagnostic information, e.g. when symbol-names within
      * a scope collide all definitions can be marked via this property.
      */
@@ -150,6 +200,7 @@ data Diagnostic =
     , _code               :: Maybe NumberOrString
     , _source             :: Maybe DiagnosticSource
     , _message            :: Text
+    , _tags               :: Maybe (List DiagnosticTag)
     , _relatedInformation :: Maybe (List DiagnosticRelatedInformation)
     } deriving (Show, Read, Eq, Ord, Generic)
 

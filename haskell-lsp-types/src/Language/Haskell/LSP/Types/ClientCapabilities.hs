@@ -9,6 +9,7 @@ import Data.Default
 import Language.Haskell.LSP.Types.Constants
 import Language.Haskell.LSP.Types.CodeAction
 import Language.Haskell.LSP.Types.Completion
+import Language.Haskell.LSP.Types.Diagnostic
 import Language.Haskell.LSP.Types.List
 import Language.Haskell.LSP.Types.MarkupContent
 import Language.Haskell.LSP.Types.Symbol
@@ -637,6 +638,15 @@ instance Default SynchronizationTextDocumentClientCapabilities where
 
 -- -------------------------------------
 
+data CompletionItemTagsClientCapabilities =
+  CompletionItemTagsClientCapabilities
+    { -- | The tag supported by the client.
+      _valueSet :: List CompletionItemTag
+    } deriving (Show, Read, Eq)
+
+
+$(deriveJSON lspOptions ''CompletionItemTagsClientCapabilities)
+
 data CompletionItemClientCapabilities =
   CompletionItemClientCapabilities
     { -- | Client supports snippets as insert text.
@@ -659,6 +669,12 @@ data CompletionItemClientCapabilities =
 
       -- | Client supports the preselect property on a completion item.
     , _preselectSupport :: Maybe Bool
+
+      -- | Client supports the tag property on a completion item. Clients
+      -- supporting tags have to handle unknown tags gracefully. Clients
+      -- especially need to preserve unknown tags when sending a
+      -- completion item back to the server in a resolve call.
+    , _tagSupport :: Maybe CompletionItemTagsClientCapabilities
     } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''CompletionItemClientCapabilities)
@@ -910,10 +926,24 @@ $(deriveJSON lspOptions ''RenameClientCapabilities)
 
 -- -------------------------------------
 
+data PublishDiagnosticsTagsClientCapabilities =
+  PublishDiagnosticsTagsClientCapabilities
+    { -- | The tags supported by the client.
+      _valueSet :: List DiagnosticTag
+    } deriving (Show, Read, Eq)
+
+
+$(deriveJSON lspOptions ''PublishDiagnosticsTagsClientCapabilities)
+
 data PublishDiagnosticsClientCapabilities =
   PublishDiagnosticsClientCapabilities
     { -- | Whether the clients accepts diagnostics with related information.
       _relatedInformation :: Maybe Bool
+      -- | Client supports the tag property to provide metadata about a
+      -- diagnostic.
+      --
+      -- Clients supporting tags have to handle unknown tags gracefully.
+    , _tagSupport :: Maybe PublishDiagnosticsTagsClientCapabilities
     } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''PublishDiagnosticsClientCapabilities)
