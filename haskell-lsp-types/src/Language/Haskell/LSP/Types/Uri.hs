@@ -70,6 +70,7 @@ windowsOS = "mingw32"
 
 type SystemOS = String
 
+{-# DEPRECATED uriToFilePath "Use uriToNormalizedFilePath" #-}
 uriToFilePath :: Uri -> Maybe FilePath
 uriToFilePath = platformAwareUriToFilePath System.Info.os
 
@@ -97,6 +98,7 @@ platformAdjustFromUriPath systemOS authority srcPath =
               else firstSegment
       in FPW.joinDrive drive $ FPW.joinPath rest
 
+{-# DEPRECATED filePathToUri "Use normalizedFilePathToUri" #-}
 filePathToUri :: FilePath -> Uri
 filePathToUri = (platformAwareFilePathToUri System.Info.os) . FP.normalise
 
