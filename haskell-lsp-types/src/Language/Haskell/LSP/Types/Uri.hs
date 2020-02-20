@@ -1,15 +1,31 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE RecordWildCards #-}
-module Language.Haskell.LSP.Types.Uri where
+module Language.Haskell.LSP.Types.Uri
+  ( Uri(..)
+  , uriToFilePath
+  , filePathToUri
+  , NormalizedUri(..)
+  , toNormalizedUri
+  , fromNormalizedUri
+  , NormalizedFilePath(..)
+  , toNormalizedFilePath
+  , fromNormalizedFilePath
+  , normalizedFilePathToUri
+  , uriToNormalizedFilePath
+  )
+  where
 
 import           Control.DeepSeq
 import qualified Data.Aeson                                 as A
+import           Data.Binary                                (Binary, Get, put, get)
 import           Data.Hashable
+import           Data.String                                (IsString, fromString)
 import           Data.Text                                  (Text)
 import qualified Data.Text                                  as T
 import           GHC.Generics
 import           Network.URI hiding (authority)
+import qualified System.FilePath                            as FP
 import qualified System.FilePath.Posix                      as FPP
 import qualified System.FilePath.Windows                    as FPW
 import qualified System.Info
@@ -35,10 +51,12 @@ instance Ord NormalizedUri where
 instance Hashable NormalizedUri where
   hash (NormalizedUri h _) = h
 
+instance NFData NormalizedUri
+
 toNormalizedUri :: Uri -> NormalizedUri
 toNormalizedUri uri = NormalizedUri (hash norm) norm
   where (Uri t) = maybe uri filePathToUri (uriToFilePath uri)
-        -- To ensure all `Uri`s have the file path like the created ones by `filePathToUri`
+        -- To ensure all `Uri`s have the file path normalized
         norm = T.pack $ escapeURIString isUnescapedInURI $ unEscapeString $ T.unpack t
 
 fromNormalizedUri :: NormalizedUri -> Uri
@@ -74,11 +92,13 @@ platformAdjustFromUriPath systemOS authority srcPath =
   if systemOS /= windowsOS || null srcPath then srcPath
     else let
       firstSegment:rest = (FPP.splitDirectories . tail) srcPath  -- Drop leading '/' for absolute Windows paths
-      drive = if FPW.isDrive firstSegment then FPW.addTrailingPathSeparator firstSegment else firstSegment
+      drive = if FPW.isDrive firstSegment 
+              then FPW.addTrailingPathSeparator firstSegment 
+              else firstSegment
       in FPW.joinDrive drive $ FPW.joinPath rest
 
 filePathToUri :: FilePath -> Uri
-filePathToUri = platformAwareFilePathToUri System.Info.os
+filePathToUri = (platformAwareFilePathToUri System.Info.os) . FP.normalise
 
 platformAwareFilePathToUri :: SystemOS -> FilePath -> Uri
 platformAwareFilePathToUri systemOS fp = Uri . T.pack . show $ URI
@@ -94,13 +114,13 @@ platformAdjustToUriPath systemOS srcPath
   | systemOS == windowsOS = '/' : escapedPath
   | otherwise = escapedPath
   where
-    (splitDirectories, splitDrive, normalise)
+    (splitDirectories, splitDrive)
       | systemOS == windowsOS =
-          (FPW.splitDirectories, FPW.splitDrive, FPW.normalise)
+          (FPW.splitDirectories, FPW.splitDrive)
       | otherwise =
-          (FPP.splitDirectories, FPP.splitDrive, FPP.normalise)
+          (FPP.splitDirectories, FPP.splitDrive)
     escapedPath =
-        case splitDrive (normalise srcPath) of
+        case splitDrive srcPath of
             (drv, rest) ->
                 convertDrive drv `FPP.joinDrive`
                 FPP.joinPath (map (escapeURIString unescaped) $ splitDirectories rest)
@@ -113,3 +133,50 @@ platformAdjustToUriPath systemOS srcPath
     unescaped c
       | systemOS == windowsOS = isUnreserved c || c `elem` [':', '\\', '/']
       | otherwise = isUnreserved c || c == '/'
+
+-- | Newtype wrapper around FilePath that always has normalized slashes.
+-- The NormalizedUri and hash of the FilePath are cached to avoided
+-- repeated normalisation when we need to compute them (which is a lot).
+--
+-- This is one of the most performance critical parts of ghcide, do not
+-- modify it without profiling.
+data NormalizedFilePath = NormalizedFilePath NormalizedUri !Int !FilePath
+    deriving (Generic, Eq, Ord)
+
+instance NFData NormalizedFilePath
+
+instance Binary NormalizedFilePath where
+  put (NormalizedFilePath _ _ fp) = put fp
+  get = do
+    v <- Data.Binary.get :: Get FilePath
+    return (toNormalizedFilePath v)
+
+instance Show NormalizedFilePath where
+  show (NormalizedFilePath _ _ fp) = "NormalizedFilePath " ++ show fp
+
+instance Hashable NormalizedFilePath where
+  hash (NormalizedFilePath _ h _) = h
+
+instance IsString NormalizedFilePath where
+    fromString = toNormalizedFilePath
+
+toNormalizedFilePath :: FilePath -> NormalizedFilePath
+toNormalizedFilePath fp = NormalizedFilePath nuri (hash nfp) nfp
+  where nfp | fp == "" = "" 
+            -- ghcide want to keep empty paths instead of normalising them to "."
+            | otherwise = FP.normalise fp
+        uriStr = fileScheme <> "//" <> platformAdjustToUriPath System.Info.os nfp
+        nuriStr = T.pack $ escapeURIString isUnescapedInURI $ unEscapeString $ uriStr
+        nuri = NormalizedUri (hash nuriStr) nuriStr
+
+fromNormalizedFilePath :: NormalizedFilePath -> FilePath
+fromNormalizedFilePath (NormalizedFilePath _ _ fp) = fp
+
+normalizedFilePathToUri :: NormalizedFilePath -> NormalizedUri
+normalizedFilePathToUri (NormalizedFilePath uri _ _) = uri
+
+uriToNormalizedFilePath :: NormalizedUri -> Maybe NormalizedFilePath
+uriToNormalizedFilePath nuri = fmap toNormFP mbFilePath
+  where mbFilePath = platformAwareUriToFilePath System.Info.os (fromNormalizedUri nuri) 
+        -- This file path is already normalized by construction
+        toNormFP nfp = NormalizedFilePath nuri (hash nfp) nfp
