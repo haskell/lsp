@@ -2,6 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module URIFilePathSpec where
 
+import Control.Monad (when)
 import Data.List
 #if __GLASGOW_HASKELL__ < 808
 import Data.Monoid ((<>))
@@ -10,14 +11,17 @@ import Data.Text                              (pack)
 import Language.Haskell.LSP.Types
 
 import           Network.URI
-import qualified System.FilePath.Windows as FPW
 import Test.Hspec
 import Test.QuickCheck
 #if !MIN_VERSION_QuickCheck(2,10,0)
 import Data.Char                              (GeneralCategory(..), generalCategory)
 #endif
-
+import System.FilePath (normalise)
+import qualified System.Info
 -- ---------------------------------------------------------------------
+
+isWindows :: Bool
+isWindows = System.Info.os == "mingw32"
 
 main :: IO ()
 main = hspec spec
@@ -25,109 +29,95 @@ main = hspec spec
 spec :: Spec
 spec = do
   describe "URI file path functions" uriFilePathSpec
-  describe "file path URI functions" filePathUriSpec
   describe "URI normalization functions" uriNormalizeSpec
 
-testPosixUri :: Uri
-testPosixUri = Uri $ pack "file:///home/myself/example.hs"
+testUri :: Uri
+testUri | isWindows = Uri "file:///C:/Users/myself/example.hs"
+        | otherwise = Uri "file:///home/myself/example.hs"
 
-testPosixFilePath :: FilePath
-testPosixFilePath = "/home/myself/example.hs"
+testFilePath :: FilePath
+testFilePath | isWindows = "C:\\Users\\myself\\example.hs"
+             | otherwise = "/home/myself/example.hs"
 
-relativePosixFilePath :: FilePath
-relativePosixFilePath = "myself/example.hs"
+withCurrentDirFilePath :: FilePath
+withCurrentDirFilePath | isWindows = "C:\\Users\\.\\myself\\.\\.\\example.hs"
+                       | otherwise = "/home/./myself/././example.hs"
 
-withCurrentDirPosixFilePath :: FilePath
-withCurrentDirPosixFilePath = "/home/./myself/././example.hs"
+fromRelativefilePathUri :: Uri
+fromRelativefilePathUri | isWindows = Uri  "file:///myself/example.hs"
+                        | otherwise = Uri "file://myself/example.hs"
 
-testWindowsUri :: Uri
-testWindowsUri = Uri $ pack "file:///C:/Users/myself/example.hs"
+relativeFilePath :: FilePath
+relativeFilePath | isWindows = "myself\\example.hs"
+                 | otherwise = "myself/example.hs"
 
-testWindowsFilePath :: FilePath
-testWindowsFilePath = "C:\\Users\\myself\\example.hs"
+withLowerCaseDriveLetterFilePath :: FilePath
+withLowerCaseDriveLetterFilePath = "C:\\Users\\.\\myself\\.\\.\\example.hs"
 
-testWindowsFilePathDriveLowerCase :: FilePath
-testWindowsFilePathDriveLowerCase = "c:\\Users\\myself\\example.hs"
+withInitialCurrentDirUriStr :: String
+withInitialCurrentDirUriStr | isWindows = "file:///Functional.hs"
+                            | otherwise = "file://Functional.hs"
 
-withCurrentDirWindowsFilePath :: FilePath
-withCurrentDirWindowsFilePath = "C:\\Users\\.\\myself\\.\\.\\example.hs"
+withInitialCurrentDirUriParts :: (String, Maybe URIAuth,  String, String, String)
+withInitialCurrentDirUriParts
+  | isWindows =
+    ("file:"
+    ,Just (URIAuth {uriUserInfo = "", uriRegName = "", uriPort = ""}) -- JNS: And asymmetrical
+    ,"/Functional.hs","","")
+  | otherwise =
+     ("file:"
+    ,Just (URIAuth {uriUserInfo = "", uriRegName = "Functional.hs", uriPort = ""}) -- AZ: Seems odd
+    ,"","","")
+
+withInitialCurrentDirFilePath :: FilePath
+withInitialCurrentDirFilePath | isWindows = ".\\Functional.hs"
+                              | otherwise = "./Functional.hs"
 
 uriFilePathSpec :: Spec
 uriFilePathSpec = do
-  it "converts a URI to a POSIX file path" $ do
-    let theFilePath = platformAwareUriToFilePath "posix" testPosixUri
-    theFilePath `shouldBe` Just testPosixFilePath
+  it "converts a URI to a file path" $ do
+    let theFilePath = uriToFilePath testUri
+    theFilePath `shouldBe` Just testFilePath
 
-  it "converts a POSIX file path to a URI" $ do
-    let theUri = platformAwareFilePathToUri "posix" testPosixFilePath
-    theUri `shouldBe` testPosixUri
-
-  it "converts a URI to a Windows file path" $ do
-    let theFilePath = platformAwareUriToFilePath windowsOS testWindowsUri
-    theFilePath `shouldBe` Just testWindowsFilePath
-
-  it "converts a Windows file path to a URI" $ do
-    let theUri = platformAwareFilePathToUri windowsOS testWindowsFilePath
-    theUri `shouldBe` testWindowsUri
+  it "converts a file path to a URI" $ do
+    let theUri = filePathToUri testFilePath
+    theUri `shouldBe` testUri
 
   it "removes unnecesary current directory paths" $ do
-    let theUri = platformAwareFilePathToUri "posix" withCurrentDirPosixFilePath
-    theUri `shouldBe` testPosixUri
+    let theUri = filePathToUri withCurrentDirFilePath
+    theUri `shouldBe` testUri
 
-  it "removes unnecesary current directory paths in windows" $ do
-    let theUri = platformAwareFilePathToUri windowsOS withCurrentDirWindowsFilePath
-    theUri `shouldBe` testWindowsUri
+  when isWindows $
+    it "make the drive letter upper case when converting a Windows file path to a URI" $ do
+      let theUri = filePathToUri withLowerCaseDriveLetterFilePath
+      theUri `shouldBe` testUri
 
-  it "make the drive letter upper case when converting a Windows file path to a URI" $ do
-    let theUri = platformAwareFilePathToUri windowsOS testWindowsFilePathDriveLowerCase
-    theUri `shouldBe` testWindowsUri
+  it "converts a file path to a URI and back" $ property $ forAll genFilePath $ \fp -> do
+      let uri = filePathToUri fp
+      uriToFilePath uri `shouldBe` Just (normalise fp)
 
-filePathUriSpec :: Spec
-filePathUriSpec = do
-  it "converts a POSIX file path to a URI" $ do
-    let theFilePath = platformAwareFilePathToUri "posix" "./Functional.hs"
-    theFilePath `shouldBe` (Uri "file://Functional.hs")
+  it "converts a relative file path to a URI and back" $ do
+    let uri = filePathToUri relativeFilePath
+    uri `shouldBe` fromRelativefilePathUri
+    let back = uriToFilePath uri
+    back `shouldBe` Just relativeFilePath
 
-  it "converts a Windows file path to a URI" $ do
-    let theFilePath = platformAwareFilePathToUri windowsOS "./Functional.hs"
-    theFilePath `shouldBe` (Uri "file:///Functional.hs")
-
-  it "converts a Windows file path to a URI" $ do
-    let theFilePath = platformAwareFilePathToUri windowsOS "c:/Functional.hs"
-    theFilePath `shouldBe` (Uri "file:///C:/Functional.hs")
-
-  it "converts a POSIX file path to a URI and back" $ do
-    let theFilePath = platformAwareFilePathToUri "posix" "./Functional.hs"
-    theFilePath `shouldBe` (Uri "file://Functional.hs")
-    let Just (URI scheme' auth' path' query' frag') =  parseURI "file://Functional.hs"
-    (scheme',auth',path',query',frag') `shouldBe`
-      ("file:"
-      ,Just (URIAuth {uriUserInfo = "", uriRegName = "Functional.hs", uriPort = ""}) -- AZ: Seems odd
-      ,""
-      ,""
-      ,"")
-    Just "Functional.hs" `shouldBe` platformAwareUriToFilePath "posix" theFilePath
-
-  it "converts a Posix file path to a URI and back" $ property $ forAll genPosixFilePath $ \fp -> do
-      let uri = platformAwareFilePathToUri "posix" fp
-      platformAwareUriToFilePath "posix" uri `shouldBe` Just fp
-
-  it "converts a Windows file path to a URI and back" $ property $ forAll genWindowsFilePath $ \fp -> do
-      let uri = platformAwareFilePathToUri windowsOS fp
-      -- We normalise to account for changes in the path separator.
-      platformAwareUriToFilePath windowsOS uri `shouldBe` Just (FPW.normalise fp)
-
-  it "converts a relative POSIX file path to a URI and back" $ do
-    let uri = platformAwareFilePathToUri "posix" relativePosixFilePath
-    uri `shouldBe` Uri "file://myself/example.hs"
-    let back = platformAwareUriToFilePath "posix" uri
-    back `shouldBe` Just relativePosixFilePath
+  it "converts a file path with initial current dir to a URI and back" $ do
+    let uri = filePathToUri withInitialCurrentDirFilePath
+    uri `shouldBe` (Uri (pack withInitialCurrentDirUriStr))
+    let Just (URI scheme' auth' path' query' frag') =  parseURI withInitialCurrentDirUriStr
+    (scheme',auth',path',query',frag') `shouldBe` withInitialCurrentDirUriParts
+    Just "Functional.hs" `shouldBe` uriToFilePath uri
 
 uriNormalizeSpec :: Spec
-uriNormalizeSpec = do
-  it "ignores differences in percent-encoding" $ property $ \uri -> do
+uriNormalizeSpec =
+  it "ignores differences in percent-encoding" $ property $ \uri ->
     toNormalizedUri (Uri $ pack $ escapeURIString isUnescapedInURI uri) `shouldBe`
         toNormalizedUri (Uri $ pack $ escapeURIString (const False) uri)
+
+genFilePath :: Gen FilePath
+genFilePath | isWindows = genWindowsFilePath
+            | otherwise = genPosixFilePath
 
 genWindowsFilePath :: Gen FilePath
 genWindowsFilePath = do
