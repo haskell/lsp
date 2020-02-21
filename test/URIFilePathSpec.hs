@@ -157,3 +157,19 @@ arbitraryUnicodeChar =
   where
     isSurrogate c = generalCategory c == Surrogate
 #endif
+
+normalizedFilePathSpec :: Spec
+normalizedFilePathSpec = do
+  it "makes file path normalized" $ property $ forAll genFilePath $ \fp -> do
+    let nfp = toNormalizedFilePath fp
+    fromNormalizedFilePath nfp `shouldBe` (normalise fp)
+
+  it "converts to a normalized uri and back" $ property $ forAll genFilePath $ \fp -> do
+    let nuri = normalizedFilePathToUri (toNormalizedFilePath fp)
+    let (Just nfp) = uriToNormalizedFilePath nuri
+    fromNormalizedFilePath nfp `shouldBe` (normalise fp)
+
+  it "creates the same NormalizedUri than the older implementation" $ property $ forAll genFilePath $ \fp -> do
+    let nuri = normalizedFilePathToUri (toNormalizedFilePath fp)
+    let oldNuri = toNormalizedUri (filePathToUri fp)
+    nuri `shouldBe` oldNuri
