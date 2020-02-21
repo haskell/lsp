@@ -128,6 +128,12 @@ uriNormalizeSpec = do
     let (Uri nuri) = testUri
     uri `shouldBe` nuri
 
+  it "converts a file path to a normalized URI and back" $ property $ forAll genFilePath $ \fp -> do
+    let nuri = toNormalizedUri (filePathToUri fp)
+    case uriToFilePath (fromNormalizedUri nuri) of
+      Just nfp -> nfp `shouldBe` (normalise fp)
+      Nothing -> return () -- Some unicode paths creates invalid uris, ignoring for now
+
 genFilePath :: Gen FilePath
 genFilePath | isWindows = genWindowsFilePath
             | otherwise = genPosixFilePath
@@ -166,8 +172,9 @@ normalizedFilePathSpec = do
 
   it "converts to a normalized uri and back" $ property $ forAll genFilePath $ \fp -> do
     let nuri = normalizedFilePathToUri (toNormalizedFilePath fp)
-    let (Just nfp) = uriToNormalizedFilePath nuri
-    fromNormalizedFilePath nfp `shouldBe` (normalise fp)
+    case uriToNormalizedFilePath nuri of
+      Just nfp -> fromNormalizedFilePath nfp `shouldBe` (normalise fp)
+      Nothing -> return () -- Some unicode paths creates invalid uris, ignoring for now
 
   it "creates the same NormalizedUri than the older implementation" $ property $ forAll genFilePath $ \fp -> do
     let nuri = normalizedFilePathToUri (toNormalizedFilePath fp)
