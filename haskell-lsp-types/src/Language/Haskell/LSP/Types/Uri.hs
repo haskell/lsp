@@ -181,4 +181,4 @@ uriToNormalizedFilePath :: NormalizedUri -> Maybe NormalizedFilePath
 uriToNormalizedFilePath nuri = fmap toNormFP mbFilePath
   where mbFilePath = platformAwareUriToFilePath System.Info.os (fromNormalizedUri nuri) 
         -- This file path is already normalized by construction
-        toNormFP nfp = NormalizedFilePath nuri nfp
+        toNormFP = NormalizedFilePath nuri
