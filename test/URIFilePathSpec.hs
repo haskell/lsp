@@ -7,7 +7,7 @@ import Data.List
 #if __GLASGOW_HASKELL__ < 808
 import Data.Monoid ((<>))
 #endif
-import Data.Text                              (pack)
+import Data.Text                              (Text, pack)
 import Language.Haskell.LSP.Types
 
 import           Network.URI
@@ -30,6 +30,7 @@ spec :: Spec
 spec = do
   describe "URI file path functions" uriFilePathSpec
   describe "URI normalization functions" uriNormalizeSpec
+  describe "Normalized file path functions" normalizedFilePathSpec
 
 testUri :: Uri
 testUri | isWindows = Uri "file:///C:/Users/myself/example.hs"
@@ -52,7 +53,7 @@ relativeFilePath | isWindows = "myself\\example.hs"
                  | otherwise = "myself/example.hs"
 
 withLowerCaseDriveLetterFilePath :: FilePath
-withLowerCaseDriveLetterFilePath = "C:\\Users\\.\\myself\\.\\.\\example.hs"
+withLowerCaseDriveLetterFilePath = "c:\\Users\\.\\myself\\.\\.\\example.hs"
 
 withInitialCurrentDirUriStr :: String
 withInitialCurrentDirUriStr | isWindows = "file:///Functional.hs"
@@ -72,6 +73,13 @@ withInitialCurrentDirUriParts
 withInitialCurrentDirFilePath :: FilePath
 withInitialCurrentDirFilePath | isWindows = ".\\Functional.hs"
                               | otherwise = "./Functional.hs"
+
+noNormalizedUriTxt :: Text
+noNormalizedUriTxt | isWindows = "file:///c:/Users/./myself/././example.hs"
+                   | otherwise = "file:///home/./myself/././example.hs"
+
+noNormalizedUri :: Uri
+noNormalizedUri = Uri noNormalizedUriTxt
 
 uriFilePathSpec :: Spec
 uriFilePathSpec = do
@@ -110,10 +118,15 @@ uriFilePathSpec = do
     Just "Functional.hs" `shouldBe` uriToFilePath uri
 
 uriNormalizeSpec :: Spec
-uriNormalizeSpec =
+uriNormalizeSpec = do
   it "ignores differences in percent-encoding" $ property $ \uri ->
     toNormalizedUri (Uri $ pack $ escapeURIString isUnescapedInURI uri) `shouldBe`
         toNormalizedUri (Uri $ pack $ escapeURIString (const False) uri)
+
+  it "normalizes uri file path when converting from uri to normalized uri" $ do
+    let (NormalizedUri _ uri) = toNormalizedUri noNormalizedUri
+    let (Uri nuri) = testUri
+    uri `shouldBe` nuri
 
 genFilePath :: Gen FilePath
 genFilePath | isWindows = genWindowsFilePath
@@ -121,7 +134,7 @@ genFilePath | isWindows = genWindowsFilePath
 
 genWindowsFilePath :: Gen FilePath
 genWindowsFilePath = do
-    segments <- listOf pathSegment
+    segments <- listOf1 pathSegment
     pathSep <- elements ['/', '\\']
     driveLetter <- elements ["C:", "c:"]
     pure (driveLetter <> [pathSep] <> intercalate [pathSep] segments)
@@ -129,7 +142,7 @@ genWindowsFilePath = do
 
 genPosixFilePath :: Gen FilePath
 genPosixFilePath = do
-    segments <- listOf pathSegment
+    segments <- listOf1 pathSegment
     pure ("/" <> intercalate "/" segments)
   where pathSegment = listOf1 (genValidUnicodeChar `suchThat` (`notElem` ['/']))
 
