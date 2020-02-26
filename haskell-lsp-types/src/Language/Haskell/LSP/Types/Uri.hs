@@ -14,6 +14,9 @@ module Language.Haskell.LSP.Types.Uri
   , fromNormalizedFilePath
   , normalizedFilePathToUri
   , uriToNormalizedFilePath
+  -- Private functions
+  , platformAwareUriToFilePath
+  , platformAwareFilePathToUri
   )
   where
 
@@ -74,10 +77,10 @@ windowsOS = "mingw32"
 
 type SystemOS = String
 
-{-# DEPRECATED uriToFilePath "Use uriToNormalizedFilePath" #-}
 uriToFilePath :: Uri -> Maybe FilePath
 uriToFilePath = platformAwareUriToFilePath System.Info.os
 
+{-# WARNING platformAwareUriToFilePath "This function is considered private. Use normalizedFilePathToUri instead." #-}
 platformAwareUriToFilePath :: String -> Uri -> Maybe FilePath
 platformAwareUriToFilePath systemOS (Uri uri) = do
   URI{..} <- parseURI $ T.unpack uri
@@ -102,10 +105,10 @@ platformAdjustFromUriPath systemOS authority srcPath =
               else firstSegment
       in FPW.joinDrive drive $ FPW.joinPath rest
 
-{-# DEPRECATED filePathToUri "Use normalizedFilePathToUri" #-}
 filePathToUri :: FilePath -> Uri
 filePathToUri = (platformAwareFilePathToUri System.Info.os) . FP.normalise
 
+{-# WARNING platformAwareFilePathToUri "This function is considered private. Use normalizedUriToFilePath instead." #-}
 platformAwareFilePathToUri :: SystemOS -> FilePath -> Uri
 platformAwareFilePathToUri systemOS fp = Uri . T.pack . show $ URI
   { uriScheme = fileScheme
