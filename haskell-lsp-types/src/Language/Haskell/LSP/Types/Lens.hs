@@ -77,6 +77,9 @@ makeFieldsNoPrefix ''InitializeResponseCapabilitiesInner
 makeFieldsNoPrefix ''InitializeResponseCapabilities
 makeFieldsNoPrefix ''Registration
 makeFieldsNoPrefix ''RegistrationParams
+makeFieldsNoPrefix ''DidChangeWatchedFilesRegistrationOptions
+makeFieldsNoPrefix ''FileSystemWatcher
+makeFieldsNoPrefix ''WatchKind
 makeFieldsNoPrefix ''TextDocumentRegistrationOptions
 makeFieldsNoPrefix ''Unregistration
 makeFieldsNoPrefix ''UnregistrationParams

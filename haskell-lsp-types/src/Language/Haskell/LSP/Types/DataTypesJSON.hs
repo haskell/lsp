@@ -1094,6 +1094,100 @@ type UnregisterCapabilityRequest = RequestMessage ServerMethod UnregistrationPar
 type UnregisterCapabilityResponse = ResponseMessage ()
 
 -- ---------------------------------------------------------------------
+
+-- /**
+--  * Describe options to be used when registering for file system change events.
+--  */
+-- export interface DidChangeWatchedFilesRegistrationOptions {
+-- 	/**
+-- 	 * The watchers to register.
+-- 	 */
+-- 	watchers: FileSystemWatcher[];
+-- }
+--
+-- export interface FileSystemWatcher {
+-- 	/**
+-- 	 * The  glob pattern to watch.
+-- 	 *
+-- 	 * Glob patterns can have the following syntax:
+-- 	 * - `*` to match one or more characters in a path segment
+-- 	 * - `?` to match on one character in a path segment
+-- 	 * - `**` to match any number of path segments, including none
+-- 	 * - `{}` to group conditions (e.g. `**​/*.{ts,js}` matches all TypeScript and JavaScript files)
+-- 	 * - `[]` to declare a range of characters to match in a path segment (e.g., `example.[0-9]` to match on `example.0`, `example.1`, …)
+-- 	 * - `[!...]` to negate a range of characters to match in a path segment (e.g., `example.[!0-9]` to match on `example.a`, `example.b`, but not `example.0`)
+-- 	 */
+-- 	globPattern: string;
+--
+-- 	/**
+-- 	 * The kind of events of interest. If omitted it defaults
+-- 	 * to WatchKind.Create | WatchKind.Change | WatchKind.Delete
+-- 	 * which is 7.
+-- 	 */
+-- 	kind?: number;
+-- }
+--
+-- export namespace WatchKind {
+-- 	/**
+-- 	 * Interested in create events.
+-- 	 */
+-- 	export const Create = 1;
+--
+-- 	/**
+-- 	 * Interested in change events
+-- 	 */
+-- 	export const Change = 2;
+--
+-- 	/**
+-- 	 * Interested in delete events
+-- 	 */
+-- 	export const Delete = 4;
+-- }
+
+data DidChangeWatchedFilesRegistrationOptions =
+  DidChangeWatchedFilesRegistrationOptions {
+    _watchers :: List FileSystemWatcher
+  } deriving (Show, Read, Eq)
+
+data FileSystemWatcher =
+  FileSystemWatcher {
+    _globPattern :: String,
+    _kind :: Maybe WatchKind
+  } deriving (Show, Read, Eq)
+
+data WatchKind =
+  WatchKind {
+    -- | Watch for create events
+    _watchCreate :: Bool,
+    -- | Watch for change events
+    _watchChange :: Bool,
+    -- | Watch for delete events
+    _watchDelete :: Bool
+  } deriving (Show, Read, Eq)
+
+instance A.ToJSON WatchKind where
+  toJSON wk = A.Number (createNum + changeNum + deleteNum)
+    where
+      createNum = if _watchCreate wk then 1 else 0
+      changeNum = if _watchChange wk then 2 else 0
+      deleteNum = if _watchDelete wk then 4 else 0
+
+instance A.FromJSON WatchKind where
+  parseJSON (A.Number n)
+    | 1 <= n && n <= 7 =
+      let
+        (wkDelete, n1) = if 4 <= n then (True, n-4) else (False, n)
+        (wkChange, n2) = if 2 <= n1 then (True, n1-2) else (False, n1)
+        (wkCreate, _) = if 1 <= n2 then (True, n2-1) else (False, n2)
+      in
+        pure $ WatchKind wkCreate wkChange wkDelete
+    | otherwise = mempty
+  parseJSON _            = mempty
+
+deriveJSON lspOptions ''DidChangeWatchedFilesRegistrationOptions
+deriveJSON lspOptions ''FileSystemWatcher
+
+-- ---------------------------------------------------------------------
 {-
 DidChangeConfiguration Notification
 
