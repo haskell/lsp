@@ -433,11 +433,13 @@ hh mVfs wrapper mh tvarDat json = do
           let msg = T.pack $ unwords $ ["haskell-lsp:parse error.", show json, show err] ++ _ERR_MSG_URL
           sendErrorLog tvarDat msg
   where
-    isOptionalNotification req' =
-      case (req', json) of
-        (NotCustomClient _, J.String method)
-          | "$/" `T.isPrefixOf` method -> True
-        _ -> False
+    isOptionalNotification req
+      | NotCustomClient _ <- req
+      , J.Object object <- json
+      , Just (J.String method) <- HM.lookup "method" object
+      , "$/" `T.isPrefixOf` method
+      = True
+      | otherwise = False
 
 handleInitialConfig
   :: (Show config)
