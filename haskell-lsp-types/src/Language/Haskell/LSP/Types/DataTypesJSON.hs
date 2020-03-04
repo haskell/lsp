@@ -8,6 +8,7 @@
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE TypeSynonymInstances       #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
 
 module Language.Haskell.LSP.Types.DataTypesJSON where
 
@@ -15,6 +16,8 @@ import           Control.Applicative
 import qualified Data.Aeson                                 as A
 import           Data.Aeson.TH
 import           Data.Aeson.Types
+import           Data.Bits                                  (testBit)
+import           Data.Scientific                            (floatingOrInteger)
 import           Data.Text                                  (Text)
 import qualified Data.Text                                  as T
 import           Language.Haskell.LSP.Types.ClientCapabilities
@@ -1168,19 +1171,15 @@ data WatchKind =
 instance A.ToJSON WatchKind where
   toJSON wk = A.Number (createNum + changeNum + deleteNum)
     where
-      createNum = if _watchCreate wk then 1 else 0
-      changeNum = if _watchChange wk then 2 else 0
-      deleteNum = if _watchDelete wk then 4 else 0
+      createNum = if _watchCreate wk then 0x1 else 0x0
+      changeNum = if _watchChange wk then 0x2 else 0x0
+      deleteNum = if _watchDelete wk then 0x4 else 0x0
 
 instance A.FromJSON WatchKind where
   parseJSON (A.Number n)
-    | 1 <= n && n <= 7 =
-      let
-        (wkDelete, n1) = if 4 <= n then (True, n-4) else (False, n)
-        (wkChange, n2) = if 2 <= n1 then (True, n1-2) else (False, n1)
-        (wkCreate, _) = if 1 <= n2 then (True, n2-1) else (False, n2)
-      in
-        pure $ WatchKind wkCreate wkChange wkDelete
+    | Right i <- floatingOrInteger n :: Either Double Int
+    , 0 <= i && i <= 7 =
+        pure $ WatchKind (testBit i 0x0) (testBit i 0x1) (testBit i 0x2)
     | otherwise = mempty
   parseJSON _            = mempty
 
