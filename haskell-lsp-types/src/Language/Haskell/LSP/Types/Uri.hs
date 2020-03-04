@@ -24,6 +24,7 @@ import           Control.DeepSeq
 import qualified Data.Aeson                                 as A
 import           Data.Binary                                (Binary, Get, put, get)
 import           Data.Hashable
+import           Data.List                                  (isPrefixOf)
 #if __GLASGOW_HASKELL__ < 804
 import           Data.Monoid                                ((<>))
 #endif
@@ -42,10 +43,6 @@ newtype Uri = Uri { getUri :: Text }
 
 instance NFData Uri
 
--- | When URIs are supposed to be used as keys, it is important to normalize
--- the percent encoding in the URI since URIs that only differ
--- when it comes to the percent-encoding should be treated as equivalent.
---
 -- If you care about performance then you should use a hash map. The keys
 -- are cached in order to make hashing very fast.
 data NormalizedUri = NormalizedUri !Int !Text
@@ -60,11 +57,25 @@ instance Hashable NormalizedUri where
 
 instance NFData NormalizedUri
 
+isUnescapedInFilePath :: SystemOS -> Char -> Bool
+isUnescapedInFilePath systemOS c
+   | systemOS == windowsOS = isUnreserved c || c `elem` [':', '\\', '/']
+   | otherwise = isUnreserved c || c == '/'
+
+-- | When URIs are supposed to be used as keys, it is important to normalize
+-- the percent encoding in the URI since URIs that only differ
+-- when it comes to the percent-encoding should be treated as equivalent.
+normalizeUriEscaping :: String -> String
+normalizeUriEscaping uri = escapeURIString isUnescaped unEscapedUri
+  where unEscapedUri = unEscapeString uri
+        isUnescaped | fileScheme `isPrefixOf` unEscapedUri = isUnescapedInFilePath System.Info.os
+                    | otherwise = isUnescapedInURI
+
 toNormalizedUri :: Uri -> NormalizedUri
 toNormalizedUri uri = NormalizedUri (hash norm) norm
   where (Uri t) = maybe uri filePathToUri (uriToFilePath uri)
         -- To ensure all `Uri`s have the file path normalized
-        norm = T.pack $ escapeURIString isUnescapedInURI $ unEscapeString $ T.unpack t
+        norm = T.pack (normalizeUriEscaping (T.unpack t))
 
 fromNormalizedUri :: NormalizedUri -> Uri
 fromNormalizedUri (NormalizedUri _ t) = Uri t
@@ -132,16 +143,13 @@ platformAdjustToUriPath systemOS srcPath
         case splitDrive srcPath of
             (drv, rest) ->
                 convertDrive drv `FPP.joinDrive`
-                FPP.joinPath (map (escapeURIString unescaped) $ splitDirectories rest)
+                FPP.joinPath (map (escapeURIString (isUnescapedInFilePath systemOS)) $ splitDirectories rest)
     -- splitDirectories does not remove the path separator after the drive so
     -- we do a final replacement of \ to /
     convertDrive drv
       | systemOS == windowsOS && FPW.hasTrailingPathSeparator drv =
           FPP.addTrailingPathSeparator (init drv)
       | otherwise = drv
-    unescaped c
-      | systemOS == windowsOS = isUnreserved c || c `elem` [':', '\\', '/']
-      | otherwise = isUnreserved c || c == '/'
 
 -- | Newtype wrapper around FilePath that always has normalized slashes.
 -- The NormalizedUri and hash of the FilePath are cached to avoided
@@ -175,7 +183,7 @@ toNormalizedFilePath fp = NormalizedFilePath nuri nfp
             -- ghcide want to keep empty paths instead of normalising them to "."
             | otherwise = FP.normalise fp
         uriStr = fileScheme <> "//" <> platformAdjustToUriPath System.Info.os nfp
-        nuriStr = T.pack $ escapeURIString isUnescapedInURI $ unEscapeString $ uriStr
+        nuriStr = T.pack (normalizeUriEscaping uriStr)
         nuri = NormalizedUri (hash nuriStr) nuriStr
 
 fromNormalizedFilePath :: NormalizedFilePath -> FilePath
