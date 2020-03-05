@@ -68,7 +68,7 @@ isUnescapedInUriPath systemOS c
 normalizeUriEscaping :: String -> String
 normalizeUriEscaping uri = escapeURIString isUnescaped unEscapedUri
   where unEscapedUri = unEscapeString uri
-        isUnescaped | fileScheme `isPrefixOf` unEscapedUri = isUnescapedInFilePath System.Info.os
+        isUnescaped | fileScheme `isPrefixOf` unEscapedUri = isUnescapedInUriPath System.Info.os
                     | otherwise = isUnescapedInURI
 
 toNormalizedUri :: Uri -> NormalizedUri
