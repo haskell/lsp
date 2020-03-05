@@ -215,6 +215,12 @@ uriNormalizeSpec = do
     let nuri = toNormalizedUri (filePathToUri fp)
     uriToFilePath (fromNormalizedUri nuri) `shouldBe` Just fp
 
+  it "converts a file path with substrings that looks like uri escaped chars and back" $ do
+    let start = if isWindows then "C:\\" else "/"
+    let fp = start ++ "ca%C3%B1a"
+    let nuri = toNormalizedUri (filePathToUri fp)
+    uriToFilePath (fromNormalizedUri nuri) `shouldBe` Just fp
+
   it "converts a file path to a normalized URI and back" $ property $ forAll genFilePath $ \fp -> do
     let nuri = toNormalizedUri (filePathToUri fp)
     case uriToFilePath (fromNormalizedUri nuri) of
@@ -266,6 +272,12 @@ normalizedFilePathSpec = do
   it "converts a file path with reserved uri chars to a normalized URI and back" $ do
     let start = if isWindows then "C:\\" else "/"
     let fp = start ++ "path;part#fragmen?param=val"
+    let nuri = normalizedFilePathToUri (toNormalizedFilePath fp)
+    fmap fromNormalizedFilePath (uriToNormalizedFilePath nuri) `shouldBe` Just fp
+
+  it "converts a file path with substrings that looks like uri escaped chars and back" $ do
+    let start = if isWindows then "C:\\" else "/"
+    let fp = start ++ "ca%C3%B1a"
     let nuri = normalizedFilePathToUri (toNormalizedFilePath fp)
     fmap fromNormalizedFilePath (uriToNormalizedFilePath nuri) `shouldBe` Just fp
 
