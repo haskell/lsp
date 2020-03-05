@@ -57,8 +57,8 @@ instance Hashable NormalizedUri where
 
 instance NFData NormalizedUri
 
-isUnescapedInFilePath :: SystemOS -> Char -> Bool
-isUnescapedInFilePath systemOS c
+isUnescapedInUriPath :: SystemOS -> Char -> Bool
+isUnescapedInUriPath systemOS c
    | systemOS == windowsOS = isUnreserved c || c `elem` [':', '\\', '/']
    | otherwise = isUnreserved c || c == '/'
 
@@ -143,7 +143,7 @@ platformAdjustToUriPath systemOS srcPath
         case splitDrive srcPath of
             (drv, rest) ->
                 convertDrive drv `FPP.joinDrive`
-                FPP.joinPath (map (escapeURIString (isUnescapedInFilePath systemOS)) $ splitDirectories rest)
+                FPP.joinPath (map (escapeURIString (isUnescapedInUriPath systemOS)) $ splitDirectories rest)
     -- splitDirectories does not remove the path separator after the drive so
     -- we do a final replacement of \ to /
     convertDrive drv
@@ -182,7 +182,7 @@ toNormalizedFilePath fp = NormalizedFilePath nuri nfp
   where nfp | fp == "" = "" 
             -- ghcide want to keep empty paths instead of normalising them to "."
             | otherwise = FP.normalise fp
-        uriPath = normalizeUriEscaping (platformAdjustToUriPath System.Info.os nfp)
+        uriPath = platformAdjustToUriPath System.Info.os nfp
         nuriStr = T.pack $ fileScheme <> "//" <> uriPath
         nuri = NormalizedUri (hash nuriStr) nuriStr
 
