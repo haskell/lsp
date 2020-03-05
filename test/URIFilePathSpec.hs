@@ -204,6 +204,12 @@ uriNormalizeSpec = do
     toNormalizedUri (Uri $ pack $ escapeURIString isUnescapedInURI uri) `shouldBe`
         toNormalizedUri (Uri $ pack $ escapeURIString (const False) uri)
 
+  it "ignores differences in percent-encoding (examples)" $ do
+    toNormalizedUri (Uri $ pack "http://server/path%C3%B1?param=%C3%B1") `shouldBe`
+        toNormalizedUri (Uri $ pack "http://server/path%c3%b1?param=%c3%b1")
+    toNormalizedUri (Uri $ pack "file:///path%2A") `shouldBe`
+        toNormalizedUri (Uri $ pack "file:///path%2a")
+
   it "normalizes uri file path when converting from uri to normalized uri" $ do
     let (NormalizedUri _ uri) = toNormalizedUri noNormalizedUri
     let (Uri nuri) = testUri
