@@ -24,7 +24,7 @@ import           Control.DeepSeq
 import qualified Data.Aeson                                 as A
 import           Data.Binary                                (Binary, Get, put, get)
 import           Data.Hashable
-import           Data.List                                  (isPrefixOf)
+import           Data.List                                  (isPrefixOf, stripPrefix)
 #if __GLASGOW_HASKELL__ < 804
 import           Data.Monoid                                ((<>))
 #endif
@@ -66,10 +66,11 @@ isUnescapedInUriPath systemOS c
 -- the percent encoding in the URI since URIs that only differ
 -- when it comes to the percent-encoding should be treated as equivalent.
 normalizeUriEscaping :: String -> String
-normalizeUriEscaping uri = escapeURIString isUnescaped unEscapedUri
-  where unEscapedUri = unEscapeString uri
-        isUnescaped | fileScheme `isPrefixOf` unEscapedUri = isUnescapedInUriPath System.Info.os
-                    | otherwise = isUnescapedInURI
+normalizeUriEscaping uri =
+  case stripPrefix (fileScheme ++ "//") uri of
+    Just p -> fileScheme ++ "//" ++ (escapeURIPath $ unEscapeString p)
+    Nothing -> escapeURIString isUnescapedInURI $ unEscapeString uri
+  where escapeURIPath = escapeURIString (isUnescapedInUriPath System.Info.os)
 
 toNormalizedUri :: Uri -> NormalizedUri
 toNormalizedUri uri = NormalizedUri (hash norm) norm
