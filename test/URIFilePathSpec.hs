@@ -199,6 +199,7 @@ uriFilePathSpec = do
 
 uriNormalizeSpec :: Spec
 uriNormalizeSpec = do
+
   it "ignores differences in percent-encoding" $ property $ \uri ->
     toNormalizedUri (Uri $ pack $ escapeURIString isUnescapedInURI uri) `shouldBe`
         toNormalizedUri (Uri $ pack $ escapeURIString (const False) uri)
@@ -207,6 +208,12 @@ uriNormalizeSpec = do
     let (NormalizedUri _ uri) = toNormalizedUri noNormalizedUri
     let (Uri nuri) = testUri
     uri `shouldBe` nuri
+
+  it "converts a file path with reserved uri chars to a normalized URI and back" $ do
+    let start = if isWindows then "C:\\" else "/"
+    let fp = start ++ "path;part#fragmen?param=val"
+    let nuri = toNormalizedUri (filePathToUri fp)
+    uriToFilePath (fromNormalizedUri nuri) `shouldBe` Just fp
 
   it "converts a file path to a normalized URI and back" $ property $ forAll genFilePath $ \fp -> do
     let nuri = toNormalizedUri (filePathToUri fp)
@@ -255,6 +262,12 @@ normalizedFilePathSpec = do
     case uriToNormalizedFilePath nuri of
       Just nfp -> fromNormalizedFilePath nfp `shouldBe` (normalise fp)
       Nothing -> return () -- Some unicode paths creates invalid uris, ignoring for now
+
+  it "converts a file path with reserved uri chars to a normalized URI and back" $ do
+    let start = if isWindows then "C:\\" else "/"
+    let fp = start ++ "path;part#fragmen?param=val"
+    let nuri = normalizedFilePathToUri (toNormalizedFilePath fp)
+    fmap fromNormalizedFilePath (uriToNormalizedFilePath nuri) `shouldBe` Just fp
 
   it "creates the same NormalizedUri than the older implementation" $ property $ forAll genFilePath $ \fp -> do
     let nuri = normalizedFilePathToUri (toNormalizedFilePath fp)
