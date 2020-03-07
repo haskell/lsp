@@ -32,7 +32,6 @@ import qualified Language.Haskell.LSP.Utility          as U
 import           Language.Haskell.LSP.VFS
 import           System.Exit
 import qualified System.Log.Logger                     as L
-import qualified Data.Rope.UTF16                       as Rope
 
 
 -- ---------------------------------------------------------------------
@@ -64,9 +63,15 @@ run dispatcherProc = flip E.catches handlers $ do
       liftIO $ U.logs "main.run:dp after dispatcherProc"
       return Nothing
 
+    callbacks = Core.InitializeCallbacks
+      { Core.onInitialConfiguration = const $ Right ()
+      , Core.onConfigurationChange = const $ Right ()
+      , Core.onStartup = dp
+      }
+
   flip E.finally finalProc $ do
     Core.setupLogger (Just "/tmp/lsp-hello.log") [] L.DEBUG
-    CTRL.run (return (Right ()), dp) (lspHandlers rin) lspOptions (Just "/tmp/lsp-hello-session.log")
+    CTRL.run callbacks (lspHandlers rin) lspOptions (Just "/tmp/lsp-hello-session.log")
 
   where
     handlers = [ E.Handler ioExcept
@@ -107,7 +112,7 @@ reactorSend msg = do
 publishDiagnostics :: Int -> J.NormalizedUri -> J.TextDocumentVersion -> DiagnosticsBySource -> R () ()
 publishDiagnostics maxToPublish uri v diags = do
   lf <- ask
-  liftIO $ (Core.publishDiagnosticsFunc lf) maxToPublish uri v diags
+  liftIO $ Core.publishDiagnosticsFunc lf maxToPublish uri v diags
 
 -- ---------------------------------------------------------------------
 
@@ -196,11 +201,11 @@ reactor lf inp = do
         mdoc <- liftIO $ Core.getVirtualFileFunc lf doc
         case mdoc of
           Just (VirtualFile _version str _) -> do
-            liftIO $ U.logs $ "reactor:processing NotDidChangeTextDocument: vf got:" ++ (show $ Rope.toString str)
+            liftIO $ U.logs $ "reactor:processing NotDidChangeTextDocument: vf got:" ++ show str
           Nothing -> do
             liftIO $ U.logs "reactor:processing NotDidChangeTextDocument: vf returned Nothing"
 
-        liftIO $ U.logs $ "reactor:processing NotDidChangeTextDocument: uri=" ++ (show doc)
+        liftIO $ U.logs $ "reactor:processing NotDidChangeTextDocument: uri=" ++ show doc
 
       -- -------------------------------
 
@@ -234,7 +239,7 @@ reactor lf inp = do
 
       HandlerRequest (ReqHover req) -> do
         liftIO $ U.logs $ "reactor:got HoverRequest:" ++ show req
-        let J.TextDocumentPositionParams _doc pos = req ^. J.params
+        let J.TextDocumentPositionParams _doc pos _workDoneToken = req ^. J.params
             J.Position _l _c' = pos
 
         let
@@ -336,7 +341,7 @@ syncOptions = J.TextDocumentSyncOptions
 
 lspOptions :: Core.Options
 lspOptions = def { Core.textDocumentSync = Just syncOptions
-                 , Core.executeCommandProvider = Just (J.ExecuteCommandOptions (J.List ["lsp-hello-command"]))
+                 , Core.executeCommandCommands = Just ["lsp-hello-command"]
                  }
 
 lspHandlers :: TChan ReactorInput -> Core.Handlers
