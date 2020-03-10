@@ -180,9 +180,7 @@ instance IsString NormalizedFilePath where
 
 toNormalizedFilePath :: FilePath -> NormalizedFilePath
 toNormalizedFilePath fp = NormalizedFilePath nuri nfp
-  where nfp | fp == "" = "" 
-            -- ghcide want to keep empty paths instead of normalising them to "."
-            | otherwise = FP.normalise fp
+  where nfp = FP.normalise fp
         uriPath = platformAdjustToUriPath System.Info.os nfp
         nuriStr = T.pack $ fileScheme <> "//" <> uriPath
         nuri = NormalizedUri (hash nuriStr) nuriStr
