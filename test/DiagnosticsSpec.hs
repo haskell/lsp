@@ -35,14 +35,14 @@ mkDiagnostic ms str =
     rng = J.Range (J.Position 0 1) (J.Position 3 0)
     loc = J.Location (J.Uri "file") rng
   in
-    J.Diagnostic rng Nothing Nothing ms str (Just (J.List [J.DiagnosticRelatedInformation loc str]))
+    J.Diagnostic rng Nothing Nothing ms str Nothing (Just (J.List [J.DiagnosticRelatedInformation loc str]))
 
 mkDiagnostic2 :: Maybe J.DiagnosticSource -> Text -> J.Diagnostic
 mkDiagnostic2 ms str =
   let
     rng = J.Range (J.Position 4 1) (J.Position 5 0)
     loc = J.Location (J.Uri "file") rng
-  in J.Diagnostic rng Nothing Nothing ms str (Just (J.List [J.DiagnosticRelatedInformation loc str]))
+  in J.Diagnostic rng Nothing Nothing ms str Nothing (Just (J.List [J.DiagnosticRelatedInformation loc str]))
 
 -- ---------------------------------------------------------------------
 
