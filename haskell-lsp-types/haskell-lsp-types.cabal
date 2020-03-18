@@ -48,6 +48,7 @@ library
   -- ghc-options:         -Werror
   build-depends:       base >= 4.9 && < 4.14
                      , aeson >=1.2.2.0
+                     , binary
                      , bytestring
                      , data-default
                      , deepseq
