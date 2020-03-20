@@ -1,5 +1,6 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -281,9 +282,10 @@ getCompletionPrefix pos@(J.Position l c) (VirtualFile _ _ ropetext) =
         curLine <- headMaybe $ T.lines $ Rope.toText
                              $ fst $ Rope.splitAtLine 1 $ snd $ Rope.splitAtLine l ropetext
         let beforePos = T.take c curLine
-        curWord <- case T.last beforePos of
-                     ' ' -> return "" -- don't count abc as the curword in 'abc '
-                     _ -> lastMaybe (T.words beforePos)
+        curWord <-
+            if | T.null beforePos -> Just ""
+               | T.last beforePos == ' ' -> Just "" -- don't count abc as the curword in 'abc '
+               | otherwise -> lastMaybe (T.words beforePos)
 
         let parts = T.split (=='.')
                       $ T.takeWhileEnd (\x -> isAlphaNum x || x `elem` ("._'"::String)) curWord
