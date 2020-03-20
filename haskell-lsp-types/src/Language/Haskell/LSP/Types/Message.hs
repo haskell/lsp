@@ -9,6 +9,7 @@ import           Data.Aeson.TH
 import           Data.Aeson.Types
 import           Data.Hashable
 import           Data.Maybe
+import           Data.Either.Combinators
 -- For <= 8.2.2
 import           Data.Text                                  (Text)
 import           Language.Haskell.LSP.Types.Constants
@@ -380,30 +381,58 @@ deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''ResponseError
 
 -- ---------------------------------------------------------------------
 
--- | Either result or error must be Just.
+{-
+  https://microsoft.github.io/language-server-protocol/specification#responseMessage
+
+  interface ResponseMessage extends Message {
+    /**
+    * The request id.
+    */
+    id: number | string | null;
+
+    /**
+    * The result of a request. This member is REQUIRED on success.
+    * This member MUST NOT exist if there was an error invoking the method.
+    */
+    result?: string | number | boolean | object | null;
+
+    /**
+    * The error object in case a request fails.
+    */
+    error?: ResponseError;
+  }
+-}
 data ResponseMessage a =
   ResponseMessage
-    { _jsonrpc :: Text
-    , _id      :: LspIdRsp
-    , _result  :: Maybe a
-    , _error   :: Maybe ResponseError
+    { _rmjsonrpc :: Text
+    , _rmid      :: LspIdRsp
+    , _rmresult  :: Either ResponseError a
     } deriving (Read,Show,Eq)
 
-deriveToJSON lspOptions ''ResponseMessage
+instance ToJSON a => ToJSON (ResponseMessage a) where
+  toJSON r = object
+    [ "jsonrpc" .= _rmjsonrpc r
+    , "id" .= _rmid r
+    , "result" .= rightToMaybe (_rmresult r)
+    , "error" .= leftToMaybe (_rmresult r)
+    ]
+
+-- TODO: simplify
+parseRespResult :: Maybe a -> Maybe b -> Either a b
+parseRespResult Nothing  Nothing  = fail "both cannot be Nothing"
+parseRespResult (Just _) (Just _) = fail "both cannot be Just"
+parseRespResult (Just a) Nothing  = Left a
+parseRespResult Nothing  (Just b) = Right b
 
 instance FromJSON a => FromJSON (ResponseMessage a) where
   parseJSON = withObject "Response" $ \o -> do
-    rsp <- ResponseMessage
-      <$> o .: "jsonrpc"
-      <*> o .: "id"
-      -- It is important to use .:! so that result = null gets decoded as Just Nothing
-      <*> o .:! "result"
-      <*> o .:! "error"
-    -- We make sure that one of them is present. Without this check we can end up
-    -- parsing a Request as a ResponseMessage.
-    unless (isJust (_result rsp) || isJust (_error rsp)) $
-      fail "ResponseMessage must either have a result or an error"
-    pure rsp
+    _jsonrpc <- o .: "jsonrpc"
+    _id      <- o .: "id"
+    -- It is important to use .:! so that result = null gets decoded as Just Nothing
+    _result  <- o .:! "result"
+    _error   <- o .:! "error"
+    let result = parseRespResult _error _result
+    return $ ResponseMessage _jsonrpc _id result
 
 type ErrorResponse = ResponseMessage ()
 

@@ -35,7 +35,7 @@ jsonSpec = do
     prop "MarkedString"      (propertyJsonRoundtrip :: MarkedString -> Property)
     prop "MarkupContent"     (propertyJsonRoundtrip :: MarkupContent -> Property)
     prop "HoverContents"     (propertyJsonRoundtrip :: HoverContents -> Property)
-    prop "ResponseMessage"   (propertyJsonRoundtrip :: ResponseMessage (Maybe ()) -> Property)
+    prop "ResponseMessage"   (propertyJsonRoundtrip :: ResponseMessage () -> Property)
 
 
 -- ---------------------------------------------------------------------
@@ -68,13 +68,11 @@ instance Arbitrary a => Arbitrary (ResponseMessage a) where
       [ ResponseMessage
           <$> arbitrary
           <*> arbitrary
-          <*> (Just <$> arbitrary)
-          <*> pure Nothing
+          <*> (Right <$> arbitrary)
       , ResponseMessage
           <$> arbitrary
           <*> arbitrary
-          <*> pure Nothing
-          <*> (Just <$> arbitrary)
+          <*> (Left <$> arbitrary)
       ]
 
 instance Arbitrary LspIdRsp where
