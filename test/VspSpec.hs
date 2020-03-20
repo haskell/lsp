@@ -322,3 +322,6 @@ vspSpec = do
 
       pp14 <- getCompletionPrefix (J.Position 1 14) (vfsFromText orig)
       pp14 `shouldBe` Just (PosPrefixInfo "import Data.List" "Data" "Li" (J.Position 1 14))
+
+      pp00 <- getCompletionPrefix (J.Position 0 0) (vfsFromText orig)
+      pp00 `shouldBe` Just (PosPrefixInfo "{-# ings #-}" "" "" (J.Position 0 0))
