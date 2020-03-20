@@ -260,7 +260,7 @@ reactor lf inp = do
 
         let
           -- makeCommand only generates commands for diagnostics whose source is us
-          makeCommand (J.Diagnostic (J.Range start _) _s _c (Just "lsp-hello") _m _l) = [J.Command title cmd cmdparams]
+          makeCommand (J.Diagnostic (J.Range start _) _s _c (Just "lsp-hello") _m _t _l) = [J.Command title cmd cmdparams]
             where
               title = "Apply LSP hello command:" <> head (T.lines _m)
               -- NOTE: the cmd needs to be registered via the InitializeResponse message. See lspOptions above
@@ -271,7 +271,7 @@ reactor lf inp = do
                       , J.Object $ H.fromList [("start_pos",J.Object $ H.fromList [("position",    J.toJSON start)])]
                       ]
               cmdparams = Just args
-          makeCommand (J.Diagnostic _r _s _c _source _m _l) = []
+          makeCommand (J.Diagnostic _r _s _c _source _m _t _l) = []
         let body = J.List $ map J.CACommand $ concatMap makeCommand diags
             rsp = Core.makeResponseMessage req body
         reactorSend $ RspCodeAction rsp
@@ -323,6 +323,7 @@ sendDiagnostics fileUri version = do
               Nothing  -- code
               (Just "lsp-hello") -- source
               "Example diagnostic message"
+              Nothing -- tags
               (Just (J.List []))
             ]
   -- reactorSend $ J.NotificationMessage "2.0" "textDocument/publishDiagnostics" (Just r)
