@@ -1,5 +1,16 @@
 # Revision history for haskell-lsp-types
 
+## 0.21.0.0
+
+* Stop getCompletionPrefix from crashing if beforePos is empty
+* Add DidChangeWatchedFilesRegistrationOptions
+* Add NormalizedFilePath from ghcide
+* Add diagnostic and completion tags
+* Fix language server example
+* Correctly fix the problem with '$/' notifications
+* Add azure ci
+* Force utf8 encoding when writing vfs temp files
+
 ## 0.20.0.0
 
 * Don't log errors for '$/' notifications (@jinwoo)
