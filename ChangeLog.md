@@ -9,7 +9,6 @@
 * Fix language server example
 * Correctly fix the problem with '$/' notifications
 * Add azure ci
-* Force utf8 encoding when writing vfs temp files
 
 ## 0.20.0.1
 
