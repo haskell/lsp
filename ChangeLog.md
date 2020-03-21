@@ -16,6 +16,7 @@
 
 ## 0.20.0.0
 
+* Force utf8 encoding when writing vfs temp files
 * Don't log errors for '$/' notifications (@jinwoo)
 * Force utf8 encoding when writing vfs temp files (@jneira)
 * Store a hash in a NormalizedUri (@mpickering)
