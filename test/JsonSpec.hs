@@ -8,7 +8,7 @@ module JsonSpec where
 
 import           Language.Haskell.LSP.Types
 
-import           Data.Aeson
+import qualified Data.Aeson                    as J
 import           Test.Hspec
 import           Test.Hspec.QuickCheck
 import           Test.QuickCheck               hiding (Success)
@@ -35,13 +35,16 @@ jsonSpec = do
     prop "MarkedString"      (propertyJsonRoundtrip :: MarkedString -> Property)
     prop "MarkupContent"     (propertyJsonRoundtrip :: MarkupContent -> Property)
     prop "HoverContents"     (propertyJsonRoundtrip :: HoverContents -> Property)
+    prop "ResponseError"     (propertyJsonRoundtrip :: ResponseError -> Property)
+    -- todo make sure it generates Left(error)
     prop "ResponseMessage"   (propertyJsonRoundtrip :: ResponseMessage () -> Property)
+    prop "ResponseMessage"   (propertyJsonRoundtrip :: ResponseMessage J.Value  -> Property)
 
 
 -- ---------------------------------------------------------------------
 
-propertyJsonRoundtrip :: (Eq a, Show a, ToJSON a, FromJSON a) => a -> Property
-propertyJsonRoundtrip a = Success a === fromJSON (toJSON a)
+propertyJsonRoundtrip :: (Eq a, Show a, J.ToJSON a, J.FromJSON a) => a -> Property
+propertyJsonRoundtrip a = J.Success a === J.fromJSON (J.toJSON a)
 
 -- ---------------------------------------------------------------------
 
@@ -104,4 +107,6 @@ smallList = resize 3 . listOf
 instance (Arbitrary a) => Arbitrary (List a) where
   arbitrary = List <$> arbitrary
 
+instance Arbitrary J.Value where
+  arbitrary = oneof [J.String <$> arbitrary, J.Number <$> arbitrary, J.Bool <$> arbitrary, pure J.Null]
 -- ---------------------------------------------------------------------

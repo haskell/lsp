@@ -370,6 +370,28 @@ instance A.FromJSON ErrorCode where
 
 -- -------------------------------------
 
+{-
+  https://microsoft.github.io/language-server-protocol/specification#responseMessage
+
+  interface ResponseError {
+    /**
+    * A number indicating the error type that occurred.
+    */
+    code: number;
+
+    /**
+    * A string providing a short description of the error.
+    */
+    message: string;
+
+    /**
+    * A primitive or structured value that contains additional
+    * information about the error. Can be omitted.
+    */
+    data?: string | number | boolean | array | object | null;
+  }
+-}
+
 data ResponseError =
   ResponseError
     { _code    :: ErrorCode
@@ -402,6 +424,7 @@ deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''ResponseError
     error?: ResponseError;
   }
 -}
+
 data ResponseMessage a =
   ResponseMessage
     { _rmjsonrpc :: Text
@@ -430,7 +453,7 @@ instance FromJSON a => FromJSON (ResponseMessage a) where
     _id      <- o .: "id"
     -- It is important to use .:! so that result = null gets decoded as Just Nothing
     _result  <- o .:! "result"
-    _error   <- o .:! "error"
+    _error   <- o .:? "error"
     let result = parseRespResult _error _result
     return $ ResponseMessage _jsonrpc _id result
 
