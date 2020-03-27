@@ -3,13 +3,10 @@
 {-# LANGUAGE TemplateHaskell            #-}
 module Language.Haskell.LSP.Types.Message where
 
-import           Control.Monad
 import qualified Data.Aeson                                 as A
 import           Data.Aeson.TH
 import           Data.Aeson.Types
 import           Data.Hashable
-import           Data.Maybe
-import           Data.Either.Combinators
 -- For <= 8.2.2
 import           Data.Text                                  (Text)
 import           Language.Haskell.LSP.Types.Constants
@@ -433,29 +430,29 @@ data ResponseMessage a =
     } deriving (Read,Show,Eq)
 
 instance ToJSON a => ToJSON (ResponseMessage a) where
-  toJSON r = object
-    [ "jsonrpc" .= _rmjsonrpc r
-    , "id" .= _rmid r
-    , "result" .= rightToMaybe (_rmresult r)
-    , "error" .= leftToMaybe (_rmresult r)
-    ]
+  toJSON (ResponseMessage { _rmjsonrpc = jsonrpc, _rmid = lspid, _rmresult = result })
+    = object
+      [ "jsonrpc" .= jsonrpc
+      , "id" .= lspid
+      , case result of
+        Left  err -> "error" .= err
+        Right a   -> "result" .= a
+      ]
 
--- TODO: simplify
-parseRespResult :: Maybe a -> Maybe b -> Either a b
-parseRespResult Nothing  Nothing  = fail "both cannot be Nothing"
-parseRespResult (Just _) (Just _) = fail "both cannot be Just"
-parseRespResult (Just a) Nothing  = Left a
-parseRespResult Nothing  (Just b) = Right b
-
-instance FromJSON a => FromJSON (ResponseMessage a) where
+instance (FromJSON a, Show a) => FromJSON (ResponseMessage a) where
   parseJSON = withObject "Response" $ \o -> do
     _jsonrpc <- o .: "jsonrpc"
     _id      <- o .: "id"
-    -- It is important to use .:! so that result = null gets decoded as Just Nothing
+    -- It is important to use .:! so that "result = null" (without error) gets decoded as Just Null
     _result  <- o .:! "result"
     _error   <- o .:? "error"
-    let result = parseRespResult _error _result
-    return $ ResponseMessage _jsonrpc _id result
+    return $ ResponseMessage _jsonrpc _id $ case (_error, _result) of
+      ((Just err), Nothing   ) -> Left err
+      (Nothing   , (Just res)) -> Right res
+      ((Just err), (Just res)) ->
+        fail $ "both error and result cannot be present: error="
+          ++ show (err) ++ ", result=" ++ show (res)
+      (Nothing, Nothing) -> fail "both error and result cannot be Nothing"
 
 type ErrorResponse = ResponseMessage ()
 

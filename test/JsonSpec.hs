@@ -23,7 +23,9 @@ main :: IO ()
 main = hspec spec
 
 spec :: Spec
-spec = describe "dispatcher" jsonSpec
+spec = do
+  describe "dispatcher" jsonSpec
+  describe "ResponseMessage"  responseMessageSpec
 
 -- ---------------------------------------------------------------------
 
@@ -31,15 +33,30 @@ jsonSpec :: Spec
 jsonSpec = do
   describe "General JSON instances round trip" $ do
   -- DataTypesJSON
-    prop "LanguageString"    (propertyJsonRoundtrip :: LanguageString -> Property)
-    prop "MarkedString"      (propertyJsonRoundtrip :: MarkedString -> Property)
-    prop "MarkupContent"     (propertyJsonRoundtrip :: MarkupContent -> Property)
-    prop "HoverContents"     (propertyJsonRoundtrip :: HoverContents -> Property)
-    prop "ResponseError"     (propertyJsonRoundtrip :: ResponseError -> Property)
-    -- todo make sure it generates Left(error)
-    prop "ResponseMessage"   (propertyJsonRoundtrip :: ResponseMessage () -> Property)
-    prop "ResponseMessage"   (propertyJsonRoundtrip :: ResponseMessage J.Value  -> Property)
+    prop "LanguageString" (propertyJsonRoundtrip :: LanguageString -> Property)
+    prop "MarkedString"   (propertyJsonRoundtrip :: MarkedString -> Property)
+    prop "MarkupContent"  (propertyJsonRoundtrip :: MarkupContent -> Property)
+    prop "HoverContents"  (propertyJsonRoundtrip :: HoverContents -> Property)
+    prop "ResponseError"  (propertyJsonRoundtrip :: ResponseError -> Property)
+    prop "ResponseMessage ()"
+         (propertyJsonRoundtrip :: ResponseMessage () -> Property)
+    prop "ResponseMessage JSON value"
+         (propertyJsonRoundtrip :: ResponseMessage J.Value -> Property)
 
+responseMessageSpec :: Spec
+responseMessageSpec = do
+  describe "edge cases" $ do
+    it "decodes result = null" $ do
+      let input = "{\"jsonrpc\": \"2.0\", \"id\": 123, \"result\": null}"
+        in  J.decode input `shouldBe` Just
+              (ResponseMessage "2.0" (IdRspInt 123) (Right J.Null))
+  describe "invalid JSON" $ do
+    it "throws if neither result nor error is present" $ do
+      print (J.decode "{\"jsonrpc\":\"2.0\",\"id\":1}" :: Maybe (ResponseMessage ())) `shouldThrow` anyException
+    it "throws if both result and error are present" $ do
+      print (J.decode 
+        "{\"jsonrpc\":\"2.0\",\"id\": 1,\"result\":1,\"error\":{\"code\":-32700,\"message\":\"\",\"data\":null}}" 
+        :: Maybe (ResponseMessage Int)) `shouldThrow` anyException
 
 -- ---------------------------------------------------------------------
 
@@ -108,5 +125,11 @@ instance (Arbitrary a) => Arbitrary (List a) where
   arbitrary = List <$> arbitrary
 
 instance Arbitrary J.Value where
-  arbitrary = oneof [J.String <$> arbitrary, J.Number <$> arbitrary, J.Bool <$> arbitrary, pure J.Null]
+  arbitrary = oneof
+    [ J.String <$> arbitrary
+    , J.Number <$> arbitrary
+    , J.Bool <$> arbitrary
+    , pure J.Null
+    ]
+
 -- ---------------------------------------------------------------------

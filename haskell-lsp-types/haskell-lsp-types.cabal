@@ -58,7 +58,6 @@ library
                      , scientific
                      , text
                      , unordered-containers
-                     , either >= 5.0.1.1
   hs-source-dirs:      src
   default-language:    Haskell2010
 
