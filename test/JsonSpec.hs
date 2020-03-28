@@ -39,6 +39,7 @@ jsonSpec = do
     prop "MarkupContent"  (propertyJsonRoundtrip :: MarkupContent -> Property)
     prop "HoverContents"  (propertyJsonRoundtrip :: HoverContents -> Property)
     prop "ResponseError"  (propertyJsonRoundtrip :: ResponseError -> Property)
+    prop "WatchedFiles"   (propertyJsonRoundtrip :: DidChangeWatchedFilesRegistrationOptions -> Property)
     prop "ResponseMessage ()"
          (propertyJsonRoundtrip :: ResponseMessage () -> Property)
     prop "ResponseMessage JSON value"
@@ -136,4 +137,15 @@ instance Arbitrary J.Value where
     , pure J.Null
     ]
 
+-- ---------------------------------------------------------------------
+
+instance Arbitrary DidChangeWatchedFilesRegistrationOptions where
+  arbitrary = DidChangeWatchedFilesRegistrationOptions <$> arbitrary
+
+instance Arbitrary FileSystemWatcher where
+  arbitrary = FileSystemWatcher <$> arbitrary <*> arbitrary
+
+instance Arbitrary WatchKind where
+  arbitrary = WatchKind <$> arbitrary <*> arbitrary <*> arbitrary
+  
 -- ---------------------------------------------------------------------

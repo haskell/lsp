@@ -8,6 +8,7 @@
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE TypeSynonymInstances       #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
 
 module Language.Haskell.LSP.Types.DataTypesJSON where
 
@@ -15,6 +16,8 @@ import           Control.Applicative
 import qualified Data.Aeson                                 as A
 import           Data.Aeson.TH
 import           Data.Aeson.Types
+import           Data.Bits                                  (testBit)
+import           Data.Scientific                            (floatingOrInteger)
 import           Data.Text                                  (Text)
 import qualified Data.Text                                  as T
 import           Language.Haskell.LSP.Types.ClientCapabilities
@@ -1092,6 +1095,96 @@ deriveJSON lspOptions ''UnregistrationParams
 type UnregisterCapabilityRequest = RequestMessage ServerMethod UnregistrationParams ()
 
 type UnregisterCapabilityResponse = ResponseMessage ()
+
+-- ---------------------------------------------------------------------
+
+-- /**
+--  * Describe options to be used when registering for file system change events.
+--  */
+-- export interface DidChangeWatchedFilesRegistrationOptions {
+-- 	/**
+-- 	 * The watchers to register.
+-- 	 */
+-- 	watchers: FileSystemWatcher[];
+-- }
+--
+-- export interface FileSystemWatcher {
+-- 	/**
+-- 	 * The  glob pattern to watch.
+-- 	 *
+-- 	 * Glob patterns can have the following syntax:
+-- 	 * - `*` to match one or more characters in a path segment
+-- 	 * - `?` to match on one character in a path segment
+-- 	 * - `**` to match any number of path segments, including none
+-- 	 * - `{}` to group conditions (e.g. `**​/*.{ts,js}` matches all TypeScript and JavaScript files)
+-- 	 * - `[]` to declare a range of characters to match in a path segment (e.g., `example.[0-9]` to match on `example.0`, `example.1`, …)
+-- 	 * - `[!...]` to negate a range of characters to match in a path segment (e.g., `example.[!0-9]` to match on `example.a`, `example.b`, but not `example.0`)
+-- 	 */
+-- 	globPattern: string;
+--
+-- 	/**
+-- 	 * The kind of events of interest. If omitted it defaults
+-- 	 * to WatchKind.Create | WatchKind.Change | WatchKind.Delete
+-- 	 * which is 7.
+-- 	 */
+-- 	kind?: number;
+-- }
+--
+-- export namespace WatchKind {
+-- 	/**
+-- 	 * Interested in create events.
+-- 	 */
+-- 	export const Create = 1;
+--
+-- 	/**
+-- 	 * Interested in change events
+-- 	 */
+-- 	export const Change = 2;
+--
+-- 	/**
+-- 	 * Interested in delete events
+-- 	 */
+-- 	export const Delete = 4;
+-- }
+
+data DidChangeWatchedFilesRegistrationOptions =
+  DidChangeWatchedFilesRegistrationOptions {
+    _watchers :: List FileSystemWatcher
+  } deriving (Show, Read, Eq)
+
+data FileSystemWatcher =
+  FileSystemWatcher {
+    _globPattern :: String,
+    _kind :: Maybe WatchKind
+  } deriving (Show, Read, Eq)
+
+data WatchKind =
+  WatchKind {
+    -- | Watch for create events
+    _watchCreate :: Bool,
+    -- | Watch for change events
+    _watchChange :: Bool,
+    -- | Watch for delete events
+    _watchDelete :: Bool
+  } deriving (Show, Read, Eq)
+
+instance A.ToJSON WatchKind where
+  toJSON wk = A.Number (createNum + changeNum + deleteNum)
+    where
+      createNum = if _watchCreate wk then 0x1 else 0x0
+      changeNum = if _watchChange wk then 0x2 else 0x0
+      deleteNum = if _watchDelete wk then 0x4 else 0x0
+
+instance A.FromJSON WatchKind where
+  parseJSON (A.Number n)
+    | Right i <- floatingOrInteger n :: Either Double Int
+    , 0 <= i && i <= 7 =
+        pure $ WatchKind (testBit i 0x0) (testBit i 0x1) (testBit i 0x2)
+    | otherwise = mempty
+  parseJSON _            = mempty
+
+deriveJSON lspOptions ''DidChangeWatchedFilesRegistrationOptions
+deriveJSON lspOptions ''FileSystemWatcher
 
 -- ---------------------------------------------------------------------
 {-
