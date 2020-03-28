@@ -424,13 +424,13 @@ deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''ResponseError
 
 data ResponseMessage a =
   ResponseMessage
-    { _rmjsonrpc :: Text
-    , _rmid      :: LspIdRsp
-    , _rmresult  :: Either ResponseError a
+    { _jsonrpc :: Text
+    , _id      :: LspIdRsp
+    , _result  :: Either ResponseError a
     } deriving (Read,Show,Eq)
 
 instance ToJSON a => ToJSON (ResponseMessage a) where
-  toJSON (ResponseMessage { _rmjsonrpc = jsonrpc, _rmid = lspid, _rmresult = result })
+  toJSON (ResponseMessage { _jsonrpc = jsonrpc, _id = lspid, _result = result })
     = object
       [ "jsonrpc" .= jsonrpc
       , "id" .= lspid
