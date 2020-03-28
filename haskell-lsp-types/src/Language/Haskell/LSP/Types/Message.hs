@@ -446,13 +446,13 @@ instance (FromJSON a, Show a) => FromJSON (ResponseMessage a) where
     -- It is important to use .:! so that "result = null" (without error) gets decoded as Just Null
     _result  <- o .:! "result"
     _error   <- o .:? "error"
-    return $ ResponseMessage _jsonrpc _id $ case (_error, _result) of
-      ((Just err), Nothing   ) -> Left err
-      (Nothing   , (Just res)) -> Right res
-      ((Just err), (Just res)) ->
-        fail $ "both error and result cannot be present: error="
-          ++ show (err) ++ ", result=" ++ show (res)
+    result   <- case (_error, _result) of
+      ((Just err), Nothing   ) -> pure $ Left err
+      (Nothing   , (Just res)) -> pure $ Right res
+      ((Just err), (Just res)) -> fail $ "both error and result cannot be present: error=" ++ show (err) 
+        ++ ", result=" ++ show (res)
       (Nothing, Nothing) -> fail "both error and result cannot be Nothing"
+    return $ ResponseMessage _jsonrpc _id $ result
 
 type ErrorResponse = ResponseMessage ()
 
