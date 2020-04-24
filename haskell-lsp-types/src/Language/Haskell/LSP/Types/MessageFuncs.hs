@@ -4,6 +4,8 @@
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE PolyKinds           #-}
 
 module Language.Haskell.LSP.Types.MessageFuncs (
   -- * General
@@ -78,7 +80,7 @@ import qualified Language.Haskell.LSP.Types      as J
 
 -- * :leftwards_arrow_with_hook: [initialize](#initialize)
 
-fmClientInitializeRequest :: J.LspId -> J.InitializeParams -> J.InitializeRequest
+fmClientInitializeRequest :: J.LspId J.Initialize -> J.InitializeParams -> J.InitializeRequest
 fmClientInitializeRequest rid params
   = J.RequestMessage  "2.0" rid J.SInitialize params
 
@@ -92,7 +94,7 @@ fmClientInitializedNotification = J.NotificationMessage "2.0" J.SInitialized Not
 -- ----------------------------------------------------------------------
 -- * :leftwards_arrow_with_hook: [shutdown](#shutdown)
 
-fmClientShutdownRequest :: J.LspId -> Maybe J.Value -> J.ShutdownRequest
+fmClientShutdownRequest :: J.LspId J.Shutdown -> Maybe J.Value -> J.ShutdownRequest
 fmClientShutdownRequest rid params
   = J.RequestMessage  "2.0" rid J.SShutdown params
 
@@ -105,7 +107,7 @@ fmClientExitNotification = J.NotificationMessage "2.0" J.SExit Nothing
 -- ----------------------------------------------------------------------
 -- * :arrow_right: [$/cancelRequest](#cancelRequest)
 
-fmClientCancelNotification :: J.LspId -> J.CancelNotification
+fmClientCancelNotification :: J.LspId a -> J.CancelNotification
 fmClientCancelNotification idToCancel
   = J.NotificationMessage "2.0" J.SCancelRequest  (J.CancelParams idToCancel)
 
@@ -122,7 +124,7 @@ fmServerShowMessageNotification mt msg
 -- ----------------------------------------------------------------------
 -- * :arrow_right_hook: [window/showMessageRequest](#window_showMessageRequest)
 
-fmServerShowMessageRequest :: J.LspId -> J.ShowMessageRequestParams -> J.ShowMessageRequest
+fmServerShowMessageRequest :: J.LspId J.WindowShowMessageRequest -> J.ShowMessageRequestParams -> J.ShowMessageRequest
 fmServerShowMessageRequest rid params
   = J.RequestMessage  "2.0" rid J.SWindowShowMessageRequest params
 
@@ -151,7 +153,7 @@ fmServerWorkDoneProgressEndNotification :: J.ProgressParams J.WorkDoneProgressEn
 fmServerWorkDoneProgressEndNotification params
   = J.NotificationMessage "2.0" J.SProgress (J.End <$> params)
 
-fmServerWorkDoneProgressCreateRequest :: J.LspId -> J.WorkDoneProgressCreateParams -> J.WorkDoneProgressCreateRequest
+fmServerWorkDoneProgressCreateRequest :: J.LspId J.WindowWorkDoneProgressCreate -> J.WorkDoneProgressCreateParams -> J.WorkDoneProgressCreateRequest
 fmServerWorkDoneProgressCreateRequest rid params
   = J.RequestMessage "2.0" rid J.SWindowWorkDoneProgressCreate params
 
@@ -168,13 +170,13 @@ fmServerTelemetryNotification params
 
 -- * :arrow_right_hook: [client/registerCapability](#client_registerCapability)
 -- | from 3.0
-fmServerRegisterCapabilityRequest :: J.LspId -> J.RegistrationParams -> J.RegisterCapabilityRequest
+fmServerRegisterCapabilityRequest :: J.LspId J.ClientRegisterCapability -> J.RegistrationParams -> J.RegisterCapabilityRequest
 fmServerRegisterCapabilityRequest rid params
   = J.RequestMessage  "2.0" rid J.SClientRegisterCapability params
 
 -- * :arrow_right_hook: [client/unregisterCapability](#client_unregisterCapability)
 -- | from 3.0
-fmServerUnregisterCapabilityRequest :: J.LspId -> J.UnregistrationParams -> J.UnregisterCapabilityRequest
+fmServerUnregisterCapabilityRequest :: J.LspId J.ClientUnregisterCapability -> J.UnregistrationParams -> J.UnregisterCapabilityRequest
 fmServerUnregisterCapabilityRequest rid params
   = J.RequestMessage  "2.0" rid J.SClientUnregisterCapability params
 
@@ -193,19 +195,19 @@ fmClientDidChangeWatchedFilesNotification params
   = J.NotificationMessage "2.0" J.SWorkspaceDidChangeWatchedFiles params
 
 -- * :leftwards_arrow_with_hook: [workspace/symbol](#workspace_symbol)
-fmClientWorkspaceSymbolRequest :: J.LspId -> J.WorkspaceSymbolParams -> J.WorkspaceSymbolRequest
+fmClientWorkspaceSymbolRequest :: J.LspId J.WorkspaceSymbol -> J.WorkspaceSymbolParams -> J.WorkspaceSymbolRequest
 fmClientWorkspaceSymbolRequest rid params
   = J.RequestMessage  "2.0" rid J.SWorkspaceSymbol params
 
 -- * **New** :leftwards_arrow_with_hook: [workspace/executeCommand](#workspace_executeCommand)
 -- | From 3.0
-fmClientExecuteCommandRequest :: J.LspId -> J.ExecuteCommandParams -> J.ExecuteCommandRequest
+fmClientExecuteCommandRequest :: J.LspId J.WorkspaceExecuteCommand -> J.ExecuteCommandParams -> J.ExecuteCommandRequest
 fmClientExecuteCommandRequest rid params
   = J.RequestMessage  "2.0" rid J.SWorkspaceExecuteCommand params
 
 -- * **New** :arrow_right_hook: [workspace/applyEdit](#workspace_applyEdit)
 -- | From 3.0
-fmServerApplyWorkspaceEditRequest :: J.LspId -> J.ApplyWorkspaceEditParams -> J.ApplyWorkspaceEditRequest
+fmServerApplyWorkspaceEditRequest :: J.LspId J.WorkspaceApplyEdit -> J.ApplyWorkspaceEditParams -> J.ApplyWorkspaceEditRequest
 fmServerApplyWorkspaceEditRequest rid params
   = J.RequestMessage  "2.0" rid J.SWorkspaceApplyEdit params
 
@@ -235,7 +237,7 @@ fmClientWillSaveTextDocumentNotification params
 
 -- * **New** :leftwards_arrow_with_hook: [textDocument/willSaveWaitUntil](#textDocument_willSaveWaitUntil)
 -- | From 3.0
-fmClientWillSaveWaitUntilRequest :: J.LspId -> J.WillSaveTextDocumentParams -> J.WillSaveWaitUntilTextDocumentRequest
+fmClientWillSaveWaitUntilRequest :: J.LspId J.TextDocumentWillSaveWaitUntil -> J.WillSaveTextDocumentParams -> J.WillSaveWaitUntilTextDocumentRequest
 fmClientWillSaveWaitUntilRequest rid params
   = J.RequestMessage "2.0" rid J.STextDocumentWillSaveWaitUntil params
 
@@ -251,91 +253,91 @@ fmClientDidCloseTextDocumentNotification params
   = J.NotificationMessage "2.0" J.STextDocumentDidClose params
 
 -- * :leftwards_arrow_with_hook: [textDocument/completion](#textDocument_completion)
-fmClientCompletionRequest :: J.LspId -> J.CompletionParams -> J.CompletionRequest
+fmClientCompletionRequest :: J.LspId J.TextDocumentCompletion -> J.CompletionParams -> J.CompletionRequest
 fmClientCompletionRequest rid params
   = J.RequestMessage "2.0" rid J.STextDocumentCompletion params
 
 -- * :leftwards_arrow_with_hook: [completionItem/resolve](#completionItem_resolve)
-fmClientCompletionItemResolveRequest :: J.LspId -> J.CompletionItem -> J.CompletionItemResolveRequest
+fmClientCompletionItemResolveRequest :: J.LspId J.CompletionItemResolve -> J.CompletionItem -> J.CompletionItemResolveRequest
 fmClientCompletionItemResolveRequest rid params
   = J.RequestMessage "2.0" rid J.SCompletionItemResolve params
 
 -- * :leftwards_arrow_with_hook: [textDocument/hover](#textDocument_hover)
-fmClientHoverRequest :: J.LspId -> J.TextDocumentPositionParams -> J.HoverRequest
+fmClientHoverRequest :: J.LspId J.TextDocumentHover -> J.TextDocumentPositionParams -> J.HoverRequest
 fmClientHoverRequest rid params
   = J.RequestMessage "2.0" rid J.STextDocumentHover params
 
 -- * :leftwards_arrow_with_hook: [textDocument/signatureHelp](#textDocument_signatureHelp)
-fmClientSignatureHelpRequest :: J.LspId -> J.TextDocumentPositionParams -> J.SignatureHelpRequest
+fmClientSignatureHelpRequest :: J.LspId J.TextDocumentSignatureHelp -> J.TextDocumentPositionParams -> J.SignatureHelpRequest
 fmClientSignatureHelpRequest rid params
   = J.RequestMessage "2.0" rid J.STextDocumentSignatureHelp params
 
 -- * :leftwards_arrow_with_hook: [textDocument/references](#textDocument_references)
-fmClientReferencesRequest :: J.LspId -> J.ReferenceParams -> J.ReferencesRequest
+fmClientReferencesRequest :: J.LspId J.TextDocumentReferences -> J.ReferenceParams -> J.ReferencesRequest
 fmClientReferencesRequest rid params
   = J.RequestMessage "2.0" rid J.STextDocumentReferences params
 
 -- * :leftwards_arrow_with_hook: [textDocument/documentHighlight](#textDocument_documentHighlight)
-fmClientDocumentHighlightRequest :: J.LspId -> J.TextDocumentPositionParams -> J.DocumentHighlightRequest
+fmClientDocumentHighlightRequest :: J.LspId J.TextDocumentDocumentHighlight -> J.TextDocumentPositionParams -> J.DocumentHighlightRequest
 fmClientDocumentHighlightRequest rid params
   = J.RequestMessage "2.0" rid J.STextDocumentDocumentHighlight params
 
 -- * :leftwards_arrow_with_hook: [textDocument/documentSymbol](#textDocument_documentSymbol)
-fmClientDocumentSymbolRequest :: J.LspId -> J.DocumentSymbolParams -> J.DocumentSymbolRequest
+fmClientDocumentSymbolRequest :: J.LspId J.TextDocumentDocumentSymbol -> J.DocumentSymbolParams -> J.DocumentSymbolRequest
 fmClientDocumentSymbolRequest rid params
   = J.RequestMessage "2.0" rid J.STextDocumentDocumentSymbol params
 
 -- * :leftwards_arrow_with_hook: [textDocument/formatting](#textDocument_formatting)
-fmClientDocumentFormattingRequest :: J.LspId -> J.DocumentFormattingParams -> J.DocumentFormattingRequest
+fmClientDocumentFormattingRequest :: J.LspId J.TextDocumentFormatting -> J.DocumentFormattingParams -> J.DocumentFormattingRequest
 fmClientDocumentFormattingRequest rid params
   = J.RequestMessage "2.0" rid J.STextDocumentFormatting params
 
 -- * :leftwards_arrow_with_hook: [textDocument/rangeFormatting](#textDocument_rangeFormatting)
-fmClientDocumentRangeFormattingRequest :: J.LspId -> J.DocumentRangeFormattingParams -> J.DocumentRangeFormattingRequest
+fmClientDocumentRangeFormattingRequest :: J.LspId J.TextDocumentRangeFormatting -> J.DocumentRangeFormattingParams -> J.DocumentRangeFormattingRequest
 fmClientDocumentRangeFormattingRequest rid params
   = J.RequestMessage "2.0" rid J.STextDocumentRangeFormatting params
 
 -- * :leftwards_arrow_with_hook: [textDocument/onTypeFormatting](#textDocument_onTypeFormatting)
-fmClientDocumentOnTypeFormattingRequest :: J.LspId -> J.DocumentOnTypeFormattingParams -> J.DocumentOnTypeFormattingRequest
+fmClientDocumentOnTypeFormattingRequest :: J.LspId J.TextDocumentOnTypeFormatting -> J.DocumentOnTypeFormattingParams -> J.DocumentOnTypeFormattingRequest
 fmClientDocumentOnTypeFormattingRequest rid params
   = J.RequestMessage "2.0" rid J.STextDocumentOnTypeFormatting params
 
 -- * :leftwards_arrow_with_hook: [textDocument/definition](#textDocument_definition)
-fmClientDefinitionRequest :: J.LspId -> J.TextDocumentPositionParams -> J.DefinitionRequest
+fmClientDefinitionRequest :: J.LspId J.TextDocumentDefinition -> J.TextDocumentPositionParams -> J.DefinitionRequest
 fmClientDefinitionRequest rid params
   = J.RequestMessage "2.0" rid J.STextDocumentDefinition params
 
 -- * :leftwards_arrow_with_hook: [textDocument/codeAction](#textDocument_codeAction)
-fmClientCodeActionRequest :: J.LspId -> J.CodeActionParams -> J.CodeActionRequest
+fmClientCodeActionRequest :: J.LspId J.TextDocumentCodeAction -> J.CodeActionParams -> J.CodeActionRequest
 fmClientCodeActionRequest rid params
   = J.RequestMessage "2.0" rid J.STextDocumentCodeAction params
 
 -- * :leftwards_arrow_with_hook: [textDocument/codeLens](#textDocument_codeLens)
-fmClientCodeLensRequest :: J.LspId -> J.CodeLensParams -> J.CodeLensRequest
+fmClientCodeLensRequest :: J.LspId J.TextDocumentCodeLens -> J.CodeLensParams -> J.CodeLensRequest
 fmClientCodeLensRequest rid params
   = J.RequestMessage "2.0" rid J.STextDocumentCodeLens params
 
 -- * :leftwards_arrow_with_hook: [codeLens/resolve](#codeLens_resolve)
-fmClientCodeLensResolveRequest :: J.LspId -> J.CodeLens -> J.CodeLensResolveRequest
+fmClientCodeLensResolveRequest :: J.LspId J.CodeLensResolve -> J.CodeLens -> J.CodeLensResolveRequest
 fmClientCodeLensResolveRequest rid params
   = J.RequestMessage "2.0" rid J.SCodeLensResolve params
 
 -- * :leftwards_arrow_with_hook: [textDocument/documentLink](#textDocument_documentLink)
-fmClientDocumentLinkRequest :: J.LspId -> J.DocumentLinkParams -> J.DocumentLinkRequest
+fmClientDocumentLinkRequest :: J.LspId J.TextDocumentDocumentLink -> J.DocumentLinkParams -> J.DocumentLinkRequest
 fmClientDocumentLinkRequest rid params
   = J.RequestMessage "2.0" rid J.STextDocumentDocumentLink params
 
 -- * :leftwards_arrow_with_hook: [documentLink/resolve](#documentLink_resolve)
-fmClientDocumentLinkResolveRequest :: J.LspId -> J.DocumentLink -> J.DocumentLinkResolveRequest
+fmClientDocumentLinkResolveRequest :: J.LspId J.DocumentLinkResolve -> J.DocumentLink -> J.DocumentLinkResolveRequest
 fmClientDocumentLinkResolveRequest rid params
   = J.RequestMessage "2.0" rid J.SDocumentLinkResolve params
 
 -- * :leftwards_arrow_with_hook: [textDocument/rename](#textDocument_rename)
-fmClientRenameRequest :: J.LspId -> J.RenameParams -> J.RenameRequest
+fmClientRenameRequest :: J.LspId J.TextDocumentRename -> J.RenameParams -> J.RenameRequest
 fmClientRenameRequest rid params
   = J.RequestMessage "2.0" rid J.STextDocumentRename params
 
 -- * :leftwards_arrow_with_hook: [textDocument/prepareRename](#textDocument_prepareRename)
-fmClientPrepareRenameRequest :: J.LspId -> J.TextDocumentPositionParams -> J.PrepareRenameRequest
+fmClientPrepareRenameRequest :: J.LspId J.TextDocumentPrepareRename -> J.TextDocumentPositionParams -> J.PrepareRenameRequest
 fmClientPrepareRenameRequest rid params
   = J.RequestMessage "2.0" rid J.STextDocumentPrepareRename params

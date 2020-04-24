@@ -2,6 +2,9 @@
 {-# LANGUAGE FlexibleInstances      #-}
 {-# LANGUAGE MultiParamTypeClasses  #-}
 {-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE PolyKinds              #-}
+{-# LANGUAGE GADTs                  #-}
+{-# LANGUAGE UndecidableInstances   #-}
 
 module Language.Haskell.LSP.Types.Lens where
 
@@ -21,6 +24,7 @@ import           Language.Haskell.LSP.Types.TextDocument
 import           Language.Haskell.LSP.Types.Window
 import           Language.Haskell.LSP.Types.WorkspaceEdit
 import           Language.Haskell.LSP.Types.WorkspaceFolders
+import           Language.Haskell.LSP.Types.Types
 import           Control.Lens.TH
 
 -- client capabilities

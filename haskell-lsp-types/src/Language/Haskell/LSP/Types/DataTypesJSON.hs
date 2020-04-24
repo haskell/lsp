@@ -10,6 +10,9 @@
 {-# LANGUAGE TypeSynonymInstances       #-}
 {-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE ExistentialQuantification  #-}
+{-# LANGUAGE StandaloneDeriving         #-}
+{-# LANGUAGE PolyKinds                  #-}
 
 module Language.Haskell.LSP.Types.DataTypesJSON where
 
@@ -2777,10 +2780,19 @@ RPC protocol that requires that every request sends a response back. In addition
 it allows for returning partial results on cancel.
 -}
 
-data CancelParams =
+data CancelParams = forall m.
   CancelParams
-    { _id :: LspId
-    } deriving (Read,Show,Eq)
+    { _id :: LspId m
+    }
+
+deriving instance Read CancelParams
+deriving instance Show CancelParams
+instance Eq CancelParams where
+  (CancelParams a) == CancelParams b =
+    case (a,b) of
+      (IdInt x, IdInt y) -> x == y
+      (IdString x, IdString y) -> x == y
+      _ -> False
 
 deriveJSON lspOptions ''CancelParams
 

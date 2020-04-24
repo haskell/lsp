@@ -4,6 +4,7 @@
 {-# LANGUAGE BinaryLiterals      #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE RankNTypes #-}
 
 module Language.Haskell.LSP.Control
   (
@@ -90,6 +91,7 @@ runWithHandles hin hout initializeCallbacks h o captureFp = do
 
   return 1
 
+{-
 type RequestMap = HM.HashMap LspId SomeClientMethod
 
 newRequestMap :: RequestMap
@@ -106,6 +108,7 @@ getRequestMap = foldl helper HM.empty
     IsClientReq -> HM.insert (val ^. id) (SomeClientMethod m) acc
     _ -> acc
   helper acc _ = acc
+  -}
 
 -- ---------------------------------------------------------------------
 
@@ -140,7 +143,7 @@ ioLoop hin dispatcherProc tvarDat =
 -- | Simple server to make sure all output is serialised
 sendServer :: TChan J.Value -> Handle -> Maybe FilePath -> IO ()
 sendServer msgChan clientH captureFp = do
-  rmap <- atomically $ newTVar newRequestMap
+  -- rmap <- atomically $ newTVar newRequestMap
   forever $ do
     msg <- atomically $ readTChan msgChan
 
@@ -157,7 +160,7 @@ sendServer msgChan clientH captureFp = do
     hFlush clientH
     logm $ B.pack "<--2--" <> str
 
-    captureFromServer rmap msg captureFp
+    -- captureFromServer rmap msg captureFp
 
 -- |
 --

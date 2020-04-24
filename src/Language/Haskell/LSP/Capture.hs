@@ -9,13 +9,13 @@ import Data.Time.Clock
 import GHC.Generics
 import Language.Haskell.LSP.Types
 
+captureFromClient = undefined
+captureFromServer = undefined
+{-
+
 data Event = FromClient UTCTime FromServerMessage
            | FromServer UTCTime FromClientMessage
   deriving (Show, Eq, Generic, ToJSON)
-captureFromClient = undefined
-captureFromServer = undefined
-
-{-
 captureFromServer :: RequestMap -> Value -> Maybe FilePath -> IO ()
 captureFromServer _ Nothing = return ()
 captureFromServer msg (Just fp) = do

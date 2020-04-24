@@ -50,6 +50,7 @@ library
   build-depends:       base >= 4.9 && < 4.14
                      , aeson >=1.2.2.0
                      , bytestring
+                     , containers
                      , data-default
                      , deepseq
                      , dependent-sum
