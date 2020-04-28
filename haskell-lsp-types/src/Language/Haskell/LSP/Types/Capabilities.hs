@@ -103,7 +103,7 @@ capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) Noth
           (Just (DocumentLinkClientCapabilities dynamicReg))
           (since 3 6 (ColorProviderClientCapabilities dynamicReg))
           (Just (RenameClientCapabilities dynamicReg (since 3 12 True)))
-          (Just (PublishDiagnosticsClientCapabilities (since 3 7 True)))
+          (Just publishDiagnosticsCapabilities)
           (since 3 10 foldingRangeCapability)
     sync =
       SynchronizationTextDocumentClientCapabilities
@@ -125,9 +125,13 @@ capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) Noth
       (since 3 3 (List [MkPlainText, MkMarkdown]))
       (Just True)
       (since 3 9 True)
+      (since 3 15 completionItemTagsCapabilities)
 
     completionItemKindCapabilities =
       CompletionItemKindClientCapabilities (Just ciKs)
+
+    completionItemTagsCapabilities =
+      CompletionItemTagsClientCapabilities (List [ CtDeprecated ])
 
     ciKs
       | maj >= 3 && min >= 4 = List (oldCiKs ++ newCiKs)
@@ -205,6 +209,15 @@ capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) Noth
         dynamicReg
         Nothing
         (Just False)
+
+    publishDiagnosticsCapabilities =
+      PublishDiagnosticsClientCapabilities
+        (since 3 7 True)
+        (since 3 15 publishDiagnosticsTagsCapabilities)
+
+    publishDiagnosticsTagsCapabilities =
+      PublishDiagnosticsTagsClientCapabilities
+        (List [ DtUnnecessary, DtDeprecated ])
 
     dynamicReg
       | maj >= 3  = Just True

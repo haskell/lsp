@@ -101,6 +101,17 @@ instance A.FromJSON CompletionItemKind where
   parseJSON (A.Number 25) = pure CiTypeParameter
   parseJSON _             = mempty
 
+data CompletionItemTag
+  -- | Render a completion as obsolete, usually using a strike-out.
+  = CtDeprecated
+  deriving (Eq, Ord, Show, Read)
+
+instance A.ToJSON CompletionItemTag where
+  toJSON CtDeprecated  = A.Number 1
+
+instance A.FromJSON CompletionItemTag where
+  parseJSON (A.Number 1) = pure CtDeprecated
+  parseJSON _            = mempty
 
 -- ---------------------------------------------------------------------
 {-
@@ -192,6 +203,10 @@ interface CompletionItem {
      * an icon is chosen by the editor.
      */
     kind?: number;
+    /**
+     * Tags for this completion item.
+     */
+    tags?: CompletionItemTag[];
     /**
      * A human-readable string with additional information
      * about this item, like type or symbol information.
@@ -325,6 +340,7 @@ data CompletionItem =
                        -- the text that is inserted when selecting this
                        -- completion.
     , _kind                :: Maybe CompletionItemKind
+    , _tags                :: List CompletionItemTag -- ^ Tags for this completion item.
     , _detail              :: Maybe Text -- ^ A human-readable string with additional
                               -- information about this item, like type or
                               -- symbol information.

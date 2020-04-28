@@ -36,6 +36,7 @@ jsonSpec = do
     prop "MarkupContent"     (propertyJsonRoundtrip :: MarkupContent -> Property)
     prop "HoverContents"     (propertyJsonRoundtrip :: HoverContents -> Property)
     prop "ResponseMessage"   (propertyJsonRoundtrip :: ResponseMessage (Maybe ()) -> Property)
+    prop "WatchedFiles"      (propertyJsonRoundtrip :: DidChangeWatchedFilesRegistrationOptions -> Property)
 
 
 -- ---------------------------------------------------------------------
@@ -106,4 +107,15 @@ smallList = resize 3 . listOf
 instance (Arbitrary a) => Arbitrary (List a) where
   arbitrary = List <$> arbitrary
 
+-- ---------------------------------------------------------------------
+
+instance Arbitrary DidChangeWatchedFilesRegistrationOptions where
+  arbitrary = DidChangeWatchedFilesRegistrationOptions <$> arbitrary
+
+instance Arbitrary FileSystemWatcher where
+  arbitrary = FileSystemWatcher <$> arbitrary <*> arbitrary
+
+instance Arbitrary WatchKind where
+  arbitrary = WatchKind <$> arbitrary <*> arbitrary <*> arbitrary
+  
 -- ---------------------------------------------------------------------

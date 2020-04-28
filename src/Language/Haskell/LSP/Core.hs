@@ -359,12 +359,26 @@ hh m mVfs mh tvarDat json = do
 
           case mh of
             Just h -> runHandler h req (mkClientResponseHandler m req tvarDat)
-            Nothing -> do
-              let msg = T.pack $ unwords ["haskell-lsp:no handler for.", show json]
-              sendErrorLog tvarDat msg
+            Nothing
+              -- '$/' notifications should/could be ignored by server.
+              -- Don't log errors in that case.
+              -- See https://microsoft.github.io/language-server-protocol/specifications/specification-current/#-notifications-and-requests.
+              | isOptionalNotification req -> return ()
+              | otherwise -> do
+                  let msg = T.pack $ unwords ["haskell-lsp:no handler for.", show json]
+                  sendErrorLog tvarDat msg
         J.Error  err -> do
           let msg = T.pack $ unwords $ ["haskell-lsp:parse error.", show json, show err] ++ _ERR_MSG_URL
           sendErrorLog tvarDat msg
+  where
+    isOptionalNotification req
+      -- TODO
+      -- | NotCustomClient _ <- req
+      -- , J.Object object <- json
+      -- , Just (J.String method) <- HM.lookup "method" object
+      -- , "$/" `T.isPrefixOf` method
+      -- = True
+      | otherwise = False
 
 handleInitialConfig
   :: (Show config)
@@ -1011,7 +1025,7 @@ flushDiagnosticsBySource tvarDat maxDiagnosticCount msource = join $ atomically 
   let ds = flushBySource (resDiagnostics ctx) msource
   writeTVar tvarDat $ ctx {resDiagnostics = ds}
   -- Send the updated diagnostics to the client
-  return $ forM_ (Map.keys ds) $ \uri -> do
+  return $ forM_ (HM.keys ds) $ \uri -> do
     -- logs $ "haskell-lsp:flushDiagnosticsBySource:uri=" ++ show uri
     let mdp = getDiagnosticParamsFor maxDiagnosticCount ds uri
     case mdp of
@@ -1019,12 +1033,12 @@ flushDiagnosticsBySource tvarDat maxDiagnosticCount msource = join $ atomically 
       Just params -> do
         resSendResponse ctx $ J.fromServerNot $ J.NotificationMessage "2.0" J.STextDocumentPublishDiagnostics params
 
--- |=====================================================================
+-- =====================================================================
 --
 --  utility
 
 
--- |
+-- 
 --  Logger
 --
 setupLogger :: Maybe FilePath -> [String] -> Priority -> IO ()

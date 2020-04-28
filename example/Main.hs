@@ -32,7 +32,6 @@ import qualified Language.Haskell.LSP.Utility          as U
 import           Language.Haskell.LSP.VFS
 import           System.Exit
 import qualified System.Log.Logger                     as L
-import qualified Data.Rope.UTF16                       as Rope
 
 
 -- ---------------------------------------------------------------------
@@ -64,9 +63,15 @@ run dispatcherProc = flip E.catches handlers $ do
       liftIO $ U.logs "main.run:dp after dispatcherProc"
       return Nothing
 
+    callbacks = Core.InitializeCallbacks
+      { Core.onInitialConfiguration = const $ Right ()
+      , Core.onConfigurationChange = const $ Right ()
+      , Core.onStartup = dp
+      }
+
   flip E.finally finalProc $ do
     Core.setupLogger (Just "/tmp/lsp-hello.log") [] L.DEBUG
-    CTRL.run (return (Right ()), dp) (lspHandlers rin) lspOptions (Just "/tmp/lsp-hello-session.log")
+    CTRL.run callbacks (lspHandlers rin) lspOptions (Just "/tmp/lsp-hello-session.log")
 
   where
     handlers = [ E.Handler ioExcept
@@ -107,7 +112,7 @@ reactorSend msg = do
 publishDiagnostics :: Int -> J.NormalizedUri -> J.TextDocumentVersion -> DiagnosticsBySource -> R () ()
 publishDiagnostics maxToPublish uri v diags = do
   lf <- ask
-  liftIO $ (Core.publishDiagnosticsFunc lf) maxToPublish uri v diags
+  liftIO $ Core.publishDiagnosticsFunc lf maxToPublish uri v diags
 
 -- ---------------------------------------------------------------------
 
@@ -196,11 +201,11 @@ reactor lf inp = do
         mdoc <- liftIO $ Core.getVirtualFileFunc lf doc
         case mdoc of
           Just (VirtualFile _version str _) -> do
-            liftIO $ U.logs $ "reactor:processing NotDidChangeTextDocument: vf got:" ++ (show $ Rope.toString str)
+            liftIO $ U.logs $ "reactor:processing NotDidChangeTextDocument: vf got:" ++ show str
           Nothing -> do
             liftIO $ U.logs "reactor:processing NotDidChangeTextDocument: vf returned Nothing"
 
-        liftIO $ U.logs $ "reactor:processing NotDidChangeTextDocument: uri=" ++ (show doc)
+        liftIO $ U.logs $ "reactor:processing NotDidChangeTextDocument: uri=" ++ show doc
 
       -- -------------------------------
 
@@ -234,7 +239,7 @@ reactor lf inp = do
 
       HandlerRequest (ReqHover req) -> do
         liftIO $ U.logs $ "reactor:got HoverRequest:" ++ show req
-        let J.TextDocumentPositionParams _doc pos = req ^. J.params
+        let J.TextDocumentPositionParams _doc pos _workDoneToken = req ^. J.params
             J.Position _l _c' = pos
 
         let
@@ -255,7 +260,7 @@ reactor lf inp = do
 
         let
           -- makeCommand only generates commands for diagnostics whose source is us
-          makeCommand (J.Diagnostic (J.Range start _) _s _c (Just "lsp-hello") _m _l) = [J.Command title cmd cmdparams]
+          makeCommand (J.Diagnostic (J.Range start _) _s _c (Just "lsp-hello") _m _t _l) = [J.Command title cmd cmdparams]
             where
               title = "Apply LSP hello command:" <> head (T.lines _m)
               -- NOTE: the cmd needs to be registered via the InitializeResponse message. See lspOptions above
@@ -266,7 +271,7 @@ reactor lf inp = do
                       , J.Object $ H.fromList [("start_pos",J.Object $ H.fromList [("position",    J.toJSON start)])]
                       ]
               cmdparams = Just args
-          makeCommand (J.Diagnostic _r _s _c _source _m _l) = []
+          makeCommand (J.Diagnostic _r _s _c _source _m _t _l) = []
         let body = J.List $ map J.CACommand $ concatMap makeCommand diags
             rsp = Core.makeResponseMessage req body
         reactorSend $ RspCodeAction rsp
@@ -318,6 +323,7 @@ sendDiagnostics fileUri version = do
               Nothing  -- code
               (Just "lsp-hello") -- source
               "Example diagnostic message"
+              Nothing -- tags
               (Just (J.List []))
             ]
   -- reactorSend $ J.NotificationMessage "2.0" "textDocument/publishDiagnostics" (Just r)
@@ -336,7 +342,7 @@ syncOptions = J.TextDocumentSyncOptions
 
 lspOptions :: Core.Options
 lspOptions = def { Core.textDocumentSync = Just syncOptions
-                 , Core.executeCommandProvider = Just (J.ExecuteCommandOptions (J.List ["lsp-hello-command"]))
+                 , Core.executeCommandCommands = Just ["lsp-hello-command"]
                  }
 
 lspHandlers :: TChan ReactorInput -> Core.Handlers

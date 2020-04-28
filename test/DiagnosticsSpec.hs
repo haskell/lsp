@@ -3,6 +3,7 @@ module DiagnosticsSpec where
 
 
 import qualified Data.Map                              as Map
+import qualified Data.HashMap.Strict                   as HM
 import qualified Data.SortedList                       as SL
 import           Data.Text                             (Text)
 import           Language.Haskell.LSP.Diagnostics
@@ -34,14 +35,14 @@ mkDiagnostic ms str =
     rng = J.Range (J.Position 0 1) (J.Position 3 0)
     loc = J.Location (J.Uri "file") rng
   in
-    J.Diagnostic rng Nothing Nothing ms str (Just (J.List [J.DiagnosticRelatedInformation loc str]))
+    J.Diagnostic rng Nothing Nothing ms str Nothing (Just (J.List [J.DiagnosticRelatedInformation loc str]))
 
 mkDiagnostic2 :: Maybe J.DiagnosticSource -> Text -> J.Diagnostic
 mkDiagnostic2 ms str =
   let
     rng = J.Range (J.Position 4 1) (J.Position 5 0)
     loc = J.Location (J.Uri "file") rng
-  in J.Diagnostic rng Nothing Nothing ms str (Just (J.List [J.DiagnosticRelatedInformation loc str]))
+  in J.Diagnostic rng Nothing Nothing ms str Nothing (Just (J.List [J.DiagnosticRelatedInformation loc str]))
 
 -- ---------------------------------------------------------------------
 
@@ -55,8 +56,8 @@ diagnosticsSpec = do
           , mkDiagnostic (Just "hlint") "b"
           ]
         uri = J.toNormalizedUri $ J.Uri "uri"
-      (updateDiagnostics Map.empty uri Nothing (partitionBySource diags)) `shouldBe`
-        Map.fromList
+      (updateDiagnostics HM.empty uri Nothing (partitionBySource diags)) `shouldBe`
+        HM.fromList
           [ (uri,StoreItem Nothing $ Map.fromList [(Just "hlint", SL.toSortedList diags) ] )
           ]
 
@@ -69,8 +70,8 @@ diagnosticsSpec = do
           , mkDiagnostic (Just "ghcmod") "b"
           ]
         uri = J.toNormalizedUri $ J.Uri "uri"
-      (updateDiagnostics Map.empty uri Nothing (partitionBySource diags)) `shouldBe`
-        Map.fromList
+      (updateDiagnostics HM.empty uri Nothing (partitionBySource diags)) `shouldBe`
+        HM.fromList
           [ (uri,StoreItem Nothing $ Map.fromList
                 [(Just "hlint",  SL.singleton (mkDiagnostic (Just "hlint")  "a"))
                 ,(Just "ghcmod", SL.singleton (mkDiagnostic (Just "ghcmod") "b"))
@@ -86,8 +87,8 @@ diagnosticsSpec = do
           , mkDiagnostic (Just "ghcmod") "b"
           ]
         uri = J.toNormalizedUri $ J.Uri "uri"
-      (updateDiagnostics Map.empty uri (Just 1) (partitionBySource diags)) `shouldBe`
-        Map.fromList
+      (updateDiagnostics HM.empty uri (Just 1) (partitionBySource diags)) `shouldBe`
+        HM.fromList
           [ (uri,StoreItem (Just 1) $ Map.fromList
                 [(Just "hlint",  SL.singleton (mkDiagnostic (Just "hlint")  "a"))
                 ,(Just "ghcmod", SL.singleton (mkDiagnostic (Just "ghcmod") "b"))
@@ -107,9 +108,9 @@ diagnosticsSpec = do
           [ mkDiagnostic (Just "hlint") "a2"
           ]
         uri = J.toNormalizedUri $ J.Uri "uri"
-      let origStore = updateDiagnostics Map.empty uri Nothing (partitionBySource diags1)
+      let origStore = updateDiagnostics HM.empty uri Nothing (partitionBySource diags1)
       (updateDiagnostics origStore uri Nothing (partitionBySource diags2)) `shouldBe`
-        Map.fromList
+        HM.fromList
           [ (uri,StoreItem Nothing $ Map.fromList [(Just "hlint", SL.toSortedList diags2) ] )
           ]
 
@@ -125,9 +126,9 @@ diagnosticsSpec = do
           [ mkDiagnostic (Just "hlint") "a2"
           ]
         uri = J.toNormalizedUri $ J.Uri "uri"
-      let origStore = updateDiagnostics Map.empty uri Nothing (partitionBySource diags1)
+      let origStore = updateDiagnostics HM.empty uri Nothing (partitionBySource diags1)
       (updateDiagnostics origStore uri Nothing (partitionBySource diags2)) `shouldBe`
-        Map.fromList
+        HM.fromList
           [ (uri,StoreItem Nothing $ Map.fromList
                 [(Just "hlint",  SL.singleton (mkDiagnostic (Just "hlint")  "a2"))
                 ,(Just "ghcmod", SL.singleton (mkDiagnostic (Just "ghcmod") "b1"))
@@ -143,9 +144,9 @@ diagnosticsSpec = do
           , mkDiagnostic (Just "ghcmod") "b1"
           ]
         uri = J.toNormalizedUri $ J.Uri "uri"
-      let origStore = updateDiagnostics Map.empty uri Nothing (partitionBySource diags1)
+      let origStore = updateDiagnostics HM.empty uri Nothing (partitionBySource diags1)
       (updateDiagnostics origStore uri Nothing (Map.fromList [(Just "ghcmod",SL.toSortedList [])])) `shouldBe`
-        Map.fromList
+        HM.fromList
           [ (uri,StoreItem Nothing $ Map.fromList
                 [(Just "ghcmod", SL.toSortedList [])
                 ,(Just "hlint",  SL.singleton (mkDiagnostic (Just "hlint")  "a1"))
@@ -166,9 +167,9 @@ diagnosticsSpec = do
           [ mkDiagnostic (Just "hlint") "a2"
           ]
         uri = J.toNormalizedUri $ J.Uri "uri"
-      let origStore = updateDiagnostics Map.empty uri (Just 1) (partitionBySource diags1)
+      let origStore = updateDiagnostics HM.empty uri (Just 1) (partitionBySource diags1)
       (updateDiagnostics origStore uri (Just 2) (partitionBySource diags2)) `shouldBe`
-        Map.fromList
+        HM.fromList
           [ (uri,StoreItem (Just 2) $ Map.fromList [(Just "hlint", SL.toSortedList diags2) ] )
           ]
 
@@ -184,9 +185,9 @@ diagnosticsSpec = do
           [ mkDiagnostic (Just "hlint") "a2"
           ]
         uri = J.toNormalizedUri $ J.Uri "uri"
-      let origStore = updateDiagnostics Map.empty uri (Just 1) (partitionBySource diags1)
+      let origStore = updateDiagnostics HM.empty uri (Just 1) (partitionBySource diags1)
       (updateDiagnostics origStore uri (Just 2) (partitionBySource diags2)) `shouldBe`
-        Map.fromList
+        HM.fromList
           [ (uri,StoreItem (Just 2) $ Map.fromList
                 [(Just "hlint", SL.singleton (mkDiagnostic (Just "hlint")  "a2"))
               ] )
@@ -203,7 +204,7 @@ diagnosticsSpec = do
           , mkDiagnostic (Just "ghcmod") "b"
           ]
         uri = J.toNormalizedUri $ J.Uri "uri"
-      let ds = updateDiagnostics Map.empty uri (Just 1) (partitionBySource diags)
+      let ds = updateDiagnostics HM.empty uri (Just 1) (partitionBySource diags)
       (getDiagnosticParamsFor 10 ds uri) `shouldBe`
         Just (J.PublishDiagnosticsParams (J.fromNormalizedUri uri) (J.List $ reverse diags))
 
@@ -220,7 +221,7 @@ diagnosticsSpec = do
           , mkDiagnostic  (Just "ghcmod") "d"
           ]
         uri = J.toNormalizedUri $ J.Uri "uri"
-      let ds = updateDiagnostics Map.empty uri (Just 1) (partitionBySource diags)
+      let ds = updateDiagnostics HM.empty uri (Just 1) (partitionBySource diags)
       (getDiagnosticParamsFor 2 ds uri) `shouldBe`
         Just (J.PublishDiagnosticsParams (J.fromNormalizedUri uri)
               (J.List [
@@ -247,7 +248,7 @@ diagnosticsSpec = do
           , mkDiagnostic  (Just "ghcmod") "d"
           ]
         uri = J.toNormalizedUri $ J.Uri "uri"
-      let ds = updateDiagnostics Map.empty uri (Just 1) (partitionBySource diags)
+      let ds = updateDiagnostics HM.empty uri (Just 1) (partitionBySource diags)
       (getDiagnosticParamsFor 100 ds uri) `shouldBe`
         Just (J.PublishDiagnosticsParams (J.fromNormalizedUri uri)
               (J.List [

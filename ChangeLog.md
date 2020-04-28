@@ -1,5 +1,28 @@
 # Revision history for haskell-lsp
 
+## 0.21.0.0
+
+* Stop getCompletionPrefix from crashing if beforePos is empty
+* Add DidChangeWatchedFilesRegistrationOptions
+* Add NormalizedFilePath from ghcide
+* Add diagnostic and completion tags
+* Fix language server example
+* Correctly fix the problem with '$/' notifications
+* Add azure ci
+
+## 0.20.0.1
+
+* Fix Haddock generation syntax error
+
+## 0.20.0.0
+
+* Force utf8 encoding when writing vfs temp files
+* Don't log errors for '$/' notifications (@jinwoo)
+* Force utf8 encoding when writing vfs temp files (@jneira)
+* Store a hash in a NormalizedUri (@mpickering)
+* Move "Semigroup WorkspaceEdit" instance (@sheaf)
+* Fix vfs line endings (@jneira)
+
 ## 0.19.0.0 -- 2019-12-14
 
 * Fix vfs line endings (@jneira)
@@ -62,7 +85,7 @@
 ```haskell
     , persistVirtualFileFunc       :: !(J.Uri -> IO FilePath)
     , reverseFileMapFunc           :: !(IO (FilePath -> FilePath))
- ```
+```
 
 * Fix exception on empty filepaths
 

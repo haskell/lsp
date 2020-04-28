@@ -36,6 +36,7 @@ makeFieldsNoPrefix ''SymbolClientCapabilities
 makeFieldsNoPrefix ''ExecuteClientCapabilities
 makeFieldsNoPrefix ''WorkspaceClientCapabilities
 makeFieldsNoPrefix ''SynchronizationTextDocumentClientCapabilities
+makeFieldsNoPrefix ''CompletionItemTagsClientCapabilities
 makeFieldsNoPrefix ''CompletionItemClientCapabilities
 makeFieldsNoPrefix ''CompletionItemKindClientCapabilities
 makeFieldsNoPrefix ''CompletionClientCapabilities
@@ -60,6 +61,7 @@ makeFieldsNoPrefix ''DocumentLinkClientCapabilities
 makeFieldsNoPrefix ''ColorProviderClientCapabilities
 makeFieldsNoPrefix ''RenameClientCapabilities
 makeFieldsNoPrefix ''PublishDiagnosticsClientCapabilities
+makeFieldsNoPrefix ''PublishDiagnosticsTagsClientCapabilities
 makeFieldsNoPrefix ''TextDocumentClientCapabilities
 makeFieldsNoPrefix ''ClientCapabilities
 
@@ -81,6 +83,9 @@ makeFieldsNoPrefix ''InitializeResponseCapabilitiesInner
 makeFieldsNoPrefix ''InitializeResponseCapabilities
 makeFieldsNoPrefix ''Registration
 makeFieldsNoPrefix ''RegistrationParams
+makeFieldsNoPrefix ''DidChangeWatchedFilesRegistrationOptions
+makeFieldsNoPrefix ''FileSystemWatcher
+makeFieldsNoPrefix ''WatchKind
 makeFieldsNoPrefix ''TextDocumentRegistrationOptions
 makeFieldsNoPrefix ''Unregistration
 makeFieldsNoPrefix ''UnregistrationParams
