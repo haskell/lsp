@@ -74,9 +74,10 @@ runWithHandles hin hout initializeCallbacks h o captureFp = do
   timestamp <- formatTime defaultTimeLocale (iso8601DateFormat (Just "%H-%M-%S")) <$> getCurrentTime
   let timestampCaptureFp = fmap (\f -> dropExtension f ++ timestamp ++ takeExtension f)
                                 captureFp
+  captureCtx <- maybe (return noCapture) captureToFile timestampCaptureFp
 
   cout <- atomically newTChan :: IO (TChan FromServerMessage)
-  _rhpid <- forkIO $ sendServer cout hout timestampCaptureFp
+  _rhpid <- forkIO $ sendServer cout hout captureCtx
 
 
   let sendFunc :: Core.SendFunc
@@ -85,7 +86,7 @@ runWithHandles hin hout initializeCallbacks h o captureFp = do
 
   tvarId <- atomically $ newTVar 0
   initVFS $ \vfs -> do
-    tvarDat <- atomically $ newTVar $ Core.defaultLanguageContextData h o lf tvarId sendFunc timestampCaptureFp vfs
+    tvarDat <- atomically $ newTVar $ Core.defaultLanguageContextData h o lf tvarId sendFunc captureCtx vfs
 
     ioLoop hin initializeCallbacks tvarDat
 
@@ -123,8 +124,8 @@ ioLoop hin dispatcherProc tvarDat =
 -- ---------------------------------------------------------------------
 
 -- | Simple server to make sure all output is serialised
-sendServer :: TChan FromServerMessage -> Handle -> Maybe FilePath -> IO ()
-sendServer msgChan clientH captureFp =
+sendServer :: TChan FromServerMessage -> Handle -> CaptureContext -> IO ()
+sendServer msgChan clientH captureCtxt =
   forever $ do
     msg <- atomically $ readTChan msgChan
 
@@ -142,7 +143,7 @@ sendServer msgChan clientH captureFp =
     hFlush clientH
     logm $ B.pack "<--2--" <> str
 
-    captureFromServer msg captureFp
+    captureFromServer msg captureCtxt
 
 -- |
 --
