@@ -14,6 +14,7 @@ import           Language.Haskell.LSP.Types.DataTypesJSON
 import           Language.Haskell.LSP.Types.Diagnostic
 import           Language.Haskell.LSP.Types.DocumentFilter
 import           Language.Haskell.LSP.Types.FoldingRange
+import           Language.Haskell.LSP.Types.Hover
 import           Language.Haskell.LSP.Types.Message
 import           Language.Haskell.LSP.Types.Location
 import           Language.Haskell.LSP.Types.Symbol
