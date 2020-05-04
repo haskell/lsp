@@ -439,7 +439,7 @@ instance ToJSON a => ToJSON (ResponseMessage a) where
         Right a   -> "result" .= a
       ]
 
-instance (FromJSON a, Show a) => FromJSON (ResponseMessage a) where
+instance FromJSON a => FromJSON (ResponseMessage a) where
   parseJSON = withObject "Response" $ \o -> do
     _jsonrpc <- o .: "jsonrpc"
     _id      <- o .: "id"
@@ -449,9 +449,8 @@ instance (FromJSON a, Show a) => FromJSON (ResponseMessage a) where
     result   <- case (_error, _result) of
       ((Just err), Nothing   ) -> pure $ Left err
       (Nothing   , (Just res)) -> pure $ Right res
-      ((Just err), (Just res)) -> fail $ "both error and result cannot be present: error=" ++ show (err) 
-        ++ ", result=" ++ show (res)
-      (Nothing, Nothing) -> fail "both error and result cannot be Nothing"
+      ((Just   _), (Just   _)) -> fail $ "Both error and result cannot be present"
+      (Nothing, Nothing) -> fail "Both error and result cannot be Nothing"
     return $ ResponseMessage _jsonrpc _id $ result
 
 type ErrorResponse = ResponseMessage ()
