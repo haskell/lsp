@@ -32,6 +32,7 @@ library
                      , Language.Haskell.LSP.Types.Diagnostic
                      , Language.Haskell.LSP.Types.DocumentFilter
                      , Language.Haskell.LSP.Types.FoldingRange
+                     , Language.Haskell.LSP.Types.Hover
                      , Language.Haskell.LSP.Types.List
                      , Language.Haskell.LSP.Types.Location
                      , Language.Haskell.LSP.Types.MarkupContent
