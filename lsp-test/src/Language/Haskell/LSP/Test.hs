@@ -160,7 +160,9 @@ runSessionWithConfig config' serverExe caps rootDir session = do
       -- collect them and then...
       (inBetween, initRspMsg) <- manyTill_ anyMessage (responseForId initReqId)
 
-      liftIO $ maybe (return ()) (putStrLn . ("Error while initializing: " ++) . show ) (initRspMsg ^. LSP.error)
+      case initRspMsg ^. LSP.result of
+        Left error -> liftIO $ putStrLn ("Error while initializing: " ++ show error)
+        Right _ -> pure ()
 
       initRspVar <- initRsp <$> ask
       liftIO $ putMVar initRspVar initRspMsg
@@ -412,12 +414,11 @@ noDiagnostics = do
 -- | Returns the symbols in a document.
 getDocumentSymbols :: TextDocumentIdentifier -> Session (Either [DocumentSymbol] [SymbolInformation])
 getDocumentSymbols doc = do
-  ResponseMessage _ rspLid mRes mErr <- request TextDocumentDocumentSymbol (DocumentSymbolParams doc Nothing) :: Session DocumentSymbolsResponse
-  maybe (return ()) (throw . UnexpectedResponseError rspLid) mErr
-  case mRes of
-    Just (DSDocumentSymbols (List xs)) -> return (Left xs)
-    Just (DSSymbolInformation (List xs)) -> return (Right xs)
-    Nothing -> Prelude.error "No result and no error in DocumentSymbolsResponse"
+  ResponseMessage _ rspLid res <- request TextDocumentDocumentSymbol (DocumentSymbolParams doc Nothing) :: Session DocumentSymbolsResponse
+  case res of
+    Right (DSDocumentSymbols (List xs)) -> return (Left xs)
+    Right (DSSymbolInformation (List xs)) -> return (Right xs)
+    Left err -> throw (UnexpectedResponseError rspLid err)
 
 -- | Returns the code actions in the specified range.
 getCodeActions :: TextDocumentIdentifier -> Range -> Session [CAResult]
@@ -426,8 +427,8 @@ getCodeActions doc range = do
   rsp <- request TextDocumentCodeAction (CodeActionParams doc range ctx Nothing)
 
   case rsp ^. result of
-    Just (List xs) -> return xs
-    _ -> throw (UnexpectedResponseError (rsp ^. LSP.id) (fromJust $ rsp ^. LSP.error))
+    Right (List xs) -> return xs
+    Left error -> throw (UnexpectedResponseError (rsp ^. LSP.id) error)
 
 -- | Returns all the code actions in a document by
 -- querying the code actions at each of the current
@@ -441,13 +442,11 @@ getAllCodeActions doc = do
   where
     go :: CodeActionContext -> [CAResult] -> Diagnostic -> Session [CAResult]
     go ctx acc diag = do
-      ResponseMessage _ rspLid mRes mErr <- request TextDocumentCodeAction (CodeActionParams doc (diag ^. range) ctx Nothing)
+      ResponseMessage _ rspLid res <- request TextDocumentCodeAction (CodeActionParams doc (diag ^. range) ctx Nothing)
 
-      case mErr of
-        Just e -> throw (UnexpectedResponseError rspLid e)
-        Nothing ->
-          let Just (List cmdOrCAs) = mRes
-            in return (acc ++ cmdOrCAs)
+      case res of
+        Left e -> throw (UnexpectedResponseError rspLid e)
+        Right (List cmdOrCAs) -> pure (acc ++ cmdOrCAs)
 
 getCodeActionContext :: TextDocumentIdentifier -> Session CodeActionContext
 getCodeActionContext doc = do
@@ -581,9 +580,10 @@ getHighlights doc pos =
 -- | Checks the response for errors and throws an exception if needed.
 -- Returns the result if successful.
 getResponseResult :: ResponseMessage a -> a
-getResponseResult rsp = fromMaybe exc (rsp ^. result)
-  where exc = throw $ UnexpectedResponseError (rsp ^. LSP.id)
-                                              (fromJust $ rsp ^. LSP.error)
+getResponseResult rsp =
+  case rsp ^. result of
+    Right x -> x
+    Left err -> throw $ UnexpectedResponseError (rsp ^. LSP.id) err
 
 -- | Applies formatting to the specified document.
 formatDoc :: TextDocumentIdentifier -> FormattingOptions -> Session ()

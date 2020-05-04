@@ -9,7 +9,7 @@ where
 
 import           Language.Haskell.LSP.Capture
 import           Language.Haskell.LSP.Types
-import           Language.Haskell.LSP.Types.Lens hiding (error)
+import           Language.Haskell.LSP.Types.Lens
 import           Language.Haskell.LSP.Messages
 import           Control.Lens
 import qualified Data.HashMap.Strict           as HM
@@ -63,15 +63,11 @@ mapUris f event =
     fromServerMsg (NotPublishDiagnostics n) = NotPublishDiagnostics $ swapUri params n
 
     fromServerMsg (RspDocumentSymbols r) =
-      let newSymbols = case r ^. result of
-            Just (DSSymbolInformation si) -> Just (DSSymbolInformation (fmap (swapUri location) si))
-            x -> x
-      in RspDocumentSymbols $ result .~ newSymbols $ r
+      let swapUri' (DSSymbolInformation si) = DSSymbolInformation (swapUri location <$> si)
+          swapUri' (DSDocumentSymbols dss) = DSDocumentSymbols dss -- no file locations here
+      in RspDocumentSymbols $ r & result %~ (fmap swapUri')
 
-    fromServerMsg (RspRename r) =
-      let oldResult = r ^. result :: Maybe WorkspaceEdit
-          newResult = fmap swapWorkspaceEdit oldResult
-      in RspRename $ result .~ newResult $ r
+    fromServerMsg (RspRename r) = RspRename $ r & result %~ (fmap swapWorkspaceEdit)
 
     fromServerMsg x = x
 

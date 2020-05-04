@@ -1,6 +1,10 @@
 # Revision history for lsp-test
 
-## 0.10.1.0 -- 2020-03-21
+## 0.10.3.0 -- 2020-05-04
+
+* Build with new haskell-lsp-0.22
+
+## 0.10.2.0 -- 2020-03-21
 
 * Bump constraints for new haskell-lsp
 

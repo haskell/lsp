@@ -12,7 +12,6 @@ import           System.IO
 import           System.IO.Error
 import           Language.Haskell.LSP.Types
 import           Language.Haskell.LSP.Types.Lens
-                                         hiding ( error )
 import           Language.Haskell.LSP.Messages
 import           Language.Haskell.LSP.Test.Exceptions
 import qualified Data.HashMap.Strict           as HM

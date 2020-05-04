@@ -7,6 +7,7 @@ import           Test.Hspec
 import           Data.Aeson
 import           Data.Default
 import qualified Data.HashMap.Strict as HM
+import           Data.Either
 import           Data.Maybe
 import qualified Data.Text as T
 import           Control.Applicative.Combinators
@@ -37,7 +38,7 @@ main = hspec $ do
         in session `shouldThrow` anySessionException
     it "initializeResponse" $ runSession "hie" fullCaps "test/data/renamePass" $ do
       rsp <- initializeResponse
-      liftIO $ rsp ^. result `shouldNotBe` Nothing
+      liftIO $ rsp ^. result `shouldSatisfy` isLeft
 
     it "runSessionWithConfig" $
       runSession "hie" didChangeCaps "test/data/renamePass" $ return ()
