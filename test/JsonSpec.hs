@@ -8,7 +8,8 @@ module JsonSpec where
 
 import           Language.Haskell.LSP.Types
 
-import           Data.Aeson
+import qualified Data.Aeson                    as J
+import           Data.List(isPrefixOf)
 import           Test.Hspec
 import           Test.Hspec.QuickCheck
 import           Test.QuickCheck               hiding (Success)
@@ -23,7 +24,9 @@ main :: IO ()
 main = hspec spec
 
 spec :: Spec
-spec = describe "dispatcher" jsonSpec
+spec = do
+  describe "dispatcher" jsonSpec
+  describe "ResponseMessage"  responseMessageSpec
 
 -- ---------------------------------------------------------------------
 
@@ -31,18 +34,39 @@ jsonSpec :: Spec
 jsonSpec = do
   describe "General JSON instances round trip" $ do
   -- DataTypesJSON
-    prop "LanguageString"    (propertyJsonRoundtrip :: LanguageString -> Property)
-    prop "MarkedString"      (propertyJsonRoundtrip :: MarkedString -> Property)
-    prop "MarkupContent"     (propertyJsonRoundtrip :: MarkupContent -> Property)
-    prop "HoverContents"     (propertyJsonRoundtrip :: HoverContents -> Property)
-    prop "ResponseMessage"   (propertyJsonRoundtrip :: ResponseMessage (Maybe ()) -> Property)
-    prop "WatchedFiles"      (propertyJsonRoundtrip :: DidChangeWatchedFilesRegistrationOptions -> Property)
+    prop "LanguageString" (propertyJsonRoundtrip :: LanguageString -> Property)
+    prop "MarkedString"   (propertyJsonRoundtrip :: MarkedString -> Property)
+    prop "MarkupContent"  (propertyJsonRoundtrip :: MarkupContent -> Property)
+    prop "HoverContents"  (propertyJsonRoundtrip :: HoverContents -> Property)
+    prop "ResponseError"  (propertyJsonRoundtrip :: ResponseError -> Property)
+    prop "WatchedFiles"   (propertyJsonRoundtrip :: DidChangeWatchedFilesRegistrationOptions -> Property)
+    prop "ResponseMessage ()"
+         (propertyJsonRoundtrip :: ResponseMessage () -> Property)
+    prop "ResponseMessage JSON value"
+         (propertyJsonRoundtrip :: ResponseMessage J.Value -> Property)
 
+responseMessageSpec :: Spec
+responseMessageSpec = do
+  describe "edge cases" $ do
+    it "decodes result = null" $ do
+      let input = "{\"jsonrpc\": \"2.0\", \"id\": 123, \"result\": null}"
+        in  J.decode input `shouldBe` Just
+              (ResponseMessage "2.0" (IdRspInt 123) (Right J.Null))
+  describe "invalid JSON" $ do
+    it "throws if neither result nor error is present" $ do
+      (J.eitherDecode "{\"jsonrpc\":\"2.0\",\"id\":1}" :: Either String (ResponseMessage ())) 
+        `shouldBe` Left ("Error in $: both error and result cannot be Nothing") 
+    it "throws if both result and error are present" $ do
+      (J.eitherDecode 
+        "{\"jsonrpc\":\"2.0\",\"id\": 1,\"result\":1,\"error\":{\"code\":-32700,\"message\":\"\",\"data\":null}}" 
+        :: Either String (ResponseMessage Int)) 
+        `shouldSatisfy` 
+          (either (\err -> isPrefixOf "Error in $: both error and result cannot be present" err) (\_ -> False))
 
 -- ---------------------------------------------------------------------
 
-propertyJsonRoundtrip :: (Eq a, Show a, ToJSON a, FromJSON a) => a -> Property
-propertyJsonRoundtrip a = Success a === fromJSON (toJSON a)
+propertyJsonRoundtrip :: (Eq a, Show a, J.ToJSON a, J.FromJSON a) => a -> Property
+propertyJsonRoundtrip a = J.Success a === J.fromJSON (J.toJSON a)
 
 -- ---------------------------------------------------------------------
 
@@ -69,13 +93,11 @@ instance Arbitrary a => Arbitrary (ResponseMessage a) where
       [ ResponseMessage
           <$> arbitrary
           <*> arbitrary
-          <*> (Just <$> arbitrary)
-          <*> pure Nothing
+          <*> (Right <$> arbitrary)
       , ResponseMessage
           <$> arbitrary
           <*> arbitrary
-          <*> pure Nothing
-          <*> (Just <$> arbitrary)
+          <*> (Left <$> arbitrary)
       ]
 
 instance Arbitrary LspIdRsp where
@@ -106,6 +128,14 @@ smallList = resize 3 . listOf
 
 instance (Arbitrary a) => Arbitrary (List a) where
   arbitrary = List <$> arbitrary
+
+instance Arbitrary J.Value where
+  arbitrary = oneof
+    [ J.String <$> arbitrary
+    , J.Number <$> arbitrary
+    , J.Bool <$> arbitrary
+    , pure J.Null
+    ]
 
 -- ---------------------------------------------------------------------
 

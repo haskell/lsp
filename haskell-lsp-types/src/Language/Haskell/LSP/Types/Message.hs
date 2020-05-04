@@ -3,12 +3,10 @@
 {-# LANGUAGE TemplateHaskell            #-}
 module Language.Haskell.LSP.Types.Message where
 
-import           Control.Monad
 import qualified Data.Aeson                                 as A
 import           Data.Aeson.TH
 import           Data.Aeson.Types
 import           Data.Hashable
-import           Data.Maybe
 -- For <= 8.2.2
 import           Data.Text                                  (Text)
 import           Language.Haskell.LSP.Types.Constants
@@ -369,6 +367,28 @@ instance A.FromJSON ErrorCode where
 
 -- -------------------------------------
 
+{-
+  https://microsoft.github.io/language-server-protocol/specification#responseMessage
+
+  interface ResponseError {
+    /**
+    * A number indicating the error type that occurred.
+    */
+    code: number;
+
+    /**
+    * A string providing a short description of the error.
+    */
+    message: string;
+
+    /**
+    * A primitive or structured value that contains additional
+    * information about the error. Can be omitted.
+    */
+    data?: string | number | boolean | array | object | null;
+  }
+-}
+
 data ResponseError =
   ResponseError
     { _code    :: ErrorCode
@@ -380,30 +400,59 @@ deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''ResponseError
 
 -- ---------------------------------------------------------------------
 
--- | Either result or error must be Just.
+{-
+  https://microsoft.github.io/language-server-protocol/specification#responseMessage
+
+  interface ResponseMessage extends Message {
+    /**
+    * The request id.
+    */
+    id: number | string | null;
+
+    /**
+    * The result of a request. This member is REQUIRED on success.
+    * This member MUST NOT exist if there was an error invoking the method.
+    */
+    result?: string | number | boolean | object | null;
+
+    /**
+    * The error object in case a request fails.
+    */
+    error?: ResponseError;
+  }
+-}
+
 data ResponseMessage a =
   ResponseMessage
     { _jsonrpc :: Text
     , _id      :: LspIdRsp
-    , _result  :: Maybe a
-    , _error   :: Maybe ResponseError
+    , _result  :: Either ResponseError a
     } deriving (Read,Show,Eq)
 
-deriveToJSON lspOptions ''ResponseMessage
+instance ToJSON a => ToJSON (ResponseMessage a) where
+  toJSON (ResponseMessage { _jsonrpc = jsonrpc, _id = lspid, _result = result })
+    = object
+      [ "jsonrpc" .= jsonrpc
+      , "id" .= lspid
+      , case result of
+        Left  err -> "error" .= err
+        Right a   -> "result" .= a
+      ]
 
-instance FromJSON a => FromJSON (ResponseMessage a) where
+instance (FromJSON a, Show a) => FromJSON (ResponseMessage a) where
   parseJSON = withObject "Response" $ \o -> do
-    rsp <- ResponseMessage
-      <$> o .: "jsonrpc"
-      <*> o .: "id"
-      -- It is important to use .:! so that result = null gets decoded as Just Nothing
-      <*> o .:! "result"
-      <*> o .:! "error"
-    -- We make sure that one of them is present. Without this check we can end up
-    -- parsing a Request as a ResponseMessage.
-    unless (isJust (_result rsp) || isJust (_error rsp)) $
-      fail "ResponseMessage must either have a result or an error"
-    pure rsp
+    _jsonrpc <- o .: "jsonrpc"
+    _id      <- o .: "id"
+    -- It is important to use .:! so that "result = null" (without error) gets decoded as Just Null
+    _result  <- o .:! "result"
+    _error   <- o .:? "error"
+    result   <- case (_error, _result) of
+      ((Just err), Nothing   ) -> pure $ Left err
+      (Nothing   , (Just res)) -> pure $ Right res
+      ((Just err), (Just res)) -> fail $ "both error and result cannot be present: error=" ++ show (err) 
+        ++ ", result=" ++ show (res)
+      (Nothing, Nothing) -> fail "both error and result cannot be Nothing"
+    return $ ResponseMessage _jsonrpc _id $ result
 
 type ErrorResponse = ResponseMessage ()
 

@@ -666,10 +666,10 @@ handleMessage dispatcherProc tvarDat jsonStr = do
 -- ---------------------------------------------------------------------
 
 makeResponseMessage :: J.RequestMessage J.ClientMethod req resp -> resp -> J.ResponseMessage resp
-makeResponseMessage req result = J.ResponseMessage "2.0" (J.responseId $ req ^. J.id) (Just result) Nothing
+makeResponseMessage req result = J.ResponseMessage "2.0" (J.responseId $ req ^. J.id) (Right result)
 
 makeResponseError :: J.LspIdRsp -> J.ResponseError -> J.ResponseMessage ()
-makeResponseError origId err = J.ResponseMessage "2.0" origId Nothing (Just err)
+makeResponseError origId err = J.ResponseMessage "2.0" origId (Left err)
 
 -- ---------------------------------------------------------------------
 -- |
@@ -694,8 +694,8 @@ sendErrorResponse tv origId msg = sendErrorResponseS (sendEvent tv) origId J.Int
 
 sendErrorResponseS ::  SendFunc -> J.LspIdRsp -> J.ErrorCode -> Text -> IO ()
 sendErrorResponseS sf origId err msg = do
-  sf $ RspError (J.ResponseMessage "2.0" origId Nothing
-                  (Just $ J.ResponseError err msg Nothing) :: J.ErrorResponse)
+  sf $ RspError (J.ResponseMessage "2.0" origId
+                  (Left $ J.ResponseError err msg Nothing) :: J.ErrorResponse)
 
 sendErrorLog :: TVar (LanguageContextData config) -> Text -> IO ()
 sendErrorLog tv msg = sendErrorLogS (sendEvent tv) msg
@@ -881,7 +881,7 @@ initializeRequestHandler' onStartup mHandler tvarCtx req@(J.RequestMessage _ ori
       Nothing -> do
         let capa = serverCapabilities (getCapabilities params) (resOptions ctx) (resHandlers ctx)
             -- TODO: wrap this up into a fn to create a response message
-            res  = J.ResponseMessage "2.0" (J.responseId origId) (Just $ J.InitializeResponseCapabilities capa) Nothing
+            res  = J.ResponseMessage "2.0" (J.responseId origId) (Right $ J.InitializeResponseCapabilities capa)
 
         sendResponse tvarCtx $ RspInitialize res
 
@@ -1038,7 +1038,7 @@ flushDiagnosticsBySource tvarDat maxDiagnosticCount msource = join $ atomically 
 --  utility
 
 
--- 
+--
 --  Logger
 --
 setupLogger :: Maybe FilePath -> [String] -> Priority -> IO ()
