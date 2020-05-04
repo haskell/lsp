@@ -55,13 +55,13 @@ responseMessageSpec = do
   describe "invalid JSON" $ do
     it "throws if neither result nor error is present" $ do
       (J.eitherDecode "{\"jsonrpc\":\"2.0\",\"id\":1}" :: Either String (ResponseMessage ())) 
-        `shouldBe` Left ("Error in $: both error and result cannot be Nothing") 
+        `shouldBe` Left ("Error in $: Both error and result cannot be Nothing") 
     it "throws if both result and error are present" $ do
       (J.eitherDecode 
         "{\"jsonrpc\":\"2.0\",\"id\": 1,\"result\":1,\"error\":{\"code\":-32700,\"message\":\"\",\"data\":null}}" 
         :: Either String (ResponseMessage Int)) 
         `shouldSatisfy` 
-          (either (\err -> isPrefixOf "Error in $: both error and result cannot be present" err) (\_ -> False))
+          (either (\err -> isPrefixOf "Error in $: Both error and result cannot be present" err) (\_ -> False))
 
 -- ---------------------------------------------------------------------
 
