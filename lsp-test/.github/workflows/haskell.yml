@@ -7,19 +7,20 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     env:
-      hieref: 35f62cffb6bae6c3f86113cb0c55f52b7192689d
+      hieref: d9d21fb0675280e20e837dbeb5715dab65e9c6be
 
     strategy:
+      fail-fast: false
       matrix:
-        ghc: ['8.6.5', '8.4.4']
-        os: [ubuntu-latest, macOS-latest]
+        ghc: ['8.8.3', '8.6.5', '8.4.4']
+        os: [ubuntu-latest, macOS-latest, windows-latest]
         exclude:
           - os: macOS-latest
             ghc: '8.4.4' # fails due to ghc panic
 
     steps:
     - uses: actions/checkout@v1
-    - uses: bubba/setup-haskell@macos-ghcup
+    - uses: actions/setup-haskell@v1.1
       with:
         ghc-version: ${{ matrix.ghc }}
         cabal-version: '3.0'
