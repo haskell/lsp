@@ -75,7 +75,7 @@ satisfyMaybe :: (FromServerMessage -> Maybe a) -> Session a
 satisfyMaybe pred = do
 
   skipTimeout <- overridingTimeout <$> get
-  timeoutId <- curTimeoutId <$> get
+  timeoutId <- getCurTimeoutId
   unless skipTimeout $ do
     chan <- asks messageChan
     timeout <- asks (messageTimeout . config)
@@ -85,8 +85,7 @@ satisfyMaybe pred = do
 
   x <- Session await
 
-  unless skipTimeout $
-    modify $ \s -> s { curTimeoutId = timeoutId + 1 }
+  unless skipTimeout (bumpTimeoutId timeoutId)
 
   modify $ \s -> s { lastReceivedMessage = Just x }
 
