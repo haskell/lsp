@@ -35,8 +35,8 @@ handlers lfvar = def
                               Nothing
                               SkObject
                               Nothing
-                              (Range (Position 0 0) (Position 0 1))
-                              (Range (Position 0 0) (Position 0 1))
+                              (mkRange 0 0 3 6)
+                              (mkRange 0 0 3 6)
                               Nothing
              ]
   , didOpenTextDocumentNotificationHandler = pure $ \noti ->
@@ -44,7 +44,7 @@ handlers lfvar = def
         threadDelay (2 * 10^6)
         let NotificationMessage _ _ (DidOpenTextDocumentParams doc) = noti
             TextDocumentItem uri _ _ _ = doc
-            diag = Diagnostic (Range (Position 0 0) (Position 0 1))
+            diag = Diagnostic (mkRange 0 0 0 1)
                               (Just DsWarning)
                               (Just (NumberValue 42))
                               (Just "dummy-server")
@@ -58,7 +58,7 @@ handlers lfvar = def
       reqId <- readMVar lfvar >>= getNextReqId
       let RequestMessage _ _ _ (ExecuteCommandParams "doAnEdit" (Just (List [val])) _) = req
           Success docUri = fromJSON val
-          edit = List [TextEdit (Range (Position 0 0) (Position 0 5)) "howdy"]
+          edit = List [TextEdit (mkRange 0 0 0 5) "howdy"]
       send $ ReqApplyWorkspaceEdit $ fmServerApplyWorkspaceEditRequest reqId $
         ApplyWorkspaceEditParams $ WorkspaceEdit (Just (HM.singleton docUri edit))
                                                  Nothing
@@ -76,3 +76,5 @@ handlers lfvar = def
       send $ RspCodeAction $ makeResponseMessage req caresults
   }
   where send msg = readMVar lfvar >>= \lf -> (sendFunc lf) msg
+
+mkRange sl sc el ec = Range (Position sl sc) (Position el ec)

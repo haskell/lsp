@@ -15,7 +15,6 @@ import           Control.Concurrent
 import           Control.Monad.IO.Class
 import           Control.Monad
 import           Control.Lens hiding (List)
-import           GHC.Generics
 import           Language.Haskell.LSP.Messages
 import           Language.Haskell.LSP.Test
 import           Language.Haskell.LSP.Test.Replay
@@ -178,12 +177,12 @@ main = findServer >>= \serverExe -> hspec $ do
         contents <- getDocumentEdit doc
         liftIO $ contents `shouldBe` "howdy:: IO Int\nmain = return (42)\n"
 
-  -- describe "getCodeActions" $
-  --   it "works" $ runSession serverExe fullCaps "test/data/refactor" $ do
-  --     doc <- openDoc "Main.hs" "haskell"
-  --     waitForDiagnostics
-  --     [CACodeAction action] <- getCodeActions doc (Range (Position 1 14) (Position 1 18))
-  --     liftIO $ action ^. title `shouldBe` "Apply hint:Redundant bracket"
+  describe "getCodeActions" $
+    it "works" $ runSession serverExe fullCaps "test/data/refactor" $ do
+      doc <- openDoc "Main.hs" "haskell"
+      waitForDiagnostics
+      [CACodeAction action] <- getCodeActions doc (Range (Position 1 14) (Position 1 18))
+      liftIO $ action ^. title `shouldBe` "Delete this"
 
   describe "getAllCodeActions" $
     it "works" $ runSession serverExe fullCaps "test/data/refactor" $ do
@@ -195,20 +194,18 @@ main = findServer >>= \serverExe -> hspec $ do
         action ^. title `shouldBe` "Delete this"
         action ^. command . _Just . command `shouldBe` "deleteThis"
 
-  -- describe "getDocumentSymbols" $
-  --   it "works" $ runSession serverExe fullCaps "test/data/renamePass" $ do
-  --     doc <- openDoc "Desktop/simple.hs" "haskell"
+  describe "getDocumentSymbols" $
+    it "works" $ runSession serverExe fullCaps "test/data/renamePass" $ do
+      doc <- openDoc "Desktop/simple.hs" "haskell"
 
-  --     skipMany loggingNotification
+      skipMany loggingNotification
 
-  --     noDiagnostics
+      Left (mainSymbol:_) <- getDocumentSymbols doc
 
-  --     Left (mainSymbol:_) <- getDocumentSymbols doc
-
-  --     liftIO $ do
-  --       mainSymbol ^. name `shouldBe` "main"
-  --       mainSymbol ^. kind `shouldBe` SkFunction
-  --       mainSymbol ^. range `shouldBe` Range (Position 3 0) (Position 5 30)
+      liftIO $ do
+        mainSymbol ^. name `shouldBe` "foo"
+        mainSymbol ^. kind `shouldBe` SkObject
+        mainSymbol ^. range `shouldBe` mkRange 0 0 3 6
 
   describe "applyEdit" $ do
     it "increments the version" $ runSession serverExe docChangesCaps "test/data/renamePass" $ do
@@ -266,13 +263,13 @@ main = findServer >>= \serverExe -> hspec $ do
   --     defs <- getTypeDefinitions doc pos
   --     liftIO $ defs `shouldBe` [Location (doc ^. uri) (mkRange 10 0 14 19)]  -- Type definition
 
-  -- describe "waitForDiagnosticsSource" $
-  --   it "works" $ runSession serverExe fullCaps "test/data" $ do
-  --     openDoc "Error.hs" "haskell"
-  --     [diag] <- waitForDiagnosticsSource "bios"
-  --     liftIO $ do
-  --       diag ^. severity `shouldBe` Just DsError
-  --       diag ^. source `shouldBe` Just "bios"
+  describe "waitForDiagnosticsSource" $
+    it "works" $ runSession serverExe fullCaps "test/data" $ do
+      openDoc "Error.hs" "haskell"
+      [diag] <- waitForDiagnosticsSource "dummy-server"
+      liftIO $ do
+        diag ^. severity `shouldBe` Just DsWarning
+        diag ^. source `shouldBe` Just "dummy-server"
 
   -- describe "rename" $ do
   --   it "works" $ pendingWith "HaRe not in hie-bios yet"
@@ -282,11 +279,11 @@ main = findServer >>= \serverExe -> hspec $ do
   --       rename doc (Position 2 11) "bar"
   --       documentContents doc >>= liftIO . (`shouldContain` "function bar()") . T.unpack
 
-  -- describe "getHover" $
-  --   it "works" $ runSession serverExe fullCaps "test/data/renamePass" $ do
-  --     doc <- openDoc "Desktop/simple.hs" "haskell"
-  --     hover <- getHover doc (Position 45 9)
-  --     liftIO $ hover `shouldSatisfy` isJust
+  describe "getHover" $
+    it "works" $ runSession serverExe fullCaps "test/data/renamePass" $ do
+      doc <- openDoc "Desktop/simple.hs" "haskell"
+      hover <- getHover doc (Position 45 9)
+      liftIO $ hover `shouldSatisfy` isJust
 
   -- describe "getHighlights" $
   --   it "works" $ runSession serverExe fullCaps "test/data/renamePass" $ do
