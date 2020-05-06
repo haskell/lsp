@@ -26,6 +26,11 @@ source-repository head
   type:     git
   location: https://github.com/bubba/lsp-test/
 
+Flag DummyServer
+  Description: Build the dummy server executable used in testing
+  Default:     False
+  Manual:      True
+
 library
   hs-source-dirs:      src
   exposed-modules:     Language.Haskell.LSP.Test
@@ -69,6 +74,20 @@ library
                        Language.Haskell.LSP.Test.Session
   ghc-options:         -W
 
+executable dummy-server
+  main-is:             Main.hs
+  hs-source-dirs:      test/dummy-server
+  ghc-options:         -W
+  build-depends:       base >= 4.10 && < 5
+                     , haskell-lsp
+                     , data-default
+                     , aeson
+                     , unordered-containers
+  default-language:    Haskell2010
+  scope:               private
+  if !flag(DummyServer)
+    buildable:         False
+
 test-suite tests
   type:                exitcode-stdio-1.0
   main-is:             Test.hs
@@ -83,4 +102,7 @@ test-suite tests
                      , aeson
                      , unordered-containers
                      , text
+                     , directory
+                     , filepath
   default-language:    Haskell2010
+  build-tool-depends: lsp-test:dummy-server

@@ -3,20 +3,17 @@ name: Haskell CI
 on: [push, pull_request]
 jobs:
   build:
-   
-    runs-on: ${{ matrix.os }}
 
-    env:
-      hieref: d9d21fb0675280e20e837dbeb5715dab65e9c6be
+    runs-on: ${{ matrix.os }}
 
     strategy:
       fail-fast: false
       matrix:
-        ghc: ['8.8.3', '8.6.5', '8.4.4']
+        ghc: ['8.10.1', '8.8.3', '8.6.5', '8.4.4']
         os: [ubuntu-latest, macOS-latest, windows-latest]
-        exclude:
-          - os: macOS-latest
-            ghc: '8.4.4' # fails due to ghc panic
+        # exclude:
+        #   - os: macOS-latest
+        #     ghc: '8.4.4' # fails due to ghc panic
 
     steps:
     - uses: actions/checkout@v1
@@ -26,46 +23,15 @@ jobs:
         cabal-version: '3.0'
     - run: cabal update
 
-    - name: Clone HIE
-      uses: actions/checkout@v1
-      with:
-        repository: haskell/haskell-ide-engine
-        submodules: recursive
-        ref: ${{ env.hieref }}
-        path: haskell-ide-engine
-
     - name: Cache Cabal
       uses: actions/cache@v1.1.0
       with:
         path: ~/.cabal
-        key: ${{ runner.OS }}-${{ matrix.ghc }}-cabal-${{ env.hieref }}
+        key: ${{ runner.OS }}-${{ matrix.ghc }}-cabal
         restore-keys: |
           ${{ runner.OS }}-${{ matrix.ghc }}-cabal
 
-    - name: Cache Hoogle
-      uses: actions/cache@v1.1.0
-      with:
-        path: ~/.hoogle
-        key: ${{ runner.OS }}-${{ matrix.ghc }}-hoogle-${{ env.hieref }}
-
-    - name: Build HIE
-      run: |
-        pushd ../haskell-ide-engine
-        cabal install hie
-        cabal install hoogle
-        popd
-    - name: Generate hoogle database
-      run: |
-        if [ -d $HOME/.hoogle ]; then
-           echo "hoogle database already built"
-           exit 0
-        fi
-        hoogle generate
-    - name: Install JS Language Server
-      run: npm install javascript-typescript-langserver
     - name: Build
       run: cabal build
     - name: Test
-      run: |
-        export PATH=$PATH:$(npm bin) 
-        cabal test
+      run: cabal test

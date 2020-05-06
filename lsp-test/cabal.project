@@ -1,0 +1,3 @@
+packages: .
+flags: DummyServer
+test-show-details: direct

@@ -19,3 +19,4 @@ example/.ghc.environment.*
 
 # downloaded by .download-hie.sh on travis
 hie
+.hie
