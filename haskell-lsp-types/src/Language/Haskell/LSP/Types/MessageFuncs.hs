@@ -6,6 +6,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE PolyKinds           #-}
+{-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
 module Language.Haskell.LSP.Types.MessageFuncs (
   -- * General

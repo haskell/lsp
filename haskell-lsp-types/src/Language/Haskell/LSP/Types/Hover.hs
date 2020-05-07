@@ -146,6 +146,3 @@ data Hover =
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''Hover
-
-type HoverRequest = RequestMessage ClientMethod TextDocumentPositionParams (Maybe Hover)
-type HoverResponse = ResponseMessage (Maybe Hover)

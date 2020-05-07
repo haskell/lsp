@@ -23,6 +23,7 @@ import           Language.Haskell.LSP.Types.Color
 import           Language.Haskell.LSP.Types.Constants
 import           Language.Haskell.LSP.Types.Completion
 import           Language.Haskell.LSP.Types.FoldingRange
+import           Language.Haskell.LSP.Types.Hover
 import           Language.Haskell.LSP.Types.List
 import           Language.Haskell.LSP.Types.Location
 import           Language.Haskell.LSP.Types.Message
@@ -281,6 +282,11 @@ instance ToJSON (CustomMessage p t) where
   toJSON (ReqMess a) = toJSON a
   toJSON (NotMess a) = toJSON a
 
+instance FromJSON (CustomMessage p Request) where
+  parseJSON v = ReqMess <$> parseJSON v
+instance FromJSON (CustomMessage p Notification) where
+  parseJSON v = NotMess <$> parseJSON v
+
 instance FromJSON (SomeCustomMessage p) where
   parseJSON = withObject "CustomMessage" $ \o -> do
     mid <- o .:? "id"
@@ -508,20 +514,21 @@ type family BaseHandlerFunc (t :: MethodType) (m :: Method p t) :: Type where
 clientResponseJSON :: SClientMethod m -> (ToJSON (ResponseMessage m) => x) -> x
 clientResponseJSON m x = case splitClientMethod m of
   IsClientReq -> x
+  IsClientEither -> x
 
-clientMethodJSON :: SClientMethod m -> ((FromJSON (ClientMessage m),ToJSON (ClientMessage m)) => x) -> x
+clientMethodJSON :: SClientMethod m -> (ToJSON (ClientMessage m) => x) -> x
 clientMethodJSON m x =
   case splitClientMethod m of
     IsClientNot -> x
     IsClientReq -> x
-    -- IsClientEither -> x
+    IsClientEither -> x
 
-serverMethodJSON :: SServerMethod m -> ((FromJSON (ServerMessage m),ToJSON (ServerMessage m)) => x) -> x
+serverMethodJSON :: SServerMethod m -> (ToJSON (ServerMessage m) => x) -> x
 serverMethodJSON m x =
   case splitServerMethod m of
     IsServerNot -> x
     IsServerReq -> x
-    -- IsServerEither -> x
+    IsServerEither -> x
 
 type HasJSON a = (ToJSON a,FromJSON a,Eq a)
 

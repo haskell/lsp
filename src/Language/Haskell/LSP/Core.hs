@@ -335,7 +335,23 @@ handlerMap i hm (J.SomeClientMethod c) = case c of
   J.STextDocumentDidChange -> hh c (Just changeFromClientVFS) h
   J.STextDocumentDidClose -> hh c (Just closeVFS) h
   J.SWorkDoneProgressCancel -> helper undefined progressCancelHandler
-  _ -> J.clientMethodJSON c $ hh c nop $ h
+  _ -> \tvar json -> case J.splitClientMethod c of
+    J.IsClientReq -> hh c nop h tvar json
+    J.IsClientNot -> hh c nop h tvar json
+    J.IsClientEither
+      | J.Object v <- json
+      , HM.member "id" v -- Request
+        -> let m' = (J.SCustomMethod m :: J.SMethod (J.CustomMethod :: J.Method J.FromClient J.Request))
+               h' = hm m'
+             in hh m' nop h' tvar json
+      | otherwise -- Notification
+        -> let m' = (J.SCustomMethod m :: J.SMethod (J.CustomMethod :: J.Method J.FromClient J.Notification))
+               h' = hm m'
+             in hh m' nop h' tvar json
+      where
+        J.SCustomMethod m = c
+
+  --J.clientMethodJSON c $ hh c nop $ h
   where h = hm c
 
 -- ---------------------------------------------------------------------
@@ -373,7 +389,7 @@ hh m mVfs mh tvarDat json = do
   where
     isOptionalNotification req
       -- TODO
-      -- | NotCustomClient _ <- req
+      -- -| NotCustomClient _ <- req
       -- , J.Object object <- json
       -- , Just (J.String method) <- HM.lookup "method" object
       -- , "$/" `T.isPrefixOf` method
