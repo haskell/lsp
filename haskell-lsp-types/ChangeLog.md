@@ -1,5 +1,8 @@
 # Revision history for haskell-lsp-types
 
+* ResponseMessage results are now an Either type (@greenhat)
+* Support for GHC 8.10.1
+
 ## 0.21.0.0
 
 * Stop getCompletionPrefix from crashing if beforePos is empty

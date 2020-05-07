@@ -1,5 +1,5 @@
 name:                haskell-lsp-types
-version:             0.21.0.0
+version:             0.22.0.0
 synopsis:            Haskell library for the Microsoft Language Server Protocol, data types
 
 description:         An implementation of the types to allow language implementors to
@@ -10,7 +10,7 @@ license:             MIT
 license-file:        LICENSE
 author:              Alan Zimmerman
 maintainer:          alan.zimm@gmail.com
-copyright:           Alan Zimmerman, 2016-2018
+copyright:           Alan Zimmerman, 2016-2020
 category:            Development
 build-type:          Simple
 extra-source-files:  ChangeLog.md, README.md
@@ -32,6 +32,7 @@ library
                      , Language.Haskell.LSP.Types.Diagnostic
                      , Language.Haskell.LSP.Types.DocumentFilter
                      , Language.Haskell.LSP.Types.FoldingRange
+                     , Language.Haskell.LSP.Types.Hover
                      , Language.Haskell.LSP.Types.List
                      , Language.Haskell.LSP.Types.Location
                      , Language.Haskell.LSP.Types.MarkupContent
@@ -47,7 +48,7 @@ library
  -- other-extensions:
   ghc-options:         -Wall
   -- ghc-options:         -Werror
-  build-depends:       base >= 4.9 && < 4.14
+  build-depends:       base >= 4.9 && < 4.15
                      , aeson >=1.2.2.0
                      , binary
                      , bytestring

@@ -1038,7 +1038,7 @@ flushDiagnosticsBySource tvarDat maxDiagnosticCount msource = join $ atomically 
 --  utility
 
 
--- 
+--
 --  Logger
 --
 setupLogger :: Maybe FilePath -> [String] -> Priority -> IO ()

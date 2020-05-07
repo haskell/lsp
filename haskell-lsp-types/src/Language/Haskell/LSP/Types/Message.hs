@@ -858,6 +858,28 @@ instance A.FromJSON ErrorCode where
 
 -- -------------------------------------
 
+{-
+  https://microsoft.github.io/language-server-protocol/specification#responseMessage
+
+  interface ResponseError {
+    /**
+    * A number indicating the error type that occurred.
+    */
+    code: number;
+
+    /**
+    * A string providing a short description of the error.
+    */
+    message: string;
+
+    /**
+    * A primitive or structured value that contains additional
+    * information about the error. Can be omitted.
+    */
+    data?: string | number | boolean | array | object | null;
+  }
+-}
+
 data ResponseError =
   ResponseError
     { _code    :: ErrorCode

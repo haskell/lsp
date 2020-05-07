@@ -156,3 +156,4 @@ instance Monoid MarkupContent where
   MarkupContent _           s1 `mappend` MarkupContent MkMarkdown  s2 = MarkupContent MkMarkdown  (s1 `mappend` s2)
 
 -- ---------------------------------------------------------------------
+
