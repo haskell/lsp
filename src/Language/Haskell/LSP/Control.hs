@@ -29,7 +29,6 @@ import           Data.Time.Format
 #if __GLASGOW_HASKELL__ < 804
 import           Data.Monoid
 #endif
-import           Language.Haskell.LSP.Capture
 import qualified Language.Haskell.LSP.Core as Core
 import           Language.Haskell.LSP.VFS
 import           Language.Haskell.LSP.Utility

@@ -10,6 +10,8 @@
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE ViewPatterns        #-}
 {-# LANGUAGE PolyKinds           #-}
+{-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
@@ -28,15 +30,12 @@ module Language.Haskell.LSP.Core (
   , SomeServerMessageWithResponse(..)
   , Handlers
   , Options(..)
-  , ClientResponseHandler
-  , ServerResponseHandler
+  , ClientResponseHandler(..)
+  , ServerResponseHandler(..)
   , defaultLanguageContextData
   , makeResponseMessage
   , makeResponseError
   , setupLogger
-  , sendErrorResponseS
-  , sendErrorLogS
-  , sendErrorShowS
   , reverseSortEdit
   ) where
 
@@ -44,6 +43,8 @@ import           Control.Concurrent.Async
 import           Control.Concurrent.STM
 import qualified Control.Exception as E
 import           Control.Monad
+import           Control.Applicative
+import           Data.Functor.Product
 import           Control.Monad.IO.Class
 import           Control.Lens ( (<&>), (^.), (^?), _Just )
 import qualified Data.Aeson as J
@@ -56,10 +57,9 @@ import qualified Data.List as L
 import           Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.Map as Map
 import           Data.Maybe
-import           Data.Monoid
+import           Data.Monoid hiding (Product)
 import qualified Data.Text as T
 import           Data.Text ( Text )
-import           Language.Haskell.LSP.Capture
 import           Language.Haskell.LSP.Constant
 import           Language.Haskell.LSP.Types.MessageFuncs
 import qualified Language.Haskell.LSP.Types.Capabilities    as C
@@ -101,7 +101,7 @@ data LanguageContextData config =
   , resCaptureFile         :: !(Maybe FilePath)
   , resWorkspaceFolders    :: ![J.WorkspaceFolder]
   , resProgressData        :: !ProgressData
-  , resPendingResponses    :: !(J.IdMap ServerResponseHandler)
+  , resPendingResponses    :: !(J.IdMap (Product J.SMethod ServerResponseHandler))
   }
 
 data ProgressData = ProgressData { progressNextId :: !Int
@@ -251,40 +251,40 @@ data InitializeCallbacks config =
     }
 
 data ClientResponseHandler (m :: J.Method J.FromClient t) where
-  ClientResponseHandler :: J.SMethod m -> J.ResponseHandlerFunc m -> ClientResponseHandler m
+  ClientResponseHandler :: J.ResponseHandlerFunc m -> ClientResponseHandler m
 
 data ServerResponseHandler (m :: J.Method J.FromServer t) where
-  ServerResponseHandler :: J.SMethod m -> J.ResponseHandlerFunc m -> ServerResponseHandler m
+  ServerResponseHandler :: J.ResponseHandlerFunc m -> ServerResponseHandler m
 
 mkClientResponseHandler :: J.SClientMethod m -> J.ClientMessage m -> TVar (LanguageContextData config) -> ClientResponseHandler m
 mkClientResponseHandler m cm tvarDat =
   case J.splitClientMethod m of
-    J.IsClientNot -> ClientResponseHandler m ()
-    J.IsClientReq -> ClientResponseHandler m $ \mrsp -> case mrsp of
+    J.IsClientNot -> ClientResponseHandler ()
+    J.IsClientReq -> ClientResponseHandler $ \mrsp -> case mrsp of
       Left err -> sendErrorResponseE tvarDat m (J.responseId $ cm ^. J.id) err
       Right rsp -> sendResponse tvarDat $ J.FromServerRsp m $ makeResponseMessage (cm ^. J.id) rsp
-    J.IsClientEither -> ClientResponseHandler m $ case cm of
+    J.IsClientEither -> ClientResponseHandler $ case cm of
       J.NotMess _ -> Nothing
       J.ReqMess req -> Just $ \mrsp -> case mrsp of
         Left err -> sendErrorResponseE tvarDat m (J.responseId $ req ^. J.id) err
         Right rsp -> sendResponse tvarDat $ J.FromServerRsp m $ makeResponseMessage (req ^. J.id) rsp
 
-addResponseHandler :: TVar (LanguageContextData config) -> J.LspId m -> ServerResponseHandler m -> IO ()
+addResponseHandler :: TVar (LanguageContextData config) -> J.LspId m -> (Product J.SMethod ServerResponseHandler) m -> IO ()
 addResponseHandler tv lid h = atomically $ modifyTVar' tv $ \ctx@LanguageContextData{resPendingResponses} ->
   ctx { resPendingResponses = J.insertIxMap lid h resPendingResponses}
 
 mkServerRequestFunc :: TVar (LanguageContextData config) -> SomeServerMessageWithResponse -> IO ()
 mkServerRequestFunc tvarDat (SomeServerMessageWithResponse m msg resHandler) =
   case J.splitServerMethod m of
-    J.IsServerNot -> sendEvent tvarDat $ J.fromServerNot msg
+    J.IsServerNot -> sendResponse tvarDat $ J.fromServerNot msg
     J.IsServerReq -> do
-      addResponseHandler tvarDat (msg ^. J.id) resHandler
-      sendEvent tvarDat $ J.fromServerReq msg
+      addResponseHandler tvarDat (msg ^. J.id) (Pair m resHandler)
+      sendResponse tvarDat $ J.fromServerReq msg
     J.IsServerEither -> case msg of
-      J.NotMess _ -> sendEvent tvarDat $ J.FromServerMess m msg
+      J.NotMess _ -> sendResponse tvarDat $ J.FromServerMess m msg
       J.ReqMess req -> do
-        addResponseHandler tvarDat (req ^. J.id) resHandler
-        sendEvent tvarDat $ J.FromServerMess m msg
+        addResponseHandler tvarDat (req ^. J.id) (Pair m resHandler)
+        sendResponse tvarDat $ J.FromServerMess m msg
 
 
 -- | The Handler type captures a function that receives local read-only state
@@ -294,47 +294,22 @@ newtype Handler m = Handler {runHandler :: J.ClientMessage m -> ClientResponseHa
 type Handlers = forall t (m :: J.Method J.FromClient t). J.SMethod m -> Maybe (Handler m)
 
 -- ---------------------------------------------------------------------
-nop :: Maybe (a -> b -> (a,[String]))
+nop :: Maybe (LSPVar config -> b -> IO ())
 nop = Nothing
-
-
-helper :: J.FromJSON a => J.SMethod (m :: J.Method J.FromClient J.Request) -> (TVar (LanguageContextData config) -> a -> IO ()) -> (TVar (LanguageContextData config) -> J.Value -> IO ())
-helper m requestHandler tvarDat json =
-  case J.fromJSON json of
-    J.Success req -> requestHandler tvarDat req
-    J.Error err -> do
-      let msg = T.pack . unwords $ ["haskell-lsp:parse error.", show json, show err] ++ _ERR_MSG_URL
-          failLog = sendErrorLog tvarDat msg
-      case json of
-        (J.Object o) -> case HM.lookup "id" o of
-          Just olid -> case J.fromJSON olid of
-            J.Success lid -> sendErrorResponse tvarDat m lid msg
-            _ -> failLog
-          _ -> failLog
-        _ -> failLog
 
 handlerMap :: (Show config) => InitializeCallbacks config
            -> Handlers -> J.SomeClientMethod -> (TVar (LanguageContextData config) -> J.Value -> IO ())
-handlerMap i hm (J.SomeClientMethod c) = case c of
-  J.SInitialize -> handleInitialConfig i h
-  J.SShutdown -> helper c shutdownRequestHandler
-  J.SExit ->
-    case h of
-      Just _ -> hh c nop h
-      Nothing -> \ctxVar v -> do
-        ctx <- readTVarIO ctxVar
-        -- Capture exit notification
-        case J.fromJSON v :: J.Result J.ExitNotification of
-          J.Success n -> captureFromClient n (resCaptureFile ctx)
-          J.Error _ -> return ()
-        logm $ B.pack "haskell-lsp:Got exit, exiting"
-        exitSuccess
-  J.SWorkspaceDidChangeWorkspaceFolders -> hwf h
-  J.SWorkspaceDidChangeConfiguration -> hc i h
-  J.STextDocumentDidOpen -> hh c (Just openVFS) h
-  J.STextDocumentDidChange -> hh c (Just changeFromClientVFS) h
-  J.STextDocumentDidClose -> hh c (Just closeVFS) h
-  J.SWorkDoneProgressCancel -> helper undefined progressCancelHandler
+handlerMap InitializeCallbacks{..} hm (J.SomeClientMethod c)
+  = case c of
+  J.SInitialize -> \tv -> hh c (Just $ handleConfigChange onInitialConfiguration) (Just $ initializeRequestHandler' onStartup h tv) tv
+  J.SShutdown -> hh c nop (h <|> Just shutdownRequestHandler) -- use shutdownRequestHandler as a default
+  J.SExit -> hh c nop (h <|> Just exitNotificationHandler)
+  J.SWorkspaceDidChangeWorkspaceFolders -> hh c (Just updateWorkspaceFolders) h
+  J.SWorkspaceDidChangeConfiguration -> hh c (Just $ handleConfigChange onConfigurationChange) h
+  J.STextDocumentDidOpen -> hh c (Just $ vfsFunc openVFS) h
+  J.STextDocumentDidChange -> hh c (Just $ vfsFunc changeFromClientVFS) h
+  J.STextDocumentDidClose -> hh c (Just $ vfsFunc closeVFS) h
+  J.SWorkDoneProgressCancel -> hh c (Just progressCancelHandler) h
   _ -> \tvar json -> case J.splitClientMethod c of
     J.IsClientReq -> hh c nop h tvar json
     J.IsClientNot -> hh c nop h tvar json
@@ -350,36 +325,28 @@ handlerMap i hm (J.SomeClientMethod c) = case c of
              in hh m' nop h' tvar json
       where
         J.SCustomMethod m = c
-
-  --J.clientMethodJSON c $ hh c nop $ h
   where h = hm c
 
 -- ---------------------------------------------------------------------
 
+type LSPVar config = TVar (LanguageContextData config)
+
 -- | Adapter from the normal handlers exposed to the library users and the
 -- internal message loop
 hh :: forall m b config. (J.FromJSON b, J.ToJSON b, b ~ J.ClientMessage m)
-   => J.SClientMethod m -> Maybe (VFS -> b -> (VFS, [String])) -> Maybe (Handler m)
-   -> TVar (LanguageContextData config) -> J.Value -> IO ()
-hh m mVfs mh tvarDat json = do
+   => J.SClientMethod m -> Maybe (LSPVar config -> b -> IO ()) -> Maybe (Handler m)
+   -> LSPVar config -> J.Value -> IO ()
+hh m mAction mh tvarDat json = do
       case J.fromJSON json of
         J.Success req -> do
-          case mVfs of
-            Just modifyVfs -> do
-              join $ atomically $ modifyVFSData tvarDat $ \(VFSData vfs rm) ->
-                let (vfs', ls) = modifyVfs vfs req
-                in (VFSData vfs' rm, mapM_ logs ls)
-            Nothing -> return ()
-          ctx <- readTVarIO tvarDat
-          captureFromClient req (resCaptureFile ctx)
-
+          maybe (return ()) (\f -> f tvarDat req) mAction
           case mh of
             Just h -> runHandler h req (mkClientResponseHandler m req tvarDat)
             Nothing
               -- '$/' notifications should/could be ignored by server.
               -- Don't log errors in that case.
               -- See https://microsoft.github.io/language-server-protocol/specifications/specification-current/#-notifications-and-requests.
-              | isOptionalNotification req -> return ()
+              | isOptionalNotification m -> return ()
               | otherwise -> do
                   let msg = T.pack $ unwords ["haskell-lsp:no handler for.", show json]
                   sendErrorLog tvarDat msg
@@ -387,93 +354,36 @@ hh m mVfs mh tvarDat json = do
           let msg = T.pack $ unwords $ ["haskell-lsp:parse error.", show json, show err] ++ _ERR_MSG_URL
           sendErrorLog tvarDat msg
   where
-    isOptionalNotification req
-      -- TODO
-      -- -| NotCustomClient _ <- req
-      -- , J.Object object <- json
-      -- , Just (J.String method) <- HM.lookup "method" object
-      -- , "$/" `T.isPrefixOf` method
-      -- = True
-      | otherwise = False
+    isOptionalNotification (J.SCustomMethod method)
+      | "$/" `T.isPrefixOf` method = True
+    isOptionalNotification _  = False
 
-handleInitialConfig
-  :: (Show config)
-  => InitializeCallbacks config
-  -> Maybe (Handler J.Initialize)
-  -> TVar (LanguageContextData config)
-  -> J.Value
-  -> IO ()
-handleInitialConfig (InitializeCallbacks { onInitialConfiguration, onStartup }) mh tvarDat json
-  = handleMessageWithConfigChange J.SInitialize onInitialConfiguration
-                                  (Just $ initializeRequestHandler' onStartup mh tvarDat)
-                                  tvarDat
-                                  json
-
-
-hc
-  :: (Show config)
-  => InitializeCallbacks config
-  -> Maybe (Handler J.WorkspaceDidChangeConfiguration)
-  -> TVar (LanguageContextData config)
-  -> J.Value
-  -> IO ()
-hc (InitializeCallbacks { onConfigurationChange }) mh tvarDat json =
-  handleMessageWithConfigChange J.SWorkspaceDidChangeConfiguration onConfigurationChange
-                                mh
-                                tvarDat
-                                json
-
-handleMessageWithConfigChange
-  :: (J.FromJSON reqParams, J.ToJSON reqParams, Show reqParams, Show err, J.ClientMessage m ~ reqParams)
-  => J.SClientMethod m
-  -> (reqParams -> Either err config) -- ^ A function to parse the config out of the request
-  -> Maybe (Handler m) -- ^ The upstream handler for the client request
-  -> TVar (LanguageContextData config) -- ^ The context data containing the current configuration
-  -> J.Value -- ^ The raw reqeust data
-  -> IO ()
-handleMessageWithConfigChange m parseConfig mh tvarDat json =
-  -- logs $ "haskell-lsp:hc DidChangeConfigurationNotification entered"
-  case J.fromJSON json of
-    J.Success req -> do
-      ctx <- readTVarIO tvarDat
-
-      captureFromClient req (resCaptureFile ctx)
-
-      case parseConfig req of
-        Left err -> do
-          let
-            msg =
-              T.pack $ unwords
-                ["haskell-lsp:configuration parse error.", show req, show err]
-          sendErrorLog tvarDat msg
-        Right newConfig ->
-          atomically $ modifyTVar' tvarDat (\ctx' -> ctx' { resConfig = Just newConfig })
-      case mh of
-        Just h  -> runHandler h req (mkClientResponseHandler m req tvarDat)
-        Nothing -> return ()
-    J.Error err -> do
-      let msg =
-            T.pack
-              $  unwords
-              $  ["haskell-lsp:parse error.", show json, show err]
-              ++ _ERR_MSG_URL
+handleConfigChange :: (Show a,Show err) =>  (a -> Either err config) -> LSPVar config -> a -> IO ()
+handleConfigChange parseConfig tvarDat req =
+  case parseConfig req of
+    Left err -> do
+      let msg = T.pack $ unwords
+            ["haskell-lsp:configuration parse error.", show req, show err]
       sendErrorLog tvarDat msg
+    Right newConfig ->
+      atomically $ modifyTVar' tvarDat (\ctx' -> ctx' { resConfig = Just newConfig })
 
--- | Updates the list of workspace folders and then delegates back to 'hh'
-hwf :: Maybe (Handler J.WorkspaceDidChangeWorkspaceFolders) -> TVar (LanguageContextData config) -> J.Value -> IO ()
-hwf h tvarDat json = do
-  case J.fromJSON json :: J.Result J.DidChangeWorkspaceFoldersNotification of
-    J.Success (J.NotificationMessage _ _ params) -> atomically $ do
+vfsFunc :: (VFS -> b -> (VFS, [String])) -> LSPVar config -> b -> IO ()
+vfsFunc modifyVfs tvarDat req =
+  join $ atomically $ modifyVFSData tvarDat $ \(VFSData vfs rm) ->
+    let (vfs', ls) = modifyVfs vfs req
+    in (VFSData vfs' rm, mapM_ logs ls)
 
-      oldWfs <- resWorkspaceFolders <$> readTVar tvarDat
-      let J.List toRemove = params ^. J.event . J.removed
-          wfs0 = foldr L.delete oldWfs toRemove
-          J.List toAdd = params ^. J.event . J.added
-          wfs1 = wfs0 <> toAdd
 
-      modifyTVar' tvarDat (\c -> c {resWorkspaceFolders = wfs1})
-    _ -> return ()
-  hh J.SWorkspaceDidChangeWorkspaceFolders nop h tvarDat json
+-- | Updates the list of workspace folders
+updateWorkspaceFolders :: LSPVar config -> J.Message J.WorkspaceDidChangeWorkspaceFolders -> IO ()
+updateWorkspaceFolders tvarDat (J.NotificationMessage _ _ params) = atomically $ do
+  oldWfs <- resWorkspaceFolders <$> readTVar tvarDat
+  let J.List toRemove = params ^. J.event . J.removed
+      wfs0 = foldr L.delete oldWfs toRemove
+      J.List toAdd = params ^. J.event . J.added
+      wfs1 = wfs0 <> toAdd
+  modifyTVar' tvarDat (\c -> c {resWorkspaceFolders = wfs1})
 
 -- ---------------------------------------------------------------------
 
@@ -540,18 +450,6 @@ _INITIAL_RESPONSE_SEQUENCE = 0
 -- |
 --
 --
-_SEP_WIN :: Char
-_SEP_WIN = '\\'
-
--- |
---
---
-_SEP_UNIX :: Char
-_SEP_UNIX = '/'
-
--- |
---
---
 _ERR_MSG_URL :: [String]
 _ERR_MSG_URL = [ "`stack update` and install new haskell-lsp."
                , "Or check information on https://marketplace.visualstudio.com/items?itemName=xxxxxxxxxxxxxxx"
@@ -603,19 +501,12 @@ handleMessage dispatcherProc tvarDat jsonStr = do
         Nothing -> do
           logs $ "haskell-lsp:Got reply message:" ++ show jsonStr
           case HM.lookup "id" o of
-            Just (J.Number (floatingOrInteger -> Right i)) -> handleResponse (Left i) o
+            Just (J.Number (floatingOrInteger @Double -> Right i)) -> handleResponse (Left i) o
 
             Just (J.String s) -> handleResponse (Right s) o
             _ -> do
                let msg = T.pack $ unwords ["haskell-lsp: could not decode id field of response ", lbs2str jsonStr]
                sendErrorLog tvarDat msg
-          {-
-          case J.fromJSON $ J.Object o of
-            J.Success m -> handleResponse m
-            J.Error err -> do
-               let msg = T.pack $ unwords ["haskell-lsp: could not decode response ", lbs2str jsonStr, ": ", err]
-               sendErrorLog tvarDat msg
-               -}
   where
     handleResponse :: Either Int Text -> J.Object -> IO ()
     handleResponse baseId resobj = do
@@ -626,39 +517,38 @@ handleMessage dispatcherProc tvarDat jsonStr = do
         return handler
       case resHandler of
         Nothing -> sendErrorLog tvarDat $ T.pack $ "haskell-lsp: No handler for " ++ (show resobj)
-        Just h -> case h of
-          ServerResponseHandler (m :: J.SMethod m) f -> case J.splitServerMethod m of
-            J.IsServerReq -> case J.fromJSON $ J.Object resobj of
+        Just (Pair (m :: J.SMethod m) (ServerResponseHandler f)) -> case J.splitServerMethod m of
+          J.IsServerReq -> case J.fromJSON $ J.Object resobj of
+            J.Error e -> do
+               let msg = T.pack $ unwords ["haskell-lsp: got error while decoding response:", show e, "in", show resobj]
+               sendErrorLog tvarDat msg
+               f (Left $ J.ResponseError J.ParseError msg Nothing)
+            J.Success (res :: J.ResponseMessage m) -> case res ^. J.error of
+              Just err -> f (Left err)
+              Nothing -> case res ^. J.result of
+                Nothing -> do
+                  let msg = T.pack $ unwords ["haskell-lsp: Got neither a result nor an error in response: ", show resobj]
+                  sendErrorLog tvarDat msg
+                  f (Left $ J.ResponseError J.ParseError msg Nothing)
+                Just result -> f (Right result)
+          J.IsServerEither -> case f of
+            Nothing ->
+              sendErrorLog tvarDat $
+                T.pack $ "haskell-lsp: No handler for "
+                      ++ (show resobj) ++ " with method" ++ (show m)
+            Just f' ->  case J.fromJSON $ J.Object resobj of
               J.Error e -> do
                  let msg = T.pack $ unwords ["haskell-lsp: got error while decoding response:", show e, "in", show resobj]
                  sendErrorLog tvarDat msg
-                 f (Left $ J.ResponseError J.ParseError msg Nothing)
+                 f' (Left $ J.ResponseError J.ParseError msg Nothing)
               J.Success (res :: J.ResponseMessage m) -> case res ^. J.error of
-                Just err -> f (Left err)
+                Just err -> f' (Left err)
                 Nothing -> case res ^. J.result of
+                  Just result -> f' (Right result)
                   Nothing -> do
-                    let msg = T.pack $ unwords ["haskell-lsp: Got neither a result nor an error in response: ", show resobj]
+                    let msg = T.pack $ unwords ["haskell-lsp: Got neither a result nor an error in response: ", show res]
                     sendErrorLog tvarDat msg
-                    f (Left $ J.ResponseError J.ParseError msg Nothing)
-                  Just result -> f (Right result)
-            J.IsServerEither -> case f of
-              Nothing ->
-                sendErrorLog tvarDat $
-                  T.pack $ "haskell-lsp: No handler for "
-                        ++ (show resobj) ++ " with method" ++ (show m)
-              Just f' ->  case J.fromJSON $ J.Object resobj of
-                J.Error e -> do
-                   let msg = T.pack $ unwords ["haskell-lsp: got error while decoding response:", show e, "in", show resobj]
-                   sendErrorLog tvarDat msg
-                   f' (Left $ J.ResponseError J.ParseError msg Nothing)
-                J.Success (res :: J.ResponseMessage m) -> case res ^. J.error of
-                  Just err -> f' (Left err)
-                  Nothing -> case res ^. J.result of
-                    Just result -> f' (Right result)
-                    Nothing -> do
-                      let msg = T.pack $ unwords ["haskell-lsp: Got neither a result nor an error in response: ", show res]
-                      sendErrorLog tvarDat msg
-                      f' (Left $ J.ResponseError J.ParseError msg Nothing)
+                    f' (Left $ J.ResponseError J.ParseError msg Nothing)
     -- capability based handlers
     handle json cmd = do
       ctx <- readTVarIO tvarDat
@@ -669,17 +559,11 @@ handleMessage dispatcherProc tvarDat jsonStr = do
 makeResponseMessage :: J.LspId m -> J.ResponseParams m -> J.ResponseMessage m
 makeResponseMessage rid result = J.ResponseMessage "2.0" (J.responseId $ rid) (Just result) Nothing
 
-makeResponseError :: Maybe (J.LspId m) -> J.ResponseError -> J.ResponseMessage m
-makeResponseError origId err = J.ResponseMessage "2.0" origId Nothing (Just err)
+makeResponseError :: J.LspId m -> J.ResponseError -> J.ResponseMessage m
+makeResponseError origId err = J.ResponseMessage "2.0" (Just origId) Nothing (Just err)
 
 -- ---------------------------------------------------------------------
--- |
---
-sendEvent :: TVar (LanguageContextData config) -> J.FromServerMessage -> IO ()
-sendEvent tvarCtx msg = sendResponse tvarCtx msg
 
--- |
---
 sendResponse :: TVar (LanguageContextData config) -> J.FromServerMessage -> IO ()
 sendResponse tvarCtx msg = do
   ctx <- readTVarIO tvarCtx
@@ -687,55 +571,25 @@ sendResponse tvarCtx msg = do
 
 
 -- ---------------------------------------------------------------------
--- |
---
---
-sendErrorResponse
-  :: forall (m :: J.Method J.FromClient J.Request) config.
-     TVar (LanguageContextData config)
-  -> J.SMethod m -> J.LspIdRsp (m :: J.Method J.FromClient J.Request) -> Text -> IO ()
-sendErrorResponse tv m origId msg = sendErrorResponseS (sendEvent tv) m origId J.InternalError msg
-
-sendErrorResponseS
-  :: forall (m :: J.Method J.FromClient J.Request).
-  SendFunc -> J.SMethod m -> J.LspIdRsp m  -> J.ErrorCode -> Text -> IO ()
-sendErrorResponseS sf m origId err msg =
-  sf $ J.FromServerRsp m (J.ResponseMessage "2.0" origId Nothing (Just $ J.ResponseError err msg Nothing) )
 
 sendErrorResponseE
   :: forall (m :: J.Method J.FromClient J.Request) config.
      TVar (LanguageContextData config)
   -> J.SMethod m -> J.LspIdRsp (m :: J.Method J.FromClient J.Request) -> J.ResponseError -> IO ()
 sendErrorResponseE sf m origId err = do
-  sendEvent sf $ J.FromServerRsp m (J.ResponseMessage "2.0" origId Nothing (Just err))
+  sendResponse sf $ J.FromServerRsp m (J.ResponseMessage "2.0" origId Nothing (Just err))
 
 sendErrorLog :: TVar (LanguageContextData config) -> Text -> IO ()
-sendErrorLog tv msg = sendErrorLogS (sendEvent tv) msg
-
-sendErrorLogS :: SendFunc -> Text -> IO ()
-sendErrorLogS sf msg =
-  sf $ J.fromServerNot $ fmServerLogMessageNotification J.MtError msg
-
--- sendErrorShow :: String -> IO ()
--- sendErrorShow msg = sendErrorShowS sendEvent msg
-
-sendErrorShowS :: SendFunc -> Text -> IO ()
-sendErrorShowS sf msg =
-  sf $ J.fromServerNot $ fmServerShowMessageNotification J.MtError msg
+sendErrorLog tv msg =
+  sendResponse tv $ J.fromServerNot $ fmServerLogMessageNotification J.MtError msg
 
 -- ---------------------------------------------------------------------
 
-defaultErrorHandlers
-  :: forall (m :: J.Method J.FromClient J.Request) config a.
-     (Show a) => TVar (LanguageContextData config)
-  -> J.SMethod m -> J.LspIdRsp (m :: J.Method J.FromClient J.Request) -> a -> [E.Handler ()]
-defaultErrorHandlers tvarDat m origId req = [ E.Handler someExcept ]
+initializeErrorHandler :: J.ResponseHandlerFunc J.Initialize -> E.SomeException -> IO ()
+initializeErrorHandler sendResp e =
+    sendResp $ Left $ J.ResponseError J.InternalError msg Nothing
   where
-    someExcept (e :: E.SomeException) = do
-      let msg = T.pack $ unwords ["request error.", show req, show e]
-      sendErrorResponse tvarDat m origId msg
-      sendErrorLog tvarDat msg
-
+    msg = T.pack $ unwords ["Error on initialize:", show e]
 
 -- |=====================================================================
 --
@@ -749,8 +603,10 @@ initializeRequestHandler'
   -> Maybe (Handler J.Initialize)
   -> TVar (LanguageContextData config)
   -> Handler J.Initialize
-initializeRequestHandler' onStartup mHandler tvarCtx = Handler $ \req@(J.RequestMessage _ origId _ params) rspH@(ClientResponseHandler _ sendResp) ->
-  flip E.catches (defaultErrorHandlers tvarCtx J.SInitialize (J.responseId origId) req) $ do
+initializeRequestHandler' onStartup mHandler tvarCtx = Handler $ \req rspH@(ClientResponseHandler sendResp) ->
+  flip E.catch (initializeErrorHandler sendResp) $ do
+
+    let params = req ^. J.params
 
     case mHandler of
       Just handler -> runHandler handler req rspH
@@ -773,8 +629,6 @@ initializeRequestHandler' onStartup mHandler tvarCtx = Handler $ \req@(J.Request
         unless (null dir) $ setCurrentDirectory dir
 
     let
-      getCapabilities :: J.InitializeParams -> C.ClientCapabilities
-      getCapabilities (J.InitializeParams _ _ _ _ c _ _) = c
       getLspId tvId = atomically $ do
         cid <- readTVar tvId
         modifyTVar' tvId (+1)
@@ -869,7 +723,7 @@ initializeRequestHandler' onStartup mHandler tvarCtx = Handler $ \req@(J.Request
         withProgressBase True title cancellable (const f)
 
     -- Launch the given process once the project root directory has been set
-    let lspFuncs = LspFuncs (getCapabilities params)
+    let lspFuncs = LspFuncs (params ^. J.capabilities)
                             (getConfig tvarCtx)
                             (mkServerRequestFunc tvarCtx)
                             (getVirtualFile tvarCtx)
@@ -894,10 +748,8 @@ initializeRequestHandler' onStartup mHandler tvarCtx = Handler $ \req@(J.Request
         sendResp $ Left errResp
 
       Nothing -> do
-        let capa = serverCapabilities (getCapabilities params) (resOptions ctx) (resHandlers ctx)
-            -- TODO: wrap this up into a fn to create a response message
-            res  = J.ResponseMessage "2.0" (J.responseId origId) (Just $ J.InitializeResponseCapabilities capa) Nothing
-        sendResponse tvarCtx $ J.FromServerRsp J.SInitialize res
+        let capa = serverCapabilities (params ^. J.capabilities) (resOptions ctx) (resHandlers ctx)
+        sendResp $ Right (J.InitializeResponseCapabilities capa)
 
 -- | Infers the capabilities based on registered handlers, and sets the appropriate options.
 -- A provider should be set to Nothing if the server does not support it, unless it is a
@@ -1004,15 +856,15 @@ progressCancelHandler tvarCtx (J.NotificationMessage _ _ (J.WorkDoneProgressCanc
     Nothing -> return ()
     Just cancelAction -> cancelAction
 
+exitNotificationHandler :: Handler J.Exit
+exitNotificationHandler = Handler $ \_ _ -> do
+  logm $ B.pack "haskell-lsp:Got exit, exiting"
+  exitSuccess
 
--- |
---
-shutdownRequestHandler :: TVar (LanguageContextData config) -> J.ShutdownRequest -> IO ()
-shutdownRequestHandler tvarCtx req@(J.RequestMessage _ origId _ _) =
-  flip E.catches (defaultErrorHandlers tvarCtx J.SShutdown (J.responseId origId) req) $ do
-  let res  = makeResponseMessage origId Nothing
-
-  sendResponse tvarCtx $ J.FromServerRsp J.SShutdown res
+-- | Default Shutdown handler
+shutdownRequestHandler :: Handler J.Shutdown
+shutdownRequestHandler = Handler $ \_req (ClientResponseHandler k) -> do
+  k $ Right J.Empty
 
 -- ---------------------------------------------------------------------
 

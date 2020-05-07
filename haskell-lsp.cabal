@@ -24,8 +24,7 @@ library
   reexported-modules:  Language.Haskell.LSP.Types
                      , Language.Haskell.LSP.Types.Capabilities
                      , Language.Haskell.LSP.Types.Lens
-  exposed-modules:     Language.Haskell.LSP.Capture
-                     , Language.Haskell.LSP.Constant
+  exposed-modules:     Language.Haskell.LSP.Constant
                      , Language.Haskell.LSP.Core
                      , Language.Haskell.LSP.Control
                      , Language.Haskell.LSP.Diagnostics

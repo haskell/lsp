@@ -125,7 +125,7 @@ type family ResponseParams (m :: Method p Request) :: Type where
 -- Client
   -- General
   ResponseParams Initialize                    = InitializeResponseCapabilities
-  ResponseParams Shutdown                      = Maybe ()
+  ResponseParams Shutdown                      = Empty
   -- Workspace
   ResponseParams WorkspaceSymbol               = List SymbolInformation
   ResponseParams WorkspaceExecuteCommand       = Value
