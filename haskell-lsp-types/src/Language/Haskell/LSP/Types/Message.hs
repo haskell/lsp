@@ -95,26 +95,8 @@ responseId :: LspId m -> LspIdRsp m
 responseId = Just
 -- ---------------------------------------------------------------------
 
-class Reify (a :: k) (t :: k -> Type) | k -> t where
-  reify :: t a
-
-data Provenance = FromServer | FromClient
-data SProvenance (p :: Provenance) where
-  SFromServer :: SProvenance FromServer
-  SFromClient :: SProvenance FromClient
-instance Reify FromServer SProvenance where
-  reify = SFromServer
-instance Reify FromClient SProvenance where
-  reify = SFromClient
-
+data Provenance = FromServer   | FromClient
 data MethodType = Notification | Request
-data SMethodType (p :: MethodType) where
-  SNotification :: SMethodType Notification
-  SRequest :: SMethodType Request
-instance Reify Notification SMethodType where
-  reify = SNotification
-instance Reify Request SMethodType where
-  reify = SRequest
 
 data Method (p :: Provenance) (t :: MethodType) where
 -- Client Methods
@@ -294,6 +276,9 @@ instance FromJSON SomeMethod where
       client = do
         c <- parseJSON v
         case c of
+          -- Don't parse the client custom method so that we can still
+          -- parse the server methods
+          SomeClientMethod (SCustomMethod _) -> mempty
           SomeClientMethod m -> pure $ SomeMethod m
       server = do
         c <- parseJSON v
@@ -384,22 +369,7 @@ instance A.FromJSON SomeServerMethod where
 -- From JSON
 -- ---------------------------------------------------------------------
 
--- Client
-
-makeSingletonInstances ''SMethod
-instance A.FromJSON (SMethod CancelRequest) where
-  parseJSON x = do
-    m <- parseJSON x
-    case m of
-      SomeMethod SCancelRequest -> pure $ SCancelRequest
-      _ -> mempty
--- Custom
-instance A.FromJSON (SMethod CustomMethod) where
-  parseJSON x = do
-    m <- parseJSON x
-    case m of
-      SomeMethod (SCustomMethod cm) -> pure (SCustomMethod cm)
-      _ -> mempty
+makeSingletonFromJSON 'SomeMethod ''SMethod
 
 -- ---------------------------------------------------------------------
 -- TO JSON
