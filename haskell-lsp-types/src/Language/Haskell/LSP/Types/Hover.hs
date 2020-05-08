@@ -11,8 +11,6 @@ import           Language.Haskell.LSP.Types.Constants
 import           Language.Haskell.LSP.Types.List
 import           Language.Haskell.LSP.Types.Location
 import           Language.Haskell.LSP.Types.MarkupContent
-import           Language.Haskell.LSP.Types.Message
-import           Language.Haskell.LSP.Types.TextDocument
 
 -- ---------------------------------------------------------------------
 

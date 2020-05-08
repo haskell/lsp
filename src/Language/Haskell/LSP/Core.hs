@@ -98,7 +98,6 @@ data LanguageContextData config =
   , resConfig              :: !(Maybe config)
   , resLspId               :: !(TVar Int)
   , resLspFuncs            :: LspFuncs config -- NOTE: Cannot be strict, lazy initialization
-  , resCaptureFile         :: !(Maybe FilePath)
   , resWorkspaceFolders    :: ![J.WorkspaceFolder]
   , resProgressData        :: !ProgressData
   , resPendingResponses    :: !(J.IdMap (Product J.SMethod ServerResponseHandler))
@@ -459,10 +458,10 @@ _ERR_MSG_URL = [ "`stack update` and install new haskell-lsp."
 -- |
 --
 --
-defaultLanguageContextData :: Handlers -> Options -> LspFuncs config -> TVar Int -> SendFunc -> Maybe FilePath -> VFS -> LanguageContextData config
-defaultLanguageContextData h o lf tv sf cf vfs =
+defaultLanguageContextData :: Handlers -> Options -> LspFuncs config -> TVar Int -> SendFunc -> VFS -> LanguageContextData config
+defaultLanguageContextData h o lf tv sf vfs =
   LanguageContextData _INITIAL_RESPONSE_SEQUENCE h o sf (VFSData vfs mempty) mempty
-                      Nothing tv lf cf mempty defaultProgressData J.emptyIxMap
+                      Nothing tv lf mempty defaultProgressData J.emptyIxMap
 
 defaultProgressData :: ProgressData
 defaultProgressData = ProgressData 0 Map.empty

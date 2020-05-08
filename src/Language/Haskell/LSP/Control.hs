@@ -24,8 +24,6 @@ import qualified Data.ByteString as BS
 import Data.ByteString.Builder.Extra (defaultChunkSize)
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as B
-import           Data.Time.Clock
-import           Data.Time.Format
 #if __GLASGOW_HASKELL__ < 804
 import           Data.Monoid
 #endif
@@ -33,7 +31,6 @@ import qualified Language.Haskell.LSP.Core as Core
 import           Language.Haskell.LSP.VFS
 import           Language.Haskell.LSP.Utility
 import           System.IO
-import           System.FilePath
 
 -- ---------------------------------------------------------------------
 
@@ -44,7 +41,6 @@ run :: (Show configs) => Core.InitializeCallbacks configs
                 -- processing will start only after this returns.
     -> Core.Handlers
     -> Core.Options
-    -> Maybe FilePath
     -- ^ File to capture the session to.
     -> IO Int
 run = runWithHandles stdin stdout
@@ -59,9 +55,8 @@ runWithHandles :: (Show config) =>
     -> Core.InitializeCallbacks config
     -> Core.Handlers
     -> Core.Options
-    -> Maybe FilePath
     -> IO Int         -- exit code
-runWithHandles hin hout initializeCallbacks h o captureFp = do
+runWithHandles hin hout initializeCallbacks h o = do
 
   logm $ B.pack "\n\n\n\n\nhaskell-lsp:Starting up server ..."
   hSetBuffering hin NoBuffering
@@ -70,12 +65,8 @@ runWithHandles hin hout initializeCallbacks h o captureFp = do
   hSetBuffering hout NoBuffering
   hSetEncoding  hout utf8
 
-  timestamp <- formatTime defaultTimeLocale (iso8601DateFormat (Just "%H-%M-%S")) <$> getCurrentTime
-  let timestampCaptureFp = fmap (\f -> dropExtension f ++ timestamp ++ takeExtension f)
-                                captureFp
-
   cout <- atomically newTChan :: IO (TChan J.Value)
-  _rhpid <- forkIO $ sendServer cout hout timestampCaptureFp
+  _rhpid <- forkIO $ sendServer cout hout
 
 
   let sendFunc :: Core.SendFunc
@@ -83,31 +74,13 @@ runWithHandles hin hout initializeCallbacks h o captureFp = do
   let lf = error "LifeCycle error, ClientCapabilities not set yet via initialize maessage"
 
   tvarId <- atomically $ newTVar 0
+
   initVFS $ \vfs -> do
-    tvarDat <- atomically $ newTVar $ Core.defaultLanguageContextData h o lf tvarId sendFunc timestampCaptureFp vfs
+    tvarDat <- atomically $ newTVar $ Core.defaultLanguageContextData h o lf tvarId sendFunc vfs
 
     ioLoop hin initializeCallbacks tvarDat
 
   return 1
-
-{-
-type RequestMap = HM.HashMap LspId SomeClientMethod
-
-newRequestMap :: RequestMap
-newRequestMap = HM.empty
-
-updateRequestMap :: RequestMap -> LspId -> SomeClientMethod -> RequestMap
-updateRequestMap reqMap id method = HM.insert id method reqMap
-
-getRequestMap :: [FromClientMessage] -> RequestMap
-getRequestMap = foldl helper HM.empty
- where
-  helper :: RequestMap -> FromClientMessage -> RequestMap
-  helper acc (FromClientMess m val) = case splitClientMethod m of
-    IsClientReq -> HM.insert (val ^. id) (SomeClientMethod m) acc
-    _ -> acc
-  helper acc _ = acc
-  -}
 
 -- ---------------------------------------------------------------------
 
@@ -140,9 +113,8 @@ ioLoop hin dispatcherProc tvarDat =
 -- ---------------------------------------------------------------------
 
 -- | Simple server to make sure all output is serialised
-sendServer :: TChan J.Value -> Handle -> Maybe FilePath -> IO ()
-sendServer msgChan clientH captureFp = do
-  -- rmap <- atomically $ newTVar newRequestMap
+sendServer :: TChan J.Value -> Handle -> IO ()
+sendServer msgChan clientH = do
   forever $ do
     msg <- atomically $ readTChan msgChan
 
@@ -158,8 +130,6 @@ sendServer msgChan clientH captureFp = do
     BSL.hPut clientH out
     hFlush clientH
     logm $ B.pack "<--2--" <> str
-
-    -- captureFromServer rmap msg captureFp
 
 -- |
 --

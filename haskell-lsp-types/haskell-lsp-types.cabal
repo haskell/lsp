@@ -55,13 +55,12 @@ library
                      , containers
                      , data-default
                      , deepseq
-                     , dependent-sum
-                     , dependent-sum-template
                      , filepath
                      , hashable
                      , lens >= 4.15.2
                      , network-uri
                      , scientific
+                     , some
                      , text
                      , template-haskell
                      , unordered-containers

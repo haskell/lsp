@@ -41,7 +41,6 @@ library
                      , containers
                      , directory
                      , data-default
-                     , dependent-map
                      , filepath
                      , hslogger
                      , hashable

@@ -39,7 +39,6 @@ import Data.Text
 import Data.Maybe
 import Control.Monad
 import GHC.Generics
-import Data.Some
 
 -- ---------------------------------------------------------------------
 -- PARAMS
@@ -273,9 +272,6 @@ data CustomMessage p t where
   ReqMess :: RequestMessage (CustomMethod :: Method p Request) -> CustomMessage p Request
   NotMess :: NotificationMessage (CustomMethod :: Method p Notification) -> CustomMessage p Notification
 
-data SomeCustomMessage p where
-  SomeCustomMessage :: CustomMessage p t -> SomeCustomMessage p
-
 deriving instance Show (CustomMessage p t)
 
 instance ToJSON (CustomMessage p t) where
@@ -287,12 +283,6 @@ instance FromJSON (CustomMessage p Request) where
 instance FromJSON (CustomMessage p Notification) where
   parseJSON v = NotMess <$> parseJSON v
 
-instance FromJSON (SomeCustomMessage p) where
-  parseJSON = withObject "CustomMessage" $ \o -> do
-    mid <- o .:? "id"
-    case (mid :: Maybe Text) of
-      Just _ -> SomeCustomMessage . ReqMess <$> parseJSON (Object o)
-      _ -> SomeCustomMessage . NotMess <$> parseJSON (Object o)
 
 type family Message (m :: Method p t) :: Type where
   Message (CustomMethod :: Method p t) = CustomMessage p t
