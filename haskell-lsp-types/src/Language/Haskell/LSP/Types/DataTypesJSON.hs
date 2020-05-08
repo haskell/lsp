@@ -1672,7 +1672,6 @@ data PublishDiagnosticsParams =
 deriveJSON lspOptions ''PublishDiagnosticsParams
 
 -- ---------------------------------------------------------------------
-
 {-
 Signature Help Request
 

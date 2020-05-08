@@ -13,6 +13,7 @@
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE TupleSections              #-}
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
 module Language.Haskell.LSP.Types.Message where
@@ -33,11 +34,13 @@ import           Language.Haskell.LSP.Types.TextDocument
 import           Language.Haskell.LSP.Types.Window
 import           Language.Haskell.LSP.Types.WorkspaceEdit
 import           Language.Haskell.LSP.Types.WorkspaceFolders
+import qualified Data.HashMap.Strict as HM
 
 import Data.Kind
 import Data.Aeson
+import Data.Aeson.Types
 import Data.Aeson.TH
-import Data.Text
+import Data.Text (Text)
 import GHC.Generics
 
 -- ---------------------------------------------------------------------
@@ -454,17 +457,91 @@ fromServerReq m@RequestMessage{_method=meth} = FromServerMess meth m
 
 data FromClientMessage where
   FromClientMess :: forall t (m :: Method FromClient t). SMethod m -> Message m -> FromClientMessage
-  FromClientRsp  :: forall m. SMethod m -> ResponseMessage m -> FromClientMessage
+  FromClientRsp  :: forall (m :: Method FromServer Request). SMethod m -> ResponseMessage m -> FromClientMessage
 
+instance ToJSON FromClientMessage where
+  toJSON (FromClientMess m p) = clientMethodJSON m (toJSON p)
+  toJSON (FromClientRsp m p) = serverResponseJSON m (toJSON p)
+
+fromClientNot :: forall (m :: Method FromClient Notification).
+  Message m ~ NotificationMessage m => NotificationMessage m -> FromClientMessage
+fromClientNot m@NotificationMessage{_method=meth} = FromClientMess meth m
+
+fromClientReq :: forall (m :: Method FromClient Request).
+  Message m ~ RequestMessage m => RequestMessage m -> FromClientMessage
+fromClientReq m@RequestMessage{_method=meth} = FromClientMess meth m
+
+type LookupFunc p = forall (m :: Method p Request). LspId m -> Maybe (SMethod m, a)
+
+parseServerMessage :: LookupFunc FromClient a -> Value -> Parser (FromServerMessage,Maybe a)
+parseServerMessage lookupId v@(Object o) = do
+  case HM.lookup "method" o of
+    Just cmd -> do
+      -- Request or Response
+      sm <- parseJSON cmd
+      case sm of
+        SomeServerMethod m -> case splitServerMethod m of
+          IsServerNot -> (,Nothing) . FromServerMess m <$> parseJSON v
+          IsServerReq -> (,Nothing) . FromServerMess m <$> parseJSON v
+          IsServerEither
+              | HM.member "id" o -- Request
+              , SCustomMethod cm <- m ->
+                  let m' = (SCustomMethod cm :: SMethod (CustomMethod :: Method FromServer Request))
+                      in (,Nothing) . FromServerMess m' <$> parseJSON v
+              | SCustomMethod cm <- m ->
+                  let m' = (SCustomMethod cm :: SMethod (CustomMethod :: Method FromServer Notification))
+                      in (,Nothing) . FromServerMess m' <$> parseJSON v
+    Nothing -> do
+      case HM.lookup "id" o of
+        Just i' -> do
+          i <- parseJSON i'
+          case lookupId i of
+            Just (m,res) -> clientResponseJSON m $ (,Just res) . FromServerRsp m <$> parseJSON v
+            Nothing -> fail $ unwords ["Failed in looking up response type of", show v]
+        Nothing -> fail $ unwords ["Got unexpected message without method or id"]
+parseServerMessage _ v = fail $ unwords ["parseServerMessage expected object, got:",show v]
+
+parseClientMessage :: LookupFunc FromServer a -> Value -> Parser (FromClientMessage,Maybe a)
+parseClientMessage lookupId v@(Object o) = do
+  case HM.lookup "method" o of
+    Just cmd -> do
+      -- Request or Response
+      sm <- parseJSON cmd
+      case sm of
+        SomeClientMethod m -> case splitClientMethod m of
+          IsClientNot -> (,Nothing) . FromClientMess m <$> parseJSON v
+          IsClientReq -> (,Nothing) . FromClientMess m <$> parseJSON v
+          IsClientEither
+              | HM.member "id" o -- Request
+              , SCustomMethod cm <- m ->
+                  let m' = (SCustomMethod cm :: SMethod (CustomMethod :: Method FromClient Request))
+                      in (,Nothing) . FromClientMess m' <$> parseJSON v
+              | SCustomMethod cm <- m ->
+                  let m' = (SCustomMethod cm :: SMethod (CustomMethod :: Method FromClient Notification))
+                      in (,Nothing) . FromClientMess m' <$> parseJSON v
+    Nothing -> do
+      case HM.lookup "id" o of
+        Just i' -> do
+          i <- parseJSON i'
+          case lookupId i of
+            Just (m,res) -> serverResponseJSON m $ (,Just res) . FromClientRsp m <$> parseJSON v
+            Nothing -> fail $ unwords ["Failed in looking up response type of", show v]
+        Nothing -> fail $ unwords ["Got unexpected message without method or id"]
+parseClientMessage _ v = fail $ unwords ["parseClientMessage expected object, got:",show v]
 
 -- ---------------------------------------------------------------------
 -- Helper Utilities
 -- ---------------------------------------------------------------------
 
-clientResponseJSON :: SClientMethod m -> (ToJSON (ResponseMessage m) => x) -> x
+clientResponseJSON :: SClientMethod m -> (HasJSON (ResponseMessage m) => x) -> x
 clientResponseJSON m x = case splitClientMethod m of
   IsClientReq -> x
   IsClientEither -> x
+
+serverResponseJSON :: SServerMethod m -> (HasJSON (ResponseMessage m) => x) -> x
+serverResponseJSON m x = case splitServerMethod m of
+  IsServerReq -> x
+  IsServerEither -> x
 
 clientMethodJSON :: SClientMethod m -> (ToJSON (ClientMessage m) => x) -> x
 clientMethodJSON m x =

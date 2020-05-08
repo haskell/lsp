@@ -286,7 +286,7 @@ instance A.FromJSON SomeServerMethod where
   parseJSON (A.String m)                                     = pure $ SomeServerMethod (SCustomMethod m)
   parseJSON _                                                = mempty
 
--- instance ToJSON (SMethod m)
+-- instance FromJSON (SMethod m)
 makeSingletonFromJSON 'SomeMethod ''SMethod
 
 -- ---------------------------------------------------------------------
