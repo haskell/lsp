@@ -138,23 +138,23 @@ fmServerLogMessageNotification mt msg
 
 -- ----------------------------------------------------------------------
 
-fmServerWorkDoneProgressBeginNotification :: J.ProgressParams J.WorkDoneProgressBeginParams -> J.WorkDoneProgressBeginNotification
+fmServerWorkDoneProgressBeginNotification :: J.ProgressParams J.WorkDoneProgressBeginParams -> J.ProgressNotification
 fmServerWorkDoneProgressBeginNotification params
   = J.NotificationMessage "2.0" J.SProgress (J.Begin <$> params)
 
 -- ----------------------------------------------------------------------
 
-fmServerWorkDoneProgressReportNotification :: J.ProgressParams J.WorkDoneProgressReportParams -> J.WorkDoneProgressReportNotification
+fmServerWorkDoneProgressReportNotification :: J.ProgressParams J.WorkDoneProgressReportParams -> J.ProgressNotification
 fmServerWorkDoneProgressReportNotification params
   = J.NotificationMessage "2.0" J.SProgress (J.Report <$> params)
 
 -- ----------------------------------------------------------------------
 
-fmServerWorkDoneProgressEndNotification :: J.ProgressParams J.WorkDoneProgressEndParams -> J.WorkDoneProgressEndNotification
+fmServerWorkDoneProgressEndNotification :: J.ProgressParams J.WorkDoneProgressEndParams -> J.ProgressNotification
 fmServerWorkDoneProgressEndNotification params
   = J.NotificationMessage "2.0" J.SProgress (J.End <$> params)
 
-fmServerWorkDoneProgressCreateRequest :: J.LspId J.WindowWorkDoneProgressCreate -> J.WorkDoneProgressCreateParams -> J.WorkDoneProgressCreateRequest
+fmServerWorkDoneProgressCreateRequest :: J.LspId J.WindowWorkDoneProgressCreate -> J.WorkDoneProgressCreateParams -> J.WindowWorkDoneProgressCreateRequest
 fmServerWorkDoneProgressCreateRequest rid params
   = J.RequestMessage "2.0" rid J.SWindowWorkDoneProgressCreate params
 

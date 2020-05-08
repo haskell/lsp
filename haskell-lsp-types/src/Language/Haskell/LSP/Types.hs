@@ -14,6 +14,7 @@ module Language.Haskell.LSP.Types
   , module Language.Haskell.LSP.Types.Message
   , module Language.Haskell.LSP.Types.Progress
   , module Language.Haskell.LSP.Types.Symbol
+  , module Language.Haskell.LSP.Types.Synonyms
   , module Language.Haskell.LSP.Types.TextDocument
   , module Language.Haskell.LSP.Types.Types
   , module Language.Haskell.LSP.Types.Uri
@@ -38,6 +39,7 @@ import           Language.Haskell.LSP.Types.MarkupContent
 import           Language.Haskell.LSP.Types.Message
 import           Language.Haskell.LSP.Types.Progress
 import           Language.Haskell.LSP.Types.Symbol
+import           Language.Haskell.LSP.Types.Synonyms
 import           Language.Haskell.LSP.Types.TextDocument
 import           Language.Haskell.LSP.Types.Types
 import           Language.Haskell.LSP.Types.Uri

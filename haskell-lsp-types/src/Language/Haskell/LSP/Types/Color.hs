@@ -193,4 +193,3 @@ data ColorPresentation =
 
 deriveJSON lspOptions ''ColorPresentation
 
-
