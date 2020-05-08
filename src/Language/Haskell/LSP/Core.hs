@@ -539,14 +539,7 @@ handleMessage dispatcherProc tvarDat jsonStr = do
                let msg = T.pack $ unwords ["haskell-lsp: got error while decoding response:", show e, "in", show resobj]
                sendErrorLog tvarDat msg
                f (Left $ J.ResponseError J.ParseError msg Nothing)
-            J.Success (res :: J.ResponseMessage m) -> case res ^. J.error of
-              Just err -> f (Left err)
-              Nothing -> case res ^. J.result of
-                Nothing -> do
-                  let msg = T.pack $ unwords ["haskell-lsp: Got neither a result nor an error in response: ", show resobj]
-                  sendErrorLog tvarDat msg
-                  f (Left $ J.ResponseError J.ParseError msg Nothing)
-                Just result -> f (Right result)
+            J.Success (res :: J.ResponseMessage m) -> f (res ^. J.result) 
           J.IsServerEither -> case f of
             Nothing ->
               sendErrorLog tvarDat $
@@ -557,14 +550,7 @@ handleMessage dispatcherProc tvarDat jsonStr = do
                  let msg = T.pack $ unwords ["haskell-lsp: got error while decoding response:", show e, "in", show resobj]
                  sendErrorLog tvarDat msg
                  f' (Left $ J.ResponseError J.ParseError msg Nothing)
-              J.Success (res :: J.ResponseMessage m) -> case res ^. J.error of
-                Just err -> f' (Left err)
-                Nothing -> case res ^. J.result of
-                  Just result -> f' (Right result)
-                  Nothing -> do
-                    let msg = T.pack $ unwords ["haskell-lsp: Got neither a result nor an error in response: ", show res]
-                    sendErrorLog tvarDat msg
-                    f' (Left $ J.ResponseError J.ParseError msg Nothing)
+              J.Success (res :: J.ResponseMessage m) -> f' (res ^. J.result)
     -- capability based handlers
     handle json cmd = do
       ctx <- readTVarIO tvarDat
@@ -573,10 +559,10 @@ handleMessage dispatcherProc tvarDat jsonStr = do
 -- ---------------------------------------------------------------------
 
 makeResponseMessage :: J.LspId m -> J.ResponseParams m -> J.ResponseMessage m
-makeResponseMessage rid result = J.ResponseMessage "2.0" (Just rid) (Just result) Nothing
+makeResponseMessage rid result = J.ResponseMessage "2.0" (Just rid) (Right result)
 
 makeResponseError :: J.LspId m -> J.ResponseError -> J.ResponseMessage m
-makeResponseError origId err = J.ResponseMessage "2.0" (Just origId) Nothing (Just err)
+makeResponseError origId err = J.ResponseMessage "2.0" (Just origId) (Left err)
 
 -- ---------------------------------------------------------------------
 
@@ -593,7 +579,7 @@ sendErrorResponseE
      TVar (LanguageContextData config)
   -> J.SMethod m -> J.LspId (m :: J.Method J.FromClient J.Request) -> J.ResponseError -> IO ()
 sendErrorResponseE sf m origId err = do
-  sendToClient sf $ J.FromServerRsp m (J.ResponseMessage "2.0" (Just origId) Nothing (Just err))
+  sendToClient sf $ J.FromServerRsp m (makeResponseError origId err)
 
 sendErrorLog :: TVar (LanguageContextData config) -> Text -> IO ()
 sendErrorLog tv msg =

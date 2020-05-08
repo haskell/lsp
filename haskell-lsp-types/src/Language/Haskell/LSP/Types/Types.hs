@@ -36,8 +36,6 @@ import           Language.Haskell.LSP.Types.WorkspaceFolders
 import Data.Kind
 import Data.Aeson
 import Data.Text
-import Data.Maybe
-import Control.Monad
 import GHC.Generics
 
 -- ---------------------------------------------------------------------
@@ -206,8 +204,7 @@ data ResponseMessage (m :: Method p Request) =
   ResponseMessage
     { _jsonrpc :: Text
     , _id      :: Maybe (LspId m)
-    , _result  :: Maybe (ResponseParams m)
-    , _error   :: Maybe ResponseError
+    , _result  :: Either ResponseError (ResponseParams m)
     } deriving Generic
 
 deriving instance Eq   (ResponseParams m) => Eq (ResponseMessage m)
@@ -215,22 +212,28 @@ deriving instance Read (ResponseParams m) => Read (ResponseMessage m)
 deriving instance Show (ResponseParams m) => Show (ResponseMessage m)
 
 instance (ToJSON (ResponseParams m)) => ToJSON (ResponseMessage m) where
-  toJSON     = genericToJSON lspOptions
-  toEncoding = genericToEncoding lspOptions
+  toJSON (ResponseMessage { _jsonrpc = jsonrpc, _id = lspid, _result = result })
+    = object
+      [ "jsonrpc" .= jsonrpc
+      , "id" .= lspid
+      , case result of
+        Left  err -> "error" .= err
+        Right a   -> "result" .= a
+      ]
 
 instance FromJSON (ResponseParams a) => FromJSON (ResponseMessage a) where
   parseJSON = withObject "Response" $ \o -> do
-    rsp <- ResponseMessage
-      <$> o .: "jsonrpc"
-      <*> o .: "id"
-      -- It is important to use .:! so that result = null gets decoded as Just Nothing
-      <*> o .:! "result"
-      <*> o .:! "error"
-    -- We make sure that one of them is present. Without this check we can end up
-    -- parsing a Request as a ResponseMessage.
-    unless (isJust (_result rsp) || isJust (_error rsp)) $
-      fail "ResponseMessage must either have a result or an error"
-    pure rsp
+    _jsonrpc <- o .: "jsonrpc"
+    _id      <- o .: "id"
+    -- It is important to use .:! so that "result = null" (without error) gets decoded as Just Null
+    _result  <- o .:! "result"
+    _error   <- o .:? "error"
+    result   <- case (_error, _result) of
+      ((Just err), Nothing   ) -> pure $ Left err
+      (Nothing   , (Just res)) -> pure $ Right res
+      ((Just _err), (Just _res)) -> fail $ "both error and result cannot be present: " ++ show o
+      (Nothing, Nothing) -> fail "both error and result cannot be Nothing"
+    return $ ResponseMessage _jsonrpc _id $ result
 
 -- ---------------------------------------------------------------------
 {-

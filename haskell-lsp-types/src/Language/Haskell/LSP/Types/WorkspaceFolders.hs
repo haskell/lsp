@@ -120,4 +120,3 @@ data DidChangeWorkspaceFoldersParams =
 
 deriveJSON lspOptions ''DidChangeWorkspaceFoldersParams
 
-
