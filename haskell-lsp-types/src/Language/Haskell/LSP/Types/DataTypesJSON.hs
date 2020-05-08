@@ -30,7 +30,8 @@ import           Language.Haskell.LSP.Types.Diagnostic
 import           Language.Haskell.LSP.Types.DocumentFilter
 import           Language.Haskell.LSP.Types.List
 import           Language.Haskell.LSP.Types.Location
-import           Language.Haskell.LSP.Types.Message
+import           Language.Haskell.LSP.Types.LspId
+import           Language.Haskell.LSP.Types.Method
 import           Language.Haskell.LSP.Types.Progress
 import           Language.Haskell.LSP.Types.TextDocument
 import           Language.Haskell.LSP.Types.Uri

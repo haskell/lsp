@@ -3,8 +3,8 @@
 
 module Language.Haskell.LSP.Types.Synonyms where
 
+import           Language.Haskell.LSP.Types.Method
 import           Language.Haskell.LSP.Types.Message
-import           Language.Haskell.LSP.Types.Types
 
 -- Server Messages
 
