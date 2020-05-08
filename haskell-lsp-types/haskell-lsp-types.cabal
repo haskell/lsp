@@ -23,6 +23,7 @@ library
                      , Language.Haskell.LSP.Types.Lens
                      , Language.Haskell.LSP.Types.MessageFuncs
                      , Language.Haskell.LSP.Types.Utils
+                     , Data.IxMap
   other-modules:       Language.Haskell.LSP.Types.ClientCapabilities
                      , Language.Haskell.LSP.Types.CodeAction
                      , Language.Haskell.LSP.Types.Color

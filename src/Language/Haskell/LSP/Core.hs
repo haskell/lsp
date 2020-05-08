@@ -51,6 +51,7 @@ import qualified Data.Aeson as J
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as B
 import           Data.Default
+import           Data.IxMap
 import           Data.Scientific (floatingOrInteger)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.List as L
@@ -100,7 +101,7 @@ data LanguageContextData config =
   , resLspFuncs            :: LspFuncs config -- NOTE: Cannot be strict, lazy initialization
   , resWorkspaceFolders    :: ![J.WorkspaceFolder]
   , resProgressData        :: !ProgressData
-  , resPendingResponses    :: !(J.IdMap (Product J.SMethod ServerResponseHandler))
+  , resPendingResponses    :: !(IxMap J.LspId (Product J.SMethod ServerResponseHandler))
   }
 
 data ProgressData = ProgressData { progressNextId :: !Int
@@ -260,17 +261,17 @@ mkClientResponseHandler m cm tvarDat =
   case J.splitClientMethod m of
     J.IsClientNot -> ClientResponseHandler ()
     J.IsClientReq -> ClientResponseHandler $ \mrsp -> case mrsp of
-      Left err -> sendErrorResponseE tvarDat m (J.responseId $ cm ^. J.id) err
+      Left err -> sendErrorResponseE tvarDat m (cm ^. J.id) err
       Right rsp -> sendResponse tvarDat $ J.FromServerRsp m $ makeResponseMessage (cm ^. J.id) rsp
     J.IsClientEither -> ClientResponseHandler $ case cm of
       J.NotMess _ -> Nothing
       J.ReqMess req -> Just $ \mrsp -> case mrsp of
-        Left err -> sendErrorResponseE tvarDat m (J.responseId $ req ^. J.id) err
+        Left err -> sendErrorResponseE tvarDat m (req ^. J.id) err
         Right rsp -> sendResponse tvarDat $ J.FromServerRsp m $ makeResponseMessage (req ^. J.id) rsp
 
 addResponseHandler :: TVar (LanguageContextData config) -> J.LspId m -> (Product J.SMethod ServerResponseHandler) m -> IO ()
 addResponseHandler tv lid h = atomically $ modifyTVar' tv $ \ctx@LanguageContextData{resPendingResponses} ->
-  ctx { resPendingResponses = J.insertIxMap lid h resPendingResponses}
+  ctx { resPendingResponses = insertIxMap lid h resPendingResponses}
 
 mkServerRequestFunc :: TVar (LanguageContextData config) -> SomeServerMessageWithResponse -> IO ()
 mkServerRequestFunc tvarDat (SomeServerMessageWithResponse m msg resHandler) =
@@ -461,7 +462,7 @@ _ERR_MSG_URL = [ "`stack update` and install new haskell-lsp."
 defaultLanguageContextData :: Handlers -> Options -> LspFuncs config -> TVar Int -> SendFunc -> VFS -> LanguageContextData config
 defaultLanguageContextData h o lf tv sf vfs =
   LanguageContextData _INITIAL_RESPONSE_SEQUENCE h o sf (VFSData vfs mempty) mempty
-                      Nothing tv lf mempty defaultProgressData J.emptyIxMap
+                      Nothing tv lf mempty defaultProgressData emptyIxMap
 
 defaultProgressData :: ProgressData
 defaultProgressData = ProgressData 0 Map.empty
@@ -511,7 +512,7 @@ handleMessage dispatcherProc tvarDat jsonStr = do
     handleResponse baseId resobj = do
       resHandler <- atomically $ do
         ctx <- readTVar tvarDat
-        let (handler, newMap) = J.pickFromIxMap' baseId (resPendingResponses ctx)
+        let (handler, newMap) = pickFromIxMap' baseId (resPendingResponses ctx)
         modifyTVar' tvarDat (\c -> c { resPendingResponses = newMap })
         return handler
       case resHandler of
@@ -556,7 +557,7 @@ handleMessage dispatcherProc tvarDat jsonStr = do
 -- ---------------------------------------------------------------------
 
 makeResponseMessage :: J.LspId m -> J.ResponseParams m -> J.ResponseMessage m
-makeResponseMessage rid result = J.ResponseMessage "2.0" (J.responseId $ rid) (Just result) Nothing
+makeResponseMessage rid result = J.ResponseMessage "2.0" (Just rid) (Just result) Nothing
 
 makeResponseError :: J.LspId m -> J.ResponseError -> J.ResponseMessage m
 makeResponseError origId err = J.ResponseMessage "2.0" (Just origId) Nothing (Just err)
@@ -574,9 +575,9 @@ sendResponse tvarCtx msg = do
 sendErrorResponseE
   :: forall (m :: J.Method J.FromClient J.Request) config.
      TVar (LanguageContextData config)
-  -> J.SMethod m -> J.LspIdRsp (m :: J.Method J.FromClient J.Request) -> J.ResponseError -> IO ()
+  -> J.SMethod m -> J.LspId (m :: J.Method J.FromClient J.Request) -> J.ResponseError -> IO ()
 sendErrorResponseE sf m origId err = do
-  sendResponse sf $ J.FromServerRsp m (J.ResponseMessage "2.0" origId Nothing (Just err))
+  sendResponse sf $ J.FromServerRsp m (J.ResponseMessage "2.0" (Just origId) Nothing (Just err))
 
 sendErrorLog :: TVar (LanguageContextData config) -> Text -> IO ()
 sendErrorLog tv msg =

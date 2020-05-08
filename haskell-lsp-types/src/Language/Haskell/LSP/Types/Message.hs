@@ -1,18 +1,11 @@
-{-# LANGUAGE DuplicateRecordFields      #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE GADTs                      #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE TypeInType                 #-}
-{-# LANGUAGE TypeApplications           #-}
-{-# LANGUAGE KindSignatures             #-}
 {-# LANGUAGE FlexibleInstances          #-}
-{-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE StandaloneDeriving         #-}
-{-# LANGUAGE ExistentialQuantification  #-}
-{-# LANGUAGE MultiParamTypeClasses      #-}
-{-# LANGUAGE FunctionalDependencies     #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 module Language.Haskell.LSP.Types.Message where
@@ -20,18 +13,12 @@ module Language.Haskell.LSP.Types.Message where
 import qualified Data.Aeson                                 as A
 import           Data.Aeson.TH
 import           Data.Aeson.Types
-import           Data.Hashable
--- For <= 8.2.2
 import           Data.Text                                  (Text)
 import           Language.Haskell.LSP.Types.Constants
 import           Language.Haskell.LSP.Types.Utils
+import           Data.IxMap
 import           Data.Function (on)
-import Data.Kind
 import Control.Applicative
-import qualified Data.Map as M
-import Data.Some
-import Unsafe.Coerce
-
 
 -- | Id used for a request, Can be either a String or an Int
 data LspId (m :: Method p Request) = IdInt Int | IdString Text
@@ -46,53 +33,11 @@ instance A.FromJSON (LspId m) where
   parseJSON  (A.String  s) = return (IdString s)
   parseJSON _              = mempty
 
-instance Hashable (LspId m) where
-  hashWithSalt salt (IdInt i) = hashWithSalt salt i
-  hashWithSalt salt (IdString s) = hashWithSalt salt s
-
-type LspIdRsp m = Maybe (LspId m)
-
--- a `compare` b <=> toBase a `compare` toBase b
--- toBase (i :: f a) == toBase (j :: f b) <=> a ~ b
-class Ord (Base f) => IxOrd f where
-  type Base f
-  toBase :: forall a. f a -> Base f
-
 instance IxOrd LspId where
   type Base LspId = Either Int Text
   toBase (IdInt i) = Left i
   toBase (IdString s) = Right s
 
-newtype IxMap (k :: a -> Type) (f :: a -> Type) = IxMap { getMap :: M.Map (Base k) (Some f) }
-type IdMap (f :: Method FromServer Request -> Type) = IxMap (LspId :: Method FromServer Request -> Type)  f
-
-emptyIxMap :: IxMap k f
-emptyIxMap = IxMap M.empty
-
-insertIxMap :: IxOrd k => k m -> f m -> IxMap k f -> IxMap k f
-insertIxMap i x (IxMap m) = IxMap $ M.insert (toBase i) (mkSome x) m
-
-lookupIxMap :: IxOrd k => k m -> IxMap k f -> Maybe (f m)
-lookupIxMap i (IxMap m) =
-  case M.lookup (toBase i) m of
-    Just (Some v) -> Just $ unsafeCoerce v
-    Nothing -> Nothing
-
-pickFromIxMap :: IxOrd k => k m -> IxMap k f -> (Maybe (f m), IxMap k f)
-pickFromIxMap i = pickFromIxMap' (toBase i)
-
-pickFromIxMap' :: IxOrd k => Base k -> IxMap k f -> (Maybe (f m), IxMap k f)
-pickFromIxMap' i (IxMap m) =
-  case M.updateLookupWithKey (\_ _ -> Nothing) i m of
-    (Nothing,m) -> (Nothing,IxMap m)
-    (Just (Some k),m) -> (Just (unsafeCoerce k),IxMap m)
-
-requestId :: LspIdRsp m -> LspId m
-requestId (Just x) = x
-requestId Nothing  = error "reponse with no id"
-
-responseId :: LspId m -> LspIdRsp m
-responseId = Just
 -- ---------------------------------------------------------------------
 
 data Provenance = FromServer   | FromClient
@@ -268,8 +213,10 @@ instance Ord SomeServerMethod where
       getString (A.String t) = t
       getString _ = error "ToJSON instance for some method isn't string"
 
-instance ToJSON SomeMethod where
-  toJSON (SomeMethod m) = toJSON m
+-- ---------------------------------------------------------------------
+-- From JSON
+-- ---------------------------------------------------------------------
+
 instance FromJSON SomeMethod where
   parseJSON v = client <|> server
     where
@@ -285,11 +232,8 @@ instance FromJSON SomeMethod where
         case c of
           SomeServerMethod m -> pure $ SomeMethod m
 
-
-instance ToJSON SomeClientMethod where
-  toJSON (SomeClientMethod m) = toJSON m
 instance FromJSON SomeClientMethod where
-  -- General
+    -- General
   parseJSON (A.String "initialize")                          = pure $ SomeClientMethod SInitialize
   parseJSON (A.String "initialized")                         = pure $ SomeClientMethod SInitialized
   parseJSON (A.String "shutdown")                            = pure $ SomeClientMethod SShutdown
@@ -337,8 +281,6 @@ instance FromJSON SomeClientMethod where
   parseJSON (A.String m)                                     = pure $ SomeClientMethod (SCustomMethod m)
   parseJSON _                                                = mempty
 
-instance ToJSON SomeServerMethod where
-  toJSON (SomeServerMethod m) = toJSON m
 instance A.FromJSON SomeServerMethod where
 -- Server
   -- Window
@@ -365,15 +307,20 @@ instance A.FromJSON SomeServerMethod where
   parseJSON (A.String m)                                     = pure $ SomeServerMethod (SCustomMethod m)
   parseJSON _                                                = mempty
 
--- ---------------------------------------------------------------------
--- From JSON
--- ---------------------------------------------------------------------
-
+-- instance ToJSON (SMethod m)
 makeSingletonFromJSON 'SomeMethod ''SMethod
 
 -- ---------------------------------------------------------------------
 -- TO JSON
 -- ---------------------------------------------------------------------
+
+instance ToJSON SomeMethod where
+  toJSON (SomeMethod m) = toJSON m
+
+instance ToJSON SomeClientMethod where
+    toJSON (SomeClientMethod m) = toJSON m
+instance ToJSON SomeServerMethod where
+    toJSON (SomeServerMethod m) = toJSON m
 
 instance A.ToJSON (SMethod m) where
 -- Client
