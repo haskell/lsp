@@ -262,29 +262,45 @@ mkClientResponseHandler m cm tvarDat =
     J.IsClientNot -> ClientResponseHandler ()
     J.IsClientReq -> ClientResponseHandler $ \mrsp -> case mrsp of
       Left err -> sendErrorResponseE tvarDat m (cm ^. J.id) err
-      Right rsp -> sendResponse tvarDat $ J.FromServerRsp m $ makeResponseMessage (cm ^. J.id) rsp
+      Right rsp -> sendToClient tvarDat $ J.FromServerRsp m $ makeResponseMessage (cm ^. J.id) rsp
     J.IsClientEither -> ClientResponseHandler $ case cm of
       J.NotMess _ -> Nothing
       J.ReqMess req -> Just $ \mrsp -> case mrsp of
         Left err -> sendErrorResponseE tvarDat m (req ^. J.id) err
-        Right rsp -> sendResponse tvarDat $ J.FromServerRsp m $ makeResponseMessage (req ^. J.id) rsp
+        Right rsp -> sendToClient tvarDat $ J.FromServerRsp m $ makeResponseMessage (req ^. J.id) rsp
 
-addResponseHandler :: TVar (LanguageContextData config) -> J.LspId m -> (Product J.SMethod ServerResponseHandler) m -> IO ()
-addResponseHandler tv lid h = atomically $ modifyTVar' tv $ \ctx@LanguageContextData{resPendingResponses} ->
-  ctx { resPendingResponses = insertIxMap lid h resPendingResponses}
+-- | Return value signals if response handler was inserted succesfully
+-- Might fail if the id was already in the map
+addResponseHandler :: TVar (LanguageContextData config) -> J.LspId m -> (Product J.SMethod ServerResponseHandler) m -> IO Bool
+addResponseHandler tv lid h = atomically $ stateTVar tv $ \ctx@LanguageContextData{resPendingResponses} ->
+  case insertIxMap lid h resPendingResponses of
+    Just m -> (True,ctx { resPendingResponses = m})
+    Nothing -> (False, ctx)
 
 mkServerRequestFunc :: TVar (LanguageContextData config) -> SomeServerMessageWithResponse -> IO ()
 mkServerRequestFunc tvarDat (SomeServerMessageWithResponse m msg resHandler) =
   case J.splitServerMethod m of
-    J.IsServerNot -> sendResponse tvarDat $ J.fromServerNot msg
+    J.IsServerNot -> sendToClient tvarDat $ J.fromServerNot msg
     J.IsServerReq -> do
-      addResponseHandler tvarDat (msg ^. J.id) (Pair m resHandler)
-      sendResponse tvarDat $ J.fromServerReq msg
+      success <- addResponseHandler tvarDat (msg ^. J.id) (Pair m resHandler)
+      if success
+      then sendToClient tvarDat $ J.fromServerReq msg
+      else do
+        let mess = T.pack $
+              unwords ["haskell-lsp: could not send FromServer request as id is reused"
+                      , show (msg ^. J.id), show $ J.toJSON msg]
+        sendErrorLog tvarDat mess
     J.IsServerEither -> case msg of
-      J.NotMess _ -> sendResponse tvarDat $ J.FromServerMess m msg
+      J.NotMess _ -> sendToClient tvarDat $ J.FromServerMess m msg
       J.ReqMess req -> do
-        addResponseHandler tvarDat (req ^. J.id) (Pair m resHandler)
-        sendResponse tvarDat $ J.FromServerMess m msg
+        success <- addResponseHandler tvarDat (req ^. J.id) (Pair m resHandler)
+        if success
+        then sendToClient tvarDat $ J.FromServerMess m msg
+        else do
+          let mess = T.pack $
+                unwords ["haskell-lsp: could not send FromServer request as id is reused"
+                        , show (req ^. J.id), show req]
+          sendErrorLog tvarDat mess
 
 
 -- | The Handler type captures a function that receives local read-only state
@@ -564,8 +580,8 @@ makeResponseError origId err = J.ResponseMessage "2.0" (Just origId) Nothing (Ju
 
 -- ---------------------------------------------------------------------
 
-sendResponse :: TVar (LanguageContextData config) -> J.FromServerMessage -> IO ()
-sendResponse tvarCtx msg = do
+sendToClient :: TVar (LanguageContextData config) -> J.FromServerMessage -> IO ()
+sendToClient tvarCtx msg = do
   ctx <- readTVarIO tvarCtx
   resSendResponse ctx msg
 
@@ -577,11 +593,11 @@ sendErrorResponseE
      TVar (LanguageContextData config)
   -> J.SMethod m -> J.LspId (m :: J.Method J.FromClient J.Request) -> J.ResponseError -> IO ()
 sendErrorResponseE sf m origId err = do
-  sendResponse sf $ J.FromServerRsp m (J.ResponseMessage "2.0" (Just origId) Nothing (Just err))
+  sendToClient sf $ J.FromServerRsp m (J.ResponseMessage "2.0" (Just origId) Nothing (Just err))
 
 sendErrorLog :: TVar (LanguageContextData config) -> Text -> IO ()
 sendErrorLog tv msg =
-  sendResponse tv $ J.fromServerNot $ fmServerLogMessageNotification J.MtError msg
+  sendToClient tv $ J.fromServerNot $ fmServerLogMessageNotification J.MtError msg
 
 -- ---------------------------------------------------------------------
 
@@ -673,7 +689,7 @@ initializeRequestHandler' onStartup mHandler tvarCtx = Handler $ \req rspH@(Clie
                     -> ((Progress -> IO ()) -> IO a) -> IO a)
       withProgressBase indefinite title cancellable f
         | clientSupportsProgress = do
-          let sf = sendResponse tvarCtx
+          let sf = sendToClient tvarCtx
 
           progId <- getNewProgressId
 

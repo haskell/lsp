@@ -2,6 +2,7 @@
 {-# LANGUAGE TypeInType       #-}
 {-# LANGUAGE RankNTypes       #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE ViewPatterns     #-}
 
 module Data.IxMap where
 
@@ -20,9 +21,11 @@ newtype IxMap (k :: a -> Type) (f :: a -> Type) = IxMap { getMap :: M.Map (Base 
 
 emptyIxMap :: IxMap k f
 emptyIxMap = IxMap M.empty
-
-insertIxMap :: IxOrd k => k m -> f m -> IxMap k f -> IxMap k f
-insertIxMap i x (IxMap m) = IxMap $ M.insert (toBase i) (mkSome x) m
+ 
+insertIxMap :: IxOrd k => k m -> f m -> IxMap k f -> Maybe (IxMap k f)
+insertIxMap (toBase -> i) x (IxMap m)
+  | M.notMember i m = Just $ IxMap $ M.insert i (mkSome x) m
+  | otherwise = Nothing
 
 lookupIxMap :: IxOrd k => k m -> IxMap k f -> Maybe (f m)
 lookupIxMap i (IxMap m) =
