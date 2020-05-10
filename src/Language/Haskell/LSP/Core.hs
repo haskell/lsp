@@ -539,7 +539,7 @@ handleMessage dispatcherProc tvarDat jsonStr = do
                let msg = T.pack $ unwords ["haskell-lsp: got error while decoding response:", show e, "in", show resobj]
                sendErrorLog tvarDat msg
                f (Left $ J.ResponseError J.ParseError msg Nothing)
-            J.Success (res :: J.ResponseMessage m) -> f (res ^. J.result) 
+            J.Success (res :: J.ResponseMessage m) -> f (res ^. J.result)
           J.IsServerEither -> case f of
             Nothing ->
               sendErrorLog tvarDat $
@@ -788,7 +788,7 @@ serverCapabilities clientCaps o h =
     }
   where
 
-    supported' m b 
+    supported' m b
       | supported_b m = Just b
       | otherwise = Nothing
 

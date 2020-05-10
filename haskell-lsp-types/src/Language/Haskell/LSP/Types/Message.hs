@@ -62,7 +62,7 @@ type family MessageParams (m :: Method p t) :: Type where
   MessageParams WorkspaceDidChangeWorkspaceFolders = DidChangeWorkspaceFoldersParams
   MessageParams WorkspaceDidChangeConfiguration    = DidChangeConfigurationParams
   MessageParams WorkspaceDidChangeWatchedFiles     = DidChangeWatchedFilesParams
-  MessageParams WorkspaceSymbol                    = WorkspaceSymbolParams 
+  MessageParams WorkspaceSymbol                    = WorkspaceSymbolParams
   MessageParams WorkspaceExecuteCommand            = ExecuteCommandParams
   -- Progress
   MessageParams WorkDoneProgressCancel             = WorkDoneProgressCancelParams
@@ -70,14 +70,14 @@ type family MessageParams (m :: Method p t) :: Type where
   MessageParams TextDocumentDidOpen                = DidOpenTextDocumentParams
   MessageParams TextDocumentDidChange              = DidChangeTextDocumentParams
   MessageParams TextDocumentWillSave               = WillSaveTextDocumentParams
-  MessageParams TextDocumentWillSaveWaitUntil      = WillSaveTextDocumentParams 
+  MessageParams TextDocumentWillSaveWaitUntil      = WillSaveTextDocumentParams
   MessageParams TextDocumentDidSave                = DidSaveTextDocumentParams
   MessageParams TextDocumentDidClose               = DidCloseTextDocumentParams
   -- Completion
   MessageParams TextDocumentCompletion             = CompletionParams
   MessageParams CompletionItemResolve              = CompletionItem
   -- Language Queries
-  MessageParams TextDocumentHover                  = TextDocumentPositionParams 
+  MessageParams TextDocumentHover                  = TextDocumentPositionParams
   MessageParams TextDocumentSignatureHelp          = TextDocumentPositionParams
   MessageParams TextDocumentDefinition             = TextDocumentPositionParams
   MessageParams TextDocumentTypeDefinition         = TextDocumentPositionParams
@@ -86,7 +86,7 @@ type family MessageParams (m :: Method p t) :: Type where
   MessageParams TextDocumentDocumentHighlight      = TextDocumentPositionParams
   MessageParams TextDocumentDocumentSymbol         = DocumentSymbolParams
   -- Code Action/Lens/Link
-  MessageParams TextDocumentCodeAction             = CodeActionParams 
+  MessageParams TextDocumentCodeAction             = CodeActionParams
   MessageParams TextDocumentCodeLens               = CodeLensParams
   MessageParams CodeLensResolve                    = CodeLens
   MessageParams TextDocumentDocumentLink           = DocumentLinkParams
@@ -471,7 +471,7 @@ fromClientReq :: forall (m :: Method FromClient Request).
   Message m ~ RequestMessage m => RequestMessage m -> FromClientMessage
 fromClientReq m@RequestMessage{_method=meth} = FromClientMess meth m
 
-type LookupFunc p = forall (m :: Method p Request). LspId m -> Maybe (SMethod m, a)
+type LookupFunc p a = forall (m :: Method p Request). LspId m -> Maybe (SMethod m, a)
 
 parseServerMessage :: LookupFunc FromClient a -> Value -> Parser (FromServerMessage,Maybe a)
 parseServerMessage lookupId v@(Object o) = do
