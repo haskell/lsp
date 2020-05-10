@@ -1,3 +1,6 @@
-resolver: nightly-2019-12-16
+resolver: lts-15.11
 packages:
   - .
+extra-deps:
+  - haskell-lsp-0.22.0.0@sha256:636af17378c10db3c784df697f1a0a450c694f1cf4a88acd0ed58be90c5295ec,5315
+  - haskell-lsp-types-0.22.0.0@sha256:c0fcd9c89279d92e79fce8e928553fa184645d0a0286a6736dec773d447510e9,3027
