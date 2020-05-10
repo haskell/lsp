@@ -50,8 +50,8 @@ import GHC.Generics
 
 -- | Map a method to the message payload type
 type family MessageParams (m :: Method p t) :: Type where
-  --   RequestMessage <method> <params> <response>
-  -- | NotificationMessage <method> <params>
+  --   RequestMessage method params response
+  --   | NotificationMessage <method> <params>
 -- Client
   -- General
   MessageParams Initialize                         = InitializeParams
@@ -421,6 +421,8 @@ type HandlerFunc a = Either ResponseError a -> IO ()
 -- () for Notifications
 -- This is a callback that will be invoked when your request
 -- recieves a response
+-- Custom methods can either be a notification or a request, so
+-- it may or may not have a response handler!
 type family ResponseHandlerFunc m :: Type where
   ResponseHandlerFunc CustomMethod = Maybe (HandlerFunc Value)
   ResponseHandlerFunc (m :: Method p t) = BaseHandlerFunc t m
