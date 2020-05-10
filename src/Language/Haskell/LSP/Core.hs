@@ -250,11 +250,9 @@ data InitializeCallbacks config =
       -- that may be necesary for the server lifecycle.
     }
 
-data ClientResponseHandler (m :: J.Method J.FromClient t) where
-  ClientResponseHandler :: J.ResponseHandlerFunc m -> ClientResponseHandler m
+newtype ClientResponseHandler (m :: J.Method J.FromClient t) = ClientResponseHandler (J.ResponseHandlerFunc m)
 
-data ServerResponseHandler (m :: J.Method J.FromServer t) where
-  ServerResponseHandler :: J.ResponseHandlerFunc m -> ServerResponseHandler m
+newtype ServerResponseHandler (m :: J.Method J.FromServer t) = ServerResponseHandler (J.ResponseHandlerFunc m)
 
 mkClientResponseHandler :: J.SClientMethod m -> J.ClientMessage m -> TVar (LanguageContextData config) -> ClientResponseHandler m
 mkClientResponseHandler m cm tvarDat =
