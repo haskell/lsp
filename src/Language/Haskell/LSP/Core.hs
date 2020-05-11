@@ -26,7 +26,6 @@ module Language.Haskell.LSP.Core (
   , ProgressCancellable(..)
   , ProgressCancelledException
   , ServerMessageFunc
-  , SendFunc
   , SomeServerMessageWithResponse(..)
   , Handlers
   , Options(..)
@@ -84,16 +83,13 @@ import qualified System.Log.Logger as L
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
 -- ---------------------------------------------------------------------
 
--- | A function to send a message to the client
-type SendFunc = J.FromServerMessage -> IO ()
-
 -- | state used by the LSP dispatcher to manage the message loop
 data LanguageContextData config =
   LanguageContextData {
     resSeqDebugContextData :: !Int
   , resHandlers            :: !Handlers
   , resOptions             :: !Options
-  , resSendResponse        :: !SendFunc
+  , resSendMessage         :: !(J.FromServerMessage -> IO ())
   , resVFS                 :: !VFSData
   , resDiagnostics         :: !DiagnosticStore
   , resConfig              :: !(Maybe config)
@@ -473,9 +469,9 @@ _ERR_MSG_URL = [ "`stack update` and install new haskell-lsp."
 -- |
 --
 --
-defaultLanguageContextData :: Handlers -> Options -> LspFuncs config -> TVar Int -> SendFunc -> VFS -> LanguageContextData config
-defaultLanguageContextData h o lf tv sf vfs =
-  LanguageContextData _INITIAL_RESPONSE_SEQUENCE h o sf (VFSData vfs mempty) mempty
+defaultLanguageContextData :: Handlers -> Options -> LspFuncs config -> TVar Int -> (J.FromServerMessage -> IO ()) -> VFS -> LanguageContextData config
+defaultLanguageContextData h o lf tv smsg vfs =
+  LanguageContextData _INITIAL_RESPONSE_SEQUENCE h o smsg (VFSData vfs mempty) mempty
                       Nothing tv lf mempty defaultProgressData emptyIxMap
 
 defaultProgressData :: ProgressData
@@ -567,7 +563,7 @@ makeResponseError origId err = J.ResponseMessage "2.0" (Just origId) (Left err)
 sendToClient :: TVar (LanguageContextData config) -> J.FromServerMessage -> IO ()
 sendToClient tvarCtx msg = do
   ctx <- readTVarIO tvarCtx
-  resSendResponse ctx msg
+  resSendMessage ctx msg
 
 
 -- ---------------------------------------------------------------------
@@ -880,7 +876,7 @@ publishDiagnostics tvarDat maxDiagnosticCount uri version diags = do
     return $ case mdp of
       Nothing -> return ()
       Just params ->
-        resSendResponse ctx $ J.fromServerNot $ J.NotificationMessage "2.0" J.STextDocumentPublishDiagnostics params
+        resSendMessage ctx $ J.fromServerNot $ J.NotificationMessage "2.0" J.STextDocumentPublishDiagnostics params
 
 -- ---------------------------------------------------------------------
 
@@ -899,7 +895,7 @@ flushDiagnosticsBySource tvarDat maxDiagnosticCount msource = join $ atomically 
     case mdp of
       Nothing -> return ()
       Just params -> do
-        resSendResponse ctx $ J.fromServerNot $ J.NotificationMessage "2.0" J.STextDocumentPublishDiagnostics params
+        resSendMessage ctx $ J.fromServerNot $ J.NotificationMessage "2.0" J.STextDocumentPublishDiagnostics params
 
 -- =====================================================================
 --

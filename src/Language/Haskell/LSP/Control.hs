@@ -66,14 +66,13 @@ runWithHandles hin hout initializeCallbacks h o = do
   _rhpid <- forkIO $ sendServer cout hout
 
 
-  let sendFunc :: Core.SendFunc
-      sendFunc msg = atomically $ writeTChan cout $ J.toJSON msg
-  let lf = error "LifeCycle error, ClientCapabilities not set yet via initialize maessage"
+  let sendMsg msg = atomically $ writeTChan cout $ J.toJSON msg
+      lf = error "LifeCycle error, ClientCapabilities not set yet via initialize maessage"
 
   tvarId <- atomically $ newTVar 0
 
   initVFS $ \vfs -> do
-    tvarDat <- atomically $ newTVar $ Core.defaultLanguageContextData h o lf tvarId sendFunc vfs
+    tvarDat <- atomically $ newTVar $ Core.defaultLanguageContextData h o lf tvarId sendMsg vfs
 
     ioLoop hin initializeCallbacks tvarDat
 
