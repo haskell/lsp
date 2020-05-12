@@ -44,7 +44,7 @@ library
                      , filepath
                      , hslogger
                      , hashable
-                     , haskell-lsp-types == 0.22.*
+                     , haskell-lsp-types
                      , lens >= 4.15.2
                      , mtl
                      , network-uri
@@ -63,7 +63,6 @@ library
 executable lsp-hello
   main-is:             Main.hs
   hs-source-dirs:      example
-                       -- src
   default-language:    Haskell2010
   ghc-options:         -Wall
 
@@ -78,7 +77,6 @@ executable lsp-hello
                      , lens >= 4.15.2
                      , mtl
                      , network-uri
-                     , rope-utf16-splay >= 0.2
                      , stm
                      , text
                      , time
