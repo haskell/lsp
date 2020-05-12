@@ -21,7 +21,6 @@ library
                      , Language.Haskell.LSP.Types.Capabilities
                      , Language.Haskell.LSP.Types.Constants
                      , Language.Haskell.LSP.Types.Lens
-                     , Language.Haskell.LSP.Types.MessageFuncs
                      , Language.Haskell.LSP.Types.Utils
                      , Data.IxMap
   other-modules:       Language.Haskell.LSP.Types.ClientCapabilities
