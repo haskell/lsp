@@ -235,6 +235,8 @@ instance (ToJSON (MessageParams m), FromJSON (SMethod m)) => ToJSON (RequestMess
   toJSON     = genericToJSON lspOptions
   toEncoding = genericToEncoding lspOptions
 
+-- | A custom message data type is needed to distinguish between
+-- notifications and requests, since a CustomMethod can be both!
 data CustomMessage p t where
   ReqMess :: RequestMessage (CustomMethod :: Method p Request) -> CustomMessage p Request
   NotMess :: NotificationMessage (CustomMethod :: Method p Notification) -> CustomMessage p Notification
@@ -424,7 +426,6 @@ type HandlerFunc a = Either ResponseError a -> IO ()
 -- Custom methods can either be a notification or a request, so
 -- it may or may not have a response handler!
 type family ResponseHandlerFunc m :: Type where
-  ResponseHandlerFunc CustomMethod = Maybe (HandlerFunc Value)
   ResponseHandlerFunc (m :: Method p t) = BaseHandlerFunc t m
 
 type family BaseHandlerFunc (t :: MethodType) (m :: Method p t) :: Type where

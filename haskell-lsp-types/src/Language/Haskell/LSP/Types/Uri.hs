@@ -24,7 +24,7 @@ import           Control.DeepSeq
 import qualified Data.Aeson                                 as A
 import           Data.Binary                                (Binary, Get, put, get)
 import           Data.Hashable
-import           Data.List                                  (isPrefixOf, stripPrefix)
+import           Data.List                                  (stripPrefix)
 #if __GLASGOW_HASKELL__ < 804
 import           Data.Monoid                                ((<>))
 #endif
@@ -112,8 +112,8 @@ platformAdjustFromUriPath systemOS authority srcPath =
   if systemOS /= windowsOS || null srcPath then srcPath
     else let
       firstSegment:rest = (FPP.splitDirectories . tail) srcPath  -- Drop leading '/' for absolute Windows paths
-      drive = if FPW.isDrive firstSegment 
-              then FPW.addTrailingPathSeparator firstSegment 
+      drive = if FPW.isDrive firstSegment
+              then FPW.addTrailingPathSeparator firstSegment
               else firstSegment
       in FPW.joinDrive drive $ FPW.joinPath rest
 
