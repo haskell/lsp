@@ -173,6 +173,16 @@ instance E.Exception ProgressCancelledException
 -- @since 0.11.0.0
 data ProgressCancellable = Cancellable | NotCancellable
 
+type SendRequestFunc = forall m.
+                        J.SServerMethod (m :: J.Method J.FromServer J.Request)
+                     -> J.MessageParams m
+                     -> (J.LspId m -> Either J.ResponseError (J.ResponseParams m) -> IO ())
+                     -> IO (J.LspId m)
+type SendNotifcationFunc = forall m.
+                            J.SServerMethod (m :: J.Method J.FromServer J.Notification)
+                         -> J.MessageParams m
+                         -> IO ()
+
 -- | Returned to the server on startup, providing ways to interact with the client.
 data LspFuncs c =
   LspFuncs
@@ -180,20 +190,18 @@ data LspFuncs c =
     , config                       :: !(IO (Maybe c))
       -- ^ Derived from the DidChangeConfigurationNotification message via a
       -- server-provided function.
-    , sendReq                      :: !(forall m.
-                                           J.SServerMethod (m :: J.Method J.FromServer J.Request)
-                                        -> J.MessageParams m
-                                        -> (J.LspId m -> Either J.ResponseError (J.ResponseParams m) -> IO ())
-                                        -> IO (J.LspId m))
-    , sendNot                      :: !(forall m.
-                                           J.SServerMethod (m :: J.Method J.FromServer J.Notification)
-                                        -> J.MessageParams m
-                                        -> IO ())
+    , sendReq                      :: !SendRequestFunc
+      -- ^ The function used to send requests to the client and handle their
+      -- responses.
+    , sendNot                      :: !SendNotifcationFunc
+      -- ^ The function used to send notifications to the client.
     , getVirtualFileFunc           :: !(J.NormalizedUri -> IO (Maybe VirtualFile))
     , getVirtualFilesFunc          :: !(IO VFS)
       -- ^ Function to return the 'VirtualFile' associated with a
       -- given 'NormalizedUri', if there is one.
     , persistVirtualFileFunc       :: !(J.NormalizedUri -> IO (Maybe FilePath))
+    , getVersionedTextDocFunc      :: !(J.TextDocumentIdentifier -> IO J.VersionedTextDocumentIdentifier)
+      -- ^ Given a text document identifier, annotate it with the latest version.
     , reverseFileMapFunc           :: !(IO (FilePath -> FilePath))
     , publishDiagnosticsFunc       :: !PublishDiagnosticsFunc
     , flushDiagnosticsBySourceFunc :: !FlushDiagnosticsBySourceFunc
@@ -430,6 +438,15 @@ persistVirtualFile tvarDat uri = join $ atomically $ do
 
       modifyVFSData tvarDat (\d -> (d { reverseMap = revMap' }, ()))
       return ((Just fn) <$ write)
+
+getVersionedTextDoc :: TVar (LanguageContextData config) -> J.TextDocumentIdentifier -> IO J.VersionedTextDocumentIdentifier
+getVersionedTextDoc tvarDat doc = do
+  let uri = doc ^. J.uri
+  mvf <- getVirtualFile tvarDat (J.toNormalizedUri uri)
+  let ver = case mvf of
+              Just (VirtualFile lspver _ _) -> Just lspver
+              Nothing -> Nothing
+  return (J.VersionedTextDocumentIdentifier uri ver)
 
 -- TODO: should this function return a URI?
 -- | If the contents of a VFS has been dumped to a temporary file, map
@@ -674,14 +691,19 @@ initializeRequestHandler' onStartup mHandler tvarCtx = Handler $ \req rspH@(Clie
                               Cancellable -> True
                               NotCancellable -> False
 
-          rId <- freshLspId tvarCtx
-
           -- Create progress token
-          liftIO $ sf $ J.fromServerReq $ J.RequestMessage
-            "2.0" (J.IdInt rId) J.SWindowWorkDoneProgressCreate (J.WorkDoneProgressCreateParams progId)
+          -- FIXME  : This needs to wait until the request returns before
+          -- continuing!!!
+          _ <- mkSendReqFunc tvarCtx J.SWindowWorkDoneProgressCreate
+                (J.WorkDoneProgressCreateParams progId) $ \_ res -> do
+                  case res of
+                    -- An error ocurred when the client was setting it up
+                    -- No need to do anything then, as per the spec
+                    Left _err -> pure ()
+                    Right () -> pure ()
 
           -- Send initial notification
-          liftIO $ sf $ J.fromServerNot $ J.NotificationMessage "2.0" J.SProgress $
+          mkSendNotFunc tvarCtx J.SProgress $
             fmap J.Begin $ J.ProgressParams progId $
               J.WorkDoneProgressBeginParams title (Just cancellable') Nothing initialPercentage
 
@@ -690,7 +712,7 @@ initializeRequestHandler' onStartup mHandler tvarCtx = Handler $ \req rspH@(Clie
           res <- wait aid
 
           -- Send done notification
-          liftIO $ sf $ J.fromServerNot $ J.NotificationMessage "2.0" J.SProgress $
+          mkSendNotFunc tvarCtx J.SProgress $
             J.End <$> (J.ProgressParams progId (J.WorkDoneProgressEndParams Nothing))
           -- Delete the progress cancellation from the map
           -- If we don't do this then it's easy to leak things as the map contains any IO action.
@@ -719,6 +741,7 @@ initializeRequestHandler' onStartup mHandler tvarCtx = Handler $ \req rspH@(Clie
                             (getVirtualFile tvarCtx)
                             (getVirtualFiles tvarCtx)
                             (persistVirtualFile tvarCtx)
+                            (getVersionedTextDoc tvarCtx)
                             (reverseFileMap tvarCtx)
                             (publishDiagnostics tvarCtx)
                             (flushDiagnosticsBySource tvarCtx)
