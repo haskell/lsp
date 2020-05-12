@@ -50,8 +50,6 @@ import GHC.Generics
 
 -- | Map a method to the message payload type
 type family MessageParams (m :: Method p t) :: Type where
-  --   RequestMessage method params response
-  --   | NotificationMessage <method> <params>
 -- Client
   -- General
   MessageParams Initialize                         = InitializeParams
