@@ -25,8 +25,6 @@ module Language.Haskell.LSP.Core (
   , Progress(..)
   , ProgressCancellable(..)
   , ProgressCancelledException
-  , ServerMessageFunc
-  , SomeServerMessageWithResponse(..)
   , Handlers
   , Options(..)
   , ClientResponseHandler(..)
@@ -61,7 +59,7 @@ import           Data.Monoid hiding (Product)
 import qualified Data.Text as T
 import           Data.Text ( Text )
 import           Language.Haskell.LSP.Constant
-import           Language.Haskell.LSP.Types.MessageFuncs
+-- import           Language.Haskell.LSP.Types.MessageFuncs
 import qualified Language.Haskell.LSP.Types.Capabilities    as C
 import qualified Language.Haskell.LSP.Types                 as J
 import qualified Language.Haskell.LSP.Types.Lens            as J
@@ -175,16 +173,6 @@ instance E.Exception ProgressCancelledException
 -- @since 0.11.0.0
 data ProgressCancellable = Cancellable | NotCancellable
 
-data SomeServerMessageWithResponse where
-  SomeServerMessageWithResponse
-    :: (J.ToJSON (J.ServerMessage m))
-    => J.SServerMethod m
-    -> J.ServerMessage m
-    -> ServerResponseHandler m
-    -> SomeServerMessageWithResponse
-
-type ServerMessageFunc = SomeServerMessageWithResponse -> IO ()
-
 -- | Returned to the server on startup, providing ways to interact with the client.
 data LspFuncs c =
   LspFuncs
@@ -192,7 +180,15 @@ data LspFuncs c =
     , config                       :: !(IO (Maybe c))
       -- ^ Derived from the DidChangeConfigurationNotification message via a
       -- server-provided function.
-    , sendFunc                     :: !ServerMessageFunc
+    , sendReq                      :: !(forall m.
+                                           J.SServerMethod (m :: J.Method J.FromServer J.Request)
+                                        -> J.MessageParams m
+                                        -> (J.LspId m -> Either J.ResponseError (J.ResponseParams m) -> IO ())
+                                        -> IO (J.LspId m))
+    , sendNot                      :: !(forall m.
+                                           J.SServerMethod (m :: J.Method J.FromServer J.Notification)
+                                        -> J.MessageParams m
+                                        -> IO ())
     , getVirtualFileFunc           :: !(J.NormalizedUri -> IO (Maybe VirtualFile))
     , getVirtualFilesFunc          :: !(IO VFS)
       -- ^ Function to return the 'VirtualFile' associated with a
@@ -201,7 +197,6 @@ data LspFuncs c =
     , reverseFileMapFunc           :: !(IO (FilePath -> FilePath))
     , publishDiagnosticsFunc       :: !PublishDiagnosticsFunc
     , flushDiagnosticsBySourceFunc :: !FlushDiagnosticsBySourceFunc
-    , getNextReqId                 :: !(IO Int)
     , rootPath                     :: !(Maybe FilePath)
     , getWorkspaceFolders          :: !(IO (Maybe [J.WorkspaceFolder]))
     , withProgress                 :: !(forall a . Text -> ProgressCancellable
@@ -251,15 +246,15 @@ newtype ClientResponseHandler (m :: J.Method J.FromClient t) = ClientResponseHan
 newtype ServerResponseHandler (m :: J.Method J.FromServer t) = ServerResponseHandler (J.ResponseHandlerFunc m)
 
 mkClientResponseHandler :: J.SClientMethod m -> J.ClientMessage m -> TVar (LanguageContextData config) -> ClientResponseHandler m
-mkClientResponseHandler m cm tvarDat =
+mkClientResponseHandler m cm tvarDat = ClientResponseHandler $
   case J.splitClientMethod m of
-    J.IsClientNot -> ClientResponseHandler ()
-    J.IsClientReq -> ClientResponseHandler $ \mrsp -> case mrsp of
+    J.IsClientNot -> ()
+    J.IsClientReq -> \mrsp -> case mrsp of
       Left err -> sendErrorResponseE tvarDat m (cm ^. J.id) err
       Right rsp -> sendToClient tvarDat $ J.FromServerRsp m $ makeResponseMessage (cm ^. J.id) rsp
-    J.IsClientEither -> ClientResponseHandler $ case cm of
-      J.NotMess _ -> Nothing
-      J.ReqMess req -> Just $ \mrsp -> case mrsp of
+    J.IsClientEither -> case cm of
+      J.NotMess _ -> ()
+      J.ReqMess req -> \mrsp -> case mrsp of
         Left err -> sendErrorResponseE tvarDat m (req ^. J.id) err
         Right rsp -> sendToClient tvarDat $ J.FromServerRsp m $ makeResponseMessage (req ^. J.id) rsp
 
@@ -271,31 +266,33 @@ addResponseHandler tv lid h = atomically $ stateTVar tv $ \ctx@LanguageContextDa
     Just m -> (True,ctx { resPendingResponses = m})
     Nothing -> (False, ctx)
 
-mkServerRequestFunc :: TVar (LanguageContextData config) -> SomeServerMessageWithResponse -> IO ()
-mkServerRequestFunc tvarDat (SomeServerMessageWithResponse m msg resHandler) =
-  case J.splitServerMethod m of
-    J.IsServerNot -> sendToClient tvarDat $ J.fromServerNot msg
-    J.IsServerReq -> do
-      success <- addResponseHandler tvarDat (msg ^. J.id) (Pair m resHandler)
-      if success
-      then sendToClient tvarDat $ J.fromServerReq msg
-      else do
-        let mess = T.pack $
-              unwords ["haskell-lsp: could not send FromServer request as id is reused"
-                      , show (msg ^. J.id), show $ J.toJSON msg]
-        sendErrorLog tvarDat mess
-    J.IsServerEither -> case msg of
-      J.NotMess _ -> sendToClient tvarDat $ J.FromServerMess m msg
-      J.ReqMess req -> do
-        success <- addResponseHandler tvarDat (req ^. J.id) (Pair m resHandler)
-        if success
-        then sendToClient tvarDat $ J.FromServerMess m msg
-        else do
-          let mess = T.pack $
-                unwords ["haskell-lsp: could not send FromServer request as id is reused"
-                        , show (req ^. J.id), show req]
-          sendErrorLog tvarDat mess
+mkSendNotFunc :: forall (m :: J.Method J.FromServer J.Notification) config.
+                       TVar (LanguageContextData config)
+                    -> J.SServerMethod m
+                    -> J.MessageParams m
+                    -> IO ()
+mkSendNotFunc tvarDat m params =
+  let msg = J.NotificationMessage "2.0" m params
+  in case J.splitServerMethod m of
+        J.IsServerNot -> sendToClient tvarDat $ J.fromServerNot msg
+        J.IsServerEither -> sendToClient tvarDat $ J.FromServerMess m $ J.NotMess msg
 
+mkSendReqFunc :: forall (m :: J.Method J.FromServer J.Request) config.
+                       TVar (LanguageContextData config)
+                    -> J.SServerMethod m
+                    -> J.MessageParams m
+                    -> (J.LspId m -> Either J.ResponseError (J.ResponseParams m) -> IO ())
+                    -> IO (J.LspId m)
+mkSendReqFunc tvarDat m params resHandler = do
+  reqId <- J.IdInt <$> freshLspId tvarDat
+  success <- addResponseHandler tvarDat reqId (Pair m (ServerResponseHandler (resHandler reqId)))
+  unless success $ error "haskell-lsp: could not send FromServer request as id is reused"
+
+  let msg = J.RequestMessage "2.0" reqId m params
+  (case J.splitServerMethod m of
+    J.IsServerReq -> sendToClient tvarDat $ J.fromServerReq msg
+    J.IsServerEither -> sendToClient tvarDat $ J.FromServerMess m $ J.ReqMess msg) :: IO ()
+  return reqId
 
 -- | The Handler type captures a function that receives local read-only state
 -- 'a', a function to send a reply message once encoded as a ByteString, and a
@@ -534,17 +531,12 @@ handleMessage dispatcherProc tvarDat jsonStr = do
                sendErrorLog tvarDat msg
                f (Left $ J.ResponseError J.ParseError msg Nothing)
             J.Success (res :: J.ResponseMessage m) -> f (res ^. J.result)
-          J.IsServerEither -> case f of
-            Nothing ->
-              sendErrorLog tvarDat $
-                T.pack $ "haskell-lsp: No handler for "
-                      ++ (show resobj) ++ " with method" ++ (show m)
-            Just f' ->  case J.fromJSON $ J.Object resobj of
+          J.IsServerEither -> case J.fromJSON $ J.Object resobj of
               J.Error e -> do
                  let msg = T.pack $ unwords ["haskell-lsp: got error while decoding response:", show e, "in", show resobj]
                  sendErrorLog tvarDat msg
-                 f' (Left $ J.ResponseError J.ParseError msg Nothing)
-              J.Success (res :: J.ResponseMessage m) -> f' (res ^. J.result)
+                 f (Left $ J.ResponseError J.ParseError msg Nothing)
+              J.Success (res :: J.ResponseMessage m) -> f (res ^. J.result)
     -- capability based handlers
     handle json cmd = do
       ctx <- readTVarIO tvarDat
@@ -577,7 +569,8 @@ sendErrorResponseE sf m origId err = do
 
 sendErrorLog :: TVar (LanguageContextData config) -> Text -> IO ()
 sendErrorLog tv msg =
-  sendToClient tv $ J.fromServerNot $ fmServerLogMessageNotification J.MtError msg
+  sendToClient tv $ J.fromServerNot $
+    J.NotificationMessage "2.0" J.SWindowLogMessage (J.LogMessageParams J.MtError msg)
 
 -- ---------------------------------------------------------------------
 
@@ -590,6 +583,13 @@ initializeErrorHandler sendResp e =
 -- |=====================================================================
 --
 -- Handlers
+
+freshLspId :: TVar (LanguageContextData config) -> IO Int
+freshLspId tvCtx = atomically $ do
+  tvId <- resLspId <$> readTVar tvCtx
+  cid <- readTVar tvId
+  modifyTVar' tvId (+1)
+  return cid
 
 -- |
 --
@@ -614,7 +614,6 @@ initializeRequestHandler' onStartup mHandler tvarCtx = Handler $ \req rspH@(Clie
 
     atomically $ modifyTVar' tvarCtx (\c -> c { resWorkspaceFolders = wfs })
 
-    ctx0 <- readTVarIO tvarCtx
     let rootDir = getFirst $ foldMap First [ params ^. J.rootUri  >>= J.uriToFilePath
                                            , params ^. J.rootPath <&> T.unpack ]
 
@@ -625,11 +624,6 @@ initializeRequestHandler' onStartup mHandler tvarCtx = Handler $ \req rspH@(Clie
         unless (null dir) $ setCurrentDirectory dir
 
     let
-      getLspId tvId = atomically $ do
-        cid <- readTVar tvId
-        modifyTVar' tvId (+1)
-        return cid
-
       clientSupportsWfs = fromMaybe False $ do
         let (C.ClientCapabilities mw _ _ _) = params ^. J.capabilities
         (C.WorkspaceClientCapabilities _ _ _ _ _ _ mwf _) <- mw
@@ -680,25 +674,24 @@ initializeRequestHandler' onStartup mHandler tvarCtx = Handler $ \req rspH@(Clie
                               Cancellable -> True
                               NotCancellable -> False
 
-          rId <- getLspId $ resLspId ctx0
+          rId <- freshLspId tvarCtx
 
           -- Create progress token
-          liftIO $ sf $ J.fromServerReq $
-            fmServerWorkDoneProgressCreateRequest (J.IdInt rId) $ J.WorkDoneProgressCreateParams progId
+          liftIO $ sf $ J.fromServerReq $ J.RequestMessage
+            "2.0" (J.IdInt rId) J.SWindowWorkDoneProgressCreate (J.WorkDoneProgressCreateParams progId)
 
           -- Send initial notification
-          liftIO $ sf $ J.fromServerNot $ fmServerWorkDoneProgressBeginNotification $
-            J.ProgressParams progId $
-            J.WorkDoneProgressBeginParams title (Just cancellable') Nothing initialPercentage
+          liftIO $ sf $ J.fromServerNot $ J.NotificationMessage "2.0" J.SProgress $
+            fmap J.Begin $ J.ProgressParams progId $
+              J.WorkDoneProgressBeginParams title (Just cancellable') Nothing initialPercentage
 
           aid <- async $ f (updater progId (sf . J.fromServerNot))
           storeProgress progId aid
           res <- wait aid
 
           -- Send done notification
-          liftIO $ sf $ J.fromServerNot $ fmServerWorkDoneProgressEndNotification $
-            J.ProgressParams progId $
-            J.WorkDoneProgressEndParams Nothing
+          liftIO $ sf $ J.fromServerNot $ J.NotificationMessage "2.0" J.SProgress $
+            J.End <$> (J.ProgressParams progId (J.WorkDoneProgressEndParams Nothing))
           -- Delete the progress cancellation from the map
           -- If we don't do this then it's easy to leak things as the map contains any IO action.
           deleteProgress progId
@@ -707,9 +700,9 @@ initializeRequestHandler' onStartup mHandler tvarCtx = Handler $ \req rspH@(Clie
           return res
         | otherwise = f (const $ return ())
           where updater progId sf (Progress percentage msg) =
-                  sf $ fmServerWorkDoneProgressReportNotification $
-                    J.ProgressParams progId $
-                    J.WorkDoneProgressReportParams Nothing msg percentage
+                  sf $ J.NotificationMessage "2.0" J.SProgress $
+                    fmap J.Report $ J.ProgressParams progId $
+                      J.WorkDoneProgressReportParams Nothing msg percentage
 
       withProgress' :: Text -> ProgressCancellable -> ((Progress -> IO ()) -> IO a) -> IO a
       withProgress' = withProgressBase False
@@ -721,14 +714,14 @@ initializeRequestHandler' onStartup mHandler tvarCtx = Handler $ \req rspH@(Clie
     -- Launch the given process once the project root directory has been set
     let lspFuncs = LspFuncs (params ^. J.capabilities)
                             (getConfig tvarCtx)
-                            (mkServerRequestFunc tvarCtx)
+                            (mkSendReqFunc tvarCtx)
+                            (mkSendNotFunc tvarCtx)
                             (getVirtualFile tvarCtx)
                             (getVirtualFiles tvarCtx)
                             (persistVirtualFile tvarCtx)
                             (reverseFileMap tvarCtx)
                             (publishDiagnostics tvarCtx)
                             (flushDiagnosticsBySource tvarCtx)
-                            (getLspId $ resLspId ctx0)
                             rootDir
                             (getWfs tvarCtx)
                             withProgress'
