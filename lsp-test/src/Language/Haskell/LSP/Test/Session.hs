@@ -267,7 +267,9 @@ runSessionWithHandles serverIn serverOut serverProc serverHandler config caps ro
       serverAndListenerFinalizer tid = do
         finally (timeout (messageTimeout config * 1^6)
                          (runSession' exitServer))
-                (cleanupProcess server >> killThread tid)
+                -- Make sure to kill the listener first, before closing
+                -- handles etc via cleanupProcess
+                (killThread tid >> cleanupProcess server)
 
   (result, _) <- bracket serverListenerLauncher
                          serverAndListenerFinalizer
