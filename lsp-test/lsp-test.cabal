@@ -16,7 +16,7 @@ license-file:        LICENSE
 author:              Luke Lau
 maintainer:          luke_lau@icloud.com
 bug-reports:         https://github.com/bubba/lsp-test/issues
-copyright:           2019 Luke Lau
+copyright:           2020 Luke Lau
 category:            Testing
 build-type:          Simple
 cabal-version:       2.0

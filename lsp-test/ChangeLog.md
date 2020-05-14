@@ -1,5 +1,12 @@
 # Revision history for lsp-test
 
+## 0.11.0.0 -- 2020-05-14
+
+* Replace `openDoc'` with `createDoc` which now sends
+  `workspace/didChangeWatchedFiles` notifications if the server has registered
+  for it
+* Add `getRegisteredCapabilities`
+
 ## 0.10.3.0 -- 2020-05-04
 
 * Build with new haskell-lsp-0.22
