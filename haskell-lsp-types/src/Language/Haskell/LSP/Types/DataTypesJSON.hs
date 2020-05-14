@@ -1054,16 +1054,16 @@ data Unregistration =
       -- provided during the register request.
       _id     :: Text
 
-       -- |The method / capability to unregister for.
-    , _method :: Text
-    } deriving (Show, Read, Eq)
+       -- | The method / capability to unregister for.
+    , _method :: SomeClientMethod
+    } deriving (Show, Eq)
 
 deriveJSON lspOptions ''Unregistration
 
 data UnregistrationParams =
   UnregistrationParams
     { _unregistrations :: List Unregistration
-    } deriving (Show, Read, Eq)
+    } deriving (Show, Eq)
 
 deriveJSON lspOptions ''UnregistrationParams
 
