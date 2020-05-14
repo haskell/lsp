@@ -59,7 +59,7 @@ handlers lfvar = def
           fmServerPublishDiagnosticsNotification $ PublishDiagnosticsParams uri $ List [diag]
 
       -- also act as a registerer for workspace/didChangeWatchedFiles
-      when ("/register" `isSuffixOf` fp) $ do
+      when (".register" `isSuffixOf` fp) $ do
         reqId <- readMVar lfvar >>= getNextReqId
         send $ ReqRegisterCapability $ fmServerRegisterCapabilityRequest reqId $
           RegistrationParams $ List $
@@ -67,7 +67,7 @@ handlers lfvar = def
                 DidChangeWatchedFilesRegistrationOptions $ List
                 [ FileSystemWatcher "*.watch" (Just (WatchKind True True True)) ]
             ]
-      when ("/register.abs" `isSuffixOf` fp) $ do
+      when (".register.abs" `isSuffixOf` fp) $ do
         curDir <- getCurrentDirectory
         reqId <- readMVar lfvar >>= getNextReqId
         send $ ReqRegisterCapability $ fmServerRegisterCapabilityRequest reqId $
@@ -78,11 +78,11 @@ handlers lfvar = def
             ]
 
       -- also act as an unregisterer for workspace/didChangeWatchedFiles
-      when ("/unregister" `isSuffixOf` fp) $ do
+      when (".unregister" `isSuffixOf` fp) $ do
         reqId <- readMVar lfvar >>= getNextReqId
         send $ ReqUnregisterCapability $ fmServerUnregisterCapabilityRequest reqId $
           UnregistrationParams $ List [ Unregistration "0" "workspace/didChangeWatchedFiles" ]
-      when ("/unregister.abs" `isSuffixOf` fp) $ do
+      when (".unregister.abs" `isSuffixOf` fp) $ do
         reqId <- readMVar lfvar >>= getNextReqId
         send $ ReqUnregisterCapability $ fmServerUnregisterCapabilityRequest reqId $
           UnregistrationParams $ List [ Unregistration "1" "workspace/didChangeWatchedFiles" ]

@@ -333,7 +333,7 @@ main = findServer >>= \serverExe -> hspec $ do
     it "keeps track" $ runSession serverExe fullCaps "test/data" $ do
       loggingNotification -- initialized log message
 
-      createDoc "register" "haskell" ""
+      createDoc ".register" "haskell" ""
       message :: Session RegisterCapabilityRequest
 
       doc <- createDoc "Foo.watch" "haskell" ""
@@ -348,7 +348,7 @@ main = findServer >>= \serverExe -> hspec $ do
         ]
 
       -- now unregister it by sending a specific createDoc
-      createDoc "unregister" "haskell" ""
+      createDoc ".unregister" "haskell" ""
       message :: Session UnregisterCapabilityRequest
 
       createDoc "Bar.watch" "haskell" ""
@@ -361,7 +361,7 @@ main = findServer >>= \serverExe -> hspec $ do
 
       loggingNotification -- initialized log message
 
-      createDoc "register.abs" "haskell" ""
+      createDoc ".register.abs" "haskell" ""
       message :: Session RegisterCapabilityRequest
 
       doc <- createDoc (curDir </> "Foo.watch") "haskell" ""
@@ -369,7 +369,7 @@ main = findServer >>= \serverExe -> hspec $ do
       liftIO $ msg ^. params . LSP.message `shouldBe` "got workspace/didChangeWatchedFiles"
 
       -- now unregister it by sending a specific createDoc
-      createDoc "unregister.abs" "haskell" ""
+      createDoc ".unregister.abs" "haskell" ""
       message :: Session UnregisterCapabilityRequest
 
       createDoc (curDir </> "Bar.watch") "haskell" ""
