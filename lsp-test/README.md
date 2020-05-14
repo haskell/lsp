@@ -35,7 +35,14 @@ anyRequest <|> anyResponse
 ```
 
 Try out the example tests in the `example` directory with `cabal test`.
-For more examples check the [Wiki](https://github.com/bubba/lsp-test/wiki/Introduction)
+For more examples check the [Wiki](https://github.com/bubba/lsp-test/wiki/Introduction).
+
+Whilst writing your tests you may want to debug them to see what's going wrong.
+You can set the `logMessages` and `logStdErr` options in `SessionConfig` to see what the server is up to.
+There are also corresponding environment variables so you can turn them on from the command line:
+```
+LSP_TEST_LOG_MESSAGES=1 cabal test
+```
 
 ## Developing
 The tests for lsp-test use a dummy server found in `test/dummy-server/`.
