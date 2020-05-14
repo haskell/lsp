@@ -63,6 +63,7 @@ import Language.Haskell.LSP.Messages
 import Language.Haskell.LSP.Types.Capabilities
 import Language.Haskell.LSP.Types
 import Language.Haskell.LSP.Types.Lens
+import qualified Language.Haskell.LSP.Types.Lens as LSP
 import Language.Haskell.LSP.VFS
 import Language.Haskell.LSP.Test.Compat
 import Language.Haskell.LSP.Test.Decoding
@@ -163,6 +164,9 @@ data SessionState = SessionState
   -- ^ The last received message from the server.
   -- Used for providing exception information
   , lastReceivedMessage :: Maybe FromServerMessage
+  , curDynCaps :: Map.Map T.Text Registration
+  -- ^ The capabilities that the server has dynamically registered with us so
+  -- far
   }
 
 class Monad m => HasState s m where
@@ -253,7 +257,7 @@ runSessionWithHandles serverIn serverOut serverProc serverHandler config caps ro
   mainThreadId <- myThreadId
 
   let context = SessionContext serverIn absRootDir messageChan timeoutIdVar reqMap initRsp config caps
-      initState vfs = SessionState (IdInt 0) vfs mempty False Nothing
+      initState vfs = SessionState (IdInt 0) vfs mempty False Nothing mempty
       runSession' ses = initVFS $ \vfs -> runSession context (initState vfs) ses
 
       errorHandler = throwTo mainThreadId :: SessionException -> IO ()
@@ -277,12 +281,25 @@ updateStateC = awaitForever $ \msg -> do
 
 updateState :: (MonadIO m, HasReader SessionContext m, HasState SessionState m)
             => FromServerMessage -> m ()
+
+-- Keep track of dynamic capability registration
+updateState (ReqRegisterCapability req) = do
+  let List newRegs = (\r -> (r ^. LSP.id, r)) <$> req ^. params . registrations
+  modify $ \s ->
+    s { curDynCaps = Map.union (Map.fromList newRegs) (curDynCaps s) }
+
+updateState (ReqUnregisterCapability req) = do
+  let List unRegs = (^. LSP.id) <$> req ^. params . unregistrations
+  modify $ \s ->
+    let newCurDynCaps = foldr' Map.delete (curDynCaps s) unRegs
+    in s { curDynCaps = newCurDynCaps }
+
 updateState (NotPublishDiagnostics n) = do
   let List diags = n ^. params . diagnostics
       doc = n ^. params . uri
-  modify (\s ->
+  modify $ \s ->
     let newDiags = Map.insert (toNormalizedUri doc) diags (curDiagnostics s)
-      in s { curDiagnostics = newDiags })
+      in s { curDiagnostics = newDiags }
 
 updateState (ReqApplyWorkspaceEdit r) = do
 
@@ -355,7 +372,7 @@ sendMessage msg = do
   logMsg LogClient msg
   liftIO $ B.hPut h (addHeader $ encode msg)
 
--- | Execute a block f that will throw a 'Timeout' exception
+-- | Execute a block f that will throw a 'Language.Haskell.LSP.Test.Exception.Timeout' exception
 -- after duration seconds. This will override the global timeout
 -- for waiting for messages to arrive defined in 'SessionConfig'.
 withTimeout :: Int -> Session a -> Session a
@@ -393,5 +410,3 @@ logMsg t msg = do
           | otherwise       = Cyan
 
         showPretty = B.unpack . encodePretty
-
-

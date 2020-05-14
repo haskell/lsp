@@ -17,10 +17,10 @@ import           Control.Monad
 import           Control.Lens hiding (List)
 import           Language.Haskell.LSP.Messages
 import           Language.Haskell.LSP.Test
-import           Language.Haskell.LSP.Test.Replay
 import           Language.Haskell.LSP.Types
-import           Language.Haskell.LSP.Types.Lens as LSP hiding
+import           Language.Haskell.LSP.Types.Lens hiding
   (capabilities, message, rename, applyEdit)
+import qualified Language.Haskell.LSP.Types.Lens as LSP
 import           Language.Haskell.LSP.Types.Capabilities as LSP
 import           System.Directory
 import           System.FilePath
@@ -329,6 +329,56 @@ main = findServer >>= \serverExe -> hspec $ do
         openDoc "Format.hs" "haskell"
         void publishDiagnosticsNotification
 
+  describe "dynamic capabilities" $ do
+    it "keeps track" $ runSession serverExe fullCaps "test/data" $ do
+      loggingNotification -- initialized log message
+
+      createDoc "register" "haskell" ""
+      message :: Session RegisterCapabilityRequest
+
+      doc <- createDoc "Foo.watch" "haskell" ""
+      NotLogMessage msg <- loggingNotification
+      liftIO $ msg ^. params . LSP.message `shouldBe` "got workspace/didChangeWatchedFiles"
+
+      caps <- getRegisteredCapabilities
+      liftIO $ caps `shouldBe`
+        [ Registration "0" WorkspaceDidChangeWatchedFiles $ Just $ toJSON $
+          DidChangeWatchedFilesRegistrationOptions $ List
+          [ FileSystemWatcher "*.watch" (Just (WatchKind True True True)) ]
+        ]
+
+      -- now unregister it by sending a specific createDoc
+      createDoc "unregister" "haskell" ""
+      message :: Session UnregisterCapabilityRequest
+
+      createDoc "Bar.watch" "haskell" ""
+      void $ sendRequest TextDocumentHover $ TextDocumentPositionParams doc (Position 0 0) Nothing
+      count 0 $ loggingNotification
+      void $ anyResponse
+
+    it "handles absolute patterns" $ runSession serverExe fullCaps "" $ do
+      curDir <- liftIO $ getCurrentDirectory
+
+      loggingNotification -- initialized log message
+
+      createDoc "register.abs" "haskell" ""
+      message :: Session RegisterCapabilityRequest
+
+      doc <- createDoc (curDir </> "Foo.watch") "haskell" ""
+      NotLogMessage msg <- loggingNotification
+      liftIO $ msg ^. params . LSP.message `shouldBe` "got workspace/didChangeWatchedFiles"
+
+      -- now unregister it by sending a specific createDoc
+      createDoc "unregister.abs" "haskell" ""
+      message :: Session UnregisterCapabilityRequest
+
+      createDoc (curDir </> "Bar.watch") "haskell" ""
+      void $ sendRequest TextDocumentHover $ TextDocumentPositionParams doc (Position 0 0) Nothing
+      count 0 $ loggingNotification
+      void $ anyResponse
+
+
+mkRange :: Int -> Int -> Int -> Int -> Range
 mkRange sl sc el ec = Range (Position sl sc) (Position el ec)
 
 didChangeCaps :: ClientCapabilities

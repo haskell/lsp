@@ -41,8 +41,8 @@ module Language.Haskell.LSP.Test
   -- ** Initialization
   , initializeResponse
   -- ** Documents
+  , createDoc
   , openDoc
-  , openDoc'
   , closeDoc
   , changeDoc
   , documentContents
@@ -82,6 +82,8 @@ module Language.Haskell.LSP.Test
   , applyEdit
   -- ** Code lenses
   , getCodeLenses
+  -- ** Capabilities
+  , getRegisteredCapabilities
   ) where
 
 import Control.Applicative.Combinators
@@ -90,12 +92,13 @@ import Control.Monad
 import Control.Monad.IO.Class
 import Control.Exception
 import Control.Lens hiding ((.=), List)
+import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import Data.Aeson
 import Data.Default
 import qualified Data.HashMap.Strict as HashMap
-import qualified Data.Map as Map
+import Data.List
 import Data.Maybe
 import Language.Haskell.LSP.Types
 import Language.Haskell.LSP.Types.Lens hiding
@@ -114,6 +117,7 @@ import System.Environment
 import System.IO
 import System.Directory
 import System.FilePath
+import qualified System.FilePath.Glob as Glob
 
 -- | Starts a new session.
 --
@@ -345,7 +349,61 @@ sendResponse = sendMessage
 initializeResponse :: Session InitializeResponse
 initializeResponse = initRsp <$> ask >>= (liftIO . readMVar)
 
--- | Opens a text document and sends a notification to the client.
+-- | /Creates/ a new text document. This is different from 'openDoc'
+-- as it sends a workspace/didChangeWatchedFiles notification letting the server
+-- know that a file was created within the workspace, __provided that the server
+-- has registered for it__, and the file matches any patterns the server
+-- registered for.
+-- It /does not/ actually create a file on disk, but is useful for convincing
+-- the server that one does exist.
+--
+-- @since 11.0.0.0
+createDoc :: FilePath -- ^ The path to the document to open, __relative to the root directory__.
+          -> String -- ^ The text document's language identifier, e.g. @"haskell"@.
+          -> T.Text -- ^ The content of the text document to create.
+          -> Session TextDocumentIdentifier -- ^ The identifier of the document just created.
+createDoc file languageId contents = do
+  dynCaps <- curDynCaps <$> get
+  rootDir <- asks rootDir
+  caps <- asks sessionCapabilities
+  absFile <- liftIO $ canonicalizePath (rootDir </> file)
+  let regs = filter (\r -> r ^. method == WorkspaceDidChangeWatchedFiles) $
+              Map.elems dynCaps
+      watchHits :: FileSystemWatcher -> Bool
+      watchHits (FileSystemWatcher pattern kind) =
+        -- If WatchKind is exlcuded, defaults to all true as per spec
+        fileMatches pattern && createHits (fromMaybe (WatchKind True True True) kind)
+
+      fileMatches pattern = Glob.match (Glob.compile pattern) relOrAbs
+        -- If the pattern is absolute then match against the absolute fp
+        where relOrAbs
+                | isAbsolute pattern = absFile
+                | otherwise = file
+
+      createHits (WatchKind create _ _) = create
+
+      regHits :: Registration -> Bool
+      regHits reg = isJust $ do
+        opts <- reg ^. registerOptions
+        fileWatchOpts <- case fromJSON opts :: Result DidChangeWatchedFilesRegistrationOptions of
+          Success x -> Just x
+          Error _ -> Nothing
+        if foldl' (\acc w -> acc || watchHits w) False (fileWatchOpts ^. watchers)
+          then Just ()
+          else Nothing
+
+      clientCapsSupports =
+          caps ^? workspace . _Just . didChangeWatchedFiles . _Just . dynamicRegistration . _Just
+            == Just True
+      shouldSend = clientCapsSupports && foldl' (\acc r -> acc || regHits r) False regs
+
+  when shouldSend $
+    sendNotification WorkspaceDidChangeWatchedFiles $ DidChangeWatchedFilesParams $
+      List [ FileEvent (filePathToUri file) FcCreated ]
+  openDoc' file languageId contents
+
+-- | Opens a text document that /exists on disk/, and sends a
+-- textDocument/didOpen notification to the server.
 openDoc :: FilePath -> String -> Session TextDocumentIdentifier
 openDoc file languageId = do
   context <- ask
@@ -354,6 +412,7 @@ openDoc file languageId = do
   openDoc' file languageId contents
 
 -- | This is a variant of `openDoc` that takes the file content as an argument.
+-- Use this is the file exists /outside/ of the current workspace.
 openDoc' :: FilePath -> String -> T.Text -> Session TextDocumentIdentifier
 openDoc' file languageId contents = do
   context <- ask
@@ -363,13 +422,13 @@ openDoc' file languageId contents = do
   sendNotification TextDocumentDidOpen (DidOpenTextDocumentParams item)
   pure $ TextDocumentIdentifier uri
 
--- | Closes a text document and sends a notification to the client.
+-- | Closes a text document and sends a textDocument/didOpen notification to the server.
 closeDoc :: TextDocumentIdentifier -> Session ()
 closeDoc docId = do
   let params = DidCloseTextDocumentParams (TextDocumentIdentifier (docId ^. uri))
   sendNotification TextDocumentDidClose params
 
--- | Changes a text document and sends a notification to the client
+-- | Changes a text document and sends a textDocument/didOpen notification to the server.
 changeDoc :: TextDocumentIdentifier -> [TextDocumentContentChangeEvent] -> Session ()
 changeDoc docId changes = do
   verDoc <- getVersionedDoc docId
@@ -611,3 +670,10 @@ getCodeLenses tId = do
     rsp <- request TextDocumentCodeLens (CodeLensParams tId Nothing) :: Session CodeLensResponse
     case getResponseResult rsp of
         List res -> pure res
+
+-- | Returns a list of capabilities that the server has requested to /dynamically/
+-- register during the 'Session'.
+--
+-- @since 0.11.0.0
+getRegisteredCapabilities :: Session [Registration]
+getRegisteredCapabilities = (Map.elems . curDynCaps) <$> get
