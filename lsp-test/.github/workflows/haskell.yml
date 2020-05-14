@@ -27,9 +27,7 @@ jobs:
       uses: actions/cache@v1.2.0
       with:
         path: ~/.cabal
-        key: ${{ runner.OS }}-${{ matrix.ghc }}-cabal
-        restore-keys: |
-          ${{ runner.OS }}-${{ matrix.ghc }}-cabal
+        key: ${{ runner.OS }}-${{ matrix.ghc }}-cabal-0
 
     - name: Build
       run: cabal build
