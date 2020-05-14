@@ -24,7 +24,7 @@ jobs:
     - run: cabal update
 
     - name: Cache Cabal
-      uses: actions/cache@v1.1.0
+      uses: actions/cache@v1.2.0
       with:
         path: ~/.cabal
         key: ${{ runner.OS }}-${{ matrix.ghc }}-cabal
