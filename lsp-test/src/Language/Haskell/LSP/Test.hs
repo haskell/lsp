@@ -399,7 +399,7 @@ createDoc file languageId contents = do
 
   when shouldSend $
     sendNotification WorkspaceDidChangeWatchedFiles $ DidChangeWatchedFilesParams $
-      List [ FileEvent (filePathToUri file) FcCreated ]
+      List [ FileEvent (filePathToUri (rootDir </> file)) FcCreated ]
   openDoc' file languageId contents
 
 -- | Opens a text document that /exists on disk/, and sends a
