@@ -55,7 +55,7 @@ library
                      , Diff
                      , directory
                      , filepath
-                     , Glob ^>= 0.10
+                     , Glob >= 0.9 && < 0.11
                      , lens
                      , mtl
                      , parser-combinators >= 1.2
