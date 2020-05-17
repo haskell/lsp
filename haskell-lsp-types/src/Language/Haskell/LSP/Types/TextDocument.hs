@@ -5,6 +5,7 @@ module Language.Haskell.LSP.Types.TextDocument where
 import           Data.Aeson.TH
 import           Data.Text                      ( Text )
 import           Language.Haskell.LSP.Types.Constants
+import           Language.Haskell.LSP.Types.DocumentFilter
 import           Language.Haskell.LSP.Types.Location
 import           Language.Haskell.LSP.Types.Progress
 import           Language.Haskell.LSP.Types.Uri
@@ -103,3 +104,26 @@ data TextDocumentPositionParams =
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''TextDocumentPositionParams
+
+
+-- -------------------------------------
+
+{-
+Since most of the registration options require to specify a document selector
+there is a base interface that can be used.
+
+export interface TextDocumentRegistrationOptions {
+        /**
+         * A document selector to identify the scope of the registration. If set to null
+         * the document selector provided on the client side will be used.
+         */
+        documentSelector: DocumentSelector | null;
+}
+-}
+
+data TextDocumentRegistrationOptions =
+  TextDocumentRegistrationOptions
+    { _documentSelector :: Maybe DocumentSelector
+    } deriving (Show, Read, Eq)
+
+deriveJSON lspOptions ''TextDocumentRegistrationOptions

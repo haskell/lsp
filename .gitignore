@@ -22,3 +22,4 @@ stack*.yaml.lock
 /haskell-lsp-types/TAGS
 /haskell-lsp-types/tags
 /haskell-lsp-types/ctags
+.hie

@@ -12,6 +12,7 @@ import           Language.Haskell.LSP.Types.TextDocument
 import           Language.Haskell.LSP.Types.List
 import           Language.Haskell.LSP.Types.Location
 import           Language.Haskell.LSP.Types.Progress
+import           Language.Haskell.LSP.Types.Utils
 
 -- ---------------------------------------------------------------------
 {-
@@ -267,4 +268,19 @@ instance ToJSON DSResult where
   toJSON (DSDocumentSymbols x) = toJSON x
   toJSON (DSSymbolInformation x) = toJSON x
 
+data DocumentSymbolOptions =
+  DocumentSymbolOptions
+    { _workDoneProgressOptions :: WorkDoneProgressOptions
+    }
+  deriving (Read, Show, Eq)
 
+deriveJSONExtendFields lspOptions ''DocumentSymbolOptions ["_workDoneProgressOptions"]
+
+data DocumentSymbolRegistrationOptions =
+  DocumentSymbolRegistrationOptions
+    { _textDocumentRegistrationOptions :: TextDocumentRegistrationOptions
+    , _documentSymbolOptions           :: DocumentSymbolOptions
+    }
+  deriving (Read, Show, Eq)
+
+deriveJSONExtendFields lspOptions ''DocumentSymbolRegistrationOptions ["_textDocumentRegistrationOptions", "_documentSymbolOptions"]

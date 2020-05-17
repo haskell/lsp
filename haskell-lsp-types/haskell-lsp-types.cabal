@@ -25,21 +25,30 @@ library
                      , Data.IxMap
   other-modules:       Language.Haskell.LSP.Types.ClientCapabilities
                      , Language.Haskell.LSP.Types.CodeAction
+                     , Language.Haskell.LSP.Types.CodeLens
                      , Language.Haskell.LSP.Types.Color
                      , Language.Haskell.LSP.Types.Command
                      , Language.Haskell.LSP.Types.Completion
                      , Language.Haskell.LSP.Types.DataTypesJSON
                      , Language.Haskell.LSP.Types.Diagnostic
                      , Language.Haskell.LSP.Types.DocumentFilter
+                     , Language.Haskell.LSP.Types.DocumentHighlight
                      , Language.Haskell.LSP.Types.FoldingRange
+                     , Language.Haskell.LSP.Types.Formatting
                      , Language.Haskell.LSP.Types.Hover
                      , Language.Haskell.LSP.Types.List
                      , Language.Haskell.LSP.Types.Location
                      , Language.Haskell.LSP.Types.LspId
+                     , Language.Haskell.LSP.Types.Empty
                      , Language.Haskell.LSP.Types.MarkupContent
                      , Language.Haskell.LSP.Types.Method
                      , Language.Haskell.LSP.Types.Message
                      , Language.Haskell.LSP.Types.Progress
+                     , Language.Haskell.LSP.Types.Registration
+                     , Language.Haskell.LSP.Types.References
+                     , Language.Haskell.LSP.Types.Rename
+                     , Language.Haskell.LSP.Types.ServerCapabilities
+                     , Language.Haskell.LSP.Types.StaticRegistrationOptions
                      , Language.Haskell.LSP.Types.Symbol
                      , Language.Haskell.LSP.Types.Synonyms
                      , Language.Haskell.LSP.Types.TextDocument

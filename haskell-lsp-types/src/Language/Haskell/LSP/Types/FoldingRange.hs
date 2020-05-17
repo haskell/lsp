@@ -7,7 +7,9 @@ import           Data.Aeson.TH
 import           Data.Text                    (Text)
 import           Language.Haskell.LSP.Types.Constants
 import           Language.Haskell.LSP.Types.Progress
+import           Language.Haskell.LSP.Types.StaticRegistrationOptions
 import           Language.Haskell.LSP.Types.TextDocument
+import           Language.Haskell.LSP.Types.Utils
 
 data FoldingRangeParams =
   FoldingRangeParams
@@ -65,3 +67,21 @@ data FoldingRange =
   deriving (Read, Show, Eq)
 
 deriveJSON lspOptions ''FoldingRange
+
+data FoldingRangeOptions =
+  FoldingRangeOptions
+    { _workDoneProgressOptions :: WorkDoneProgressOptions
+    } deriving (Read,Show,Eq)
+deriveJSONExtendFields lspOptions ''FoldingRangeOptions ["_workDoneProgressOptions"]
+
+data FoldingRangeRegistrationOptions =
+  FoldingRangeRegistrationOptions
+    { _textDocumentRegistrationOptions :: TextDocumentRegistrationOptions
+    , _foldingRangeOptions             :: FoldingRangeOptions
+    , _staticRegistrationOptions       :: StaticRegistrationOptions
+    } deriving (Read,Show,Eq)
+deriveJSONExtendFields lspOptions ''FoldingRangeRegistrationOptions
+  [ "_textDocumentRegistrationOptions"
+  , "_foldingRangeOptions"
+  , "_staticRegistrationOptions"
+  ]

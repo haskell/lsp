@@ -152,10 +152,10 @@ data SymbolKindClientCapabilities =
      -- property exists the client also guarantees that it will
      -- handle values outside its set gracefully and falls back
      -- to a default value when unknown.
-     -- 
+     --
      -- If this property is not present the client only supports
      -- the symbol kinds from `File` to `Array` as defined in
-     -- the initial version of the protocol. 
+     -- the initial version of the protocol.
      _valueSet :: Maybe (List SymbolKind)
    } deriving (Show, Read, Eq)
 
@@ -583,10 +583,10 @@ export interface TextDocumentClientCapabilities {
                  */
                 relatedInformation?: boolean;
         };
-        
+
         /**
 	 * Capabilities specific to `textDocument/foldingRange` requests.
-	 * 
+	 *
 	 * Since 3.10.0
 	 */
 	foldingRange?: {
@@ -713,7 +713,7 @@ $(deriveJSON lspOptions ''HoverClientCapabilities)
 
 -- -------------------------------------
 
-data SignatureInformationClientCapabilities = 
+data SignatureInformationClientCapabilities =
   SignatureInformationClientCapabilities
     { -- | Client supports the follow content formats for the documentation
       -- property. The order describes the preferred format of the client.
@@ -727,7 +727,7 @@ data SignatureHelpClientCapabilities =
   SignatureHelpClientCapabilities
     { -- | Whether signature help supports dynamic registration.
       _dynamicRegistration :: Maybe Bool
-      
+
       -- | The client supports the following `SignatureInformation`
       -- specific properties.
     , _signatureInformation :: Maybe SignatureInformationClientCapabilities
@@ -761,7 +761,7 @@ data DocumentSymbolKindClientCapabilities =
       --  property exists the client also guarantees that it will
       --  handle values outside its set gracefully and falls back
       --  to a default value when unknown.
-      --  
+      --
       --  If this property is not present the client only supports
       --  the symbol kinds from `File` to `Array` as defined in
       --  the initial version of the protocol.
@@ -1043,7 +1043,7 @@ instance Default TextDocumentClientCapabilities where
 -- ---------------------------------------------------------------------
 
 -- | Window specific client capabilities.
-data WindowClientCapabilities = 
+data WindowClientCapabilities =
   WindowClientCapabilities
     { -- | Whether client supports handling progress notifications.
       _workDoneProgress :: Maybe Bool

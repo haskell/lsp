@@ -11,6 +11,9 @@ import           Language.Haskell.LSP.Types.Constants
 import           Language.Haskell.LSP.Types.List
 import           Language.Haskell.LSP.Types.Location
 import           Language.Haskell.LSP.Types.MarkupContent
+import           Language.Haskell.LSP.Types.Progress
+import           Language.Haskell.LSP.Types.TextDocument
+import           Language.Haskell.LSP.Types.Utils
 
 -- ---------------------------------------------------------------------
 
@@ -144,3 +147,18 @@ data Hover =
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''Hover
+
+data HoverOptions =
+  HoverOptions
+    { _workDoneProgressOptions :: WorkDoneProgressOptions
+    } deriving (Read,Show,Eq)
+
+deriveJSONExtendFields lspOptions ''HoverOptions ["_workDoneProgressOptions"]
+
+data HoverRegistrationOptions =
+  HoverRegistrationOptions
+    { _textDocumentRegistrationOptions :: TextDocumentRegistrationOptions
+    , _hoverOptions     :: HoverOptions
+    } deriving (Read,Show,Eq)
+
+deriveJSONExtendFields lspOptions ''HoverRegistrationOptions ["_textDocumentRegistrationOptions", "_hoverOptions"]
