@@ -161,6 +161,10 @@ deriving instance Eq   (SMethod m)
 deriving instance Ord  (SMethod m)
 deriving instance Show (SMethod m)
 
+-- Some useful type synonyms
+type SClientMethod (m :: Method FromClient t) = SMethod m
+type SServerMethod (m :: Method FromServer t) = SMethod m
+
 data SomeClientMethod = forall t (m :: Method FromClient t). SomeClientMethod (SMethod m)
 data SomeServerMethod = forall t (m :: Method FromServer t). SomeServerMethod (SMethod m)
 

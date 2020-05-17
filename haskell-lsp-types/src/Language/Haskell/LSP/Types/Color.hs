@@ -8,8 +8,10 @@ import           Language.Haskell.LSP.Types.Constants
 import           Language.Haskell.LSP.Types.List
 import           Language.Haskell.LSP.Types.Location
 import           Language.Haskell.LSP.Types.Progress
+import           Language.Haskell.LSP.Types.StaticRegistrationOptions
 import           Language.Haskell.LSP.Types.TextDocument
 import           Language.Haskell.LSP.Types.WorkspaceEdit
+import           Language.Haskell.LSP.Types.Utils
 
 {-
 Document Color Request (:leftwards_arrow_with_hook:)
@@ -157,7 +159,7 @@ interface ColorPresentation {
 	 */
 	additionalTextEdits?: TextEdit[];
 }
-error: code and message set in case an exception happens during the 
+error: code and message set in case an exception happens during the
 ‘textDocument/colorPresentation’ request
 -}
 
@@ -193,3 +195,19 @@ data ColorPresentation =
 
 deriveJSON lspOptions ''ColorPresentation
 
+data DocumentColorOptions =
+  DocumentColorOptions
+    { _workDoneProgressOptions :: WorkDoneProgressOptions
+    } deriving (Read,Show,Eq)
+deriveJSONExtendFields lspOptions ''DocumentColorOptions ["_workDoneProgressOptions"]
+
+data DocumentColorRegistrationOptions =
+  DocumentColorRegistrationOptions
+    { _textDocumentRegistrationOptions :: TextDocumentRegistrationOptions
+    , _staticRegistrationOptions       :: StaticRegistrationOptions
+    , _documentColorOptions            :: DocumentColorOptions
+    } deriving (Read,Show,Eq)
+deriveJSONExtendFields lspOptions ''DocumentColorRegistrationOptions
+  [ "_textDocumentRegistrationOptions"
+  , "_staticRegistrationOptions"
+  , "_documentColorOptions"]

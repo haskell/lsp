@@ -10,15 +10,23 @@ module Language.Haskell.LSP.Types.Lens where
 
 import           Language.Haskell.LSP.Types.ClientCapabilities
 import           Language.Haskell.LSP.Types.CodeAction
+import           Language.Haskell.LSP.Types.CodeLens
 import           Language.Haskell.LSP.Types.Color
 import           Language.Haskell.LSP.Types.Command
 import           Language.Haskell.LSP.Types.Completion
 import           Language.Haskell.LSP.Types.DataTypesJSON
 import           Language.Haskell.LSP.Types.Diagnostic
 import           Language.Haskell.LSP.Types.DocumentFilter
+import           Language.Haskell.LSP.Types.DocumentHighlight
 import           Language.Haskell.LSP.Types.FoldingRange
+import           Language.Haskell.LSP.Types.Formatting
 import           Language.Haskell.LSP.Types.Hover
 import           Language.Haskell.LSP.Types.Location
+import           Language.Haskell.LSP.Types.Progress
+import           Language.Haskell.LSP.Types.Registration
+import           Language.Haskell.LSP.Types.References
+import           Language.Haskell.LSP.Types.Rename
+import           Language.Haskell.LSP.Types.ServerCapabilities
 import           Language.Haskell.LSP.Types.Symbol
 import           Language.Haskell.LSP.Types.TextDocument
 import           Language.Haskell.LSP.Types.Window
@@ -77,9 +85,9 @@ makeFieldsNoPrefix ''DocumentLinkOptions
 makeFieldsNoPrefix ''ExecuteCommandOptions
 makeFieldsNoPrefix ''SaveOptions
 makeFieldsNoPrefix ''TextDocumentSyncOptions
-makeFieldsNoPrefix ''WorkspaceFolderOptions
-makeFieldsNoPrefix ''WorkspaceOptions
-makeFieldsNoPrefix ''InitializeResponseCapabilitiesInner
+makeFieldsNoPrefix ''WorkspaceServerCapabilities
+makeFieldsNoPrefix ''WorkspaceFoldersServerCapabilities
+makeFieldsNoPrefix ''ServerCapabilities
 makeFieldsNoPrefix ''InitializeResponseCapabilities
 makeFieldsNoPrefix ''Registration
 makeFieldsNoPrefix ''RegistrationParams
@@ -98,12 +106,12 @@ makeFieldsNoPrefix ''DidChangeTextDocumentParams
 makeFieldsNoPrefix ''TextDocumentChangeRegistrationOptions
 makeFieldsNoPrefix ''WillSaveTextDocumentParams
 makeFieldsNoPrefix ''DidSaveTextDocumentParams
+makeFieldsNoPrefix ''TextDocumentSaveRegistrationOptions
 makeFieldsNoPrefix ''DidCloseTextDocumentParams
 makeFieldsNoPrefix ''FileEvent
 makeFieldsNoPrefix ''DidChangeWatchedFilesParams
 makeFieldsNoPrefix ''PublishDiagnosticsParams
 makeFieldsNoPrefix ''LanguageString
-makeFieldsNoPrefix ''Hover
 makeFieldsNoPrefix ''ParameterInformation
 makeFieldsNoPrefix ''SignatureInformation
 makeFieldsNoPrefix ''SignatureHelp
@@ -180,6 +188,10 @@ makeFieldsNoPrefix ''Command
 -- Diagnostic
 makeFieldsNoPrefix ''Diagnostic
 makeFieldsNoPrefix ''DiagnosticRelatedInformation
+
+-- Hover
+makeFieldsNoPrefix ''Hover
+makeFieldsNoPrefix ''HoverRegistrationOptions
 
 -- Symbol
 makeFieldsNoPrefix ''DocumentSymbolParams

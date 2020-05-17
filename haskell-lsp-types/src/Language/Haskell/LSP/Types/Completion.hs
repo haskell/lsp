@@ -486,6 +486,54 @@ data CompletionRegistrationOptions =
 
 deriveJSON lspOptions ''CompletionRegistrationOptions
 
+-- -------------------------------------
+
+{-
+/**
+ * Completion options.
+ */
+interface CompletionOptions {
+    /**
+     * The server provides support to resolve additional information for a completion item.
+     */
+    resolveProvider?: boolean;
+
+    /**
+     * The characters that trigger completion automatically.
+     */
+    triggerCharacters?: string[];
+
+    /**
+     * The list of all possible characters that commit a completion. This field can be used
+     * if clients don't support individual commmit characters per completion item. See
+     * `ClientCapabilities.textDocument.completion.completionItem.commitCharactersSupport`.
+     *
+     * If a server provides both `allCommitCharacters` and commit characters on an individual
+     * completion item the once on the completion item win.
+     *
+     * @since 3.2.0
+     */
+    allCommitCharacters?: string[];
+}
+-}
+
+data CompletionOptions =
+  CompletionOptions
+    { _workDoneProgressOptions :: WorkDoneProgressOptions
+    -- | The server provides support to resolve additional information for a completion item.
+    , _resolveProvider         :: Maybe Bool
+    -- | The characters that trigger completion automatically.
+    , _triggerCharacters       :: Maybe [String]
+    -- | The list of all possible characters that commit a completion. This field can be used
+    -- if clients don't support individual commmit characters per completion item. See
+    -- `_commitCharactersSupport`.
+    -- Since LSP 3.2.0
+    -- @since 0.18.0.0
+    , _allCommitCharacters     :: Maybe [String]
+    } deriving (Read,Show,Eq)
+
+deriveJSONExtendFields lspOptions ''CompletionOptions ["_workDoneProgressOptions"]
+
 -- ---------------------------------------------------------------------
 {-
 Completion Item Resolve Request

@@ -20,15 +20,23 @@ module Language.Haskell.LSP.Types.Message where
 
 import           Language.Haskell.LSP.Types.DataTypesJSON
 import           Language.Haskell.LSP.Types.CodeAction
+import           Language.Haskell.LSP.Types.CodeLens
 import           Language.Haskell.LSP.Types.Color
 import           Language.Haskell.LSP.Types.Constants
 import           Language.Haskell.LSP.Types.Completion
+import           Language.Haskell.LSP.Types.DocumentHighlight
+import           Language.Haskell.LSP.Types.Empty
 import           Language.Haskell.LSP.Types.FoldingRange
+import           Language.Haskell.LSP.Types.Formatting
 import           Language.Haskell.LSP.Types.Hover
 import           Language.Haskell.LSP.Types.List
 import           Language.Haskell.LSP.Types.Location
 import           Language.Haskell.LSP.Types.LspId
 import           Language.Haskell.LSP.Types.Method
+import           Language.Haskell.LSP.Types.Progress
+import           Language.Haskell.LSP.Types.Registration
+import           Language.Haskell.LSP.Types.Rename
+import           Language.Haskell.LSP.Types.References
 import           Language.Haskell.LSP.Types.Symbol
 import           Language.Haskell.LSP.Types.TextDocument
 import           Language.Haskell.LSP.Types.Window
@@ -179,13 +187,6 @@ type family ResponseParams (m :: Method p Request) :: Type where
   ResponseParams WorkspaceApplyEdit            = ApplyWorkspaceEditResponseBody
 -- Custom
   ResponseParams CustomMethod                  = Value
-
-data Empty = Empty deriving (Eq,Ord,Show)
-instance ToJSON Empty where
-  toJSON Empty = Null
-instance FromJSON Empty where
-  parseJSON Null = pure Empty
-  parseJSON _ = mempty
 
 
 -- ---------------------------------------------------------------------
@@ -434,8 +435,6 @@ type family BaseHandlerFunc (t :: MethodType) (m :: Method p t) :: Type where
 -- Some helpful type synonyms
 type ClientMessage (m :: Method FromClient t) = Message m
 type ServerMessage (m :: Method FromServer t) = Message m
-type SClientMethod (m :: Method FromClient t) = SMethod m
-type SServerMethod (m :: Method FromServer t) = SMethod m
 
 -- ---------------------------------------------------------------------
 -- Working with arbritary messages

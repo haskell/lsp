@@ -6,6 +6,7 @@ module Language.Haskell.LSP.Types
   , module Language.Haskell.LSP.Types.Completion
   , module Language.Haskell.LSP.Types.Diagnostic
   , module Language.Haskell.LSP.Types.DocumentFilter
+  , module Language.Haskell.LSP.Types.Empty
   , module Language.Haskell.LSP.Types.FoldingRange
   , module Language.Haskell.LSP.Types.Hover
   , module Language.Haskell.LSP.Types.List
@@ -32,6 +33,7 @@ import           Language.Haskell.LSP.Types.Command
 import           Language.Haskell.LSP.Types.Completion
 import           Language.Haskell.LSP.Types.Diagnostic
 import           Language.Haskell.LSP.Types.DocumentFilter
+import           Language.Haskell.LSP.Types.Empty
 import           Language.Haskell.LSP.Types.FoldingRange
 import           Language.Haskell.LSP.Types.Hover
 import           Language.Haskell.LSP.Types.List

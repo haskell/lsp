@@ -43,3 +43,26 @@ data Command =
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''Command
+
+{-
+New in 3.0
+-----------
+
+/**
+ * Execute command options.
+ */
+export interface ExecuteCommandOptions {
+        /**
+         * The commands to be executed on the server
+         */
+        commands: string[]
+}
+-}
+
+data ExecuteCommandOptions =
+  ExecuteCommandOptions
+    { -- | The commands to be executed on the server
+      _commands :: List Text
+    } deriving (Show, Read, Eq)
+
+deriveJSON lspOptions ''ExecuteCommandOptions

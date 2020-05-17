@@ -14,6 +14,7 @@ import           Language.Haskell.LSP.Types.List
 import           Language.Haskell.LSP.Types.Location
 import           Language.Haskell.LSP.Types.Progress
 import           Language.Haskell.LSP.Types.TextDocument
+import           Language.Haskell.LSP.Types.Utils
 import           Language.Haskell.LSP.Types.WorkspaceEdit
 
 
@@ -288,3 +289,38 @@ instance FromJSON CAResult where
 instance ToJSON CAResult where
   toJSON (CACommand x) = toJSON x
   toJSON (CACodeAction x) = toJSON x
+
+
+-- ---------------------------------------------------------------------
+{-
+/**
+ * Code Action options.
+ */
+export interface CodeActionOptions {
+    /**
+     * CodeActionKinds that this server may return.
+     *
+     * The list of kinds may be generic, such as `CodeActionKind.Refactor`, or the server
+     * may list out every specific kind they provide.
+     */
+    codeActionKinds?: CodeActionKind[];
+}
+-}
+
+data CodeActionOptions =
+  CodeActionOptionsStatic Bool
+  | CodeActionOptions
+    { _codeActionKinds :: Maybe [CodeActionKind]
+    } deriving (Read,Show,Eq)
+
+deriveJSON (lspOptions { sumEncoding = UntaggedValue }) ''CodeActionOptions
+
+data CodeActionRegistrationOptions =
+  CodeActionRegistrationOptions
+    { _textDocumentRegistrationOptions :: TextDocumentRegistrationOptions
+    , _codeActionOptions               :: CodeActionOptions
+    } deriving (Read,Show,Eq)
+deriveJSONExtendFields lspOptions ''CodeActionRegistrationOptions
+  [ "_textDocumentRegistrationOptions"
+  , "_codeActionOptions"
+  ]
