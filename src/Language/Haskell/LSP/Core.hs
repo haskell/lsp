@@ -27,6 +27,7 @@ module Language.Haskell.LSP.Core (
   , sendErrorLogS
   , sendErrorShowS
   , reverseSortEdit
+  , Priority(..)
   ) where
 
 import           Control.Concurrent.Async
