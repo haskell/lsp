@@ -16,31 +16,40 @@ import Data.Time.Clock
 import GHC.Generics
 import Language.Haskell.LSP.Messages
 import System.IO
+import Language.Haskell.LSP.Utility
+import Control.Concurrent
+import Control.Monad
+import Control.Concurrent.STM
 
-data Event = FromClient UTCTime FromClientMessage
-           | FromServer UTCTime FromServerMessage
+data Event = FromClient !UTCTime !FromClientMessage
+           | FromServer !UTCTime !FromServerMessage
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
-data CaptureContext = NoCapture | CaptureToFile Handle
+data CaptureContext = NoCapture | Capture (TChan Event)
 
 noCapture :: CaptureContext
 noCapture = NoCapture
 
 captureToFile :: FilePath -> IO CaptureContext
-captureToFile fname = CaptureToFile <$> openFile fname WriteMode
+captureToFile fname = do
+    logs $ "haskell-lsp:Logging to " <> fname
+    chan <- newTChanIO
+    _tid <- forkIO $ withFile fname WriteMode $ writeToHandle chan
+    return $ Capture chan
 
 captureFromServer :: FromServerMessage -> CaptureContext -> IO ()
 captureFromServer _ NoCapture = return ()
-captureFromServer msg (CaptureToFile fp) = do
+captureFromServer msg (Capture chan) = do
   time <- getCurrentTime
-  let entry = FromServer time msg
-
-  BSL.hPutStrLn fp (encode entry)
+  atomically $ writeTChan chan $ FromServer time msg
 
 captureFromClient :: FromClientMessage -> CaptureContext -> IO ()
 captureFromClient _ NoCapture = return ()
-captureFromClient msg (CaptureToFile fp) = do
+captureFromClient msg (Capture chan) = do
   time <- getCurrentTime
-  let entry = FromClient time msg
+  atomically $ writeTChan chan $ FromClient time msg
 
-  BSL.hPutStrLn fp $ BSL.append (encode entry) "\n"
+writeToHandle :: TChan Event -> Handle -> IO ()
+writeToHandle chan hdl = forever $ do
+    ev <- atomically $ readTChan chan
+    BSL.hPutStrLn hdl $ encode ev
