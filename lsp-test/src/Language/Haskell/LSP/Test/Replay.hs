@@ -34,6 +34,8 @@ import           Language.Haskell.LSP.Test.Session
 -- makes sure it matches up with an expected response.
 -- The session directory should have a captured session file in it
 -- named "session.log".
+-- You can get these capture files from 'Language.Haskell.LSP.resCaptureFile' in
+-- haskell-lsp.
 replaySession :: String -- ^ The command to run the server.
               -> FilePath -- ^ The recorded session directory.
               -> IO ()
