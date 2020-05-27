@@ -54,6 +54,7 @@ instance Ord NormalizedUri where
 
 instance Hashable NormalizedUri where
   hash (NormalizedUri h _) = h
+  hashWithSalt salt (NormalizedUri h _) = hashWithSalt salt h
 
 instance NFData NormalizedUri
 
@@ -174,6 +175,7 @@ instance Show NormalizedFilePath where
 
 instance Hashable NormalizedFilePath where
   hash (NormalizedFilePath uri _) = hash uri
+  hashWithSalt salt (NormalizedFilePath uri _) = hashWithSalt salt uri
 
 instance IsString NormalizedFilePath where
     fromString = toNormalizedFilePath
