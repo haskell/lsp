@@ -27,6 +27,7 @@ module Language.Haskell.LSP.Core (
   , sendErrorLogS
   , sendErrorShowS
   , reverseSortEdit
+  , Priority(..)
   ) where
 
 import           Control.Concurrent.Async
@@ -86,7 +87,7 @@ data LanguageContextData config =
   , resConfig              :: !(Maybe config)
   , resLspId               :: !(TVar Int)
   , resLspFuncs            :: LspFuncs config -- NOTE: Cannot be strict, lazy initialization
-  , resCaptureFile         :: !(Maybe FilePath)
+  , resCaptureContext      :: !CaptureContext
   , resWorkspaceFolders    :: ![J.WorkspaceFolder]
   , resProgressData        :: !ProgressData
   }
@@ -348,7 +349,7 @@ handlerMap _ h J.Exit                            =
       ctx <- readTVarIO ctxVar
       -- Capture exit notification
       case J.fromJSON v :: J.Result J.ExitNotification of
-        J.Success n -> captureFromClient (NotExit n) (resCaptureFile ctx)
+        J.Success n -> captureFromClient (NotExit n) (resCaptureContext ctx)
         J.Error _ -> return ()
       logm $ B.pack "haskell-lsp:Got exit, exiting"
       exitSuccess
@@ -417,7 +418,7 @@ hh mVfs wrapper mh tvarDat json = do
 
           ctx <- readTVarIO tvarDat
           let req' = wrapper req
-          captureFromClient req' (resCaptureFile ctx)
+          captureFromClient req' (resCaptureContext ctx)
 
           case mh of
             Just h -> h req
@@ -484,7 +485,7 @@ handleMessageWithConfigChange notification parseConfig mh tvarDat json =
     J.Success req -> do
       ctx <- readTVarIO tvarDat
 
-      captureFromClient (notification req) (resCaptureFile ctx)
+      captureFromClient (notification req) (resCaptureContext ctx)
 
       case parseConfig req of
         Left err -> do
@@ -605,10 +606,10 @@ _ERR_MSG_URL = [ "`stack update` and install new haskell-lsp."
 -- |
 --
 --
-defaultLanguageContextData :: Handlers -> Options -> LspFuncs config -> TVar Int -> SendFunc -> Maybe FilePath -> VFS -> LanguageContextData config
-defaultLanguageContextData h o lf tv sf cf vfs =
+defaultLanguageContextData :: Handlers -> Options -> LspFuncs config -> TVar Int -> SendFunc -> CaptureContext -> VFS -> LanguageContextData config
+defaultLanguageContextData h o lf tv sf cc vfs =
   LanguageContextData _INITIAL_RESPONSE_SEQUENCE h o sf (VFSData vfs mempty) mempty
-                      Nothing tv lf cf mempty defaultProgressData
+                      Nothing tv lf cc mempty defaultProgressData
 
 defaultProgressData :: ProgressData
 defaultProgressData = ProgressData 0 Map.empty
