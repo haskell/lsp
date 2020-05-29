@@ -6,6 +6,7 @@ import Control.Concurrent.MVar
 import Control.Concurrent.STM
 import Data.Aeson
 import Data.Default
+import Language.Haskell.LSP.Capture
 import Language.Haskell.LSP.Core
 import Language.Haskell.LSP.Types
 import Language.Haskell.LSP.VFS
@@ -31,7 +32,7 @@ spec =
                                                         undefined
                                                         tvarLspId
                                                         (const $ return ())
-                                                        Nothing
+                                                        noCapture
                                                         vfs
 
     let putMsg msg =
