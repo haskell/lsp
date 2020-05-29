@@ -32,7 +32,7 @@ noCapture = NoCapture
 
 captureToFile :: FilePath -> IO CaptureContext
 captureToFile fname = do
-    logs $ "haskell-lsp:Logging to " <> fname
+    logs $ "haskell-lsp:Logging to " ++ fname
     chan <- newTChanIO
     _tid <- forkIO $ withFile fname WriteMode $ writeToHandle chan
     return $ Capture chan
