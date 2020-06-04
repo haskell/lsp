@@ -1,5 +1,9 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -7,7 +11,6 @@ module Language.Haskell.LSP.Test.Parsing
   ( -- $receiving
     satisfy
   , satisfyMaybe
-  , message
   , anyRequest
   , anyResponse
   , anyNotification
@@ -28,7 +31,6 @@ import Data.Conduit.Parser hiding (named)
 import qualified Data.Conduit.Parser (named)
 import qualified Data.Text as T
 import Data.Typeable
-import Language.Haskell.LSP.Messages
 import Language.Haskell.LSP.Types
 import qualified Language.Haskell.LSP.Types.Lens as LSP
 import Language.Haskell.LSP.Test.Messages
@@ -98,50 +100,56 @@ satisfyMaybe pred = do
 named :: T.Text -> Session a -> Session a
 named s (Session x) = Session (Data.Conduit.Parser.named s x)
 
+{-
 -- | Matches a message of type @a@.
 message :: forall a. (Typeable a, FromJSON a) => Session a
 message =
   let parser = decode . encodeMsg :: FromServerMessage -> Maybe a
   in named (T.pack $ show $ head $ snd $ splitTyConApp $ last $ typeRepArgs $ typeOf parser) $
      satisfyMaybe parser
+-}
 
 -- | Matches if the message is a notification.
 anyNotification :: Session FromServerMessage
-anyNotification = named "Any notification" $ satisfy isServerNotification
+anyNotification = named "Any notification" $ satisfy $ \case
+  FromServerMess m _ -> case splitServerMethod m of
+    IsServerNot -> True
+    _ -> False
+  FromServerRsp _ _ -> False
 
 -- | Matches if the message is a request.
 anyRequest :: Session FromServerMessage
-anyRequest = named "Any request" $ satisfy isServerRequest
+anyRequest = named "Any request" $ satisfy $ \case
+  FromServerMess m _ -> case splitServerMethod m of
+    IsServerReq -> True
+    _ -> False
+  FromServerRsp _ _ -> False
 
 -- | Matches if the message is a response.
 anyResponse :: Session FromServerMessage
-anyResponse = named "Any response" $ satisfy isServerResponse
+anyResponse = named "Any response" $ satisfy $ \case
+  FromServerMess _ _ -> False
+  FromServerRsp _ _ -> True
 
 -- | Matches a response for a specific id.
-responseForId :: forall a. FromJSON a => LspId -> Session (ResponseMessage a)
+responseForId :: LspId (m :: Method FromClient Request) -> Session (ResponseMessage m)
 responseForId lid = named (T.pack $ "Response for id: " ++ show lid) $ do
-  let parser = decode . encodeMsg :: FromServerMessage -> Maybe (ResponseMessage a)
   satisfyMaybe $ \msg -> do
-    z <- parser msg
-    guard (z ^. LSP.id == responseId lid)
-    pure z
+    case msg of
+      FromServerMess _ _ -> Nothing
+      FromServerRsp m rsp -> undefined -- TODO
 
 -- | Matches any type of message.
 anyMessage :: Session FromServerMessage
 anyMessage = satisfy (const True)
 
--- | A version of encode that encodes FromServerMessages as if they
--- weren't wrapped.
-encodeMsg :: FromServerMessage -> B.ByteString
-encodeMsg = encode . genericToJSON (defaultOptions { sumEncoding = UntaggedValue })
-
 -- | Matches if the message is a log message notification or a show message notification/request.
 loggingNotification :: Session FromServerMessage
 loggingNotification = named "Logging notification" $ satisfy shouldSkip
   where
-    shouldSkip (NotLogMessage _) = True
-    shouldSkip (NotShowMessage _) = True
-    shouldSkip (ReqShowMessage _) = True
+    shouldSkip (FromServerMess SWindowLogMessage _) = True
+    shouldSkip (FromServerMess SWindowShowMessage _) = True
+    shouldSkip (FromServerMess SWindowShowMessageRequest _) = True
     shouldSkip _ = False
 
 -- | Matches a 'Language.Haskell.LSP.Test.PublishDiagnosticsNotification'
@@ -149,5 +157,5 @@ loggingNotification = named "Logging notification" $ satisfy shouldSkip
 publishDiagnosticsNotification :: Session PublishDiagnosticsNotification
 publishDiagnosticsNotification = named "Publish diagnostics notification" $
   satisfyMaybe $ \msg -> case msg of
-    NotPublishDiagnostics diags -> Just diags
+    FromServerMess STextDocumentPublishDiagnostics diags -> Just diags
     _ -> Nothing

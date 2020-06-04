@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP               #-}
+{-# LANGUAGE GADTs             #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -59,7 +60,6 @@ import qualified Data.Text.IO as T
 import qualified Data.HashMap.Strict as HashMap
 import Data.Maybe
 import Data.Function
-import Language.Haskell.LSP.Messages
 import Language.Haskell.LSP.Types.Capabilities
 import Language.Haskell.LSP.Types
 import Language.Haskell.LSP.Types.Lens
@@ -160,7 +160,7 @@ bumpTimeoutId prev = do
 
 data SessionState = SessionState
   {
-    curReqId :: LspId
+    curReqId :: Int
   , vfs :: VFS
   , curDiagnostics :: Map.Map NormalizedUri [Diagnostic]
   , overridingTimeout :: Bool
@@ -219,8 +219,8 @@ runSession context state (Session session) = runReaderT (runStateT conduit state
         yield msg
       chanSource
 
-    isLogNotification (ServerMessage (NotShowMessage _)) = True
-    isLogNotification (ServerMessage (NotLogMessage _)) = True
+    isLogNotification (ServerMessage (FromServerMess SWindowShowMessage _)) = True
+    isLogNotification (ServerMessage (FromServerMess SWindowLogMessage _)) = True
     isLogNotification _ = False
 
     watchdog :: ConduitM SessionMessage FromServerMessage (StateT SessionState (ReaderT SessionContext IO)) ()
@@ -260,7 +260,7 @@ runSessionWithHandles serverIn serverOut serverProc serverHandler config caps ro
   mainThreadId <- myThreadId
 
   let context = SessionContext serverIn absRootDir messageChan timeoutIdVar reqMap initRsp config caps
-      initState vfs = SessionState (IdInt 0) vfs mempty False Nothing mempty
+      initState vfs = SessionState 0 vfs mempty False Nothing mempty
       runSession' ses = initVFS $ \vfs -> runSession context (initState vfs) ses
 
       errorHandler = throwTo mainThreadId :: SessionException -> IO ()
@@ -282,7 +282,7 @@ runSessionWithHandles serverIn serverOut serverProc serverHandler config caps ro
 
   (result, _) <- bracket serverListenerLauncher
                          serverAndListenerFinalizer
-                         (const $ runSession' session)
+                         (const $ initVFS $ \vfs -> runSession context (initState vfs) session)
   return result
 
 updateStateC :: ConduitM FromServerMessage FromServerMessage (StateT SessionState (ReaderT SessionContext IO)) ()
@@ -294,25 +294,25 @@ updateState :: (MonadIO m, HasReader SessionContext m, HasState SessionState m)
             => FromServerMessage -> m ()
 
 -- Keep track of dynamic capability registration
-updateState (ReqRegisterCapability req) = do
+updateState (FromServerMess SClientRegisterCapability req) = do
   let List newRegs = (\r -> (r ^. LSP.id, r)) <$> req ^. params . registrations
   modify $ \s ->
     s { curDynCaps = Map.union (Map.fromList newRegs) (curDynCaps s) }
 
-updateState (ReqUnregisterCapability req) = do
+updateState (FromServerMess SClientUnregisterCapability req) = do
   let List unRegs = (^. LSP.id) <$> req ^. params . unregistrations
   modify $ \s ->
     let newCurDynCaps = foldr' Map.delete (curDynCaps s) unRegs
     in s { curDynCaps = newCurDynCaps }
 
-updateState (NotPublishDiagnostics n) = do
+updateState (FromServerMess STextDocumentPublishDiagnostics n) = do
   let List diags = n ^. params . diagnostics
       doc = n ^. params . uri
   modify $ \s ->
     let newDiags = Map.insert (toNormalizedUri doc) diags (curDiagnostics s)
       in s { curDiagnostics = newDiags }
 
-updateState (ReqApplyWorkspaceEdit r) = do
+updateState (FromServerMess SWorkspaceApplyEdit r) = do
 
   -- First, prefer the versioned documentChanges field
   allChangeParams <- case r ^. params . edit . documentChanges of
@@ -335,7 +335,7 @@ updateState (ReqApplyWorkspaceEdit r) = do
       mergedParams = map mergeParams groupedParams
 
   -- TODO: Don't do this when replaying a session
-  forM_ mergedParams (sendMessage . NotificationMessage "2.0" TextDocumentDidChange)
+  forM_ mergedParams (sendMessage . NotificationMessage "2.0" STextDocumentDidChange)
 
   -- Update VFS to new document versions
   let sortedVersions = map (sortBy (compare `on` (^. textDocument . version))) groupedParams
@@ -358,7 +358,7 @@ updateState (ReqApplyWorkspaceEdit r) = do
             let fp = fromJust $ uriToFilePath uri
             contents <- liftIO $ T.readFile fp
             let item = TextDocumentItem (filePathToUri fp) "" 0 contents
-                msg = NotificationMessage "2.0" TextDocumentDidOpen (DidOpenTextDocumentParams item)
+                msg = NotificationMessage "2.0" STextDocumentDidOpen (DidOpenTextDocumentParams item)
             liftIO $ B.hPut (serverIn ctx) $ addHeader (encode msg)
 
             modifyM $ \s -> do

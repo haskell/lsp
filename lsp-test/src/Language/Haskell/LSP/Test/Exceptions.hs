@@ -1,7 +1,6 @@
 module Language.Haskell.LSP.Test.Exceptions where
 
 import Control.Exception
-import Language.Haskell.LSP.Messages
 import Language.Haskell.LSP.Types
 import Data.Aeson
 import Data.Aeson.Encode.Pretty
@@ -17,7 +16,7 @@ data SessionException = Timeout (Maybe FromServerMessage)
                       | ReplayOutOfOrder FromServerMessage [FromServerMessage]
                       | UnexpectedDiagnostics
                       | IncorrectApplyEditRequest String
-                      | UnexpectedResponseError LspIdRsp ResponseError
+                      | UnexpectedResponseError SomeLspId  ResponseError
                       | UnexpectedServerTermination
                       | IllegalInitSequenceMessage FromServerMessage
   deriving Eq

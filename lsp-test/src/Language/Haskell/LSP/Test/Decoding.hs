@@ -1,8 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE DataKinds #-}
 module Language.Haskell.LSP.Test.Decoding where
 
 import           Prelude                 hiding ( id )
 import           Data.Aeson
+import           Data.Aeson.Types
 import           Data.Foldable
 import           Control.Exception
 import           Control.Lens
@@ -12,9 +18,12 @@ import           System.IO
 import           System.IO.Error
 import           Language.Haskell.LSP.Types
 import           Language.Haskell.LSP.Types.Lens
-import           Language.Haskell.LSP.Messages
 import           Language.Haskell.LSP.Test.Exceptions
 import qualified Data.HashMap.Strict           as HM
+
+import Data.IxMap
+import Data.Kind
+import Data.Maybe
 
 getAllMessages :: Handle -> IO [B.ByteString]
 getAllMessages h = do
@@ -53,93 +62,29 @@ getHeaders h = do
           | isEOFError e = throw UnexpectedServerTermination
           | otherwise = throw e
 
-type RequestMap = HM.HashMap LspId ClientMethod
+type RequestMap = IxMap LspId (SMethod :: Method FromClient Request -> Type )
 
 newRequestMap :: RequestMap
-newRequestMap = HM.empty
+newRequestMap = emptyIxMap
 
-updateRequestMap :: RequestMap -> LspId -> ClientMethod -> RequestMap
-updateRequestMap reqMap id method = HM.insert id method reqMap
+updateRequestMap :: RequestMap -> LspId m -> SClientMethod m -> Maybe RequestMap
+updateRequestMap reqMap id method = insertIxMap id method reqMap
 
 getRequestMap :: [FromClientMessage] -> RequestMap
-getRequestMap = foldl helper HM.empty
+getRequestMap = foldl' helper emptyIxMap
  where
+  helper :: RequestMap -> FromClientMessage -> RequestMap
   helper acc msg = case msg of
-    (ReqInitialize val) -> insert val acc
-    (ReqShutdown val) -> insert val acc
-    (ReqHover val) -> insert val acc
-    (ReqCompletion val) -> insert val acc
-    (ReqCompletionItemResolve val) -> insert val acc
-    (ReqSignatureHelp val) -> insert val acc
-    (ReqDefinition val) -> insert val acc
-    (ReqTypeDefinition val) -> insert val acc
-    (ReqFindReferences val) -> insert val acc
-    (ReqDocumentHighlights val) -> insert val acc
-    (ReqDocumentSymbols val) -> insert val acc
-    (ReqWorkspaceSymbols val) -> insert val acc
-    (ReqCodeAction val) -> insert val acc
-    (ReqCodeLens val) -> insert val acc
-    (ReqCodeLensResolve val) -> insert val acc
-    (ReqDocumentFormatting val) -> insert val acc
-    (ReqDocumentRangeFormatting val) -> insert val acc
-    (ReqDocumentOnTypeFormatting val) -> insert val acc
-    (ReqRename val) -> insert val acc
-    (ReqExecuteCommand val) -> insert val acc
-    (ReqDocumentLink val) -> insert val acc
-    (ReqDocumentLinkResolve val) -> insert val acc
-    (ReqWillSaveWaitUntil val) -> insert val acc
+    FromClientMess m mess -> case splitClientMethod m of
+      IsClientNot -> acc
+      IsClientReq -> fromJust $ updateRequestMap acc (mess ^. id) m
     _ -> acc
-  insert m = HM.insert (m ^. id) (m ^. method)
-
-matchResponseMsgType :: ClientMethod -> B.ByteString -> FromServerMessage
-matchResponseMsgType req = case req of
-  Initialize                    -> RspInitialize . decoded
-  Shutdown                      -> RspShutdown . decoded
-  TextDocumentHover             -> RspHover . decoded
-  TextDocumentCompletion        -> RspCompletion . decoded
-  CompletionItemResolve         -> RspCompletionItemResolve . decoded
-  TextDocumentSignatureHelp     -> RspSignatureHelp . decoded
-  TextDocumentDefinition        -> RspDefinition . decoded
-  TextDocumentTypeDefinition    -> RspTypeDefinition . decoded
-  TextDocumentReferences        -> RspFindReferences . decoded
-  TextDocumentDocumentHighlight -> RspDocumentHighlights . decoded
-  TextDocumentDocumentSymbol    -> RspDocumentSymbols . decoded
-  WorkspaceSymbol               -> RspWorkspaceSymbols . decoded
-  TextDocumentCodeAction        -> RspCodeAction . decoded
-  TextDocumentCodeLens          -> RspCodeLens . decoded
-  CodeLensResolve               -> RspCodeLensResolve . decoded
-  TextDocumentFormatting        -> RspDocumentFormatting . decoded
-  TextDocumentRangeFormatting   -> RspDocumentRangeFormatting . decoded
-  TextDocumentOnTypeFormatting  -> RspDocumentOnTypeFormatting . decoded
-  TextDocumentRename            -> RspRename . decoded
-  WorkspaceExecuteCommand       -> RspExecuteCommand . decoded
-  TextDocumentDocumentLink      -> RspDocumentLink . decoded
-  DocumentLinkResolve           -> RspDocumentLinkResolve . decoded
-  TextDocumentWillSaveWaitUntil -> RspWillSaveWaitUntil . decoded
-  CustomClientMethod{}          -> RspCustomServer . decoded
-  x                             -> error . ((show x ++ " is not a request: ") ++) . show
-  where decoded x = fromMaybe (error $ "Couldn't decode response for the request type: "
-                                        ++ show req ++ "\n" ++ show x)
-                              (decode x)
 
 decodeFromServerMsg :: RequestMap -> B.ByteString -> FromServerMessage
-decodeFromServerMsg reqMap bytes =
-  case HM.lookup "method" obj of
-    Just methodStr -> case fromJSON methodStr of
-      Success method -> case method of
-        -- We can work out the type of the message
-        TextDocumentPublishDiagnostics -> NotPublishDiagnostics $ fromJust $ decode bytes
-        WindowShowMessage              -> NotShowMessage $ fromJust $ decode bytes
-        WindowLogMessage               -> NotLogMessage $ fromJust $ decode bytes
-        CancelRequestServer            -> NotCancelRequestFromServer $ fromJust $ decode bytes
-        Progress                       ->
-          fromJust $ asum [NotWorkDoneProgressBegin <$> decode bytes, NotWorkDoneProgressReport <$> decode bytes, NotWorkDoneProgressEnd <$> decode bytes]
-        WindowWorkDoneProgressCreate   -> ReqWorkDoneProgressCreate $ fromJust $ decode bytes
-        TelemetryEvent                 -> NotTelemetry $ fromJust $ decode bytes
-        WindowShowMessageRequest       -> ReqShowMessage $ fromJust $ decode bytes
-        ClientRegisterCapability       -> ReqRegisterCapability $ fromJust $ decode bytes
-        ClientUnregisterCapability     -> ReqUnregisterCapability $ fromJust $ decode bytes
-        WorkspaceApplyEdit             -> ReqApplyWorkspaceEdit $ fromJust $ decode bytes
+decodeFromServerMsg reqMap bytes =  fst $ fromJust $ parseMaybe p obj
+  where obj = fromJust $ decode bytes :: Value
+        p = parseServerMessage (\i -> (,()) <$> lookupIxMap i reqMap)
+        {-
         WorkspaceWorkspaceFolders      -> error "ReqWorkspaceFolders not supported yet"
         WorkspaceConfiguration         -> error "ReqWorkspaceConfiguration not supported yet"
         CustomServerMethod _
@@ -148,10 +93,4 @@ decodeFromServerMsg reqMap bytes =
             | otherwise -> NotCustomServer $ fromJust $ decode bytes
 
       Error e -> error e
-
-    Nothing -> case decode bytes :: Maybe (ResponseMessage Value) of
-      Just msg -> case HM.lookup (requestId $ msg ^. id) reqMap of
-        Just req -> matchResponseMsgType req bytes -- try to decode it to more specific type
-        Nothing  -> error "Couldn't match up response with request"
-      Nothing -> error "Couldn't decode message"
-    where obj = fromJust $ decode bytes :: Object
+      -}

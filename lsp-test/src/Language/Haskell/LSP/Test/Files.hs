@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Language.Haskell.LSP.Test.Files
@@ -7,16 +8,19 @@ module Language.Haskell.LSP.Test.Files
   )
 where
 
-import           Language.Haskell.LSP.Capture
 import           Language.Haskell.LSP.Types
 import           Language.Haskell.LSP.Types.Lens
-import           Language.Haskell.LSP.Messages
 import           Control.Lens
 import qualified Data.HashMap.Strict           as HM
 import qualified Data.Text                     as T
 import           Data.Maybe
 import           System.Directory
 import           System.FilePath
+import Data.Time.Clock
+
+data Event
+  = ClientEv UTCTime FromClientMessage
+  | ServerEv UTCTime FromServerMessage
 
 swapFiles :: FilePath -> [Event] -> IO [Event]
 swapFiles relCurBaseDir msgs = do
@@ -32,7 +36,7 @@ swapFiles relCurBaseDir msgs = do
   return newMsgs
 
 rootDir :: [Event] -> FilePath
-rootDir (FromClient _ (ReqInitialize req):_) =
+rootDir (ClientEv _ (FromClientMess SInitialize req):_) =
   fromMaybe (error "Couldn't find root dir") $ do
     rootUri <- req ^. params .rootUri
     uriToFilePath rootUri
@@ -41,34 +45,29 @@ rootDir _ = error "Couldn't find initialize request in session"
 mapUris :: (Uri -> Uri) -> Event -> Event
 mapUris f event =
   case event of
-    FromClient t msg -> FromClient t (fromClientMsg msg)
-    FromServer t msg -> FromServer t (fromServerMsg msg)
+    ClientEv t msg -> ClientEv t (fromClientMsg msg)
+    ServerEv t msg -> ServerEv t (fromServerMsg msg)
 
   where
     --TODO: Handle all other URIs that might need swapped
-    fromClientMsg (NotDidOpenTextDocument n) = NotDidOpenTextDocument $ swapUri (params . textDocument) n
-    fromClientMsg (NotDidChangeTextDocument n) = NotDidChangeTextDocument $ swapUri (params . textDocument) n
-    fromClientMsg (NotWillSaveTextDocument n) = NotWillSaveTextDocument $ swapUri (params . textDocument) n
-    fromClientMsg (NotDidSaveTextDocument n) = NotDidSaveTextDocument $ swapUri (params . textDocument) n
-    fromClientMsg (NotDidCloseTextDocument n) = NotDidCloseTextDocument $ swapUri (params . textDocument) n
-    fromClientMsg (ReqInitialize r) = ReqInitialize $ params .~ transformInit (r ^. params) $ r
-    fromClientMsg (ReqDocumentSymbols r) = ReqDocumentSymbols $ swapUri (params . textDocument) r
-    fromClientMsg (ReqRename r) = ReqRename $ swapUri (params . textDocument) r
+    fromClientMsg (FromClientMess m@SInitialize                 r) = FromClientMess m $ params .~ transformInit (r ^. params) $ r
+    fromClientMsg (FromClientMess m@STextDocumentDidOpen        n) = FromClientMess m $ swapUri (params . textDocument) n
+    fromClientMsg (FromClientMess m@STextDocumentDidChange      n) = FromClientMess m $ swapUri (params . textDocument) n
+    fromClientMsg (FromClientMess m@STextDocumentWillSave       n) = FromClientMess m $ swapUri (params . textDocument) n
+    fromClientMsg (FromClientMess m@STextDocumentDidSave        n) = FromClientMess m $ swapUri (params . textDocument) n
+    fromClientMsg (FromClientMess m@STextDocumentDidClose       n) = FromClientMess m $ swapUri (params . textDocument) n
+    fromClientMsg (FromClientMess m@STextDocumentDocumentSymbol n) = FromClientMess m $ swapUri (params . textDocument) n
+    fromClientMsg (FromClientMess m@STextDocumentRename         n) = FromClientMess m $ swapUri (params . textDocument) n
     fromClientMsg x = x
 
     fromServerMsg :: FromServerMessage -> FromServerMessage
-    fromServerMsg (ReqApplyWorkspaceEdit r) =
-      ReqApplyWorkspaceEdit $ params . edit .~ swapWorkspaceEdit (r ^. params . edit) $ r
-
-    fromServerMsg (NotPublishDiagnostics n) = NotPublishDiagnostics $ swapUri params n
-
-    fromServerMsg (RspDocumentSymbols r) =
+    fromServerMsg (FromServerMess m@SWorkspaceApplyEdit r) = FromServerMess m $ params . edit .~ swapWorkspaceEdit (r ^. params . edit) $ r
+    fromServerMsg (FromServerMess m@STextDocumentPublishDiagnostics n) = FromServerMess m $ swapUri params n
+    fromServerMsg (FromServerRsp m@STextDocumentDocumentSymbol r) =
       let swapUri' (DSSymbolInformation si) = DSSymbolInformation (swapUri location <$> si)
           swapUri' (DSDocumentSymbols dss) = DSDocumentSymbols dss -- no file locations here
-      in RspDocumentSymbols $ r & result %~ (fmap swapUri')
-
-    fromServerMsg (RspRename r) = RspRename $ r & result %~ (fmap swapWorkspaceEdit)
-
+      in FromServerRsp m $ r & result %~ (fmap swapUri')
+    fromServerMsg (FromServerRsp m@STextDocumentRename r) = FromServerRsp m $ r & result %~ (fmap swapWorkspaceEdit)
     fromServerMsg x = x
 
     swapWorkspaceEdit :: WorkspaceEdit -> WorkspaceEdit

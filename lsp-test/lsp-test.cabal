@@ -44,6 +44,7 @@ library
   build-depends:       base >= 4.10 && < 5
                      , haskell-lsp >= 0.22 && < 0.24
                      , aeson
+                     , time
                      , aeson-pretty
                      , ansi-terminal
                      , async

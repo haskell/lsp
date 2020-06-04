@@ -10,8 +10,6 @@ import           Control.Concurrent
 import           Control.Monad.IO.Class
 import qualified Data.ByteString.Lazy.Char8    as B
 import qualified Data.Text                     as T
-import           Language.Haskell.LSP.Capture
-import           Language.Haskell.LSP.Messages
 import           Language.Haskell.LSP.Types
 import           Language.Haskell.LSP.Types.Lens as LSP
 import           Data.Aeson
