@@ -259,9 +259,6 @@ getDocumentEdit doc = do
       let mMap = req ^. params . edit . changes
         in maybe False (HashMap.member (doc ^. uri)) mMap
 
-message :: SServerMethod m -> Session (ServerMessage m)
-message = undefined -- TODO
-
 -- | Sends a request to the server and waits for its response.
 -- Will skip any messages in between the request and the response
 -- @
@@ -292,10 +289,7 @@ sendRequest method params = do
   liftIO $ modifyMVar_ reqMap $
     \r -> return $ fromJust $ updateRequestMap r id method
 
-  let mkSession :: Session () -> Session ()
-      mkSession x = x
-
-  mkSession $ case splitClientMethod method of
+  ~() <- case splitClientMethod method of
     IsClientReq -> sendMessage mess
     IsClientEither -> sendMessage $ ReqMess mess
 

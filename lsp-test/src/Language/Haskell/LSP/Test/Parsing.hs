@@ -1,5 +1,6 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
@@ -11,6 +12,7 @@ module Language.Haskell.LSP.Test.Parsing
   ( -- $receiving
     satisfy
   , satisfyMaybe
+  , message
   , anyRequest
   , anyResponse
   , anyNotification
@@ -33,7 +35,6 @@ import qualified Data.Text as T
 import Data.Typeable
 import Language.Haskell.LSP.Types
 import qualified Language.Haskell.LSP.Types.Lens as LSP
-import Language.Haskell.LSP.Test.Messages
 import Language.Haskell.LSP.Test.Session
 
 -- $receiving
@@ -100,14 +101,8 @@ satisfyMaybe pred = do
 named :: T.Text -> Session a -> Session a
 named s (Session x) = Session (Data.Conduit.Parser.named s x)
 
-{-
--- | Matches a message of type @a@.
-message :: forall a. (Typeable a, FromJSON a) => Session a
-message =
-  let parser = decode . encodeMsg :: FromServerMessage -> Maybe a
-  in named (T.pack $ show $ head $ snd $ splitTyConApp $ last $ typeRepArgs $ typeOf parser) $
-     satisfyMaybe parser
--}
+message :: SServerMethod m -> Session (ServerMessage m)
+message = undefined -- TODO
 
 -- | Matches if the message is a notification.
 anyNotification :: Session FromServerMessage

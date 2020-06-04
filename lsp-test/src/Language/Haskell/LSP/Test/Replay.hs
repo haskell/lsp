@@ -1,7 +1,7 @@
 -- | A testing tool for replaying captured client logs back to a server,
 -- and validating that the server output matches up with another log.
 module Language.Haskell.LSP.Test.Replay
-  ( replaySession
+  ( -- replaySession
   )
 where
 
@@ -24,10 +24,10 @@ import           Language.Haskell.LSP.Test
 import           Language.Haskell.LSP.Test.Compat
 import           Language.Haskell.LSP.Test.Files
 import           Language.Haskell.LSP.Test.Decoding
-import           Language.Haskell.LSP.Test.Messages
 import           Language.Haskell.LSP.Test.Server
 import           Language.Haskell.LSP.Test.Session
 
+{-
 -- | Replays a captured client output and
 -- makes sure it matches up with an expected response.
 -- The session directory should have a captured session file in it
@@ -233,3 +233,4 @@ swapPid :: Int -> T.Text -> T.Text
 swapPid pid t
   | hasPid t = T.append (T.pack $ show pid) $ T.dropWhile (/= ':') t
   | otherwise = t
+-}
