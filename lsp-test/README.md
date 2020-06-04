@@ -35,7 +35,7 @@ anyRequest <|> anyResponse
 ```
 
 Try out the example tests in the `example` directory with `cabal test`.
-For more examples check the [Wiki](https://github.com/bubba/lsp-test/wiki/Introduction).
+For more examples check the [Wiki](https://github.com/bubba/lsp-test/wiki/Introduction), or see this [introductory blog post](https://lukelau.me/haskell/posts/lsp-test/).
 
 Whilst writing your tests you may want to debug them to see what's going wrong.
 You can set the `logMessages` and `logStdErr` options in `SessionConfig` to see what the server is up to.
