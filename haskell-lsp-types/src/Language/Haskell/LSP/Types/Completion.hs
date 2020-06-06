@@ -341,7 +341,7 @@ data CompletionItem =
                        -- the text that is inserted when selecting this
                        -- completion.
     , _kind                :: Maybe CompletionItemKind
-    , _tags                :: List CompletionItemTag -- ^ Tags for this completion item.
+    , _tags                :: Maybe (List CompletionItemTag) -- ^ Tags for this completion item.
     , _detail              :: Maybe Text -- ^ A human-readable string with additional
                               -- information about this item, like type or
                               -- symbol information.

@@ -3,6 +3,8 @@
 {-# LANGUAGE OverloadedStrings    #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
+-- For the use of MarkedString
+{-# OPTIONS_GHC -fno-warn-deprecations #-}
 -- | Test for JSON serialization
 module JsonSpec where
 
@@ -44,6 +46,11 @@ jsonSpec = do
          (propertyJsonRoundtrip :: ResponseMessage () -> Property)
     prop "ResponseMessage JSON value"
          (propertyJsonRoundtrip :: ResponseMessage J.Value -> Property)
+  describe "JSON decoding regressions" $
+    it "CompletionItem" $
+      (J.decode "{\"jsonrpc\":\"2.0\",\"result\":[{\"label\":\"raisebox\"}],\"id\":1}" :: Maybe CompletionResponse)
+        `shouldNotBe` Nothing
+  
 
 responseMessageSpec :: Spec
 responseMessageSpec = do
