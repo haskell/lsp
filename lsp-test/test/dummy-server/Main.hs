@@ -109,6 +109,13 @@ handlers lfvar = def
       send $ RspCodeAction $ makeResponseMessage req caresults
   , didChangeWatchedFilesNotificationHandler = pure $ \_ ->
       send $ NotLogMessage $ fmServerLogMessageNotification MtLog "got workspace/didChangeWatchedFiles"
+  , completionHandler = pure $ \req -> do
+      let res = CompletionList (CompletionListType False (List [item]))
+          item =
+            CompletionItem "foo" (Just CiConstant) (List []) Nothing
+            Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+            Nothing Nothing Nothing Nothing Nothing
+      send $ RspCompletion $ makeResponseMessage req res
   }
   where send msg = readMVar lfvar >>= \lf -> (sendFunc lf) msg
 

@@ -221,21 +221,13 @@ main = findServer >>= \serverExe -> hspec $ do
       contents <- documentContents doc
       liftIO $ contents `shouldSatisfy` T.isPrefixOf "foodule"
 
-  -- describe "getCompletions" $
-  --   it "works" $ runSession serverExe def "test/data/renamePass" $ do
-  --     doc <- openDoc "Desktop/simple.hs" "haskell"
+  describe "getCompletions" $
+    it "works" $ runSession serverExe def "test/data/renamePass" $ do
+      doc <- openDoc "Desktop/simple.hs" "haskell"
 
-  --     -- wait for module to be loaded
-  --     skipMany loggingNotification
-  --     noDiagnostics
-  --     noDiagnostics
-
-  --     comps <- getCompletions doc (Position 5 5)
-  --     let item = head (filter (\x -> x ^. label == "interactWithUser") comps)
-  --     liftIO $ do
-  --       item ^. label `shouldBe` "interactWithUser"
-  --       item ^. kind `shouldBe` Just CiFunction
-  --       item ^. detail `shouldBe` Just "Items -> IO ()\nMain"
+      comps <- getCompletions doc (Position 5 5)
+      let item = head comps
+      liftIO $ item ^. label `shouldBe` "foo"
 
   -- describe "getReferences" $
   --   it "works" $ runSession serverExe fullCaps "test/data/renamePass" $ do

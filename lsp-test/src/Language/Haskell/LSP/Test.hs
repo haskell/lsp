@@ -604,16 +604,19 @@ getDefinitions doc pos = do
   let params = TextDocumentPositionParams doc pos Nothing
   rsp <- request TextDocumentDefinition params :: Session DefinitionResponse
   case getResponseResult rsp of
-      SingleLoc loc -> pure [loc]
-      MultiLoc locs -> pure locs
+    SingleLoc loc -> pure [loc]
+    MultiLoc locs -> pure locs
 
 -- | Returns the type definition(s) for the term at the specified position.
 getTypeDefinitions :: TextDocumentIdentifier -- ^ The document the term is in.
-               -> Position -- ^ The position the term is at.
-               -> Session [Location] -- ^ The location(s) of the definitions
-getTypeDefinitions doc pos =
+                   -> Position -- ^ The position the term is at.
+                   -> Session [Location] -- ^ The location(s) of the definitions
+getTypeDefinitions doc pos = do
   let params = TextDocumentPositionParams doc pos Nothing
-  in getResponseResult <$> request TextDocumentTypeDefinition params
+  rsp <- request TextDocumentTypeDefinition params :: Session TypeDefinitionResponse
+  case getResponseResult rsp of
+    SingleLoc loc -> pure [loc]
+    MultiLoc locs -> pure locs
 
 -- | Renames the term at the specified position.
 rename :: TextDocumentIdentifier -> Position -> String -> Session ()
