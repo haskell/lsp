@@ -1,3 +1,4 @@
 packages: .
-flags: DummyServer
+flags: +DummyServer
 test-show-details: direct
+
