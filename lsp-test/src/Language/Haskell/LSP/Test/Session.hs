@@ -71,7 +71,7 @@ import Language.Haskell.LSP.Test.Exceptions
 import System.Console.ANSI
 import System.Directory
 import System.IO
-import System.Process (ProcessHandle())
+import System.Process (waitForProcess, ProcessHandle())
 import System.Timeout
 
 -- | A session representing one instance of launching and connecting to a server.
@@ -264,12 +264,15 @@ runSessionWithHandles serverIn serverOut serverProc serverHandler config caps ro
       serverListenerLauncher =
         forkIO $ catch (serverHandler serverOut context) errorHandler
       server = (Just serverIn, Just serverOut, Nothing, serverProc)
+      msgTimeoutMs = messageTimeout config * 10^6
       serverAndListenerFinalizer tid = do
-        finally (timeout (messageTimeout config * 1^6)
-                         (runSession' exitServer))
-                -- Make sure to kill the listener first, before closing
-                -- handles etc via cleanupProcess
-                (killThread tid >> cleanupProcess server)
+        finally (timeout msgTimeoutMs (runSession' exitServer)) $ do
+          -- Make sure to kill the listener first, before closing
+          -- handles etc via cleanupProcess
+          killThread tid
+          -- Give the server some time to exit cleanly
+          timeout msgTimeoutMs (waitForProcess serverProc)
+          cleanupProcess server
 
   (result, _) <- bracket serverListenerLauncher
                          serverAndListenerFinalizer
