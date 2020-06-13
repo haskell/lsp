@@ -16,12 +16,11 @@ jobs:
             ghc: '8.8.3' # fails due to segfault
 
     steps:
-    - uses: actions/checkout@v1
-    - uses: actions/setup-haskell@v1.1
+    - uses: actions/checkout@v2
+    - uses: actions/setup-haskell@v1.1.1
       with:
         ghc-version: ${{ matrix.ghc }}
-        cabal-version: '3.0'
-    - run: cabal update
+        cabal-version: '3.2'
 
     - name: Cache Cabal
       uses: actions/cache@v1.2.0
