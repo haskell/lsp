@@ -24,7 +24,7 @@ import           Control.DeepSeq
 import qualified Data.Aeson                                 as A
 import           Data.Binary                                (Binary, Get, put, get)
 import           Data.Hashable
-import           Data.List                                  (isPrefixOf, stripPrefix)
+import           Data.List                                  (stripPrefix)
 #if __GLASGOW_HASKELL__ < 804
 import           Data.Monoid                                ((<>))
 #endif
@@ -168,7 +168,18 @@ instance Binary NormalizedFilePath where
   put (NormalizedFilePath _ fp) = put fp
   get = do
     v <- Data.Binary.get :: Get FilePath
-    return (toNormalizedFilePath v)
+    let nuri = internalNormalizedFilePathToUri v
+    return (NormalizedFilePath nuri v)
+
+-- | Internal helper that takes a file path that is assumed to
+-- already be normalized to a URI. It is up to the caller
+-- to ensure normalization.
+internalNormalizedFilePathToUri :: FilePath -> NormalizedUri
+internalNormalizedFilePathToUri fp = nuri
+  where
+    uriPath = platformAdjustToUriPath System.Info.os fp
+    nuriStr = T.pack $ fileScheme <> "//" <> uriPath
+    nuri = NormalizedUri (hash nuriStr) nuriStr
 
 instance Show NormalizedFilePath where
   show (NormalizedFilePath _ fp) = "NormalizedFilePath " ++ show fp
@@ -182,10 +193,9 @@ instance IsString NormalizedFilePath where
 
 toNormalizedFilePath :: FilePath -> NormalizedFilePath
 toNormalizedFilePath fp = NormalizedFilePath nuri nfp
-  where nfp = FP.normalise fp
-        uriPath = platformAdjustToUriPath System.Info.os nfp
-        nuriStr = T.pack $ fileScheme <> "//" <> uriPath
-        nuri = NormalizedUri (hash nuriStr) nuriStr
+  where
+      nfp = FP.normalise fp
+      nuri = internalNormalizedFilePathToUri nfp
 
 fromNormalizedFilePath :: NormalizedFilePath -> FilePath
 fromNormalizedFilePath (NormalizedFilePath _ fp) = fp
