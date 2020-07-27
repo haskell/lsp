@@ -308,15 +308,18 @@ updateState (NotPublishDiagnostics n) = do
 
 updateState (ReqApplyWorkspaceEdit r) = do
 
+  -- First, prefer the versioned documentChanges field
   allChangeParams <- case r ^. params . edit . documentChanges of
     Just (List cs) -> do
       mapM_ (checkIfNeedsOpened . (^. textDocument . uri)) cs
       return $ map getParams cs
+    -- Then fall back to the changes field
     Nothing -> case r ^. params . edit . changes of
       Just cs -> do
         mapM_ checkIfNeedsOpened (HashMap.keys cs)
-        return $ concatMap (uncurry getChangeParams) (HashMap.toList cs)
-      Nothing -> error "No changes!"
+        concat <$> mapM (uncurry getChangeParams) (HashMap.toList cs)
+      Nothing ->
+        error "WorkspaceEdit contains neither documentChanges nor changes!"
 
   modifyM $ \s -> do
     newVFS <- liftIO $ changeFromServerVFS (vfs s) r
@@ -360,11 +363,20 @@ updateState (ReqApplyWorkspaceEdit r) = do
           let changeEvents = map (\e -> TextDocumentContentChangeEvent (Just (e ^. range)) Nothing (e ^. newText)) edits
             in DidChangeTextDocumentParams docId (List changeEvents)
 
-        textDocumentVersions uri = map (VersionedTextDocumentIdentifier uri . Just) [0..]
+        -- For a uri returns an infinite list of versions [n,n+1,n+2,...]
+        -- where n is the current version
+        textDocumentVersions uri = do
+          m <- vfsMap . vfs <$> get
+          let curVer = fromMaybe 0 $
+                _lsp_version <$> m Map.!? (toNormalizedUri uri)
+          pure $ map (VersionedTextDocumentIdentifier uri . Just) [curVer..]
 
-        textDocumentEdits uri edits = map (\(v, e) -> TextDocumentEdit v (List [e])) $ zip (textDocumentVersions uri) edits
+        textDocumentEdits uri edits = do
+          vers <- textDocumentVersions uri
+          pure $ map (\(v, e) -> TextDocumentEdit v (List [e])) $ zip vers edits
 
-        getChangeParams uri (List edits) = map getParams (textDocumentEdits uri (reverse edits))
+        getChangeParams uri (List edits) =
+          map <$> pure getParams <*> textDocumentEdits uri (reverse edits)
 
         mergeParams :: [DidChangeTextDocumentParams] -> DidChangeTextDocumentParams
         mergeParams params = let events = concat (toList (map (toList . (^. contentChanges)) params))

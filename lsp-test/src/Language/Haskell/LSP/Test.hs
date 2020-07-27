@@ -664,6 +664,7 @@ formatRange doc opts range = do
 applyTextEdits :: TextDocumentIdentifier -> List TextEdit -> Session ()
 applyTextEdits doc edits =
   let wEdit = WorkspaceEdit (Just (HashMap.singleton (doc ^. uri) edits)) Nothing
+      -- Send a dummy message to updateState so it can do bookkeeping
       req = RequestMessage "" (IdInt 0) WorkspaceApplyEdit (ApplyWorkspaceEditParams wEdit)
   in updateState (ReqApplyWorkspaceEdit req)
 
