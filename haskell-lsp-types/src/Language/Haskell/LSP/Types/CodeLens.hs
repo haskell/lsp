@@ -1,4 +1,5 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell       #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 
 module Language.Haskell.LSP.Types.CodeLens where
 

@@ -1,4 +1,5 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell       #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 module Language.Haskell.LSP.Types.References where
 
 import Data.Aeson.TH
@@ -50,7 +51,6 @@ data ReferenceContext =
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''ReferenceContext
-
 
 data ReferenceParams =
   ReferenceParams
