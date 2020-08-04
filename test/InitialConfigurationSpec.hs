@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, GADTs #-}
 
 module InitialConfigurationSpec where
 
@@ -18,8 +18,7 @@ spec =
 
     lfVar <- newEmptyMVar
 
-    let
-        initialConfigHandler (RequestMessage _ _ Initialize InitializeParams{_initializationOptions = Just opts}) =
+    let initialConfigHandler (RequestMessage _ _ SInitialize InitializeParams{_initializationOptions = Just opts}) =
           case (fromJSON opts :: Result String) of
                 Success s -> Right s
                 _         -> Left "Could not decode configuration"
@@ -57,7 +56,7 @@ spec =
           Nothing
 
         initMsg :: InitializeRequest
-        initMsg = RequestMessage "2.0" (IdInt 0) Initialize initParams
+        initMsg = RequestMessage "2.0" (IdInt 0) SInitialize initParams
 
     putMsg initMsg
     contents <- readTVarIO tvarCtx

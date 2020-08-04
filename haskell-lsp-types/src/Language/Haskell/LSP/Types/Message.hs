@@ -83,7 +83,7 @@ type family MessageParams (m :: Method p t) :: Type where
   MessageParams TextDocumentCompletion             = CompletionParams
   MessageParams CompletionItemResolve              = CompletionItem
   -- Language Queries
-  MessageParams TextDocumentHover                  = TextDocumentPositionParams
+  MessageParams TextDocumentHover                  = HoverParams
   MessageParams TextDocumentSignatureHelp          = TextDocumentPositionParams
   MessageParams TextDocumentDefinition             = TextDocumentPositionParams
   MessageParams TextDocumentTypeDefinition         = TextDocumentPositionParams

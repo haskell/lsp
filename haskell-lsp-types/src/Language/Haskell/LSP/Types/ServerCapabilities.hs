@@ -26,9 +26,12 @@ import Language.Haskell.LSP.Types.Symbol
 import Language.Haskell.LSP.Types.TextDocument
 import Language.Haskell.LSP.Types.Utils
 
+-- | A terser, isomorphic data type for 'Either', that does not get tagged when
+-- converting to and from JSON.
 data a |? b = L a
             | R b
   deriving (Read,Show,Eq)
+infixr |?
 
 instance (ToJSON a, ToJSON b) => ToJSON (a |? b) where
   toJSON (L x) = toJSON x

@@ -7,4 +7,7 @@
 #          https://github.com/digital-asset/ghcide/issues/113
 cradle:
   cabal:
-      component: "haskell-lsp"
+      - path: "./haskell-lsp-types"
+        component: "haskell-lsp-types"
+      - path: "./src"
+        component: "haskell-lsp"

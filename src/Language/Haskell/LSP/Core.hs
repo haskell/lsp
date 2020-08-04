@@ -60,7 +60,7 @@ import qualified Data.Text as T
 import           Data.Text ( Text )
 import           Language.Haskell.LSP.Constant
 -- import           Language.Haskell.LSP.Types.MessageFuncs
-import qualified Language.Haskell.LSP.Types.Capabilities    as C
+import qualified Language.Haskell.LSP.Types.Capabilities    as J
 import qualified Language.Haskell.LSP.Types                 as J
 import qualified Language.Haskell.LSP.Types.Lens            as J
 import           Language.Haskell.LSP.Utility
@@ -186,7 +186,7 @@ type SendNotifcationFunc = forall m.
 -- | Returned to the server on startup, providing ways to interact with the client.
 data LspFuncs c =
   LspFuncs
-    { clientCapabilities           :: !C.ClientCapabilities
+    { clientCapabilities           :: !J.ClientCapabilities
     , config                       :: !(IO (Maybe c))
       -- ^ Derived from the DidChangeConfigurationNotification message via a
       -- server-provided function.
@@ -642,16 +642,16 @@ initializeRequestHandler' onStartup mHandler tvarCtx = Handler $ \req rspH@(Clie
 
     let
       clientSupportsWfs = fromMaybe False $ do
-        let (C.ClientCapabilities mw _ _ _) = params ^. J.capabilities
-        (C.WorkspaceClientCapabilities _ _ _ _ _ _ mwf _) <- mw
+        let (J.ClientCapabilities mw _ _ _) = params ^. J.capabilities
+        (J.WorkspaceClientCapabilities _ _ _ _ _ _ mwf _) <- mw
         mwf
       getWfs tvc
         | clientSupportsWfs = atomically $ Just . resWorkspaceFolders <$> readTVar tvc
         | otherwise = return Nothing
 
       clientSupportsProgress = fromMaybe False $ do
-        let (C.ClientCapabilities _ _ wc _) = params ^. J.capabilities
-        (C.WindowClientCapabilities mProgress) <- wc
+        let (J.ClientCapabilities _ _ wc _) = params ^. J.capabilities
+        (J.WindowClientCapabilities mProgress) <- wc
         mProgress
 
       storeProgress :: J.ProgressToken -> Async a -> IO ()
@@ -766,37 +766,42 @@ initializeRequestHandler' onStartup mHandler tvarCtx = Handler $ \req rspH@(Clie
 -- | Infers the capabilities based on registered handlers, and sets the appropriate options.
 -- A provider should be set to Nothing if the server does not support it, unless it is a
 -- static option.
-serverCapabilities :: C.ClientCapabilities -> Options -> Handlers -> J.InitializeResponseCapabilitiesInner
+serverCapabilities :: J.ClientCapabilities -> Options -> Handlers -> J.ServerCapabilities
 serverCapabilities clientCaps o h =
-  J.InitializeResponseCapabilitiesInner
+  J.ServerCapabilities
     { J._textDocumentSync                 = sync
-    , J._hoverProvider                    = supported J.STextDocumentHover
+    , J._hoverProvider                    = supportedBool J.STextDocumentHover
     , J._completionProvider               = completionProvider
     , J._signatureHelpProvider            = signatureHelpProvider
-    , J._definitionProvider               = supported J.STextDocumentDefinition
-    , J._typeDefinitionProvider           = Just $ J.GotoOptionsStatic $ supported_b J.STextDocumentTypeDefinition
-    , J._implementationProvider           = Just $ J.GotoOptionsStatic $ supported_b J.STextDocumentImplementation
-    , J._referencesProvider               = supported J.STextDocumentReferences
-    , J._documentHighlightProvider        = supported J.STextDocumentDocumentHighlight
-    , J._documentSymbolProvider           = supported J.STextDocumentDocumentSymbol
+    , J._definitionProvider               = supportedBool J.STextDocumentDefinition
+    , J._typeDefinitionProvider           = supportedBool J.STextDocumentTypeDefinition
+    , J._implementationProvider           = supportedBool J.STextDocumentImplementation
+    , J._referencesProvider               = supportedBool J.STextDocumentReferences
+    , J._documentHighlightProvider        = supportedBool J.STextDocumentDocumentHighlight
+    , J._documentSymbolProvider           = supportedBool J.STextDocumentDocumentSymbol
     , J._workspaceSymbolProvider          = supported J.SWorkspaceSymbol
     , J._codeActionProvider               = codeActionProvider
-    , J._codeLensProvider                 = supported' J.STextDocumentCodeLens $ J.CodeLensOptions $
-                                              supported J.SCodeLensResolve
-    , J._documentFormattingProvider       = supported J.STextDocumentFormatting
-    , J._documentRangeFormattingProvider  = supported J.STextDocumentRangeFormatting
+    , J._codeLensProvider                 = supported' J.STextDocumentCodeLens $ J.CodeLensOptions
+                                              (J.WorkDoneProgressOptions Nothing)
+                                              (supported J.SCodeLensResolve)
+    , J._documentFormattingProvider       = supportedBool J.STextDocumentFormatting
+    , J._documentRangeFormattingProvider  = supportedBool J.STextDocumentRangeFormatting
     , J._documentOnTypeFormattingProvider = documentOnTypeFormattingProvider
-    , J._renameProvider                   = Just $ J.RenameOptionsStatic $ supported_b J.STextDocumentRename
+    , J._renameProvider                   = supportedBool J.STextDocumentRename
     , J._documentLinkProvider             = supported' J.STextDocumentDocumentLink $ J.DocumentLinkOptions $
                                               supported J.SDocumentLinkResolve
-    , J._colorProvider                    = Just $ J.ColorOptionsStatic $ supported_b J.STextDocumentDocumentColor
-    , J._foldingRangeProvider             = Just $ J.FoldingRangeOptionsStatic $ supported_b J.STextDocumentFoldingRange
+    , J._colorProvider                    = supportedBool J.STextDocumentDocumentColor
+    , J._foldingRangeProvider             = supportedBool J.STextDocumentFoldingRange
     , J._executeCommandProvider           = executeCommandProvider
     , J._workspace                        = Just workspace
     -- TODO: Add something for experimental
     , J._experimental                     = Nothing :: Maybe J.Value
     }
   where
+    
+    -- | For when we just return a simple @true@/@false@ to indicate if we
+    -- support the capability
+    supportedBool = Just . J.L . supported_b
 
     supported' m b
       | supported_b m = Just b
@@ -814,6 +819,7 @@ serverCapabilities clientCaps o h =
     completionProvider
       | supported_b J.STextDocumentCompletion = Just $
           J.CompletionOptions
+            (J.WorkDoneProgressOptions Nothing)
             (supported J.SCompletionItemResolve)
             (map singleton <$> completionTriggerCharacters o)
             (map singleton <$> completionAllCommitCharacters o)
@@ -824,13 +830,14 @@ serverCapabilities clientCaps o h =
 
     codeActionProvider
       | clientSupportsCodeActionKinds
-      , supported_b J.STextDocumentCodeAction = Just $ maybe (J.CodeActionOptionsStatic True) (J.CodeActionOptions . Just) (codeActionKinds o)
-      | supported_b J.STextDocumentCodeAction = Just (J.CodeActionOptionsStatic True)
-      | otherwise = Just (J.CodeActionOptionsStatic False)
+      , supported_b J.STextDocumentCodeAction = Just $ maybe (J.L True) (J.R . J.CodeActionOptions . Just) (codeActionKinds o)
+      | supported_b J.STextDocumentCodeAction = Just (J.L True)
+      | otherwise = Just (J.L False)
 
     signatureHelpProvider
       | supported_b J.STextDocumentSignatureHelp = Just $
           J.SignatureHelpOptions
+            (J.WorkDoneProgressOptions Nothing)
             (map singleton <$> signatureHelpTriggerCharacters o)
             (map singleton <$> signatureHelpRetriggerCharacters o)
       | otherwise = Nothing
@@ -856,10 +863,10 @@ serverCapabilities clientCaps o h =
             Just x -> Just (J.TDSOptions x)
             Nothing -> Nothing
 
-    workspace = J.WorkspaceOptions workspaceFolder
+    workspace = J.WorkspaceServerCapabilities workspaceFolder
     workspaceFolder = supported' J.SWorkspaceDidChangeWorkspaceFolders $
         -- sign up to receive notifications
-        J.WorkspaceFolderOptions (Just True) (Just (J.WorkspaceFolderChangeNotificationsBool True))
+        J.WorkspaceFoldersServerCapabilities (Just True) (Just (J.R True))
 
 progressCancelHandler :: TVar (LanguageContextData config) -> J.WorkDoneProgressCancelNotification -> IO ()
 progressCancelHandler tvarCtx (J.NotificationMessage _ _ (J.WorkDoneProgressCancelParams tid)) = do

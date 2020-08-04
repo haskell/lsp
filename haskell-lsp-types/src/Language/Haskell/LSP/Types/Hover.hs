@@ -162,3 +162,6 @@ data HoverRegistrationOptions =
     } deriving (Read,Show,Eq)
 
 deriveJSONExtendFields lspOptions ''HoverRegistrationOptions ["_textDocumentRegistrationOptions", "_hoverOptions"]
+
+makeExtendingDatatype "HoverParams" [''TextDocumentPositionParams, ''WorkDoneProgressParams]
+  []

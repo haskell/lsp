@@ -6,6 +6,7 @@ module Language.Haskell.LSP.Types.Utils
   , makeSingletonFromJSON
   , deriveJSONExtendFields
   , makeRegHelper
+  , makeExtendingDatatype
   ) where
 
 import qualified Data.HashMap.Strict as HM
@@ -14,6 +15,7 @@ import Data.Aeson
 import Data.String
 import Control.Monad
 import Data.List (foldl', (\\))
+import Data.Maybe (fromJust)
 
 -- ---------------------------------------------------------------------
 
@@ -166,3 +168,18 @@ makeRegHelper regOptTypeName = do
         -> (Show ($regOptTcon m) => ToJSON ($regOptTcon m) => FromJSON ($regOptTcon m) => x)
         -> x |]
   return [typSig, fun]
+
+makeExtendingDatatype :: String -> [Name] -> [(String, Name)] -> DecsQ
+makeExtendingDatatype datatypeNameStr extends fields = do
+  extendFields <- fmap concat $ forM extends $ \e -> do
+    reify e >>= runIO . print
+    TyConI (DataD _ _ _ _ [RecC _ eFields] _) <- reify e
+    return eFields
+  let datatypeName = mkName datatypeNameStr
+      insts = [[t| Read |], [t| Show |], [t| Eq |]]
+      constructor = recC datatypeName combinedFields
+      userFields = flip map fields $ \(s, n) -> do
+        varBangType (mkName s) (bangType (bang noSourceUnpackedness noSourceStrictness) (conT n))
+      combinedFields = (map pure extendFields) <> userFields
+      derivs = [derivClause Nothing insts]
+  (\a -> [a]) <$> dataD (cxt []) datatypeName [] Nothing [constructor] derivs
