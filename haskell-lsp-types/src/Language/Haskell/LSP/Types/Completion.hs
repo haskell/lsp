@@ -14,7 +14,6 @@ import           Language.Haskell.LSP.Types.DocumentFilter
 import           Language.Haskell.LSP.Types.List
 import           Language.Haskell.LSP.Types.Location
 import           Language.Haskell.LSP.Types.MarkupContent
-import           Language.Haskell.LSP.Types.Message
 import           Language.Haskell.LSP.Types.Progress
 import           Language.Haskell.LSP.Types.TextDocument
 import           Language.Haskell.LSP.Types.Utils
@@ -458,9 +457,6 @@ data CompletionParams =
 
 deriveJSON lspOptions ''CompletionParams
 
-type CompletionResponse = ResponseMessage CompletionResponseResult
-type CompletionRequest = RequestMessage ClientMethod CompletionParams CompletionResponseResult
-
 -- -------------------------------------
 {-
 New in 3.0
@@ -509,6 +505,3 @@ Response
     result: CompletionItem
     error: code and message set in case an exception happens during the completion resolve request.
 -}
-
-type CompletionItemResolveRequest  = RequestMessage ClientMethod CompletionItem CompletionItem
-type CompletionItemResolveResponse = ResponseMessage CompletionItem

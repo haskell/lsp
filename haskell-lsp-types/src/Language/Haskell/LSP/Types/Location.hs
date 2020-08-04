@@ -97,3 +97,10 @@ data Location =
 
 instance NFData Location
 deriveJSON lspOptions ''Location
+
+-- ---------------------------------------------------------------------
+
+-- | A helper function for creating ranges.
+-- prop> mkRange l c l' c' = Range (Position l c) (Position l' c')
+mkRange :: Int -> Int -> Int -> Int -> Range
+mkRange l c l' c' = Range (Position l c) (Position l' c')

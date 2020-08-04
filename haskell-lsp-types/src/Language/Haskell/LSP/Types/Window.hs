@@ -2,15 +2,16 @@
 {-# LANGUAGE DuplicateRecordFields      #-}
 {-# LANGUAGE RecordWildCards            #-}
 {-# LANGUAGE TemplateHaskell            #-}
+{-# LANGUAGE DeriveFunctor              #-}
 module Language.Haskell.LSP.Types.Window where
 
+import           Control.Applicative
 import           Control.Monad (unless)
 import qualified Data.Aeson                                 as A
 import           Data.Aeson.TH
 import           Data.Maybe (catMaybes)
 import           Data.Text                                  (Text)
 import           Language.Haskell.LSP.Types.Constants
-import           Language.Haskell.LSP.Types.Message
 import           Language.Haskell.LSP.Types.Progress
 
 -- ---------------------------------------------------------------------
@@ -90,8 +91,6 @@ data ShowMessageParams =
 
 deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''ShowMessageParams
 
-type ShowMessageNotification = NotificationMessage ServerMethod ShowMessageParams
-
 -- ---------------------------------------------------------------------
 {-
 ShowMessage Request
@@ -157,9 +156,6 @@ data ShowMessageRequestParams =
 
 deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''ShowMessageRequestParams
 
-type ShowMessageRequest = RequestMessage ServerMethod ShowMessageRequestParams Text
-type ShowMessageResponse = ResponseMessage Text
-
 -- ---------------------------------------------------------------------
 {-
 LogMessage Notification
@@ -196,9 +192,6 @@ data LogMessageParams =
   } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''LogMessageParams
-
-
-type LogMessageNotification = NotificationMessage ServerMethod LogMessageParams
 
 {-
 Progress Begin Notification
@@ -249,9 +242,26 @@ data ProgressParams t =
     ProgressParams {
       _token :: ProgressToken
     , _value :: t
-    } deriving (Show, Read, Eq)
+    } deriving (Show, Read, Eq, Functor)
 
 deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''ProgressParams
+
+data SomeProgressParams
+  = Begin WorkDoneProgressBeginParams
+  | Report WorkDoneProgressReportParams
+  | End WorkDoneProgressEndParams
+  deriving Eq
+
+instance A.FromJSON SomeProgressParams where
+  parseJSON x =
+       (Begin  <$> A.parseJSON x)
+   <|> (Report <$> A.parseJSON x)
+   <|> (End    <$> A.parseJSON x)
+
+instance A.ToJSON SomeProgressParams where
+  toJSON (Begin  x) = A.toJSON x
+  toJSON (Report x) = A.toJSON x
+  toJSON (End    x) = A.toJSON x
 
 -- | Parameters for 'WorkDoneProgressBeginNotification'.
 --
@@ -306,8 +316,6 @@ instance A.FromJSON WorkDoneProgressBeginParams where
 -- client to ask the client to start progress.
 --
 -- @since 0.10.0.0
-type WorkDoneProgressBeginNotification = NotificationMessage ServerMethod (ProgressParams WorkDoneProgressBeginParams)
-
 {-
 Progress Report Notification
 
@@ -389,8 +397,6 @@ instance A.FromJSON WorkDoneProgressReportParams where
 -- client to report progress for a previously started progress.
 --
 -- @since 0.10.0.0
-type WorkDoneProgressReportNotification = NotificationMessage ServerMethod (ProgressParams WorkDoneProgressReportParams)
-
 {-
 Progress End Notification
 
@@ -434,8 +440,6 @@ instance A.FromJSON WorkDoneProgressEndParams where
 -- client to stop a previously started progress.
 --
 -- @since 0.10.0.0
-type WorkDoneProgressEndNotification = NotificationMessage ServerMethod (ProgressParams WorkDoneProgressEndParams)
-
 {-
 Progress Cancel Notification
 
@@ -470,13 +474,11 @@ deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''WorkDoneProgressC
 -- A server receiving a cancel request must still close a progress using the done notification.
 --
 -- @since 0.10.0.0
-type WorkDoneProgressCancelNotification = NotificationMessage ClientMethod WorkDoneProgressCancelParams
 
 data WorkDoneProgressCreateParams =
-    WorkDoneProgressCreateParams {
+      WorkDoneProgressCreateParams {
       _token :: ProgressToken
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''WorkDoneProgressCreateParams
 
-type WorkDoneProgressCreateRequest = RequestMessage ServerMethod WorkDoneProgressCreateParams ()

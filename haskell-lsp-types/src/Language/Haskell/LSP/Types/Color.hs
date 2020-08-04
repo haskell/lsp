@@ -7,7 +7,6 @@ import           Data.Text                      ( Text )
 import           Language.Haskell.LSP.Types.Constants
 import           Language.Haskell.LSP.Types.List
 import           Language.Haskell.LSP.Types.Location
-import           Language.Haskell.LSP.Types.Message
 import           Language.Haskell.LSP.Types.Progress
 import           Language.Haskell.LSP.Types.TextDocument
 import           Language.Haskell.LSP.Types.WorkspaceEdit
@@ -105,10 +104,6 @@ data DocumentColorParams =
 
 deriveJSON lspOptions ''DocumentColorParams
 
-type DocumentColorRequest =
-  RequestMessage ClientMethod DocumentColorParams (List ColorInformation)
-type DocumentColorResponse = ResponseMessage (List ColorInformation)
-
 {-
 Color Presentation Request (:leftwards_arrow_with_hook:)
 Since version 3.6.0
@@ -198,6 +193,3 @@ data ColorPresentation =
 
 deriveJSON lspOptions ''ColorPresentation
 
-type ColorPresentationRequest = 
-  RequestMessage ClientMethod ColorPresentationParams (List ColorPresentation)
-type ColorPresentationResponse = ResponseMessage (List ColorPresentation)

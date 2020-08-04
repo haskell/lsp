@@ -7,6 +7,9 @@
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE TypeSynonymInstances       #-}
+{-# LANGUAGE ExistentialQuantification  #-}
+{-# LANGUAGE StandaloneDeriving         #-}
+{-# LANGUAGE PolyKinds                  #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 
 module Language.Haskell.LSP.Types.DataTypesJSON where
@@ -27,9 +30,9 @@ import           Language.Haskell.LSP.Types.Diagnostic
 import           Language.Haskell.LSP.Types.DocumentFilter
 import           Language.Haskell.LSP.Types.List
 import           Language.Haskell.LSP.Types.Location
-import           Language.Haskell.LSP.Types.Message
+import           Language.Haskell.LSP.Types.LspId
+import           Language.Haskell.LSP.Types.Method
 import           Language.Haskell.LSP.Types.Progress
-import           Language.Haskell.LSP.Types.Symbol
 import           Language.Haskell.LSP.Types.TextDocument
 import           Language.Haskell.LSP.Types.Uri
 import           Language.Haskell.LSP.Types.WorkspaceEdit
@@ -796,10 +799,6 @@ deriveJSON lspOptions ''InitializeResponseCapabilities
 
 -- ---------------------------------------------------------------------
 
-type InitializeResponse = ResponseMessage InitializeResponseCapabilities
-
-type InitializeRequest = RequestMessage ClientMethod InitializeParams InitializeResponseCapabilities
-
 {-
     error.code:
 
@@ -858,8 +857,6 @@ instance A.FromJSON InitializedParams where
 instance A.ToJSON InitializedParams where
   toJSON InitializedParams = A.Object mempty
 
-type InitializedNotification = NotificationMessage ClientMethod (Maybe InitializedParams)
-
 -- ---------------------------------------------------------------------
 {-
 Shutdown Request
@@ -883,9 +880,6 @@ Response
 
 
 -}
-
-type ShutdownRequest  = RequestMessage ClientMethod (Maybe A.Value) (Maybe ())
-type ShutdownResponse = ResponseMessage (Maybe ())
 
 -- ---------------------------------------------------------------------
 {-
@@ -911,8 +905,6 @@ data ExitParams =
 
 deriveJSON defaultOptions ''ExitParams
 
-type ExitNotification = NotificationMessage ClientMethod (Maybe ExitParams)
-
 -- ---------------------------------------------------------------------
 {-
 Telemetry Notification
@@ -928,16 +920,6 @@ Notification:
     params: 'any'
 -}
 
-
-type TelemetryNotification = NotificationMessage ServerMethod A.Value
-
-type CustomClientNotification = NotificationMessage ClientMethod A.Value
-type CustomServerNotification = NotificationMessage ServerMethod A.Value
-
-type CustomClientRequest = RequestMessage ClientMethod A.Value A.Value
-type CustomServerRequest = RequestMessage ServerMethod A.Value A.Value
-
-type CustomResponse = ResponseMessage A.Value
 
 -- ---------------------------------------------------------------------
 {-
@@ -991,25 +973,20 @@ data Registration =
       _id              :: Text
 
        -- | The method / capability to register for.
-    , _method          :: ClientMethod
+    , _method          :: SomeClientMethod
 
       -- | Options necessary for the registration.
     , _registerOptions :: Maybe A.Value
-    } deriving (Show, Read, Eq)
+    } deriving (Show, Eq)
 
 deriveJSON lspOptions ''Registration
 
 data RegistrationParams =
   RegistrationParams
     { _registrations :: List Registration
-    } deriving (Show, Read, Eq)
+    } deriving (Show, Eq)
 
 deriveJSON lspOptions ''RegistrationParams
-
--- |Note: originates at the server
-type RegisterCapabilityRequest = RequestMessage ServerMethod RegistrationParams ()
-
-type RegisterCapabilityResponse = ResponseMessage ()
 
 -- -------------------------------------
 
@@ -1077,22 +1054,18 @@ data Unregistration =
       -- provided during the register request.
       _id     :: Text
 
-       -- |The method / capability to unregister for.
-    , _method :: Text
-    } deriving (Show, Read, Eq)
+       -- | The method / capability to unregister for.
+    , _method :: SomeClientMethod
+    } deriving (Show, Eq)
 
 deriveJSON lspOptions ''Unregistration
 
 data UnregistrationParams =
   UnregistrationParams
     { _unregistrations :: List Unregistration
-    } deriving (Show, Read, Eq)
+    } deriving (Show, Eq)
 
 deriveJSON lspOptions ''UnregistrationParams
-
-type UnregisterCapabilityRequest = RequestMessage ServerMethod UnregistrationParams ()
-
-type UnregisterCapabilityResponse = ResponseMessage ()
 
 -- ---------------------------------------------------------------------
 
@@ -1215,8 +1188,6 @@ deriveJSON lspOptions ''DidChangeConfigurationParams
 
 -- ---------------------------------------------------------------------
 
-type DidChangeConfigurationNotification = NotificationMessage ClientMethod DidChangeConfigurationParams
-
 {-
 Configuration Request (:arrow_right_hook:)
 Since version 3.6.0
@@ -1281,9 +1252,6 @@ data ConfigurationParams =
 
 deriveJSON lspOptions ''ConfigurationParams
 
-type ConfigurationRequest = RequestMessage ServerMethod ConfigurationParams (List A.Value)
-type ConfigurationResponse = ResponseMessage (List A.Value)
-
 -- ---------------------------------------------------------------------
 {-
 DidOpenTextDocument Notification
@@ -1316,8 +1284,6 @@ data DidOpenTextDocumentParams =
   } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''DidOpenTextDocumentParams
-
-type DidOpenTextDocumentNotification = NotificationMessage ClientMethod DidOpenTextDocumentParams
 
 -- ---------------------------------------------------------------------
 {-
@@ -1388,7 +1354,6 @@ data DidChangeTextDocumentParams =
 
 deriveJSON lspOptions ''DidChangeTextDocumentParams
 
-type DidChangeTextDocumentNotification = NotificationMessage ClientMethod DidChangeTextDocumentParams
 {-
 New in 3.0
 ----------
@@ -1497,8 +1462,6 @@ data WillSaveTextDocumentParams =
 
 deriveJSON lspOptions ''WillSaveTextDocumentParams
 
-type WillSaveTextDocumentNotification = NotificationMessage ClientMethod WillSaveTextDocumentParams
-
 -- ---------------------------------------------------------------------
 {-
 New in 3.0
@@ -1526,9 +1489,6 @@ Response:
 Registration Options: TextDocumentRegistrationOptions
 -}
 
-type WillSaveWaitUntilTextDocumentRequest = RequestMessage ClientMethod WillSaveTextDocumentParams (List TextEdit)
-type WillSaveWaitUntilTextDocumentResponse = ResponseMessage (List TextEdit)
-
 -- ---------------------------------------------------------------------
 {-
 DidSaveTextDocument Notification
@@ -1554,10 +1514,6 @@ data DidSaveTextDocumentParams =
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''DidSaveTextDocumentParams
-
-type DidSaveTextDocumentNotification = NotificationMessage ClientMethod DidSaveTextDocumentParams
-
-
 
 -- ---------------------------------------------------------------------
 {-
@@ -1591,9 +1547,6 @@ data DidCloseTextDocumentParams =
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''DidCloseTextDocumentParams
-
-
-type DidCloseTextDocumentNotification = NotificationMessage ClientMethod DidCloseTextDocumentParams
 
 -- ---------------------------------------------------------------------
 {-
@@ -1683,9 +1636,6 @@ data DidChangeWatchedFilesParams =
 
 deriveJSON lspOptions ''DidChangeWatchedFilesParams
 
-
-type DidChangeWatchedFilesNotification = NotificationMessage ClientMethod DidChangeWatchedFilesParams
-
 -- ---------------------------------------------------------------------
 {-
 PublishDiagnostics Notification
@@ -1720,9 +1670,6 @@ data PublishDiagnosticsParams =
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''PublishDiagnosticsParams
-
-
-type PublishDiagnosticsNotification = NotificationMessage ServerMethod PublishDiagnosticsParams
 
 -- ---------------------------------------------------------------------
 {-
@@ -1843,9 +1790,6 @@ data SignatureHelp =
 
 deriveJSON lspOptions ''SignatureHelp
 
-type SignatureHelpRequest = RequestMessage ClientMethod TextDocumentPositionParams SignatureHelp
-type SignatureHelpResponse = ResponseMessage SignatureHelp
-
 -- -------------------------------------
 {-
 New in 3.0
@@ -1908,9 +1852,6 @@ instance A.FromJSON LocationResponseParams where
   parseJSON xs@(A.Array _) = MultiLoc <$> parseJSON xs
   parseJSON x              = SingleLoc <$> parseJSON x
 
-type DefinitionRequest  = RequestMessage ClientMethod TextDocumentPositionParams LocationResponseParams
-type DefinitionResponse = ResponseMessage LocationResponseParams
-
 -- ---------------------------------------------------------------------
 
 {-
@@ -1930,9 +1871,6 @@ error: code and message set in case an exception happens during the definition r
 Registration Options: TextDocumentRegistrationOptions
 -}
 
-type TypeDefinitionRequest = RequestMessage ClientMethod TextDocumentPositionParams LocationResponseParams
-type TypeDefinitionResponse = ResponseMessage LocationResponseParams
-
 -- ---------------------------------------------------------------------
 
 {-
@@ -1951,10 +1889,6 @@ result: Location | Location[] | null
 error: code and message set in case an exception happens during the definition request.
 Registration Options: TextDocumentRegistrationOptions
 -}
-
-
-type ImplementationRequest  = RequestMessage ClientMethod TextDocumentPositionParams LocationResponseParams
-type ImplementationResponse = ResponseMessage LocationResponseParams
 
 -- ---------------------------------------------------------------------
 
@@ -2011,10 +1945,6 @@ data ReferenceParams =
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''ReferenceParams
-
-
-type ReferencesRequest  = RequestMessage ClientMethod ReferenceParams (List Location)
-type ReferencesResponse = ResponseMessage (List Location)
 
 -- ---------------------------------------------------------------------
 {-
@@ -2112,9 +2042,6 @@ data DocumentHighlight =
 
 deriveJSON lspOptions ''DocumentHighlight
 
-type DocumentHighlightRequest = RequestMessage ClientMethod TextDocumentPositionParams (List DocumentHighlight)
-type DocumentHighlightsResponse = ResponseMessage (List DocumentHighlight)
-
 -- ---------------------------------------------------------------------
 {-
 Workspace Symbols Request
@@ -2153,9 +2080,6 @@ data WorkspaceSymbolParams =
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''WorkspaceSymbolParams
-
-type WorkspaceSymbolRequest  = RequestMessage ClientMethod WorkspaceSymbolParams (List SymbolInformation)
-type WorkspaceSymbolsResponse = ResponseMessage (List SymbolInformation)
 
 -- ---------------------------------------------------------------------
 {-
@@ -2231,10 +2155,6 @@ data CodeLens =
 
 deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''CodeLens
 
-
-type CodeLensRequest = RequestMessage ClientMethod CodeLensParams (List CodeLens)
-type CodeLensResponse = ResponseMessage (List CodeLens)
-
 -- -------------------------------------
 {-
 Registration Options: CodeLensRegistrationOptions defined as follows:
@@ -2277,9 +2197,6 @@ Response
 
 
 -}
-
-type CodeLensResolveRequest  = RequestMessage ClientMethod CodeLens CodeLens
-type CodeLensResolveResponse = ResponseMessage CodeLens
 
 -- ---------------------------------------------------------------------
 {-
@@ -2349,10 +2266,6 @@ data DocumentLink =
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''DocumentLink
-
-type DocumentLinkRequest = RequestMessage ClientMethod DocumentLinkParams (List DocumentLink)
-type DocumentLinkResponse = ResponseMessage (List DocumentLink)
-
 -- ---------------------------------------------------------------------
 {-
 New in 3.0
@@ -2373,10 +2286,6 @@ Response:
     error: code and message set in case an exception happens during the document link resolve request.
 
 -}
-
-type DocumentLinkResolveRequest  = RequestMessage ClientMethod DocumentLink DocumentLink
-type DocumentLinkResolveResponse = ResponseMessage DocumentLink
-
 -- ---------------------------------------------------------------------
 {-
 Document Formatting Request
@@ -2450,10 +2359,6 @@ data DocumentFormattingParams =
     } deriving (Show,Read,Eq)
 
 deriveJSON lspOptions ''DocumentFormattingParams
-
-type DocumentFormattingRequest  = RequestMessage ClientMethod DocumentFormattingParams (List TextEdit)
-type DocumentFormattingResponse = ResponseMessage (List TextEdit)
-
 -- ---------------------------------------------------------------------
 {-
 Document Range Formatting Request
@@ -2502,9 +2407,6 @@ data DocumentRangeFormattingParams =
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''DocumentRangeFormattingParams
-
-type DocumentRangeFormattingRequest  = RequestMessage ClientMethod DocumentRangeFormattingParams (List TextEdit)
-type DocumentRangeFormattingResponse = ResponseMessage (List TextEdit)
 
 -- ---------------------------------------------------------------------
 {-
@@ -2572,9 +2474,6 @@ data DocumentOnTypeFormattingParams =
 
 deriveJSON lspOptions ''DocumentOnTypeFormattingParams
 
-type DocumentOnTypeFormattingRequest  = RequestMessage ClientMethod DocumentOnTypeFormattingParams (List TextEdit)
-type DocumentOnTypeFormattingResponse = ResponseMessage (List TextEdit)
-
 data DocumentOnTypeFormattingRegistrationOptions =
   DocumentOnTypeFormattingRegistrationOptions
     { _firstTriggerCharacter :: Text
@@ -2638,9 +2537,6 @@ deriveJSON lspOptions ''RenameParams
 
 -- {\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"textDocument/rename\",\"params\":{\"textDocument\":{\"uri\":\"file:///home/alanz/mysrc/github/alanz/haskell-lsp/src/HieVscode.hs\"},\"position\":{\"line\":37,\"character\":17},\"newName\":\"getArgs'\"}}
 
-type RenameRequest  = RequestMessage ClientMethod RenameParams WorkspaceEdit
-type RenameResponse = ResponseMessage WorkspaceEdit
-
 -- ---------------------------------------------------------------------
 {-
 Prepare Rename Request
@@ -2674,17 +2570,15 @@ data RangeWithPlaceholder =
     {
     _range :: Range
     , _placeholder :: Text
-    }
+    } deriving Eq
 
 deriveJSON lspOptions { sumEncoding = A.UntaggedValue } ''RangeWithPlaceholder
 
 data RangeOrRangeWithPlaceholder = RangeWithPlaceholderValue RangeWithPlaceholder
                                  | RangeValue Range
+                                 deriving Eq
 
 deriveJSON lspOptions { sumEncoding = A.UntaggedValue } ''RangeOrRangeWithPlaceholder
-
-type PrepareRenameRequest  = RequestMessage ClientMethod TextDocumentPositionParams Range
-type PrepareRenameResponse = ResponseMessage (Maybe RangeOrRangeWithPlaceholder)
 
 -- ---------------------------------------------------------------------
 {-
@@ -2746,9 +2640,6 @@ data ExecuteCommandParams =
 
 deriveJSON lspOptions ''ExecuteCommandParams
 
-type ExecuteCommandRequest = RequestMessage ClientMethod ExecuteCommandParams A.Value
-type ExecuteCommandResponse = ResponseMessage A.Value
-
 data ExecuteCommandRegistrationOptions =
   ExecuteCommandRegistrationOptions
     { _commands :: List Text
@@ -2806,12 +2697,6 @@ data ApplyWorkspaceEditResponseBody =
 
 deriveJSON lspOptions ''ApplyWorkspaceEditResponseBody
 
--- | Sent from the server to the client
-type ApplyWorkspaceEditRequest  = RequestMessage ServerMethod ApplyWorkspaceEditParams ApplyWorkspaceEditResponseBody
-type ApplyWorkspaceEditResponse = ResponseMessage ApplyWorkspaceEditResponseBody
-
--- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 -- ---------------------------------------------------------------------
 
 data TraceParams =
@@ -2828,3 +2713,49 @@ data TraceNotification =
   } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''TraceNotification
+
+-- ---------------------------------------------------------------------
+{-
+Cancellation Support
+
+https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#cancellation-support
+
+    New: The base protocol now offers support for request cancellation. To
+    cancel a request, a notification message with the following properties is
+    sent:
+
+Notification:
+
+    method: '$/cancelRequest'
+    params: CancelParams defined as follows:
+
+interface CancelParams {
+    /**
+     * The request id to cancel.
+     */
+    id: number | string;
+}
+
+A request that got canceled still needs to return from the server and send a
+response back. It can not be left open / hanging. This is in line with the JSON
+RPC protocol that requires that every request sends a response back. In addition
+it allows for returning partial results on cancel.
+-}
+
+data CancelParams = forall m.
+  CancelParams
+    { _id :: LspId m
+    }
+
+deriving instance Read CancelParams
+deriving instance Show CancelParams
+instance Eq CancelParams where
+  (CancelParams a) == CancelParams b =
+    case (a,b) of
+      (IdInt x, IdInt y) -> x == y
+      (IdString x, IdString y) -> x == y
+      _ -> False
+
+deriveJSON lspOptions ''CancelParams
+
+-- ---------------------------------------------------------------------

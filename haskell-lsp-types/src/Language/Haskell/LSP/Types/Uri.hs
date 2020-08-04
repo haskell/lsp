@@ -113,8 +113,8 @@ platformAdjustFromUriPath systemOS authority srcPath =
   if systemOS /= windowsOS || null srcPath then srcPath
     else let
       firstSegment:rest = (FPP.splitDirectories . tail) srcPath  -- Drop leading '/' for absolute Windows paths
-      drive = if FPW.isDrive firstSegment 
-              then FPW.addTrailingPathSeparator firstSegment 
+      drive = if FPW.isDrive firstSegment
+              then FPW.addTrailingPathSeparator firstSegment
               else firstSegment
       in FPW.joinDrive drive $ FPW.joinPath rest
 

@@ -11,7 +11,6 @@ import           Language.Haskell.LSP.Types.Constants
 import           Language.Haskell.LSP.Types.TextDocument
 import           Language.Haskell.LSP.Types.List
 import           Language.Haskell.LSP.Types.Location
-import           Language.Haskell.LSP.Types.Message
 import           Language.Haskell.LSP.Types.Progress
 
 -- ---------------------------------------------------------------------
@@ -269,5 +268,3 @@ instance ToJSON DSResult where
   toJSON (DSSymbolInformation x) = toJSON x
 
 
-type DocumentSymbolRequest = RequestMessage ClientMethod DocumentSymbolParams DSResult
-type DocumentSymbolsResponse = ResponseMessage DSResult

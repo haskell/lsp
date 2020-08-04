@@ -12,7 +12,6 @@ import           Language.Haskell.LSP.Types.Constants
 import           Language.Haskell.LSP.Types.Diagnostic
 import           Language.Haskell.LSP.Types.List
 import           Language.Haskell.LSP.Types.Location
-import           Language.Haskell.LSP.Types.Message
 import           Language.Haskell.LSP.Types.Progress
 import           Language.Haskell.LSP.Types.TextDocument
 import           Language.Haskell.LSP.Types.WorkspaceEdit
@@ -289,6 +288,3 @@ instance FromJSON CAResult where
 instance ToJSON CAResult where
   toJSON (CACommand x) = toJSON x
   toJSON (CACodeAction x) = toJSON x
-
-type CodeActionRequest  = RequestMessage ClientMethod CodeActionParams (List CAResult)
-type CodeActionResponse = ResponseMessage (List CAResult)

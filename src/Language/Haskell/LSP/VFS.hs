@@ -158,7 +158,7 @@ changeFromServerVFS initVfs (J.RequestMessage _ _ _ params) = do
       let sortedEdits = sortOn (Down . (^. J.range)) edits
           changeEvents = map editToChangeEvent sortedEdits
           ps = J.DidChangeTextDocumentParams vid (J.List changeEvents)
-          notif = J.NotificationMessage "" J.TextDocumentDidChange ps
+          notif = J.NotificationMessage "" J.STextDocumentDidChange ps
       let (vfs',ls) = changeFromClientVFS vfs notif
       mapM_ logs ls
       return vfs'
