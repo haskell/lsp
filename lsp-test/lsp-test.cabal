@@ -1,5 +1,5 @@
 name:                lsp-test
-version:             0.11.0.3
+version:             0.11.0.4
 synopsis:            Functional test framework for LSP servers.
 description:
   A test framework for writing tests against

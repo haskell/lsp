@@ -369,7 +369,7 @@ updateState (ReqApplyWorkspaceEdit r) = do
           m <- vfsMap . vfs <$> get
           let curVer = fromMaybe 0 $
                 _lsp_version <$> m Map.!? (toNormalizedUri uri)
-          pure $ map (VersionedTextDocumentIdentifier uri . Just) [curVer..]
+          pure $ map (VersionedTextDocumentIdentifier uri . Just) [curVer + 1..]
 
         textDocumentEdits uri edits = do
           vers <- textDocumentVersions uri
