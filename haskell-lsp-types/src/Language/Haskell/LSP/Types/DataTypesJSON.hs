@@ -1181,8 +1181,8 @@ instance A.FromJSON WatchKind where
     | otherwise = mempty
   parseJSON _            = mempty
 
-deriveJSON lspOptions ''DidChangeWatchedFilesRegistrationOptions
 deriveJSON lspOptions ''FileSystemWatcher
+deriveJSON lspOptions ''DidChangeWatchedFilesRegistrationOptions
 
 -- ---------------------------------------------------------------------
 {-
