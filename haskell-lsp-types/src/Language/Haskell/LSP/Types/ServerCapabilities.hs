@@ -14,6 +14,7 @@ import Language.Haskell.LSP.Types.Color
 import Language.Haskell.LSP.Types.Command
 import Language.Haskell.LSP.Types.Common
 import Language.Haskell.LSP.Types.Completion
+import Language.Haskell.LSP.Types.Declaration
 import Language.Haskell.LSP.Types.DocumentHighlight
 import Language.Haskell.LSP.Types.FoldingRange
 import Language.Haskell.LSP.Types.Formatting
@@ -462,6 +463,10 @@ data ServerCapabilities =
     , _completionProvider               :: Maybe CompletionOptions
       -- | The server provides signature help support.
     , _signatureHelpProvider            :: Maybe SignatureHelpOptions
+      -- | The server provides go to declaration support.
+      -- 
+      -- Since LSP 3.14.0
+    , _declarationProvider              :: Maybe (Bool |? DeclarationOptions |? DeclarationRegistrationOptions)
       -- | The server provides goto definition support.
     , _definitionProvider               :: Maybe (Bool |? DefinitionOptions)
       -- | The server provides Goto Type Definition support. Since LSP 3.6

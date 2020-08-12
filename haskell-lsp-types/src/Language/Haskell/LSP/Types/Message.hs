@@ -24,6 +24,7 @@ import           Language.Haskell.LSP.Types.CodeLens
 import           Language.Haskell.LSP.Types.Color
 import           Language.Haskell.LSP.Types.Common
 import           Language.Haskell.LSP.Types.Completion
+import           Language.Haskell.LSP.Types.Declaration
 import           Language.Haskell.LSP.Types.DocumentHighlight
 import           Language.Haskell.LSP.Types.Empty
 import           Language.Haskell.LSP.Types.FoldingRange
@@ -85,8 +86,9 @@ type family MessageParams (m :: Method p t) :: Type where
   MessageParams TextDocumentCompletion             = CompletionParams
   MessageParams CompletionItemResolve              = CompletionItem
   -- Language Queries
-  MessageParams TextDocumentHover                  = TextDocumentPositionParams
-  MessageParams TextDocumentSignatureHelp          = TextDocumentPositionParams
+  MessageParams TextDocumentHover                  = HoverParams
+  MessageParams TextDocumentSignatureHelp          = SignatureHelpParams
+  MessageParams TextDocumentDeclaration            = DeclarationParams
   MessageParams TextDocumentDefinition             = TextDocumentPositionParams
   MessageParams TextDocumentTypeDefinition         = TextDocumentPositionParams
   MessageParams TextDocumentImplementation         = TextDocumentPositionParams
@@ -150,6 +152,7 @@ type family ResponseParams (m :: Method p Request) :: Type where
   -- Language Queries
   ResponseParams TextDocumentHover             = Maybe Hover
   ResponseParams TextDocumentSignatureHelp     = Maybe SignatureHelp
+  ResponseParams TextDocumentDeclaration       = Maybe (Location |? List Location |? LocationLink)
   ResponseParams TextDocumentDefinition        = LocationResponseParams
   ResponseParams TextDocumentTypeDefinition    = LocationResponseParams
   ResponseParams TextDocumentImplementation    = LocationResponseParams
@@ -633,6 +636,7 @@ splitClientMethod STextDocumentCompletion = IsClientReq
 splitClientMethod SCompletionItemResolve = IsClientReq
 splitClientMethod STextDocumentHover = IsClientReq
 splitClientMethod STextDocumentSignatureHelp = IsClientReq
+splitClientMethod STextDocumentDeclaration = IsClientReq
 splitClientMethod STextDocumentDefinition = IsClientReq
 splitClientMethod STextDocumentTypeDefinition = IsClientReq
 splitClientMethod STextDocumentImplementation = IsClientReq

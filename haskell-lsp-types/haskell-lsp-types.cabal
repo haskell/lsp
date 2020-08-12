@@ -29,6 +29,7 @@ library
                      , Language.Haskell.LSP.Types.Common
                      , Language.Haskell.LSP.Types.Completion
                      , Language.Haskell.LSP.Types.DataTypesJSON
+                     , Language.Haskell.LSP.Types.Declaration
                      , Language.Haskell.LSP.Types.Diagnostic
                      , Language.Haskell.LSP.Types.DocumentFilter
                      , Language.Haskell.LSP.Types.DocumentHighlight

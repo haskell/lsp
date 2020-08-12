@@ -34,6 +34,7 @@ import           Language.Haskell.LSP.Types.CodeLens
 import           Language.Haskell.LSP.Types.Color
 import           Language.Haskell.LSP.Types.Completion
 import           Language.Haskell.LSP.Types.DataTypesJSON
+import           Language.Haskell.LSP.Types.Declaration
 import           Language.Haskell.LSP.Types.ServerCapabilities
 import           Language.Haskell.LSP.Types.Empty
 import           Language.Haskell.LSP.Types.FoldingRange
@@ -115,8 +116,7 @@ type family RegistrationOptions (m :: Method FromClient t) :: Type where
   RegistrationOptions TextDocumentCompletion             = CompletionRegistrationOptions
   RegistrationOptions TextDocumentHover                  = HoverRegistrationOptions
   RegistrationOptions TextDocumentSignatureHelp          = SignatureHelpRegistrationOptions
-  -- TODO: Add me once textDocument/declaration is implemented
-  -- RegistrationOptions TextDocumentDeclaration            = DeclarationRegistrationOptions
+  RegistrationOptions TextDocumentDeclaration            = DeclarationRegistrationOptions
   RegistrationOptions TextDocumentDefinition             = DefinitionRegistrationOptions
   RegistrationOptions TextDocumentTypeDefinition         = TypeDefinitionRegistrationOptions
   RegistrationOptions TextDocumentImplementation         = ImplementationRegistrationOptions

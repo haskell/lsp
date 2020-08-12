@@ -6,6 +6,7 @@ module Language.Haskell.LSP.Types
   , module Language.Haskell.LSP.Types.Command
   , module Language.Haskell.LSP.Types.Common
   , module Language.Haskell.LSP.Types.Completion
+  , module Language.Haskell.LSP.Types.Declaration
   , module Language.Haskell.LSP.Types.Diagnostic
   , module Language.Haskell.LSP.Types.DocumentFilter
   , module Language.Haskell.LSP.Types.Empty
@@ -38,6 +39,7 @@ import           Language.Haskell.LSP.Types.CodeLens
 import           Language.Haskell.LSP.Types.Color
 import           Language.Haskell.LSP.Types.Command
 import           Language.Haskell.LSP.Types.Completion
+import           Language.Haskell.LSP.Types.Declaration
 import           Language.Haskell.LSP.Types.Diagnostic
 import           Language.Haskell.LSP.Types.DocumentFilter
 import           Language.Haskell.LSP.Types.Empty

@@ -50,6 +50,7 @@ data Method (p :: Provenance) (t :: MethodType) where
   -- LanguageQueries
   TextDocumentHover                  :: Method FromClient Request
   TextDocumentSignatureHelp          :: Method FromClient Request
+  TextDocumentDeclaration            :: Method FromClient Request
   TextDocumentDefinition             :: Method FromClient Request
   TextDocumentTypeDefinition         :: Method FromClient Request
   TextDocumentImplementation         :: Method FromClient Request
@@ -121,6 +122,7 @@ data SMethod (m :: Method p t) where
   SCompletionItemResolve              :: SMethod CompletionItemResolve
   STextDocumentHover                  :: SMethod TextDocumentHover
   STextDocumentSignatureHelp          :: SMethod TextDocumentSignatureHelp
+  STextDocumentDeclaration            :: SMethod TextDocumentDeclaration
   STextDocumentDefinition             :: SMethod TextDocumentDefinition
   STextDocumentTypeDefinition         :: SMethod TextDocumentTypeDefinition
   STextDocumentImplementation         :: SMethod TextDocumentImplementation
@@ -238,6 +240,7 @@ instance FromJSON SomeClientMethod where
   parseJSON (A.String "completionItem/resolve")              = pure $ SomeClientMethod SCompletionItemResolve
   parseJSON (A.String "textDocument/hover")                  = pure $ SomeClientMethod STextDocumentHover
   parseJSON (A.String "textDocument/signatureHelp")          = pure $ SomeClientMethod STextDocumentSignatureHelp
+  parseJSON (A.String "textDocument/declaration")            = pure $ SomeClientMethod STextDocumentDeclaration
   parseJSON (A.String "textDocument/definition")             = pure $ SomeClientMethod STextDocumentDefinition
   parseJSON (A.String "textDocument/typeDefinition")         = pure $ SomeClientMethod STextDocumentTypeDefinition
   parseJSON (A.String "textDocument/implementation")         = pure $ SomeClientMethod STextDocumentImplementation
@@ -332,6 +335,7 @@ instance A.ToJSON (SMethod m) where
   toJSON STextDocumentReferences             = A.String "textDocument/references"
   toJSON STextDocumentDocumentHighlight      = A.String "textDocument/documentHighlight"
   toJSON STextDocumentDocumentSymbol         = A.String "textDocument/documentSymbol"
+  toJSON STextDocumentDeclaration            = A.String "textDocument/declaration"
   toJSON STextDocumentDefinition             = A.String "textDocument/definition"
   toJSON STextDocumentTypeDefinition         = A.String "textDocument/typeDefinition"
   toJSON STextDocumentImplementation         = A.String "textDocument/implementation"

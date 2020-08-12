@@ -100,6 +100,29 @@ deriveJSON lspOptions ''Location
 
 -- ---------------------------------------------------------------------
 
+-- | Represents a link between a source and a target location.
+data LocationLink =
+  LocationLink
+  { -- | Span of the origin of this link.
+    -- Used as the underlined span for mouse interaction. Defaults to the word
+    -- range at the mouse position.
+    _originSelectionRange :: Maybe Range
+    -- | The target resource identifier of this link.
+  , _targetUri :: Uri
+    -- | The full target range of this link. If the target for example is a
+    -- symbol then target range is the range enclosing this symbol not including
+    -- leading/trailing whitespace but everything else like comments. This
+    -- information is typically used to highlight the range in the editor.
+  , _targetRange :: Range
+    -- | The range that should be selected and revealed when this link is being
+    -- followed, e.g the name of a function. Must be contained by the the
+    -- 'targetRange'. See also @DocumentSymbol._range@
+  , _targetSelectionRange :: Range
+  } deriving (Read, Show, Eq)
+deriveJSON lspOptions ''LocationLink
+
+-- ---------------------------------------------------------------------
+
 -- | A helper function for creating ranges.
 -- prop> mkRange l c l' c' = Range (Position l c) (Position l' c')
 mkRange :: Int -> Int -> Int -> Int -> Range
