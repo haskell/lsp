@@ -25,6 +25,7 @@ import           Language.Haskell.LSP.Types.Color
 import           Language.Haskell.LSP.Types.Common
 import           Language.Haskell.LSP.Types.Completion
 import           Language.Haskell.LSP.Types.Declaration
+import           Language.Haskell.LSP.Types.Definition
 import           Language.Haskell.LSP.Types.DocumentHighlight
 import           Language.Haskell.LSP.Types.Empty
 import           Language.Haskell.LSP.Types.FoldingRange
@@ -89,7 +90,7 @@ type family MessageParams (m :: Method p t) :: Type where
   MessageParams TextDocumentHover                  = HoverParams
   MessageParams TextDocumentSignatureHelp          = SignatureHelpParams
   MessageParams TextDocumentDeclaration            = DeclarationParams
-  MessageParams TextDocumentDefinition             = TextDocumentPositionParams
+  MessageParams TextDocumentDefinition             = DefinitionParams
   MessageParams TextDocumentTypeDefinition         = TextDocumentPositionParams
   MessageParams TextDocumentImplementation         = TextDocumentPositionParams
   MessageParams TextDocumentReferences             = ReferenceParams
@@ -152,8 +153,8 @@ type family ResponseParams (m :: Method p Request) :: Type where
   -- Language Queries
   ResponseParams TextDocumentHover             = Maybe Hover
   ResponseParams TextDocumentSignatureHelp     = Maybe SignatureHelp
-  ResponseParams TextDocumentDeclaration       = Maybe (Location |? List Location |? LocationLink)
-  ResponseParams TextDocumentDefinition        = LocationResponseParams
+  ResponseParams TextDocumentDeclaration       = Maybe (Location |? List Location |? List LocationLink)
+  ResponseParams TextDocumentDefinition        = Maybe (Location |? List Location |? List LocationLink)
   ResponseParams TextDocumentTypeDefinition    = LocationResponseParams
   ResponseParams TextDocumentImplementation    = LocationResponseParams
   ResponseParams TextDocumentReferences        = List Location

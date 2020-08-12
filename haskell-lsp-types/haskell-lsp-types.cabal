@@ -30,6 +30,7 @@ library
                      , Language.Haskell.LSP.Types.Completion
                      , Language.Haskell.LSP.Types.DataTypesJSON
                      , Language.Haskell.LSP.Types.Declaration
+                     , Language.Haskell.LSP.Types.Definition
                      , Language.Haskell.LSP.Types.Diagnostic
                      , Language.Haskell.LSP.Types.DocumentFilter
                      , Language.Haskell.LSP.Types.DocumentHighlight
@@ -59,7 +60,6 @@ library
                      , Language.Haskell.LSP.Types.WorkspaceFolders
  -- other-extensions:
   ghc-options:         -Wall
-  -- ghc-options:         -Werror
   build-depends:       base >= 4.9 && < 4.15
                      , aeson >=1.2.2.0
                      , binary

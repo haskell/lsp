@@ -15,6 +15,7 @@ import Language.Haskell.LSP.Types.Command
 import Language.Haskell.LSP.Types.Common
 import Language.Haskell.LSP.Types.Completion
 import Language.Haskell.LSP.Types.Declaration
+import Language.Haskell.LSP.Types.Definition
 import Language.Haskell.LSP.Types.DocumentHighlight
 import Language.Haskell.LSP.Types.FoldingRange
 import Language.Haskell.LSP.Types.Formatting
@@ -291,28 +292,6 @@ instance FromJSON TDS where
 instance ToJSON TDS where
     toJSON (TDSOptions x) = toJSON x
     toJSON (TDSKind x) = toJSON x
-
--- ---------------------------------------------------------------------
-
-data DefinitionOptions =
-  DefinitionOptions
-    { _workDoneProgressOptions :: WorkDoneProgressOptions
-    }
-  deriving (Eq,Read,Show)
-
-deriveJSONExtendFields lspOptions ''DefinitionOptions ["_workDoneProgressOptions"]
-
-data DefinitionRegistrationOptions =
-  DefinitionRegistrationOptions
-    { _textDocumentRegistrationOptions :: TextDocumentRegistrationOptions
-    , _definitionOptions               :: DefinitionOptions
-    } deriving (Read,Show,Eq)
-
-deriveJSONExtendFields lspOptions ''DefinitionRegistrationOptions
-  [ "_textDocumentRegistrationOptions"
-  , "_definitionOptions"
-  ]
-
 
 -- ---------------------------------------------------------------------
 

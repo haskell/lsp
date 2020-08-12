@@ -9,6 +9,8 @@ import Data.Default
 import Language.Haskell.LSP.Types.CodeAction
 import Language.Haskell.LSP.Types.Completion
 import Language.Haskell.LSP.Types.Diagnostic
+import Language.Haskell.LSP.Types.Declaration
+import Language.Haskell.LSP.Types.Definition
 import Language.Haskell.LSP.Types.Common
 import Language.Haskell.LSP.Types.Hover
 import Language.Haskell.LSP.Types.SignatureHelp
@@ -567,13 +569,13 @@ export interface TextDocumentClientCapabilities {
                  * Whether rename supports dynamic registration.
                  */
                 dynamicRegistration?: boolean;
-		/**
-		 * The client supports testing for validity of rename operations
-		 * before execution.
+    /**
+     * The client supports testing for validity of rename operations
+     * before execution.
                  *
                  * Since 3.12.0
-		 */
-		prepareSupport?: boolean;
+     */
+    prepareSupport?: boolean;
         };
 
         /**
@@ -587,28 +589,28 @@ export interface TextDocumentClientCapabilities {
         };
 
         /**
-	 * Capabilities specific to `textDocument/foldingRange` requests.
-	 *
-	 * Since 3.10.0
-	 */
-	foldingRange?: {
-		/**
-		 * Whether implementation supports dynamic registration for folding range providers. If this is set to `true`
-		 * the client supports the new `(FoldingRangeProviderOptions & TextDocumentRegistrationOptions & StaticRegistrationOptions)`
-		 * return value for the corresponding server capability as well.
-		 */
-		dynamicRegistration?: boolean;
-		/**
-		 * The maximum number of folding ranges that the client prefers to receive per document. The value serves as a
-		 * hint, servers are free to follow the limit.
-		 */
-		rangeLimit?: number;
-		/**
-		 * If set, the client signals that it only supports folding complete lines. If set, client will
-		 * ignore specified `startCharacter` and `endCharacter` properties in a FoldingRange.
-		 */
-		lineFoldingOnly?: boolean;
-	};
+   * Capabilities specific to `textDocument/foldingRange` requests.
+   *
+   * Since 3.10.0
+   */
+  foldingRange?: {
+    /**
+     * Whether implementation supports dynamic registration for folding range providers. If this is set to `true`
+     * the client supports the new `(FoldingRangeProviderOptions & TextDocumentRegistrationOptions & StaticRegistrationOptions)`
+     * return value for the corresponding server capability as well.
+     */
+    dynamicRegistration?: boolean;
+    /**
+     * The maximum number of folding ranges that the client prefers to receive per document. The value serves as a
+     * hint, servers are free to follow the limit.
+     */
+    rangeLimit?: number;
+    /**
+     * If set, the client signals that it only supports folding complete lines. If set, client will
+     * ignore specified `startCharacter` and `endCharacter` properties in a FoldingRange.
+     */
+    lineFoldingOnly?: boolean;
+  };
 }
 
 -}
@@ -704,15 +706,6 @@ data OnTypeFormattingClientCapabilities =
     } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''OnTypeFormattingClientCapabilities)
-
--- -------------------------------------
-
-data DefinitionClientCapabilities =
-  DefinitionClientCapabilities
-    { _dynamicRegistration :: Maybe Bool
-    } deriving (Show, Read, Eq)
-
-$(deriveJSON lspOptions ''DefinitionClientCapabilities)
 
 -- -------------------------------------
 
@@ -895,6 +888,11 @@ data TextDocumentClientCapabilities =
       -- | Capabilities specific to the `textDocument/onTypeFormatting`
     , _onTypeFormatting :: Maybe OnTypeFormattingClientCapabilities
 
+      -- | Capabilities specific to the `textDocument/declaration` request.
+      -- 
+      -- Since LSP 3.14.0
+    , _declaration :: Maybe DeclarationClientCapabilities
+
       -- | Capabilities specific to the `textDocument/definition`
     , _definition :: Maybe DefinitionClientCapabilities
 
@@ -934,7 +932,7 @@ $(deriveJSON lspOptions ''TextDocumentClientCapabilities)
 instance Default TextDocumentClientCapabilities where
   def = TextDocumentClientCapabilities def def def def def def def def
                                        def def def def def def def def
-                                       def def def def
+                                       def def def def def
 
 -- ---------------------------------------------------------------------
 
@@ -993,8 +991,8 @@ interface ClientCapabilities {
 
         /**
          * Window specific client capabilities.
-	       */
-	      window?: WindowClientCapabilities;
+         */
+        window?: WindowClientCapabilities;
 }
 -}
 
