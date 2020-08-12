@@ -31,6 +31,7 @@ import           Language.Haskell.LSP.Types.Empty
 import           Language.Haskell.LSP.Types.FoldingRange
 import           Language.Haskell.LSP.Types.Formatting
 import           Language.Haskell.LSP.Types.Hover
+import           Language.Haskell.LSP.Types.Implementation
 import           Language.Haskell.LSP.Types.Location
 import           Language.Haskell.LSP.Types.LspId
 import           Language.Haskell.LSP.Types.Method
@@ -93,7 +94,7 @@ type family MessageParams (m :: Method p t) :: Type where
   MessageParams TextDocumentDeclaration            = DeclarationParams
   MessageParams TextDocumentDefinition             = DefinitionParams
   MessageParams TextDocumentTypeDefinition         = TypeDefinitionParams
-  MessageParams TextDocumentImplementation         = TextDocumentPositionParams
+  MessageParams TextDocumentImplementation         = ImplementationParams
   MessageParams TextDocumentReferences             = ReferenceParams
   MessageParams TextDocumentDocumentHighlight      = TextDocumentPositionParams
   MessageParams TextDocumentDocumentSymbol         = DocumentSymbolParams
@@ -157,7 +158,7 @@ type family ResponseParams (m :: Method p Request) :: Type where
   ResponseParams TextDocumentDeclaration       = Maybe (Location |? List Location |? List LocationLink)
   ResponseParams TextDocumentDefinition        = Maybe (Location |? List Location |? List LocationLink)
   ResponseParams TextDocumentTypeDefinition    = Maybe (Location |? List Location |? List LocationLink)
-  ResponseParams TextDocumentImplementation    = LocationResponseParams
+  ResponseParams TextDocumentImplementation    = Maybe (Location |? List Location |? List LocationLink)
   ResponseParams TextDocumentReferences        = List Location
   ResponseParams TextDocumentDocumentHighlight = List DocumentHighlight
   ResponseParams TextDocumentDocumentSymbol    = DSResult

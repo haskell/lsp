@@ -22,6 +22,7 @@ import           Language.Haskell.LSP.Types.DocumentHighlight
 import           Language.Haskell.LSP.Types.FoldingRange
 import           Language.Haskell.LSP.Types.Formatting
 import           Language.Haskell.LSP.Types.Hover
+import           Language.Haskell.LSP.Types.Implementation
 import           Language.Haskell.LSP.Types.Location
 import           Language.Haskell.LSP.Types.Progress
 import           Language.Haskell.LSP.Types.Registration

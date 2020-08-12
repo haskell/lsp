@@ -13,6 +13,7 @@ import Language.Haskell.LSP.Types.Declaration
 import Language.Haskell.LSP.Types.Definition
 import Language.Haskell.LSP.Types.Common
 import Language.Haskell.LSP.Types.Hover
+import Language.Haskell.LSP.Types.Implementation
 import Language.Haskell.LSP.Types.SignatureHelp
 import Language.Haskell.LSP.Types.Symbol
 import Language.Haskell.LSP.Types.References
@@ -707,18 +708,6 @@ data OnTypeFormattingClientCapabilities =
     } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''OnTypeFormattingClientCapabilities)
-
--- -------------------------------------
---
-data ImplementationClientCapabilities =
-  ImplementationClientCapabilities
-    { -- | Whether implementation supports dynamic registration. If this is set to `true`
-      -- the client supports the new `(TextDocumentRegistrationOptions & StaticRegistrationOptions)`
-      -- return value for the corresponding server capability as well.
-      _dynamicRegistration :: Maybe Bool
-    } deriving (Show, Read, Eq)
-
-$(deriveJSON lspOptions ''ImplementationClientCapabilities)
 
 -- -------------------------------------
 

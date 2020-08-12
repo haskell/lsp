@@ -100,7 +100,7 @@ capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) Noth
           (since 3 14 (DeclarationClientCapabilities dynamicReg (Just True)))
           (Just (DefinitionClientCapabilities dynamicReg (since 3 14 True)))
           (since 3 6 (TypeDefinitionClientCapabilities dynamicReg (since 3 14 True)))
-          (since 3 6 (ImplementationClientCapabilities dynamicReg))
+          (since 3 6 (ImplementationClientCapabilities dynamicReg (since 3 14 True)))
           (Just codeActionCapability)
           (Just (CodeLensClientCapabilities dynamicReg))
           (Just (DocumentLinkClientCapabilities dynamicReg))

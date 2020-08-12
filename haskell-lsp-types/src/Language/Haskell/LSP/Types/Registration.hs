@@ -32,6 +32,7 @@ import           GHC.Generics
 import           Language.Haskell.LSP.Types.CodeAction
 import           Language.Haskell.LSP.Types.CodeLens
 import           Language.Haskell.LSP.Types.Color
+import           Language.Haskell.LSP.Types.Common
 import           Language.Haskell.LSP.Types.Completion
 import           Language.Haskell.LSP.Types.DataTypesJSON
 import           Language.Haskell.LSP.Types.Declaration
@@ -41,7 +42,7 @@ import           Language.Haskell.LSP.Types.Empty
 import           Language.Haskell.LSP.Types.FoldingRange
 import           Language.Haskell.LSP.Types.Formatting
 import           Language.Haskell.LSP.Types.Hover
-import           Language.Haskell.LSP.Types.Common
+import           Language.Haskell.LSP.Types.Implementation
 import           Language.Haskell.LSP.Types.Method
 import           Language.Haskell.LSP.Types.References
 import           Language.Haskell.LSP.Types.Rename

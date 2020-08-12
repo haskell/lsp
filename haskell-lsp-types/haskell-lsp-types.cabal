@@ -37,6 +37,7 @@ library
                      , Language.Haskell.LSP.Types.FoldingRange
                      , Language.Haskell.LSP.Types.Formatting
                      , Language.Haskell.LSP.Types.Hover
+                     , Language.Haskell.LSP.Types.Implementation
                      , Language.Haskell.LSP.Types.Location
                      , Language.Haskell.LSP.Types.LspId
                      , Language.Haskell.LSP.Types.Empty

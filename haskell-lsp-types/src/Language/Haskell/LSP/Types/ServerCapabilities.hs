@@ -20,11 +20,10 @@ import Language.Haskell.LSP.Types.DocumentHighlight
 import Language.Haskell.LSP.Types.FoldingRange
 import Language.Haskell.LSP.Types.Formatting
 import Language.Haskell.LSP.Types.Hover
-import Language.Haskell.LSP.Types.Progress
+import Language.Haskell.LSP.Types.Implementation
 import Language.Haskell.LSP.Types.References
 import Language.Haskell.LSP.Types.Rename
 import Language.Haskell.LSP.Types.SignatureHelp
-import Language.Haskell.LSP.Types.StaticRegistrationOptions
 import Language.Haskell.LSP.Types.Symbol
 import Language.Haskell.LSP.Types.TextDocument
 import Language.Haskell.LSP.Types.TypeDefinition
@@ -293,43 +292,6 @@ instance FromJSON TDS where
 instance ToJSON TDS where
     toJSON (TDSOptions x) = toJSON x
     toJSON (TDSKind x) = toJSON x
-
--- ---------------------------------------------------------------------
-
-{-
-Goto Implementation Request (:leftwards_arrow_with_hook:)
-Since version 3.6.0
-
-The goto implementation request is sent from the client to the server to resolve the implementation location of a symbol at a given text document position.
-
-Request:
-
-method: ‘textDocument/implementation’
-params: TextDocumentPositionParams
-Response:
-
-result: Location | Location[] | null
-error: code and message set in case an exception happens during the definition request.
-Registration Options: TextDocumentRegistrationOptions
--}
-
-data ImplementationOptions =
-  ImplementationOptions
-    { _workDoneProgressOptions :: WorkDoneProgressOptions
-    } deriving (Read,Show,Eq)
-deriveJSONExtendFields lspOptions ''ImplementationOptions ["_workDoneProgressOptions"]
-
-data ImplementationRegistrationOptions =
-  ImplementationRegistrationOptions
-    { _textDocumentRegistrationOptions :: TextDocumentRegistrationOptions
-    , _implementationOptions           :: ImplementationOptions
-    , _staticRegistrationOptions       :: StaticRegistrationOptions
-    } deriving (Read,Show,Eq)
-deriveJSONExtendFields lspOptions ''ImplementationRegistrationOptions
-  [ "_textDocumentRegistrationOptions"
-  , "_implementationOptions"
-  , "_staticRegistrationOptions"
-  ]
 
 -- ---------------------------------------------------------------------
 {-
