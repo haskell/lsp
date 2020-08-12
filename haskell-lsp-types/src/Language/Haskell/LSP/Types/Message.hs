@@ -22,14 +22,13 @@ import           Language.Haskell.LSP.Types.DataTypesJSON
 import           Language.Haskell.LSP.Types.CodeAction
 import           Language.Haskell.LSP.Types.CodeLens
 import           Language.Haskell.LSP.Types.Color
-import           Language.Haskell.LSP.Types.Constants
+import           Language.Haskell.LSP.Types.Common
 import           Language.Haskell.LSP.Types.Completion
 import           Language.Haskell.LSP.Types.DocumentHighlight
 import           Language.Haskell.LSP.Types.Empty
 import           Language.Haskell.LSP.Types.FoldingRange
 import           Language.Haskell.LSP.Types.Formatting
 import           Language.Haskell.LSP.Types.Hover
-import           Language.Haskell.LSP.Types.List
 import           Language.Haskell.LSP.Types.Location
 import           Language.Haskell.LSP.Types.LspId
 import           Language.Haskell.LSP.Types.Method
@@ -37,8 +36,10 @@ import           Language.Haskell.LSP.Types.Progress
 import           Language.Haskell.LSP.Types.Registration
 import           Language.Haskell.LSP.Types.Rename
 import           Language.Haskell.LSP.Types.References
+import           Language.Haskell.LSP.Types.SignatureHelp
 import           Language.Haskell.LSP.Types.Symbol
 import           Language.Haskell.LSP.Types.TextDocument
+import           Language.Haskell.LSP.Types.Utils
 import           Language.Haskell.LSP.Types.Window
 import           Language.Haskell.LSP.Types.WorkspaceEdit
 import           Language.Haskell.LSP.Types.WorkspaceFolders
@@ -144,11 +145,11 @@ type family ResponseParams (m :: Method p Request) :: Type where
   -- Sync/Document state
   ResponseParams TextDocumentWillSaveWaitUntil = List TextEdit
   -- Completion
-  ResponseParams TextDocumentCompletion        = CompletionResponseResult
+  ResponseParams TextDocumentCompletion        = Maybe (List CompletionItem |? CompletionList)
   ResponseParams CompletionItemResolve         = CompletionItem
   -- Language Queries
   ResponseParams TextDocumentHover             = Maybe Hover
-  ResponseParams TextDocumentSignatureHelp     = SignatureHelp
+  ResponseParams TextDocumentSignatureHelp     = Maybe SignatureHelp
   ResponseParams TextDocumentDefinition        = LocationResponseParams
   ResponseParams TextDocumentTypeDefinition    = LocationResponseParams
   ResponseParams TextDocumentImplementation    = LocationResponseParams

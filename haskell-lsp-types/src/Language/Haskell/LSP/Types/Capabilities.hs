@@ -191,10 +191,11 @@ capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) Noth
       SignatureHelpClientCapabilities
         dynamicReg
         (Just signatureInformationCapability)
+        Nothing
 
     signatureInformationCapability =
-      SignatureInformationClientCapabilities
-        (Just (List [MkPlainText, MkMarkdown]))
+      SignatureHelpSignatureInformation
+        (Just (List [MkPlainText, MkMarkdown])) Nothing
 
     documentSymbolCapability =
       DocumentSymbolClientCapabilities

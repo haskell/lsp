@@ -12,8 +12,8 @@ import Language.Haskell.LSP.Types.CodeAction
 import Language.Haskell.LSP.Types.CodeLens
 import Language.Haskell.LSP.Types.Color
 import Language.Haskell.LSP.Types.Command
+import Language.Haskell.LSP.Types.Common
 import Language.Haskell.LSP.Types.Completion
-import Language.Haskell.LSP.Types.Constants
 import Language.Haskell.LSP.Types.DocumentHighlight
 import Language.Haskell.LSP.Types.FoldingRange
 import Language.Haskell.LSP.Types.Formatting
@@ -21,24 +21,11 @@ import Language.Haskell.LSP.Types.Hover
 import Language.Haskell.LSP.Types.Progress
 import Language.Haskell.LSP.Types.References
 import Language.Haskell.LSP.Types.Rename
+import Language.Haskell.LSP.Types.SignatureHelp
 import Language.Haskell.LSP.Types.StaticRegistrationOptions
 import Language.Haskell.LSP.Types.Symbol
 import Language.Haskell.LSP.Types.TextDocument
 import Language.Haskell.LSP.Types.Utils
-
--- | A terser, isomorphic data type for 'Either', that does not get tagged when
--- converting to and from JSON.
-data a |? b = L a
-            | R b
-  deriving (Read,Show,Eq)
-infixr |?
-
-instance (ToJSON a, ToJSON b) => ToJSON (a |? b) where
-  toJSON (L x) = toJSON x
-  toJSON (R x) = toJSON x
-
-instance (FromJSON a, FromJSON b) => FromJSON (a |? b) where
-  parseJSON v = L <$> parseJSON v <|> R <$> parseJSON v
 
 -- ---------------------------------------------------------------------
 {-
@@ -303,42 +290,6 @@ instance FromJSON TDS where
 instance ToJSON TDS where
     toJSON (TDSOptions x) = toJSON x
     toJSON (TDSKind x) = toJSON x
-
-{-
-/**
- * Signature help options.
- */
-interface SignatureHelpOptions {
-    /**
-     * The characters that trigger signature help automatically.
-     */
-    triggerCharacters?: string[];
-    /**
-     * List of characters that re-trigger signature help.
-     *
-     * These trigger characters are only active when signature help is already showing. All trigger characters
-     * are also counted as re-trigger characters.
-     *
-     * @since 3.15.0
-     */
--}
-
-data SignatureHelpOptions =
-  SignatureHelpOptions
-    { _workDoneProgressOptions :: WorkDoneProgressOptions
-    , -- | The characters that trigger signature help automatically.
-      _triggerCharacters       :: Maybe [String]
-
-    -- | List of characters that re-trigger signature help.
-    -- These trigger characters are only active when signature help is already showing. All trigger characters
-    -- are also counted as re-trigger characters.
-    --
-    -- Since LSP 3.15.0
-    -- @since 0.18.0.0
-    , _retriggerCharacters     :: Maybe [String]
-    } deriving (Read,Show,Eq)
-
-deriveJSONExtendFields lspOptions ''SignatureHelpOptions ["_workDoneProgressOptions"]
 
 -- ---------------------------------------------------------------------
 

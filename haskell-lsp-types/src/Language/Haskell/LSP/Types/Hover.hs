@@ -7,39 +7,34 @@ import           Control.Applicative
 import           Data.Aeson
 import           Data.Aeson.TH
 import           Data.Text                      ( Text )
-import           Language.Haskell.LSP.Types.Constants
-import           Language.Haskell.LSP.Types.List
+
+import           Language.Haskell.LSP.Types.Common
 import           Language.Haskell.LSP.Types.Location
 import           Language.Haskell.LSP.Types.MarkupContent
 import           Language.Haskell.LSP.Types.Progress
 import           Language.Haskell.LSP.Types.TextDocument
 import           Language.Haskell.LSP.Types.Utils
 
--- ---------------------------------------------------------------------
 
-{-
-/**
- * MarkedString can be used to render human readable text. It is either a markdown string
- * or a code-block that provides a language and a code snippet. The language identifier
- * is semantically equal to the optional language identifier in fenced code blocks in GitHub
- * issues. See https://help.github.com/articles/creating-and-highlighting-code-blocks/#syntax-highlighting
- *
- * The pair of a language and a value is an equivalent to markdown:
- * ```${language}
- * ${value}
- * ```
- *
- * Note that markdown strings will be sanitized - that means html will be escaped.
-* @deprecated use MarkupContent instead.
-*/
-type MarkedString = string | { language: string; value: string };
+-- -------------------------------------
 
-    error: code and message set in case an exception happens during the hover
-    request.
+data HoverClientCapabilities =
+  HoverClientCapabilities
+    { _dynamicRegistration :: Maybe Bool
+    , _contentFormat :: Maybe (List MarkupKind)
+    } deriving (Show, Read, Eq)
+deriveJSON lspOptions ''HoverClientCapabilities
 
-Registration Options: TextDocumentRegistrationOptions
+makeExtendingDatatype "HoverOptions" [''WorkDoneProgressOptions] []
+deriveJSON lspOptions ''HoverOptions
 
--}
+makeExtendingDatatype "HoverRegistrationOptions" [''TextDocumentRegistrationOptions, ''HoverOptions] []
+deriveJSON lspOptions ''HoverRegistrationOptions
+
+makeExtendingDatatype "HoverParams" [''TextDocumentPositionParams, ''WorkDoneProgressParams] []
+deriveJSON lspOptions ''HoverParams
+
+-- -------------------------------------
 
 data LanguageString =
   LanguageString
@@ -61,46 +56,6 @@ instance ToJSON MarkedString where
 instance FromJSON MarkedString where
   parseJSON (String t) = pure $ PlainString t
   parseJSON o            = CodeString <$> parseJSON o
-
--- ---------------------------------------------------------------------
-{-
-Hover Request
-
-The hover request is sent from the client to the server to request hover
-information at a given text document position.
-
-    Changed: In 2.0 the request uses TextDocumentPositionParams with a proper
-    textDocument and position property. In 1.0 the uri of the referenced text
-    document was inlined into the params object.
-
-Request
-
-    method: 'textDocument/hover'
-    params: TextDocumentPositionParams
-
-Response
-
-    result: Hover | null defined as follows:
-
-
-/**
- * The result of a hover request.
- */
-interface Hover {
-        /**
-         * The hover's content
-         */
-        contents: MarkedString | MarkedString[] | MarkupContent;
-
-        /**
-         * An optional range is a range inside a text document
-         * that is used to visualize a hover, e.g. by changing the background color.
-         */
-        range?: Range;
-}
-
--}
-
 
 -- -------------------------------------
 
@@ -147,22 +102,3 @@ data Hover =
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''Hover
-
-data HoverOptions =
-  HoverOptions
-    { _workDoneProgressOptions :: WorkDoneProgressOptions
-    } deriving (Read,Show,Eq)
-
-deriveJSONExtendFields lspOptions ''HoverOptions ["_workDoneProgressOptions"]
-
-data HoverRegistrationOptions =
-  HoverRegistrationOptions
-    { _textDocumentRegistrationOptions :: TextDocumentRegistrationOptions
-    , _hoverOptions     :: HoverOptions
-    } deriving (Read,Show,Eq)
-
-deriveJSONExtendFields lspOptions ''HoverRegistrationOptions ["_textDocumentRegistrationOptions", "_hoverOptions"]
-
--- TODO: derive json instances for this
--- makeExtendingDatatype "HoverParams" [''TextDocumentPositionParams, ''WorkDoneProgressParams]
-  -- []

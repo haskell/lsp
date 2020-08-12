@@ -8,9 +8,8 @@ import           Data.Aeson.TH
 import           Data.Aeson.Types
 import           Data.Text                      ( Text )
 import           Language.Haskell.LSP.Types.Command
-import           Language.Haskell.LSP.Types.Constants
 import           Language.Haskell.LSP.Types.Diagnostic
-import           Language.Haskell.LSP.Types.List
+import           Language.Haskell.LSP.Types.Common
 import           Language.Haskell.LSP.Types.Location
 import           Language.Haskell.LSP.Types.Progress
 import           Language.Haskell.LSP.Types.TextDocument

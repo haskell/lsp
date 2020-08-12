@@ -4,11 +4,11 @@ module Language.Haskell.LSP.Types.TextDocument where
 
 import           Data.Aeson.TH
 import           Data.Text                      ( Text )
-import           Language.Haskell.LSP.Types.Constants
+
 import           Language.Haskell.LSP.Types.DocumentFilter
 import           Language.Haskell.LSP.Types.Location
-import           Language.Haskell.LSP.Types.Progress
 import           Language.Haskell.LSP.Types.Uri
+import           Language.Haskell.LSP.Types.Utils
 
 -- ---------------------------------------------------------------------
 {-

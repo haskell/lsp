@@ -5,8 +5,8 @@ module Language.Haskell.LSP.Types.Location where
 import           Control.DeepSeq
 import           Data.Aeson.TH
 import           GHC.Generics
-import           Language.Haskell.LSP.Types.Constants
 import           Language.Haskell.LSP.Types.Uri
+import           Language.Haskell.LSP.Types.Utils
 
 -- ---------------------------------------------------------------------
 

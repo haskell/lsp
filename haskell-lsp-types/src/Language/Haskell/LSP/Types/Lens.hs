@@ -26,6 +26,7 @@ import           Language.Haskell.LSP.Types.Progress
 import           Language.Haskell.LSP.Types.Registration
 import           Language.Haskell.LSP.Types.References
 import           Language.Haskell.LSP.Types.Rename
+import           Language.Haskell.LSP.Types.SignatureHelp
 import           Language.Haskell.LSP.Types.ServerCapabilities
 import           Language.Haskell.LSP.Types.Symbol
 import           Language.Haskell.LSP.Types.TextDocument
@@ -34,6 +35,8 @@ import           Language.Haskell.LSP.Types.WorkspaceEdit
 import           Language.Haskell.LSP.Types.WorkspaceFolders
 import           Language.Haskell.LSP.Types.Message
 import           Control.Lens.TH
+
+-- TODO: This is out of date and very unmantainable, use TH to call all these!!
 
 -- client capabilities
 makeFieldsNoPrefix ''WorkspaceEditClientCapabilities
@@ -49,7 +52,8 @@ makeFieldsNoPrefix ''CompletionItemClientCapabilities
 makeFieldsNoPrefix ''CompletionItemKindClientCapabilities
 makeFieldsNoPrefix ''CompletionClientCapabilities
 makeFieldsNoPrefix ''HoverClientCapabilities
-makeFieldsNoPrefix ''SignatureInformationClientCapabilities
+makeFieldsNoPrefix ''SignatureHelpSignatureInformation
+makeFieldsNoPrefix ''SignatureHelpParameterInformation
 makeFieldsNoPrefix ''SignatureHelpClientCapabilities
 makeFieldsNoPrefix ''ReferencesClientCapabilities
 makeFieldsNoPrefix ''DocumentHighlightClientCapabilities
@@ -147,7 +151,7 @@ makeFieldsNoPrefix ''Location
 -- Completion
 makeFieldsNoPrefix ''CompletionItem
 makeFieldsNoPrefix ''CompletionContext
-makeFieldsNoPrefix ''CompletionListType
+makeFieldsNoPrefix ''CompletionList
 makeFieldsNoPrefix ''CompletionParams
 makeFieldsNoPrefix ''CompletionRegistrationOptions
 

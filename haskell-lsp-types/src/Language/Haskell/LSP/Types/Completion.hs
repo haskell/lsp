@@ -9,10 +9,7 @@ import           Data.Aeson.TH
 import           Data.Scientific                ( Scientific )
 import           Data.Text                      ( Text )
 import           Language.Haskell.LSP.Types.Command
-import           Language.Haskell.LSP.Types.Constants
-import           Language.Haskell.LSP.Types.DocumentFilter
-import           Language.Haskell.LSP.Types.List
-import           Language.Haskell.LSP.Types.Location
+import           Language.Haskell.LSP.Types.Common
 import           Language.Haskell.LSP.Types.MarkupContent
 import           Language.Haskell.LSP.Types.Progress
 import           Language.Haskell.LSP.Types.TextDocument
@@ -113,191 +110,68 @@ instance A.FromJSON CompletionItemTag where
   parseJSON (A.Number 1) = pure CtDeprecated
   parseJSON _            = mempty
 
--- ---------------------------------------------------------------------
-{-
-Completion Request
+data CompletionItemTagsClientCapabilities =
+  CompletionItemTagsClientCapabilities
+    { -- | The tag supported by the client.
+      _valueSet :: List CompletionItemTag
+    } deriving (Show, Read, Eq)
 
-The Completion request is sent from the client to the server to compute
-completion items at a given cursor position. Completion items are presented in
-the IntelliSense user interface. If computing full completion items is
-expensive, servers can additionally provide a handler for the completion item
-resolve request ('completionItem/resolve'). This request is sent when a
-completion item is selected in the user interface. A typically use case is for
-example: the 'textDocument/completion' request doesn't fill in the documentation
-property for returned completion items since it is expensive to compute. When
-the item is selected in the user interface then a 'completionItem/resolve'
-request is sent with the selected completion item as a param. The returned
-completion item should have the documentation property filled in.
+deriveJSON lspOptions ''CompletionItemTagsClientCapabilities
 
-    Changed: In 2.0 the request uses TextDocumentPositionParams with a proper
-    textDocument and position property. In 1.0 the uri of the referenced text
-    document was inlined into the params object.
+data CompletionItemClientCapabilities =
+  CompletionItemClientCapabilities
+    { -- | Client supports snippets as insert text.
+      --
+      -- A snippet can define tab stops and placeholders with `$1`, `$2` and
+      -- `${3:foo}`. `$0` defines the final tab stop, it defaults to the end of
+      -- the snippet. Placeholders with equal identifiers are linked, that is
+      -- typing in one will update others too.
+      _snippetSupport :: Maybe Bool
 
-Request
+      -- | Client supports commit characters on a completion item.
+    , _commitCharactersSupport :: Maybe Bool
 
-    method: 'textDocument/completion'
-    params: TextDocumentPositionParams
--}
+      -- | Client supports the follow content formats for the documentation
+      -- property. The order describes the preferred format of the client.
+    , _documentationFormat :: Maybe (List MarkupKind)
 
--- -------------------------------------
+      -- | Client supports the deprecated property on a completion item.
+    , _deprecatedSupport :: Maybe Bool
 
-{-
+      -- | Client supports the preselect property on a completion item.
+    , _preselectSupport :: Maybe Bool
 
-Response
+      -- | Client supports the tag property on a completion item. Clients
+      -- supporting tags have to handle unknown tags gracefully. Clients
+      -- especially need to preserve unknown tags when sending a
+      -- completion item back to the server in a resolve call.
+    , _tagSupport :: Maybe CompletionItemTagsClientCapabilities
+    } deriving (Show, Read, Eq)
 
-    result: CompletionItem[] | CompletionList
+deriveJSON lspOptions ''CompletionItemClientCapabilities
 
-/**
- * Represents a collection of [completion items](#CompletionItem) to be presented
- * in the editor.
- */
-interface CompletionList {
-    /**
-     * This list it not complete. Further typing should result in recomputing
-     * this list.
-     */
-    isIncomplete: boolean;
-    /**
-     * The completion items.
-     */
-    items: CompletionItem[];
-}
+data CompletionItemKindClientCapabilities =
+  CompletionItemKindClientCapabilities
+    { -- | The completion item kind values the client supports. When this
+      -- property exists the client also guarantees that it will
+      --  handle values outside its set gracefully and falls back
+      --  to a default value when unknown.
+      _valueSet :: Maybe (List CompletionItemKind)
+    }
+  deriving (Show, Read, Eq)
 
+deriveJSON lspOptions ''CompletionItemKindClientCapabilities
 
-New in 3.0 : InsertTextFormat
+data CompletionClientCapabilities =
+  CompletionClientCapabilities
+    { _dynamicRegistration :: Maybe Bool -- ^ Whether completion supports dynamic
+                                         -- registration.
+    , _completionItem :: Maybe CompletionItemClientCapabilities
+    , _completionItemKind :: Maybe CompletionItemKindClientCapabilities
+    , _contextSupport :: Maybe Bool
+    } deriving (Show, Read, Eq)
 
-/**
- * Defines whether the insert text in a completion item should be interpreted as
- * plain text or a snippet.
- */
-namespace InsertTextFormat {
-        /**
-         * The primary text to be inserted is treated as a plain string.
-         */
-        export const PlainText = 1;
-
-        /**
-         * The primary text to be inserted is treated as a snippet.
-         *
-         * A snippet can define tab stops and placeholders with `$1`, `$2`
-         * and `${3:foo}`. `$0` defines the final tab stop, it defaults to
-         * the end of the snippet. Placeholders with equal identifiers are linked,
-         * that is typing in one will update others too.
-         *
-         * See also: https://github.com/Microsoft/vscode/blob/master/src/vs/editor/contrib/snippet/common/snippet.md
-         */
-        export const Snippet = 2;
-}
-
-
-
-interface CompletionItem {
-    /**
-     * The label of this completion item. By default
-     * also the text that is inserted when selecting
-     * this completion.
-     */
-    label: string;
-    /**
-     * The kind of this completion item. Based of the kind
-     * an icon is chosen by the editor.
-     */
-    kind?: number;
-    /**
-     * Tags for this completion item.
-     */
-    tags?: CompletionItemTag[];
-    /**
-     * A human-readable string with additional information
-     * about this item, like type or symbol information.
-     */
-    detail?: string;
-    /**
-     * A human-readable string that represents a doc-comment.
-     */
-    documentation?: string;
-    /**
-     * A string that shoud be used when comparing this item
-     * with other items. When `falsy` the label is used.
-     */
-    sortText?: string;
-    /**
-     * A string that should be used when filtering a set of
-     * completion items. When `falsy` the label is used.
-     */
-    filterText?: string;
-    /**
-     * A string that should be inserted a document when selecting
-     * this completion. When `falsy` the label is used.
-     */
-    insertText?: string;
-    -- Following field is new in 3.0
-        /**
-         * The format of the insert text. The format applies to both the `insertText` property
-         * and the `newText` property of a provided `textEdit`.
-         */
-    insertTextFormat?: InsertTextFormat;
-        /**
-         * An edit which is applied to a document when selecting this completion. When an edit is provided the value of
-         * `insertText` is ignored.
-         *
-         * *Note:* The range of the edit must be a single line range and it must contain the position at which completion
-         * has been requested.
-         */
-
-    textEdit?: TextEdit;
-
-    -- Following field is new in 3.0
-        /**
-         * An optional array of additional text edits that are applied when
-         * selecting this completion. Edits must not overlap with the main edit
-         * nor with themselves.
-         */
-    additionalTextEdits?: TextEdit[];
-    -- Following field is new in 3.0
-        /**
-         * An optional command that is executed *after* inserting this completion. *Note* that
-         * additional modifications to the current document should be described with the
-         * additionalTextEdits-property.
-         */
-
-    command?: Command;
-        /**
-         * An data entry field that is preserved on a completion item between
-         * a completion and a completion resolve request.
-         */
-
-    data?: any
-}
-
-Where CompletionItemKind is defined as follows:
-
-/**
- * The kind of a completion entry.
- */
-enum CompletionItemKind {
-    Text = 1,
-    Method = 2,
-    Function = 3,
-    Constructor = 4,
-    Field = 5,
-    Variable = 6,
-    Class = 7,
-    Interface = 8,
-    Module = 9,
-    Property = 10,
-    Unit = 11,
-    Value = 12,
-    Enum = 13,
-    Keyword = 14,
-    Snippet = 15,
-    Color = 16,
-    File = 17,
-    Reference = 18
-}
-
-    error: code and message set in case an exception happens during the completion request.
--}
+deriveJSON lspOptions ''CompletionClientCapabilities
 
 -- -------------------------------------
 
@@ -392,20 +266,15 @@ data CompletionItem =
 
 deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''CompletionItem
 
-data CompletionListType =
-  CompletionListType
-    { _isIncomplete :: Bool
-    , _items        :: List CompletionItem
+-- | Represents a collection of 'CompletionItem's to be presented in the editor.
+data CompletionList =
+  CompletionList
+    { _isIncomplete :: Bool -- ^ This list it not complete. Further typing
+                            -- should result in recomputing this list.
+    , _items        :: List CompletionItem -- ^ The completion items.
     } deriving (Read,Show,Eq)
 
-deriveJSON lspOptions ''CompletionListType
-
-data CompletionResponseResult
-  = CompletionList CompletionListType
-  | Completions (List CompletionItem)
-  deriving (Read,Show,Eq)
-
-deriveJSON defaultOptions { fieldLabelModifier = rdrop (length ("CompletionResponseResult"::String)), sumEncoding = UntaggedValue } ''CompletionResponseResult
+deriveJSON lspOptions ''CompletionList
 
 -- | How a completion was triggered
 data CompletionTriggerKind = -- | Completion was triggered by typing an identifier (24x7 code
@@ -433,6 +302,20 @@ instance A.FromJSON CompletionTriggerKind where
   parseJSON (A.Number x) = pure (CtUnknown x)
   parseJSON _          = mempty
 
+makeExtendingDatatype "CompletionOptions" [''WorkDoneProgressOptions]
+  [ ("_triggerCharacters", [t| Maybe [String] |])
+  , ("_allCommitCharacters", [t| Maybe [String] |])
+  , ("_resolveProvider", [t| Maybe Bool|])
+  ]
+deriveJSON lspOptions ''CompletionOptions
+
+makeExtendingDatatype "CompletionRegistrationOptions"
+  [ ''TextDocumentRegistrationOptions
+  , ''CompletionOptions
+  ]
+  []
+deriveJSON lspOptions ''CompletionRegistrationOptions
+
 data CompletionContext =
   CompletionContext
     { _triggerKind      :: CompletionTriggerKind -- ^ How the completion was triggered.
@@ -444,112 +327,11 @@ data CompletionContext =
 
 deriveJSON lspOptions ''CompletionContext
 
-data CompletionParams =
-  CompletionParams
-    { _textDocument :: TextDocumentIdentifier -- ^ The text document.
-    , _position     :: Position -- ^ The position inside the text document.
-    , _context      :: Maybe CompletionContext
-      -- ^ The completion context. This is only available if the client specifies
-      -- to send this using `ClientCapabilities.textDocument.completion.contextSupport === true`
-    , _workDoneToken :: Maybe ProgressToken -- ^ An optional token that a server can use to report work done progress.
-    }
-  deriving (Read, Show, Eq)
-
+makeExtendingDatatype "CompletionParams"
+  [ ''TextDocumentPositionParams
+  , ''WorkDoneProgressParams
+  , ''PartialResultParams
+  ]
+  [ ("_context", [t| CompletionContext |]) ]
 deriveJSON lspOptions ''CompletionParams
 
--- -------------------------------------
-{-
-New in 3.0
------------
-Registration Options: CompletionRegistrationOptions options defined as follows:
-
-export interface CompletionRegistrationOptions extends TextDocumentRegistrationOptions {
-        /**
-         * The characters that trigger completion automatically.
-         */
-        triggerCharacters?: string[];
-
-        /**
-         * The server provides support to resolve additional
-         * information for a completion item.
-         */
-        resolveProvider?: boolean;
-}
--}
-
-data CompletionRegistrationOptions =
-  CompletionRegistrationOptions
-    { _documentSelector  :: Maybe DocumentSelector
-    , _triggerCharacters :: Maybe (List String)
-    , _resolveProvider   :: Maybe Bool
-    } deriving (Show, Read, Eq)
-
-deriveJSON lspOptions ''CompletionRegistrationOptions
-
--- -------------------------------------
-
-{-
-/**
- * Completion options.
- */
-interface CompletionOptions {
-    /**
-     * The server provides support to resolve additional information for a completion item.
-     */
-    resolveProvider?: boolean;
-
-    /**
-     * The characters that trigger completion automatically.
-     */
-    triggerCharacters?: string[];
-
-    /**
-     * The list of all possible characters that commit a completion. This field can be used
-     * if clients don't support individual commmit characters per completion item. See
-     * `ClientCapabilities.textDocument.completion.completionItem.commitCharactersSupport`.
-     *
-     * If a server provides both `allCommitCharacters` and commit characters on an individual
-     * completion item the once on the completion item win.
-     *
-     * @since 3.2.0
-     */
-    allCommitCharacters?: string[];
-}
--}
-
-data CompletionOptions =
-  CompletionOptions
-    { _workDoneProgressOptions :: WorkDoneProgressOptions
-    -- | The server provides support to resolve additional information for a completion item.
-    , _resolveProvider         :: Maybe Bool
-    -- | The characters that trigger completion automatically.
-    , _triggerCharacters       :: Maybe [String]
-    -- | The list of all possible characters that commit a completion. This field can be used
-    -- if clients don't support individual commmit characters per completion item. See
-    -- `_commitCharactersSupport`.
-    -- Since LSP 3.2.0
-    -- @since 0.18.0.0
-    , _allCommitCharacters     :: Maybe [String]
-    } deriving (Read,Show,Eq)
-
-deriveJSONExtendFields lspOptions ''CompletionOptions ["_workDoneProgressOptions"]
-
--- ---------------------------------------------------------------------
-{-
-Completion Item Resolve Request
-
-https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#completion-item-resolve-request
-
-The request is sent from the client to the server to resolve additional
-information for a given completion item.
-
-Request
-
-    method: 'completionItem/resolve'
-    params: CompletionItem
-
-Response
-
-    result: CompletionItem
-    error: code and message set in case an exception happens during the completion resolve request.
--}

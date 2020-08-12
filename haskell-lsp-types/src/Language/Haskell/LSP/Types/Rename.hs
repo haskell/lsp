@@ -5,7 +5,7 @@ module Language.Haskell.LSP.Types.Rename where
 
 import Data.Aeson.TH
 import Data.Text (Text)
-import Language.Haskell.LSP.Types.Constants
+
 import Language.Haskell.LSP.Types.Location
 import Language.Haskell.LSP.Types.TextDocument
 import Language.Haskell.LSP.Types.Progress

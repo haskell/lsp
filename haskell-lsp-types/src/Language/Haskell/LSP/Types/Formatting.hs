@@ -4,7 +4,6 @@ module Language.Haskell.LSP.Types.Formatting where
 
 import Data.Aeson.TH
 import Data.Text (Text)
-import Language.Haskell.LSP.Types.Constants
 import Language.Haskell.LSP.Types.Location
 import Language.Haskell.LSP.Types.Progress
 import Language.Haskell.LSP.Types.TextDocument

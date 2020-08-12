@@ -6,13 +6,15 @@ module Language.Haskell.LSP.Types.ClientCapabilities where
 import           Data.Aeson.TH
 import qualified Data.Aeson as A
 import Data.Default
-import Language.Haskell.LSP.Types.Constants
 import Language.Haskell.LSP.Types.CodeAction
 import Language.Haskell.LSP.Types.Completion
 import Language.Haskell.LSP.Types.Diagnostic
-import Language.Haskell.LSP.Types.List
-import Language.Haskell.LSP.Types.MarkupContent
+import Language.Haskell.LSP.Types.Common
+import Language.Haskell.LSP.Types.Hover
+import Language.Haskell.LSP.Types.SignatureHelp
 import Language.Haskell.LSP.Types.Symbol
+import Language.Haskell.LSP.Types.References
+import Language.Haskell.LSP.Types.Utils
 
 -- ---------------------------------------------------------------------
 {-
@@ -636,113 +638,7 @@ $(deriveJSON lspOptions ''SynchronizationTextDocumentClientCapabilities)
 instance Default SynchronizationTextDocumentClientCapabilities where
   def = SynchronizationTextDocumentClientCapabilities def def def def
 
--- -------------------------------------
 
-data CompletionItemTagsClientCapabilities =
-  CompletionItemTagsClientCapabilities
-    { -- | The tag supported by the client.
-      _valueSet :: List CompletionItemTag
-    } deriving (Show, Read, Eq)
-
-$(deriveJSON lspOptions ''CompletionItemTagsClientCapabilities)
-
-data CompletionItemClientCapabilities =
-  CompletionItemClientCapabilities
-    { -- | Client supports snippets as insert text.
-      --
-      -- A snippet can define tab stops and placeholders with `$1`, `$2` and
-      -- `${3:foo}`. `$0` defines the final tab stop, it defaults to the end of
-      -- the snippet. Placeholders with equal identifiers are linked, that is
-      -- typing in one will update others too.
-      _snippetSupport :: Maybe Bool
-
-      -- | Client supports commit characters on a completion item.
-    , _commitCharactersSupport :: Maybe Bool
-
-      -- | Client supports the follow content formats for the documentation
-      -- property. The order describes the preferred format of the client.
-    , _documentationFormat :: Maybe (List MarkupKind)
-
-      -- | Client supports the deprecated property on a completion item.
-    , _deprecatedSupport :: Maybe Bool
-
-      -- | Client supports the preselect property on a completion item.
-    , _preselectSupport :: Maybe Bool
-
-      -- | Client supports the tag property on a completion item. Clients
-      -- supporting tags have to handle unknown tags gracefully. Clients
-      -- especially need to preserve unknown tags when sending a
-      -- completion item back to the server in a resolve call.
-    , _tagSupport :: Maybe CompletionItemTagsClientCapabilities
-    } deriving (Show, Read, Eq)
-
-$(deriveJSON lspOptions ''CompletionItemClientCapabilities)
-
-data CompletionItemKindClientCapabilities =
-  CompletionItemKindClientCapabilities
-    { -- | The completion item kind values the client supports. When this
-      -- property exists the client also guarantees that it will
-      --  handle values outside its set gracefully and falls back
-      --  to a default value when unknown.
-      _valueSet :: Maybe (List CompletionItemKind)
-    }
-  deriving (Show, Read, Eq)
-
-$(deriveJSON lspOptions ''CompletionItemKindClientCapabilities)
-
-data CompletionClientCapabilities =
-  CompletionClientCapabilities
-    { _dynamicRegistration :: Maybe Bool -- ^Whether completion supports dynamic
-                                         -- registration.
-    , _completionItem :: Maybe CompletionItemClientCapabilities
-    , _completionItemKind :: Maybe CompletionItemKindClientCapabilities
-    , _contextSupport :: Maybe Bool
-    } deriving (Show, Read, Eq)
-
-$(deriveJSON lspOptions ''CompletionClientCapabilities)
-
--- -------------------------------------
-
-data HoverClientCapabilities =
-  HoverClientCapabilities
-    { _dynamicRegistration :: Maybe Bool
-    , _contentFormat :: Maybe (List MarkupKind)
-    } deriving (Show, Read, Eq)
-
-$(deriveJSON lspOptions ''HoverClientCapabilities)
-
--- -------------------------------------
-
-data SignatureInformationClientCapabilities =
-  SignatureInformationClientCapabilities
-    { -- | Client supports the follow content formats for the documentation
-      -- property. The order describes the preferred format of the client.
-      documentationFormat :: Maybe (List MarkupKind)
-    }
-  deriving (Show, Read, Eq)
-
-$(deriveJSON lspOptions ''SignatureInformationClientCapabilities)
-
-data SignatureHelpClientCapabilities =
-  SignatureHelpClientCapabilities
-    { -- | Whether signature help supports dynamic registration.
-      _dynamicRegistration :: Maybe Bool
-
-      -- | The client supports the following `SignatureInformation`
-      -- specific properties.
-    , _signatureInformation :: Maybe SignatureInformationClientCapabilities
-    } deriving (Show, Read, Eq)
-
-$(deriveJSON lspOptions ''SignatureHelpClientCapabilities)
-
--- -------------------------------------
-
-data ReferencesClientCapabilities =
-  ReferencesClientCapabilities
-    { _dynamicRegistration :: Maybe Bool
-    } deriving (Show, Read, Eq)
-
-$(deriveJSON lspOptions ''ReferencesClientCapabilities)
 
 -- -------------------------------------
 

@@ -7,7 +7,7 @@ module Language.Haskell.LSP.Types.Window where
 import qualified Data.Aeson                                 as A
 import           Data.Aeson.TH
 import           Data.Text                                  (Text)
-import           Language.Haskell.LSP.Types.Constants
+import           Language.Haskell.LSP.Types.Utils
 
 -- ---------------------------------------------------------------------
 {-

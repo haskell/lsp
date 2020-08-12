@@ -4,8 +4,9 @@ module Language.Haskell.LSP.Types.WorkspaceFolders where
 
 import           Data.Aeson.TH
 import           Data.Text                      ( Text )
-import           Language.Haskell.LSP.Types.Constants
-import           Language.Haskell.LSP.Types.List
+
+import           Language.Haskell.LSP.Types.Common
+import           Language.Haskell.LSP.Types.Utils
 
 {-
 Workspace folders request (:arrow_right_hook:)

@@ -4,6 +4,7 @@ module Language.Haskell.LSP.Types
   , module Language.Haskell.LSP.Types.CodeLens
   , module Language.Haskell.LSP.Types.Color
   , module Language.Haskell.LSP.Types.Command
+  , module Language.Haskell.LSP.Types.Common
   , module Language.Haskell.LSP.Types.Completion
   , module Language.Haskell.LSP.Types.Diagnostic
   , module Language.Haskell.LSP.Types.DocumentFilter
@@ -11,7 +12,6 @@ module Language.Haskell.LSP.Types
   , module Language.Haskell.LSP.Types.FoldingRange
   , module Language.Haskell.LSP.Types.Formatting
   , module Language.Haskell.LSP.Types.Hover
-  , module Language.Haskell.LSP.Types.List
   , module Language.Haskell.LSP.Types.Location
   , module Language.Haskell.LSP.Types.LspId
   , module Language.Haskell.LSP.Types.MarkupContent
@@ -20,6 +20,7 @@ module Language.Haskell.LSP.Types
   , module Language.Haskell.LSP.Types.Progress
   , module Language.Haskell.LSP.Types.References
   , module Language.Haskell.LSP.Types.Rename
+  , module Language.Haskell.LSP.Types.SignatureHelp
   , module Language.Haskell.LSP.Types.StaticRegistrationOptions
   , module Language.Haskell.LSP.Types.Symbol
   , module Language.Haskell.LSP.Types.Synonyms
@@ -43,7 +44,7 @@ import           Language.Haskell.LSP.Types.Empty
 import           Language.Haskell.LSP.Types.FoldingRange
 import           Language.Haskell.LSP.Types.Formatting
 import           Language.Haskell.LSP.Types.Hover
-import           Language.Haskell.LSP.Types.List
+import           Language.Haskell.LSP.Types.Common
 import           Language.Haskell.LSP.Types.Location
 import           Language.Haskell.LSP.Types.LspId
 import           Language.Haskell.LSP.Types.MarkupContent
@@ -52,6 +53,7 @@ import           Language.Haskell.LSP.Types.Message
 import           Language.Haskell.LSP.Types.Progress
 import           Language.Haskell.LSP.Types.References
 import           Language.Haskell.LSP.Types.Rename
+import           Language.Haskell.LSP.Types.SignatureHelp
 import           Language.Haskell.LSP.Types.StaticRegistrationOptions
 import           Language.Haskell.LSP.Types.Symbol
 import           Language.Haskell.LSP.Types.Synonyms

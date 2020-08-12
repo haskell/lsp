@@ -3,7 +3,6 @@ module Language.Haskell.LSP.Types.DocumentHighlight where
 
 import Data.Aeson
 import Data.Aeson.TH
-import Language.Haskell.LSP.Types.Constants
 import Language.Haskell.LSP.Types.Location
 import Language.Haskell.LSP.Types.Progress
 import Language.Haskell.LSP.Types.Utils

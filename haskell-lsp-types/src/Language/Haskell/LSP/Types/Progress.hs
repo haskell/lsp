@@ -12,7 +12,7 @@ import qualified Data.Aeson as A
 import           Data.Aeson.TH
 import           Data.Maybe (catMaybes)
 import           Data.Text (Text)
-import           Language.Haskell.LSP.Types.Constants
+import           Language.Haskell.LSP.Types.Utils
 
 -- | A token used to report progress back or return partial results for a
 -- specific request.

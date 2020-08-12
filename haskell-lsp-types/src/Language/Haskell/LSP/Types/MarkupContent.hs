@@ -14,7 +14,7 @@ import           Data.Aeson
 import           Data.Aeson.TH
 import           Data.Monoid                                    ((<>))
 import           Data.Text                                      (Text)
-import           Language.Haskell.LSP.Types.Constants
+import           Language.Haskell.LSP.Types.Utils
 
 {-
 /**

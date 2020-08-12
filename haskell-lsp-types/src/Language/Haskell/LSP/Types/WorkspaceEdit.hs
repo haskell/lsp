@@ -9,10 +9,11 @@ import qualified Data.HashMap.Strict                        as H
 import           Data.Monoid                                ((<>))
 import           Data.Text                                  (Text)
 import qualified Data.Text                                  as T
-import           Language.Haskell.LSP.Types.Constants
-import           Language.Haskell.LSP.Types.List
+
+import           Language.Haskell.LSP.Types.Common
 import           Language.Haskell.LSP.Types.Location
 import           Language.Haskell.LSP.Types.Uri
+import           Language.Haskell.LSP.Types.Utils
 
 -- ---------------------------------------------------------------------
 {-

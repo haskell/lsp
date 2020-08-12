@@ -22,9 +22,8 @@ import           Data.Scientific                            (floatingOrInteger)
 import           Data.Text                                  (Text)
 import qualified Data.Text                                  as T
 import           Language.Haskell.LSP.Types.ClientCapabilities
-import           Language.Haskell.LSP.Types.Constants
 import           Language.Haskell.LSP.Types.Diagnostic
-import           Language.Haskell.LSP.Types.List
+import           Language.Haskell.LSP.Types.Common
 import           Language.Haskell.LSP.Types.Location
 import           Language.Haskell.LSP.Types.LspId
 import           Language.Haskell.LSP.Types.Method
@@ -127,6 +126,7 @@ data InitializeParams =
   --
   -- @since 0.7.0.0
   , _workspaceFolders      :: Maybe (List WorkspaceFolder)
+  , _workDoneToken         :: Maybe ProgressToken
   } deriving (Show, Read, Eq)
 
 {-# DEPRECATED _rootPath "Use _rootUri" #-}
@@ -994,147 +994,6 @@ data PublishDiagnosticsParams =
 
 deriveJSON lspOptions ''PublishDiagnosticsParams
 
--- ---------------------------------------------------------------------
-{-
-Signature Help Request
-
-https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#signature-help-request
-
-The signature help request is sent from the client to the server to request
-signature information at a given cursor position.
-
-    Changed: In 2.0 the request uses TextDocumentPositionParams with proper
-    textDocument and position properties. In 1.0 the uri of the referenced text
-    document was inlined into the params object.
-
-Request
-
-    method: 'textDocument/signatureHelp'
-    params: TextDocumentPositionParams
-
-Response
-
-    result: SignatureHelp defined as follows:
-
-/**
- * Signature help represents the signature of something
- * callable. There can be multiple signature but only one
- * active and only one active parameter.
- */
-interface SignatureHelp {
-    /**
-     * One or more signatures.
-     */
-    signatures: SignatureInformation[];
-
-    /**
-     * The active signature.
-     */
-    activeSignature?: number;
-
-    /**
-     * The active parameter of the active signature.
-     */
-    activeParameter?: number;
-}
-
-/**
- * Represents the signature of something callable. A signature
- * can have a label, like a function-name, a doc-comment, and
- * a set of parameters.
- */
-interface SignatureInformation {
-    /**
-     * The label of this signature. Will be shown in
-     * the UI.
-     */
-    label: string;
-
-    /**
-     * The human-readable doc-comment of this signature. Will be shown
-     * in the UI but can be omitted.
-     */
-    documentation?: string;
-
-    /**
-     * The parameters of this signature.
-     */
-    parameters?: ParameterInformation[];
-}
-
-/**
- * Represents a parameter of a callable-signature. A parameter can
- * have a label and a doc-comment.
- */
-interface ParameterInformation {
-    /**
-     * The label of this signature. Will be shown in
-     * the UI.
-     */
-    label: string;
-
-    /**
-     * The human-readable doc-comment of this signature. Will be shown
-     * in the UI but can be omitted.
-     */
-    documentation?: string;
-}
-
-    error: code and message set in case an exception happens during the
-    signature help request.
--}
-
-
-data ParameterInformation =
-  ParameterInformation
-    { _label         :: Text
-    , _documentation :: Maybe Text
-    } deriving (Read,Show,Eq)
-deriveJSON lspOptions ''ParameterInformation
-
-
--- -------------------------------------
-
-data SignatureInformation =
-  SignatureInformation
-    { _label         :: Text
-    , _documentation :: Maybe Text
-    , _parameters    :: Maybe [ParameterInformation]
-    } deriving (Read,Show,Eq)
-
-deriveJSON lspOptions ''SignatureInformation
-
-data SignatureHelp =
-  SignatureHelp
-    { _signatures      :: List SignatureInformation
-    , _activeSignature :: Maybe Int -- ^ The active signature
-    , _activeParameter :: Maybe Int -- ^ The active parameter of the active signature
-    } deriving (Read,Show,Eq)
-
-deriveJSON lspOptions ''SignatureHelp
-
--- -------------------------------------
-{-
-New in 3.0
-----------
-Registration Options: SignatureHelpRegistrationOptions defined as follows:
-
-export interface SignatureHelpRegistrationOptions extends TextDocumentRegistrationOptions {
-        /**
-         * The characters that trigger signature help
-         * automatically.
-         */
-        triggerCharacters?: string[];
-}
--}
-
-data SignatureHelpRegistrationOptions =
-  SignatureHelpRegistrationOptions
-    { _textDocumentRegistrationOptions :: TextDocumentRegistrationOptions
-    , _signatureHelpOptions            :: SignatureHelpOptions
-    } deriving (Show, Read, Eq)
-
-deriveJSONExtendFields lspOptions ''SignatureHelpRegistrationOptions ["_textDocumentRegistrationOptions", "_signatureHelpOptions"]
 
 -- ---------------------------------------------------------------------
 {-
@@ -1232,11 +1091,9 @@ Response
            workspace symbol request.
 -}
 
-data WorkspaceSymbolParams =
-  WorkspaceSymbolParams
-    { _query :: Text -- ^ A query string to filter symbols by. Clients may send an empty string here to request all symbols.
-    , _workDoneToken :: Maybe ProgressToken -- ^ An optional token that a server can use to report work done progress.
-    } deriving (Read,Show,Eq)
+
+makeExtendingDatatype "WorkspaceSymbolParams" [''WorkDoneProgressParams, ''PartialResultParams]
+  [("_query", [t| String |])]
 
 deriveJSON lspOptions ''WorkspaceSymbolParams
 

@@ -10,9 +10,9 @@ import           Data.Aeson.TH
 import           Data.Scientific
 import           Data.Text
 import           GHC.Generics
-import           Language.Haskell.LSP.Types.Constants
-import           Language.Haskell.LSP.Types.List
+import           Language.Haskell.LSP.Types.Common
 import           Language.Haskell.LSP.Types.Location
+import           Language.Haskell.LSP.Types.Utils
 
 -- ---------------------------------------------------------------------
 {-
