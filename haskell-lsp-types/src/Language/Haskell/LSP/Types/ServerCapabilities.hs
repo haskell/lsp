@@ -381,7 +381,7 @@ data ServerCapabilities =
       -- @since 0.7.0.0
     , _implementationProvider           :: Maybe (Bool |? ImplementationOptions |? ImplementationRegistrationOptions)
       -- | The server provides find references support.
-    , _referencesProvider               :: Maybe (Bool |? ReferenceOptions)
+    , _referencesProvider               :: Maybe (Bool |? ReferenceOptions) -- For some reason the spec doesn't include ReferenceRegistrationOptions here
       -- | The server provides document highlight support.
     , _documentHighlightProvider        :: Maybe (Bool |? DocumentHighlightOptions)
       -- | The server provides document symbol support.

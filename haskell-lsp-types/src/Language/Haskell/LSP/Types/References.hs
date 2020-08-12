@@ -12,18 +12,10 @@ import Language.Haskell.LSP.Types.Utils
 
 data ReferencesClientCapabilities =
   ReferencesClientCapabilities
-    { _dynamicRegistration :: Maybe Bool
+    { -- | Whether references supports dynamic registration.
+      _dynamicRegistration :: Maybe Bool
     } deriving (Show, Read, Eq)
-
-$(deriveJSON lspOptions ''ReferencesClientCapabilities)
-
-data ReferenceContext =
-  ReferenceContext
-    { -- | Include the declaration of the current symbol.
-      _includeDeclaration :: Bool
-    } deriving (Read,Show,Eq)
-
-deriveJSON lspOptions ''ReferenceContext
+deriveJSON lspOptions ''ReferencesClientCapabilities
 
 makeExtendingDatatype "ReferenceOptions" [''WorkDoneProgressOptions] []
 deriveJSON lspOptions ''ReferenceOptions
@@ -34,6 +26,13 @@ makeExtendingDatatype "ReferenceRegistrationOptions"
   ]
   []
 deriveJSON lspOptions ''ReferenceRegistrationOptions
+
+data ReferenceContext =
+  ReferenceContext
+    { -- | Include the declaration of the current symbol.
+      _includeDeclaration :: Bool
+    } deriving (Read,Show,Eq)
+deriveJSON lspOptions ''ReferenceContext
 
 makeExtendingDatatype "ReferenceParams"
   [ ''TextDocumentPositionParams
