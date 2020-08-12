@@ -16,6 +16,7 @@ import Language.Haskell.LSP.Types.Hover
 import Language.Haskell.LSP.Types.SignatureHelp
 import Language.Haskell.LSP.Types.Symbol
 import Language.Haskell.LSP.Types.References
+import Language.Haskell.LSP.Types.TypeDefinition
 import Language.Haskell.LSP.Types.Utils
 
 -- ---------------------------------------------------------------------
@@ -706,18 +707,6 @@ data OnTypeFormattingClientCapabilities =
     } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''OnTypeFormattingClientCapabilities)
-
--- -------------------------------------
-
-data TypeDefinitionClientCapabilities =
-  TypeDefinitionClientCapabilities
-    { -- | Whether typeDefinition supports dynamic registration. If this is set to `true`
-      --  the client supports the new `(TextDocumentRegistrationOptions & StaticRegistrationOptions)`
-      --  return value for the corresponding server capability as well.
-      _dynamicRegistration :: Maybe Bool
-    } deriving (Show, Read, Eq)
-
-$(deriveJSON lspOptions ''TypeDefinitionClientCapabilities)
 
 -- -------------------------------------
 --

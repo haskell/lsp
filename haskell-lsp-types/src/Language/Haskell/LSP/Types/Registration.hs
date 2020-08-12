@@ -48,6 +48,7 @@ import           Language.Haskell.LSP.Types.Rename
 import           Language.Haskell.LSP.Types.SignatureHelp
 import           Language.Haskell.LSP.Types.Symbol
 import           Language.Haskell.LSP.Types.TextDocument
+import           Language.Haskell.LSP.Types.TypeDefinition
 import           Language.Haskell.LSP.Types.Utils
 
 

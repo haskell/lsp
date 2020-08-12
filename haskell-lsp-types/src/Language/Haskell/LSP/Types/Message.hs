@@ -41,6 +41,7 @@ import           Language.Haskell.LSP.Types.References
 import           Language.Haskell.LSP.Types.SignatureHelp
 import           Language.Haskell.LSP.Types.Symbol
 import           Language.Haskell.LSP.Types.TextDocument
+import           Language.Haskell.LSP.Types.TypeDefinition
 import           Language.Haskell.LSP.Types.Utils
 import           Language.Haskell.LSP.Types.Window
 import           Language.Haskell.LSP.Types.WorkspaceEdit
@@ -91,7 +92,7 @@ type family MessageParams (m :: Method p t) :: Type where
   MessageParams TextDocumentSignatureHelp          = SignatureHelpParams
   MessageParams TextDocumentDeclaration            = DeclarationParams
   MessageParams TextDocumentDefinition             = DefinitionParams
-  MessageParams TextDocumentTypeDefinition         = TextDocumentPositionParams
+  MessageParams TextDocumentTypeDefinition         = TypeDefinitionParams
   MessageParams TextDocumentImplementation         = TextDocumentPositionParams
   MessageParams TextDocumentReferences             = ReferenceParams
   MessageParams TextDocumentDocumentHighlight      = TextDocumentPositionParams
@@ -155,7 +156,7 @@ type family ResponseParams (m :: Method p Request) :: Type where
   ResponseParams TextDocumentSignatureHelp     = Maybe SignatureHelp
   ResponseParams TextDocumentDeclaration       = Maybe (Location |? List Location |? List LocationLink)
   ResponseParams TextDocumentDefinition        = Maybe (Location |? List Location |? List LocationLink)
-  ResponseParams TextDocumentTypeDefinition    = LocationResponseParams
+  ResponseParams TextDocumentTypeDefinition    = Maybe (Location |? List Location |? List LocationLink)
   ResponseParams TextDocumentImplementation    = LocationResponseParams
   ResponseParams TextDocumentReferences        = List Location
   ResponseParams TextDocumentDocumentHighlight = List DocumentHighlight

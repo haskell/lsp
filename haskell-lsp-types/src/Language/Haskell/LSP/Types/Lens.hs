@@ -31,6 +31,7 @@ import           Language.Haskell.LSP.Types.SignatureHelp
 import           Language.Haskell.LSP.Types.ServerCapabilities
 import           Language.Haskell.LSP.Types.Symbol
 import           Language.Haskell.LSP.Types.TextDocument
+import           Language.Haskell.LSP.Types.TypeDefinition
 import           Language.Haskell.LSP.Types.Window
 import           Language.Haskell.LSP.Types.WorkspaceEdit
 import           Language.Haskell.LSP.Types.WorkspaceFolders

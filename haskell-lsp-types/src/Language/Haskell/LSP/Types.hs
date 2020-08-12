@@ -27,6 +27,7 @@ module Language.Haskell.LSP.Types
   , module Language.Haskell.LSP.Types.Symbol
   , module Language.Haskell.LSP.Types.Synonyms
   , module Language.Haskell.LSP.Types.TextDocument
+  , module Language.Haskell.LSP.Types.TypeDefinition
   , module Language.Haskell.LSP.Types.Uri
   , module Language.Haskell.LSP.Types.Window
   , module Language.Haskell.LSP.Types.WorkspaceEdit
@@ -62,6 +63,7 @@ import           Language.Haskell.LSP.Types.StaticRegistrationOptions
 import           Language.Haskell.LSP.Types.Symbol
 import           Language.Haskell.LSP.Types.Synonyms
 import           Language.Haskell.LSP.Types.TextDocument
+import           Language.Haskell.LSP.Types.TypeDefinition
 import           Language.Haskell.LSP.Types.Uri
 import           Language.Haskell.LSP.Types.Window
 import           Language.Haskell.LSP.Types.WorkspaceEdit

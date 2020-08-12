@@ -27,6 +27,7 @@ import Language.Haskell.LSP.Types.SignatureHelp
 import Language.Haskell.LSP.Types.StaticRegistrationOptions
 import Language.Haskell.LSP.Types.Symbol
 import Language.Haskell.LSP.Types.TextDocument
+import Language.Haskell.LSP.Types.TypeDefinition
 import Language.Haskell.LSP.Types.Utils
 
 -- ---------------------------------------------------------------------
@@ -296,44 +297,6 @@ instance ToJSON TDS where
 -- ---------------------------------------------------------------------
 
 {-
-Goto Type Definition Request (:leftwards_arrow_with_hook:)
-Since version 3.6.0
-
-The goto type definition request is sent from the client to the server to resolve the type definition location of a symbol at a given text document position.
-
-Request:
-
-method: ‘textDocument/typeDefinition’
-params: TextDocumentPositionParams
-Response:
-
-result: Location | Location[] | null
-error: code and message set in case an exception happens during the definition request.
-Registration Options: TextDocumentRegistrationOptions
--}
-
-data TypeDefinitionOptions =
-  TypeDefinitionOptions
-    { _workDoneProgressOptions :: WorkDoneProgressOptions
-    } deriving (Read,Show,Eq)
-deriveJSONExtendFields lspOptions ''TypeDefinitionOptions ["_workDoneProgressOptions"]
-
-data TypeDefinitionRegistrationOptions =
-  TypeDefinitionRegistrationOptions
-    { _textDocumentRegistrationOptions :: TextDocumentRegistrationOptions
-    , _typeDefinitionOptions           :: TypeDefinitionOptions
-    , _staticRegistrationOptions       :: StaticRegistrationOptions
-    } deriving (Read,Show,Eq)
-deriveJSONExtendFields lspOptions ''TypeDefinitionRegistrationOptions
-  [ "_textDocumentRegistrationOptions"
-  , "_typeDefinitionOptions"
-  , "_staticRegistrationOptions"
-  ]
-
-
--- ---------------------------------------------------------------------
-
-{-
 Goto Implementation Request (:leftwards_arrow_with_hook:)
 Since version 3.6.0
 
@@ -421,7 +384,6 @@ deriveJSON lspOptions ''WorkspaceFoldersServerCapabilities
 data WorkspaceServerCapabilities =
   WorkspaceServerCapabilities
     { -- | The server supports workspace folder. Since LSP 3.6
-      -- Since LSP 3.6.0
       --
       -- @since 0.7.0.0
       _workspaceFolders :: Maybe WorkspaceFoldersServerCapabilities
@@ -452,8 +414,7 @@ data ServerCapabilities =
       --
       -- @since 0.7.0.0
     , _typeDefinitionProvider           :: Maybe (Bool |? TypeDefinitionOptions |? TypeDefinitionRegistrationOptions)
-      -- | The server provides Goto Implementation support.
-      -- Since LSP 3.6
+      -- | The server provides Goto Implementation support. Since LSP 3.6
       --
       -- @since 0.7.0.0
     , _implementationProvider           :: Maybe (Bool |? ImplementationOptions |? ImplementationRegistrationOptions)

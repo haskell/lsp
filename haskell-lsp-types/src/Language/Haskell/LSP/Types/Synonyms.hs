@@ -103,6 +103,9 @@ type HoverResponse              = ResponseMessage TextDocumentHover
 type SignatureHelpRequest       = Message TextDocumentSignatureHelp
 type SignatureHelpResponse      = ResponseMessage TextDocumentSignatureHelp
 
+type DeclarationRequest      = Message TextDocumentDeclaration
+type DeclarationResponse     = ResponseMessage TextDocumentDeclaration
+
 type DefinitionRequest          = Message TextDocumentDefinition
 type DefinitionResponse         = ResponseMessage TextDocumentDefinition
 
