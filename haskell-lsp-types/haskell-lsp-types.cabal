@@ -24,7 +24,6 @@ library
   other-modules:       Language.Haskell.LSP.Types.ClientCapabilities
                      , Language.Haskell.LSP.Types.CodeAction
                      , Language.Haskell.LSP.Types.CodeLens
-                     , Language.Haskell.LSP.Types.Color
                      , Language.Haskell.LSP.Types.Command
                      , Language.Haskell.LSP.Types.Common
                      , Language.Haskell.LSP.Types.Completion
@@ -32,6 +31,7 @@ library
                      , Language.Haskell.LSP.Types.Declaration
                      , Language.Haskell.LSP.Types.Definition
                      , Language.Haskell.LSP.Types.Diagnostic
+                     , Language.Haskell.LSP.Types.DocumentColor
                      , Language.Haskell.LSP.Types.DocumentFilter
                      , Language.Haskell.LSP.Types.DocumentHighlight
                      , Language.Haskell.LSP.Types.DocumentLink

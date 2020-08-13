@@ -21,12 +21,12 @@ module Language.Haskell.LSP.Types.Message where
 import           Language.Haskell.LSP.Types.DataTypesJSON
 import           Language.Haskell.LSP.Types.CodeAction
 import           Language.Haskell.LSP.Types.CodeLens
-import           Language.Haskell.LSP.Types.Color
 import           Language.Haskell.LSP.Types.Command
 import           Language.Haskell.LSP.Types.Common
 import           Language.Haskell.LSP.Types.Completion
 import           Language.Haskell.LSP.Types.Declaration
 import           Language.Haskell.LSP.Types.Definition
+import           Language.Haskell.LSP.Types.DocumentColor
 import           Language.Haskell.LSP.Types.DocumentHighlight
 import           Language.Haskell.LSP.Types.DocumentLink
 import           Language.Haskell.LSP.Types.FoldingRange

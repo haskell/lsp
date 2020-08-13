@@ -11,12 +11,12 @@ module Language.Haskell.LSP.Types.Lens where
 import           Language.Haskell.LSP.Types.ClientCapabilities
 import           Language.Haskell.LSP.Types.CodeAction
 import           Language.Haskell.LSP.Types.CodeLens
-import           Language.Haskell.LSP.Types.Color
 import           Language.Haskell.LSP.Types.Command
 import           Language.Haskell.LSP.Types.Completion
 import           Language.Haskell.LSP.Types.DataTypesJSON
 import           Language.Haskell.LSP.Types.Definition
 import           Language.Haskell.LSP.Types.Diagnostic
+import           Language.Haskell.LSP.Types.DocumentColor
 import           Language.Haskell.LSP.Types.DocumentFilter
 import           Language.Haskell.LSP.Types.DocumentHighlight
 import           Language.Haskell.LSP.Types.DocumentLink
@@ -167,6 +167,18 @@ makeFieldsNoPrefix ''DocumentLinkRegistrationOptions
 makeFieldsNoPrefix ''DocumentLinkParams
 makeFieldsNoPrefix ''DocumentLink
 
+-- DocumentColor
+makeFieldsNoPrefix ''DocumentColorClientCapabilities
+makeFieldsNoPrefix ''DocumentColorOptions
+makeFieldsNoPrefix ''DocumentColorRegistrationOptions
+makeFieldsNoPrefix ''DocumentColorParams
+makeFieldsNoPrefix ''Color
+makeFieldsNoPrefix ''ColorInformation
+
+-- ColorPresentation
+makeFieldsNoPrefix ''ColorPresentationParams
+makeFieldsNoPrefix ''ColorPresentation
+
 -- DocumentHighlight
 makeFieldsNoPrefix ''DocumentHighlightClientCapabilities
 makeFieldsNoPrefix ''DocumentHighlightOptions
@@ -219,13 +231,6 @@ makeFieldsNoPrefix ''DiagnosticRelatedInformation
 -- Hover
 makeFieldsNoPrefix ''Hover
 makeFieldsNoPrefix ''HoverRegistrationOptions
-
--- Color
-makeFieldsNoPrefix ''Color
-makeFieldsNoPrefix ''ColorInformation
-makeFieldsNoPrefix ''DocumentColorParams
-makeFieldsNoPrefix ''ColorPresentationParams
-makeFieldsNoPrefix ''ColorPresentation
 
 -- Folding Range
 makeFieldsNoPrefix ''FoldingRange
