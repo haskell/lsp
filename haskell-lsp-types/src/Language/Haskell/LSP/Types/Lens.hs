@@ -59,7 +59,6 @@ makeFieldsNoPrefix ''SignatureHelpSignatureInformation
 makeFieldsNoPrefix ''SignatureHelpParameterInformation
 makeFieldsNoPrefix ''SignatureHelpClientCapabilities
 makeFieldsNoPrefix ''ReferencesClientCapabilities
-makeFieldsNoPrefix ''DocumentHighlightClientCapabilities
 makeFieldsNoPrefix ''DocumentSymbolKindClientCapabilities
 makeFieldsNoPrefix ''DocumentSymbolClientCapabilities
 makeFieldsNoPrefix ''FormattingClientCapabilities
@@ -125,7 +124,6 @@ makeFieldsNoPrefix ''SignatureHelp
 makeFieldsNoPrefix ''SignatureHelpRegistrationOptions
 makeFieldsNoPrefix ''ReferenceContext
 makeFieldsNoPrefix ''ReferenceParams
-makeFieldsNoPrefix ''DocumentHighlight
 makeFieldsNoPrefix ''WorkspaceSymbolParams
 makeFieldsNoPrefix ''CodeLensParams
 makeFieldsNoPrefix ''CodeLens
@@ -162,6 +160,15 @@ makeFieldsNoPrefix ''CompletionRegistrationOptions
 makeFieldsNoPrefix ''CodeActionContext
 makeFieldsNoPrefix ''CodeActionParams
 makeFieldsNoPrefix ''CodeAction
+
+-- DocumentHighlight
+concat <$> mapM makeFieldsNoPrefix
+  [ ''DocumentHighlightClientCapabilities
+  , ''DocumentHighlightOptions
+  , ''DocumentHighlightRegistrationOptions
+  , ''DocumentHighlightParams
+  , ''DocumentHighlight
+  ]
 
 -- DocumentFilter
 makeFieldsNoPrefix ''DocumentFilter

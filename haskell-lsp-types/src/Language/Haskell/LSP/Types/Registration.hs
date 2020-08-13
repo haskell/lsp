@@ -37,6 +37,7 @@ import           Language.Haskell.LSP.Types.Completion
 import           Language.Haskell.LSP.Types.DataTypesJSON
 import           Language.Haskell.LSP.Types.Declaration
 import           Language.Haskell.LSP.Types.Definition
+import           Language.Haskell.LSP.Types.DocumentHighlight
 import           Language.Haskell.LSP.Types.ServerCapabilities
 import           Language.Haskell.LSP.Types.Empty
 import           Language.Haskell.LSP.Types.FoldingRange
@@ -124,8 +125,7 @@ type family RegistrationOptions (m :: Method FromClient t) :: Type where
   RegistrationOptions TextDocumentTypeDefinition         = TypeDefinitionRegistrationOptions
   RegistrationOptions TextDocumentImplementation         = ImplementationRegistrationOptions
   RegistrationOptions TextDocumentReferences             = ReferenceRegistrationOptions
-  -- TODO: Add me once textDocument/highlights is implemented
-  -- RegistrationOptions TextDocumentHighlights             = DocumentHighlightRegistrationOptions
+  RegistrationOptions TextDocumentDocumentHighlight      = DocumentHighlightRegistrationOptions
   RegistrationOptions TextDocumentDocumentSymbol         = DocumentSymbolRegistrationOptions
   RegistrationOptions TextDocumentCodeAction             = CodeActionRegistrationOptions
   RegistrationOptions TextDocumentCodeLens               = CodeLensRegistrationOptions

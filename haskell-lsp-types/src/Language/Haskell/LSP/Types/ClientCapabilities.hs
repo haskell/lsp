@@ -11,6 +11,7 @@ import Language.Haskell.LSP.Types.Completion
 import Language.Haskell.LSP.Types.Diagnostic
 import Language.Haskell.LSP.Types.Declaration
 import Language.Haskell.LSP.Types.Definition
+import Language.Haskell.LSP.Types.DocumentHighlight
 import Language.Haskell.LSP.Types.Common
 import Language.Haskell.LSP.Types.Hover
 import Language.Haskell.LSP.Types.Implementation
@@ -642,16 +643,6 @@ $(deriveJSON lspOptions ''SynchronizationTextDocumentClientCapabilities)
 instance Default SynchronizationTextDocumentClientCapabilities where
   def = SynchronizationTextDocumentClientCapabilities def def def def
 
-
-
--- -------------------------------------
-
-data DocumentHighlightClientCapabilities =
-  DocumentHighlightClientCapabilities
-    { _dynamicRegistration :: Maybe Bool
-    } deriving (Show, Read, Eq)
-
-$(deriveJSON lspOptions ''DocumentHighlightClientCapabilities)
 
 -- -------------------------------------
 

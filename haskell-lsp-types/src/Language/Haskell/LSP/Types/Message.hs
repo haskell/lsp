@@ -96,7 +96,7 @@ type family MessageParams (m :: Method p t) :: Type where
   MessageParams TextDocumentTypeDefinition         = TypeDefinitionParams
   MessageParams TextDocumentImplementation         = ImplementationParams
   MessageParams TextDocumentReferences             = ReferenceParams
-  MessageParams TextDocumentDocumentHighlight      = TextDocumentPositionParams
+  MessageParams TextDocumentDocumentHighlight      = DocumentHighlightParams
   MessageParams TextDocumentDocumentSymbol         = DocumentSymbolParams
   -- Code Action/Lens/Link
   MessageParams TextDocumentCodeAction             = CodeActionParams
@@ -159,8 +159,8 @@ type family ResponseParams (m :: Method p Request) :: Type where
   ResponseParams TextDocumentDefinition        = Maybe (Location |? List Location |? List LocationLink)
   ResponseParams TextDocumentTypeDefinition    = Maybe (Location |? List Location |? List LocationLink)
   ResponseParams TextDocumentImplementation    = Maybe (Location |? List Location |? List LocationLink)
-  ResponseParams TextDocumentReferences        = List Location
-  ResponseParams TextDocumentDocumentHighlight = List DocumentHighlight
+  ResponseParams TextDocumentReferences        = Maybe (List Location)
+  ResponseParams TextDocumentDocumentHighlight = Maybe (List DocumentHighlight)
   ResponseParams TextDocumentDocumentSymbol    = DSResult
   -- Code Action/Lens/Link
   ResponseParams TextDocumentCodeAction        = List CAResult
