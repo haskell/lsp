@@ -17,6 +17,7 @@ import Language.Haskell.LSP.Types.Completion
 import Language.Haskell.LSP.Types.Declaration
 import Language.Haskell.LSP.Types.Definition
 import Language.Haskell.LSP.Types.DocumentHighlight
+import Language.Haskell.LSP.Types.DocumentLink
 import Language.Haskell.LSP.Types.FoldingRange
 import Language.Haskell.LSP.Types.Formatting
 import Language.Haskell.LSP.Types.Hover
@@ -25,7 +26,6 @@ import Language.Haskell.LSP.Types.References
 import Language.Haskell.LSP.Types.Rename
 import Language.Haskell.LSP.Types.SignatureHelp
 import Language.Haskell.LSP.Types.DocumentSymbol
-import Language.Haskell.LSP.Types.TextDocument
 import Language.Haskell.LSP.Types.TypeDefinition
 import Language.Haskell.LSP.Types.Utils
 
@@ -294,38 +294,6 @@ instance ToJSON TDS where
     toJSON (TDSKind x) = toJSON x
 
 -- ---------------------------------------------------------------------
-{-
-New in 3.0
-----------
-
-/**
- * Document link options
- */
-export interface DocumentLinkOptions {
-        /**
-         * Document links have a resolve provider as well.
-         */
-        resolveProvider?: boolean;
-}
--}
-
-data DocumentLinkOptions =
-  DocumentLinkOptions
-    { -- | Document links have a resolve provider as well.
-      _resolveProvider :: Maybe Bool
-    } deriving (Show, Read, Eq)
-
-deriveJSON lspOptions ''DocumentLinkOptions
-
-data DocumentLinkRegistrationOptions =
-  DocumentLinkRegistrationOptions
-    { _textDocumentRegistrationOptions :: TextDocumentRegistrationOptions
-    , _documentLinkOptions             :: DocumentLinkOptions
-    } deriving (Read,Show,Eq)
-deriveJSONExtendFields lspOptions ''DocumentLinkRegistrationOptions
-  [ "_textDocumentRegistrationOptions"
-  , "_documentLinkOptions"
-  ]
 
 data WorkspaceFoldersServerCapabilities =
   WorkspaceFoldersServerCapabilities

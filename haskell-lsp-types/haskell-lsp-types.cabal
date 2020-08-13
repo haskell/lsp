@@ -34,6 +34,7 @@ library
                      , Language.Haskell.LSP.Types.Diagnostic
                      , Language.Haskell.LSP.Types.DocumentFilter
                      , Language.Haskell.LSP.Types.DocumentHighlight
+                     , Language.Haskell.LSP.Types.DocumentLink
                      , Language.Haskell.LSP.Types.FoldingRange
                      , Language.Haskell.LSP.Types.Formatting
                      , Language.Haskell.LSP.Types.Hover

@@ -38,7 +38,7 @@ import           Language.Haskell.LSP.Types.DataTypesJSON
 import           Language.Haskell.LSP.Types.Declaration
 import           Language.Haskell.LSP.Types.Definition
 import           Language.Haskell.LSP.Types.DocumentHighlight
-import           Language.Haskell.LSP.Types.ServerCapabilities
+import           Language.Haskell.LSP.Types.DocumentLink
 import           Language.Haskell.LSP.Types.Empty
 import           Language.Haskell.LSP.Types.FoldingRange
 import           Language.Haskell.LSP.Types.Formatting

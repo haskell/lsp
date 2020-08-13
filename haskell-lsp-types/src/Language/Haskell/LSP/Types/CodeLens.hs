@@ -61,4 +61,4 @@ data CodeLens =
     _xdata   :: Maybe Value
   } deriving (Read,Show,Eq)
 
-deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''CodeLens
+deriveJSON lspOptions ''CodeLens

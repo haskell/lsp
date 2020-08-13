@@ -19,6 +19,7 @@ import           Language.Haskell.LSP.Types.Definition
 import           Language.Haskell.LSP.Types.Diagnostic
 import           Language.Haskell.LSP.Types.DocumentFilter
 import           Language.Haskell.LSP.Types.DocumentHighlight
+import           Language.Haskell.LSP.Types.DocumentLink
 import           Language.Haskell.LSP.Types.FoldingRange
 import           Language.Haskell.LSP.Types.Formatting
 import           Language.Haskell.LSP.Types.Hover
@@ -65,7 +66,6 @@ makeFieldsNoPrefix ''OnTypeFormattingClientCapabilities
 makeFieldsNoPrefix ''DefinitionClientCapabilities
 makeFieldsNoPrefix ''TypeDefinitionClientCapabilities
 makeFieldsNoPrefix ''ImplementationClientCapabilities
-makeFieldsNoPrefix ''DocumentLinkClientCapabilities
 makeFieldsNoPrefix ''ColorProviderClientCapabilities
 makeFieldsNoPrefix ''RenameClientCapabilities
 makeFieldsNoPrefix ''PublishDiagnosticsClientCapabilities
@@ -80,7 +80,6 @@ makeFieldsNoPrefix ''InitializeError
 makeFieldsNoPrefix ''CompletionOptions
 makeFieldsNoPrefix ''SignatureHelpOptions
 makeFieldsNoPrefix ''DocumentOnTypeFormattingOptions
-makeFieldsNoPrefix ''DocumentLinkOptions
 makeFieldsNoPrefix ''ExecuteCommandOptions
 makeFieldsNoPrefix ''SaveOptions
 makeFieldsNoPrefix ''TextDocumentSyncOptions
@@ -118,8 +117,6 @@ makeFieldsNoPrefix ''SignatureHelpRegistrationOptions
 makeFieldsNoPrefix ''ReferenceContext
 makeFieldsNoPrefix ''ReferenceParams
 makeFieldsNoPrefix ''WorkspaceSymbolParams
-makeFieldsNoPrefix ''DocumentLinkParams
-makeFieldsNoPrefix ''DocumentLink
 makeFieldsNoPrefix ''FormattingOptions
 makeFieldsNoPrefix ''DocumentFormattingParams
 makeFieldsNoPrefix ''DocumentRangeFormattingParams
@@ -162,6 +159,13 @@ makeFieldsNoPrefix ''CodeLensOptions
 makeFieldsNoPrefix ''CodeLensRegistrationOptions
 makeFieldsNoPrefix ''CodeLensParams
 makeFieldsNoPrefix ''CodeLens
+
+-- DocumentLink
+makeFieldsNoPrefix ''DocumentLinkClientCapabilities
+makeFieldsNoPrefix ''DocumentLinkOptions
+makeFieldsNoPrefix ''DocumentLinkRegistrationOptions
+makeFieldsNoPrefix ''DocumentLinkParams
+makeFieldsNoPrefix ''DocumentLink
 
 -- DocumentHighlight
 makeFieldsNoPrefix ''DocumentHighlightClientCapabilities

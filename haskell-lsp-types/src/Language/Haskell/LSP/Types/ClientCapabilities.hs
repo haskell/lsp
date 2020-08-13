@@ -13,6 +13,7 @@ import Language.Haskell.LSP.Types.Diagnostic
 import Language.Haskell.LSP.Types.Declaration
 import Language.Haskell.LSP.Types.Definition
 import Language.Haskell.LSP.Types.DocumentHighlight
+import Language.Haskell.LSP.Types.DocumentLink
 import Language.Haskell.LSP.Types.DocumentSymbol
 import Language.Haskell.LSP.Types.Common
 import Language.Haskell.LSP.Types.Hover
@@ -671,15 +672,6 @@ data OnTypeFormattingClientCapabilities =
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''OnTypeFormattingClientCapabilities
-
--- -------------------------------------
-
-data DocumentLinkClientCapabilities =
-  DocumentLinkClientCapabilities
-    { _dynamicRegistration :: Maybe Bool
-    } deriving (Show, Read, Eq)
-
-deriveJSON lspOptions ''DocumentLinkClientCapabilities
 
 -- -------------------------------------
 

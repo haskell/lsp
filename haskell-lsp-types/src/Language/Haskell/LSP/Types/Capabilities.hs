@@ -13,7 +13,7 @@ import Language.Haskell.LSP.Types.ServerCapabilities
 import Language.Haskell.LSP.Types
 
 -- | The whole shebang. The real deal.
--- Capabilities for full conformance to the current (v3.10) LSP specification.
+-- Capabilities for full conformance to the current (v3.15) LSP specification.
 fullCaps :: ClientCapabilities
 fullCaps = capsForVersion (LSPVersion maxBound maxBound)
 
@@ -103,7 +103,7 @@ capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) Noth
           (since 3 6 (ImplementationClientCapabilities dynamicReg (since 3 14 True)))
           (Just codeActionCapability)
           (Just (CodeLensClientCapabilities dynamicReg))
-          (Just (DocumentLinkClientCapabilities dynamicReg))
+          (Just (DocumentLinkClientCapabilities dynamicReg (since 3 15 True)))
           (since 3 6 (ColorProviderClientCapabilities dynamicReg))
           (Just (RenameClientCapabilities dynamicReg (since 3 12 True)))
           (Just publishDiagnosticsCapabilities)

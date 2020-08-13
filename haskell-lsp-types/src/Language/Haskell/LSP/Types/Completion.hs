@@ -264,7 +264,7 @@ data CompletionItem =
                               -- completion resolve request.
     } deriving (Read,Show,Eq)
 
-deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''CompletionItem
+deriveJSON lspOptions ''CompletionItem
 
 -- | Represents a collection of 'CompletionItem's to be presented in the editor.
 data CompletionList =

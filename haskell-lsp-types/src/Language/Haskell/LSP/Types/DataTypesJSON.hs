@@ -950,7 +950,7 @@ data FileEvent =
     , _xtype :: FileChangeType
     } deriving (Read,Show,Eq)
 
-deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''FileEvent
+deriveJSON lspOptions ''FileEvent
 
 data DidChangeWatchedFilesParams =
   DidChangeWatchedFilesParams
@@ -1096,96 +1096,6 @@ makeExtendingDatatype "WorkspaceSymbolParams" [''WorkDoneProgressParams, ''Parti
   [("_query", [t| String |])]
 
 deriveJSON lspOptions ''WorkspaceSymbolParams
-
-
--- ---------------------------------------------------------------------
-{-
-New in 3.0
-----------
-
-Document Link Request
-
-The document links request is sent from the client to the server to request the
-location of links in a document.
-
-Request:
-
-    method: 'textDocument/documentLink'
-    params: DocumentLinkParams, defined as follows
-
-interface DocumentLinkParams {
-        /**
-         * The document to provide document links for.
-         */
-        textDocument: TextDocumentIdentifier;
-}
-
-Response:
-
-    result: An array of DocumentLink, or null.
-
-/**
- * A document link is a range in a text document that links to an internal or external resource, like another
- * text document or a web site.
- */
-interface DocumentLink {
-        /**
-         * The range this link applies to.
-         */
-        range: Range;
-        /**
-         * The uri this link points to. If missing a resolve request is sent later.
-         */
-        target?: DocumentUri;
-}
-
-    error: code and message set in case an exception happens during the document link request.
-
-Registration Options: DocumentLinkRegistrationOptions defined as follows:
-
-export interface DocumentLinkRegistrationOptions extends TextDocumentRegistrationOptions {
-        /**
-         * Document links have a resolve provider as well.
-         */
-        resolveProvider?: boolean;
-}
--}
-
-data DocumentLinkParams =
-  DocumentLinkParams
-    { _textDocument :: TextDocumentIdentifier
-    , _workDoneToken :: Maybe ProgressToken -- ^ An optional token that a server can use to report work done progress.
-    } deriving (Read,Show,Eq)
-
-deriveJSON lspOptions ''DocumentLinkParams
-
-data DocumentLink =
-  DocumentLink
-    { _range  :: Range
-    , _target :: Maybe Text
-    } deriving (Show, Read, Eq)
-
-deriveJSON lspOptions ''DocumentLink
--- ---------------------------------------------------------------------
-{-
-New in 3.0
-----------
-
-Document Link Resolve Request
-
-The document link resolve request is sent from the client to the server to resolve the target of a given document link.
-
-Request:
-
-    method: 'documentLink/resolve'
-    params: DocumentLink
-
-Response:
-
-    result: DocumentLink
-    error: code and message set in case an exception happens during the document link resolve request.
-
--}
 
 -- ---------------------------------------------------------------------
 {-

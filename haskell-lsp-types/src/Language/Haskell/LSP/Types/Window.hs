@@ -84,7 +84,7 @@ data ShowMessageParams =
   , _message :: Text
   } deriving (Show, Read, Eq)
 
-deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''ShowMessageParams
+deriveJSON lspOptions ''ShowMessageParams
 
 -- ---------------------------------------------------------------------
 {-
@@ -149,7 +149,7 @@ data ShowMessageRequestParams =
     , _actions :: Maybe [MessageActionItem]
     } deriving (Show,Read,Eq)
 
-deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''ShowMessageRequestParams
+deriveJSON lspOptions ''ShowMessageRequestParams
 
 -- ---------------------------------------------------------------------
 {-
@@ -186,4 +186,4 @@ data LogMessageParams =
   , _message :: Text
   } deriving (Show, Read, Eq)
 
-deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''LogMessageParams
+deriveJSON lspOptions ''LogMessageParams

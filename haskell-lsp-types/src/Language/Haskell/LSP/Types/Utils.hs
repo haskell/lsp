@@ -9,7 +9,6 @@ module Language.Haskell.LSP.Types.Utils
   , makeRegHelper
   , makeExtendingDatatype
   , lspOptions
-  , customModifier
   ) where
 
 import Language.Haskell.TH
@@ -187,11 +186,15 @@ makeExtendingDatatype datatypeNameStr extends fields = do
   (\a -> [a]) <$> dataD (cxt []) datatypeName [] Nothing [constructor] derivs
 
 -- | Standard options for use when generating JSON instances
+-- NOTE: This needs to be in a separate file because of the TH stage restriction
 lspOptions :: Options
-lspOptions = defaultOptions { omitNothingFields = True, fieldLabelModifier = drop 1 }
- -- NOTE: This needs to be in a separate file because of the TH stage restriction
+lspOptions = defaultOptions { omitNothingFields = True, fieldLabelModifier = modifier }
+  where
+  modifier :: String -> String
+  -- For fields called data and type in the spec, we call them xdata and xtype
+  -- in haskell-lsp-types to avoid it clashing with the Haskell keywords. This
+  -- fixes up the json derivation
+  modifier "_xdata" = "data"
+  modifier "_xtype" = "type"
+  modifier xs = drop 1 xs
 
-customModifier :: String -> String
-customModifier "_xdata" = "data"
-customModifier "_xtype" = "type"
-customModifier xs = drop 1 xs

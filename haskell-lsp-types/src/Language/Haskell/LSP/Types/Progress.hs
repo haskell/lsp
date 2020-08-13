@@ -82,7 +82,7 @@ data ProgressParams t =
     , _value :: t
     } deriving (Show, Read, Eq, Functor)
 
-deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''ProgressParams
+deriveJSON lspOptions ''ProgressParams
 
 data SomeProgressParams
   = Begin WorkDoneProgressBeginParams
@@ -305,7 +305,7 @@ data WorkDoneProgressCancelParams =
     _token   :: ProgressToken
   } deriving (Show, Read, Eq)
 
-deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''WorkDoneProgressCancelParams
+deriveJSON lspOptions ''WorkDoneProgressCancelParams
 
 -- | The window/workDoneProgress/cancel notification is sent from the client to the server
 -- to inform the server that the user has pressed the cancel button on the progress UX.
@@ -318,7 +318,7 @@ data WorkDoneProgressCreateParams =
       _token :: ProgressToken
     } deriving (Show, Read, Eq)
 
-deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''WorkDoneProgressCreateParams
+deriveJSON lspOptions ''WorkDoneProgressCreateParams
 
 data WorkDoneProgressOptions =
   WorkDoneProgressOptions
