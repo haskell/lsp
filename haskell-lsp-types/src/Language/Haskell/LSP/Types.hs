@@ -26,7 +26,7 @@ module Language.Haskell.LSP.Types
   , module Language.Haskell.LSP.Types.Rename
   , module Language.Haskell.LSP.Types.SignatureHelp
   , module Language.Haskell.LSP.Types.StaticRegistrationOptions
-  , module Language.Haskell.LSP.Types.Symbol
+  , module Language.Haskell.LSP.Types.DocumentSymbol
   , module Language.Haskell.LSP.Types.Synonyms
   , module Language.Haskell.LSP.Types.TextDocument
   , module Language.Haskell.LSP.Types.TypeDefinition
@@ -64,7 +64,7 @@ import           Language.Haskell.LSP.Types.References
 import           Language.Haskell.LSP.Types.Rename
 import           Language.Haskell.LSP.Types.SignatureHelp
 import           Language.Haskell.LSP.Types.StaticRegistrationOptions
-import           Language.Haskell.LSP.Types.Symbol
+import           Language.Haskell.LSP.Types.DocumentSymbol
 import           Language.Haskell.LSP.Types.Synonyms
 import           Language.Haskell.LSP.Types.TextDocument
 import           Language.Haskell.LSP.Types.TypeDefinition

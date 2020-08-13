@@ -40,7 +40,7 @@ import           Language.Haskell.LSP.Types.Registration
 import           Language.Haskell.LSP.Types.Rename
 import           Language.Haskell.LSP.Types.References
 import           Language.Haskell.LSP.Types.SignatureHelp
-import           Language.Haskell.LSP.Types.Symbol
+import           Language.Haskell.LSP.Types.DocumentSymbol
 import           Language.Haskell.LSP.Types.TextDocument
 import           Language.Haskell.LSP.Types.TypeDefinition
 import           Language.Haskell.LSP.Types.Utils
@@ -161,7 +161,7 @@ type family ResponseParams (m :: Method p Request) :: Type where
   ResponseParams TextDocumentImplementation    = Maybe (Location |? List Location |? List LocationLink)
   ResponseParams TextDocumentReferences        = Maybe (List Location)
   ResponseParams TextDocumentDocumentHighlight = Maybe (List DocumentHighlight)
-  ResponseParams TextDocumentDocumentSymbol    = DSResult
+  ResponseParams TextDocumentDocumentSymbol    = Maybe (List DocumentSymbol |? List SymbolInformation)
   -- Code Action/Lens/Link
   ResponseParams TextDocumentCodeAction        = List CAResult
   ResponseParams TextDocumentCodeLens          = List CodeLens

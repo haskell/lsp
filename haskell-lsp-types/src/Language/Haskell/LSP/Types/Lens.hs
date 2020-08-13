@@ -30,7 +30,7 @@ import           Language.Haskell.LSP.Types.References
 import           Language.Haskell.LSP.Types.Rename
 import           Language.Haskell.LSP.Types.SignatureHelp
 import           Language.Haskell.LSP.Types.ServerCapabilities
-import           Language.Haskell.LSP.Types.Symbol
+import           Language.Haskell.LSP.Types.DocumentSymbol
 import           Language.Haskell.LSP.Types.TextDocument
 import           Language.Haskell.LSP.Types.TypeDefinition
 import           Language.Haskell.LSP.Types.Window
@@ -45,9 +45,9 @@ import           Control.Lens.TH
 makeFieldsNoPrefix ''WorkspaceEditClientCapabilities
 makeFieldsNoPrefix ''DidChangeConfigurationClientCapabilities
 makeFieldsNoPrefix ''DidChangeWatchedFilesClientCapabilities
-makeFieldsNoPrefix ''SymbolKindClientCapabilities
-makeFieldsNoPrefix ''SymbolClientCapabilities
-makeFieldsNoPrefix ''ExecuteClientCapabilities
+makeFieldsNoPrefix ''WorkspaceSymbolKindClientCapabilities
+makeFieldsNoPrefix ''WorkspaceSymbolClientCapabilities
+makeFieldsNoPrefix ''ExecuteCommandClientCapabilities
 makeFieldsNoPrefix ''WorkspaceClientCapabilities
 makeFieldsNoPrefix ''SynchronizationTextDocumentClientCapabilities
 makeFieldsNoPrefix ''CompletionItemTagsClientCapabilities
@@ -59,8 +59,6 @@ makeFieldsNoPrefix ''SignatureHelpSignatureInformation
 makeFieldsNoPrefix ''SignatureHelpParameterInformation
 makeFieldsNoPrefix ''SignatureHelpClientCapabilities
 makeFieldsNoPrefix ''ReferencesClientCapabilities
-makeFieldsNoPrefix ''DocumentSymbolKindClientCapabilities
-makeFieldsNoPrefix ''DocumentSymbolClientCapabilities
 makeFieldsNoPrefix ''FormattingClientCapabilities
 makeFieldsNoPrefix ''RangeFormattingClientCapabilities
 makeFieldsNoPrefix ''OnTypeFormattingClientCapabilities
@@ -162,13 +160,20 @@ makeFieldsNoPrefix ''CodeActionParams
 makeFieldsNoPrefix ''CodeAction
 
 -- DocumentHighlight
-concat <$> mapM makeFieldsNoPrefix
-  [ ''DocumentHighlightClientCapabilities
-  , ''DocumentHighlightOptions
-  , ''DocumentHighlightRegistrationOptions
-  , ''DocumentHighlightParams
-  , ''DocumentHighlight
-  ]
+makeFieldsNoPrefix ''DocumentHighlightClientCapabilities
+makeFieldsNoPrefix ''DocumentHighlightOptions
+makeFieldsNoPrefix ''DocumentHighlightRegistrationOptions
+makeFieldsNoPrefix ''DocumentHighlightParams
+makeFieldsNoPrefix ''DocumentHighlight
+
+-- DocumentSymbol
+makeFieldsNoPrefix ''DocumentSymbolKindClientCapabilities
+makeFieldsNoPrefix ''DocumentSymbolClientCapabilities
+makeFieldsNoPrefix ''DocumentSymbolOptions
+makeFieldsNoPrefix ''DocumentSymbolRegistrationOptions
+makeFieldsNoPrefix ''DocumentSymbolParams
+makeFieldsNoPrefix ''DocumentSymbol
+makeFieldsNoPrefix ''SymbolInformation
 
 -- DocumentFilter
 makeFieldsNoPrefix ''DocumentFilter
@@ -206,11 +211,6 @@ makeFieldsNoPrefix ''DiagnosticRelatedInformation
 -- Hover
 makeFieldsNoPrefix ''Hover
 makeFieldsNoPrefix ''HoverRegistrationOptions
-
--- Symbol
-makeFieldsNoPrefix ''DocumentSymbolParams
-makeFieldsNoPrefix ''DocumentSymbol
-makeFieldsNoPrefix ''SymbolInformation
 
 -- Color
 makeFieldsNoPrefix ''Color

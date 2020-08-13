@@ -51,7 +51,7 @@ library
                      , Language.Haskell.LSP.Types.ServerCapabilities
                      , Language.Haskell.LSP.Types.SignatureHelp
                      , Language.Haskell.LSP.Types.StaticRegistrationOptions
-                     , Language.Haskell.LSP.Types.Symbol
+                     , Language.Haskell.LSP.Types.DocumentSymbol
                      , Language.Haskell.LSP.Types.Synonyms
                      , Language.Haskell.LSP.Types.TextDocument
                      , Language.Haskell.LSP.Types.TypeDefinition

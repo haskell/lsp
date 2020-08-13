@@ -41,16 +41,16 @@ capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) Noth
           (Just (DidChangeConfigurationClientCapabilities dynamicReg))
           (Just (DidChangeWatchedFilesClientCapabilities dynamicReg))
           (Just symbolCapabilities)
-          (Just (ExecuteClientCapabilities dynamicReg))
+          (Just (ExecuteCommandClientCapabilities dynamicReg))
           (since 3 6 True)
           (since 3 6 True)
 
-    symbolCapabilities = SymbolClientCapabilities
+    symbolCapabilities = WorkspaceSymbolClientCapabilities
       dynamicReg
       (since 3 4 symbolKindCapabilities)
 
     symbolKindCapabilities =
-      SymbolKindClientCapabilities (Just sKs)
+      WorkspaceSymbolKindClientCapabilities (Just sKs)
 
     sKs
       | maj >= 3 && min >= 4 = List (oldSKs ++ newSKs)

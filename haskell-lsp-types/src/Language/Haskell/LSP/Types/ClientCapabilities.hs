@@ -12,11 +12,11 @@ import Language.Haskell.LSP.Types.Diagnostic
 import Language.Haskell.LSP.Types.Declaration
 import Language.Haskell.LSP.Types.Definition
 import Language.Haskell.LSP.Types.DocumentHighlight
+import Language.Haskell.LSP.Types.DocumentSymbol
 import Language.Haskell.LSP.Types.Common
 import Language.Haskell.LSP.Types.Hover
 import Language.Haskell.LSP.Types.Implementation
 import Language.Haskell.LSP.Types.SignatureHelp
-import Language.Haskell.LSP.Types.Symbol
 import Language.Haskell.LSP.Types.References
 import Language.Haskell.LSP.Types.TypeDefinition
 import Language.Haskell.LSP.Types.Utils
@@ -153,8 +153,8 @@ $(deriveJSON lspOptions ''DidChangeWatchedFilesClientCapabilities)
 
 -- -------------------------------------
 
-data SymbolKindClientCapabilities =
-  SymbolKindClientCapabilities
+data WorkspaceSymbolKindClientCapabilities =
+  WorkspaceSymbolKindClientCapabilities
    { -- | The symbol kind values the client supports. When this
      -- property exists the client also guarantees that it will
      -- handle values outside its set gracefully and falls back
@@ -166,10 +166,10 @@ data SymbolKindClientCapabilities =
      _valueSet :: Maybe (List SymbolKind)
    } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''SymbolKindClientCapabilities)
+$(deriveJSON lspOptions ''WorkspaceSymbolKindClientCapabilities)
 
-instance Default SymbolKindClientCapabilities where
-  def = SymbolKindClientCapabilities (Just $ List allKinds)
+instance Default WorkspaceSymbolKindClientCapabilities where
+  def = WorkspaceSymbolKindClientCapabilities (Just $ List allKinds)
     where allKinds = [ SkFile
                      , SkModule
                      , SkNamespace
@@ -190,24 +190,24 @@ instance Default SymbolKindClientCapabilities where
                      , SkArray
                      ]
 
-data SymbolClientCapabilities =
-  SymbolClientCapabilities
+data WorkspaceSymbolClientCapabilities =
+  WorkspaceSymbolClientCapabilities
     { _dynamicRegistration :: Maybe Bool -- ^Symbol request supports dynamic
                                          -- registration.
-    , _symbolKind :: Maybe SymbolKindClientCapabilities -- ^ Specific capabilities for the `SymbolKind`.
+    , _symbolKind :: Maybe WorkspaceSymbolKindClientCapabilities -- ^ Specific capabilities for the `SymbolKind`.
     } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''SymbolClientCapabilities)
+deriveJSON lspOptions ''WorkspaceSymbolClientCapabilities
 
 -- -------------------------------------
 
-data ExecuteClientCapabilities =
-  ExecuteClientCapabilities
+data ExecuteCommandClientCapabilities =
+  ExecuteCommandClientCapabilities
     { _dynamicRegistration :: Maybe Bool -- ^Execute command supports dynamic
                                          -- registration.
     } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''ExecuteClientCapabilities)
+$(deriveJSON lspOptions ''ExecuteCommandClientCapabilities)
 
 -- -------------------------------------
 
@@ -227,10 +227,10 @@ data WorkspaceClientCapabilities =
     , _didChangeWatchedFiles :: Maybe DidChangeWatchedFilesClientCapabilities
 
       -- | Capabilities specific to the `workspace/symbol` request.
-    , _symbol :: Maybe SymbolClientCapabilities
+    , _symbol :: Maybe WorkspaceSymbolClientCapabilities
 
       -- | Capabilities specific to the `workspace/executeCommand` request.
-    , _executeCommand :: Maybe ExecuteClientCapabilities
+    , _executeCommand :: Maybe ExecuteCommandClientCapabilities
 
       -- | The client has support for workspace folders.
     , _workspaceFolders :: Maybe Bool
@@ -643,35 +643,6 @@ $(deriveJSON lspOptions ''SynchronizationTextDocumentClientCapabilities)
 instance Default SynchronizationTextDocumentClientCapabilities where
   def = SynchronizationTextDocumentClientCapabilities def def def def
 
-
--- -------------------------------------
-
-data DocumentSymbolKindClientCapabilities =
-  DocumentSymbolKindClientCapabilities
-    { -- | The symbol kind values the client supports. When this
-      --  property exists the client also guarantees that it will
-      --  handle values outside its set gracefully and falls back
-      --  to a default value when unknown.
-      --
-      --  If this property is not present the client only supports
-      --  the symbol kinds from `File` to `Array` as defined in
-      --  the initial version of the protocol.
-      _valueSet :: Maybe (List SymbolKind)
-    }
-  deriving (Show, Read, Eq)
-
-$(deriveJSON lspOptions ''DocumentSymbolKindClientCapabilities)
-
-data DocumentSymbolClientCapabilities =
-  DocumentSymbolClientCapabilities
-    { -- | Whether document symbol supports dynamic registration.
-      _dynamicRegistration :: Maybe Bool
-      -- | Specific capabilities for the `SymbolKind`.
-    , _symbolKind :: Maybe DocumentSymbolKindClientCapabilities
-    , _hierarchicalDocumentSymbolSupport :: Maybe Bool
-    } deriving (Show, Read, Eq)
-
-$(deriveJSON lspOptions ''DocumentSymbolClientCapabilities)
 
 -- -------------------------------------
 
