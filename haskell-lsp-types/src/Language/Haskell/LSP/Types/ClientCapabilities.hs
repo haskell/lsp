@@ -671,46 +671,6 @@ data OnTypeFormattingClientCapabilities =
 
 deriveJSON lspOptions ''OnTypeFormattingClientCapabilities
 
--- -------------------------------------
-
-data CodeActionKindClientCapabilities =
-  CodeActionKindClientCapabilities
-   { -- | The code action kind values the client supports. When this
-     -- property exists the client also guarantees that it will
-     -- handle values outside its set gracefully and falls back
-     -- to a default value when unknown.
-      _valueSet :: List CodeActionKind
-   } deriving (Show, Read, Eq)
-
-deriveJSON lspOptions ''CodeActionKindClientCapabilities
-
-instance Default CodeActionKindClientCapabilities where
-  def = CodeActionKindClientCapabilities (List allKinds)
-    where allKinds = [ CodeActionQuickFix
-                     , CodeActionRefactor
-                     , CodeActionRefactorExtract
-                     , CodeActionRefactorInline
-                     , CodeActionRefactorRewrite
-                     , CodeActionSource
-                     , CodeActionSourceOrganizeImports
-                     ]
-
-data CodeActionLiteralSupport =
-  CodeActionLiteralSupport
-    { _codeActionKind :: CodeActionKindClientCapabilities -- ^ The code action kind is support with the following value set.
-    } deriving (Show, Read, Eq)
-
-deriveJSON lspOptions ''CodeActionLiteralSupport
-
-data CodeActionClientCapabilities =
-  CodeActionClientCapabilities
-    { _dynamicRegistration      :: Maybe Bool -- ^ Whether code action supports dynamic registration.
-    , _codeActionLiteralSupport :: Maybe CodeActionLiteralSupport -- ^ The client support code action literals as a valid response
-                                                                  -- of the `textDocument/codeAction` request.
-                                                                  -- Since 3.8.0
-    } deriving (Show, Read, Eq)
-
-deriveJSON lspOptions ''CodeActionClientCapabilities
 
 -- -------------------------------------
 

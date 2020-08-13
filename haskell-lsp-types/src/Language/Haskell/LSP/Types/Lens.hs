@@ -65,9 +65,6 @@ makeFieldsNoPrefix ''OnTypeFormattingClientCapabilities
 makeFieldsNoPrefix ''DefinitionClientCapabilities
 makeFieldsNoPrefix ''TypeDefinitionClientCapabilities
 makeFieldsNoPrefix ''ImplementationClientCapabilities
-makeFieldsNoPrefix ''CodeActionKindClientCapabilities
-makeFieldsNoPrefix ''CodeActionLiteralSupport
-makeFieldsNoPrefix ''CodeActionClientCapabilities
 makeFieldsNoPrefix ''CodeLensClientCapabilities
 makeFieldsNoPrefix ''DocumentLinkClientCapabilities
 makeFieldsNoPrefix ''ColorProviderClientCapabilities
@@ -155,6 +152,11 @@ makeFieldsNoPrefix ''CompletionParams
 makeFieldsNoPrefix ''CompletionRegistrationOptions
 
 -- CodeActions
+makeFieldsNoPrefix ''CodeActionKindClientCapabilities
+makeFieldsNoPrefix ''CodeActionLiteralSupport
+makeFieldsNoPrefix ''CodeActionClientCapabilities
+makeFieldsNoPrefix ''CodeActionOptions
+makeFieldsNoPrefix ''CodeActionRegistrationOptions
 makeFieldsNoPrefix ''CodeActionContext
 makeFieldsNoPrefix ''CodeActionParams
 makeFieldsNoPrefix ''CodeAction

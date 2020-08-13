@@ -22,6 +22,7 @@ import           Language.Haskell.LSP.Types.DataTypesJSON
 import           Language.Haskell.LSP.Types.CodeAction
 import           Language.Haskell.LSP.Types.CodeLens
 import           Language.Haskell.LSP.Types.Color
+import           Language.Haskell.LSP.Types.Command
 import           Language.Haskell.LSP.Types.Common
 import           Language.Haskell.LSP.Types.Completion
 import           Language.Haskell.LSP.Types.Declaration
@@ -140,6 +141,11 @@ type family MessageParams (m :: Method p t) :: Type where
 
 -- | Map a request method to the response payload type
 type family ResponseParams (m :: Method p Request) :: Type where
+-- Even though the specification mentions that the result types are
+-- @x | y | ... | null@, they don't actually need to be wrapped in a Maybe since
+-- (we think) this is just to account for how the response field is always
+-- nullable. I.e. if it is null, then the error field is set
+
 -- Client
   -- General
   ResponseParams Initialize                    = InitializeResponseCapabilities
@@ -150,20 +156,20 @@ type family ResponseParams (m :: Method p Request) :: Type where
   -- Sync/Document state
   ResponseParams TextDocumentWillSaveWaitUntil = List TextEdit
   -- Completion
-  ResponseParams TextDocumentCompletion        = Maybe (List CompletionItem |? CompletionList)
+  ResponseParams TextDocumentCompletion        = List CompletionItem |? CompletionList
   ResponseParams CompletionItemResolve         = CompletionItem
   -- Language Queries
-  ResponseParams TextDocumentHover             = Maybe Hover
-  ResponseParams TextDocumentSignatureHelp     = Maybe SignatureHelp
-  ResponseParams TextDocumentDeclaration       = Maybe (Location |? List Location |? List LocationLink)
-  ResponseParams TextDocumentDefinition        = Maybe (Location |? List Location |? List LocationLink)
-  ResponseParams TextDocumentTypeDefinition    = Maybe (Location |? List Location |? List LocationLink)
-  ResponseParams TextDocumentImplementation    = Maybe (Location |? List Location |? List LocationLink)
-  ResponseParams TextDocumentReferences        = Maybe (List Location)
-  ResponseParams TextDocumentDocumentHighlight = Maybe (List DocumentHighlight)
-  ResponseParams TextDocumentDocumentSymbol    = Maybe (List DocumentSymbol |? List SymbolInformation)
+  ResponseParams TextDocumentHover             = Hover
+  ResponseParams TextDocumentSignatureHelp     = SignatureHelp
+  ResponseParams TextDocumentDeclaration       = Location |? List Location |? List LocationLink
+  ResponseParams TextDocumentDefinition        = Location |? List Location |? List LocationLink
+  ResponseParams TextDocumentTypeDefinition    = Location |? List Location |? List LocationLink
+  ResponseParams TextDocumentImplementation    = Location |? List Location |? List LocationLink
+  ResponseParams TextDocumentReferences        = List Location
+  ResponseParams TextDocumentDocumentHighlight = List DocumentHighlight
+  ResponseParams TextDocumentDocumentSymbol    = List DocumentSymbol |? List SymbolInformation
   -- Code Action/Lens/Link
-  ResponseParams TextDocumentCodeAction        = List CAResult
+  ResponseParams TextDocumentCodeAction        = List (Command |? CodeAction)
   ResponseParams TextDocumentCodeLens          = List CodeLens
   ResponseParams CodeLensResolve               = CodeLens
   ResponseParams TextDocumentDocumentLink      = List DocumentLink
