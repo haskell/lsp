@@ -127,7 +127,7 @@ data WorkspaceEditClientCapabilities =
                                    -- changes in `WorkspaceEdit`s
   } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''WorkspaceEditClientCapabilities)
+deriveJSON lspOptions ''WorkspaceEditClientCapabilities
 
 -- -------------------------------------
 
@@ -138,7 +138,7 @@ data DidChangeConfigurationClientCapabilities =
                                          -- registration.
     } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''DidChangeConfigurationClientCapabilities)
+deriveJSON lspOptions ''DidChangeConfigurationClientCapabilities
 
 -- -------------------------------------
 
@@ -149,7 +149,7 @@ data DidChangeWatchedFilesClientCapabilities =
                                          -- registration.
     } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''DidChangeWatchedFilesClientCapabilities)
+deriveJSON lspOptions ''DidChangeWatchedFilesClientCapabilities
 
 -- -------------------------------------
 
@@ -166,7 +166,7 @@ data WorkspaceSymbolKindClientCapabilities =
      _valueSet :: Maybe (List SymbolKind)
    } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''WorkspaceSymbolKindClientCapabilities)
+deriveJSON lspOptions ''WorkspaceSymbolKindClientCapabilities
 
 instance Default WorkspaceSymbolKindClientCapabilities where
   def = WorkspaceSymbolKindClientCapabilities (Just $ List allKinds)
@@ -207,7 +207,7 @@ data ExecuteCommandClientCapabilities =
                                          -- registration.
     } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''ExecuteCommandClientCapabilities)
+deriveJSON lspOptions ''ExecuteCommandClientCapabilities
 
 -- -------------------------------------
 
@@ -239,7 +239,7 @@ data WorkspaceClientCapabilities =
     , _configuration :: Maybe Bool
     } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''WorkspaceClientCapabilities)
+deriveJSON lspOptions ''WorkspaceClientCapabilities
 
 instance Default WorkspaceClientCapabilities where
   def = WorkspaceClientCapabilities def def def def def def def def
@@ -638,7 +638,7 @@ data SynchronizationTextDocumentClientCapabilities =
     , _didSave :: Maybe Bool
     } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''SynchronizationTextDocumentClientCapabilities)
+deriveJSON lspOptions ''SynchronizationTextDocumentClientCapabilities
 
 instance Default SynchronizationTextDocumentClientCapabilities where
   def = SynchronizationTextDocumentClientCapabilities def def def def
@@ -651,7 +651,7 @@ data FormattingClientCapabilities =
     { _dynamicRegistration :: Maybe Bool
     } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''FormattingClientCapabilities)
+deriveJSON lspOptions ''FormattingClientCapabilities
 
 -- -------------------------------------
 
@@ -660,7 +660,7 @@ data RangeFormattingClientCapabilities =
     { _dynamicRegistration :: Maybe Bool
     } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''RangeFormattingClientCapabilities)
+deriveJSON lspOptions ''RangeFormattingClientCapabilities
 
 -- -------------------------------------
 
@@ -669,7 +669,7 @@ data OnTypeFormattingClientCapabilities =
     { _dynamicRegistration :: Maybe Bool
     } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''OnTypeFormattingClientCapabilities)
+deriveJSON lspOptions ''OnTypeFormattingClientCapabilities
 
 -- -------------------------------------
 
@@ -682,7 +682,7 @@ data CodeActionKindClientCapabilities =
       _valueSet :: List CodeActionKind
    } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''CodeActionKindClientCapabilities)
+deriveJSON lspOptions ''CodeActionKindClientCapabilities
 
 instance Default CodeActionKindClientCapabilities where
   def = CodeActionKindClientCapabilities (List allKinds)
@@ -700,7 +700,7 @@ data CodeActionLiteralSupport =
     { _codeActionKind :: CodeActionKindClientCapabilities -- ^ The code action kind is support with the following value set.
     } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''CodeActionLiteralSupport)
+deriveJSON lspOptions ''CodeActionLiteralSupport
 
 data CodeActionClientCapabilities =
   CodeActionClientCapabilities
@@ -710,7 +710,7 @@ data CodeActionClientCapabilities =
                                                                   -- Since 3.8.0
     } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''CodeActionClientCapabilities)
+deriveJSON lspOptions ''CodeActionClientCapabilities
 
 -- -------------------------------------
 
@@ -719,7 +719,7 @@ data CodeLensClientCapabilities =
     { _dynamicRegistration :: Maybe Bool
     } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''CodeLensClientCapabilities)
+deriveJSON lspOptions ''CodeLensClientCapabilities
 
 -- -------------------------------------
 
@@ -728,7 +728,7 @@ data DocumentLinkClientCapabilities =
     { _dynamicRegistration :: Maybe Bool
     } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''DocumentLinkClientCapabilities)
+deriveJSON lspOptions ''DocumentLinkClientCapabilities
 
 -- -------------------------------------
 
@@ -740,7 +740,7 @@ data ColorProviderClientCapabilities =
       _dynamicRegistration :: Maybe Bool
     } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''ColorProviderClientCapabilities)
+deriveJSON lspOptions ''ColorProviderClientCapabilities
 
 -- -------------------------------------
 
@@ -750,7 +750,7 @@ data RenameClientCapabilities =
     , _prepareSupport :: Maybe Bool
     } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''RenameClientCapabilities)
+deriveJSON lspOptions ''RenameClientCapabilities
 
 -- -------------------------------------
 
@@ -760,7 +760,7 @@ data PublishDiagnosticsTagsClientCapabilities =
       _valueSet :: List DiagnosticTag
     } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''PublishDiagnosticsTagsClientCapabilities)
+deriveJSON lspOptions ''PublishDiagnosticsTagsClientCapabilities
 
 data PublishDiagnosticsClientCapabilities =
   PublishDiagnosticsClientCapabilities
@@ -773,7 +773,7 @@ data PublishDiagnosticsClientCapabilities =
     , _tagSupport :: Maybe PublishDiagnosticsTagsClientCapabilities
     } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''PublishDiagnosticsClientCapabilities)
+deriveJSON lspOptions ''PublishDiagnosticsClientCapabilities
 
 -- -------------------------------------
 
@@ -793,7 +793,7 @@ data FoldingRangeClientCapabilities =
     , _lineFoldingOnly     :: Maybe Bool
     } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''FoldingRangeClientCapabilities)
+deriveJSON lspOptions ''FoldingRangeClientCapabilities
 
 -- -------------------------------------
 
@@ -867,7 +867,7 @@ data TextDocumentClientCapabilities =
     , _foldingRange :: Maybe FoldingRangeClientCapabilities
     } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''TextDocumentClientCapabilities)
+deriveJSON lspOptions ''TextDocumentClientCapabilities
 
 instance Default TextDocumentClientCapabilities where
   def = TextDocumentClientCapabilities def def def def def def def def
@@ -883,7 +883,7 @@ data WindowClientCapabilities =
       _workDoneProgress :: Maybe Bool
     } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''WindowClientCapabilities)
+deriveJSON lspOptions ''WindowClientCapabilities
 
 instance Default WindowClientCapabilities where
   def = WindowClientCapabilities def
@@ -947,7 +947,7 @@ data ClientCapabilities =
     , _experimental :: Maybe A.Object
     } deriving (Show, Read, Eq)
 
-$(deriveJSON lspOptions ''ClientCapabilities)
+deriveJSON lspOptions ''ClientCapabilities
 
 instance Default ClientCapabilities where
   def = ClientCapabilities def def def def
