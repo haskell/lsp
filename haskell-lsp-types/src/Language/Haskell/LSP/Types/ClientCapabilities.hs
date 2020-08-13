@@ -8,6 +8,7 @@ import qualified Data.Aeson as A
 import Data.Default
 import Language.Haskell.LSP.Types.CodeAction
 import Language.Haskell.LSP.Types.CodeLens
+import Language.Haskell.LSP.Types.Common
 import Language.Haskell.LSP.Types.Completion
 import Language.Haskell.LSP.Types.Diagnostic
 import Language.Haskell.LSP.Types.Declaration
@@ -15,7 +16,7 @@ import Language.Haskell.LSP.Types.Definition
 import Language.Haskell.LSP.Types.DocumentHighlight
 import Language.Haskell.LSP.Types.DocumentLink
 import Language.Haskell.LSP.Types.DocumentSymbol
-import Language.Haskell.LSP.Types.Common
+import Language.Haskell.LSP.Types.Formatting
 import Language.Haskell.LSP.Types.Hover
 import Language.Haskell.LSP.Types.Implementation
 import Language.Haskell.LSP.Types.SignatureHelp
@@ -645,34 +646,6 @@ deriveJSON lspOptions ''SynchronizationTextDocumentClientCapabilities
 instance Default SynchronizationTextDocumentClientCapabilities where
   def = SynchronizationTextDocumentClientCapabilities def def def def
 
-
--- -------------------------------------
-
-data FormattingClientCapabilities =
-  FormattingClientCapabilities
-    { _dynamicRegistration :: Maybe Bool
-    } deriving (Show, Read, Eq)
-
-deriveJSON lspOptions ''FormattingClientCapabilities
-
--- -------------------------------------
-
-data RangeFormattingClientCapabilities =
-  RangeFormattingClientCapabilities
-    { _dynamicRegistration :: Maybe Bool
-    } deriving (Show, Read, Eq)
-
-deriveJSON lspOptions ''RangeFormattingClientCapabilities
-
--- -------------------------------------
-
-data OnTypeFormattingClientCapabilities =
-  OnTypeFormattingClientCapabilities
-    { _dynamicRegistration :: Maybe Bool
-    } deriving (Show, Read, Eq)
-
-deriveJSON lspOptions ''OnTypeFormattingClientCapabilities
-
 -- -------------------------------------
 
 data ColorProviderClientCapabilities =
@@ -763,13 +736,13 @@ data TextDocumentClientCapabilities =
     , _documentSymbol :: Maybe DocumentSymbolClientCapabilities
 
       -- | Capabilities specific to the `textDocument/formatting`
-    , _formatting :: Maybe FormattingClientCapabilities
+    , _formatting :: Maybe DocumentFormattingClientCapabilities
 
       -- | Capabilities specific to the `textDocument/rangeFormatting`
-    , _rangeFormatting :: Maybe RangeFormattingClientCapabilities
+    , _rangeFormatting :: Maybe DocumentRangeFormattingClientCapabilities
 
       -- | Capabilities specific to the `textDocument/onTypeFormatting`
-    , _onTypeFormatting :: Maybe OnTypeFormattingClientCapabilities
+    , _onTypeFormatting :: Maybe DocumentOnTypeFormattingClientCapabilities
 
       -- | Capabilities specific to the `textDocument/declaration` request.
       -- 

@@ -60,9 +60,6 @@ makeFieldsNoPrefix ''SignatureHelpSignatureInformation
 makeFieldsNoPrefix ''SignatureHelpParameterInformation
 makeFieldsNoPrefix ''SignatureHelpClientCapabilities
 makeFieldsNoPrefix ''ReferencesClientCapabilities
-makeFieldsNoPrefix ''FormattingClientCapabilities
-makeFieldsNoPrefix ''RangeFormattingClientCapabilities
-makeFieldsNoPrefix ''OnTypeFormattingClientCapabilities
 makeFieldsNoPrefix ''DefinitionClientCapabilities
 makeFieldsNoPrefix ''TypeDefinitionClientCapabilities
 makeFieldsNoPrefix ''ImplementationClientCapabilities
@@ -79,7 +76,6 @@ makeFieldsNoPrefix ''InitializeParams
 makeFieldsNoPrefix ''InitializeError
 makeFieldsNoPrefix ''CompletionOptions
 makeFieldsNoPrefix ''SignatureHelpOptions
-makeFieldsNoPrefix ''DocumentOnTypeFormattingOptions
 makeFieldsNoPrefix ''ExecuteCommandOptions
 makeFieldsNoPrefix ''SaveOptions
 makeFieldsNoPrefix ''TextDocumentSyncOptions
@@ -117,10 +113,6 @@ makeFieldsNoPrefix ''SignatureHelpRegistrationOptions
 makeFieldsNoPrefix ''ReferenceContext
 makeFieldsNoPrefix ''ReferenceParams
 makeFieldsNoPrefix ''WorkspaceSymbolParams
-makeFieldsNoPrefix ''FormattingOptions
-makeFieldsNoPrefix ''DocumentFormattingParams
-makeFieldsNoPrefix ''DocumentRangeFormattingParams
-makeFieldsNoPrefix ''DocumentOnTypeFormattingParams
 makeFieldsNoPrefix ''RenameParams
 makeFieldsNoPrefix ''ExecuteCommandParams
 makeFieldsNoPrefix ''ExecuteCommandRegistrationOptions
@@ -178,6 +170,25 @@ makeFieldsNoPrefix ''ColorInformation
 -- ColorPresentation
 makeFieldsNoPrefix ''ColorPresentationParams
 makeFieldsNoPrefix ''ColorPresentation
+
+-- Formatting
+makeFieldsNoPrefix ''DocumentFormattingClientCapabilities
+makeFieldsNoPrefix ''DocumentFormattingOptions
+makeFieldsNoPrefix ''DocumentFormattingRegistrationOptions
+makeFieldsNoPrefix ''FormattingOptions
+makeFieldsNoPrefix ''DocumentFormattingParams
+
+-- RangeFormatting
+makeFieldsNoPrefix ''DocumentRangeFormattingClientCapabilities
+makeFieldsNoPrefix ''DocumentRangeFormattingOptions
+makeFieldsNoPrefix ''DocumentRangeFormattingRegistrationOptions
+makeFieldsNoPrefix ''DocumentRangeFormattingParams
+
+-- OnTypeFormatting
+makeFieldsNoPrefix ''DocumentOnTypeFormattingClientCapabilities
+makeFieldsNoPrefix ''DocumentOnTypeFormattingOptions
+makeFieldsNoPrefix ''DocumentOnTypeFormattingRegistrationOptions
+makeFieldsNoPrefix ''DocumentOnTypeFormattingParams
 
 -- DocumentHighlight
 makeFieldsNoPrefix ''DocumentHighlightClientCapabilities
