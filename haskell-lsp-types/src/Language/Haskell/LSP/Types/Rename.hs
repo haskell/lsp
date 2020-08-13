@@ -48,15 +48,8 @@ deriveJSON lspOptions ''PrepareRenameParams
 
 data RangeWithPlaceholder =
   RangeWithPlaceholder
-    {
-      _range :: Range
-    , _placeholder :: Text
-    } deriving Eq
-
-deriveJSON lspOptions { sumEncoding = UntaggedValue } ''RangeWithPlaceholder
-
-data RangeOrRangeWithPlaceholder = RangeWithPlaceholderValue RangeWithPlaceholder
-                                 | RangeValue Range
-                                 deriving Eq
-
-deriveJSON lspOptions { sumEncoding = UntaggedValue } ''RangeOrRangeWithPlaceholder
+  {
+    _range :: Range
+  , _placeholder :: Text
+  } deriving Eq
+deriveJSON lspOptions ''RangeWithPlaceholder

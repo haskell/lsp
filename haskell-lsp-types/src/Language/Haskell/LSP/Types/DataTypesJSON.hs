@@ -652,15 +652,11 @@ export interface TextDocumentChangeRegistrationOptions extends TextDocumentRegis
 }
 -}
 
-data TextDocumentChangeRegistrationOptions =
-  TextDocumentChangeRegistrationOptions
-    { _textDocumentRegistrationOptions :: TextDocumentRegistrationOptions
-    -- | How documents are synced to the server.
-    -- See 'TdSyncFull' and 'TdSyncIncremental'
-    , _syncKind                        :: TextDocumentSyncKind
-    } deriving (Show, Read, Eq)
+makeExtendingDatatype "TextDocumentChangeRegistrationOptions"
+  [''TextDocumentRegistrationOptions]
+  [("_syncKind", [t| TextDocumentSyncKind |])]
 
-deriveJSONExtendFields lspOptions ''TextDocumentChangeRegistrationOptions ["_textDocumentRegistrationOptions"]
+deriveJSON lspOptions ''TextDocumentChangeRegistrationOptions
 
 -- ---------------------------------------------------------------------
 {-
@@ -828,15 +824,11 @@ data DidSaveTextDocumentParams =
 
 deriveJSON lspOptions ''DidSaveTextDocumentParams
 
-data TextDocumentSaveRegistrationOptions =
-  TextDocumentSaveRegistrationOptions
-    { _textDocumentRegistrationOptions :: TextDocumentRegistrationOptions
-    -- The spec doesn't say it extends SaveOptions, but it's the same fields.
-    -- Looks like an oversight
-    , _saveOptions                     :: SaveOptions
-    } deriving (Show, Read, Eq)
+makeExtendingDatatype "TextDocumentSaveRegistrationOptions"
+  [''TextDocumentRegistrationOptions]
+  [("_saveOptions", [t| SaveOptions |])]
 
-deriveJSONExtendFields lspOptions ''TextDocumentSaveRegistrationOptions ["_textDocumentRegistrationOptions", "_saveOptions"]
+deriveJSON lspOptions ''TextDocumentSaveRegistrationOptions
 
 -- ---------------------------------------------------------------------
 {-

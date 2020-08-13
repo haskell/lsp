@@ -30,6 +30,7 @@ import           Language.Haskell.LSP.Types.Registration
 import           Language.Haskell.LSP.Types.References
 import           Language.Haskell.LSP.Types.Rename
 import           Language.Haskell.LSP.Types.SignatureHelp
+import           Language.Haskell.LSP.Types.SelectionRange
 import           Language.Haskell.LSP.Types.ServerCapabilities
 import           Language.Haskell.LSP.Types.DocumentSymbol
 import           Language.Haskell.LSP.Types.TextDocument
@@ -198,6 +199,19 @@ makeFieldsNoPrefix ''RenameParams
 makeFieldsNoPrefix ''PrepareRenameParams
 makeFieldsNoPrefix ''RangeWithPlaceholder
 
+-- FoldingRange
+makeFieldsNoPrefix ''FoldingRangeClientCapabilities
+makeFieldsNoPrefix ''FoldingRangeOptions
+makeFieldsNoPrefix ''FoldingRangeRegistrationOptions
+makeFieldsNoPrefix ''FoldingRangeParams
+makeFieldsNoPrefix ''FoldingRange
+
+-- SelectionRange
+makeFieldsNoPrefix ''SelectionRangeClientCapabilities
+makeFieldsNoPrefix ''SelectionRangeOptions
+makeFieldsNoPrefix ''SelectionRangeRegistrationOptions
+makeFieldsNoPrefix ''SelectionRangeParams
+makeFieldsNoPrefix ''SelectionRange
 
 -- DocumentHighlight
 makeFieldsNoPrefix ''DocumentHighlightClientCapabilities
@@ -252,9 +266,6 @@ makeFieldsNoPrefix ''DiagnosticRelatedInformation
 makeFieldsNoPrefix ''Hover
 makeFieldsNoPrefix ''HoverRegistrationOptions
 
--- Folding Range
-makeFieldsNoPrefix ''FoldingRange
-makeFieldsNoPrefix ''FoldingRangeParams
 
 -- Window
 makeFieldsNoPrefix ''ShowMessageParams

@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE DuplicateRecordFields      #-}
 {-# LANGUAGE TemplateHaskell            #-}
 module Language.Haskell.LSP.Types.FoldingRange where
 
@@ -10,13 +11,43 @@ import           Language.Haskell.LSP.Types.StaticRegistrationOptions
 import           Language.Haskell.LSP.Types.TextDocument
 import           Language.Haskell.LSP.Types.Utils
 
-data FoldingRangeParams =
-  FoldingRangeParams
-  { _textDocument :: TextDocumentIdentifier -- ^ The text document.
-  , _workDoneToken :: Maybe ProgressToken -- ^ An optional token that a server can use to report work done progress.
-  }
-  deriving (Read, Show, Eq)
 
+-- -------------------------------------
+
+data FoldingRangeClientCapabilities =
+  FoldingRangeClientCapabilities
+    { -- | Whether implementation supports dynamic registration for folding range
+      -- providers. If this is set to `true` the client supports the new
+      -- `(FoldingRangeProviderOptions & TextDocumentRegistrationOptions & StaticRegistrationOptions)`
+      -- return value for the corresponding server capability as well.
+      _dynamicRegistration :: Maybe Bool
+      -- | The maximum number of folding ranges that the client prefers to receive
+      -- per document. The value serves as a hint, servers are free to follow the limit.
+    , _rangeLimit          :: Maybe Int
+      -- | If set, the client signals that it only supports folding complete lines. If set,
+      -- client will ignore specified `startCharacter` and `endCharacter` properties in a
+      -- FoldingRange.
+    , _lineFoldingOnly     :: Maybe Bool
+    } deriving (Show, Read, Eq)
+
+deriveJSON lspOptions ''FoldingRangeClientCapabilities
+
+makeExtendingDatatype "FoldingRangeOptions" [''WorkDoneProgressOptions] []
+deriveJSON lspOptions ''FoldingRangeOptions
+
+makeExtendingDatatype "FoldingRangeRegistrationOptions"
+  [ ''TextDocumentRegistrationOptions
+  , ''FoldingRangeOptions
+  , ''StaticRegistrationOptions
+  ] []
+deriveJSON lspOptions ''FoldingRangeRegistrationOptions
+
+
+makeExtendingDatatype "FoldingRangeParams"
+  [ ''WorkDoneProgressParams
+  , ''PartialResultParams
+  ]
+  [("_textDocument", [t| TextDocumentIdentifier |])]
 deriveJSON lspOptions ''FoldingRangeParams
 
 -- | Enum of known range kinds
@@ -66,21 +97,3 @@ data FoldingRange =
   deriving (Read, Show, Eq)
 
 deriveJSON lspOptions ''FoldingRange
-
-data FoldingRangeOptions =
-  FoldingRangeOptions
-    { _workDoneProgressOptions :: WorkDoneProgressOptions
-    } deriving (Read,Show,Eq)
-deriveJSONExtendFields lspOptions ''FoldingRangeOptions ["_workDoneProgressOptions"]
-
-data FoldingRangeRegistrationOptions =
-  FoldingRangeRegistrationOptions
-    { _textDocumentRegistrationOptions :: TextDocumentRegistrationOptions
-    , _foldingRangeOptions             :: FoldingRangeOptions
-    , _staticRegistrationOptions       :: StaticRegistrationOptions
-    } deriving (Read,Show,Eq)
-deriveJSONExtendFields lspOptions ''FoldingRangeRegistrationOptions
-  [ "_textDocumentRegistrationOptions"
-  , "_foldingRangeOptions"
-  , "_staticRegistrationOptions"
-  ]

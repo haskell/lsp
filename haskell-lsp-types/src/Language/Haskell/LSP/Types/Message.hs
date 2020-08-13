@@ -40,9 +40,9 @@ import           Language.Haskell.LSP.Types.Progress
 import           Language.Haskell.LSP.Types.Registration
 import           Language.Haskell.LSP.Types.Rename
 import           Language.Haskell.LSP.Types.References
+import           Language.Haskell.LSP.Types.SelectionRange
 import           Language.Haskell.LSP.Types.SignatureHelp
 import           Language.Haskell.LSP.Types.DocumentSymbol
-import           Language.Haskell.LSP.Types.TextDocument
 import           Language.Haskell.LSP.Types.TypeDefinition
 import           Language.Haskell.LSP.Types.Utils
 import           Language.Haskell.LSP.Types.Window
@@ -114,9 +114,11 @@ type family MessageParams (m :: Method p t) :: Type where
   MessageParams TextDocumentOnTypeFormatting       = DocumentOnTypeFormattingParams
   -- Rename
   MessageParams TextDocumentRename                 = RenameParams
-  MessageParams TextDocumentPrepareRename          = TextDocumentPositionParams
-  -- FoldingRange
+  MessageParams TextDocumentPrepareRename          = PrepareRenameParams
+  -- Folding Range
   MessageParams TextDocumentFoldingRange           = FoldingRangeParams
+  -- Selection Range
+  MessageParams TextDocumentSelectionRange         = SelectionRangeParams
 -- Server
     -- Window
   MessageParams WindowShowMessage                  = ShowMessageParams
@@ -183,9 +185,10 @@ type family ResponseParams (m :: Method p Request) :: Type where
   ResponseParams TextDocumentOnTypeFormatting  = List TextEdit
   -- Rename
   ResponseParams TextDocumentRename            = WorkspaceEdit
-  ResponseParams TextDocumentPrepareRename     = Maybe RangeOrRangeWithPlaceholder
+  ResponseParams TextDocumentPrepareRename     = Range |? RangeWithPlaceholder
   -- FoldingRange
   ResponseParams TextDocumentFoldingRange      = List FoldingRange
+  ResponseParams TextDocumentSelectionRange    = List SelectionRange
   -- Custom can be either a notification or a message
 -- Server
   -- Window
@@ -665,6 +668,7 @@ splitClientMethod STextDocumentOnTypeFormatting = IsClientReq
 splitClientMethod STextDocumentRename = IsClientReq
 splitClientMethod STextDocumentPrepareRename = IsClientReq
 splitClientMethod STextDocumentFoldingRange = IsClientReq
+splitClientMethod STextDocumentSelectionRange = IsClientReq
 splitClientMethod SCancelRequest = IsClientNot
 splitClientMethod SCustomMethod{} = IsClientEither
 

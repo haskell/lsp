@@ -16,6 +16,7 @@ import Language.Haskell.LSP.Types.Definition
 import Language.Haskell.LSP.Types.DocumentHighlight
 import Language.Haskell.LSP.Types.DocumentLink
 import Language.Haskell.LSP.Types.DocumentSymbol
+import Language.Haskell.LSP.Types.FoldingRange
 import Language.Haskell.LSP.Types.Formatting
 import Language.Haskell.LSP.Types.Hover
 import Language.Haskell.LSP.Types.Implementation
@@ -681,26 +682,6 @@ data PublishDiagnosticsClientCapabilities =
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''PublishDiagnosticsClientCapabilities
-
--- -------------------------------------
-
-data FoldingRangeClientCapabilities =
-  FoldingRangeClientCapabilities
-    { -- | Whether implementation supports dynamic registration for folding range
-      -- providers. If this is set to `true` the client supports the new
-      -- `(FoldingRangeProviderOptions & TextDocumentRegistrationOptions & StaticRegistrationOptions)`
-      -- return value for the corresponding server capability as well.
-      _dynamicRegistration :: Maybe Bool
-      -- | The maximum number of folding ranges that the client prefers to receive
-      -- per document. The value serves as a hint, servers are free to follow the limit.
-    , _rangeLimit          :: Maybe Int
-      -- | If set, the client signals that it only supports folding complete lines. If set,
-      -- client will ignore specified `startCharacter` and `endCharacter` properties in a
-      -- FoldingRange.
-    , _lineFoldingOnly     :: Maybe Bool
-    } deriving (Show, Read, Eq)
-
-deriveJSON lspOptions ''FoldingRangeClientCapabilities
 
 -- -------------------------------------
 

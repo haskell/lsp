@@ -27,6 +27,7 @@ module Language.Haskell.LSP.Types
   , module Language.Haskell.LSP.Types.SignatureHelp
   , module Language.Haskell.LSP.Types.StaticRegistrationOptions
   , module Language.Haskell.LSP.Types.DocumentSymbol
+  , module Language.Haskell.LSP.Types.SelectionRange
   , module Language.Haskell.LSP.Types.Synonyms
   , module Language.Haskell.LSP.Types.TextDocument
   , module Language.Haskell.LSP.Types.TypeDefinition
@@ -62,6 +63,7 @@ import           Language.Haskell.LSP.Types.Message
 import           Language.Haskell.LSP.Types.Progress
 import           Language.Haskell.LSP.Types.References
 import           Language.Haskell.LSP.Types.Rename
+import           Language.Haskell.LSP.Types.SelectionRange
 import           Language.Haskell.LSP.Types.SignatureHelp
 import           Language.Haskell.LSP.Types.StaticRegistrationOptions
 import           Language.Haskell.LSP.Types.DocumentSymbol

@@ -35,6 +35,7 @@ library
                      , Language.Haskell.LSP.Types.DocumentFilter
                      , Language.Haskell.LSP.Types.DocumentHighlight
                      , Language.Haskell.LSP.Types.DocumentLink
+                     , Language.Haskell.LSP.Types.DocumentSymbol
                      , Language.Haskell.LSP.Types.FoldingRange
                      , Language.Haskell.LSP.Types.Formatting
                      , Language.Haskell.LSP.Types.Hover
@@ -48,10 +49,10 @@ library
                      , Language.Haskell.LSP.Types.Registration
                      , Language.Haskell.LSP.Types.References
                      , Language.Haskell.LSP.Types.Rename
+                     , Language.Haskell.LSP.Types.SelectionRange
                      , Language.Haskell.LSP.Types.ServerCapabilities
                      , Language.Haskell.LSP.Types.SignatureHelp
                      , Language.Haskell.LSP.Types.StaticRegistrationOptions
-                     , Language.Haskell.LSP.Types.DocumentSymbol
                      , Language.Haskell.LSP.Types.Synonyms
                      , Language.Haskell.LSP.Types.TextDocument
                      , Language.Haskell.LSP.Types.TypeDefinition
