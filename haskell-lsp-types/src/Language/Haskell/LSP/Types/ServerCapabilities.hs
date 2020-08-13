@@ -281,18 +281,6 @@ interface ServerCapabilities {
 }
 -}
 
--- | Wrapper for TextDocumentSyncKind fallback.
-data TDS = TDSOptions TextDocumentSyncOptions
-         | TDSKind TextDocumentSyncKind
-    deriving (Show, Read, Eq)
-
-instance FromJSON TDS where
-    parseJSON x = TDSOptions <$> parseJSON x <|> TDSKind <$> parseJSON x
-
-instance ToJSON TDS where
-    toJSON (TDSOptions x) = toJSON x
-    toJSON (TDSKind x) = toJSON x
-
 -- ---------------------------------------------------------------------
 
 data WorkspaceFoldersServerCapabilities =
@@ -327,7 +315,7 @@ data ServerCapabilities =
       -- defining each notification or for backwards compatibility the
       -- 'TextDocumentSyncKind' number.
       -- If omitted it defaults to 'TdSyncNone'.
-      _textDocumentSync                 :: Maybe TDS
+      _textDocumentSync                 :: Maybe (TextDocumentSyncOptions |? TextDocumentSyncKind)
       -- | The server provides hover support.
     , _hoverProvider                    :: Maybe (Bool |? HoverOptions)
       -- | The server provides completion support.
