@@ -12,7 +12,6 @@ module Language.Haskell.LSP.Types
   , module Language.Haskell.LSP.Types.DocumentFilter
   , module Language.Haskell.LSP.Types.DocumentHighlight
   , module Language.Haskell.LSP.Types.DocumentLink
-  , module Language.Haskell.LSP.Types.Empty
   , module Language.Haskell.LSP.Types.FoldingRange
   , module Language.Haskell.LSP.Types.Formatting
   , module Language.Haskell.LSP.Types.Hover
@@ -51,7 +50,6 @@ import           Language.Haskell.LSP.Types.Diagnostic
 import           Language.Haskell.LSP.Types.DocumentFilter
 import           Language.Haskell.LSP.Types.DocumentHighlight
 import           Language.Haskell.LSP.Types.DocumentLink
-import           Language.Haskell.LSP.Types.Empty
 import           Language.Haskell.LSP.Types.FoldingRange
 import           Language.Haskell.LSP.Types.Formatting
 import           Language.Haskell.LSP.Types.Hover

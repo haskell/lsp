@@ -44,3 +44,10 @@ instance (FromJSON a) => FromJSON (List a) where
 instance Semigroup (List a) where
   (<>) = mappend
 #endif
+
+data Empty = Empty deriving (Eq,Ord,Show)
+instance ToJSON Empty where
+  toJSON Empty = Null
+instance FromJSON Empty where
+  parseJSON Null = pure Empty
+  parseJSON _ = mempty

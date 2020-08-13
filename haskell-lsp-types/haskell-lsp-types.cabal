@@ -41,7 +41,6 @@ library
                      , Language.Haskell.LSP.Types.Implementation
                      , Language.Haskell.LSP.Types.Location
                      , Language.Haskell.LSP.Types.LspId
-                     , Language.Haskell.LSP.Types.Empty
                      , Language.Haskell.LSP.Types.MarkupContent
                      , Language.Haskell.LSP.Types.Method
                      , Language.Haskell.LSP.Types.Message
