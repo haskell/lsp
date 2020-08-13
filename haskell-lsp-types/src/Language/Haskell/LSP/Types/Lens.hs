@@ -65,7 +65,6 @@ makeFieldsNoPrefix ''OnTypeFormattingClientCapabilities
 makeFieldsNoPrefix ''DefinitionClientCapabilities
 makeFieldsNoPrefix ''TypeDefinitionClientCapabilities
 makeFieldsNoPrefix ''ImplementationClientCapabilities
-makeFieldsNoPrefix ''CodeLensClientCapabilities
 makeFieldsNoPrefix ''DocumentLinkClientCapabilities
 makeFieldsNoPrefix ''ColorProviderClientCapabilities
 makeFieldsNoPrefix ''RenameClientCapabilities
@@ -80,7 +79,6 @@ makeFieldsNoPrefix ''InitializeParams
 makeFieldsNoPrefix ''InitializeError
 makeFieldsNoPrefix ''CompletionOptions
 makeFieldsNoPrefix ''SignatureHelpOptions
-makeFieldsNoPrefix ''CodeLensOptions
 makeFieldsNoPrefix ''DocumentOnTypeFormattingOptions
 makeFieldsNoPrefix ''DocumentLinkOptions
 makeFieldsNoPrefix ''ExecuteCommandOptions
@@ -120,9 +118,6 @@ makeFieldsNoPrefix ''SignatureHelpRegistrationOptions
 makeFieldsNoPrefix ''ReferenceContext
 makeFieldsNoPrefix ''ReferenceParams
 makeFieldsNoPrefix ''WorkspaceSymbolParams
-makeFieldsNoPrefix ''CodeLensParams
-makeFieldsNoPrefix ''CodeLens
-makeFieldsNoPrefix ''CodeLensRegistrationOptions
 makeFieldsNoPrefix ''DocumentLinkParams
 makeFieldsNoPrefix ''DocumentLink
 makeFieldsNoPrefix ''FormattingOptions
@@ -160,6 +155,13 @@ makeFieldsNoPrefix ''CodeActionRegistrationOptions
 makeFieldsNoPrefix ''CodeActionContext
 makeFieldsNoPrefix ''CodeActionParams
 makeFieldsNoPrefix ''CodeAction
+
+-- CodeLens
+makeFieldsNoPrefix ''CodeLensClientCapabilities
+makeFieldsNoPrefix ''CodeLensOptions
+makeFieldsNoPrefix ''CodeLensRegistrationOptions
+makeFieldsNoPrefix ''CodeLensParams
+makeFieldsNoPrefix ''CodeLens
 
 -- DocumentHighlight
 makeFieldsNoPrefix ''DocumentHighlightClientCapabilities

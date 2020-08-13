@@ -7,6 +7,7 @@ import           Data.Aeson.TH
 import qualified Data.Aeson as A
 import Data.Default
 import Language.Haskell.LSP.Types.CodeAction
+import Language.Haskell.LSP.Types.CodeLens
 import Language.Haskell.LSP.Types.Completion
 import Language.Haskell.LSP.Types.Diagnostic
 import Language.Haskell.LSP.Types.Declaration
@@ -670,16 +671,6 @@ data OnTypeFormattingClientCapabilities =
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''OnTypeFormattingClientCapabilities
-
-
--- -------------------------------------
-
-data CodeLensClientCapabilities =
-  CodeLensClientCapabilities
-    { _dynamicRegistration :: Maybe Bool
-    } deriving (Show, Read, Eq)
-
-deriveJSON lspOptions ''CodeLensClientCapabilities
 
 -- -------------------------------------
 
