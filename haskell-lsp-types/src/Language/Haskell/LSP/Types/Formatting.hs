@@ -20,24 +20,35 @@ makeExtendingDatatype "DocumentFormattingOptions" [''WorkDoneProgressOptions] []
 deriveJSON lspOptions ''DocumentFormattingOptions
 
 makeExtendingDatatype "DocumentFormattingRegistrationOptions"
-  [ ''TextDocumentRegistrationOptions
-  , ''DocumentFormattingOptions
+  [ ''TextDocumentRegistrationOptions,
+    ''DocumentFormattingOptions
   ]
   []
 deriveJSON lspOptions ''DocumentFormattingRegistrationOptions
 
 -- | Value-object describing what options formatting should use.
-data FormattingOptions =
-  FormattingOptions
-    { _tabSize                :: Int  -- ^ Size of a tab in spaces.
-    , _insertSpaces           :: Bool -- ^ Prefer spaces over tabs
-    , _trimTrailingWhitespace :: Maybe Bool -- ^ Trim trailing whitespace on a line. Since LSP 3.15.0
-    , _insertFinalNewline     :: Maybe Bool -- ^ Insert a newline character at the end of the file if one does not exist. Since LSP 3.15.0
-    , _trimFinalNewlines      :: Maybe Bool -- ^ Trim all newlines after the final newline at the end of the file. Since LSP 3.15.0
+data FormattingOptions = FormattingOptions
+  { -- | Size of a tab in spaces.
+    _tabSize :: Int,
+    -- | Prefer spaces over tabs
+    _insertSpaces :: Bool,
+    -- | Trim trailing whitespace on a line.
+    --
+    -- Since LSP 3.15.0
+    _trimTrailingWhitespace :: Maybe Bool,
+    -- | Insert a newline character at the end of the file if one does not exist.
+    --
+    -- Since LSP 3.15.0
+    _insertFinalNewline :: Maybe Bool,
+    -- | Trim all newlines after the final newline at the end of the file.
+    -- 
+    -- Since LSP 3.15.0
+    _trimFinalNewlines :: Maybe Bool
     -- Note: May be more properties
-    } deriving (Read,Show,Eq)
-deriveJSON lspOptions ''FormattingOptions
+  }
+  deriving (Read, Show, Eq)
 
+deriveJSON lspOptions ''FormattingOptions
 makeExtendingDatatype "DocumentFormattingParams" [''WorkDoneProgressParams]
   [ ("_textDocument", [t| TextDocumentIdentifier |])
   , ("_options", [t| FormattingOptions |])

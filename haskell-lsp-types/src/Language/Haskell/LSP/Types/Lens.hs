@@ -64,7 +64,6 @@ makeFieldsNoPrefix ''DefinitionClientCapabilities
 makeFieldsNoPrefix ''TypeDefinitionClientCapabilities
 makeFieldsNoPrefix ''ImplementationClientCapabilities
 makeFieldsNoPrefix ''ColorProviderClientCapabilities
-makeFieldsNoPrefix ''RenameClientCapabilities
 makeFieldsNoPrefix ''PublishDiagnosticsClientCapabilities
 makeFieldsNoPrefix ''PublishDiagnosticsTagsClientCapabilities
 makeFieldsNoPrefix ''TextDocumentClientCapabilities
@@ -113,7 +112,6 @@ makeFieldsNoPrefix ''SignatureHelpRegistrationOptions
 makeFieldsNoPrefix ''ReferenceContext
 makeFieldsNoPrefix ''ReferenceParams
 makeFieldsNoPrefix ''WorkspaceSymbolParams
-makeFieldsNoPrefix ''RenameParams
 makeFieldsNoPrefix ''ExecuteCommandParams
 makeFieldsNoPrefix ''ExecuteCommandRegistrationOptions
 makeFieldsNoPrefix ''ApplyWorkspaceEditParams
@@ -189,6 +187,17 @@ makeFieldsNoPrefix ''DocumentOnTypeFormattingClientCapabilities
 makeFieldsNoPrefix ''DocumentOnTypeFormattingOptions
 makeFieldsNoPrefix ''DocumentOnTypeFormattingRegistrationOptions
 makeFieldsNoPrefix ''DocumentOnTypeFormattingParams
+
+-- Rename
+makeFieldsNoPrefix ''RenameClientCapabilities
+makeFieldsNoPrefix ''RenameOptions
+makeFieldsNoPrefix ''RenameRegistrationOptions
+makeFieldsNoPrefix ''RenameParams
+
+-- PrepareRename
+makeFieldsNoPrefix ''PrepareRenameParams
+makeFieldsNoPrefix ''RangeWithPlaceholder
+
 
 -- DocumentHighlight
 makeFieldsNoPrefix ''DocumentHighlightClientCapabilities
