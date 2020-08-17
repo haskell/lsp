@@ -786,22 +786,6 @@ export interface ExecuteCommandRegistrationOptions {
 }
 -}
 
-data ExecuteCommandParams =
-  ExecuteCommandParams
-    { _command   :: Text -- ^ The identifier of the actual command handler.
-    , _arguments :: Maybe (List A.Value) -- ^ Arguments that the command should be invoked with.
-    , _workDoneToken :: Maybe ProgressToken -- ^ An optional token that a server can use to report work done progress.
-    } deriving (Show, Read, Eq)
-
-deriveJSON lspOptions ''ExecuteCommandParams
-
-data ExecuteCommandRegistrationOptions =
-  ExecuteCommandRegistrationOptions
-    { _commands :: List Text
-    } deriving (Show, Read, Eq)
-
-deriveJSON lspOptions ''ExecuteCommandRegistrationOptions
-
 -- ---------------------------------------------------------------------
 {-
 New in 3.0

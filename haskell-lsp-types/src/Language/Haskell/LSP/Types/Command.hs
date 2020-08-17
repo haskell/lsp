@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell            #-}
+{-# LANGUAGE DuplicateRecordFields      #-}
 
 module Language.Haskell.LSP.Types.Command where
 
@@ -6,64 +7,45 @@ import           Data.Aeson
 import           Data.Aeson.TH
 import           Data.Text
 import           Language.Haskell.LSP.Types.Common
+import           Language.Haskell.LSP.Types.Progress
 import           Language.Haskell.LSP.Types.Utils
 
--- ---------------------------------------------------------------------
-{-
-Command
+-- -------------------------------------
 
-https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#command
+data ExecuteCommandClientCapabilities =
+  ExecuteCommandClientCapabilities
+    { _dynamicRegistration :: Maybe Bool -- ^Execute command supports dynamic
+                                         -- registration.
+    } deriving (Show, Read, Eq)
 
-Represents a reference to a command. Provides a title which will be used to
-represent a command in the UI. Commands are identitifed using a string
-identifier and the protocol currently doesn't specify a set of well known
-commands. So executing a command requires some tool extension code.
+deriveJSON lspOptions ''ExecuteCommandClientCapabilities
 
-interface Command {
-    /**
-     * Title of the command, like `save`.
-     */
-    title: string;
-    /**
-     * The identifier of the actual command handler.
-     */
-    command: string;
-    /**
-     * Arguments that the command handler should be
-     * invoked with.
-     */
-    arguments?: any[];
-}
--}
+-- -------------------------------------
+
+makeExtendingDatatype "ExecuteCommandOptions" [''WorkDoneProgressOptions]
+  [("_commands", [t| List String |])]
+deriveJSON lspOptions ''ExecuteCommandOptions
+
+makeExtendingDatatype "ExecuteCommandRegistrationOptions" [''ExecuteCommandOptions] []
+deriveJSON lspOptions ''ExecuteCommandRegistrationOptions
+
+-- -------------------------------------
+
+makeExtendingDatatype "ExecuteCommandParams" [''WorkDoneProgressParams]
+  [ ("_command", [t| Text |])
+  , ("_arguments", [t| Maybe (List Value ) |])
+  ]
+deriveJSON lspOptions ''ExecuteCommandParams
 
 data Command =
   Command
-    { _title     :: Text
-    , _command   :: Text
-    , _arguments :: Maybe (List Value)
+    { -- | Title of the command, like @save@.
+      _title     :: Text
+    , -- | The identifier of the actual command handler.
+      _command   :: Text
+    , -- | Arguments that the command handler should be invoked with.
+      _arguments :: Maybe (List Value)
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''Command
 
-{-
-New in 3.0
------------
-
-/**
- * Execute command options.
- */
-export interface ExecuteCommandOptions {
-        /**
-         * The commands to be executed on the server
-         */
-        commands: string[]
-}
--}
-
-data ExecuteCommandOptions =
-  ExecuteCommandOptions
-    { -- | The commands to be executed on the server
-      _commands :: List Text
-    } deriving (Show, Read, Eq)
-
-deriveJSON lspOptions ''ExecuteCommandOptions

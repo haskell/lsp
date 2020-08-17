@@ -31,6 +31,7 @@ import           Data.Void (Void)
 import           GHC.Generics
 import           Language.Haskell.LSP.Types.CodeAction
 import           Language.Haskell.LSP.Types.CodeLens
+import           Language.Haskell.LSP.Types.Command
 import           Language.Haskell.LSP.Types.Common
 import           Language.Haskell.LSP.Types.Completion
 import           Language.Haskell.LSP.Types.DataTypesJSON

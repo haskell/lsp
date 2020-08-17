@@ -8,6 +8,7 @@ import qualified Data.Aeson as A
 import Data.Default
 import Language.Haskell.LSP.Types.CodeAction
 import Language.Haskell.LSP.Types.CodeLens
+import Language.Haskell.LSP.Types.Command
 import Language.Haskell.LSP.Types.Common
 import Language.Haskell.LSP.Types.Completion
 import Language.Haskell.LSP.Types.Diagnostic
@@ -203,16 +204,6 @@ data WorkspaceSymbolClientCapabilities =
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''WorkspaceSymbolClientCapabilities
-
--- -------------------------------------
-
-data ExecuteCommandClientCapabilities =
-  ExecuteCommandClientCapabilities
-    { _dynamicRegistration :: Maybe Bool -- ^Execute command supports dynamic
-                                         -- registration.
-    } deriving (Show, Read, Eq)
-
-deriveJSON lspOptions ''ExecuteCommandClientCapabilities
 
 -- -------------------------------------
 
