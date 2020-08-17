@@ -219,6 +219,7 @@ capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) Noth
       PublishDiagnosticsClientCapabilities
         (since 3 7 True)
         (since 3 15 publishDiagnosticsTagsCapabilities)
+        (since 3 15 True)
 
     publishDiagnosticsTagsCapabilities =
       PublishDiagnosticsTagsClientCapabilities

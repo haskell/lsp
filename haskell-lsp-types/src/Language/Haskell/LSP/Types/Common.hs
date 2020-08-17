@@ -16,7 +16,7 @@ import GHC.Generics
 -- converting to and from JSON.
 data a |? b = L a
             | R b
-  deriving (Read,Show,Eq)
+  deriving (Read,Show,Eq,Generic)
 infixr |?
 
 instance (ToJSON a, ToJSON b) => ToJSON (a |? b) where
@@ -25,6 +25,8 @@ instance (ToJSON a, ToJSON b) => ToJSON (a |? b) where
 
 instance (FromJSON a, FromJSON b) => FromJSON (a |? b) where
   parseJSON v = L <$> parseJSON v <|> R <$> parseJSON v
+
+instance (NFData a, NFData b) => NFData (a |? b)
 
 -- | This data type is used to host a FromJSON instance for the encoding used by
 -- elisp, where an empty list shows up as "null"

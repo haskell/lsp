@@ -1,17 +1,18 @@
 {-# LANGUAGE DuplicateRecordFields      #-}
 {-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE TypeOperators              #-}
 
 module Language.Haskell.LSP.Types.Diagnostic where
 
 import           Control.DeepSeq
 import qualified Data.Aeson                                 as A
 import           Data.Aeson.TH
-import           Data.Scientific
 import           Data.Text
 import           GHC.Generics
 import           Language.Haskell.LSP.Types.Common
 import           Language.Haskell.LSP.Types.Location
+import           Language.Haskell.LSP.Types.Uri
 import           Language.Haskell.LSP.Types.Utils
 
 -- ---------------------------------------------------------------------
@@ -183,27 +184,63 @@ interface Diagnostic {
 }
 -}
 
-data NumberOrString =
-  NumberValue Scientific
-  | StringValue Text
-  deriving (Show, Read, Eq, Ord, Generic)
-
-instance NFData NumberOrString
-
-deriveJSON lspOptions { sumEncoding = A.UntaggedValue } ''NumberOrString
-
 type DiagnosticSource = Text
 data Diagnostic =
   Diagnostic
     { _range              :: Range
     , _severity           :: Maybe DiagnosticSeverity
-    , _code               :: Maybe NumberOrString
+    , _code               :: Maybe (Int |? String)
     , _source             :: Maybe DiagnosticSource
     , _message            :: Text
     , _tags               :: Maybe (List DiagnosticTag)
     , _relatedInformation :: Maybe (List DiagnosticRelatedInformation)
-    } deriving (Show, Read, Eq, Ord, Generic)
+    } deriving (Show, Read, Eq, Generic)
 
 instance NFData Diagnostic
 
 deriveJSON lspOptions ''Diagnostic
+
+-- -------------------------------------
+
+data PublishDiagnosticsTagsClientCapabilities =
+  PublishDiagnosticsTagsClientCapabilities
+    { -- | The tags supported by the client.
+      _valueSet :: List DiagnosticTag
+    } deriving (Show, Read, Eq)
+
+deriveJSON lspOptions ''PublishDiagnosticsTagsClientCapabilities
+
+data PublishDiagnosticsClientCapabilities =
+  PublishDiagnosticsClientCapabilities
+    { -- | Whether the clients accepts diagnostics with related information.
+      _relatedInformation :: Maybe Bool
+      -- | Client supports the tag property to provide metadata about a
+      -- diagnostic.
+      --
+      -- Clients supporting tags have to handle unknown tags gracefully.
+      -- 
+      -- Since LSP 3.15.0
+    , _tagSupport :: Maybe PublishDiagnosticsTagsClientCapabilities
+      -- | Whether the client interprets the version property of the
+      -- @textDocument/publishDiagnostics@ notification's parameter.
+      -- 
+      -- Since LSP 3.15.0
+    , _versionSupport :: Maybe Bool
+    } deriving (Show, Read, Eq)
+
+deriveJSON lspOptions ''PublishDiagnosticsClientCapabilities
+
+data PublishDiagnosticsParams =
+  PublishDiagnosticsParams
+    { -- | The URI for which diagnostic information is reported.
+      _uri         :: Uri
+      -- | Optional the version number of the document the diagnostics are
+      -- published for.
+      -- 
+      -- Since LSP 3.15.0
+    , _version     :: Maybe Int
+      -- | An array of diagnostic information items.
+    , _diagnostics :: List Diagnostic
+    } deriving (Read,Show,Eq)
+
+deriveJSON lspOptions ''PublishDiagnosticsParams

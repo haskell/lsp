@@ -26,9 +26,11 @@ import           Language.Haskell.LSP.Types.Common
 import           Language.Haskell.LSP.Types.Completion
 import           Language.Haskell.LSP.Types.Declaration
 import           Language.Haskell.LSP.Types.Definition
+import           Language.Haskell.LSP.Types.Diagnostic
 import           Language.Haskell.LSP.Types.DocumentColor
 import           Language.Haskell.LSP.Types.DocumentHighlight
 import           Language.Haskell.LSP.Types.DocumentLink
+import           Language.Haskell.LSP.Types.DocumentSymbol
 import           Language.Haskell.LSP.Types.FoldingRange
 import           Language.Haskell.LSP.Types.Formatting
 import           Language.Haskell.LSP.Types.Hover
@@ -42,7 +44,7 @@ import           Language.Haskell.LSP.Types.Rename
 import           Language.Haskell.LSP.Types.References
 import           Language.Haskell.LSP.Types.SelectionRange
 import           Language.Haskell.LSP.Types.SignatureHelp
-import           Language.Haskell.LSP.Types.DocumentSymbol
+import           Language.Haskell.LSP.Types.TextDocument
 import           Language.Haskell.LSP.Types.TypeDefinition
 import           Language.Haskell.LSP.Types.Utils
 import           Language.Haskell.LSP.Types.Window

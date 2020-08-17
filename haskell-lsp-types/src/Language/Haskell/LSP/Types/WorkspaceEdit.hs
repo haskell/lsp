@@ -12,6 +12,7 @@ import qualified Data.Text                                  as T
 
 import           Language.Haskell.LSP.Types.Common
 import           Language.Haskell.LSP.Types.Location
+import           Language.Haskell.LSP.Types.TextDocument
 import           Language.Haskell.LSP.Types.Uri
 import           Language.Haskell.LSP.Types.Utils
 
@@ -48,34 +49,6 @@ data TextEdit =
 
 deriveJSON lspOptions ''TextEdit
 
--- ---------------------------------------------------------------------
-{-
-VersionedTextDocumentIdentifier
-
-https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#versionedtextdocumentidentifier
-
-    New: An identifier to denote a specific version of a text document.
-
-interface VersionedTextDocumentIdentifier extends TextDocumentIdentifier {
-    /**
-	 * The version number of this document. If a versioned text document identifier
-	 * is sent from the server to the client and the file is not open in the editor
-	 * (the server has not received an open notification before) the server can send
-	 * `null` to indicate that the version is known and the content on disk is the
-	 * truth (as speced with document content ownership)
-	 */
-	version: number | null;
--}
-
-type TextDocumentVersion = Maybe Int
-
-data VersionedTextDocumentIdentifier =
-  VersionedTextDocumentIdentifier
-    { _uri     :: Uri
-    , _version :: TextDocumentVersion
-    } deriving (Show, Read, Eq)
-
-deriveJSON lspOptions ''VersionedTextDocumentIdentifier
 
 -- ---------------------------------------------------------------------
 {-

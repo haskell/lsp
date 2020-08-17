@@ -660,28 +660,6 @@ data ColorProviderClientCapabilities =
 
 deriveJSON lspOptions ''ColorProviderClientCapabilities
 
--- -------------------------------------
-
-data PublishDiagnosticsTagsClientCapabilities =
-  PublishDiagnosticsTagsClientCapabilities
-    { -- | The tags supported by the client.
-      _valueSet :: List DiagnosticTag
-    } deriving (Show, Read, Eq)
-
-deriveJSON lspOptions ''PublishDiagnosticsTagsClientCapabilities
-
-data PublishDiagnosticsClientCapabilities =
-  PublishDiagnosticsClientCapabilities
-    { -- | Whether the clients accepts diagnostics with related information.
-      _relatedInformation :: Maybe Bool
-      -- | Client supports the tag property to provide metadata about a
-      -- diagnostic.
-      --
-      -- Clients supporting tags have to handle unknown tags gracefully.
-    , _tagSupport :: Maybe PublishDiagnosticsTagsClientCapabilities
-    } deriving (Show, Read, Eq)
-
-deriveJSON lspOptions ''PublishDiagnosticsClientCapabilities
 
 -- -------------------------------------
 
