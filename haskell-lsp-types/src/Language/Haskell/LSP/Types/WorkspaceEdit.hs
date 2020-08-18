@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP                        #-}
 {-# LANGUAGE DuplicateRecordFields      #-}
 {-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE OverloadedStrings          #-}
@@ -7,8 +6,6 @@ module Language.Haskell.LSP.Types.WorkspaceEdit where
 import           Data.Aeson
 import           Data.Aeson.TH
 import qualified Data.HashMap.Strict                        as H
--- For <= 8.2.2
-import           Data.Monoid                                ((<>))
 import           Data.Text                                  (Text)
 import qualified Data.Text                                  as T
 
@@ -49,14 +46,10 @@ data WorkspaceEdit =
     , _documentChanges :: Maybe (List TextDocumentEdit)
     } deriving (Show, Read, Eq)
 
+instance Semigroup WorkspaceEdit where
+  (WorkspaceEdit a b) <> (WorkspaceEdit c d) = WorkspaceEdit (a <> c) (b <> d)
 instance Monoid WorkspaceEdit where
   mempty = WorkspaceEdit Nothing Nothing
-  mappend (WorkspaceEdit a b) (WorkspaceEdit c d) = WorkspaceEdit (a <> c) (b <> d)
-
-#if __GLASGOW_HASKELL__ >= 804
-instance Semigroup WorkspaceEdit where
-  (<>) = mappend
-#endif
 
 deriveJSON lspOptions ''WorkspaceEdit
 

@@ -1,12 +1,8 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE OverloadedStrings #-}
 module ServerCapabilitiesSpec where
 
 import Control.Lens.Operators
 import Data.Aeson
-#if __GLASGOW_HASKELL__ < 808
-import Data.Monoid ((<>))
-#endif
 import Language.Haskell.LSP.Types
 import Language.Haskell.LSP.Types.Lens
 import Test.Hspec

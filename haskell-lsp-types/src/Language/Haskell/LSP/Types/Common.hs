@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP                        #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE DeriveTraversable          #-}
 {-# LANGUAGE DeriveGeneric              #-}
@@ -31,7 +30,7 @@ instance (NFData a, NFData b) => NFData (a |? b)
 -- | This data type is used to host a FromJSON instance for the encoding used by
 -- elisp, where an empty list shows up as "null"
 newtype List a = List [a]
-                deriving (Show,Read,Eq,Ord,Monoid,Functor,Foldable,Traversable,Generic)
+                deriving (Show,Read,Eq,Ord,Semigroup,Monoid,Functor,Foldable,Traversable,Generic)
 
 instance NFData a => NFData (List a)
 
@@ -41,11 +40,6 @@ instance (ToJSON a) => ToJSON (List a) where
 instance (FromJSON a) => FromJSON (List a) where
   parseJSON Null = return (List [])
   parseJSON v      = List <$> parseJSON v
-
-#if __GLASGOW_HASKELL__ >= 804
-instance Semigroup (List a) where
-  (<>) = mappend
-#endif
 
 data Empty = Empty deriving (Eq,Ord,Show)
 instance ToJSON Empty where

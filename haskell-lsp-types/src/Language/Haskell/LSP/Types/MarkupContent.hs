@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP                        #-}
 {-# LANGUAGE DuplicateRecordFields      #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE TemplateHaskell            #-}
@@ -12,7 +11,6 @@ module Language.Haskell.LSP.Types.MarkupContent where
 
 import           Data.Aeson
 import           Data.Aeson.TH
-import           Data.Monoid                                    ((<>))
 import           Data.Text                                      (Text)
 import           Language.Haskell.LSP.Types.Utils
 
@@ -83,16 +81,13 @@ sectionSeparator = "* * *\n"
 
 -- ---------------------------------------------------------------------
 
-#if __GLASGOW_HASKELL__ >= 804
 instance Semigroup MarkupContent where
-  (<>) = mappend
-#endif
+  MarkupContent MkPlainText s1 <> MarkupContent MkPlainText s2 = MarkupContent MkPlainText (s1 `mappend` s2)
+  MarkupContent MkMarkdown  s1 <> MarkupContent _           s2 = MarkupContent MkMarkdown  (s1 `mappend` s2)
+  MarkupContent _           s1 <> MarkupContent MkMarkdown  s2 = MarkupContent MkMarkdown  (s1 `mappend` s2)
 
 instance Monoid MarkupContent where
   mempty = MarkupContent MkPlainText ""
-  MarkupContent MkPlainText s1 `mappend` MarkupContent MkPlainText s2 = MarkupContent MkPlainText (s1 `mappend` s2)
-  MarkupContent MkMarkdown  s1 `mappend` MarkupContent _           s2 = MarkupContent MkMarkdown  (s1 `mappend` s2)
-  MarkupContent _           s1 `mappend` MarkupContent MkMarkdown  s2 = MarkupContent MkMarkdown  (s1 `mappend` s2)
 
 -- ---------------------------------------------------------------------
 

@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP              #-}
 {-# LANGUAGE TemplateHaskell  #-}
 {-# LANGUAGE DuplicateRecordFields      #-}
 module Language.Haskell.LSP.Types.Hover where
@@ -76,18 +75,14 @@ instance FromJSON HoverContents where
 
 -- -------------------------------------
 
-#if __GLASGOW_HASKELL__ >= 804
 instance Semigroup HoverContents where
-  (<>) = mappend
-#endif
+  HoverContents h1   <> HoverContents         h2   = HoverContents (h1 `mappend` h2)
+  HoverContents h1   <> HoverContentsMS (List h2s) = HoverContents (mconcat (h1: (map toMarkupContent h2s)))
+  HoverContentsMS (List h1s) <> HoverContents         h2    = HoverContents (mconcat ((map toMarkupContent h1s) ++ [h2]))
+  HoverContentsMS (List h1s) <> HoverContentsMS (List h2s) = HoverContentsMS (List (h1s `mappend` h2s))
 
 instance Monoid HoverContents where
   mempty = HoverContentsMS (List [])
-
-  HoverContents h1   `mappend` HoverContents         h2   = HoverContents (h1 `mappend` h2)
-  HoverContents h1   `mappend` HoverContentsMS (List h2s) = HoverContents (mconcat (h1: (map toMarkupContent h2s)))
-  HoverContentsMS (List h1s) `mappend` HoverContents         h2    = HoverContents (mconcat ((map toMarkupContent h1s) ++ [h2]))
-  HoverContentsMS (List h1s) `mappend` HoverContentsMS (List h2s) = HoverContentsMS (List (h1s `mappend` h2s))
 
 toMarkupContent :: MarkedString -> MarkupContent
 toMarkupContent (PlainString s) = unmarkedUpContent s
