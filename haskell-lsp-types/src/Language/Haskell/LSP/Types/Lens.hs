@@ -8,15 +8,16 @@
 
 module Language.Haskell.LSP.Types.Lens where
 
+import           Language.Haskell.LSP.Types.Cancellation
 import           Language.Haskell.LSP.Types.ClientCapabilities
 import           Language.Haskell.LSP.Types.CodeAction
 import           Language.Haskell.LSP.Types.CodeLens
+import           Language.Haskell.LSP.Types.DocumentColor
 import           Language.Haskell.LSP.Types.Command
 import           Language.Haskell.LSP.Types.Completion
-import           Language.Haskell.LSP.Types.DataTypesJSON
+import           Language.Haskell.LSP.Types.Configuration
 import           Language.Haskell.LSP.Types.Definition
 import           Language.Haskell.LSP.Types.Diagnostic
-import           Language.Haskell.LSP.Types.DocumentColor
 import           Language.Haskell.LSP.Types.DocumentFilter
 import           Language.Haskell.LSP.Types.DocumentHighlight
 import           Language.Haskell.LSP.Types.DocumentLink
@@ -24,6 +25,7 @@ import           Language.Haskell.LSP.Types.FoldingRange
 import           Language.Haskell.LSP.Types.Formatting
 import           Language.Haskell.LSP.Types.Hover
 import           Language.Haskell.LSP.Types.Implementation
+import           Language.Haskell.LSP.Types.Initialize
 import           Language.Haskell.LSP.Types.Location
 import           Language.Haskell.LSP.Types.Progress
 import           Language.Haskell.LSP.Types.Registration
@@ -36,8 +38,10 @@ import           Language.Haskell.LSP.Types.DocumentSymbol
 import           Language.Haskell.LSP.Types.TextDocument
 import           Language.Haskell.LSP.Types.TypeDefinition
 import           Language.Haskell.LSP.Types.Window
+import           Language.Haskell.LSP.Types.WatchedFiles
 import           Language.Haskell.LSP.Types.WorkspaceEdit
 import           Language.Haskell.LSP.Types.WorkspaceFolders
+import           Language.Haskell.LSP.Types.WorkspaceSymbol
 import           Language.Haskell.LSP.Types.Message
 import           Control.Lens.TH
 
@@ -46,12 +50,9 @@ import           Control.Lens.TH
 -- client capabilities
 makeFieldsNoPrefix ''WorkspaceEditClientCapabilities
 makeFieldsNoPrefix ''DidChangeConfigurationClientCapabilities
-makeFieldsNoPrefix ''DidChangeWatchedFilesClientCapabilities
-makeFieldsNoPrefix ''WorkspaceSymbolKindClientCapabilities
-makeFieldsNoPrefix ''WorkspaceSymbolClientCapabilities
 makeFieldsNoPrefix ''ExecuteCommandClientCapabilities
 makeFieldsNoPrefix ''WorkspaceClientCapabilities
-makeFieldsNoPrefix ''SynchronizationTextDocumentClientCapabilities
+makeFieldsNoPrefix ''TextDocumentSyncClientCapabilities
 makeFieldsNoPrefix ''CompletionItemTagsClientCapabilities
 makeFieldsNoPrefix ''CompletionItemClientCapabilities
 makeFieldsNoPrefix ''CompletionItemKindClientCapabilities
@@ -64,7 +65,6 @@ makeFieldsNoPrefix ''ReferencesClientCapabilities
 makeFieldsNoPrefix ''DefinitionClientCapabilities
 makeFieldsNoPrefix ''TypeDefinitionClientCapabilities
 makeFieldsNoPrefix ''ImplementationClientCapabilities
-makeFieldsNoPrefix ''ColorProviderClientCapabilities
 makeFieldsNoPrefix ''PublishDiagnosticsClientCapabilities
 makeFieldsNoPrefix ''PublishDiagnosticsTagsClientCapabilities
 makeFieldsNoPrefix ''TextDocumentClientCapabilities
@@ -72,8 +72,6 @@ makeFieldsNoPrefix ''ClientCapabilities
 
 -- ---------------------------------------------------------------------
 
-makeFieldsNoPrefix ''InitializeParams
-makeFieldsNoPrefix ''InitializeError
 makeFieldsNoPrefix ''CompletionOptions
 makeFieldsNoPrefix ''SignatureHelpOptions
 makeFieldsNoPrefix ''ExecuteCommandOptions
@@ -82,12 +80,8 @@ makeFieldsNoPrefix ''TextDocumentSyncOptions
 makeFieldsNoPrefix ''WorkspaceServerCapabilities
 makeFieldsNoPrefix ''WorkspaceFoldersServerCapabilities
 makeFieldsNoPrefix ''ServerCapabilities
-makeFieldsNoPrefix ''InitializeResponseCapabilities
 makeFieldsNoPrefix ''Registration
 makeFieldsNoPrefix ''RegistrationParams
-makeFieldsNoPrefix ''DidChangeWatchedFilesRegistrationOptions
-makeFieldsNoPrefix ''FileSystemWatcher
-makeFieldsNoPrefix ''WatchKind
 makeFieldsNoPrefix ''TextDocumentRegistrationOptions
 makeFieldsNoPrefix ''Unregistration
 makeFieldsNoPrefix ''UnregistrationParams
@@ -102,8 +96,6 @@ makeFieldsNoPrefix ''WillSaveTextDocumentParams
 makeFieldsNoPrefix ''DidSaveTextDocumentParams
 makeFieldsNoPrefix ''TextDocumentSaveRegistrationOptions
 makeFieldsNoPrefix ''DidCloseTextDocumentParams
-makeFieldsNoPrefix ''FileEvent
-makeFieldsNoPrefix ''DidChangeWatchedFilesParams
 makeFieldsNoPrefix ''PublishDiagnosticsParams
 makeFieldsNoPrefix ''LanguageString
 makeFieldsNoPrefix ''ParameterInformation
@@ -112,15 +104,35 @@ makeFieldsNoPrefix ''SignatureHelp
 makeFieldsNoPrefix ''SignatureHelpRegistrationOptions
 makeFieldsNoPrefix ''ReferenceContext
 makeFieldsNoPrefix ''ReferenceParams
-makeFieldsNoPrefix ''WorkspaceSymbolParams
 makeFieldsNoPrefix ''ExecuteCommandParams
 makeFieldsNoPrefix ''ExecuteCommandRegistrationOptions
 makeFieldsNoPrefix ''ApplyWorkspaceEditParams
 makeFieldsNoPrefix ''ApplyWorkspaceEditResponseBody
-makeFieldsNoPrefix ''TraceParams
-makeFieldsNoPrefix ''TraceNotification
 
 -- ---------------------------------------------------------------------
+
+-- Initialize
+makeFieldsNoPrefix ''InitializeParams
+makeFieldsNoPrefix ''InitializeError
+makeFieldsNoPrefix ''InitializeResult
+makeFieldsNoPrefix ''ClientInfo
+makeFieldsNoPrefix ''ServerInfo
+makeFieldsNoPrefix ''InitializedParams
+
+-- Watched files
+makeFieldsNoPrefix ''DidChangeWatchedFilesClientCapabilities
+makeFieldsNoPrefix ''DidChangeWatchedFilesRegistrationOptions
+makeFieldsNoPrefix ''FileSystemWatcher
+makeFieldsNoPrefix ''WatchKind
+makeFieldsNoPrefix ''FileEvent
+makeFieldsNoPrefix ''DidChangeWatchedFilesParams
+
+-- Workspace symbols
+makeFieldsNoPrefix ''WorkspaceSymbolKindClientCapabilities
+makeFieldsNoPrefix ''WorkspaceSymbolClientCapabilities
+makeFieldsNoPrefix ''WorkspaceSymbolOptions
+makeFieldsNoPrefix ''WorkspaceSymbolRegistrationOptions
+makeFieldsNoPrefix ''WorkspaceSymbolParams
 
 -- Location
 makeFieldsNoPrefix ''Position

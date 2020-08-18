@@ -16,6 +16,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 {-# OPTIONS_GHC -Werror=incomplete-patterns #-}
@@ -34,12 +35,12 @@ import           Language.Haskell.LSP.Types.CodeLens
 import           Language.Haskell.LSP.Types.Command
 import           Language.Haskell.LSP.Types.Common
 import           Language.Haskell.LSP.Types.Completion
-import           Language.Haskell.LSP.Types.DataTypesJSON
 import           Language.Haskell.LSP.Types.Declaration
 import           Language.Haskell.LSP.Types.Definition
 import           Language.Haskell.LSP.Types.DocumentColor
 import           Language.Haskell.LSP.Types.DocumentHighlight
 import           Language.Haskell.LSP.Types.DocumentLink
+import           Language.Haskell.LSP.Types.DocumentSymbol
 import           Language.Haskell.LSP.Types.FoldingRange
 import           Language.Haskell.LSP.Types.Formatting
 import           Language.Haskell.LSP.Types.Hover
@@ -48,64 +49,23 @@ import           Language.Haskell.LSP.Types.Method
 import           Language.Haskell.LSP.Types.References
 import           Language.Haskell.LSP.Types.Rename
 import           Language.Haskell.LSP.Types.SignatureHelp
-import           Language.Haskell.LSP.Types.DocumentSymbol
+import           Language.Haskell.LSP.Types.SelectionRange
 import           Language.Haskell.LSP.Types.TextDocument
 import           Language.Haskell.LSP.Types.TypeDefinition
 import           Language.Haskell.LSP.Types.Utils
+import           Language.Haskell.LSP.Types.WatchedFiles
+import           Language.Haskell.LSP.Types.WorkspaceSymbol
 
 
 -- ---------------------------------------------------------------------
-{-
-New in 3.0
-----------
 
-Register Capability
-
-The client/registerCapability request is sent from the server to the client to
-register for a new capability on the client side. Not all clients need to
-support dynamic capability registration. A client opts in via the
-ClientCapabilities.dynamicRegistration property.
-
-Request:
-
-    method: 'client/registerCapability'
-    params: RegistrationParams
-
-Where RegistrationParams are defined as follows:
-
-/**
- * General paramters to to regsiter for a capability.
- */
-export interface Registration {
-        /**
-         * The id used to register the request. The id can be used to deregister
-         * the request again.
-         */
-        id: string;
-
-        /**
-         * The method / capability to register for.
-         */
-        method: string;
-
-        /**
-         * Options necessary for the registration.
-         */
-        registerOptions?: any;
-}
-
-export interface RegistrationParams {
-        registrations: Registration[];
-}
--}
-
-
+-- | Matches up the registration options for a specific method
 type family RegistrationOptions (m :: Method FromClient t) :: Type where
   -- Workspace
   RegistrationOptions WorkspaceDidChangeWorkspaceFolders = Empty
   RegistrationOptions WorkspaceDidChangeConfiguration    = Empty
   RegistrationOptions WorkspaceDidChangeWatchedFiles     = DidChangeWatchedFilesRegistrationOptions
-  RegistrationOptions WorkspaceSymbol                    = Empty
+  RegistrationOptions WorkspaceSymbol                    = WorkspaceSymbolRegistrationOptions
   RegistrationOptions WorkspaceExecuteCommand            = ExecuteCommandRegistrationOptions
 
   -- Text synchronisation
@@ -136,8 +96,7 @@ type family RegistrationOptions (m :: Method FromClient t) :: Type where
   RegistrationOptions TextDocumentOnTypeFormatting       = DocumentOnTypeFormattingRegistrationOptions
   RegistrationOptions TextDocumentRename                 = RenameRegistrationOptions
   RegistrationOptions TextDocumentFoldingRange           = FoldingRangeRegistrationOptions
-  -- TODO: Add me once textDocument/selectionRange is implemented
-  -- RegistrationOptions TextDocumentSelectionRange         = SelectionRangeRegistrationOptions
+  RegistrationOptions TextDocumentSelectionRange         = SelectionRangeRegistrationOptions
   RegistrationOptions m                                  = Void
 
 data Registration (m :: Method FromClient t) =
@@ -190,3 +149,28 @@ data RegistrationParams =
   deriving (Show, Eq)
 
 deriveJSON lspOptions ''RegistrationParams
+
+
+-- ---------------------------------------------------------------------
+
+-- | General parameters to unregister a capability.
+data Unregistration =
+  Unregistration
+    { -- | The id used to unregister the request or notification. Usually an id
+      -- provided during the register request.
+      _id     :: Text
+      -- | The method / capability to unregister for.
+    , _method :: SomeClientMethod
+    } deriving (Show, Eq)
+
+deriveJSON lspOptions ''Unregistration
+
+data UnregistrationParams =
+  UnregistrationParams
+    { -- | This should correctly be named @unregistrations@. However changing this
+      -- is a breaking change and needs to wait until we deliver a 4.x version
+      -- of the specification.
+      _unregistrations :: List Unregistration
+    } deriving (Show, Eq)
+
+deriveJSON lspOptions ''UnregistrationParams

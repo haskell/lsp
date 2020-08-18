@@ -21,13 +21,14 @@ library
                      , Language.Haskell.LSP.Types.Capabilities
                      , Language.Haskell.LSP.Types.Lens
                      , Data.IxMap
-  other-modules:       Language.Haskell.LSP.Types.ClientCapabilities
+  other-modules:       Language.Haskell.LSP.Types.Cancellation
+                     , Language.Haskell.LSP.Types.ClientCapabilities
                      , Language.Haskell.LSP.Types.CodeAction
                      , Language.Haskell.LSP.Types.CodeLens
                      , Language.Haskell.LSP.Types.Command
                      , Language.Haskell.LSP.Types.Common
                      , Language.Haskell.LSP.Types.Completion
-                     , Language.Haskell.LSP.Types.DataTypesJSON
+                     , Language.Haskell.LSP.Types.Configuration
                      , Language.Haskell.LSP.Types.Declaration
                      , Language.Haskell.LSP.Types.Definition
                      , Language.Haskell.LSP.Types.Diagnostic
@@ -40,6 +41,7 @@ library
                      , Language.Haskell.LSP.Types.Formatting
                      , Language.Haskell.LSP.Types.Hover
                      , Language.Haskell.LSP.Types.Implementation
+                     , Language.Haskell.LSP.Types.Initialize
                      , Language.Haskell.LSP.Types.Location
                      , Language.Haskell.LSP.Types.LspId
                      , Language.Haskell.LSP.Types.MarkupContent
@@ -59,8 +61,10 @@ library
                      , Language.Haskell.LSP.Types.Uri
                      , Language.Haskell.LSP.Types.Utils
                      , Language.Haskell.LSP.Types.Window
+                     , Language.Haskell.LSP.Types.WatchedFiles
                      , Language.Haskell.LSP.Types.WorkspaceEdit
                      , Language.Haskell.LSP.Types.WorkspaceFolders
+                     , Language.Haskell.LSP.Types.WorkspaceSymbol
  -- other-extensions:
   ghc-options:         -Wall
   build-depends:       base >= 4.9 && < 4.15

@@ -37,13 +37,22 @@ capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) Noth
   where
     w = WorkspaceClientCapabilities
           (Just True)
-          (Just (WorkspaceEditClientCapabilities (Just True)))
+          (Just (WorkspaceEditClientCapabilities
+                  (Just True)
+                  (since 3 13 resourceOperations)
+                  Nothing))
           (Just (DidChangeConfigurationClientCapabilities dynamicReg))
           (Just (DidChangeWatchedFilesClientCapabilities dynamicReg))
           (Just symbolCapabilities)
           (Just (ExecuteCommandClientCapabilities dynamicReg))
           (since 3 6 True)
           (since 3 6 True)
+    
+    resourceOperations = List
+      [ ResourceOperationCreate
+      , ResourceOperationDelete
+      , ResourceOperationRename
+      ]
 
     symbolCapabilities = WorkspaceSymbolClientCapabilities
       dynamicReg
@@ -104,12 +113,12 @@ capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) Noth
           (Just codeActionCapability)
           (Just (CodeLensClientCapabilities dynamicReg))
           (Just (DocumentLinkClientCapabilities dynamicReg (since 3 15 True)))
-          (since 3 6 (ColorProviderClientCapabilities dynamicReg))
+          (since 3 6 (DocumentColorClientCapabilities dynamicReg))
           (Just (RenameClientCapabilities dynamicReg (since 3 12 True)))
           (Just publishDiagnosticsCapabilities)
           (since 3 10 foldingRangeCapability)
     sync =
-      SynchronizationTextDocumentClientCapabilities
+      TextDocumentSyncClientCapabilities
         dynamicReg
         (Just True)
         (Just True)

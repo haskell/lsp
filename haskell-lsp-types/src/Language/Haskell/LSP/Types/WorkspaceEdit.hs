@@ -1,8 +1,10 @@
 {-# LANGUAGE CPP                        #-}
 {-# LANGUAGE DuplicateRecordFields      #-}
 {-# LANGUAGE TemplateHaskell            #-}
+{-# LANGUAGE OverloadedStrings          #-}
 module Language.Haskell.LSP.Types.WorkspaceEdit where
 
+import           Data.Aeson
 import           Data.Aeson.TH
 import qualified Data.HashMap.Strict                        as H
 -- For <= 8.2.2
@@ -17,29 +19,6 @@ import           Language.Haskell.LSP.Types.Uri
 import           Language.Haskell.LSP.Types.Utils
 
 -- ---------------------------------------------------------------------
-{-
-TextEdit
-
-https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#textedit
-
-A textual edit applicable to a text document.
-
-interface TextEdit {
-    /**
-     * The range of the text document to be manipulated. To insert
-     * text into a document create a range where start === end.
-     */
-    range: Range;
-
-    /**
-     * The string to be inserted. For delete operations use an
-     * empty string.
-     */
-    newText: string;
-}
-
-
--}
 
 data TextEdit =
   TextEdit
@@ -51,31 +30,6 @@ deriveJSON lspOptions ''TextEdit
 
 
 -- ---------------------------------------------------------------------
-{-
-New in 3.0
-----------
-
-TextDocumentEdit
-https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#new-textdocumentedit
-
-If multiple TextEdits are applied to a text document, all text edits describe
-changes made to the initial document version. Execution wise text edits should
-applied from the bottom to the top of the text document. Overlapping text edits
-are not supported.
-
-export interface TextDocumentEdit {
-        /**
-         * The text document to change.
-         */
-        textDocument: VersionedTextDocumentIdentifier;
-
-        /**
-         * The edits to be applied.
-         */
-        edits: TextEdit[];
-}
-
--}
 
 data TextDocumentEdit =
   TextDocumentEdit
@@ -86,34 +40,6 @@ data TextDocumentEdit =
 deriveJSON lspOptions ''TextDocumentEdit
 
 -- ---------------------------------------------------------------------
-{-
-Changed in 3.0
---------------
-
-WorkspaceEdit
-
-https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#workspaceedit
-
-
-Changed A workspace edit represents changes to many resources managed in the
-workspace. The edit should either provide changes or documentChanges. If
-documentChanges are present they are preferred over changes if the client can
-handle versioned document edits.
-
-export interface WorkspaceEdit {
-        /**
-         * Holds changes to existing resources.
-         */
-        changes?: { [uri: string]: TextEdit[]; };
-
-        /**
-         * An array of `TextDocumentEdit`s to express changes to specific a specific
-         * version of a text document. Whether a client supports versioned document
-         * edits is expressed via `WorkspaceClientCapabilities.versionedWorkspaceEdit`.
-         */
-        documentChanges?: TextDocumentEdit[];
-}
--}
 
 type WorkspaceEditMap = H.HashMap Uri (List TextEdit)
 
@@ -133,6 +59,86 @@ instance Semigroup WorkspaceEdit where
 #endif
 
 deriveJSON lspOptions ''WorkspaceEdit
+
+-- -------------------------------------
+
+data ResourceOperationKind
+  = ResourceOperationCreate -- ^ Supports creating new files and folders.
+  | ResourceOperationRename -- ^ Supports renaming existing files and folders.
+  | ResourceOperationDelete -- ^ Supports deleting existing files and folders.
+  deriving (Read, Show, Eq)
+  
+instance ToJSON ResourceOperationKind where
+  toJSON ResourceOperationCreate = String "create"
+  toJSON ResourceOperationRename = String "rename"
+  toJSON ResourceOperationDelete = String "delete"
+
+instance FromJSON ResourceOperationKind where
+  parseJSON (String "create") = pure ResourceOperationCreate
+  parseJSON (String "rename") = pure ResourceOperationRename
+  parseJSON (String "delete") = pure ResourceOperationDelete
+  parseJSON _                 = mempty
+
+data FailureHandlingKind
+  = FailureHandlingAbort -- ^ Applying the workspace change is simply aborted if one of the changes provided fails. All operations executed before the failing operation stay executed.
+  | FailureHandlingTransactional -- ^ All operations are executed transactional. That means they either all succeed or no changes at all are applied to the workspace.
+  | FailureHandlingTextOnlyTransactional -- ^ If the workspace edit contains only textual file changes they are executed transactional. If resource changes (create, rename or delete file) are part of the change the failure handling strategy is abort.
+  | FailureHandlingUndo -- ^ The client tries to undo the operations already executed. But there is no guarantee that this is succeeding.
+  deriving (Read, Show, Eq)
+  
+instance ToJSON FailureHandlingKind where
+  toJSON FailureHandlingAbort                 = String "abort"
+  toJSON FailureHandlingTransactional         = String "transactional"
+  toJSON FailureHandlingTextOnlyTransactional = String "textOnlyTransactional"
+  toJSON FailureHandlingUndo                  = String "undo"
+
+instance FromJSON FailureHandlingKind where
+  parseJSON (String "abort")                 = pure FailureHandlingAbort
+  parseJSON (String "transactional")         = pure FailureHandlingTransactional
+  parseJSON (String "textOnlyTransactional") = pure FailureHandlingTextOnlyTransactional
+  parseJSON (String "undo")                  = pure FailureHandlingUndo
+  parseJSON _                                = mempty
+
+data WorkspaceEditClientCapabilities =
+  WorkspaceEditClientCapabilities
+  { _documentChanges :: Maybe Bool -- ^The client supports versioned document
+                                   -- changes in 'WorkspaceEdit's
+    -- | The resource operations the client supports. Clients should at least
+    -- support @create@, @rename@ and @delete@ files and folders.
+  , _resourceOperations :: Maybe (List ResourceOperationKind)
+    -- | The failure handling strategy of a client if applying the workspace edit
+    -- fails.
+  , _failureHandling :: Maybe FailureHandlingKind
+  } deriving (Show, Read, Eq)
+
+deriveJSON lspOptions ''WorkspaceEditClientCapabilities
+
+-- ---------------------------------------------------------------------
+
+data ApplyWorkspaceEditParams =
+  ApplyWorkspaceEditParams
+    { -- | An optional label of the workspace edit. This label is
+      -- presented in the user interface for example on an undo
+      -- stack to undo the workspace edit.
+      _label :: Maybe Text
+      -- | The edits to apply
+    , _edit :: WorkspaceEdit
+    } deriving (Show, Read, Eq)
+
+deriveJSON lspOptions ''ApplyWorkspaceEditParams
+
+data ApplyWorkspaceEditResponseBody =
+  ApplyWorkspaceEditResponseBody
+    { -- | Indicates whether the edit was applied or not.
+      _applied :: Bool
+      -- | An optional textual description for why the edit was not applied.
+      -- This may be used may be used by the server for diagnostic
+      -- logging or to provide a suitable error for a request that
+      -- triggered the edit.
+    , _failureReason :: Maybe Text
+    } deriving (Show, Read, Eq)
+
+deriveJSON lspOptions ''ApplyWorkspaceEditResponseBody
 
 -- ---------------------------------------------------------------------
 

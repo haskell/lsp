@@ -18,11 +18,12 @@
 
 module Language.Haskell.LSP.Types.Message where
 
-import           Language.Haskell.LSP.Types.DataTypesJSON
+import           Language.Haskell.LSP.Types.Cancellation
 import           Language.Haskell.LSP.Types.CodeAction
 import           Language.Haskell.LSP.Types.CodeLens
 import           Language.Haskell.LSP.Types.Command
 import           Language.Haskell.LSP.Types.Common
+import           Language.Haskell.LSP.Types.Configuration
 import           Language.Haskell.LSP.Types.Completion
 import           Language.Haskell.LSP.Types.Declaration
 import           Language.Haskell.LSP.Types.Definition
@@ -35,6 +36,7 @@ import           Language.Haskell.LSP.Types.FoldingRange
 import           Language.Haskell.LSP.Types.Formatting
 import           Language.Haskell.LSP.Types.Hover
 import           Language.Haskell.LSP.Types.Implementation
+import           Language.Haskell.LSP.Types.Initialize
 import           Language.Haskell.LSP.Types.Location
 import           Language.Haskell.LSP.Types.LspId
 import           Language.Haskell.LSP.Types.Method
@@ -48,8 +50,10 @@ import           Language.Haskell.LSP.Types.TextDocument
 import           Language.Haskell.LSP.Types.TypeDefinition
 import           Language.Haskell.LSP.Types.Utils
 import           Language.Haskell.LSP.Types.Window
+import           Language.Haskell.LSP.Types.WatchedFiles
 import           Language.Haskell.LSP.Types.WorkspaceEdit
 import           Language.Haskell.LSP.Types.WorkspaceFolders
+import           Language.Haskell.LSP.Types.WorkspaceSymbol
 import qualified Data.HashMap.Strict as HM
 
 import Data.Kind
@@ -72,7 +76,7 @@ type family MessageParams (m :: Method p t) :: Type where
   MessageParams Initialize                         = InitializeParams
   MessageParams Initialized                        = Maybe InitializedParams
   MessageParams Shutdown                           = Maybe Value
-  MessageParams Exit                               = Maybe ExitParams
+  MessageParams Exit                               = Empty
   -- Workspace
   MessageParams WorkspaceDidChangeWorkspaceFolders = DidChangeWorkspaceFoldersParams
   MessageParams WorkspaceDidChangeConfiguration    = DidChangeConfigurationParams
@@ -152,7 +156,7 @@ type family ResponseParams (m :: Method p Request) :: Type where
 
 -- Client
   -- General
-  ResponseParams Initialize                    = InitializeResponseCapabilities
+  ResponseParams Initialize                    = InitializeResult
   ResponseParams Shutdown                      = Empty
   -- Workspace
   ResponseParams WorkspaceSymbol               = List SymbolInformation
@@ -273,42 +277,6 @@ instance FromJSON (CustomMessage p Notification) where
 -- ---------------------------------------------------------------------
 -- Response Message
 -- ---------------------------------------------------------------------
-{-
-interface ResponseError<D> {
-    /**
-     * A number indicating the error type that occurred.
-     */
-    code: number;
-
-    /**
-     * A string providing a short description of the error.
-     */
-    message: string;
-
-    /**
-     * A Primitive or Structured value that contains additional
-     * information about the error. Can be omitted.
-     */
-    data?: D;
-}
-
-export namespace ErrorCodes {
-        // Defined by JSON RPC
-        export const ParseError: number = -32700;
-        export const InvalidRequest: number = -32600;
-        export const MethodNotFound: number = -32601;
-        export const InvalidParams: number = -32602;
-        export const InternalError: number = -32603;
-        export const serverErrorStart: number = -32099;
-        export const serverErrorEnd: number = -32000;
-        export const ServerNotInitialized: number = -32002;
-        export const UnknownErrorCode: number = -32001;
-
-        // Defined by the protocol.
-        export const RequestCancelled: number = -32800;
-        export const ContentModified: number = -32801;
-}
--}
 
 data ErrorCode = ParseError
                | InvalidRequest
@@ -352,28 +320,6 @@ instance FromJSON ErrorCode where
   parseJSON _                   = mempty
 
 -- -------------------------------------
-
-{-
-  https://microsoft.github.io/language-server-protocol/specification#responseMessage
-
-  interface ResponseError {
-    /**
-    * A number indicating the error type that occurred.
-    */
-    code: number;
-
-    /**
-    * A string providing a short description of the error.
-    */
-    message: string;
-
-    /**
-    * A primitive or structured value that contains additional
-    * information about the error. Can be omitted.
-    */
-    data?: string | number | boolean | array | object | null;
-  }
--}
 
 data ResponseError =
   ResponseError

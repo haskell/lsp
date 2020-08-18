@@ -5,6 +5,7 @@ module Language.Haskell.LSP.Types.TextDocument where
 
 import           Data.Aeson
 import           Data.Aeson.TH
+import           Data.Default
 import           Data.Text                      ( Text )
 
 import           Language.Haskell.LSP.Types.Common
@@ -117,6 +118,31 @@ deriveJSON lspOptions ''TextDocumentPositionParams
 -- -------------------------------------
 
 -- Text document synchronisation
+
+
+data TextDocumentSyncClientCapabilities =
+  TextDocumentSyncClientCapabilities
+    { -- | Whether text document synchronization supports dynamic registration.
+      _dynamicRegistration :: Maybe Bool
+
+      -- | The client supports sending will save notifications.
+    , _willSave :: Maybe Bool
+
+      -- | The client supports sending a will save request and waits for a
+      -- response providing text edits which will be applied to the document
+      -- before it is saved.
+    , _willSaveWaitUntil :: Maybe Bool
+
+      -- | The client supports did save notifications.
+    , _didSave :: Maybe Bool
+    } deriving (Show, Read, Eq)
+
+deriveJSON lspOptions ''TextDocumentSyncClientCapabilities
+
+instance Default TextDocumentSyncClientCapabilities where
+  def = TextDocumentSyncClientCapabilities def def def def
+
+-- -------------------------------------
 
 -- | Defines how the host (editor) should sync document changes to the language server.
 data TextDocumentSyncKind
