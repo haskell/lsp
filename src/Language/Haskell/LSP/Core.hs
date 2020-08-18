@@ -453,11 +453,6 @@ getConfig = readData resConfig
 
 -- ---------------------------------------------------------------------
 
-_ERR_MSG_URL :: [String]
-_ERR_MSG_URL = [ "`stack update` and install new haskell-lsp."
-               , "Or check information on https://marketplace.visualstudio.com/items?itemName=xxxxxxxxxxxxxxx"
-               ]
-
 defaultProgressData :: ProgressData
 defaultProgressData = ProgressData 0 Map.empty
 
@@ -485,7 +480,6 @@ handleMessage jsonStr = do
     handleErrors = either (sendErrorLog . errMsg) id
 
     errMsg err = T.pack $ unwords [ "haskell-lsp:incoming message parse error.", lbs2str jsonStr, show err]
-           ++ L.intercalate "\n" ("" : "" : _ERR_MSG_URL)
            ++ "\n"
 
 -- ---------------------------------------------------------------------
@@ -609,7 +603,8 @@ initializeRequestHandler InitializeCallbacks{..} vfs handlers options sendFunc r
         sendResp $ makeResponseError (req ^. J.id) errResp
       Nothing -> do
         let capa = serverCapabilities (params ^. J.capabilities) options handlers
-        sendResp $ makeResponseMessage (req ^. J.id) (InitializeResponseCapabilities capa)
+        -- TODO: add API for serverinfo
+        sendResp $ makeResponseMessage (req ^. J.id) (InitializeResult capa Nothing)
 
 
     case initialConfigRes of
@@ -707,6 +702,7 @@ serverCapabilities clientCaps o h =
     { J._textDocumentSync                 = sync
     , J._hoverProvider                    = supportedBool J.STextDocumentHover
     , J._completionProvider               = completionProvider
+    , J._declarationProvider              = supportedBool J.STextDocumentDeclaration
     , J._signatureHelpProvider            = signatureHelpProvider
     , J._definitionProvider               = supportedBool J.STextDocumentDefinition
     , J._typeDefinitionProvider           = supportedBool J.STextDocumentTypeDefinition
@@ -714,20 +710,22 @@ serverCapabilities clientCaps o h =
     , J._referencesProvider               = supportedBool J.STextDocumentReferences
     , J._documentHighlightProvider        = supportedBool J.STextDocumentDocumentHighlight
     , J._documentSymbolProvider           = supportedBool J.STextDocumentDocumentSymbol
-    , J._workspaceSymbolProvider          = supported J.SWorkspaceSymbol
     , J._codeActionProvider               = codeActionProvider
     , J._codeLensProvider                 = supported' J.STextDocumentCodeLens $ J.CodeLensOptions
-                                              (J.WorkDoneProgressOptions Nothing)
+                                              (Just False)
                                               (supported J.SCodeLensResolve)
     , J._documentFormattingProvider       = supportedBool J.STextDocumentFormatting
     , J._documentRangeFormattingProvider  = supportedBool J.STextDocumentRangeFormatting
     , J._documentOnTypeFormattingProvider = documentOnTypeFormattingProvider
     , J._renameProvider                   = supportedBool J.STextDocumentRename
-    , J._documentLinkProvider             = supported' J.STextDocumentDocumentLink $ J.DocumentLinkOptions $
-                                              supported J.SDocumentLinkResolve
+    , J._documentLinkProvider             = supported' J.STextDocumentDocumentLink $ J.DocumentLinkOptions
+                                              (Just False)
+                                              (supported J.SDocumentLinkResolve)
     , J._colorProvider                    = supportedBool J.STextDocumentDocumentColor
     , J._foldingRangeProvider             = supportedBool J.STextDocumentFoldingRange
     , J._executeCommandProvider           = executeCommandProvider
+    , J._selectionRangeProvider           = supportedBool J.STextDocumentSelectionRange
+    , J._workspaceSymbolProvider          = supported J.SWorkspaceSymbol
     , J._workspace                        = Just workspace
     -- TODO: Add something for experimental
     , J._experimental                     = Nothing :: Maybe J.Value
@@ -754,10 +752,10 @@ serverCapabilities clientCaps o h =
     completionProvider
       | supported_b J.STextDocumentCompletion = Just $
           J.CompletionOptions
-            (J.WorkDoneProgressOptions Nothing)
-            (supported J.SCompletionItemResolve)
+            Nothing
             (map singleton <$> completionTriggerCharacters o)
             (map singleton <$> completionAllCommitCharacters o)
+            (supported J.SCompletionItemResolve)
       | otherwise = Nothing
 
     clientSupportsCodeActionKinds = isJust $
@@ -765,16 +763,18 @@ serverCapabilities clientCaps o h =
 
     codeActionProvider
       | clientSupportsCodeActionKinds
-      , supported_b J.STextDocumentCodeAction = Just $ maybe (J.L True) (J.R . J.CodeActionOptions . Just) (codeActionKinds o)
+      , supported_b J.STextDocumentCodeAction = Just $
+          maybe (J.L True) (J.R . J.CodeActionOptions Nothing . Just . J.List)
+                (codeActionKinds o)
       | supported_b J.STextDocumentCodeAction = Just (J.L True)
       | otherwise = Just (J.L False)
 
     signatureHelpProvider
       | supported_b J.STextDocumentSignatureHelp = Just $
           J.SignatureHelpOptions
-            (J.WorkDoneProgressOptions Nothing)
-            (map singleton <$> signatureHelpTriggerCharacters o)
-            (map singleton <$> signatureHelpRetriggerCharacters o)
+            Nothing
+            (J.List . map singleton <$> signatureHelpTriggerCharacters o)
+            (J.List . map singleton <$> signatureHelpRetriggerCharacters o)
       | otherwise = Nothing
 
     documentOnTypeFormattingProvider
@@ -788,14 +788,14 @@ serverCapabilities clientCaps o h =
 
     executeCommandProvider
       | supported_b J.SWorkspaceExecuteCommand
-      , Just cmds <- executeCommandCommands o = Just (J.ExecuteCommandOptions (J.List cmds))
+      , Just cmds <- executeCommandCommands o = Just (J.ExecuteCommandOptions Nothing (J.List cmds))
       | supported_b J.SWorkspaceExecuteCommand
       , Nothing <- executeCommandCommands o =
           error "executeCommandCommands needs to be set if a executeCommandHandler is set"
       | otherwise = Nothing
 
     sync = case textDocumentSync o of
-            Just x -> Just (J.TDSOptions x)
+            Just x -> Just (J.L x)
             Nothing -> Nothing
 
     workspace = J.WorkspaceServerCapabilities workspaceFolder

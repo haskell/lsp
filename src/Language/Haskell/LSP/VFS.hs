@@ -132,7 +132,7 @@ updateVFS f vfs@VFS{vfsMap} = vfs { vfsMap = f vfsMap }
 -- ^ Applies the changes from a 'ApplyWorkspaceEditRequest' to the 'VFS'
 changeFromServerVFS :: VFS -> J.ApplyWorkspaceEditRequest -> IO VFS
 changeFromServerVFS initVfs (J.RequestMessage _ _ _ params) = do
-  let J.ApplyWorkspaceEditParams edit = params
+  let J.ApplyWorkspaceEditParams _label edit = params
       J.WorkspaceEdit mChanges mDocChanges = edit
   case mDocChanges of
     Just (J.List textDocEdits) -> applyEdits textDocEdits

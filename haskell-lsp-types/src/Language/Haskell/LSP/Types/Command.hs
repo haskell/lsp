@@ -23,7 +23,7 @@ deriveJSON lspOptions ''ExecuteCommandClientCapabilities
 -- -------------------------------------
 
 makeExtendingDatatype "ExecuteCommandOptions" [''WorkDoneProgressOptions]
-  [("_commands", [t| List String |])]
+  [("_commands", [t| List Text |])]
 deriveJSON lspOptions ''ExecuteCommandOptions
 
 makeExtendingDatatype "ExecuteCommandRegistrationOptions" [''ExecuteCommandOptions] []
@@ -33,7 +33,7 @@ deriveJSON lspOptions ''ExecuteCommandRegistrationOptions
 
 makeExtendingDatatype "ExecuteCommandParams" [''WorkDoneProgressParams]
   [ ("_command", [t| Text |])
-  , ("_arguments", [t| Maybe (List Value ) |])
+  , ("_arguments", [t| Maybe (List Value) |])
   ]
 deriveJSON lspOptions ''ExecuteCommandParams
 

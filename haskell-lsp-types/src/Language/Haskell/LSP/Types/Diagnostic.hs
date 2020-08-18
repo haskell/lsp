@@ -87,7 +87,7 @@ data Diagnostic =
     , _message            :: Text
     , _tags               :: Maybe (List DiagnosticTag)
     , _relatedInformation :: Maybe (List DiagnosticRelatedInformation)
-    } deriving (Show, Read, Eq, Generic)
+    } deriving (Show, Read, Eq, Ord, Generic)
 
 instance NFData Diagnostic
 
