@@ -16,28 +16,6 @@ import           Data.Monoid                                    ((<>))
 import           Data.Text                                      (Text)
 import           Language.Haskell.LSP.Types.Utils
 
-{-
-/**
- * Describes the content type that a client supports in various
- * result literals like `Hover`, `ParameterInfo` or `CompletionItem`.
- *
- * Please note that `MarkupKinds` must not start with a `$`. This kinds
- * are reserved for internal usage.
- */
-export namespace MarkupKind {
-        /**
-         * Plain text is supported as a content format
-         */
-        export const PlainText: 'plaintext' = 'plaintext';
-
-        /**
-         * Markdown is supported as a content format
-         */
-        export const Markdown: 'markdown' = 'markdown';
-}
-export type MarkupKind = 'plaintext' | 'markdown';
--}
-
 -- |  Describes the content type that a client supports in various
 -- result literals like `Hover`, `ParameterInfo` or `CompletionItem`.
 data MarkupKind = MkPlainText -- ^ Plain text is supported as a content format
@@ -52,45 +30,6 @@ instance FromJSON MarkupKind where
   parseJSON (String "plaintext") = pure MkPlainText
   parseJSON (String "markdown")  = pure MkMarkdown
   parseJSON _                    = mempty
-
-
-{-
-/**
- * A `MarkupContent` literal represents a string value which content is interpreted base on its
- * kind flag. Currently the protocol supports `plaintext` and `markdown` as markup kinds.
- *
- * If the kind is `markdown` then the value can contain fenced code blocks like in GitHub issues.
- * See https://help.github.com/articles/creating-and-highlighting-code-blocks/#syntax-highlighting
- *
- * Here is an example how such a string can be constructed using JavaScript / TypeScript:
- * ```ts
- * let markdown: MarkdownContent = {
- *  kind: MarkupKind.Markdown,
- *	value: [
- *		'# Header',
- *		'Some text',
- *		'```typescript',
- *		'someCode();',
- *		'```'
- *	].join('\n')
- * };
- * ```
- *
- * *Please Note* that clients might sanitize the return markdown. A client could decide to
- * remove HTML from the markdown to avoid script execution.
- */
-export interface MarkupContent {
-        /**
-         * The type of the Markup
-         */
-        kind: MarkupKind;
-
-        /**
-         * The content itself
-         */
-        value: string;
-}
--}
 
 -- | A `MarkupContent` literal represents a string value which content is interpreted base on its
 -- | kind flag. Currently the protocol supports `plaintext` and `markdown` as markup kinds.

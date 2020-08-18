@@ -16,28 +16,7 @@ import           Language.Haskell.LSP.Types.Uri
 import           Language.Haskell.LSP.Types.Utils
 
 -- ---------------------------------------------------------------------
-{-
-The protocol currently supports the following diagnostic severities:
 
-enum DiagnosticSeverity {
-    /**
-     * Reports an error.
-     */
-    Error = 1,
-    /**
-     * Reports a warning.
-     */
-    Warning = 2,
-    /**
-     * Reports an information.
-     */
-    Information = 3,
-    /**
-     * Reports a hint.
-     */
-    Hint = 4
-}
--}
 data DiagnosticSeverity
   = DsError   -- ^ Error = 1,
   | DsWarning -- ^ Warning = 2,
@@ -60,25 +39,6 @@ instance A.FromJSON DiagnosticSeverity where
   parseJSON (A.Number 4) = pure DsHint
   parseJSON _            = mempty
 
-{-
-The diagnostic tags.
-
-export namespace DiagnosticTag {
-    /**
-     * Unused or unnecessary code.
-     *
-     * Clients are allowed to render diagnostics with this tag faded out instead of having
-     * an error squiggle.
-     */
-    export const Unnecessary: 1;
-    /**
-     * Deprecated or obsolete code.
-     *
-     * Clients are allowed to rendered diagnostics with this tag strike through.
-     */
-    export const Deprecated: 2;
-}
--}
 data DiagnosticTag
   -- | Unused or unnecessary code.
   --
@@ -104,23 +64,6 @@ instance A.FromJSON DiagnosticTag where
   parseJSON _            = mempty
 
 -- ---------------------------------------------------------------------
-{-
-Represents a related message and source code location for a diagnostic. This should be
-used to point to code locations that cause or related to a diagnostics, e.g when duplicating
-a symbol in a scope.
-
-export interface DiagnosticRelatedInformation {
-  /**
-   * The location of this related diagnostic information.
-   */
-  location: Location;
-
-  /**
-   * The message of this related diagnostic information.
-   */
-  message: string;
-}
--}
 
 data DiagnosticRelatedInformation =
   DiagnosticRelatedInformation
@@ -133,56 +76,6 @@ instance NFData DiagnosticRelatedInformation
 deriveJSON lspOptions ''DiagnosticRelatedInformation
 
 -- ---------------------------------------------------------------------
-{-
-Diagnostic
-
-https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#diagnostic
-
-Represents a diagnostic, such as a compiler error or warning. Diagnostic objects
-are only valid in the scope of a resource.
-
-interface Diagnostic {
-    /**
-     * The range at which the message applies.
-     */
-    range: Range;
-
-    /**
-     * The diagnostic's severity. Can be omitted. If omitted it is up to the
-     * client to interpret diagnostics as error, warning, info or hint.
-     */
-    severity?: number;
-
-    /**
-     * The diagnostic's code. Can be omitted.
-     */
-    code?: number | string;
-
-    /**
-     * A human-readable string describing the source of this
-     * diagnostic, e.g. 'typescript' or 'super lint'.
-     */
-    source?: string;
-
-    /**
-     * The diagnostic's message.
-     */
-    message: string;
-
-    /**
-     * Additional metadata about the diagnostic.
-     *
-     * @since 3.15.0
-     */
-    tags?: DiagnosticTag[];
-
-    /**
-     * An array of related diagnostic information, e.g. when symbol-names within
-     * a scope collide all definitions can be marked via this property.
-     */
-    relatedInformation?: DiagnosticRelatedInformation[];
-}
--}
 
 type DiagnosticSource = Text
 data Diagnostic =

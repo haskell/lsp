@@ -31,50 +31,6 @@ instance A.FromJSON ProgressToken where
     parseJSON (A.Number i) = ProgressNumericToken <$> A.parseJSON (A.Number i)
     parseJSON v = fail $ "Invalid progress token: " ++ show v
 
-{-
-Progress Begin Notification
-
-To start progress reporting a $/progress notification with the following payload must be sent:
-
-export interface WorkDoneProgressBegin {
-
-	kind: 'begin';
-
-	/**
-	 * Mandatory title of the progress operation. Used to briefly inform about
-	 * the kind of operation being performed.
-	 *
-	 * Examples: "Indexing" or "Linking dependencies".
-	 */
-	title: string;
-
-	/**
-	 * Controls if a cancel button should show to allow the user to cancel the
-	 * long running operation. Clients that don't support cancellation are allowed
-	 * to ignore the setting.
-	 */
-	cancellable?: boolean;
-
-	/**
-	 * Optional, more detailed associated progress message. Contains
-	 * complementary information to the `title`.
-	 *
-	 * Examples: "3/25 files", "project/src/module2", "node_modules/some_dep".
-	 * If unset, the previous progress message (if any) is still valid.
-	 */
-	message?: string;
-
-	/**
-	 * Optional progress percentage to display (value 100 is considered 100%).
-	 * If not provided infinite progress is assumed and clients are allowed
-	 * to ignore the `percentage` value in subsequent in report notifications.
-	 *
-	 * The value should be steadily rising. Clients are free to ignore values
-	 * that are not following this rule.
-	 */
-	percentage?: number;
--}
-
 -- | Parameters for a $/progress notification.
 data ProgressParams t =
     ProgressParams {
@@ -150,48 +106,10 @@ instance A.FromJSON WorkDoneProgressBeginParams where
         _percentage <- o A..:? "percentage"
         pure WorkDoneProgressBeginParams{..}
 
--- | The $/progress begin notification is sent from the server to the
+-- The $/progress begin notification is sent from the server to the
 -- client to ask the client to start progress.
 --
 -- @since 0.10.0.0
-{-
-Progress Report Notification
-
-Reporting progress is done using the following payload:
-
-export interface WorkDoneProgressReport {
-
-	kind: 'report';
-
-	/**
-	 * Controls enablement state of a cancel button. This property is only valid if a cancel
-	 * button got requested in the `WorkDoneProgressStart` payload.
-	 *
-	 * Clients that don't support cancellation or don't support control the button's
-	 * enablement state are allowed to ignore the setting.
-	 */
-	cancellable?: boolean;
-
-	/**
-	 * Optional, more detailed associated progress message. Contains
-	 * complementary information to the `title`.
-	 *
-	 * Examples: "3/25 files", "project/src/module2", "node_modules/some_dep".
-	 * If unset, the previous progress message (if any) is still valid.
-	 */
-	message?: string;
-
-	/**
-	 * Optional progress percentage to display (value 100 is considered 100%).
-	 * If not provided infinite progress is assumed and clients are allowed
-	 * to ignore the `percentage` value in subsequent in report notifications.
-	 *
-	 * The value should be steadily rising. Clients are free to ignore values
-	 * that are not following this rule.
-	 */
-	percentage?: number;
-}
--}
 
 -- | Parameters for 'WorkDoneProgressReportNotification'
 --
@@ -231,26 +149,10 @@ instance A.FromJSON WorkDoneProgressReportParams where
     _percentage <- o A..:? "percentage"
     pure WorkDoneProgressReportParams{..}
 
--- | The workdone $/progress report notification is sent from the server to the
+-- The workdone $/progress report notification is sent from the server to the
 -- client to report progress for a previously started progress.
 --
 -- @since 0.10.0.0
-{-
-Progress End Notification
-
-Signaling the end of a progress reporting is done using the following payload:
-
-export interface WorkDoneProgressEnd {
-
-	kind: 'end';
-
-	/**
-	 * Optional, a final message indicating to for example indicate the outcome
-	 * of the operation.
-	 */
-	message?: string;
-}
--}
 
 -- | Parameters for 'WorkDoneProgressEndNotification'.
 --
@@ -274,26 +176,10 @@ instance A.FromJSON WorkDoneProgressEndParams where
     _message <- o A..:? "message"
     pure WorkDoneProgressEndParams{..}
 
--- | The $/progress end notification is sent from the server to the
+--  The $/progress end notification is sent from the server to the
 -- client to stop a previously started progress.
 --
 -- @since 0.10.0.0
-{-
-Progress Cancel Notification
-
-The window/workDoneProgress/cancel notification is sent from the client to the server to inform the server that the user has pressed the cancel button on the progress UX. A server receiving a cancel request must still close a progress using the done notification.
-
-Notification:
-
-method: 'window/workDoneProgress/cancel'
-params: WorkDoneProgressCancelParams defined as follows:
-export interface WorkDoneProgressCancelParams {
-	/**
-	 * The token to be used to report progress.
-	 */
-	token: ProgressToken;
-}
--}
 
 -- | Parameters for 'WorkDoneProgressCancelNotification'.
 --
@@ -307,7 +193,7 @@ data WorkDoneProgressCancelParams =
 
 deriveJSON lspOptions ''WorkDoneProgressCancelParams
 
--- | The window/workDoneProgress/cancel notification is sent from the client to the server
+-- The window/workDoneProgress/cancel notification is sent from the client to the server
 -- to inform the server that the user has pressed the cancel button on the progress UX.
 -- A server receiving a cancel request must still close a progress using the done notification.
 --

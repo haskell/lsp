@@ -7,42 +7,23 @@ import           Language.Haskell.LSP.Types.Common
 import           Language.Haskell.LSP.Types.Utils
 
 -- ---------------------------------------------------------------------
-{-
-New in 3.0
-----------
 
-DocumentFilter
-https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#new-documentfilter
-
-A document filter denotes a document through properties like language, schema or
-pattern. Examples are a filter that applies to TypeScript files on disk or a
-filter the applies to JSON files with name package.json:
-
-    { language: 'typescript', scheme: 'file' }
-    { language: 'json', pattern: '**/package.json' }
-
-export interface DocumentFilter {
-        /**
-         * A language id, like `typescript`.
-         */
-        language?: string;
-
-        /**
-         * A Uri [scheme](#Uri.scheme), like `file` or `untitled`.
-         */
-        scheme?: string;
-
-        /**
-         * A glob pattern, like `*.{ts,js}`.
-         */
-        pattern?: string;
-}
--}
 data DocumentFilter =
   DocumentFilter
-    { _language :: Maybe Text
+    { -- | A language id, like `typescript`.
+      _language :: Maybe Text
+      -- | A Uri scheme, like @file@ or @untitled@.
     , _scheme   :: Maybe Text
-    , _pattern  :: Maybe Text
+    , -- | A glob pattern, like `*.{ts,js}`.
+      --
+      -- Glob patterns can have the following syntax:
+	    -- - @*@ to match one or more characters in a path segment
+	    -- - @?@ to match on one character in a path segment
+	    -- - @**@ to match any number of path segments, including none
+	    -- - @{}@ to group conditions (e.g. @**​/*.{ts,js}@ matches all TypeScript and JavaScript files)
+	    -- - @[]@ to declare a range of characters to match in a path segment (e.g., @example.[0-9]@ to match on @example.0@, @example.1@, …)
+	    -- - @[!...]@ to negate a range of characters to match in a path segment (e.g., @example.[!0-9]@ to match on @example.a@, @example.b@, but not @example.0@)
+      _pattern  :: Maybe Text
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''DocumentFilter
