@@ -8,6 +8,7 @@
 module Language.Haskell.LSP.Control
   (
     run
+  , runWith
   , runWithHandles
   ) where
 
@@ -50,8 +51,7 @@ run :: (Show configs) => Core.InitializeCallbacks configs
     -> IO Int
 run = runWithHandles stdin stdout
 
--- | Starts listening and sending requests and responses
--- at the specified handles.
+-- | Convenience function for 'runWith' using the specified handles.
 runWithHandles :: (Show config) =>
        Handle
     -- ^ Handle to read client input from.
@@ -63,13 +63,36 @@ runWithHandles :: (Show config) =>
     -> Maybe FilePath
     -> IO Int         -- exit code
 runWithHandles hin hout initializeCallbacks h o captureFp = do
-
-  logm $ B.pack "\n\n\n\n\nhaskell-lsp:Starting up server ..."
   hSetBuffering hin NoBuffering
   hSetEncoding  hin utf8
 
   hSetBuffering hout NoBuffering
   hSetEncoding  hout utf8
+
+  let
+    clientIn = BS.hGetSome hin defaultChunkSize
+
+    clientOut out = do
+      BSL.hPut hout out
+      hFlush hout
+
+  runWith clientIn clientOut initializeCallbacks h o captureFp
+
+-- | Starts listening and sending requests and responses
+-- using the specified I/O.
+runWith :: (Show config) =>
+       IO BS.ByteString
+    -- ^ Client input.
+    -> (BSL.ByteString -> IO ())
+    -- ^ Function to provide output to.
+    -> Core.InitializeCallbacks config
+    -> Core.Handlers
+    -> Core.Options
+    -> Maybe FilePath
+    -> IO Int         -- exit code
+runWith clientIn clientOut initializeCallbacks h o captureFp = do
+
+  logm $ B.pack "\n\n\n\n\nhaskell-lsp:Starting up server ..."
 
   timestamp <- formatTime defaultTimeLocale (iso8601DateFormat (Just "%H-%M-%S")) <$> getCurrentTime
   let timestampCaptureFp = fmap (\f -> dropExtension f ++ timestamp ++ takeExtension f)
@@ -77,7 +100,7 @@ runWithHandles hin hout initializeCallbacks h o captureFp = do
   captureCtx <- maybe (return noCapture) captureToFile timestampCaptureFp
 
   cout <- atomically newTChan :: IO (TChan FromServerMessage)
-  _rhpid <- forkIO $ sendServer cout hout captureCtx
+  _rhpid <- forkIO $ sendServer cout clientOut captureCtx
 
 
   let sendFunc :: Core.SendFunc
@@ -88,18 +111,18 @@ runWithHandles hin hout initializeCallbacks h o captureFp = do
   initVFS $ \vfs -> do
     tvarDat <- atomically $ newTVar $ Core.defaultLanguageContextData h o lf tvarId sendFunc captureCtx vfs
 
-    ioLoop hin initializeCallbacks tvarDat
+    ioLoop clientIn initializeCallbacks tvarDat
 
   return 1
 
 
 -- ---------------------------------------------------------------------
 
-ioLoop :: (Show config) => Handle
+ioLoop :: (Show config) => IO BS.ByteString
                    -> Core.InitializeCallbacks config
                    -> TVar (Core.LanguageContextData config)
                    -> IO ()
-ioLoop hin dispatcherProc tvarDat =
+ioLoop clientIn dispatcherProc tvarDat =
   go (parse parser "")
   where
     go :: Result BS.ByteString -> IO ()
@@ -107,7 +130,7 @@ ioLoop hin dispatcherProc tvarDat =
       "\nhaskell-lsp: Failed to parse message header:\n" <> B.intercalate " > " (map str2lbs ctxs) <> ": " <>
       str2lbs err <> "\n exiting 1 ...\n"
     go (Partial c) = do
-      bs <- BS.hGetSome hin defaultChunkSize
+      bs <- clientIn
       if BS.null bs
         then logm $ B.pack "\nhaskell-lsp:Got EOF, exiting 1 ...\n"
         else go (c bs)
@@ -124,8 +147,8 @@ ioLoop hin dispatcherProc tvarDat =
 -- ---------------------------------------------------------------------
 
 -- | Simple server to make sure all output is serialised
-sendServer :: TChan FromServerMessage -> Handle -> CaptureContext -> IO ()
-sendServer msgChan clientH captureCtxt =
+sendServer :: TChan FromServerMessage -> (BSL.ByteString -> IO ()) -> CaptureContext -> IO ()
+sendServer msgChan clientOut captureCtxt =
   forever $ do
     msg <- atomically $ readTChan msgChan
 
@@ -139,8 +162,7 @@ sendServer msgChan clientH captureCtxt =
                  , BSL.fromStrict _TWO_CRLF
                  , str ]
 
-    BSL.hPut clientH out
-    hFlush clientH
+    clientOut out
     logm $ B.pack "<--2--" <> str
 
     captureFromServer msg captureCtxt
