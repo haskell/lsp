@@ -8,6 +8,7 @@
 {-# LANGUAGE PolyKinds             #-}
 {-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE TypeApplications #-}
 
 {- |
 This is an example language server built with haskell-lsp using a 'Reactor'
@@ -199,40 +200,8 @@ lspHandlers rin method =
 handle :: J.SMethod m -> Maybe (J.ClientMessage m -> J.ResponseHandlerFunc m -> R () ())
 handle J.SInitialized = Just $ \_msg () -> do
     liftIO $ U.logm "Processing the Initialized notification"
-    -- Server is ready, register any specific capabilities we need
-
-     {-
-     Example:
-     {
-             "method": "client/registerCapability",
-             "params": {
-                     "registrations": [
-                             {
-                                     "id": "79eee87c-c409-4664-8102-e03263673f6f",
-                                     "method": "textDocument/willSaveWaitUntil",
-                                     "registerOptions": {
-                                             "documentSelector": [
-                                                     { "language": "javascript" }
-                                             ]
-                                     }
-                             }
-                     ]
-             }
-     }
-    -}
-    let registration = J.Registration "code-lens"
-                                      J.STextDocumentCodeLens
-                                      (J.CodeLensRegistrationOptions
-                                        Nothing
-                                        Nothing
-                                        (Just False))
-        regParams = J.RegistrationParams (J.List [J.SomeRegistration registration])
-    void $ reactorSendReq J.SClientRegisterCapability regParams $ \_lid res ->
-      case res of
-        Left e -> liftIO $ U.logs $ "Got an error: " ++ show e
-        Right J.Empty -> liftIO $ U.logm "Got a response for registering WorkspaceExecuteCommand"
-
-    -- example of showMessageRequest
+    
+    -- We're initialized! Lets send a showMessageRequest now
     let params = J.ShowMessageRequestParams
                        J.MtWarning
                        "What's your favourite language extension?"
@@ -241,8 +210,19 @@ handle J.SInitialized = Just $ \_msg () -> do
     void $ reactorSendReq J.SWindowShowMessageRequest params $ \_lid res ->
       case res of
         Left e -> liftIO $ U.logs $ "Got an error: " ++ show e
-        Right _ -> reactorSendNot J.SWindowShowMessage
-                                  (J.ShowMessageParams J.MtInfo "Excellent choice")
+        Right _ -> do
+          reactorSendNot J.SWindowShowMessage (J.ShowMessageParams J.MtInfo "Excellent choice")
+
+          -- We can dynamically register a capability once the user accepts it
+          reactorSendNot J.SWindowShowMessage (J.ShowMessageParams J.MtInfo "Turning on code lenses dynamically")
+          
+          Core.LspFuncs { Core.registerDynamically = registerDynamically } <- ask
+          let regOpts = J.CodeLensRegistrationOptions Nothing Nothing (Just False)
+          void $ liftIO $ registerDynamically J.STextDocumentCodeLens regOpts $ \_req responder -> do
+            liftIO $ U.logs "Processing a textDocument/codeLens request"
+            let cmd = J.Command "Say hello" "lsp-hello-command" Nothing
+                rsp = J.List [J.CodeLens (J.mkRange 0 0 0 100) (Just cmd) Nothing]
+            liftIO $ responder (Right rsp)
 
 handle J.STextDocumentDidOpen = Just $ \msg () -> do
   let doc  = msg ^. J.params . J.textDocument . J.uri
@@ -325,11 +305,6 @@ handle J.SWorkspaceExecuteCommand = Just $ \req responder -> do
   reactorSendNot J.SWindowShowMessage
                  (J.ShowMessageParams J.MtInfo "I was told to execute a command")
 
-handle J.STextDocumentCodeLens = Just $ \_req responder -> do
-  liftIO $ U.logs "Processing a textDocument/codeLens request"
-  let cmd = J.Command "Say hello" "lsp-hello-command" Nothing
-      rsp = J.List [J.CodeLens (J.mkRange 0 0 0 100) (Just cmd) Nothing]
-  liftIO $ responder (Right rsp)
 
 handle _ = Nothing
 

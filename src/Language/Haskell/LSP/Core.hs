@@ -123,7 +123,7 @@ type ResponseMap = IxMap LspId (Product SMethod ServerResponseHandler)
 type RegistrationMap t = IxMap SMethod (Compose [] (Product RegistrationId (RegistrationHandler t)))
 -- type RegistrationMap = IxMap RegistrationId (Product SMethod RegistrationHandler)
 
-newtype RegistrationHandler t (m :: Method FromClient t) = RegistrationHandler (ClientMessage m -> ClientResponseHandler m -> IO ())
+newtype RegistrationHandler t (m :: Method FromClient t) = RegistrationHandler (ClientMessage m -> ResponseHandlerFunc m -> IO ())
 
 data ProgressData = ProgressData { progressNextId :: !Int
                                  , progressCancel :: !(Map.Map ProgressToken (IO ())) }
@@ -266,13 +266,13 @@ data LspFuncs c =
       -- @since 0.10.0.0
     , withIndefiniteProgress       :: !(forall a . Text -> ProgressCancellable
                                         -> IO a -> IO a)
-    -- ^ Same as 'withProgress', but for processes that do not report the
-    -- precentage complete.
-    --
-    -- @since 0.10.0.0
-    , registerDynamically :: !(forall m. SClientMethod m
+      -- ^ Same as 'withProgress', but for processes that do not report the
+      -- precentage complete.
+      --
+      -- @since 0.10.0.0
+    , registerDynamically :: !(forall t m. SMethod (m :: Method FromClient t)
                                 -> RegistrationOptions m
-                                -> (ClientMessage m -> ClientResponseHandler m -> IO ())
+                                -> (ClientMessage m -> ResponseHandlerFunc m -> IO ())
                                 -> IO (Maybe (RegistrationId m)))
       -- ^ Returns 'Nothing' if the client does not support dynamic registration for the specified method
     }
@@ -365,21 +365,21 @@ handlerMap c msg = do
   -- their handlers
   regsReq <- readData resRegistrationsReq
   regsNot <- readData resRegistrationsNot
-  case splitClientMethod c of
+  ~() <- case splitClientMethod c of
     IsClientReq -> 
       case lookupIxMap c regsReq of
         -- TODO: If one request handles it, stop here and break out so we don't send back multiple responses?
         Just (Compose regs) -> forM_ regs $ \(Pair _regId (RegistrationHandler f)) -> do
-          respH <- mkClientResponseHandler c msg
+          ClientResponseHandler respH <- mkClientResponseHandler c msg
           liftIO $ f msg respH
         Nothing -> pure ()
     IsClientNot ->
       case lookupIxMap c regsNot of
         Just (Compose regs) -> forM_ regs $ \(Pair _regId (RegistrationHandler f)) -> do
-          respH <- mkClientResponseHandler c msg
+          ClientResponseHandler respH <- mkClientResponseHandler c msg
           liftIO $ f msg respH
         Nothing -> pure ()
-    _ -> pure ()
+    IsClientEither -> pure ()
   
   case c of
     SWorkspaceDidChangeWorkspaceFolders -> hh (Just updateWorkspaceFolders) c msg
@@ -693,7 +693,7 @@ registerDynamicallyFunc :: J.ClientCapabilities
 -- It's not limited to notifications though, its notifications + requests
                         -> SClientMethod (m :: Method FromClient t)
                         -> RegistrationOptions m
-                        -> (ClientMessage m -> ClientResponseHandler m -> IO ())
+                        -> (ClientMessage m -> ResponseHandlerFunc m -> IO ())
                         -> LspM config (Maybe (RegistrationId m))
 registerDynamicallyFunc clientCaps method regOpts f
   -- First, check to see if the client supports dynamic registration on this method
@@ -706,7 +706,7 @@ registerDynamicallyFunc clientCaps method regOpts f
       -- TODO: handle the scenario where this returns an error
       _ <- mkSendReqFunc SClientRegisterCapability params $ \_id _res -> pure ()
       
-      case splitClientMethod method of
+      ~() <- case splitClientMethod method of
         IsClientNot -> modifyData $ \ctx ->
           let oldRegs = resRegistrationsNot ctx
               pair = Compose [Pair regId (RegistrationHandler f)]
@@ -719,7 +719,7 @@ registerDynamicallyFunc clientCaps method regOpts f
               newRegs = fromMaybe (error "TODO") $
                           insertIxMap method pair oldRegs
             in ctx { resRegistrationsReq = newRegs }
-        _              -> pure ()
+        IsClientEither -> pure ()
             -- let oldRegs = resRegistrationsReq ctx
             --     pair = Compose [Pair regId (RegistrationHandler f)]
             --     newRegs = fromMaybe (error "Registration UUID already exists!") $
