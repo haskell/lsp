@@ -45,6 +45,7 @@ library
                      , hslogger
                      , hashable
                      , haskell-lsp-types == 0.22.*
+                     , dependent-map
                      , lens >= 4.15.2
                      , mtl
                      , network-uri

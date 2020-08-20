@@ -16,6 +16,7 @@ import           Data.Text                                  (Text)
 import           Language.Haskell.LSP.Types.Utils
 import           Data.Function (on)
 import Control.Applicative
+import  Data.GADT.Compare.TH
 
 -- ---------------------------------------------------------------------
 
@@ -160,6 +161,9 @@ data SMethod (m :: Method p t) where
 
   SCancelRequest                      :: SMethod CancelRequest
   SCustomMethod                       :: Text -> SMethod CustomMethod
+
+deriveGEq ''SMethod
+deriveGCompare ''SMethod
 
 deriving instance Eq   (SMethod m)
 deriving instance Ord  (SMethod m)

@@ -80,6 +80,7 @@ library
                      , network-uri
                      , scientific
                      , some
+                     , dependent-sum-template
                      , text
                      , template-haskell
                      , unordered-containers

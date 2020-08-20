@@ -382,20 +382,6 @@ type family BaseMessage (t :: MethodType) :: Method p t -> Type where
 
 type HandlerFunc a = Either ResponseError a -> IO ()
 
--- | Map a method to a handler for its response
--- Either ResponseError (ResponseParams m) -> IO () for Requests
--- () for Notifications
--- This is a callback that will be invoked when your request
--- recieves a response
--- Custom methods can either be a notification or a request, so
--- it may or may not have a response handler!
-type family ResponseHandlerFunc m :: Type where
-  ResponseHandlerFunc (m :: Method p t) = BaseHandlerFunc t m
-
-type family BaseHandlerFunc (t :: MethodType) (m :: Method p t) :: Type where
-  BaseHandlerFunc Request m = HandlerFunc (ResponseParams m)
-  BaseHandlerFunc Notification m = ()
-
 -- Some helpful type synonyms
 type ClientMessage (m :: Method FromClient t) = Message m
 type ServerMessage (m :: Method FromServer t) = Message m
@@ -546,15 +532,13 @@ type HasJSON a = (ToJSON a,FromJSON a,Eq a)
 data ClientNotOrReq (m :: Method FromClient t) where
   IsClientNot
     :: ( HasJSON (ClientMessage m)
-       , Message m ~ NotificationMessage m
-       , ResponseHandlerFunc m ~ ())
+       , Message m ~ NotificationMessage m)
     => ClientNotOrReq (m :: Method FromClient Notification)
   IsClientReq
     :: forall (m :: Method FromClient Request).
     ( HasJSON (ClientMessage m)
     , HasJSON (ResponseMessage m)
-    , Message m ~ RequestMessage m
-    , ResponseHandlerFunc m ~ HandlerFunc (ResponseParams m))
+    , Message m ~ RequestMessage m)
     => ClientNotOrReq m
   IsClientEither
     :: ClientNotOrReq CustomMethod
@@ -562,15 +546,13 @@ data ClientNotOrReq (m :: Method FromClient t) where
 data ServerNotOrReq (m :: Method FromServer t) where
   IsServerNot
     :: ( HasJSON (ServerMessage m)
-       , Message m ~ NotificationMessage m
-       , ResponseHandlerFunc m ~ ())
+       , Message m ~ NotificationMessage m)
     => ServerNotOrReq (m :: Method FromServer Notification)
   IsServerReq
     :: forall (m :: Method FromServer Request).
     ( HasJSON (ServerMessage m)
     , HasJSON (ResponseMessage m)
-    , Message m ~ RequestMessage m
-    , ResponseHandlerFunc m ~ HandlerFunc (ResponseParams m))
+    , Message m ~ RequestMessage m)
     => ServerNotOrReq m
   IsServerEither
     :: ServerNotOrReq CustomMethod

@@ -1,33 +1,34 @@
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE GADTs               #-}
-{-# LANGUAGE MultiWayIf          #-}
-{-# LANGUAGE BinaryLiterals      #-}
-{-# LANGUAGE OverloadedStrings   #-}
-{-# LANGUAGE RankNTypes          #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE DataKinds           #-}
-{-# LANGUAGE TypeFamilies        #-}
-{-# LANGUAGE FlexibleContexts    #-}
-{-# LANGUAGE ViewPatterns        #-}
-{-# LANGUAGE PolyKinds           #-}
-{-# LANGUAGE TypeApplications    #-}
-{-# LANGUAGE RecordWildCards     #-}
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE LambdaCase           #-}
+{-# LANGUAGE GADTs                #-}
+{-# LANGUAGE MultiWayIf           #-}
+{-# LANGUAGE BinaryLiterals       #-}
+{-# LANGUAGE OverloadedStrings    #-}
+{-# LANGUAGE RankNTypes           #-}
+{-# LANGUAGE ScopedTypeVariables  #-}
+{-# LANGUAGE DataKinds            #-}
+{-# LANGUAGE TypeFamilies         #-}
+{-# LANGUAGE FlexibleContexts     #-}
+{-# LANGUAGE ViewPatterns         #-}
+{-# LANGUAGE PolyKinds            #-}
+{-# LANGUAGE TypeApplications     #-}
+{-# LANGUAGE RecordWildCards      #-}
+{-# LANGUAGE NamedFieldPuns       #-}
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
 module Language.Haskell.LSP.Core (
     handleMessage
   , LanguageContextData(..)
-  , Handler(..)
   , VFSData(..)
   , InitializeCallbacks(..)
   , LspFuncs(..)
   , Progress(..)
   , ProgressCancellable(..)
   , ProgressCancelledException
-  , Handlers
+  , Handlers(..)
   , Options(..)
-  , ClientResponseHandler(..)
+  , ClientRequestHandler(..)
+  , ClientNotificationHandler(..)
   , ServerResponseHandler(..)
   , makeResponseMessage
   , makeResponseError
@@ -57,6 +58,8 @@ import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as B
 import           Data.Default
 import           Data.IxMap
+import qualified Data.Dependent.Map as DMap
+import           Data.Dependent.Map (DMap)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.List as L
 import           Data.List.NonEmpty (NonEmpty(..))
@@ -278,23 +281,8 @@ data InitializeCallbacks config =
       -- that may be necesary for the server lifecycle.
     }
 
-newtype ClientResponseHandler (m :: Method FromClient t) = ClientResponseHandler (ResponseHandlerFunc m)
-
-newtype ServerResponseHandler (m :: Method FromServer t) = ServerResponseHandler (ResponseHandlerFunc m)
-
-mkClientResponseHandler :: SClientMethod m -> ClientMessage m -> LspM config (ClientResponseHandler m)
-mkClientResponseHandler m cm = do
-  sf <- asks resSendMessage
-  pure $ ClientResponseHandler $ case splitClientMethod m of
-    IsClientNot -> ()
-    IsClientReq -> \mrsp -> case mrsp of
-      Left err  -> sf $ FromServerRsp m $ makeResponseError   (cm ^. J.id) err
-      Right rsp -> sf $ FromServerRsp m $ makeResponseMessage (cm ^. J.id) rsp
-    IsClientEither -> case cm of
-      NotMess _ -> ()
-      ReqMess req -> \mrsp -> case mrsp of
-        Left err  -> sf $ FromServerRsp m $ makeResponseError   (req ^. J.id) err
-        Right rsp -> sf $ FromServerRsp m $ makeResponseMessage (req ^. J.id) rsp
+newtype ServerResponseHandler (m :: Method FromServer Request)
+  = ServerResponseHandler (HandlerFunc (ResponseParams m))
 
 -- | Return value signals if response handler was inserted succesfully
 -- Might fail if the id was already in the map
@@ -328,11 +316,21 @@ mkSendReqFunc m params resHandler = do
     IsServerEither -> sendToClient $ FromServerMess m $ ReqMess msg
   return reqId
 
--- | The Handler type captures a function that receives local read-only state
--- 'a', a function to send a reply message once encoded as a ByteString, and a
--- received message of type 'b'
-newtype Handler m = Handler {runHandler :: ClientMessage m -> ClientResponseHandler m -> IO ()}
-type Handlers = forall t (m :: Method FromClient t). SMethod m -> Maybe (Handler m)
+newtype ClientRequestHandler (m :: Method FromClient Request)
+  = ClientRequestHandler
+  { runRequestHandler :: RequestMessage m -> HandlerFunc (ResponseParams m) -> IO ()
+  }
+
+newtype ClientNotificationHandler (m :: Method FromClient Notification)
+  = ClientNotificationHandler
+  { runNotificationHandler :: NotificationMessage m -> IO ()
+  }
+
+data Handlers
+  = Handlers
+  { requestHandlers :: DMap SMethod ClientRequestHandler
+  , notificationHandlers :: DMap SMethod ClientNotificationHandler
+  }
 
 -- ---------------------------------------------------------------------
 nop :: Maybe (b -> LspM config ())
@@ -350,28 +348,48 @@ handlerMap c = case c of
 
 -- ---------------------------------------------------------------------
 
+mkClientResponseHandler :: (FromServerMessage -> IO ()) -> RequestMessage (m :: Method FromClient Request) -> HandlerFunc (ResponseParams m)
+mkClientResponseHandler sf req (Left  err) = sf $ FromServerRsp (req ^. J.method) $ makeResponseError (req ^. J.id) err
+mkClientResponseHandler sf req (Right rsp) = sf $ FromServerRsp (req ^. J.method) $ makeResponseMessage (req ^. J.id) rsp
+
 -- | Adapter from the normal handlers exposed to the library users and the
 -- internal message loop
 hh :: Maybe (ClientMessage m -> LspM config ()) -> SClientMethod m -> ClientMessage m -> LspM config ()
 hh mAction m req = do
   maybe (return ()) (\f -> f req) mAction
-  getHandler <- asks resHandlers
-  let handleReq h = do
-        respH <- mkClientResponseHandler m req
-        liftIO $ runHandler h req respH
-  case getHandler m of
-    Just h -> handleReq h
-    Nothing
-      | SExit <- m -> handleReq exitNotificationHandler
-      | SShutdown <- m -> handleReq shutdownRequestHandler
-      -- '$/' notifications should/could be ignored by server.
-      -- Don't log errors in that case.
-      -- See https://microsoft.github.io/language-server-protocol/specifications/specification-current/#-notifications-and-requests.
-      | isOptionalNotification m -> return ()
-      | otherwise -> do
+  Handlers{..} <- asks resHandlers
+  sf <- asks resSendMessage
+  let mkRspH :: forall m. RequestMessage (m :: Method FromClient Request) -> HandlerFunc (ResponseParams m)
+      mkRspH = mkClientResponseHandler sf
+  ~() <- case splitClientMethod m of
+    IsClientNot -> case DMap.lookup m notificationHandlers of
+      Just h -> liftIO $ runNotificationHandler h req
+      Nothing
+        | SExit <- m -> liftIO $ runNotificationHandler exitNotificationHandler req
+        | otherwise -> reportMissingHandler
+    IsClientReq -> case DMap.lookup m requestHandlers of
+      Just h -> liftIO $ runRequestHandler h req $ mkRspH req
+      Nothing
+        | SShutdown <- m -> liftIO $ runRequestHandler shutdownRequestHandler req $ mkRspH req
+        | otherwise -> reportMissingHandler
+    IsClientEither -> case req of
+      NotMess not -> case DMap.lookup m notificationHandlers of
+        Just h -> liftIO $ runNotificationHandler h not
+        Nothing -> reportMissingHandler
+      ReqMess req -> case DMap.lookup m requestHandlers of
+        Just h -> liftIO $ runRequestHandler h req $ mkRspH req
+        Nothing -> reportMissingHandler
+  pure ()
+  where
+    -- '$/' notifications should/could be ignored by server.
+    -- Don't log errors in that case.
+    -- See https://microsoft.github.io/language-server-protocol/specifications/specification-current/#-notifications-and-requests.
+    reportMissingHandler :: LspM config ()
+    reportMissingHandler
+      | isOptionalNotification m = return ()
+      | otherwise = do
           let msg = T.pack $ unwords ["haskell-lsp:no handler for: ", show m]
           sendErrorLog msg
-  where
     isOptionalNotification (SCustomMethod method)
       | "$/" `T.isPrefixOf` method = True
     isOptionalNotification _  = False
@@ -744,7 +762,10 @@ serverCapabilities clientCaps o h =
     supported = Just . supported_b
 
     supported_b :: forall m. J.SClientMethod m -> Bool
-    supported_b m = isJust (h m)
+    supported_b m = case splitClientMethod m of
+      IsClientNot -> DMap.member m (notificationHandlers h)
+      IsClientReq -> DMap.member m (requestHandlers h)
+      IsClientEither -> False -- No capabilities for custom method
 
     singleton :: a -> [a]
     singleton x = [x]
@@ -810,14 +831,14 @@ progressCancelHandler (J.NotificationMessage _ _ (J.WorkDoneProgressCancelParams
     Nothing -> return ()
     Just cancelAction -> liftIO $ cancelAction
 
-exitNotificationHandler :: Handler J.Exit
-exitNotificationHandler = Handler $ \_ _ -> do
+exitNotificationHandler :: ClientNotificationHandler J.Exit
+exitNotificationHandler = ClientNotificationHandler $ \_ -> do
   logm $ B.pack "haskell-lsp:Got exit, exiting"
   exitSuccess
 
 -- | Default Shutdown handler
-shutdownRequestHandler :: Handler J.Shutdown
-shutdownRequestHandler = Handler $ \_req (ClientResponseHandler k) -> do
+shutdownRequestHandler :: ClientRequestHandler J.Shutdown
+shutdownRequestHandler = ClientRequestHandler $ \_req k -> do
   k $ Right J.Empty
 
 -- ---------------------------------------------------------------------
