@@ -119,6 +119,7 @@ capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) Noth
           (Just (RenameClientCapabilities dynamicReg (since 3 12 True)))
           (Just publishDiagnosticsCapabilities)
           (since 3 10 foldingRangeCapability)
+          (since 3 5 (SelectionRangeClientCapabilities dynamicReg))
     sync =
       TextDocumentSyncClientCapabilities
         dynamicReg

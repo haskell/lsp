@@ -11,3 +11,5 @@ cradle:
         component: "haskell-lsp-types"
       - path: "./src"
         component: "haskell-lsp"
+      - path: "./example"
+        component: "lsp-hello"

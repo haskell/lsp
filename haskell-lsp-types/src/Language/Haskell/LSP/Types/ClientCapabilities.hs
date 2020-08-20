@@ -24,6 +24,7 @@ import Language.Haskell.LSP.Types.Hover
 import Language.Haskell.LSP.Types.Implementation
 import Language.Haskell.LSP.Types.References
 import Language.Haskell.LSP.Types.Rename
+import Language.Haskell.LSP.Types.SelectionRange
 import Language.Haskell.LSP.Types.SignatureHelp
 import Language.Haskell.LSP.Types.TextDocument
 import Language.Haskell.LSP.Types.TypeDefinition
@@ -132,10 +133,15 @@ data TextDocumentClientCapabilities =
       -- | Capabilities specific to `textDocument/publishDiagnostics`
     , _publishDiagnostics :: Maybe PublishDiagnosticsClientCapabilities
 
-      -- | Capabilities specific to `textDocument/foldingRange` requests. Since LSP 3.10.
+      -- | Capabilities specific to the `textDocument/foldingRange` request.
+      -- Since LSP 3.10.
       --
       -- @since 0.7.0.0
     , _foldingRange :: Maybe FoldingRangeClientCapabilities
+
+      -- | Capabilities specific to the `textDocument/selectionRange` request.
+      -- Since LSP 3.15.0
+    , _selectionRange :: Maybe SelectionRangeClientCapabilities
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''TextDocumentClientCapabilities
@@ -143,7 +149,7 @@ deriveJSON lspOptions ''TextDocumentClientCapabilities
 instance Default TextDocumentClientCapabilities where
   def = TextDocumentClientCapabilities def def def def def def def def
                                        def def def def def def def def
-                                       def def def def def
+                                       def def def def def def
 
 -- ---------------------------------------------------------------------
 

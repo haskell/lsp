@@ -16,6 +16,7 @@ import           Language.Haskell.LSP.Types.DocumentColor
 import           Language.Haskell.LSP.Types.Command
 import           Language.Haskell.LSP.Types.Completion
 import           Language.Haskell.LSP.Types.Configuration
+import           Language.Haskell.LSP.Types.Declaration
 import           Language.Haskell.LSP.Types.Definition
 import           Language.Haskell.LSP.Types.Diagnostic
 import           Language.Haskell.LSP.Types.DocumentFilter
@@ -145,6 +146,12 @@ makeFieldsNoPrefix ''CompletionContext
 makeFieldsNoPrefix ''CompletionList
 makeFieldsNoPrefix ''CompletionParams
 makeFieldsNoPrefix ''CompletionRegistrationOptions
+
+-- Declaration
+makeFieldsNoPrefix ''DeclarationClientCapabilities
+makeFieldsNoPrefix ''DeclarationOptions
+makeFieldsNoPrefix ''DeclarationRegistrationOptions
+makeFieldsNoPrefix ''DeclarationParams
 
 -- CodeActions
 makeFieldsNoPrefix ''CodeActionKindClientCapabilities

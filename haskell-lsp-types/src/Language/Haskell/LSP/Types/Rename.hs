@@ -38,7 +38,7 @@ makeExtendingDatatype "RenameParams"
   [ ''TextDocumentPositionParams
   , ''WorkDoneProgressParams
   ]
-  [("_newName", [t| String |])]
+  [("_newName", [t| Text |])]
 deriveJSON lspOptions ''RenameParams
 
 -- -----------------------------------------

@@ -1,12 +1,13 @@
-{-# LANGUAGE FlexibleContexts    #-}
-{-# LANGUAGE LambdaCase          #-}
-{-# LANGUAGE MultiWayIf          #-}
-{-# LANGUAGE OverloadedStrings   #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE RankNTypes          #-}
-{-# LANGUAGE GADTs               #-}
-{-# LANGUAGE PolyKinds           #-}
-{-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE LambdaCase            #-}
+{-# LANGUAGE MultiWayIf            #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE RankNTypes            #-}
+{-# LANGUAGE GADTs                 #-}
+{-# LANGUAGE PolyKinds             #-}
+{-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 
 {- |
 This is an example language server built with haskell-lsp using a 'Reactor'
@@ -100,7 +101,7 @@ syncOptions = J.TextDocumentSyncOptions
   , J._change            = Just J.TdSyncIncremental
   , J._willSave          = Just False
   , J._willSaveWaitUntil = Just False
-  , J._save              = Just $ J.SaveOptions $ Just False
+  , J._save              = Just $ J.R $ J.SaveOptions $ Just False
   }
 
 lspOptions :: Core.Options
@@ -219,10 +220,13 @@ handle J.SInitialized = Just $ \_msg () -> do
              }
      }
     -}
-    let registration = J.Registration "lsp-hello-registered"
-                                      (J.SomeClientMethod J.SWorkspaceExecuteCommand)
-                                      Nothing
-        regParams = J.RegistrationParams (J.List [registration])
+    let registration = J.Registration "code-lens"
+                                      J.STextDocumentCodeLens
+                                      (J.CodeLensRegistrationOptions
+                                        Nothing
+                                        Nothing
+                                        (Just False))
+        regParams = J.RegistrationParams (J.List [J.SomeRegistration registration])
     void $ reactorSendReq J.SClientRegisterCapability regParams $ \_lid res ->
       case res of
         Left e -> liftIO $ U.logs $ "Got an error: " ++ show e
@@ -282,9 +286,9 @@ handle J.STextDocumentRename = Just $ \req responder -> do
 
 handle J.STextDocumentHover = Just $ \req responder -> do
   liftIO $ U.logs "Processing a textDocument/hover request"
-  let J.TextDocumentPositionParams _doc pos _workDoneToken = req ^. J.params
+  let J.HoverParams _doc pos _workDone = req ^. J.params
       J.Position _l _c' = pos
-      rsp = Just $ J.Hover ms (Just range)
+      rsp = J.Hover ms (Just range)
       ms = J.HoverContents $ J.markedUpContent "lsp-hello" "Your type info here!"
       range = J.Range pos pos
   liftIO $ responder (Right rsp)
@@ -307,7 +311,7 @@ handle J.STextDocumentCodeAction = Just $ \req responder -> do
                   ]
           cmdparams = Just args
       makeCommand (J.Diagnostic _r _s _c _source _m _t _l) = []
-      rsp = J.List $ map J.CACommand $ concatMap makeCommand diags
+      rsp = J.List $ map J.L $ concatMap makeCommand diags
   liftIO $ responder (Right rsp)
 
 handle J.SWorkspaceExecuteCommand = Just $ \req responder -> do
@@ -320,6 +324,12 @@ handle J.SWorkspaceExecuteCommand = Just $ \req responder -> do
 
   reactorSendNot J.SWindowShowMessage
                  (J.ShowMessageParams J.MtInfo "I was told to execute a command")
+
+handle J.STextDocumentCodeLens = Just $ \_req responder -> do
+  liftIO $ U.logs "Processing a textDocument/codeLens request"
+  let cmd = J.Command "Say hello" "lsp-hello-command" Nothing
+      rsp = J.List [J.CodeLens (J.mkRange 0 0 0 100) (Just cmd) Nothing]
+  liftIO $ responder (Right rsp)
 
 handle _ = Nothing
 

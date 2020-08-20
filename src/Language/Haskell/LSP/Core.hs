@@ -15,6 +15,8 @@
 {-# LANGUAGE RecordWildCards      #-}
 {-# LANGUAGE NamedFieldPuns       #-}
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
+{-# OPTIONS_GHC -fprint-explicit-kinds #-}
+
 
 module Language.Haskell.LSP.Core (
     handleMessage
@@ -26,6 +28,7 @@ module Language.Haskell.LSP.Core (
   , ProgressCancellable(..)
   , ProgressCancelledException
   , Handlers(..)
+  , RegistrationId
   , Options(..)
   , ClientRequestHandler(..)
   , ClientNotificationHandler(..)
@@ -68,6 +71,7 @@ import           Data.Maybe
 import           Data.Monoid hiding (Product)
 import qualified Data.Text as T
 import           Data.Text ( Text )
+import qualified Data.UUID as UUID
 import           Language.Haskell.LSP.Constant
 -- import           Language.Haskell.LSP.Types.MessageFuncs
 import qualified Language.Haskell.LSP.Types.Capabilities    as J
@@ -84,6 +88,7 @@ import qualified System.Log.Handler as LH
 import qualified System.Log.Handler.Simple as LHS
 import           System.Log.Logger
 import qualified System.Log.Logger as L
+import           System.Random
 
 -- ---------------------------------------------------------------------
 {-# ANN module ("HLint: ignore Eta reduce"         :: String) #-}
@@ -108,10 +113,15 @@ data LanguageContextData config =
   , resWorkspaceFolders    :: ![WorkspaceFolder]
   , resProgressData        :: !ProgressData
   , resPendingResponses    :: !ResponseMap
+  , resRegistrations       :: !RegistrationMap
   , resLspId               :: !Int
   }
 
 type ResponseMap = IxMap LspId (Product SMethod ServerResponseHandler)
+type RegistrationMap = IxMap SMethod (Product RegistrationId RegistrationHandler)
+-- type RegistrationMap = IxMap RegistrationId (Product SMethod RegistrationHandler)
+
+newtype RegistrationHandler (m :: Method FromClient t) = RegistrationHandler (ClientMessage m -> ClientResponseHandler m -> IO ())
 
 data ProgressData = ProgressData { progressNextId :: !Int
                                  , progressCancel :: !(Map.Map ProgressToken (IO ())) }
@@ -258,7 +268,18 @@ data LspFuncs c =
     -- precentage complete.
     --
     -- @since 0.10.0.0
+    , registerDynamically :: !(forall m. SClientMethod m
+                                -> RegistrationOptions m
+                                -> (ClientMessage m -> ClientResponseHandler m -> IO ())
+                                -> IO (Maybe (RegistrationId m)))
+      -- ^ Returns 'Nothing' if the client does not support dynamic registration for the specified method
     }
+    
+newtype RegistrationId (m :: Method FromClient t) = RegistrationId Text
+
+instance IxOrd RegistrationId where
+  type Base RegistrationId = Text
+  toBase (RegistrationId t) = t
 
 -- | Contains all the callbacks to use for initialized the language server.
 -- it is parameterized over a config type variable representing the type for the
@@ -337,14 +358,19 @@ nop :: Maybe (b -> LspM config ())
 nop = Nothing
 
 handlerMap :: (Show config) => SClientMethod m -> ClientMessage m -> LspM config ()
-handlerMap c = case c of
-  SWorkspaceDidChangeWorkspaceFolders -> hh (Just updateWorkspaceFolders) c
-  SWorkspaceDidChangeConfiguration    -> hh (Just handleConfigChange) c
-  STextDocumentDidOpen                -> hh (Just $ vfsFunc openVFS) c
-  STextDocumentDidChange              -> hh (Just $ vfsFunc changeFromClientVFS) c
-  STextDocumentDidClose               -> hh (Just $ vfsFunc closeVFS) c
-  SWorkDoneProgressCancel             -> hh (Just progressCancelHandler) c
-  _ -> hh nop c
+handlerMap c msg = do
+  -- First check to see if we have any dynamically registered handlers and call
+  -- their handlers
+  regHandlers <- readData resRegistrations
+  
+  case c of
+    SWorkspaceDidChangeWorkspaceFolders -> hh (Just updateWorkspaceFolders) c msg
+    SWorkspaceDidChangeConfiguration    -> hh (Just handleConfigChange) c msg
+    STextDocumentDidOpen                -> hh (Just $ vfsFunc openVFS) c msg
+    STextDocumentDidChange              -> hh (Just $ vfsFunc changeFromClientVFS) c msg
+    STextDocumentDidClose               -> hh (Just $ vfsFunc closeVFS) c msg
+    SWorkDoneProgressCancel             -> hh (Just progressCancelHandler) c msg
+    _ -> hh nop c msg
 
 -- ---------------------------------------------------------------------
 
@@ -586,7 +612,16 @@ initializeRequestHandler InitializeCallbacks{..} vfs handlers options sendFunc r
         initialConfigRes = onInitialConfiguration req
         initialConfig = either (const Nothing) Just initialConfigRes
 
-    tvarCtx <- newTVarIO $ LanguageContextData (VFSData vfs mempty) mempty initialConfig wfs defaultProgressData emptyIxMap 0
+    tvarCtx <- newTVarIO $
+      LanguageContextData
+        (VFSData vfs mempty)
+        mempty
+        initialConfig
+        wfs
+        defaultProgressData
+        emptyIxMap
+        emptyIxMap
+        0
 
     -- Launch the given process once the project root directory has been set
     let lspFuncs = LspFuncs (params ^. J.capabilities)
@@ -604,6 +639,7 @@ initializeRequestHandler InitializeCallbacks{..} vfs handlers options sendFunc r
                             (getWfs tvarCtx)
                             withProgressFunc
                             withIndefiniteProgressFunc
+                            (\a b c -> flip runReaderT env $ registerDynamicallyFunc (params ^. J.capabilities) a b c)
         env = LanguageContextEnv handlers onConfigurationChange sendFunc tvarCtx
 
         withProgressFunc :: Text -> ProgressCancellable -> ((Progress -> IO ()) -> IO a) -> IO a
@@ -633,6 +669,70 @@ initializeRequestHandler InitializeCallbacks{..} vfs handlers options sendFunc r
         runReaderT (sendErrorLog msg) env
 
     return $ Just env
+
+registerDynamicallyFunc :: J.ClientCapabilities
+-- It's not limited to notifications though, its notifications + requests
+                        -> SClientMethod (m :: Method FromClient t)
+                        -> RegistrationOptions m
+                        -> (ClientMessage m -> ClientResponseHandler m -> IO ())
+                        -> LspM config (Maybe (RegistrationId m))
+registerDynamicallyFunc clientCaps method regOpts f
+  -- First, check to see if the client supports dynamic registration on this method
+  | dynamicSupported = do
+      uuid <- liftIO $ UUID.toText <$> getStdRandom random
+      let registration = J.Registration uuid method regOpts
+          params = J.RegistrationParams (J.List [J.SomeRegistration registration])
+          regId = RegistrationId uuid
+      
+      -- TODO: handle the scenario where this returns an error
+      mkSendReqFunc SClientRegisterCapability params $ \_id _res -> pure ()
+      modifyData $ \ctx ->
+        let oldRegs = resRegistrations ctx
+            pair = Pair method (RegistrationHandler f)
+            newRegs = fromMaybe (error "Registration UUID already exists!") $
+                        insertIxMap regId pair oldRegs
+        in ctx { resRegistrations = (id oldRegs) }
+
+      pure (Just regId)
+  | otherwise        = pure Nothing
+  where
+    -- Also I'm thinking we should move this function to somewhere in messages.hs so
+    -- we don't forget to update it when adding new methods...
+    capDyn :: J.HasDynamicRegistration a (Maybe Bool) => Maybe a -> Bool
+    capDyn (Just x) = fromMaybe False $ x ^. J.dynamicRegistration
+    capDyn Nothing  = False
+    -- | Checks if client capabilities declares that the method supports dynamic registration
+    dynamicSupported = case method of
+      SWorkspaceDidChangeConfiguration -> capDyn $ clientCaps ^? J.workspace . _Just . J.didChangeConfiguration . _Just
+      SWorkspaceDidChangeWatchedFiles  -> capDyn $ clientCaps ^? J.workspace . _Just . J.didChangeWatchedFiles . _Just
+      SWorkspaceSymbol                 -> capDyn $ clientCaps ^? J.workspace . _Just . J.symbol . _Just
+      SWorkspaceExecuteCommand         -> capDyn $ clientCaps ^? J.workspace . _Just . J.executeCommand . _Just
+      STextDocumentDidOpen             -> capDyn $ clientCaps ^? J.textDocument . _Just . J.synchronization . _Just
+      STextDocumentDidChange           -> capDyn $ clientCaps ^? J.textDocument . _Just . J.synchronization . _Just
+      STextDocumentDidClose            -> capDyn $ clientCaps ^? J.textDocument . _Just . J.synchronization . _Just
+      STextDocumentCompletion          -> capDyn $ clientCaps ^? J.textDocument . _Just . J.completion . _Just
+      STextDocumentHover               -> capDyn $ clientCaps ^? J.textDocument . _Just . J.hover . _Just
+      STextDocumentSignatureHelp       -> capDyn $ clientCaps ^? J.textDocument . _Just . J.signatureHelp . _Just
+      STextDocumentDeclaration         -> capDyn $ clientCaps ^? J.textDocument . _Just . J.declaration . _Just
+      STextDocumentDefinition          -> capDyn $ clientCaps ^? J.textDocument . _Just . J.definition . _Just
+      STextDocumentTypeDefinition      -> capDyn $ clientCaps ^? J.textDocument . _Just . J.typeDefinition . _Just
+      STextDocumentImplementation      -> capDyn $ clientCaps ^? J.textDocument . _Just . J.implementation . _Just
+      STextDocumentReferences          -> capDyn $ clientCaps ^? J.textDocument . _Just . J.references . _Just
+      STextDocumentDocumentHighlight   -> capDyn $ clientCaps ^? J.textDocument . _Just . J.documentHighlight . _Just
+      STextDocumentDocumentSymbol      -> capDyn $ clientCaps ^? J.textDocument . _Just . J.documentSymbol . _Just
+      STextDocumentCodeAction          -> capDyn $ clientCaps ^? J.textDocument . _Just . J.codeAction . _Just
+      STextDocumentCodeLens            -> capDyn $ clientCaps ^? J.textDocument . _Just . J.codeLens . _Just
+      STextDocumentDocumentLink        -> capDyn $ clientCaps ^? J.textDocument . _Just . J.documentLink . _Just
+      STextDocumentDocumentColor       -> capDyn $ clientCaps ^? J.textDocument . _Just . J.colorProvider . _Just
+      STextDocumentColorPresentation   -> capDyn $ clientCaps ^? J.textDocument . _Just . J.colorProvider . _Just
+      STextDocumentFormatting          -> capDyn $ clientCaps ^? J.textDocument . _Just . J.formatting . _Just
+      STextDocumentRangeFormatting     -> capDyn $ clientCaps ^? J.textDocument . _Just . J.rangeFormatting . _Just
+      STextDocumentOnTypeFormatting    -> capDyn $ clientCaps ^? J.textDocument . _Just . J.onTypeFormatting . _Just
+      STextDocumentRename              -> capDyn $ clientCaps ^? J.textDocument . _Just . J.rename . _Just
+      STextDocumentFoldingRange        -> capDyn $ clientCaps ^? J.textDocument . _Just . J.foldingRange . _Just
+      STextDocumentSelectionRange      -> capDyn $ clientCaps ^? J.textDocument . _Just . J.selectionRange . _Just
+      _                                -> False
+  
 
 --------------------------------------------------------------------------------
 -- PROGRESS

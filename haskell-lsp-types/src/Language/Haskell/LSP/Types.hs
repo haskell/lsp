@@ -25,6 +25,7 @@ module Language.Haskell.LSP.Types
   , module Language.Haskell.LSP.Types.Message
   , module Language.Haskell.LSP.Types.Progress
   , module Language.Haskell.LSP.Types.References
+  , module Language.Haskell.LSP.Types.Registration
   , module Language.Haskell.LSP.Types.Rename
   , module Language.Haskell.LSP.Types.SignatureHelp
   , module Language.Haskell.LSP.Types.StaticRegistrationOptions
@@ -69,6 +70,7 @@ import           Language.Haskell.LSP.Types.Method
 import           Language.Haskell.LSP.Types.Message
 import           Language.Haskell.LSP.Types.Progress
 import           Language.Haskell.LSP.Types.References
+import           Language.Haskell.LSP.Types.Registration
 import           Language.Haskell.LSP.Types.Rename
 import           Language.Haskell.LSP.Types.SelectionRange
 import           Language.Haskell.LSP.Types.SignatureHelp

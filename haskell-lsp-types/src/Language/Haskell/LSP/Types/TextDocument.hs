@@ -79,6 +79,14 @@ instance Default TextDocumentSyncClientCapabilities where
 
 -- -------------------------------------
 
+data SaveOptions =
+  SaveOptions
+  { -- | The client is supposed to include the content on save.
+    _includeText :: Maybe Bool
+  } deriving (Show, Read, Eq)
+
+-- -------------------------------------
+
 -- | Defines how the host (editor) should sync document changes to the language server.
 data TextDocumentSyncKind
   = -- | Documents should not be synced at all.
@@ -110,6 +118,15 @@ data TextDocumentSyncOptions =
     -- and TextDocumentSyncKind.Incremental. If omitted it defaults to
     -- TextDocumentSyncKind.None.
     _change    :: Maybe TextDocumentSyncKind
+    -- | If present will save notifications are sent to the server. If omitted the notification should not be
+    -- sent.
+  , _willSave  :: Maybe Bool
+    -- | If present will save wait until requests are sent to the server. If omitted the request should not be
+    -- sent.
+  , _willSaveWaitUntil :: Maybe Bool
+    -- | If present save notifications are sent to the server. If omitted the
+    -- notification should not be sent.
+  , _save      :: Maybe (Bool |? SaveOptions)
   } deriving (Show, Read, Eq)
 deriveJSON lspOptions ''TextDocumentSyncOptions
 
@@ -216,12 +233,6 @@ data WillSaveTextDocumentParams =
 deriveJSON lspOptions ''WillSaveTextDocumentParams
 
 -- -------------------------------------
-
-data SaveOptions =
-  SaveOptions
-    { -- | The client is supposed to include the content on save.
-      _includeText :: Maybe Bool
-    } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''SaveOptions
 
