@@ -12,6 +12,7 @@ module Language.Haskell.LSP.Types.Method where
 
 import qualified Data.Aeson                                 as A
 import           Data.Aeson.Types
+import           Data.IxMap
 import           Data.Text                                  (Text)
 import           Language.Haskell.LSP.Types.Utils
 import           Data.Function (on)
@@ -382,3 +383,7 @@ instance A.ToJSON (SMethod m) where
   toJSON SCancelRequest                      = A.String "$/cancelRequest"
 -- Custom
   toJSON (SCustomMethod m)                   = A.String m
+
+instance IxOrd SMethod where
+  type Base SMethod = A.Value
+  toBase = A.toJSON

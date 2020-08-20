@@ -49,7 +49,6 @@ import           Control.Concurrent.STM
 import qualified Control.Exception as E
 import           Control.Monad
 import           Control.Applicative
-import           Data.Functor.Product
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Reader
@@ -60,6 +59,8 @@ import qualified Data.Aeson.Types as J
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as B
 import           Data.Default
+import           Data.Functor.Compose
+import           Data.Functor.Product
 import           Data.IxMap
 import qualified Data.Dependent.Map as DMap
 import           Data.Dependent.Map (DMap)
@@ -113,15 +114,16 @@ data LanguageContextData config =
   , resWorkspaceFolders    :: ![WorkspaceFolder]
   , resProgressData        :: !ProgressData
   , resPendingResponses    :: !ResponseMap
-  , resRegistrations       :: !RegistrationMap
+  , resRegistrationsNot    :: !(RegistrationMap Notification)
+  , resRegistrationsReq    :: !(RegistrationMap Request)
   , resLspId               :: !Int
   }
 
 type ResponseMap = IxMap LspId (Product SMethod ServerResponseHandler)
-type RegistrationMap = IxMap SMethod (Product RegistrationId RegistrationHandler)
+type RegistrationMap t = IxMap SMethod (Compose [] (Product RegistrationId (RegistrationHandler t)))
 -- type RegistrationMap = IxMap RegistrationId (Product SMethod RegistrationHandler)
 
-newtype RegistrationHandler (m :: Method FromClient t) = RegistrationHandler (ClientMessage m -> ClientResponseHandler m -> IO ())
+newtype RegistrationHandler t (m :: Method FromClient t) = RegistrationHandler (ClientMessage m -> ClientResponseHandler m -> IO ())
 
 data ProgressData = ProgressData { progressNextId :: !Int
                                  , progressCancel :: !(Map.Map ProgressToken (IO ())) }
@@ -361,7 +363,23 @@ handlerMap :: (Show config) => SClientMethod m -> ClientMessage m -> LspM config
 handlerMap c msg = do
   -- First check to see if we have any dynamically registered handlers and call
   -- their handlers
-  regHandlers <- readData resRegistrations
+  regsReq <- readData resRegistrationsReq
+  regsNot <- readData resRegistrationsNot
+  case splitClientMethod c of
+    IsClientReq -> 
+      case lookupIxMap c regsReq of
+        -- TODO: If one request handles it, stop here and break out so we don't send back multiple responses?
+        Just (Compose regs) -> forM_ regs $ \(Pair _regId (RegistrationHandler f)) -> do
+          respH <- mkClientResponseHandler c msg
+          liftIO $ f msg respH
+        Nothing -> pure ()
+    IsClientNot ->
+      case lookupIxMap c regsNot of
+        Just (Compose regs) -> forM_ regs $ \(Pair _regId (RegistrationHandler f)) -> do
+          respH <- mkClientResponseHandler c msg
+          liftIO $ f msg respH
+        Nothing -> pure ()
+    _ -> pure ()
   
   case c of
     SWorkspaceDidChangeWorkspaceFolders -> hh (Just updateWorkspaceFolders) c msg
@@ -621,6 +639,7 @@ initializeRequestHandler InitializeCallbacks{..} vfs handlers options sendFunc r
         defaultProgressData
         emptyIxMap
         emptyIxMap
+        emptyIxMap
         0
 
     -- Launch the given process once the project root directory has been set
@@ -685,13 +704,27 @@ registerDynamicallyFunc clientCaps method regOpts f
           regId = RegistrationId uuid
       
       -- TODO: handle the scenario where this returns an error
-      mkSendReqFunc SClientRegisterCapability params $ \_id _res -> pure ()
-      modifyData $ \ctx ->
-        let oldRegs = resRegistrations ctx
-            pair = Pair method (RegistrationHandler f)
-            newRegs = fromMaybe (error "Registration UUID already exists!") $
-                        insertIxMap regId pair oldRegs
-        in ctx { resRegistrations = (id oldRegs) }
+      _ <- mkSendReqFunc SClientRegisterCapability params $ \_id _res -> pure ()
+      
+      case splitClientMethod method of
+        IsClientNot -> modifyData $ \ctx ->
+          let oldRegs = resRegistrationsNot ctx
+              pair = Compose [Pair regId (RegistrationHandler f)]
+              newRegs = fromMaybe (error "TODO") $
+                          insertIxMap method pair oldRegs
+            in ctx { resRegistrationsNot = newRegs }
+        IsClientReq    -> modifyData $ \ctx ->
+          let oldRegs = resRegistrationsReq ctx
+              pair = Compose [Pair regId (RegistrationHandler f)]
+              newRegs = fromMaybe (error "TODO") $
+                          insertIxMap method pair oldRegs
+            in ctx { resRegistrationsReq = newRegs }
+        _              -> pure ()
+            -- let oldRegs = resRegistrationsReq ctx
+            --     pair = Compose [Pair regId (RegistrationHandler f)]
+            --     newRegs = fromMaybe (error "Registration UUID already exists!") $
+            --                 insertIxMap method pair oldRegs
+            -- in ctx { resRegistrationsReqs = oldRegs }
 
       pure (Just regId)
   | otherwise        = pure Nothing
