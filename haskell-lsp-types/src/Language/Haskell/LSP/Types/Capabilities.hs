@@ -2,6 +2,7 @@ module Language.Haskell.LSP.Types.Capabilities
   (
     module Language.Haskell.LSP.Types.ClientCapabilities
   , module Language.Haskell.LSP.Types.ServerCapabilities
+  , module Language.Haskell.LSP.Types.WorkspaceEdit
   , fullCaps
   , LSPVersion(..)
   , capsForVersion
@@ -10,6 +11,7 @@ module Language.Haskell.LSP.Types.Capabilities
 import Prelude hiding (min)
 import Language.Haskell.LSP.Types.ClientCapabilities
 import Language.Haskell.LSP.Types.ServerCapabilities
+import Language.Haskell.LSP.Types.WorkspaceEdit
 import Language.Haskell.LSP.Types
 
 -- | The whole shebang. The real deal.

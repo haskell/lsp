@@ -39,6 +39,7 @@ module Language.Haskell.LSP.Types
   , module Language.Haskell.LSP.Types.WorkspaceEdit
   , module Language.Haskell.LSP.Types.WorkspaceFolders
   , module Language.Haskell.LSP.Types.WorkspaceSymbol
+  , module Language.Haskell.LSP.Types.Registration
   )
 where
 
@@ -82,3 +83,4 @@ import           Language.Haskell.LSP.Types.Window
 import           Language.Haskell.LSP.Types.WorkspaceEdit
 import           Language.Haskell.LSP.Types.WorkspaceFolders
 import           Language.Haskell.LSP.Types.WorkspaceSymbol
+import           Language.Haskell.LSP.Types.Registration

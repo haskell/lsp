@@ -35,8 +35,8 @@ makeExtendingDatatype "RenameRegistrationOptions"
 deriveJSON lspOptions ''RenameRegistrationOptions
 
 makeExtendingDatatype "RenameParams"
-  [ ''TextDocumentRegistrationOptions
-  , ''RenameOptions
+  [ ''TextDocumentPositionParams
+  , ''WorkDoneProgressParams
   ]
   [("_newName", [t| String |])]
 deriveJSON lspOptions ''RenameParams
