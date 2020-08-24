@@ -167,7 +167,7 @@ data SessionState = SessionState
   -- ^ The last received message from the server.
   -- Used for providing exception information
   , lastReceivedMessage :: Maybe FromServerMessage
-  , curDynCaps :: Map.Map T.Text Registration
+  , curDynCaps :: Map.Map T.Text SomeRegistration
   -- ^ The capabilities that the server has dynamically registered with us so
   -- far
   }
@@ -295,7 +295,7 @@ updateState :: (MonadIO m, HasReader SessionContext m, HasState SessionState m)
 
 -- Keep track of dynamic capability registration
 updateState (FromServerMess SClientRegisterCapability req) = do
-  let List newRegs = (\r -> (r ^. LSP.id, r)) <$> req ^. params . registrations
+  let List newRegs = (\sr@(SomeRegistration r) -> (r ^. LSP.id, sr)) <$> req ^. params . registrations
   modify $ \s ->
     s { curDynCaps = Map.union (Map.fromList newRegs) (curDynCaps s) }
 

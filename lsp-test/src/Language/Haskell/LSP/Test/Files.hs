@@ -1,4 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -64,8 +66,9 @@ mapUris f event =
     fromServerMsg (FromServerMess m@SWorkspaceApplyEdit r) = FromServerMess m $ params . edit .~ swapWorkspaceEdit (r ^. params . edit) $ r
     fromServerMsg (FromServerMess m@STextDocumentPublishDiagnostics n) = FromServerMess m $ swapUri params n
     fromServerMsg (FromServerRsp m@STextDocumentDocumentSymbol r) =
-      let swapUri' (DSSymbolInformation si) = DSSymbolInformation (swapUri location <$> si)
-          swapUri' (DSDocumentSymbols dss) = DSDocumentSymbols dss -- no file locations here
+      let swapUri' :: (List DocumentSymbol |? List SymbolInformation) -> List DocumentSymbol |? List SymbolInformation
+          swapUri' (R si) = R (swapUri location <$> si)
+          swapUri' (L dss) = L dss -- no file locations here
       in FromServerRsp m $ r & result %~ (fmap swapUri')
     fromServerMsg (FromServerRsp m@STextDocumentRename r) = FromServerRsp m $ r & result %~ (fmap swapWorkspaceEdit)
     fromServerMsg x = x

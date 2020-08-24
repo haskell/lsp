@@ -1,4 +1,5 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE KindSignatures #-}
@@ -36,6 +37,8 @@ import Data.Typeable
 import Language.Haskell.LSP.Types
 import qualified Language.Haskell.LSP.Types.Lens as LSP
 import Language.Haskell.LSP.Test.Session
+import Data.GADT.Compare
+import Data.Type.Equality
 
 -- $receiving
 -- To receive a message, just specify the type that expect:
@@ -101,8 +104,22 @@ satisfyMaybe pred = do
 named :: T.Text -> Session a -> Session a
 named s (Session x) = Session (Data.Conduit.Parser.named s x)
 
+mEq :: SServerMethod m1 -> SServerMethod m2 -> Maybe (m1 :~~: m2)
+mEq m1 m2 = case (splitServerMethod m1, splitServerMethod m2) of
+  (IsServerNot, IsServerNot) -> do
+    Refl <- geq m1 m2
+    pure HRefl
+  (IsServerReq, IsServerReq) -> do
+    Refl <- geq m1 m2
+    pure HRefl
+  _ -> Nothing
+
 message :: SServerMethod m -> Session (ServerMessage m)
-message = undefined -- TODO
+message m1 = named (T.pack $ show m1) $ satisfyMaybe $ \case
+  FromServerMess m2 msg -> do
+    HRefl <- mEq m1 m2
+    pure msg
+  _ -> Nothing
 
 -- | Matches if the message is a notification.
 anyNotification :: Session FromServerMessage

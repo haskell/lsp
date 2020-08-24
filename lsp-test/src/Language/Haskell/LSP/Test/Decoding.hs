@@ -10,6 +10,8 @@ import           Prelude                 hiding ( id )
 import           Data.Aeson
 import           Data.Aeson.Types
 import           Data.Foldable
+import           Data.Functor.Product
+import           Data.Functor.Const
 import           Control.Exception
 import           Control.Lens
 import qualified Data.ByteString.Lazy.Char8    as B
@@ -78,12 +80,21 @@ getRequestMap = foldl' helper emptyIxMap
     FromClientMess m mess -> case splitClientMethod m of
       IsClientNot -> acc
       IsClientReq -> fromJust $ updateRequestMap acc (mess ^. id) m
+      IsClientEither -> case mess of
+        NotMess _ -> acc
+        ReqMess msg -> fromJust $ updateRequestMap acc (msg ^. id) m
     _ -> acc
 
-decodeFromServerMsg :: RequestMap -> B.ByteString -> FromServerMessage
-decodeFromServerMsg reqMap bytes =  fst $ fromJust $ parseMaybe p obj
+decodeFromServerMsg :: RequestMap -> B.ByteString -> (FromServerMessage, RequestMap)
+decodeFromServerMsg reqMap bytes = unP $ fromJust $ parseMaybe p obj
   where obj = fromJust $ decode bytes :: Value
-        p = parseServerMessage (\i -> (,()) <$> lookupIxMap i reqMap)
+        p = parseServerMessage $ \lid ->
+          let (mm, newMap) = pickFromIxMap lid reqMap
+            in case mm of
+              Nothing -> Nothing
+              Just m -> Just $ (m, Pair m (Const newMap))
+        unP (FromServerMess m msg) = (FromServerMess m msg, reqMap)
+        unP (FromServerRsp (Pair m (Const newMap)) msg) = (FromServerRsp m msg, newMap)
         {-
         WorkspaceWorkspaceFolders      -> error "ReqWorkspaceFolders not supported yet"
         WorkspaceConfiguration         -> error "ReqWorkspaceConfiguration not supported yet"

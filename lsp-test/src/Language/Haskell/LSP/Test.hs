@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE DataKinds #-}
@@ -96,7 +97,7 @@ import Control.Concurrent
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Exception
-import Control.Lens hiding ((.=), List)
+import Control.Lens hiding ((.=), List, Empty)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
@@ -191,7 +192,7 @@ runSessionWithConfig config' serverExe caps rootDir session = do
   where
   -- | Asks the server to shutdown and exit politely
   exitServer :: Session ()
-  exitServer = request_ SShutdown (Nothing :: Maybe Value) >> sendNotification SExit (Just ExitParams)
+  exitServer = request_ SShutdown (Nothing :: Maybe Value) >> sendNotification SExit (Just Empty)
 
   -- | Listens to the server output until the shutdown ack,
   -- makes sure it matches the record and signals any semaphores
@@ -370,7 +371,7 @@ createDoc file languageId contents = do
 
       createHits (WatchKind create _ _) = create
 
-      regHits :: Registration -> Bool
+      regHits :: SomeRegistration -> Bool
       regHits reg = isJust $ do
         opts <- reg ^. registerOptions
         fileWatchOpts <- case fromJSON opts :: Result DidChangeWatchedFilesRegistrationOptions of
@@ -463,12 +464,12 @@ getDocumentSymbols :: TextDocumentIdentifier -> Session (Either [DocumentSymbol]
 getDocumentSymbols doc = do
   ResponseMessage _ rspLid res <- request STextDocumentDocumentSymbol (DocumentSymbolParams doc Nothing) :: Session DocumentSymbolsResponse
   case res of
-    Right (DSDocumentSymbols (List xs)) -> return (Left xs)
-    Right (DSSymbolInformation (List xs)) -> return (Right xs)
+    Right (L (List xs)) -> return (Left xs)
+    Right (R (List xs)) -> return (Right xs)
     Left err -> throw (UnexpectedResponseError (SomeLspId $ fromJust rspLid) err)
 
 -- | Returns the code actions in the specified range.
-getCodeActions :: TextDocumentIdentifier -> Range -> Session [CAResult]
+getCodeActions :: TextDocumentIdentifier -> Range -> Session [Command |? CodeAction]
 getCodeActions doc range = do
   ctx <- getCodeActionContext doc
   rsp <- request STextDocumentCodeAction (CodeActionParams doc range ctx Nothing)
@@ -480,14 +481,14 @@ getCodeActions doc range = do
 -- | Returns all the code actions in a document by
 -- querying the code actions at each of the current
 -- diagnostics' positions.
-getAllCodeActions :: TextDocumentIdentifier -> Session [CAResult]
+getAllCodeActions :: TextDocumentIdentifier -> Session [Command |? CodeAction]
 getAllCodeActions doc = do
   ctx <- getCodeActionContext doc
 
   foldM (go ctx) [] =<< getCurrentDiagnostics doc
 
   where
-    go :: CodeActionContext -> [CAResult] -> Diagnostic -> Session [CAResult]
+    go :: CodeActionContext -> [Command |? CodeAction] -> Diagnostic -> Session [Command |? CodeAction]
     go ctx acc diag = do
       ResponseMessage _ rspLid res <- request STextDocumentCodeAction (CodeActionParams doc (diag ^. range) ctx Nothing)
 
@@ -546,7 +547,7 @@ applyEdit doc edit = do
   caps <- asks sessionCapabilities
 
   let supportsDocChanges = fromMaybe False $ do
-        let mWorkspace = C._workspace caps
+        let mWorkspace = caps ^. LSP.workspace
         C.WorkspaceClientCapabilities _ mEdit _ _ _ _ _ _ <- mWorkspace
         C.WorkspaceEditClientCapabilities mDocChanges <- mEdit
         mDocChanges
@@ -571,8 +572,8 @@ getCompletions doc pos = do
   rsp <- request STextDocumentCompletion (CompletionParams doc pos Nothing Nothing)
 
   case getResponseResult rsp of
-    Completions (List items) -> return items
-    CompletionList (CompletionListType _ (List items)) -> return items
+    L (List items) -> return items
+    R (CompletionList _ (List items)) -> return items
 
 -- | Returns the references for the position in the document.
 getReferences :: TextDocumentIdentifier -- ^ The document to lookup in.
@@ -592,19 +593,19 @@ getDefinitions doc pos = do
   let params = TextDocumentPositionParams doc pos Nothing
   rsp <- request STextDocumentDefinition params :: Session DefinitionResponse
   case getResponseResult rsp of
-    SingleLoc loc -> pure [loc]
-    MultiLoc locs -> pure locs
+      L loc -> pure [loc]
+      R locs -> pure locs
 
 -- | Returns the type definition(s) for the term at the specified position.
 getTypeDefinitions :: TextDocumentIdentifier -- ^ The document the term is in.
-                   -> Position -- ^ The position the term is at.
-                   -> Session [Location] -- ^ The location(s) of the definitions
-getTypeDefinitions doc pos = do
+               -> Position -- ^ The position the term is at.
+               -> Session (Location |? List Location |? List LocationLink) -- ^ The location(s) of the definitions
+getTypeDefinitions doc pos =
   let params = TextDocumentPositionParams doc pos Nothing
   rsp <- request STextDocumentTypeDefinition params :: Session TypeDefinitionResponse
   case getResponseResult rsp of
-    SingleLoc loc -> pure [loc]
-    MultiLoc locs -> pure locs
+      L loc -> pure [loc]
+      R locs -> pure locs
 
 -- | Renames the term at the specified position.
 rename :: TextDocumentIdentifier -> Position -> String -> Session ()
@@ -667,5 +668,5 @@ getCodeLenses tId = do
 -- register during the 'Session'.
 --
 -- @since 0.11.0.0
-getRegisteredCapabilities :: Session [Registration]
+getRegisteredCapabilities :: Session [SomeRegistration]
 getRegisteredCapabilities = (Map.elems . curDynCaps) <$> get
