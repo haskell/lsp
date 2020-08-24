@@ -27,11 +27,9 @@ module Language.Haskell.LSP.Core (
   , Progress(..)
   , ProgressCancellable(..)
   , ProgressCancelledException
-  , Handlers(..)
+  , Handlers
   , RegistrationId
   , Options(..)
-  , ClientRequestHandler(..)
-  , ClientNotificationHandler(..)
   , ServerResponseHandler(..)
   , makeResponseMessage
   , makeResponseError
@@ -120,10 +118,9 @@ data LanguageContextData config =
   }
 
 type ResponseMap = IxMap LspId (Product SMethod ServerResponseHandler)
-type RegistrationMap t = IxMap SMethod (Compose [] (Product RegistrationId (RegistrationHandler t)))
--- type RegistrationMap = IxMap RegistrationId (Product SMethod RegistrationHandler)
+type RegistrationMap t = DMap SMethod (Compose [] (Product RegistrationId (RegistrationHandler t)))
 
-newtype RegistrationHandler t (m :: Method FromClient t) = RegistrationHandler (ClientMessage m -> ResponseHandlerFunc m -> IO ())
+newtype RegistrationHandler t (m :: Method FromClient t) = RegistrationHandler (Handler m)
 
 data ProgressData = ProgressData { progressNextId :: !Int
                                  , progressCancel :: !(Map.Map ProgressToken (IO ())) }
@@ -272,7 +269,7 @@ data LspFuncs c =
       -- @since 0.10.0.0
     , registerDynamically :: !(forall t m. SMethod (m :: Method FromClient t)
                                 -> RegistrationOptions m
-                                -> (ClientMessage m -> ResponseHandlerFunc m -> IO ())
+                                -> Handler m
                                 -> IO (Maybe (RegistrationId m)))
       -- ^ Returns 'Nothing' if the client does not support dynamic registration for the specified method
     }
@@ -305,7 +302,7 @@ data InitializeCallbacks config =
     }
 
 newtype ServerResponseHandler (m :: Method FromServer Request)
-  = ServerResponseHandler (HandlerFunc (ResponseParams m))
+  = ServerResponseHandler (Either ResponseError (ResponseParams m) -> IO ())
 
 -- | Return value signals if response handler was inserted succesfully
 -- Might fail if the id was already in the map
@@ -339,91 +336,77 @@ mkSendReqFunc m params resHandler = do
     IsServerEither -> sendToClient $ FromServerMess m $ ReqMess msg
   return reqId
 
-newtype ClientRequestHandler (m :: Method FromClient Request)
-  = ClientRequestHandler
-  { runRequestHandler :: RequestMessage m -> HandlerFunc (ResponseParams m) -> IO ()
-  }
-
-newtype ClientNotificationHandler (m :: Method FromClient Notification)
-  = ClientNotificationHandler
-  { runNotificationHandler :: NotificationMessage m -> IO ()
-  }
-
-data Handlers
-  = Handlers
-  { requestHandlers :: DMap SMethod ClientRequestHandler
-  , notificationHandlers :: DMap SMethod ClientNotificationHandler
-  }
+type Handlers = forall t (m :: Method FromClient t). (SMethod m -> Maybe (Handler m))
 
 -- ---------------------------------------------------------------------
 nop :: Maybe (b -> LspM config ())
 nop = Nothing
 
 handlerMap :: (Show config) => SClientMethod m -> ClientMessage m -> LspM config ()
-handlerMap c msg = do
+handlerMap m msg = do
   -- First check to see if we have any dynamically registered handlers and call
   -- their handlers
-  regsReq <- readData resRegistrationsReq
-  regsNot <- readData resRegistrationsNot
-  ~() <- case splitClientMethod c of
+  sf <- asks resSendMessage
+  dynReqHandlers <- readData resRegistrationsReq -- :: LspM config (RegistrationMap Request)
+  dynNotHandlers <- readData resRegistrationsNot
+  ~() <- case splitClientMethod m of
     IsClientReq -> 
-      case lookupIxMap c regsReq of
+      case DMap.lookup m dynReqHandlers of
         -- TODO: If one request handles it, stop here and break out so we don't send back multiple responses?
-        Just (Compose regs) -> forM_ regs $ \(Pair _regId (RegistrationHandler f)) -> do
-          ClientResponseHandler respH <- mkClientResponseHandler c msg
-          liftIO $ f msg respH
+        Just (Compose regs) -> forM_ regs $ \(Pair _regId (RegistrationHandler h)) ->
+          liftIO $ h msg (mkClientResponseCallback sf msg)
         Nothing -> pure ()
     IsClientNot ->
-      case lookupIxMap c regsNot of
-        Just (Compose regs) -> forM_ regs $ \(Pair _regId (RegistrationHandler f)) -> do
-          ClientResponseHandler respH <- mkClientResponseHandler c msg
-          liftIO $ f msg respH
+      case DMap.lookup m dynNotHandlers of
+        Just (Compose regs) -> forM_ regs $ \(Pair _regId (RegistrationHandler h)) ->
+          liftIO $ h msg
         Nothing -> pure ()
     IsClientEither -> pure ()
   
-  case c of
-    SWorkspaceDidChangeWorkspaceFolders -> hh (Just updateWorkspaceFolders) c msg
-    SWorkspaceDidChangeConfiguration    -> hh (Just handleConfigChange) c msg
-    STextDocumentDidOpen                -> hh (Just $ vfsFunc openVFS) c msg
-    STextDocumentDidChange              -> hh (Just $ vfsFunc changeFromClientVFS) c msg
-    STextDocumentDidClose               -> hh (Just $ vfsFunc closeVFS) c msg
-    SWorkDoneProgressCancel             -> hh (Just progressCancelHandler) c msg
-    _ -> hh nop c msg
+  case m of
+    SWorkspaceDidChangeWorkspaceFolders -> hh (Just updateWorkspaceFolders) m msg
+    SWorkspaceDidChangeConfiguration    -> hh (Just handleConfigChange) m msg
+    STextDocumentDidOpen                -> hh (Just $ vfsFunc openVFS) m msg
+    STextDocumentDidChange              -> hh (Just $ vfsFunc changeFromClientVFS) m msg
+    STextDocumentDidClose               -> hh (Just $ vfsFunc closeVFS) m msg
+    SWorkDoneProgressCancel             -> hh (Just progressCancelHandler) m msg
+    _ -> hh nop m msg
 
 -- ---------------------------------------------------------------------
 
-mkClientResponseHandler :: (FromServerMessage -> IO ()) -> RequestMessage (m :: Method FromClient Request) -> HandlerFunc (ResponseParams m)
-mkClientResponseHandler sf req (Left  err) = sf $ FromServerRsp (req ^. J.method) $ makeResponseError (req ^. J.id) err
-mkClientResponseHandler sf req (Right rsp) = sf $ FromServerRsp (req ^. J.method) $ makeResponseMessage (req ^. J.id) rsp
+-- | Makes the callback function passed to a 'Handler'
+mkClientResponseCallback :: (FromServerMessage -> IO ()) -> RequestMessage (m :: Method FromClient Request) -> ((Either ResponseError (ResponseParams m)) -> IO ())
+mkClientResponseCallback sf req (Left  err) = sf $ FromServerRsp (req ^. J.method) $ makeResponseError (req ^. J.id) err
+mkClientResponseCallback sf req (Right rsp) = sf $ FromServerRsp (req ^. J.method) $ makeResponseMessage (req ^. J.id) rsp
 
 -- | Adapter from the normal handlers exposed to the library users and the
 -- internal message loop
 hh :: Maybe (ClientMessage m -> LspM config ()) -> SClientMethod m -> ClientMessage m -> LspM config ()
-hh mAction m req = do
-  maybe (return ()) (\f -> f req) mAction
-  Handlers{..} <- asks resHandlers
+hh mAction m msg = do
+  maybe (return ()) (\f -> f msg) mAction
+  handlers <- asks resHandlers
   sf <- asks resSendMessage
-  let mkRspH :: forall m. RequestMessage (m :: Method FromClient Request) -> HandlerFunc (ResponseParams m)
-      mkRspH = mkClientResponseHandler sf
-  ~() <- case splitClientMethod m of
-    IsClientNot -> case DMap.lookup m notificationHandlers of
-      Just h -> liftIO $ runNotificationHandler h req
+  let mkRspCb :: forall m. RequestMessage (m :: Method FromClient Request) -> ((Either ResponseError (ResponseParams m)) -> IO ())
+      mkRspCb = mkClientResponseCallback sf
+      mHandler = handlers m
+  case splitClientMethod m of
+    IsClientNot -> case mHandler of
+      Just h -> liftIO $ h msg
       Nothing
-        | SExit <- m -> liftIO $ runNotificationHandler exitNotificationHandler req
+        | SExit <- m -> liftIO $ exitNotificationHandler msg
         | otherwise -> reportMissingHandler
-    IsClientReq -> case DMap.lookup m requestHandlers of
-      Just h -> liftIO $ runRequestHandler h req $ mkRspH req
+    IsClientReq -> case mHandler of
+      Just h -> liftIO $ h msg (mkRspCb msg)
       Nothing
-        | SShutdown <- m -> liftIO $ runRequestHandler shutdownRequestHandler req $ mkRspH req
+        | SShutdown <- m -> liftIO $ shutdownRequestHandler msg (mkRspCb msg)
         | otherwise -> reportMissingHandler
-    IsClientEither -> case req of
-      NotMess not -> case DMap.lookup m notificationHandlers of
-        Just h -> liftIO $ runNotificationHandler h not
+    IsClientEither -> case msg of
+      NotMess noti -> case mHandler of
+        Just h -> liftIO $ h noti
         Nothing -> reportMissingHandler
-      ReqMess req -> case DMap.lookup m requestHandlers of
-        Just h -> liftIO $ runRequestHandler h req $ mkRspH req
+      ReqMess req -> case mHandler of
+        Just h -> liftIO $ h req (mkRspCb req)
         Nothing -> reportMissingHandler
-  pure ()
   where
     -- '$/' notifications should/could be ignored by server.
     -- Don't log errors in that case.
@@ -432,8 +415,8 @@ hh mAction m req = do
     reportMissingHandler
       | isOptionalNotification m = return ()
       | otherwise = do
-          let msg = T.pack $ unwords ["haskell-lsp:no handler for: ", show m]
-          sendErrorLog msg
+          let errorMsg = T.pack $ unwords ["haskell-lsp:no handler for: ", show m]
+          sendErrorLog errorMsg
     isOptionalNotification (SCustomMethod method)
       | "$/" `T.isPrefixOf` method = True
     isOptionalNotification _  = False
@@ -638,8 +621,8 @@ initializeRequestHandler InitializeCallbacks{..} vfs handlers options sendFunc r
         wfs
         defaultProgressData
         emptyIxMap
-        emptyIxMap
-        emptyIxMap
+        mempty
+        mempty
         0
 
     -- Launch the given process once the project root directory has been set
@@ -693,7 +676,7 @@ registerDynamicallyFunc :: J.ClientCapabilities
 -- It's not limited to notifications though, its notifications + requests
                         -> SClientMethod (m :: Method FromClient t)
                         -> RegistrationOptions m
-                        -> (ClientMessage m -> ResponseHandlerFunc m -> IO ())
+                        -> Handler m
                         -> LspM config (Maybe (RegistrationId m))
 registerDynamicallyFunc clientCaps method regOpts f
   -- First, check to see if the client supports dynamic registration on this method
@@ -707,18 +690,15 @@ registerDynamicallyFunc clientCaps method regOpts f
       _ <- mkSendReqFunc SClientRegisterCapability params $ \_id _res -> pure ()
       
       ~() <- case splitClientMethod method of
-        IsClientNot -> modifyData $ \ctx ->
-          let oldRegs = resRegistrationsNot ctx
-              pair = Compose [Pair regId (RegistrationHandler f)]
-              newRegs = fromMaybe (error "TODO") $
-                          insertIxMap method pair oldRegs
-            in ctx { resRegistrationsNot = newRegs }
-        IsClientReq    -> modifyData $ \ctx ->
-          let oldRegs = resRegistrationsReq ctx
-              pair = Compose [Pair regId (RegistrationHandler f)]
-              newRegs = fromMaybe (error "TODO") $
-                          insertIxMap method pair oldRegs
-            in ctx { resRegistrationsReq = newRegs }
+        IsClientNot -> modifyData $ \LanguageContextData{..} ->
+          let pair = Compose [Pair regId (RegistrationHandler f)]
+              newRegs = DMap.insertWith (\(Compose xs) (Compose ys) -> Compose (xs <> ys)) method pair resRegistrationsNot
+              
+            in LanguageContextData { resRegistrationsNot = newRegs, .. }
+        IsClientReq    -> modifyData $ \LanguageContextData{..} ->
+          let pair = Compose [Pair regId (RegistrationHandler f)]
+              newRegs = DMap.insertWith (\(Compose xs) (Compose ys) -> Compose (xs <> ys)) method pair resRegistrationsReq
+            in LanguageContextData { resRegistrationsReq = newRegs, .. }
         IsClientEither -> pure ()
             -- let oldRegs = resRegistrationsReq ctx
             --     pair = Compose [Pair regId (RegistrationHandler f)]
@@ -895,10 +875,7 @@ serverCapabilities clientCaps o h =
     supported = Just . supported_b
 
     supported_b :: forall m. J.SClientMethod m -> Bool
-    supported_b m = case splitClientMethod m of
-      IsClientNot -> DMap.member m (notificationHandlers h)
-      IsClientReq -> DMap.member m (requestHandlers h)
-      IsClientEither -> False -- No capabilities for custom method
+    supported_b m = isJust (h m)
 
     singleton :: a -> [a]
     singleton x = [x]
@@ -964,14 +941,14 @@ progressCancelHandler (J.NotificationMessage _ _ (J.WorkDoneProgressCancelParams
     Nothing -> return ()
     Just cancelAction -> liftIO $ cancelAction
 
-exitNotificationHandler :: ClientNotificationHandler J.Exit
-exitNotificationHandler = ClientNotificationHandler $ \_ -> do
+exitNotificationHandler :: Handler J.Exit
+exitNotificationHandler =  \_ -> do
   logm $ B.pack "haskell-lsp:Got exit, exiting"
   exitSuccess
 
 -- | Default Shutdown handler
-shutdownRequestHandler :: ClientRequestHandler J.Shutdown
-shutdownRequestHandler = ClientRequestHandler $ \_req k -> do
+shutdownRequestHandler :: Handler J.Shutdown
+shutdownRequestHandler = \_req k -> do
   k $ Right J.Empty
 
 -- ---------------------------------------------------------------------

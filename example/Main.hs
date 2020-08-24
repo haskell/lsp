@@ -116,10 +116,11 @@ lspOptions = def { Core.textDocumentSync = Just syncOptions
 -- LSP client, so they can be sent to the backend compiler one at a time, and a
 -- reply sent.
 
-data ReactorInput = forall t (m :: J.Method 'J.FromClient t).
-                      ReactorInput (J.SMethod m)
-                                   (J.ClientMessage m)
-                                   (J.ResponseHandlerFunc m)
+data ReactorInput
+  = forall (m :: J.Method 'J.FromClient 'J.Request).
+    ReactorInputReq (J.SMethod m) (J.RequestMessage m) (Either J.ResponseError (J.ResponseParams m) -> IO ())
+  | forall (m :: J.Method 'J.FromClient 'J.Notification).
+    ReactorInputNot (J.SMethod m) (J.NotificationMessage m)
 
 -- ---------------------------------------------------------------------
 
@@ -182,23 +183,33 @@ reactor :: Core.LspFuncs () -> TChan ReactorInput -> IO ()
 reactor lf inp = do
   liftIO $ U.logs "reactor:entered"
   flip runReaderT lf $ forever $ do
-    ReactorInput method msg responder <- (liftIO $ atomically $ readTChan inp)
-    case handle method of
-      Just f -> f msg responder
-      Nothing -> pure ()
+    reactorInput <- liftIO $ atomically $ readTChan inp
+    case reactorInput of
+      ReactorInputReq method msg responder ->
+        case handle method of
+          Just f -> f msg responder
+          Nothing -> pure ()
+      ReactorInputNot method msg ->
+        case handle method of
+          Just f -> f msg
+          Nothing -> pure ()
 
 -- | Check if we have a handler, and if we create a haskell-lsp handler to pass it as
 -- input into the reactor
 lspHandlers :: TChan ReactorInput -> Core.Handlers
 lspHandlers rin method =
   case handle method of
-    Just _ -> Just $ Core.Handler $ \clientMsg (Core.ClientResponseHandler responder) ->
-                atomically $ writeTChan rin (ReactorInput method clientMsg responder)
+    Just _ -> case J.splitClientMethod method of
+      J.IsClientReq -> Just $ \clientMsg responder ->
+        atomically $ writeTChan rin (ReactorInputReq method clientMsg responder)
+      J.IsClientNot -> Just $ \clientMsg ->
+        atomically $ writeTChan rin (ReactorInputNot method clientMsg)
+      J.IsClientEither -> error "TODO???"
     Nothing -> Nothing
 
 -- | Where the actual logic resides for handling requests and notifications.
-handle :: J.SMethod m -> Maybe (J.ClientMessage m -> J.ResponseHandlerFunc m -> R () ())
-handle J.SInitialized = Just $ \_msg () -> do
+handle :: J.SMethod m -> Maybe (J.BaseHandler m (R () ()))
+handle J.SInitialized = Just $ \_msg -> do
     liftIO $ U.logm "Processing the Initialized notification"
     
     -- We're initialized! Lets send a showMessageRequest now
@@ -224,13 +235,13 @@ handle J.SInitialized = Just $ \_msg () -> do
                 rsp = J.List [J.CodeLens (J.mkRange 0 0 0 100) (Just cmd) Nothing]
             liftIO $ responder (Right rsp)
 
-handle J.STextDocumentDidOpen = Just $ \msg () -> do
+handle J.STextDocumentDidOpen = Just $ \msg -> do
   let doc  = msg ^. J.params . J.textDocument . J.uri
       fileName =  J.uriToFilePath doc
   liftIO $ U.logs $ "Processing DidOpenTextDocument for: " ++ show fileName
   sendDiagnostics (J.toNormalizedUri doc) (Just 0)
 
-handle J.STextDocumentDidChange = Just $ \msg () -> do
+handle J.STextDocumentDidChange = Just $ \msg -> do
   let doc  = msg ^. J.params
                   . J.textDocument
                   . J.uri
@@ -244,7 +255,7 @@ handle J.STextDocumentDidChange = Just $ \msg () -> do
     Nothing -> do
       liftIO $ U.logs $ "Didn't find anything in the VFS for: " ++ show doc
 
-handle J.STextDocumentDidSave = Just $ \msg () -> do
+handle J.STextDocumentDidSave = Just $ \msg -> do
   let doc = msg ^. J.params . J.textDocument . J.uri
       fileName = J.uriToFilePath doc
   liftIO $ U.logs $ "Processing DidSaveTextDocument  for: " ++ show fileName

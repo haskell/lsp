@@ -380,7 +380,19 @@ type family BaseMessage (t :: MethodType) :: Method p t -> Type where
   BaseMessage Request = RequestMessage
   BaseMessage Notification = NotificationMessage
 
-type HandlerFunc a = Either ResponseError a -> IO ()
+-- | The type of a handler that handles requests and notifications coming in
+-- from the server or client
+type family Handler m :: Type where
+  Handler (m :: Method p t) = BaseHandler m (IO ())
+
+-- | Version of 'Handler' that can be used to construct arbitrary functions
+-- taking in the required handler arguments
+type family BaseHandler (m :: Method p t) a :: Type where
+  BaseHandler (m :: Method p t) a = BaseHandler' t m a
+
+type family BaseHandler' (t :: MethodType) (m :: Method p t) (a :: Type) :: Type where
+  BaseHandler' Request      m a = RequestMessage m -> (Either ResponseError (ResponseParams m) -> IO ()) -> a
+  BaseHandler' Notification m a = NotificationMessage m -> a
 
 -- Some helpful type synonyms
 type ClientMessage (m :: Method FromClient t) = Message m
