@@ -170,7 +170,7 @@ data UnregistrationParams =
     { -- | This should correctly be named @unregistrations@. However changing this
       -- is a breaking change and needs to wait until we deliver a 4.x version
       -- of the specification.
-      _unregistrations :: List Unregistration
+      _unregisterations :: List Unregistration
     } deriving (Show, Eq)
 
 deriveJSON lspOptions ''UnregistrationParams

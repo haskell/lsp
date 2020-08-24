@@ -28,7 +28,7 @@ module Language.Haskell.LSP.Core (
   , ProgressCancellable(..)
   , ProgressCancelledException
   , Handlers
-  , RegistrationId
+  , RegistrationToken
   , Options(..)
   , ServerResponseHandler(..)
   , makeResponseMessage
@@ -117,10 +117,15 @@ data LanguageContextData config =
   , resLspId               :: !Int
   }
 
-type ResponseMap = IxMap LspId (Product SMethod ServerResponseHandler)
+type ResponseMap = IxMap LspId (Product SMethod ServerResponseCallback)
+
 type RegistrationMap t = DMap SMethod (Compose [] (Product RegistrationId (RegistrationHandler t)))
 
-newtype RegistrationHandler t (m :: Method FromClient t) = RegistrationHandler (Handler m)
+data RegistrationToken (m :: Method FromClient t) = RegistrationToken (SMethod m) (RegistrationId m)
+newtype RegistrationId (m :: Method FromClient t) = RegistrationId Text
+  deriving Eq
+
+newtype RegistrationHandler (t :: MethodType) (m :: Method FromClient t) = RegistrationHandler (Handler m)
 
 data ProgressData = ProgressData { progressNextId :: !Int
                                  , progressCancel :: !(Map.Map ProgressToken (IO ())) }
@@ -267,18 +272,18 @@ data LspFuncs c =
       -- precentage complete.
       --
       -- @since 0.10.0.0
-    , registerDynamically :: !(forall t m. SMethod (m :: Method FromClient t)
-                                -> RegistrationOptions m
-                                -> Handler m
-                                -> IO (Maybe (RegistrationId m)))
-      -- ^ Returns 'Nothing' if the client does not support dynamic registration for the specified method
+    , registerCapability :: !(forall t m. SMethod (m :: Method FromClient t)
+                              -> RegistrationOptions m
+                              -> Handler m
+                              -> IO (Maybe (RegistrationToken m)))
+      -- ^ Sends a @client/registerCapability@ request and dynamically registers
+      -- a 'Method' with a 'Handler'. Returns 'Nothing' if the client does not
+      -- support dynamic registration for the specified method, otherwise a
+      -- 'RegistrationToken' which can be used to unregister it later
+    , unregisterCapability :: !(forall t (m :: Method FromClient t). RegistrationToken m -> IO ())
+      -- ^ Sends a @client/unregisterCapability@ request and removes the handler
+      -- for that associated registration.
     }
-    
-newtype RegistrationId (m :: Method FromClient t) = RegistrationId Text
-
-instance IxOrd RegistrationId where
-  type Base RegistrationId = Text
-  toBase (RegistrationId t) = t
 
 -- | Contains all the callbacks to use for initialized the language server.
 -- it is parameterized over a config type variable representing the type for the
@@ -301,12 +306,14 @@ data InitializeCallbacks config =
       -- that may be necesary for the server lifecycle.
     }
 
-newtype ServerResponseHandler (m :: Method FromServer Request)
-  = ServerResponseHandler (Either ResponseError (ResponseParams m) -> IO ())
+-- | A function that a 'Handler' is passed that can be used to respond to a
+-- request with either an error, or the response params.
+newtype ServerResponseCallback (m :: Method FromServer Request)
+  = ServerResponseCallback (Either ResponseError (ResponseParams m) -> IO ())
 
 -- | Return value signals if response handler was inserted succesfully
 -- Might fail if the id was already in the map
-addResponseHandler :: LspId m -> (Product SMethod ServerResponseHandler) m -> LspM config Bool
+addResponseHandler :: LspId m -> (Product SMethod ServerResponseCallback) m -> LspM config Bool
 addResponseHandler lid h = do
   stateData $ \ctx@LanguageContextData{resPendingResponses} ->
     case insertIxMap lid h resPendingResponses of
@@ -327,7 +334,7 @@ mkSendReqFunc :: forall (m :: Method FromServer Request) config.
                     -> LspM config (LspId m)
 mkSendReqFunc m params resHandler = do
   reqId <- IdInt <$> freshLspId
-  success <- addResponseHandler reqId (Pair m (ServerResponseHandler (resHandler reqId)))
+  success <- addResponseHandler reqId (Pair m (ServerResponseCallback (resHandler reqId)))
   unless success $ error "haskell-lsp: could not send FromServer request as id is reused"
 
   let msg = RequestMessage "2.0" reqId m params
@@ -347,7 +354,7 @@ handlerMap m msg = do
   -- First check to see if we have any dynamically registered handlers and call
   -- their handlers
   sf <- asks resSendMessage
-  dynReqHandlers <- readData resRegistrationsReq -- :: LspM config (RegistrationMap Request)
+  dynReqHandlers <- readData resRegistrationsReq
   dynNotHandlers <- readData resRegistrationsNot
   ~() <- case splitClientMethod m of
     IsClientReq -> 
@@ -513,11 +520,11 @@ handleMessage jsonStr = do
       lift $ case msg of
         FromClientMess m mess ->
           pure $ handlerMap m mess
-        FromClientRsp (Pair (ServerResponseHandler f) (Const newMap)) res -> do
+        FromClientRsp (Pair (ServerResponseCallback f) (Const newMap)) res -> do
           modifyTVar' tvarDat (\c -> c { resPendingResponses = newMap })
           pure $ liftIO $ f (res ^. J.result)
   where
-    parser :: ResponseMap -> J.Value -> J.Parser (FromClientMessage' (Product ServerResponseHandler (Const ResponseMap)))
+    parser :: ResponseMap -> J.Value -> J.Parser (FromClientMessage' (Product ServerResponseCallback (Const ResponseMap)))
     parser rm = parseClientMessage $ \i ->
       let (mhandler, newMap) = pickFromIxMap i rm
         in (\(Pair m handler) -> (m,Pair handler (Const newMap))) <$> mhandler
@@ -641,7 +648,8 @@ initializeRequestHandler InitializeCallbacks{..} vfs handlers options sendFunc r
                             (getWfs tvarCtx)
                             withProgressFunc
                             withIndefiniteProgressFunc
-                            (\a b c -> flip runReaderT env $ registerDynamicallyFunc (params ^. J.capabilities) a b c)
+                            (\a b c -> flip runReaderT env $ registerCapabilityFunc (params ^. J.capabilities) a b c)
+                            (flip runReaderT env . unregisterCapabilityFunc)
         env = LanguageContextEnv handlers onConfigurationChange sendFunc tvarCtx
 
         withProgressFunc :: Text -> ProgressCancellable -> ((Progress -> IO ()) -> IO a) -> IO a
@@ -672,13 +680,13 @@ initializeRequestHandler InitializeCallbacks{..} vfs handlers options sendFunc r
 
     return $ Just env
 
-registerDynamicallyFunc :: J.ClientCapabilities
+registerCapabilityFunc :: J.ClientCapabilities
 -- It's not limited to notifications though, its notifications + requests
                         -> SClientMethod (m :: Method FromClient t)
                         -> RegistrationOptions m
                         -> Handler m
-                        -> LspM config (Maybe (RegistrationId m))
-registerDynamicallyFunc clientCaps method regOpts f
+                        -> LspM config (Maybe (RegistrationToken m))
+registerCapabilityFunc clientCaps method regOpts f
   -- First, check to see if the client supports dynamic registration on this method
   | dynamicSupported = do
       uuid <- liftIO $ UUID.toText <$> getStdRandom random
@@ -686,27 +694,22 @@ registerDynamicallyFunc clientCaps method regOpts f
           params = J.RegistrationParams (J.List [J.SomeRegistration registration])
           regId = RegistrationId uuid
       
+      ~() <- case splitClientMethod method of
+        IsClientNot -> modifyData $ \ctx ->
+          let pair = Compose [Pair regId (RegistrationHandler f)]
+              newRegs = DMap.insertWith (\(Compose xs) (Compose ys) -> Compose (xs <> ys)) method pair (resRegistrationsNot ctx)
+              
+            in ctx { resRegistrationsNot = newRegs }
+        IsClientReq    -> modifyData $ \ctx ->
+          let pair = Compose [Pair regId (RegistrationHandler f)]
+              newRegs = DMap.insertWith (\(Compose xs) (Compose ys) -> Compose (xs <> ys)) method pair (resRegistrationsReq ctx)
+            in ctx { resRegistrationsReq = newRegs }
+        IsClientEither -> pure ()
+      
       -- TODO: handle the scenario where this returns an error
       _ <- mkSendReqFunc SClientRegisterCapability params $ \_id _res -> pure ()
-      
-      ~() <- case splitClientMethod method of
-        IsClientNot -> modifyData $ \LanguageContextData{..} ->
-          let pair = Compose [Pair regId (RegistrationHandler f)]
-              newRegs = DMap.insertWith (\(Compose xs) (Compose ys) -> Compose (xs <> ys)) method pair resRegistrationsNot
-              
-            in LanguageContextData { resRegistrationsNot = newRegs, .. }
-        IsClientReq    -> modifyData $ \LanguageContextData{..} ->
-          let pair = Compose [Pair regId (RegistrationHandler f)]
-              newRegs = DMap.insertWith (\(Compose xs) (Compose ys) -> Compose (xs <> ys)) method pair resRegistrationsReq
-            in LanguageContextData { resRegistrationsReq = newRegs, .. }
-        IsClientEither -> pure ()
-            -- let oldRegs = resRegistrationsReq ctx
-            --     pair = Compose [Pair regId (RegistrationHandler f)]
-            --     newRegs = fromMaybe (error "Registration UUID already exists!") $
-            --                 insertIxMap method pair oldRegs
-            -- in ctx { resRegistrationsReqs = oldRegs }
 
-      pure (Just regId)
+      pure (Just (RegistrationToken method regId))
   | otherwise        = pure Nothing
   where
     -- Also I'm thinking we should move this function to somewhere in messages.hs so
@@ -746,6 +749,25 @@ registerDynamicallyFunc clientCaps method regOpts f
       STextDocumentSelectionRange      -> capDyn $ clientCaps ^? J.textDocument . _Just . J.selectionRange . _Just
       _                                -> False
   
+unregisterCapabilityFunc :: RegistrationToken m -> LspM config ()
+unregisterCapabilityFunc (RegistrationToken m regId@(RegistrationId uuid)) = do
+  ~() <- case splitClientMethod m of
+    IsClientReq -> do
+      reqRegs <- readData resRegistrationsReq
+      let f (Compose xs) = Just $ Compose $ filter (\(Pair regId' _) -> regId /= regId') xs
+          newMap = DMap.update f m reqRegs
+      modifyData (\ctx -> ctx { resRegistrationsReq = newMap })
+    IsClientNot -> do
+      notRegs <- readData resRegistrationsNot
+      let f (Compose xs) = Just $ Compose $ filter (\(Pair regId' _) -> regId /= regId') xs
+          newMap = DMap.update f m notRegs
+      modifyData (\ctx -> ctx { resRegistrationsNot = newMap })
+    _ -> error "TODO???"
+      
+  
+  let unregistration = J.Unregistration uuid (J.SomeClientMethod m)
+      params = J.UnregistrationParams (J.List [unregistration])
+  void $ mkSendReqFunc SClientUnregisterCapability params $ \_id _res -> pure ()
 
 --------------------------------------------------------------------------------
 -- PROGRESS

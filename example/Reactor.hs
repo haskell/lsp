@@ -226,9 +226,10 @@ handle J.SInitialized = Just $ \_msg -> do
           -- We can dynamically register a capability once the user accepts it
           reactorSendNot J.SWindowShowMessage (J.ShowMessageParams J.MtInfo "Turning on code lenses dynamically")
           
-          Core.LspFuncs { Core.registerDynamically = registerDynamically } <- ask
+          Core.LspFuncs { Core.registerCapability = registerCapability } <- ask
           let regOpts = J.CodeLensRegistrationOptions Nothing Nothing (Just False)
-          void $ liftIO $ registerDynamically J.STextDocumentCodeLens regOpts $ \_req responder -> do
+          
+          void $ liftIO $ registerCapability J.STextDocumentCodeLens regOpts $ \_req responder -> do
             liftIO $ U.logs "Processing a textDocument/codeLens request"
             let cmd = J.Command "Say hello" "lsp-hello-command" Nothing
                 rsp = J.List [J.CodeLens (J.mkRange 0 0 0 100) (Just cmd) Nothing]
