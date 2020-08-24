@@ -19,11 +19,10 @@ The `haskell-lsp` handlers then simply pass on all the requests and
 notifications onto the channel via 'ReactorInput's.
 
 To try out this server, install it with
-> cabal install lsp-hello -fdemo
+> cabal install lsp-demo-reactor-server -fdemo
 and plug it into your client of choice.
 -}
 module Main (main) where
-
 import           Control.Concurrent
 import           Control.Concurrent.STM.TChan
 import qualified Control.Exception                     as E
