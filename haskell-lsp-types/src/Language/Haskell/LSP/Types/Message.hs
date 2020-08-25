@@ -372,8 +372,7 @@ instance FromJSON (ResponseParams a) => FromJSON (ResponseMessage a) where
 
 -- | The type of a handler that handles requests and notifications coming in
 -- from the server or client
-type family Handler m :: Type where
-  Handler (m :: Method p t) = BaseHandler m (IO ())
+type Handler (m :: Method p t) = BaseHandler m (IO ())
 
 -- | Version of 'Handler' that can be used to construct arbitrary functions
 -- taking in the required handler arguments
