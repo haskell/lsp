@@ -367,18 +367,8 @@ instance FromJSON (ResponseParams a) => FromJSON (ResponseMessage a) where
     return $ ResponseMessage _jsonrpc _id $ result
 
 -- ---------------------------------------------------------------------
--- Helper Type Families
+-- Handlers
 -- ---------------------------------------------------------------------
-
--- | Map a method to the Request/Notification type with the correct
--- payload
-type family Message (m :: Method p t) :: Type where
-  Message (CustomMethod :: Method p t) = CustomMessage p t
-  Message (m :: Method p t) = BaseMessage t m
-
-type family BaseMessage (t :: MethodType) :: Method p t -> Type where
-  BaseMessage Request = RequestMessage
-  BaseMessage Notification = NotificationMessage
 
 -- | The type of a handler that handles requests and notifications coming in
 -- from the server or client
@@ -387,12 +377,20 @@ type family Handler m :: Type where
 
 -- | Version of 'Handler' that can be used to construct arbitrary functions
 -- taking in the required handler arguments
-type family BaseHandler (m :: Method p t) a :: Type where
-  BaseHandler (m :: Method p t) a = BaseHandler' t m a
+type family BaseHandler (m :: Method p t) (a :: Type) :: Type where
+  BaseHandler (m :: Method p Request)      a = RequestMessage m -> (Either ResponseError (ResponseParams m) -> IO ()) -> a
+  BaseHandler (m :: Method p Notification) a = NotificationMessage m -> a
 
-type family BaseHandler' (t :: MethodType) (m :: Method p t) (a :: Type) :: Type where
-  BaseHandler' Request      m a = RequestMessage m -> (Either ResponseError (ResponseParams m) -> IO ()) -> a
-  BaseHandler' Notification m a = NotificationMessage m -> a
+-- ---------------------------------------------------------------------
+-- Helper Type Families
+-- ---------------------------------------------------------------------
+
+-- | Map a method to the Request/Notification type with the correct
+-- payload
+type family Message (m :: Method p t) :: Type where
+  Message (CustomMethod :: Method p t) = CustomMessage p t
+  Message (m :: Method p Request) = RequestMessage m
+  Message (m :: Method p Notification) = NotificationMessage m
 
 -- Some helpful type synonyms
 type ClientMessage (m :: Method FromClient t) = Message m

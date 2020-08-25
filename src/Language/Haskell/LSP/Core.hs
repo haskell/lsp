@@ -30,7 +30,6 @@ module Language.Haskell.LSP.Core (
   , Handlers
   , RegistrationToken
   , Options(..)
-  , ServerResponseHandler(..)
   , makeResponseMessage
   , makeResponseError
   , setupLogger
