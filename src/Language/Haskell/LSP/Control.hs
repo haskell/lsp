@@ -32,7 +32,7 @@ import           System.Log.Logger
 -- ---------------------------------------------------------------------
 
 -- | Convenience function for 'runWithHandles stdin stdout'.
-run :: (Show config) => Core.InitializeCallbacks config
+run :: Core.InitializeCallbacks config
                 -- ^ function to be called once initialize has
                 -- been received from the client. Further message
                 -- processing will start only after this returns.
@@ -43,7 +43,7 @@ run :: (Show config) => Core.InitializeCallbacks config
 run = runWithHandles stdin stdout
 
 -- | Convenience function for 'runWith' using the specified handles.
-runWithHandles :: (Show config) =>
+runWithHandles ::
        Handle
     -- ^ Handle to read client input from.
     -> Handle
@@ -71,7 +71,7 @@ runWithHandles hin hout initializeCallbacks h o = do
 
 -- | Starts listening and sending requests and responses
 -- using the specified I/O.
-runWith :: (Show config) =>
+runWith ::
        IO BS.ByteString
     -- ^ Client input.
     -> (BSL.ByteString -> IO ())
@@ -96,9 +96,8 @@ runWith clientIn clientOut initializeCallbacks h o = do
 
 -- ---------------------------------------------------------------------
 
-ioLoop
-  :: Show config
-  => IO BS.ByteString
+ioLoop ::
+     IO BS.ByteString
   -> Core.InitializeCallbacks config
   -> VFS
   -> Core.Handlers config

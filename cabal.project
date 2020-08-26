@@ -1,3 +1,6 @@
 packages:
          ./
          ./haskell-lsp-types/
+
+package haskell-lsp
+  flags: +demo

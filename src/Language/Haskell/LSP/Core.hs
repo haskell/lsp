@@ -106,7 +106,6 @@ import           Data.Text ( Text )
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Encoding as TL
 import qualified Data.UUID as UUID
-import           Language.Haskell.LSP.Constant
 import qualified Language.Haskell.LSP.Types.Capabilities    as J
 import Language.Haskell.LSP.Types as J hiding (Progress)
 import qualified Language.Haskell.LSP.Types.Lens as J
@@ -333,7 +332,7 @@ sendRequest m params resHandler = do
 
 -- | Invokes the registered dynamic or static handlers for the given message and
 -- method, as well as doing some bookkeeping.
-handle :: (Show config) => SClientMethod m -> ClientMessage m -> LspM config ()
+handle :: SClientMethod m -> ClientMessage m -> LspM config ()
 handle m msg =
   case m of
     SWorkspaceDidChangeWorkspaceFolders -> handle' (Just updateWorkspaceFolders) m msg
@@ -499,7 +498,7 @@ defaultProgressData = ProgressData 0 Map.empty
 
 -- ---------------------------------------------------------------------
 
-processMessage :: (Show config) => BSL.ByteString -> LspM config ()
+processMessage :: BSL.ByteString -> LspM config ()
 processMessage jsonStr = do
   tvarDat <- LspM $ asks resState
   join $ liftIO $ atomically $ fmap handleErrors $ runExceptT $ do
@@ -568,8 +567,7 @@ freshLspId = do
 
 -- | Call this to initialize the session
 initializeRequestHandler
-  :: forall config. (Show config)
-  => InitializeCallbacks config
+  :: InitializeCallbacks config
   -> VFS
   -> (Handlers config)
   -> Options
@@ -1031,18 +1029,20 @@ setupLogger mLogFile extraLogNames level = do
   logH <- LHS.streamHandler logStream level
 
   let logHandle  = logH {LHS.closeFunc = hClose}
-      logFormat  = L.tfLogFormatter _LOG_FORMAT_DATE _LOG_FORMAT
-      logHandler = LH.setFormatter logHandle logFormat
+      logFormatter  = L.tfLogFormatter logDateFormat logFormat
+      logHandler = LH.setFormatter logHandle logFormatter
 
   L.updateGlobalLogger L.rootLoggerName $ L.setHandlers ([] :: [LHS.GenericHandler Handle])
-  L.updateGlobalLogger _LOG_NAME $ L.setHandlers [logHandler]
-  L.updateGlobalLogger _LOG_NAME $ L.setLevel level
+  L.updateGlobalLogger "haskell-lsp" $ L.setHandlers [logHandler]
+  L.updateGlobalLogger "haskell-lsp" $ L.setLevel level
 
   -- Also route the additional log names to the same log
   forM_ extraLogNames $ \logName -> do
     L.updateGlobalLogger logName $ L.setHandlers [logHandler]
     L.updateGlobalLogger logName $ L.setLevel level
-
+  where
+    logFormat = "$time [$tid] $prio $loggername:\t$msg"
+    logDateFormat = "%Y-%m-%d %H:%M:%S%Q"
 
 -- ---------------------------------------------------------------------
 

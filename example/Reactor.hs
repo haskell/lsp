@@ -1,6 +1,6 @@
-{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE DeriveAnyClass        #-}
 {-# LANGUAGE LambdaCase            #-}
-{-# LANGUAGE MultiWayIf            #-}
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE RankNTypes            #-}
@@ -8,7 +8,6 @@
 {-# LANGUAGE PolyKinds             #-}
 {-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE TypeApplications #-}
 
 {- |
 This is an example language server built with haskell-lsp using a 'Reactor'
@@ -35,6 +34,7 @@ import qualified Data.Aeson                            as J
 import           Data.Default
 import qualified Data.HashMap.Strict                   as H
 import qualified Data.Text                             as T
+import           GHC.Generics (Generic)
 import qualified Language.Haskell.LSP.Control          as CTRL
 import           Language.Haskell.LSP.Core
 import           Language.Haskell.LSP.Diagnostics
@@ -60,6 +60,9 @@ main = do
 
 -- ---------------------------------------------------------------------
 
+data Config = Config { fooTheBar :: Bool, wibbleFactor :: Int }
+  deriving (Generic, J.ToJSON, J.FromJSON)
+
 run :: IO Int
 run = flip E.catches handlers $ do
 
@@ -67,15 +70,18 @@ run = flip E.catches handlers $ do
 
   let
     callbacks = InitializeCallbacks
-      { onInitialConfiguration = const $ Right ()
-      , onConfigurationChange = const $ Right ()
-      , onStartup = do
-          _reactorThreadId <- (liftBaseDiscard forkIO) (reactor rin)
-          return Nothing
+      { onInitialConfiguration = const $ pure (Config False 0)
+      , onConfigurationChange = \v -> case J.fromJSON v of
+          J.Error e -> pure $ Left (T.pack e)
+          J.Success cfg -> do
+            sendNotification J.SWindowShowMessage $
+              J.ShowMessageParams J.MtInfo $ "Wibble factor set to " <> T.pack (show (wibbleFactor cfg))
+            pure $ Right cfg
+      , onStartup = liftBaseDiscard forkIO (reactor rin) >> pure Nothing
       }
 
   flip E.finally finalProc $ do
-    setupLogger Nothing [] DEBUG
+    setupLogger Nothing ["reactor"] DEBUG
     CTRL.run callbacks (lspHandlers rin) lspOptions
 
   where
@@ -110,13 +116,13 @@ lspOptions = def { textDocumentSync = Just syncOptions
 
 data ReactorInput
   = forall (m :: J.Method 'J.FromClient 'J.Request).
-    ReactorInputReq (J.SMethod m) (J.RequestMessage m) (Either J.ResponseError (J.ResponseParams m) -> LspM () ())
+    ReactorInputReq (J.SMethod m) (J.RequestMessage m) (Either J.ResponseError (J.ResponseParams m) -> LspM Config ())
   | forall (m :: J.Method 'J.FromClient 'J.Notification).
     ReactorInputNot (J.SMethod m) (J.NotificationMessage m)
 
 -- | Analyze the file and send any diagnostics to the client in a
 -- "textDocument/publishDiagnostics" notification
-sendDiagnostics :: J.NormalizedUri -> Maybe Int -> LspM () ()
+sendDiagnostics :: J.NormalizedUri -> Maybe Int -> LspM Config ()
 sendDiagnostics fileUri version = do
   let
     diags = [J.Diagnostic
@@ -128,7 +134,6 @@ sendDiagnostics fileUri version = do
               Nothing -- tags
               (Just (J.List []))
             ]
-  -- reactorSend $ J.NotificationMessage "2.0" "textDocument/publishDiagnostics" (Just r)
   publishDiagnostics 100 fileUri version (partitionBySource diags)
 
 -- ---------------------------------------------------------------------
@@ -136,9 +141,9 @@ sendDiagnostics fileUri version = do
 -- | The single point that all events flow through, allowing management of state
 -- to stitch replies and requests together from the two asynchronous sides: lsp
 -- server and backend compiler
-reactor :: TChan ReactorInput -> LspM () ()
+reactor :: TChan ReactorInput -> LspM Config ()
 reactor inp = do
-  liftIO $ debugM "reactor" "entered"
+  liftIO $ debugM "reactor" "Started the reactor"
   forever $ do
     reactorInput <- liftIO $ atomically $ readTChan inp
     case reactorInput of
@@ -153,7 +158,7 @@ reactor inp = do
 
 -- | Check if we have a handler, and if we create a haskell-lsp handler to pass it as
 -- input into the reactor
-lspHandlers :: TChan ReactorInput -> Handlers ()
+lspHandlers :: TChan ReactorInput -> Handlers Config
 lspHandlers rin method =
   case handle method of
     Just _ -> case J.splitClientMethod method of
@@ -165,9 +170,9 @@ lspHandlers rin method =
     Nothing -> Nothing
 
 -- | Where the actual logic resides for handling requests and notifications.
-handle :: J.SMethod m -> Maybe (Handler m ())
+handle :: J.SMethod m -> Maybe (Handler m Config)
 handle J.SInitialized = Just $ \_msg -> do
-    liftIO $ debugM "handle" "Processing the Initialized notification"
+    liftIO $ debugM "reactor.handle" "Processing the Initialized notification"
     
     -- We're initialized! Lets send a showMessageRequest now
     let params = J.ShowMessageRequestParams
@@ -177,7 +182,7 @@ handle J.SInitialized = Just $ \_msg -> do
 
     void $ sendRequest J.SWindowShowMessageRequest params $ \res ->
       case res of
-        Left e -> liftIO $ errorM "handle" $ "Got an error: " ++ show e
+        Left e -> liftIO $ errorM "reactor.handle" $ "Got an error: " ++ show e
         Right _ -> do
           sendNotification J.SWindowShowMessage (J.ShowMessageParams J.MtInfo "Excellent choice")
 
@@ -187,7 +192,7 @@ handle J.SInitialized = Just $ \_msg -> do
           let regOpts = J.CodeLensRegistrationOptions Nothing Nothing (Just False)
           
           void $ registerCapability J.STextDocumentCodeLens regOpts $ \_req responder -> do
-            liftIO $ debugM "handle" "Processing a textDocument/codeLens request"
+            liftIO $ debugM "reactor.handle" "Processing a textDocument/codeLens request"
             let cmd = J.Command "Say hello" "lsp-hello-command" Nothing
                 rsp = J.List [J.CodeLens (J.mkRange 0 0 0 100) (Just cmd) Nothing]
             responder (Right rsp)
@@ -195,7 +200,7 @@ handle J.SInitialized = Just $ \_msg -> do
 handle J.STextDocumentDidOpen = Just $ \msg -> do
   let doc  = msg ^. J.params . J.textDocument . J.uri
       fileName =  J.uriToFilePath doc
-  liftIO $ debugM "handle" $ "Processing DidOpenTextDocument for: " ++ show fileName
+  liftIO $ debugM "reactor.handle" $ "Processing DidOpenTextDocument for: " ++ show fileName
   sendDiagnostics (J.toNormalizedUri doc) (Just 0)
 
 handle J.STextDocumentDidChange = Just $ \msg -> do
@@ -203,22 +208,22 @@ handle J.STextDocumentDidChange = Just $ \msg -> do
                   . J.textDocument
                   . J.uri
                   . to J.toNormalizedUri
-  liftIO $ debugM "handle" $ "Processing DidChangeTextDocument for: " ++ show doc
+  liftIO $ debugM "reactor.handle" $ "Processing DidChangeTextDocument for: " ++ show doc
   mdoc <- getVirtualFile doc
   case mdoc of
     Just (VirtualFile _version str _) -> do
-      liftIO $ debugM "handle" $ "Found the virtual file: " ++ show str
+      liftIO $ debugM "reactor.handle" $ "Found the virtual file: " ++ show str
     Nothing -> do
-      liftIO $ debugM "handle" $ "Didn't find anything in the VFS for: " ++ show doc
+      liftIO $ debugM "reactor.handle" $ "Didn't find anything in the VFS for: " ++ show doc
 
 handle J.STextDocumentDidSave = Just $ \msg -> do
   let doc = msg ^. J.params . J.textDocument . J.uri
       fileName = J.uriToFilePath doc
-  liftIO $ debugM "handle" $ "Processing DidSaveTextDocument  for: " ++ show fileName
+  liftIO $ debugM "reactor.handle" $ "Processing DidSaveTextDocument  for: " ++ show fileName
   sendDiagnostics (J.toNormalizedUri doc) Nothing
 
 handle J.STextDocumentRename = Just $ \req responder -> do
-  liftIO $ debugM "handle" "Processing a textDocument/rename request"
+  liftIO $ debugM "reactor.handle" "Processing a textDocument/rename request"
   let params = req ^. J.params
       J.Position l c = params ^. J.position
       newName = params ^. J.newName
@@ -231,7 +236,7 @@ handle J.STextDocumentRename = Just $ \req responder -> do
   responder (Right rsp)
 
 handle J.STextDocumentHover = Just $ \req responder -> do
-  liftIO $ debugM "handle" "Processing a textDocument/hover request"
+  liftIO $ debugM "reactor.handle" "Processing a textDocument/hover request"
   let J.HoverParams _doc pos _workDone = req ^. J.params
       J.Position _l _c' = pos
       rsp = J.Hover ms (Just range)
@@ -240,7 +245,7 @@ handle J.STextDocumentHover = Just $ \req responder -> do
   responder (Right rsp)
 
 handle J.STextDocumentCodeAction = Just $ \req responder -> do
-  liftIO $ debugM "handle" $ "Processing a textDocument/codeAction request"
+  liftIO $ debugM "reactor.handle" $ "Processing a textDocument/codeAction request"
   let params = req ^. J.params
       doc = params ^. J.textDocument
       (J.List diags) = params ^. J.context . J.diagnostics
@@ -261,11 +266,11 @@ handle J.STextDocumentCodeAction = Just $ \req responder -> do
   responder (Right rsp)
 
 handle J.SWorkspaceExecuteCommand = Just $ \req responder -> do
-  liftIO $ debugM "handle" "Processing a workspace/executeCommand request"
+  liftIO $ debugM "reactor.handle" "Processing a workspace/executeCommand request"
   let params = req ^. J.params
       margs = params ^. J.arguments
 
-  liftIO $ debugM "handle" $ "The arguments are: " ++ show margs
+  liftIO $ debugM "reactor.handle" $ "The arguments are: " ++ show margs
   responder (Right (J.Object mempty)) -- respond to the request
 
   void $ withProgress "Executing some long running command" Cancellable $ \update ->

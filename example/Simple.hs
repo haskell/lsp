@@ -37,7 +37,7 @@ handlers _ = Nothing
 
 initCallbacks = InitializeCallbacks
   { onInitialConfiguration = const $ Right ()
-  , onConfigurationChange = const $ Right ()
+  , onConfigurationChange = const $ pure $ Right ()
   , onStartup = pure Nothing
   }
 
