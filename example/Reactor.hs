@@ -268,8 +268,10 @@ handle J.SWorkspaceExecuteCommand = Just $ \req responder -> do
   liftIO $ debugM "handle" $ "The arguments are: " ++ show margs
   responder (Right (J.Object mempty)) -- respond to the request
 
-  sendNotification J.SWindowShowMessage
-                  (J.ShowMessageParams J.MtInfo "I was told to execute a command")
+  void $ withProgress "Executing some long running command" Cancellable $ \update ->
+    forM [(0 :: Double)..10] $ \i -> do
+      update (Progress (Just (i * 10)) (Just "Doing stuff"))
+      liftIO $ threadDelay (1 * 1000000)
 
 
 handle _ = Nothing

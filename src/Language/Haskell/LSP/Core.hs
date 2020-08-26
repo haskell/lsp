@@ -766,7 +766,7 @@ getNewProgressId = do
         ctx' = ctx { resProgressData = resProgressData { progressNextId = x + 1 }}
     in (ProgressNumericToken x, ctx')
 
-withProgressBase :: Bool -> Text -> ProgressCancellable -> ((Progress -> IO ()) -> IO a) -> LspM config a
+withProgressBase :: Bool -> Text -> ProgressCancellable -> ((Progress -> LspM c ()) -> LspM c a) -> LspM c a
 withProgressBase indefinite title cancellable f = do
   env <- LspM ask
   let sf x = runReaderT (runLspT (sendToClient x)) env
@@ -796,7 +796,8 @@ withProgressBase indefinite title cancellable f = do
     fmap Begin $ ProgressParams progId $
       WorkDoneProgressBeginParams title (Just cancellable') Nothing initialPercentage
 
-  aid <- liftIO $ async $ f (updater progId (sf . fromServerNot))
+  aid <- liftBaseWith $ \runInBase ->
+    async $ runInBase $ f (updater progId (sf . fromServerNot))
   storeProgress progId aid
   res <- liftIO $ wait aid
 
@@ -810,7 +811,7 @@ withProgressBase indefinite title cancellable f = do
 
   return res
   where updater progId sf (Progress percentage msg) =
-          sf $ NotificationMessage "2.0" SProgress $
+          liftIO $ sf $ NotificationMessage "2.0" SProgress $
             fmap Report $ ProgressParams progId $
               WorkDoneProgressReportParams Nothing msg percentage
 
@@ -828,24 +829,24 @@ clientSupportsProgress (J.ClientCapabilities _ _ wc _) = fromMaybe False $ do
 -- If @cancellable@ is 'Cancellable', @f@ will be thrown a
 -- 'ProgressCancelledException' if the user cancels the action in
 -- progress.
-withProgress :: Text -> ProgressCancellable -> ((Progress -> IO ()) -> IO a) -> LspM config a
+withProgress :: Text -> ProgressCancellable -> ((Progress -> LspM config ()) -> LspM config a) -> LspM config a
 withProgress title cancellable f = do
   clientCaps <- clientCapabilities
   if clientSupportsProgress clientCaps
     then withProgressBase False title cancellable f
-    else liftIO $ f (const $ return ())
+    else f (const $ return ())
   where
 
 -- | Same as 'withProgress', but for processes that do not report the
 -- precentage complete.
 --
 -- @since 0.10.0.0
-withIndefiniteProgress :: Text -> ProgressCancellable -> IO a -> LspM config a
+withIndefiniteProgress :: Text -> ProgressCancellable -> LspM config a -> LspM config a
 withIndefiniteProgress title cancellable f = do
   clientCaps <- clientCapabilities
   if clientSupportsProgress clientCaps
     then withProgressBase True title cancellable (const f)
-    else liftIO f
+    else f
 
 -- | Infers the capabilities based on registered handlers, and sets the appropriate options.
 -- A provider should be set to Nothing if the server does not support it, unless it is a
