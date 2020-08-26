@@ -243,11 +243,13 @@ data Options =
     -- | The commands to be executed on the server.
     -- If you set `executeCommandHandler`, you **must** set this.
     , executeCommandCommands           :: Maybe [Text]
+    -- | Information about the server that can be advertised to the client.
+    , serverInfo                       :: Maybe J.ServerInfo
     }
 
 instance Default Options where
   def = Options Nothing Nothing Nothing Nothing Nothing
-                Nothing Nothing Nothing
+                Nothing Nothing Nothing Nothing
 
 -- | A package indicating the perecentage of progress complete and a
 -- an optional message to go with it during a 'withProgress'
@@ -614,8 +616,7 @@ initializeRequestHandler InitializeCallbacks{..} vfs handlers options sendFunc r
         sendResp $ makeResponseError (req ^. J.id) errResp
       Nothing -> do
         let serverCaps = inferServerCapabilities (params ^. J.capabilities) options handlers
-        -- TODO: add API for serverinfo
-        sendResp $ makeResponseMessage (req ^. J.id) (InitializeResult serverCaps Nothing)
+        sendResp $ makeResponseMessage (req ^. J.id) (InitializeResult serverCaps (serverInfo options))
 
 
     case initialConfigRes of
