@@ -27,7 +27,7 @@ spec =
         handlers = def
 
     tvarLspId <- newTVarIO 0
-    tvarCtx   <- newTVarIO $ defaultLanguageContextData handlers
+    tvarCtx   <- newTVarIO $ defaultLanguageContextState handlers
                                                         def
                                                         undefined
                                                         tvarLspId
@@ -37,7 +37,7 @@ spec =
 
     let putMsg msg =
           let jsonStr = encode msg
-            in handleMessage initCb tvarCtx jsonStr
+            in processMessage initCb tvarCtx jsonStr
 
     let starterWorkspaces = List [wf0]
         initParams = InitializeParams

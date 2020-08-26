@@ -53,12 +53,12 @@ import           Data.Rope.UTF16 ( Rope )
 import qualified Data.Rope.UTF16 as Rope
 import qualified Language.Haskell.LSP.Types           as J
 import qualified Language.Haskell.LSP.Types.Lens      as J
-import           Language.Haskell.LSP.Utility
 import           System.FilePath
 import           Data.Hashable
 import           System.Directory
 import           System.IO 
 import           System.IO.Temp
+import           System.Log.Logger
 
 -- ---------------------------------------------------------------------
 {-# ANN module ("hlint: ignore Eta reduce" :: String) #-}
@@ -138,7 +138,7 @@ changeFromServerVFS initVfs (J.RequestMessage _ _ _ params) = do
     Nothing -> case mChanges of
       Just cs -> applyEdits $ HashMap.foldlWithKey' changeToTextDocumentEdit [] cs
       Nothing -> do
-        logs "haskell-lsp:changeVfs:no changes"
+        debugM "haskell-lsp.changeVfs" "No changes"
         return initVfs
 
   where
@@ -159,7 +159,7 @@ changeFromServerVFS initVfs (J.RequestMessage _ _ _ params) = do
           ps = J.DidChangeTextDocumentParams vid (J.List changeEvents)
           notif = J.NotificationMessage "" J.STextDocumentDidChange ps
       let (vfs',ls) = changeFromClientVFS vfs notif
-      mapM_ logs ls
+      mapM_ (debugM "haskell-lsp.changeFromServerVFS") ls
       return vfs'
 
     editToChangeEvent (J.TextEdit range text) = J.TextDocumentContentChangeEvent (Just range) Nothing text
@@ -194,7 +194,7 @@ persistFileVFS vfs uri =
                     hSetNewlineMode h noNewlineTranslation
                     hSetEncoding h utf8
                     hPutStr h contents
-               logs  $ "haskell-lsp:persistFileVFS: Writing virtual file: " 
+               debugM "haskell-lsp.persistFileVFS" $ "Writing virtual file: " 
                     ++ "uri = " ++ show uri ++ ", virtual file = " ++ show tfn
                withFile tfn WriteMode writeRaw
       in Just (tfn, action)

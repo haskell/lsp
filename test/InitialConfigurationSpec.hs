@@ -35,7 +35,7 @@ spec =
         handlers = def
 
     tvarLspId <- newTVarIO 0
-    tvarCtx   <- newTVarIO $ defaultLanguageContextData handlers
+    tvarCtx   <- newTVarIO $ defaultLanguageContextState handlers
                                                         def
                                                         undefined
                                                         tvarLspId
@@ -44,7 +44,7 @@ spec =
                                                         vfs
 
     let putMsg msg =
-          let jsonStr = encode msg in handleMessage initCb tvarCtx jsonStr
+          let jsonStr = encode msg in processMessage initCb tvarCtx jsonStr
 
     let
         initParams        = InitializeParams

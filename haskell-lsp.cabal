@@ -28,7 +28,6 @@ library
                      , Language.Haskell.LSP.Core
                      , Language.Haskell.LSP.Control
                      , Language.Haskell.LSP.Diagnostics
-                     , Language.Haskell.LSP.Utility
                      , Language.Haskell.LSP.VFS
   -- other-modules:
  -- other-extensions:
@@ -47,6 +46,7 @@ library
                      , haskell-lsp-types == 0.22.*
                      , dependent-map
                      , lens >= 4.15.2
+                     , monad-control
                      , mtl
                      , network-uri
                      , rope-utf16-splay >= 0.3.1.0
@@ -56,6 +56,7 @@ library
                      , temporary
                      , text
                      , transformers
+                     , transformers-base
                      , time
                      , unordered-containers
                      -- used for generating random uuids for dynamic registration
@@ -80,6 +81,7 @@ executable lsp-demo-reactor-server
                      , filepath
                      , hslogger
                      , lens >= 4.15.2
+                     , monad-control
                      , mtl
                      , network-uri
                      , stm

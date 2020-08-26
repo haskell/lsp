@@ -6,7 +6,26 @@ import Language.Haskell.LSP.Control
 import Language.Haskell.LSP.Core
 import Language.Haskell.LSP.Types
 
-handlers :: Handlers
+handlers :: Handlers ()
+handlers SInitialized = Just $ \_not -> do 
+  let params = ShowMessageRequestParams MtInfo "Turn on code lenses?"
+        (Just [MessageActionItem "Turn on", MessageActionItem "Don't"])
+  sendRequest SWindowShowMessageRequest params $ \res ->
+    case res of
+      Right (Just (MessageActionItem "Turn on")) -> do
+        let regOpts = CodeLensRegistrationOptions Nothing Nothing (Just False)
+          
+        registerCapability STextDocumentCodeLens regOpts $ \_req responder -> do
+          let cmd = Command "Say hello" "lsp-hello-command" Nothing
+              rsp = List [CodeLens (mkRange 0 0 0 100) (Just cmd) Nothing]
+          responder (Right rsp)
+        pure ()
+      Right _ ->
+        sendNotification SWindowShowMessage (ShowMessageParams MtInfo "Not turning on code lenses")
+      Left err -> 
+        sendNotification SWindowShowMessage (ShowMessageParams MtError "Something went wrong!")
+  pure ()
+
 handlers STextDocumentHover = Just $ \req responder -> do
   let RequestMessage _ _ _ (HoverParams _doc pos _workDone) = req
       Position _l _c' = pos
@@ -19,7 +38,7 @@ handlers _ = Nothing
 initCallbacks = InitializeCallbacks
   { onInitialConfiguration = const $ Right ()
   , onConfigurationChange = const $ Right ()
-  , onStartup = const $ pure Nothing
+  , onStartup = pure Nothing
   }
 
 main = run initCallbacks handlers def

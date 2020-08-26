@@ -367,20 +367,6 @@ instance FromJSON (ResponseParams a) => FromJSON (ResponseMessage a) where
     return $ ResponseMessage _jsonrpc _id $ result
 
 -- ---------------------------------------------------------------------
--- Handlers
--- ---------------------------------------------------------------------
-
--- | The type of a handler that handles requests and notifications coming in
--- from the server or client
-type Handler (m :: Method p t) = BaseHandler m (IO ())
-
--- | Version of 'Handler' that can be used to construct arbitrary functions
--- taking in the required handler arguments
-type family BaseHandler (m :: Method p t) (a :: Type) :: Type where
-  BaseHandler (m :: Method p Request)      a = RequestMessage m -> (Either ResponseError (ResponseParams m) -> IO ()) -> a
-  BaseHandler (m :: Method p Notification) a = NotificationMessage m -> a
-
--- ---------------------------------------------------------------------
 -- Helper Type Families
 -- ---------------------------------------------------------------------
 
