@@ -5,6 +5,8 @@
 {-# LANGUAGE PolyKinds              #-}
 {-# LANGUAGE GADTs                  #-}
 {-# LANGUAGE UndecidableInstances   #-}
+{-# LANGUAGE RankNTypes             #-}
+{-# LANGUAGE FlexibleContexts       #-}
 
 module Language.Haskell.LSP.Types.Lens where
 

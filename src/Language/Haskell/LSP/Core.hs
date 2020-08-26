@@ -26,20 +26,21 @@ module Language.Haskell.LSP.Core (
     processMessage
   , VFSData(..)
   , InitializeCallbacks(..)
-  , Progress(..)
-  , ProgressCancellable(..)
-  , ProgressCancelledException
 
+  -- * Handlers
   , Handlers
   , Handler
 
   , Options(..)
   
+  -- * LspT and LspM
   , LspT(..)
   , LspM
+
   , clientCapabilities
   , config
   , rootPath
+  , workspaceFolders
 
   , sendRequest
   , sendNotification
@@ -54,19 +55,19 @@ module Language.Haskell.LSP.Core (
   -- * Diagnostics
   , publishDiagnostics
   , flushDiagnosticsBySource
-  , workspaceFolders
   
   -- * Progress
   , withProgress
   , withIndefiniteProgress
+  , Progress(..)
+  , ProgressCancellable(..)
+  , ProgressCancelledException
   
   -- * Dynamic registration
   , registerCapability
   , unregisterCapability
   , RegistrationToken
   
-  , makeResponseMessage
-  , makeResponseError
   , setupLogger
   , reverseSortEdit
   , initializeRequestHandler
@@ -357,7 +358,6 @@ handle' mAction m msg = do
   dynReqHandlers <- getsState resRegistrationsReq
   dynNotHandlers <- getsState resRegistrationsNot
   staticHandlers <- LspM $ asks resHandlers
-  sf <- LspM$ asks resSendMessage
   let mStaticHandler = staticHandlers m
   
   case splitClientMethod m of
@@ -368,9 +368,9 @@ handle' mAction m msg = do
         | otherwise -> reportMissingHandler
 
     IsClientReq -> case pickHandler dynReqHandlers mStaticHandler of
-      Just h -> h msg (mkRspCb sf msg)
+      Just h -> h msg (mkRspCb msg)
       Nothing
-        | SShutdown <- m -> shutdownRequestHandler msg (mkRspCb sf msg)
+        | SShutdown <- m -> shutdownRequestHandler msg (mkRspCb msg)
         | otherwise -> reportMissingHandler
 
     IsClientEither -> case msg of
@@ -378,7 +378,7 @@ handle' mAction m msg = do
         Just h -> h noti
         Nothing -> reportMissingHandler
       ReqMess req -> case pickHandler dynReqHandlers mStaticHandler of
-        Just h -> h req (mkRspCb sf req)
+        Just h -> h req (mkRspCb req)
         Nothing -> reportMissingHandler
   where
     -- | Checks to see if there's a dynamic handler, and uses it in favour of the
@@ -403,14 +403,13 @@ handle' mAction m msg = do
     isOptionalNotification _  = False
 
     -- | Makes the callback function passed to a 'Handler'
-    mkRspCb :: (FromServerMessage -> IO ())
-            -> RequestMessage (m1 :: Method FromClient Request)
+    mkRspCb :: RequestMessage (m1 :: Method FromClient Request)
             -> ((Either ResponseError (ResponseParams m1))
             -> LspM config ())
-    mkRspCb sf req (Left  err) = liftIO $ sf $
-      FromServerRsp (req ^. J.method) $ makeResponseError (req ^. J.id) err
-    mkRspCb sf req (Right rsp) = liftIO $ sf $ 
-      FromServerRsp (req ^. J.method) $ makeResponseMessage (req ^. J.id) rsp
+    mkRspCb req (Left  err) = sendToClient $
+      FromServerRsp (req ^. J.method) $ ResponseMessage "2.0" (Just (req ^. J.id)) (Left err)
+    mkRspCb req (Right rsp) = sendToClient $ 
+      FromServerRsp (req ^. J.method) $ ResponseMessage "2.0" (Just (req ^. J.id)) (Right rsp)
 
 handleConfigChange :: DidChangeConfigurationNotification -> LspM config ()
 handleConfigChange req = do
@@ -525,13 +524,6 @@ processMessage jsonStr = do
       , TL.pack err
       ] <> "\n"
 
--- ---------------------------------------------------------------------
-
-makeResponseMessage :: LspId m -> ResponseParams m -> ResponseMessage m
-makeResponseMessage rid result = ResponseMessage "2.0" (Just rid) (Right result)
-
-makeResponseError :: LspId m -> ResponseError -> ResponseMessage m
-makeResponseError origId err = ResponseMessage "2.0" (Just origId) (Left err)
 
 -- ---------------------------------------------------------------------
 
@@ -627,6 +619,10 @@ initializeRequestHandler InitializeCallbacks{..} vfs handlers options sendFunc r
         runReaderT (runLspT (sendErrorLog msg)) env
 
     return $ Just env
+  
+  where 
+    makeResponseMessage rid result = ResponseMessage "2.0" (Just rid) (Right result)
+    makeResponseError origId err = ResponseMessage "2.0" (Just origId) (Left err)
 
 clientCapabilities :: LspM config J.ClientCapabilities
 clientCapabilities = LspM $ asks resClientCapabilities

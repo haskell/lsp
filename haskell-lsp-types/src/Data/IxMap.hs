@@ -36,5 +36,5 @@ lookupIxMap i (IxMap m) =
 pickFromIxMap :: IxOrd k => k m -> IxMap k f -> (Maybe (f m), IxMap k f)
 pickFromIxMap i (IxMap m) =
   case M.updateLookupWithKey (\_ _ -> Nothing) (toBase i) m of
-    (Nothing,m) -> (Nothing,IxMap m)
-    (Just (Some k),m) -> (Just (unsafeCoerce k),IxMap m)
+    (Nothing,m') -> (Nothing,IxMap m')
+    (Just (Some k),m') -> (Just (unsafeCoerce k),IxMap m')
