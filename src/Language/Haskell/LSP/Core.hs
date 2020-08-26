@@ -127,16 +127,6 @@ import           System.Random
 {-# ANN module ("HLint: ignore Redundant do"       :: String) #-}
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
 -- ---------------------------------------------------------------------
-
-data LanguageContextEnv config =
-  LanguageContextEnv
-  { resHandlers            :: !(Handlers config)
-  , resParseConfig         :: !(DidChangeConfigurationNotification -> Either T.Text config)
-  , resSendMessage         :: !(FromServerMessage -> IO ())
-  , resState               :: !(TVar (LanguageContextState config))
-  , resClientCapabilities  :: !J.ClientCapabilities
-  , resRootPath            :: !(Maybe FilePath)
-  }
   
 newtype LspT config m a = LspM { runLspT :: ReaderT (LanguageContextEnv config) m a }
   deriving (Functor, Applicative, Monad, MonadIO, MonadTrans, MonadTransControl)
@@ -150,6 +140,16 @@ instance MonadBaseControl b m => MonadBaseControl b (LspT config m) where
     restoreM         = defaultRestoreM
 
 type LspM config = LspT config IO
+
+data LanguageContextEnv config =
+  LanguageContextEnv
+  { resHandlers            :: !(Handlers config)
+  , resParseConfig         :: !(J.Value -> LspM config (Either T.Text config))
+  , resSendMessage         :: !(FromServerMessage -> IO ())
+  , resState               :: !(TVar (LanguageContextState config))
+  , resClientCapabilities  :: !J.ClientCapabilities
+  , resRootPath            :: !(Maybe FilePath)
+  }
 
 -- ---------------------------------------------------------------------
 -- Handlers
@@ -278,13 +278,14 @@ data InitializeCallbacks config =
     { onInitialConfiguration :: InitializeRequest -> Either T.Text config
       -- ^ Invoked on the first message from the language client, containg the client configuration
       -- This callback should return either the parsed configuration data or an error indicating
-      -- what went wrong. The parsed configuration object will be stored internally and passed to
-      -- hanlder functions as context.
-    , onConfigurationChange :: DidChangeConfigurationNotification -> Either T.Text config
-      -- ^ Invoked whenever the clients sends a message with a changed client configuration.
-      -- This callback should return either the parsed configuration data or an error indicating
-      -- what went wrong. The parsed configuration object will be stored internally and passed to
-      -- hanlder functions as context.
+      -- what went wrong. The parsed configuration object will be stored internally and can be
+      -- accessed via 'config'.
+    , onConfigurationChange :: J.Value -> LspM config (Either T.Text config)
+      -- ^ @onConfigurationChange newConfig@ is called whenever the
+      -- clients sends a message with a changed client configuration. This
+      -- callback should return either the parsed configuration data or an error
+      -- indicating what went wrong. The parsed configuration object will be
+      -- stored internally and can be accessed via 'config'.
     , onStartup :: LspM config (Maybe ResponseError)
       -- ^ Once the initial configuration has been received, this callback will be invoked to offer
       -- the language server implementation the chance to create any processes or start new threads
@@ -415,7 +416,8 @@ handle' mAction m msg = do
 handleConfigChange :: DidChangeConfigurationNotification -> LspM config ()
 handleConfigChange req = do
   parseConfig <- LspM $ asks resParseConfig
-  case parseConfig req of
+  res <- parseConfig (req ^. J.params . J.settings)
+  case res of
     Left err -> do
       let msg = T.pack $ unwords
             ["haskell-lsp:configuration parse error.", show req, show err]
