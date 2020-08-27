@@ -75,7 +75,7 @@ type WorkspaceSymbolsResponse              = ResponseMessage WorkspaceSymbol
 type ExecuteCommandRequest                 = Message WorkspaceExecuteCommand 
 type ExecuteCommandResponse                = ResponseMessage WorkspaceExecuteCommand 
 
-type WorkDoneProgressCancelNotification = Message WorkDoneProgressCancel
+type WorkDoneProgressCancelNotification = Message WindowWorkDoneProgressCancel
 
 -- Document/Sync
 type DidOpenTextDocumentNotification       = Message TextDocumentDidOpen

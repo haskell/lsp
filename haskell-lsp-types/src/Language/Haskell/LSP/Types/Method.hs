@@ -36,8 +36,6 @@ data Method (p :: Provenance) (t :: MethodType) where
   WorkspaceDidChangeWatchedFiles     :: Method FromClient Notification
   WorkspaceSymbol                    :: Method FromClient Request
   WorkspaceExecuteCommand            :: Method FromClient Request
-  -- Progress
-  WorkDoneProgressCancel             :: Method FromClient Notification
   -- Document
   TextDocumentDidOpen                :: Method FromClient Notification
   TextDocumentDidChange              :: Method FromClient Notification
@@ -83,10 +81,13 @@ data Method (p :: Provenance) (t :: MethodType) where
   WindowShowMessage                  :: Method FromServer Notification
   WindowShowMessageRequest           :: Method FromServer Request
   WindowLogMessage                   :: Method FromServer Notification
+  WindowWorkDoneProgressCancel       :: Method FromClient Notification
   WindowWorkDoneProgressCreate       :: Method FromServer Request
+  -- Progress
   Progress                           :: Method FromServer Notification
+  -- Telemetry
   TelemetryEvent                     :: Method FromServer Notification
-  -- Capability
+  -- Client
   ClientRegisterCapability           :: Method FromServer Request
   ClientUnregisterCapability         :: Method FromServer Request
   -- Workspace
@@ -113,7 +114,6 @@ data SMethod (m :: Method p t) where
   SWorkspaceDidChangeWatchedFiles     :: SMethod WorkspaceDidChangeWatchedFiles
   SWorkspaceSymbol                    :: SMethod WorkspaceSymbol
   SWorkspaceExecuteCommand            :: SMethod WorkspaceExecuteCommand
-  SWorkDoneProgressCancel             :: SMethod WorkDoneProgressCancel
   STextDocumentDidOpen                :: SMethod TextDocumentDidOpen
   STextDocumentDidChange              :: SMethod TextDocumentDidChange
   STextDocumentWillSave               :: SMethod TextDocumentWillSave
@@ -150,6 +150,7 @@ data SMethod (m :: Method p t) where
   SWindowShowMessageRequest           :: SMethod WindowShowMessageRequest
   SWindowLogMessage                   :: SMethod WindowLogMessage
   SWindowWorkDoneProgressCreate       :: SMethod WindowWorkDoneProgressCreate
+  SWindowWorkDoneProgressCancel       :: SMethod WindowWorkDoneProgressCancel
   SProgress                           :: SMethod Progress
   STelemetryEvent                     :: SMethod TelemetryEvent
   SClientRegisterCapability           :: SMethod ClientRegisterCapability
@@ -267,7 +268,7 @@ instance FromJSON SomeClientMethod where
   parseJSON (A.String "textDocument/prepareRename")          = pure $ SomeClientMethod STextDocumentPrepareRename
   parseJSON (A.String "textDocument/foldingRange")           = pure $ SomeClientMethod STextDocumentFoldingRange
   parseJSON (A.String "textDocument/selectionRange")         = pure $ SomeClientMethod STextDocumentFoldingRange
-  parseJSON (A.String "window/workDoneProgress/cancel")      = pure $ SomeClientMethod SWorkDoneProgressCancel
+  parseJSON (A.String "window/workDoneProgress/cancel")      = pure $ SomeClientMethod SWindowWorkDoneProgressCancel
 -- Cancelling
   parseJSON (A.String "$/cancelRequest")                     = pure $ SomeClientMethod SCancelRequest
 -- Custom
@@ -360,7 +361,7 @@ instance A.ToJSON (SMethod m) where
   toJSON STextDocumentSelectionRange         = A.String "textDocument/selectionRange"
   toJSON STextDocumentDocumentLink           = A.String "textDocument/documentLink"
   toJSON SDocumentLinkResolve                = A.String "documentLink/resolve"
-  toJSON SWorkDoneProgressCancel             = A.String "window/workDoneProgress/cancel"
+  toJSON SWindowWorkDoneProgressCancel       = A.String "window/workDoneProgress/cancel"
 -- Server
   -- Window
   toJSON SWindowShowMessage                  = A.String "window/showMessage"

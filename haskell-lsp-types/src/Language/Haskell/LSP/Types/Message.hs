@@ -83,8 +83,6 @@ type family MessageParams (m :: Method p t) :: Type where
   MessageParams WorkspaceDidChangeWatchedFiles     = DidChangeWatchedFilesParams
   MessageParams WorkspaceSymbol                    = WorkspaceSymbolParams
   MessageParams WorkspaceExecuteCommand            = ExecuteCommandParams
-  -- Progress
-  MessageParams WorkDoneProgressCancel             = WorkDoneProgressCancelParams
   -- Sync/Document state
   MessageParams TextDocumentDidOpen                = DidOpenTextDocumentParams
   MessageParams TextDocumentDidChange              = DidChangeTextDocumentParams
@@ -130,10 +128,13 @@ type family MessageParams (m :: Method p t) :: Type where
   MessageParams WindowShowMessage                  = ShowMessageParams
   MessageParams WindowShowMessageRequest           = ShowMessageRequestParams
   MessageParams WindowLogMessage                   = LogMessageParams
+  -- Progress
   MessageParams WindowWorkDoneProgressCreate       = WorkDoneProgressCreateParams
+  MessageParams WindowWorkDoneProgressCancel       = WorkDoneProgressCancelParams
   MessageParams Progress                           = ProgressParams SomeProgressParams
+  -- Telemetry
   MessageParams TelemetryEvent                     = Value
-  -- Capability
+  -- Client
   MessageParams ClientRegisterCapability           = RegistrationParams
   MessageParams ClientUnregisterCapability         = UnregistrationParams
   -- Workspace
@@ -562,7 +563,7 @@ splitClientMethod SWorkspaceDidChangeConfiguration = IsClientNot
 splitClientMethod SWorkspaceDidChangeWatchedFiles = IsClientNot
 splitClientMethod SWorkspaceSymbol = IsClientReq
 splitClientMethod SWorkspaceExecuteCommand = IsClientReq
-splitClientMethod SWorkDoneProgressCancel = IsClientNot
+splitClientMethod SWindowWorkDoneProgressCancel = IsClientNot
 splitClientMethod STextDocumentDidOpen = IsClientNot
 splitClientMethod STextDocumentDidChange = IsClientNot
 splitClientMethod STextDocumentWillSave = IsClientNot

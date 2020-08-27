@@ -341,7 +341,7 @@ handle m msg =
     STextDocumentDidOpen                -> handle' (Just $ vfsFunc openVFS) m msg
     STextDocumentDidChange              -> handle' (Just $ vfsFunc changeFromClientVFS) m msg
     STextDocumentDidClose               -> handle' (Just $ vfsFunc closeVFS) m msg
-    SWorkDoneProgressCancel             -> handle' (Just progressCancelHandler) m msg
+    SWindowWorkDoneProgressCancel       -> handle' (Just progressCancelHandler) m msg
     _ -> handle' Nothing m msg
 
 
