@@ -36,6 +36,7 @@ module Language.Haskell.LSP.Core (
   -- * LspT and LspM
   , LspT(..)
   , LspM
+  , LanguageContextEnv(..)
 
   , clientCapabilities
   , config
@@ -81,6 +82,7 @@ import qualified Control.Exception as E
 import           Control.Monad
 import           Control.Applicative
 import           Control.Monad.Base
+import           Control.Monad.Fix
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Control
 import           Control.Monad.Trans.Except
@@ -128,8 +130,8 @@ import           System.Random
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
 -- ---------------------------------------------------------------------
   
-newtype LspT config m a = LspM { runLspT :: ReaderT (LanguageContextEnv config) m a }
-  deriving (Functor, Applicative, Monad, MonadIO, MonadTrans, MonadTransControl)
+newtype LspT config m a = LspT { runLspT :: ReaderT (LanguageContextEnv config) m a }
+  deriving (Functor, Applicative, Monad, MonadIO, MonadTrans, MonadTransControl, MonadFix)
 
 instance MonadBase b m => MonadBase b (LspT config m) where
   liftBase = liftBaseDefault
@@ -200,17 +202,17 @@ data VFSData =
 
 modifyState :: (LanguageContextState config -> LanguageContextState config) -> LspM config ()
 modifyState f = do
-  tvarDat <- LspM $ asks resState
+  tvarDat <- LspT $ asks resState
   liftIO $ atomically $ modifyTVar' tvarDat f
 
 stateState :: (LanguageContextState config -> (a,LanguageContextState config)) -> LspM config a
 stateState f = do
-  tvarDat <- LspM $ asks resState
+  tvarDat <- LspT $ asks resState
   liftIO $ atomically $ stateTVar tvarDat f
 
 getsState :: (LanguageContextState config -> a) -> LspM config a
 getsState f = do
-  tvarDat <- LspM $ asks resState
+  tvarDat <- LspT $ asks resState
   liftIO $ f <$> readTVarIO tvarDat
 
 -- ---------------------------------------------------------------------
@@ -357,7 +359,7 @@ handle' mAction m msg = do
   
   dynReqHandlers <- getsState resRegistrationsReq
   dynNotHandlers <- getsState resRegistrationsNot
-  staticHandlers <- LspM $ asks resHandlers
+  staticHandlers <- LspT $ asks resHandlers
   let mStaticHandler = staticHandlers m
   
   case splitClientMethod m of
@@ -413,7 +415,7 @@ handle' mAction m msg = do
 
 handleConfigChange :: DidChangeConfigurationNotification -> LspM config ()
 handleConfigChange req = do
-  parseConfig <- LspM $ asks resParseConfig
+  parseConfig <- LspT $ asks resParseConfig
   res <- parseConfig (req ^. J.params . J.settings)
   case res of
     Left err -> do
@@ -499,7 +501,7 @@ defaultProgressData = ProgressData 0 Map.empty
 
 processMessage :: BSL.ByteString -> LspM config ()
 processMessage jsonStr = do
-  tvarDat <- LspM $ asks resState
+  tvarDat <- LspT $ asks resState
   join $ liftIO $ atomically $ fmap handleErrors $ runExceptT $ do
       val <- except $ J.eitherDecode jsonStr
       ctx <- lift   $ readTVar tvarDat
@@ -529,7 +531,7 @@ processMessage jsonStr = do
 
 sendToClient :: FromServerMessage -> LspM config ()
 sendToClient msg = do
-  f <- LspM $ asks resSendMessage
+  f <- LspT $ asks resSendMessage
   liftIO $ f msg
 
 -- ---------------------------------------------------------------------
@@ -625,10 +627,10 @@ initializeRequestHandler InitializeCallbacks{..} vfs handlers options sendFunc r
     makeResponseError origId err = ResponseMessage "2.0" (Just origId) (Left err)
 
 clientCapabilities :: LspM config J.ClientCapabilities
-clientCapabilities = LspM $ asks resClientCapabilities
+clientCapabilities = LspT $ asks resClientCapabilities
 
 rootPath :: LspM config (Maybe FilePath)
-rootPath = LspM $ asks resRootPath
+rootPath = LspT $ asks resRootPath
 
 -- | The current workspace folders, if the client supports workspace folders.
 workspaceFolders :: LspM config (Maybe [WorkspaceFolder])
@@ -652,8 +654,8 @@ registerCapability :: forall (config :: Type) t (m :: Method FromClient t).
                    -> Handler m config
                    -> LspM config (Maybe (RegistrationToken m))
 registerCapability method regOpts f = do
-  clientCaps <- LspM $ asks resClientCapabilities
-  handlers <- LspM $ asks resHandlers
+  clientCaps <- LspT $ asks resClientCapabilities
+  handlers <- LspT $ asks resHandlers
   let alreadyStaticallyRegistered = isJust $ handlers method
   go clientCaps alreadyStaticallyRegistered
   where
@@ -765,7 +767,7 @@ getNewProgressId = do
 
 withProgressBase :: Bool -> Text -> ProgressCancellable -> ((Progress -> LspM c ()) -> LspM c a) -> LspM c a
 withProgressBase indefinite title cancellable f = do
-  env <- LspM ask
+  env <- LspT ask
   let sf x = runReaderT (runLspT (sendToClient x)) env
 
   progId <- getNewProgressId
