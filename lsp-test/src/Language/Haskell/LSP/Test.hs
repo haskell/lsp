@@ -25,8 +25,9 @@ module Language.Haskell.LSP.Test
   -- * Sessions
     Session
   , runSession
-  -- ** Config
   , runSessionWithConfig
+  , runSessionWithHandles
+  -- ** Config
   , SessionConfig(..)
   , defaultConfig
   , C.fullCaps
@@ -73,8 +74,10 @@ module Language.Haskell.LSP.Test
   -- ** References
   , getReferences
   -- ** Definitions
+  , getDeclarations
   , getDefinitions
   , getTypeDefinitions
+  , getImplementations
   -- ** Renaming
   , rename
   -- ** Hover
@@ -122,6 +125,7 @@ import System.Environment
 import System.IO
 import System.Directory
 import System.FilePath
+import System.Process (ProcessHandle)
 import qualified System.FilePath.Glob as Glob
 
 -- | Starts a new session.
@@ -147,52 +151,77 @@ runSessionWithConfig :: SessionConfig -- ^ Configuration options for the session
                      -> Session a -- ^ The session to run.
                      -> IO a
 runSessionWithConfig config' serverExe caps rootDir session = do
+  config <- envOverrideConfig config'
+  withServer serverExe (logStdErr config) $ \serverIn serverOut serverProc ->
+    runSessionWithHandles' (Just serverProc) serverIn serverOut config caps rootDir session
+
+
+runSessionWithHandles :: Handle -- ^ The input handle
+                      -> Handle -- ^ The output handle
+                      -> SessionConfig
+                      -> C.ClientCapabilities -- ^ The capabilities that the client should declare.
+                      -> FilePath -- ^ The filepath to the root directory for the session.
+                      -> Session a -- ^ The session to run.
+                      -> IO a
+runSessionWithHandles = runSessionWithHandles' Nothing
+
+
+runSessionWithHandles' :: Maybe ProcessHandle
+                       -> Handle -- ^ The input handle
+                       -> Handle -- ^ The output handle
+                       -> SessionConfig
+                       -> C.ClientCapabilities -- ^ The capabilities that the client should declare.
+                       -> FilePath -- ^ The filepath to the root directory for the session.
+                       -> Session a -- ^ The session to run.
+                       -> IO a
+runSessionWithHandles' serverProc serverIn serverOut config' caps rootDir session = do
   pid <- getCurrentProcessID
   absRootDir <- canonicalizePath rootDir
 
   config <- envOverrideConfig config'
 
-  let initializeParams = InitializeParams (Just pid)
+  let initializeParams = InitializeParams Nothing
+                                          (Just pid)
+                                          (Just lspTestClientInfo)
                                           (Just $ T.pack absRootDir)
                                           (Just $ filePathToUri absRootDir)
                                           Nothing
                                           caps
                                           (Just TraceOff)
                                           Nothing
-  withServer serverExe (logStdErr config) $ \serverIn serverOut serverProc ->
-    runSessionWithHandles serverIn serverOut serverProc listenServer config caps rootDir exitServer $ do
-      -- Wrap the session around initialize and shutdown calls
-      -- initRspMsg <- sendRequest Initialize initializeParams :: Session InitializeResponse
-      initReqId <- sendRequest SInitialize initializeParams
+  runSession' serverIn serverOut serverProc listenServer config caps rootDir exitServer $ do
+    -- Wrap the session around initialize and shutdown calls
+    -- initRspMsg <- sendRequest Initialize initializeParams :: Session InitializeResponse
+    initReqId <- sendRequest SInitialize initializeParams
 
-      -- Because messages can be sent in between the request and response,
-      -- collect them and then...
-      (inBetween, initRspMsg) <- manyTill_ anyMessage (responseForId initReqId)
+    -- Because messages can be sent in between the request and response,
+    -- collect them and then...
+    (inBetween, initRspMsg) <- manyTill_ anyMessage (responseForId initReqId)
 
-      case initRspMsg ^. LSP.result of
-        Left error -> liftIO $ putStrLn ("Error while initializing: " ++ show error)
-        Right _ -> pure ()
+    case initRspMsg ^. LSP.result of
+      Left error -> liftIO $ putStrLn ("Error while initializing: " ++ show error)
+      Right _ -> pure ()
 
-      initRspVar <- initRsp <$> ask
-      liftIO $ putMVar initRspVar initRspMsg
-      sendNotification SInitialized (Just InitializedParams)
+    initRspVar <- initRsp <$> ask
+    liftIO $ putMVar initRspVar initRspMsg
+    sendNotification SInitialized (Just InitializedParams)
 
-      case lspConfig config of
-        Just cfg -> sendNotification SWorkspaceDidChangeConfiguration (DidChangeConfigurationParams cfg)
-        Nothing -> return ()
+    case lspConfig config of
+      Just cfg -> sendNotification SWorkspaceDidChangeConfiguration (DidChangeConfigurationParams cfg)
+      Nothing -> return ()
 
-      -- ... relay them back to the user Session so they can match on them!
-      -- As long as they are allowed.
-      forM_ inBetween checkLegalBetweenMessage
-      msgChan <- asks messageChan
-      liftIO $ writeList2Chan msgChan (ServerMessage <$> inBetween)
+    -- ... relay them back to the user Session so they can match on them!
+    -- As long as they are allowed.
+    forM_ inBetween checkLegalBetweenMessage
+    msgChan <- asks messageChan
+    liftIO $ writeList2Chan msgChan (ServerMessage <$> inBetween)
 
-      -- Run the actual test
-      session
+    -- Run the actual test
+    session
   where
   -- | Asks the server to shutdown and exit politely
   exitServer :: Session ()
-  exitServer = request_ SShutdown (Nothing :: Maybe Value) >> sendNotification SExit (Just Empty)
+  exitServer = request_ SShutdown (Nothing :: Maybe Value) >> sendNotification SExit Empty
 
   -- | Listens to the server output until the shutdown ack,
   -- makes sure it matches the record and signals any semaphores
@@ -202,7 +231,7 @@ runSessionWithConfig config' serverExe caps rootDir session = do
 
     reqMap <- readMVar $ requestMap context
 
-    let msg = decodeFromServerMsg reqMap msgBytes
+    let msg = fst $ decodeFromServerMsg reqMap msgBytes
     writeChan (messageChan context) (ServerMessage msg)
 
     case msg of
@@ -219,16 +248,16 @@ runSessionWithConfig config' serverExe caps rootDir session = do
   checkLegalBetweenMessage (FromServerMess SWindowShowMessageRequest _) = pure ()
   checkLegalBetweenMessage msg = throw (IllegalInitSequenceMessage msg)
 
-  -- | Check environment variables to override the config
-  envOverrideConfig :: SessionConfig -> IO SessionConfig
-  envOverrideConfig cfg = do
-    logMessages' <- fromMaybe (logMessages cfg) <$> checkEnv "LSP_TEST_LOG_MESSAGES"
-    logStdErr' <- fromMaybe (logStdErr cfg) <$> checkEnv "LSP_TEST_LOG_STDERR"
-    return $ cfg { logMessages = logMessages', logStdErr = logStdErr' }
-    where checkEnv :: String -> IO (Maybe Bool)
-          checkEnv s = fmap convertVal <$> lookupEnv s
-          convertVal "0" = False
-          convertVal _ = True
+-- | Check environment variables to override the config
+envOverrideConfig :: SessionConfig -> IO SessionConfig
+envOverrideConfig cfg = do
+  logMessages' <- fromMaybe (logMessages cfg) <$> checkEnv "LSP_TEST_LOG_MESSAGES"
+  logStdErr' <- fromMaybe (logStdErr cfg) <$> checkEnv "LSP_TEST_LOG_STDERR"
+  return $ cfg { logMessages = logMessages', logStdErr = logStdErr' }
+  where checkEnv :: String -> IO (Maybe Bool)
+        checkEnv s = fmap convertVal <$> lookupEnv s
+        convertVal "0" = False
+        convertVal _ = True
 
 -- | The current text contents of a document.
 documentContents :: TextDocumentIdentifier -> Session T.Text
@@ -356,8 +385,10 @@ createDoc file languageId contents = do
   rootDir <- asks rootDir
   caps <- asks sessionCapabilities
   absFile <- liftIO $ canonicalizePath (rootDir </> file)
-  let regs = filter (\r -> r ^. method == SomeClientMethod SWorkspaceDidChangeWatchedFiles) $
-              Map.elems dynCaps
+  let pred :: SomeRegistration -> [Registration WorkspaceDidChangeWatchedFiles]
+      pred (SomeRegistration r@(Registration _ SWorkspaceDidChangeWatchedFiles _)) = [r]
+      pred _ = mempty
+      regs = concatMap pred $ Map.elems dynCaps
       watchHits :: FileSystemWatcher -> Bool
       watchHits (FileSystemWatcher pattern kind) =
         -- If WatchKind is exlcuded, defaults to all true as per spec
@@ -371,15 +402,8 @@ createDoc file languageId contents = do
 
       createHits (WatchKind create _ _) = create
 
-      regHits :: SomeRegistration -> Bool
-      regHits reg = isJust $ do
-        opts <- reg ^. registerOptions
-        fileWatchOpts <- case fromJSON opts :: Result DidChangeWatchedFilesRegistrationOptions of
-          Success x -> Just x
-          Error _ -> Nothing
-        if foldl' (\acc w -> acc || watchHits w) False (fileWatchOpts ^. watchers)
-          then Just ()
-          else Nothing
+      regHits :: Registration WorkspaceDidChangeWatchedFiles -> Bool
+      regHits reg = foldl' (\acc w -> acc || watchHits w) False (reg ^. registerOptions . watchers)
 
       clientCapsSupports =
           caps ^? workspace . _Just . didChangeWatchedFiles . _Just . dynamicRegistration . _Just
@@ -462,7 +486,7 @@ noDiagnostics = do
 -- | Returns the symbols in a document.
 getDocumentSymbols :: TextDocumentIdentifier -> Session (Either [DocumentSymbol] [SymbolInformation])
 getDocumentSymbols doc = do
-  ResponseMessage _ rspLid res <- request STextDocumentDocumentSymbol (DocumentSymbolParams doc Nothing) :: Session DocumentSymbolsResponse
+  ResponseMessage _ rspLid res <- request STextDocumentDocumentSymbol (DocumentSymbolParams Nothing Nothing doc) :: Session DocumentSymbolsResponse
   case res of
     Right (L (List xs)) -> return (Left xs)
     Right (R (List xs)) -> return (Right xs)
@@ -472,7 +496,7 @@ getDocumentSymbols doc = do
 getCodeActions :: TextDocumentIdentifier -> Range -> Session [Command |? CodeAction]
 getCodeActions doc range = do
   ctx <- getCodeActionContext doc
-  rsp <- request STextDocumentCodeAction (CodeActionParams doc range ctx Nothing)
+  rsp <- request STextDocumentCodeAction (CodeActionParams Nothing Nothing doc range ctx)
 
   case rsp ^. result of
     Right (List xs) -> return xs
@@ -490,7 +514,7 @@ getAllCodeActions doc = do
   where
     go :: CodeActionContext -> [Command |? CodeAction] -> Diagnostic -> Session [Command |? CodeAction]
     go ctx acc diag = do
-      ResponseMessage _ rspLid res <- request STextDocumentCodeAction (CodeActionParams doc (diag ^. range) ctx Nothing)
+      ResponseMessage _ rspLid res <- request STextDocumentCodeAction (CodeActionParams Nothing Nothing doc (diag ^. range) ctx)
 
       case res of
         Left e -> throw (UnexpectedResponseError (SomeLspId $ fromJust rspLid) e)
@@ -510,7 +534,7 @@ getCurrentDiagnostics doc = fromMaybe [] . Map.lookup (toNormalizedUri $ doc ^. 
 executeCommand :: Command -> Session ()
 executeCommand cmd = do
   let args = decode $ encode $ fromJust $ cmd ^. arguments
-      execParams = ExecuteCommandParams (cmd ^. command) args Nothing
+      execParams = ExecuteCommandParams Nothing (cmd ^. command) args
   request_ SWorkspaceExecuteCommand execParams
 
 -- | Executes a code action.
@@ -525,7 +549,7 @@ executeCodeAction action = do
   where handleEdit :: WorkspaceEdit -> Session ()
         handleEdit e =
           -- Its ok to pass in dummy parameters here as they aren't used
-          let req = RequestMessage "" (IdInt 0) SWorkspaceApplyEdit (ApplyWorkspaceEditParams e)
+          let req = RequestMessage "" (IdInt 0) SWorkspaceApplyEdit (ApplyWorkspaceEditParams Nothing e)
             in updateState (FromServerMess SWorkspaceApplyEdit req)
 
 -- | Adds the current version to the document, as tracked by the session.
@@ -549,7 +573,7 @@ applyEdit doc edit = do
   let supportsDocChanges = fromMaybe False $ do
         let mWorkspace = caps ^. LSP.workspace
         C.WorkspaceClientCapabilities _ mEdit _ _ _ _ _ _ <- mWorkspace
-        C.WorkspaceEditClientCapabilities mDocChanges <- mEdit
+        C.WorkspaceEditClientCapabilities mDocChanges _ _ <- mEdit
         mDocChanges
 
   let wEdit = if supportsDocChanges
@@ -560,7 +584,7 @@ applyEdit doc edit = do
         let changes = HashMap.singleton (doc ^. uri) (List [edit])
         in WorkspaceEdit (Just changes) Nothing
 
-  let req = RequestMessage "" (IdInt 0) SWorkspaceApplyEdit (ApplyWorkspaceEditParams wEdit)
+  let req = RequestMessage "" (IdInt 0) SWorkspaceApplyEdit (ApplyWorkspaceEditParams Nothing wEdit)
   updateState (FromServerMess SWorkspaceApplyEdit req)
 
   -- version may have changed
@@ -569,7 +593,7 @@ applyEdit doc edit = do
 -- | Returns the completions for the position in the document.
 getCompletions :: TextDocumentIdentifier -> Position -> Session [CompletionItem]
 getCompletions doc pos = do
-  rsp <- request STextDocumentCompletion (CompletionParams doc pos Nothing Nothing)
+  rsp <- request STextDocumentCompletion (CompletionParams doc pos Nothing Nothing Nothing)
 
   case getResponseResult rsp of
     L (List items) -> return items
@@ -582,50 +606,71 @@ getReferences :: TextDocumentIdentifier -- ^ The document to lookup in.
               -> Session (List Location) -- ^ The locations of the references.
 getReferences doc pos inclDecl =
   let ctx = ReferenceContext inclDecl
-      params = ReferenceParams doc pos ctx Nothing
+      params = ReferenceParams doc pos Nothing Nothing ctx
   in getResponseResult <$> request STextDocumentReferences params
+
+-- | Returns the declarations(s) for the term at the specified position.
+getDeclarations :: TextDocumentIdentifier -- ^ The document the term is in.
+                -> Position -- ^ The position the term is at.
+                -> Session ([Location] |? [LocationLink])
+getDeclarations = getDeclarationyRequest STextDocumentDeclaration DeclarationParams
 
 -- | Returns the definition(s) for the term at the specified position.
 getDefinitions :: TextDocumentIdentifier -- ^ The document the term is in.
                -> Position -- ^ The position the term is at.
-               -> Session [Location] -- ^ The location(s) of the definitions
-getDefinitions doc pos = do
-  let params = TextDocumentPositionParams doc pos Nothing
-  rsp <- request STextDocumentDefinition params :: Session DefinitionResponse
-  case getResponseResult rsp of
-      L loc -> pure [loc]
-      R locs -> pure locs
+               -> Session ([Location] |? [LocationLink])
+getDefinitions = getDeclarationyRequest STextDocumentDefinition DefinitionParams
 
 -- | Returns the type definition(s) for the term at the specified position.
 getTypeDefinitions :: TextDocumentIdentifier -- ^ The document the term is in.
-               -> Position -- ^ The position the term is at.
-               -> Session (Location |? List Location |? List LocationLink) -- ^ The location(s) of the definitions
-getTypeDefinitions doc pos =
-  let params = TextDocumentPositionParams doc pos Nothing
-  rsp <- request STextDocumentTypeDefinition params :: Session TypeDefinitionResponse
+                   -> Position -- ^ The position the term is at.
+                   -> Session ([Location] |? [LocationLink])
+getTypeDefinitions = getDeclarationyRequest STextDocumentTypeDefinition TypeDefinitionParams 
+
+-- | Returns the type definition(s) for the term at the specified position.
+getImplementations :: TextDocumentIdentifier -- ^ The document the term is in.
+                   -> Position -- ^ The position the term is at.
+                   -> Session ([Location] |? [LocationLink])
+getImplementations = getDeclarationyRequest STextDocumentImplementation ImplementationParams
+
+
+getDeclarationyRequest :: (ResponseParams m ~ (Location |? (List Location |? List LocationLink)))
+                       => SClientMethod m
+                       -> (TextDocumentIdentifier
+                            -> Position
+                            -> Maybe ProgressToken
+                            -> Maybe ProgressToken
+                            -> MessageParams m)
+                       -> TextDocumentIdentifier
+                       -> Position
+                       -> Session ([Location] |? [LocationLink])
+getDeclarationyRequest method paramCons doc pos = do
+  let params = paramCons doc pos Nothing Nothing
+  rsp <- request method params
   case getResponseResult rsp of
-      L loc -> pure [loc]
-      R locs -> pure locs
+      L loc -> pure (L [loc])
+      R (L (List locs)) -> pure (L locs)
+      R (R (List locLinks)) -> pure (R locLinks)
 
 -- | Renames the term at the specified position.
 rename :: TextDocumentIdentifier -> Position -> String -> Session ()
 rename doc pos newName = do
-  let params = RenameParams doc pos (T.pack newName) Nothing
+  let params = RenameParams doc pos Nothing (T.pack newName)
   rsp <- request STextDocumentRename params :: Session RenameResponse
   let wEdit = getResponseResult rsp
-      req = RequestMessage "" (IdInt 0) SWorkspaceApplyEdit (ApplyWorkspaceEditParams wEdit)
+      req = RequestMessage "" (IdInt 0) SWorkspaceApplyEdit (ApplyWorkspaceEditParams Nothing wEdit)
   updateState (FromServerMess SWorkspaceApplyEdit req)
 
 -- | Returns the hover information at the specified position.
-getHover :: TextDocumentIdentifier -> Position -> Session (Maybe Hover)
+getHover :: TextDocumentIdentifier -> Position -> Session Hover
 getHover doc pos =
-  let params = TextDocumentPositionParams doc pos Nothing
+  let params = HoverParams doc pos Nothing
   in getResponseResult <$> request STextDocumentHover params
 
 -- | Returns the highlighted occurences of the term at the specified position
 getHighlights :: TextDocumentIdentifier -> Position -> Session (List DocumentHighlight)
 getHighlights doc pos =
-  let params = TextDocumentPositionParams doc pos Nothing
+  let params = DocumentHighlightParams doc pos Nothing Nothing
   in getResponseResult <$> request STextDocumentDocumentHighlight params
 
 -- | Checks the response for errors and throws an exception if needed.
@@ -639,14 +684,14 @@ getResponseResult rsp =
 -- | Applies formatting to the specified document.
 formatDoc :: TextDocumentIdentifier -> FormattingOptions -> Session ()
 formatDoc doc opts = do
-  let params = DocumentFormattingParams doc opts Nothing
+  let params = DocumentFormattingParams Nothing doc opts
   edits <- getResponseResult <$> request STextDocumentFormatting params
   applyTextEdits doc edits
 
 -- | Applies formatting to the specified range in a document.
 formatRange :: TextDocumentIdentifier -> FormattingOptions -> Range -> Session ()
 formatRange doc opts range = do
-  let params = DocumentRangeFormattingParams doc range opts Nothing
+  let params = DocumentRangeFormattingParams Nothing doc range opts
   edits <- getResponseResult <$> request STextDocumentRangeFormatting params
   applyTextEdits doc edits
 
@@ -654,13 +699,13 @@ applyTextEdits :: TextDocumentIdentifier -> List TextEdit -> Session ()
 applyTextEdits doc edits =
   let wEdit = WorkspaceEdit (Just (HashMap.singleton (doc ^. uri) edits)) Nothing
       -- Send a dummy message to updateState so it can do bookkeeping
-      req = RequestMessage "" (IdInt 0) SWorkspaceApplyEdit (ApplyWorkspaceEditParams wEdit)
+      req = RequestMessage "" (IdInt 0) SWorkspaceApplyEdit (ApplyWorkspaceEditParams Nothing wEdit)
   in updateState (FromServerMess SWorkspaceApplyEdit req)
 
 -- | Returns the code lenses for the specified document.
 getCodeLenses :: TextDocumentIdentifier -> Session [CodeLens]
 getCodeLenses tId = do
-    rsp <- request STextDocumentCodeLens (CodeLensParams tId Nothing) :: Session CodeLensResponse
+    rsp <- request STextDocumentCodeLens (CodeLensParams Nothing Nothing tId) :: Session CodeLensResponse
     case getResponseResult rsp of
         List res -> pure res
 

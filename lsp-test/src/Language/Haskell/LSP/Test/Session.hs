@@ -14,7 +14,7 @@ module Language.Haskell.LSP.Test.Session
   , SessionMessage(..)
   , SessionContext(..)
   , SessionState(..)
-  , runSessionWithHandles
+  , runSession'
   , get
   , put
   , modify
@@ -201,8 +201,8 @@ instance (Monad m, (HasState s m)) => HasState s (ConduitParser a m)
   get = lift get
   put = lift . put
 
-runSession :: SessionContext -> SessionState -> Session a -> IO (a, SessionState)
-runSession context state (Session session) = runReaderT (runStateT conduit state) context
+runSessionasdf :: SessionContext -> SessionState -> Session a -> IO (a, SessionState)
+runSessionasdf context state (Session session) = runReaderT (runStateT conduit state) context
   where
     conduit = runConduit $ chanSource .| watchdog .| updateStateC .| runConduitParser (catchError session handler)
 
@@ -232,17 +232,17 @@ runSession context state (Session session) = runReaderT (runStateT conduit state
 
 -- | An internal version of 'runSession' that allows for a custom handler to listen to the server.
 -- It also does not automatically send initialize and exit messages.
-runSessionWithHandles :: Handle -- ^ Server in
-                      -> Handle -- ^ Server out
-                      -> ProcessHandle -- ^ Server process
-                      -> (Handle -> SessionContext -> IO ()) -- ^ Server listener
-                      -> SessionConfig
-                      -> ClientCapabilities
-                      -> FilePath -- ^ Root directory
-                      -> Session () -- ^ To exit the Server properly
-                      -> Session a
-                      -> IO a
-runSessionWithHandles serverIn serverOut serverProc serverHandler config caps rootDir exitServer session = do
+runSession' :: Handle -- ^ Server in
+            -> Handle -- ^ Server out
+            -> Maybe ProcessHandle -- ^ Server process
+            -> (Handle -> SessionContext -> IO ()) -- ^ Server listener
+            -> SessionConfig
+            -> ClientCapabilities
+            -> FilePath -- ^ Root directory
+            -> Session () -- ^ To exit the Server properly
+            -> Session a
+            -> IO a
+runSession' serverIn serverOut mServerProc serverHandler config caps rootDir exitServer session = do
   absRootDir <- canonicalizePath rootDir
 
   hSetBuffering serverIn  NoBuffering
@@ -261,7 +261,7 @@ runSessionWithHandles serverIn serverOut serverProc serverHandler config caps ro
 
   let context = SessionContext serverIn absRootDir messageChan timeoutIdVar reqMap initRsp config caps
       initState vfs = SessionState 0 vfs mempty False Nothing mempty
-      runSession' ses = initVFS $ \vfs -> runSession context (initState vfs) ses
+      runSession' ses = initVFS $ \vfs -> runSessionasdf context (initState vfs) ses
 
       errorHandler = throwTo mainThreadId :: SessionException -> IO ()
       serverListenerLauncher =
@@ -269,20 +269,22 @@ runSessionWithHandles serverIn serverOut serverProc serverHandler config caps ro
       server = (Just serverIn, Just serverOut, Nothing, serverProc)
       msgTimeoutMs = messageTimeout config * 10^6
       serverAndListenerFinalizer tid = do
+        let cleanup
+              | Just sp <- mServerProc = cleanupProcess (Just serverIn, Just serverOut, Nothing, sp)
+              | otherwise = pure ()
         finally (timeout msgTimeoutMs (runSession' exitServer)) $ do
-          -- Make sure to kill the listener first, before closing
-          -- handles etc via cleanupProcess
-          killThread tid
-          -- Give the server some time to exit cleanly
-          -- It makes the server hangs in windows so we have to avoid it
+                -- Make sure to kill the listener first, before closing
+                -- handles etc via cleanupProcess
+                killThread tid
+                -- Give the server some time to exit cleanly
 #ifndef mingw32_HOST_OS
-          timeout msgTimeoutMs (waitForProcess serverProc)
+                timeout msgTimeoutMs (waitForProcess serverProc)
 #endif
-          cleanupProcess server
+                cleanup
 
   (result, _) <- bracket serverListenerLauncher
                          serverAndListenerFinalizer
-                         (const $ initVFS $ \vfs -> runSession context (initState vfs) session)
+                         (const $ initVFS $ \vfs -> runSessionasdf context (initState vfs) session)
   return result
 
 updateStateC :: ConduitM FromServerMessage FromServerMessage (StateT SessionState (ReaderT SessionContext IO)) ()
@@ -300,7 +302,7 @@ updateState (FromServerMess SClientRegisterCapability req) = do
     s { curDynCaps = Map.union (Map.fromList newRegs) (curDynCaps s) }
 
 updateState (FromServerMess SClientUnregisterCapability req) = do
-  let List unRegs = (^. LSP.id) <$> req ^. params . unregistrations
+  let List unRegs = (^. LSP.id) <$> req ^. params . unregisterations
   modify $ \s ->
     let newCurDynCaps = foldr' Map.delete (curDynCaps s) unRegs
     in s { curDynCaps = newCurDynCaps }
