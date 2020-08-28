@@ -57,7 +57,7 @@ makeRegHelper regOptTypeName = do
       isConsFromClient _ = return False
       isMethodFromClient :: Type -> Q Bool
       isMethodFromClient (PromotedT method) = do
-        typ <- reifyType method
+        DataConI _ typ _ <- reify method
         case typ of
           AppT (AppT _ (PromotedT n)) _ -> return $ n == fromClientName
           _ -> return False
