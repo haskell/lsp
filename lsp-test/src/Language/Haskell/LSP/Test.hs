@@ -229,14 +229,14 @@ runSessionWithHandles' serverProc serverIn serverOut config' caps rootDir sessio
   listenServer serverOut context = do
     msgBytes <- getNextMessage serverOut
 
-    reqMap <- readMVar $ requestMap context
-
-    let msg = fst $ decodeFromServerMsg reqMap msgBytes
-    writeChan (messageChan context) (ServerMessage msg)
+    msg <- modifyMVar (requestMap context) $ \reqMap -> do
+      let (msg, newReqMap) = decodeFromServerMsg reqMap msgBytes
+      writeChan (messageChan context) (ServerMessage msg)
+      pure (newReqMap, msg)
 
     case msg of
       (FromServerRsp SShutdown _) -> return ()
-      _               -> listenServer serverOut context
+      _                           -> listenServer serverOut context
 
   -- | Is this message allowed to be sent by the server between the intialize
   -- request and response?
