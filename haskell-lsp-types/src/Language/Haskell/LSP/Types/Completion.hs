@@ -332,6 +332,6 @@ makeExtendingDatatype "CompletionParams"
   , ''WorkDoneProgressParams
   , ''PartialResultParams
   ]
-  [ ("_context", [t| CompletionContext |]) ]
+  [ ("_context", [t| Maybe CompletionContext |]) ]
 deriveJSON lspOptions ''CompletionParams
 
