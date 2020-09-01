@@ -23,7 +23,10 @@ instance (ToJSON a, ToJSON b) => ToJSON (a |? b) where
   toJSON (R x) = toJSON x
 
 instance (FromJSON a, FromJSON b) => FromJSON (a |? b) where
-  parseJSON v = L <$> parseJSON v <|> R <$> parseJSON v
+  -- Important: Try to parse the **rightmost** type first, as in the specification
+  -- the more complex types tend to appear on the right of the |, i.e.
+  -- @colorProvider?: boolean | DocumentColorOptions | DocumentColorRegistrationOptions;@
+  parseJSON v = R <$> parseJSON v <|> L <$> parseJSON v
 
 instance (NFData a, NFData b) => NFData (a |? b)
 

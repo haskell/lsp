@@ -1,6 +1,13 @@
 packages:
          ./
          ./haskell-lsp-types/
+         ./func-test/
 
 package haskell-lsp
   flags: +demo
+
+
+source-repository-package
+    type: git
+    location: https://github.com/wz1000/lsp-test.git
+    tag: 826575195f87238c46431ed70bda8f97f079ffc9

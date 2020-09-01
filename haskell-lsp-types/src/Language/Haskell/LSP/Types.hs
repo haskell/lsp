@@ -13,6 +13,7 @@ module Language.Haskell.LSP.Types
   , module Language.Haskell.LSP.Types.DocumentFilter
   , module Language.Haskell.LSP.Types.DocumentHighlight
   , module Language.Haskell.LSP.Types.DocumentLink
+  , module Language.Haskell.LSP.Types.DocumentSymbol
   , module Language.Haskell.LSP.Types.FoldingRange
   , module Language.Haskell.LSP.Types.Formatting
   , module Language.Haskell.LSP.Types.Hover
@@ -29,7 +30,6 @@ module Language.Haskell.LSP.Types
   , module Language.Haskell.LSP.Types.Rename
   , module Language.Haskell.LSP.Types.SignatureHelp
   , module Language.Haskell.LSP.Types.StaticRegistrationOptions
-  , module Language.Haskell.LSP.Types.DocumentSymbol
   , module Language.Haskell.LSP.Types.SelectionRange
   , module Language.Haskell.LSP.Types.Synonyms
   , module Language.Haskell.LSP.Types.TextDocument
@@ -57,6 +57,7 @@ import           Language.Haskell.LSP.Types.DocumentColor
 import           Language.Haskell.LSP.Types.DocumentFilter
 import           Language.Haskell.LSP.Types.DocumentHighlight
 import           Language.Haskell.LSP.Types.DocumentLink
+import           Language.Haskell.LSP.Types.DocumentSymbol
 import           Language.Haskell.LSP.Types.FoldingRange
 import           Language.Haskell.LSP.Types.Formatting
 import           Language.Haskell.LSP.Types.Hover
@@ -74,7 +75,6 @@ import           Language.Haskell.LSP.Types.Rename
 import           Language.Haskell.LSP.Types.SelectionRange
 import           Language.Haskell.LSP.Types.SignatureHelp
 import           Language.Haskell.LSP.Types.StaticRegistrationOptions
-import           Language.Haskell.LSP.Types.DocumentSymbol
 import           Language.Haskell.LSP.Types.Synonyms
 import           Language.Haskell.LSP.Types.TextDocument
 import           Language.Haskell.LSP.Types.TypeDefinition

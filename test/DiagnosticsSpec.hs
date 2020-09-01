@@ -205,8 +205,8 @@ diagnosticsSpec = do
           ]
         uri = J.toNormalizedUri $ J.Uri "uri"
       let ds = updateDiagnostics HM.empty uri (Just 1) (partitionBySource diags)
-      (getDiagnosticParamsFor 10 ds uri) `shouldBe`
-        Just (J.PublishDiagnosticsParams (J.fromNormalizedUri uri) (J.List $ reverse diags))
+      getDiagnosticParamsFor 10 ds uri `shouldBe`
+        Just (J.PublishDiagnosticsParams (J.fromNormalizedUri uri) (Just 1) (J.List $ reverse diags))
 
     -- ---------------------------------
 
@@ -222,15 +222,15 @@ diagnosticsSpec = do
           ]
         uri = J.toNormalizedUri $ J.Uri "uri"
       let ds = updateDiagnostics HM.empty uri (Just 1) (partitionBySource diags)
-      (getDiagnosticParamsFor 2 ds uri) `shouldBe`
-        Just (J.PublishDiagnosticsParams (J.fromNormalizedUri uri)
+      getDiagnosticParamsFor 2 ds uri `shouldBe`
+        Just (J.PublishDiagnosticsParams (J.fromNormalizedUri uri) (Just 1)
               (J.List [
                     mkDiagnostic  (Just "ghcmod") "d"
                   , mkDiagnostic  (Just "hlint") "c"
                   ]))
 
-      (getDiagnosticParamsFor 1 ds uri) `shouldBe`
-        Just (J.PublishDiagnosticsParams (J.fromNormalizedUri uri)
+      getDiagnosticParamsFor 1 ds uri `shouldBe`
+        Just (J.PublishDiagnosticsParams (J.fromNormalizedUri uri) (Just 1)
               (J.List [
                     mkDiagnostic  (Just "ghcmod") "d"
                   ]))
@@ -249,8 +249,8 @@ diagnosticsSpec = do
           ]
         uri = J.toNormalizedUri $ J.Uri "uri"
       let ds = updateDiagnostics HM.empty uri (Just 1) (partitionBySource diags)
-      (getDiagnosticParamsFor 100 ds uri) `shouldBe`
-        Just (J.PublishDiagnosticsParams (J.fromNormalizedUri uri)
+      getDiagnosticParamsFor 100 ds uri `shouldBe`
+        Just (J.PublishDiagnosticsParams (J.fromNormalizedUri uri) (Just 1)
               (J.List [
                     mkDiagnostic  (Just "ghcmod") "d"
                   , mkDiagnostic  (Just "hlint") "c"
@@ -259,8 +259,8 @@ diagnosticsSpec = do
                   ]))
 
       let ds' = flushBySource ds (Just "hlint")
-      (getDiagnosticParamsFor 100 ds' uri) `shouldBe`
-        Just (J.PublishDiagnosticsParams (J.fromNormalizedUri uri)
+      getDiagnosticParamsFor 100 ds' uri `shouldBe`
+        Just (J.PublishDiagnosticsParams (J.fromNormalizedUri uri) (Just 1)
               (J.List [
                      mkDiagnostic  (Just "ghcmod") "d"
                   ,  mkDiagnostic2 (Just "ghcmod") "b"

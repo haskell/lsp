@@ -32,7 +32,7 @@ module Language.Haskell.LSP.Core (
   , Handler
 
   , Options(..)
-  
+
   -- * LspT and LspM
   , LspT(..)
   , LspM
@@ -45,30 +45,30 @@ module Language.Haskell.LSP.Core (
 
   , sendRequest
   , sendNotification
-  
+
   -- * VFS
   , getVirtualFile
   , getVirtualFiles
   , persistVirtualFile
   , getVersionedTextDoc
   , reverseFileMap
-  
+
   -- * Diagnostics
   , publishDiagnostics
   , flushDiagnosticsBySource
-  
+
   -- * Progress
   , withProgress
   , withIndefiniteProgress
-  , Progress(..)
+  , ProgressAmount(..)
   , ProgressCancellable(..)
   , ProgressCancelledException
-  
+
   -- * Dynamic registration
   , registerCapability
   , unregisterCapability
   , RegistrationToken
-  
+
   , setupLogger
   , reverseSortEdit
   , initializeRequestHandler
@@ -110,7 +110,7 @@ import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Encoding as TL
 import qualified Data.UUID as UUID
 import qualified Language.Haskell.LSP.Types.Capabilities    as J
-import Language.Haskell.LSP.Types as J hiding (Progress)
+import Language.Haskell.LSP.Types as J
 import qualified Language.Haskell.LSP.Types.Lens as J
 import           Language.Haskell.LSP.VFS
 import           Language.Haskell.LSP.Diagnostics
@@ -129,7 +129,7 @@ import           System.Random
 {-# ANN module ("HLint: ignore Redundant do"       :: String) #-}
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
 -- ---------------------------------------------------------------------
-  
+
 newtype LspT config m a = LspT { runLspT :: ReaderT (LanguageContextEnv config) m a }
   deriving (Functor, Applicative, Monad, MonadIO, MonadTrans, MonadTransControl, MonadFix)
 
@@ -257,7 +257,7 @@ instance Default Options where
 -- an optional message to go with it during a 'withProgress'
 --
 -- @since 0.10.0.0
-data Progress = Progress (Maybe Double) (Maybe Text)
+data ProgressAmount = ProgressAmount (Maybe Double) (Maybe Text)
 
 -- | Thrown if the user cancels a 'Cancellable' 'withProgress'/'withIndefiniteProgress'/ session
 --
@@ -277,21 +277,18 @@ data ProgressCancellable = Cancellable | NotCancellable
 -- specific configuration data the language server needs to use.
 data InitializeCallbacks config =
   InitializeCallbacks
-    { onInitialConfiguration :: InitializeRequest -> Either T.Text config
-      -- ^ Invoked on the first message from the language client, containg the client configuration
-      -- This callback should return either the parsed configuration data or an error indicating
-      -- what went wrong. The parsed configuration object will be stored internally and can be
-      -- accessed via 'config'.
-    , onConfigurationChange :: J.Value -> LspM config (Either T.Text config)
+    { onConfigurationChange :: J.Value -> LspM config (Either T.Text config)
       -- ^ @onConfigurationChange newConfig@ is called whenever the
       -- clients sends a message with a changed client configuration. This
       -- callback should return either the parsed configuration data or an error
       -- indicating what went wrong. The parsed configuration object will be
       -- stored internally and can be accessed via 'config'.
-    , onStartup :: LspM config (Maybe ResponseError)
-      -- ^ Once the initial configuration has been received, this callback will be invoked to offer
-      -- the language server implementation the chance to create any processes or start new threads
+    , doInitialize :: InitializeRequest -> LspM config (Maybe ResponseError)
+      -- ^ Called after receiving the @initialize@ request and before returning the response.
+      -- This callback will be invoked to offer the language server
+      -- implementation the chance to create any processes or start new threads
       -- that may be necesary for the server lifecycle.
+      -- It can also return an error in the initialization if necessary.
     }
 
 -- | A function that a 'Handler' is passed that can be used to respond to a
@@ -356,12 +353,12 @@ handle' :: forall t (m :: Method FromClient t) (config :: Type).
         -> LspM config ()
 handle' mAction m msg = do
   maybe (return ()) (\f -> f msg) mAction
-  
+
   dynReqHandlers <- getsState resRegistrationsReq
   dynNotHandlers <- getsState resRegistrationsNot
   staticHandlers <- LspT $ asks resHandlers
   let mStaticHandler = staticHandlers m
-  
+
   case splitClientMethod m of
     IsClientNot -> case pickHandler dynNotHandlers mStaticHandler of
       Just h -> h msg
@@ -390,7 +387,7 @@ handle' mAction m msg = do
       (Just (Pair _ (RegistrationHandler h)), _) -> Just h
       (Nothing, Just h) -> Just h
       (Nothing, Nothing) -> Nothing
-    
+
     -- '$/' notifications should/could be ignored by server.
     -- Don't log errors in that case.
     -- See https://microsoft.github.io/language-server-protocol/specifications/specification-current/#-notifications-and-requests.
@@ -410,7 +407,7 @@ handle' mAction m msg = do
             -> LspM config ())
     mkRspCb req (Left  err) = sendToClient $
       FromServerRsp (req ^. J.method) $ ResponseMessage "2.0" (Just (req ^. J.id)) (Left err)
-    mkRspCb req (Right rsp) = sendToClient $ 
+    mkRspCb req (Right rsp) = sendToClient $
       FromServerRsp (req ^. J.method) $ ResponseMessage "2.0" (Just (req ^. J.id)) (Right rsp)
 
 handleConfigChange :: DidChangeConfigurationNotification -> LspM config ()
@@ -586,14 +583,12 @@ initializeRequestHandler InitializeCallbacks{..} vfs handlers options sendFunc r
     let initialWfs = case params ^. J.workspaceFolders of
           Just (List xs) -> xs
           Nothing -> []
-        initialConfigRes = onInitialConfiguration req
-        initialConfig = either (const Nothing) Just initialConfigRes
 
     tvarCtx <- newTVarIO $
       LanguageContextState
         (VFSData vfs mempty)
         mempty
-        initialConfig
+        Nothing
         initialWfs
         defaultProgressData
         emptyIxMap
@@ -604,7 +599,9 @@ initializeRequestHandler InitializeCallbacks{..} vfs handlers options sendFunc r
     -- Launch the given process once the project root directory has been set
     let env = LanguageContextEnv handlers onConfigurationChange sendFunc tvarCtx (params ^. J.capabilities) rootDir
 
-    initializationResult <- flip runReaderT env $ runLspT onStartup
+    -- Call the 'duringInitialization' callback to let the server kick stuff up
+    initializationResult <- flip runReaderT env $ runLspT $ doInitialize req
+
     case initializationResult of
       Just errResp -> do
         sendResp $ makeResponseError (req ^. J.id) errResp
@@ -612,17 +609,9 @@ initializeRequestHandler InitializeCallbacks{..} vfs handlers options sendFunc r
         let serverCaps = inferServerCapabilities (params ^. J.capabilities) options handlers
         sendResp $ makeResponseMessage (req ^. J.id) (InitializeResult serverCaps (serverInfo options))
 
-
-    case initialConfigRes of
-      Right _ -> pure ()
-      Left err -> do
-        let msg = T.pack $ unwords
-              ["haskell-lsp:configuration parse error.", show req, show err]
-        runReaderT (runLspT (sendErrorLog msg)) env
-
     return $ Just env
-  
-  where 
+
+  where
     makeResponseMessage rid result = ResponseMessage "2.0" (Just rid) (Right result)
     makeResponseError origId err = ResponseMessage "2.0" (Just origId) (Left err)
 
@@ -670,7 +659,7 @@ registerCapability method regOpts f = do
               params = J.RegistrationParams (J.List [J.SomeRegistration registration])
               regId = RegistrationId uuid
               pair = Pair regId (RegistrationHandler f)
-          
+
           ~() <- case splitClientMethod method of
             IsClientNot -> modifyState $ \ctx ->
               let newRegs = DMap.insert method pair (resRegistrationsNot ctx)
@@ -679,19 +668,19 @@ registerCapability method regOpts f = do
               let newRegs = DMap.insert method pair (resRegistrationsReq ctx)
                 in ctx { resRegistrationsReq = newRegs }
             IsClientEither -> error "Cannot register capability for custom methods"
-          
+
           -- TODO: handle the scenario where this returns an error
           _ <- sendRequest SClientRegisterCapability params $ \_res -> pure ()
 
           pure (Just (RegistrationToken method regId))
       | otherwise        = pure Nothing
-      
+
     -- Also I'm thinking we should move this function to somewhere in messages.hs so
     -- we don't forget to update it when adding new methods...
     capDyn :: J.HasDynamicRegistration a (Maybe Bool) => Maybe a -> Bool
     capDyn (Just x) = fromMaybe False $ x ^. J.dynamicRegistration
     capDyn Nothing  = False
-  
+
     -- | Checks if client capabilities declares that the method supports dynamic registration
     dynamicSupported clientCaps = case method of
       SWorkspaceDidChangeConfiguration -> capDyn $ clientCaps ^? J.workspace . _Just . J.didChangeConfiguration . _Just
@@ -723,7 +712,7 @@ registerCapability method regOpts f = do
       STextDocumentFoldingRange        -> capDyn $ clientCaps ^? J.textDocument . _Just . J.foldingRange . _Just
       STextDocumentSelectionRange      -> capDyn $ clientCaps ^? J.textDocument . _Just . J.selectionRange . _Just
       _                                -> False
-  
+
 -- | Sends a @client/unregisterCapability@ request and removes the handler
 -- for that associated registration.
 unregisterCapability :: RegistrationToken m -> LspM config ()
@@ -765,10 +754,8 @@ getNewProgressId = do
         ctx' = ctx { resProgressData = resProgressData { progressNextId = x + 1 }}
     in (ProgressNumericToken x, ctx')
 
-withProgressBase :: Bool -> Text -> ProgressCancellable -> ((Progress -> LspM c ()) -> LspM c a) -> LspM c a
+withProgressBase :: Bool -> Text -> ProgressCancellable -> ((ProgressAmount -> LspM c ()) -> LspM c a) -> LspM c a
 withProgressBase indefinite title cancellable f = do
-  env <- LspT ask
-  let sf x = runReaderT (runLspT (sendToClient x)) env
 
   progId <- getNewProgressId
 
@@ -795,23 +782,31 @@ withProgressBase indefinite title cancellable f = do
     fmap Begin $ ProgressParams progId $
       WorkDoneProgressBeginParams title (Just cancellable') Nothing initialPercentage
 
-  aid <- liftBaseWith $ \runInBase ->
-    async $ runInBase $ f (updater progId (sf . fromServerNot))
-  storeProgress progId aid
-  res <- liftIO $ wait aid
+  -- Send the begin and done notifications via 'bracket_' so that they are always fired
+  res <- control $ \runInBase ->
+    E.bracket_
+      -- Send begin notification
+      (runInBase $ sendNotification SProgress $
+        fmap Begin $ ProgressParams progId $
+          WorkDoneProgressBeginParams title (Just cancellable') Nothing initialPercentage)
 
-  -- Send done notification
-  sendNotification SProgress $
-    End <$> (ProgressParams progId (WorkDoneProgressEndParams Nothing))
+      -- Send end notification
+      (runInBase $ sendNotification SProgress $
+        End <$> ProgressParams progId (WorkDoneProgressEndParams Nothing)) $ do
+
+      -- Run f asynchronously
+      aid <- async $ runInBase $ f (updater progId)
+      runInBase $ storeProgress progId aid
+      wait aid
+
   -- Delete the progress cancellation from the map
   -- If we don't do this then it's easy to leak things as the map contains any IO action.
   deleteProgress progId
 
-
   return res
-  where updater progId sf (Progress percentage msg) =
-          liftIO $ sf $ NotificationMessage "2.0" SProgress $
-            fmap Report $ ProgressParams progId $
+  where updater progId (ProgressAmount percentage msg) = do
+          liftIO $ putStrLn "asdf"
+          sendNotification SProgress $ fmap Report $ ProgressParams progId $
               WorkDoneProgressReportParams Nothing msg percentage
 
 clientSupportsProgress :: J.ClientCapabilities -> Bool
@@ -828,13 +823,12 @@ clientSupportsProgress (J.ClientCapabilities _ _ wc _) = fromMaybe False $ do
 -- If @cancellable@ is 'Cancellable', @f@ will be thrown a
 -- 'ProgressCancelledException' if the user cancels the action in
 -- progress.
-withProgress :: Text -> ProgressCancellable -> ((Progress -> LspM config ()) -> LspM config a) -> LspM config a
+withProgress :: Text -> ProgressCancellable -> ((ProgressAmount -> LspM config ()) -> LspM config a) -> LspM config a
 withProgress title cancellable f = do
   clientCaps <- clientCapabilities
   if clientSupportsProgress clientCaps
     then withProgressBase False title cancellable f
     else f (const $ return ())
-  where
 
 -- | Same as 'withProgress', but for processes that do not report the
 -- precentage complete.
@@ -885,7 +879,7 @@ inferServerCapabilities clientCaps o h =
     , J._experimental                     = Nothing :: Maybe J.Value
     }
   where
-    
+
     -- | For when we just return a simple @true@/@false@ to indicate if we
     -- support the capability
     supportedBool = Just . J.L . supported_b

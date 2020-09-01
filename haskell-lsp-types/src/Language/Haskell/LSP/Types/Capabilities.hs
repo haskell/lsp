@@ -14,8 +14,7 @@ import Language.Haskell.LSP.Types.ServerCapabilities
 import Language.Haskell.LSP.Types.WorkspaceEdit
 import Language.Haskell.LSP.Types
 
--- | The whole shebang. The real deal.
--- Capabilities for full conformance to the current (v3.15) LSP specification.
+-- | Capabilities for full conformance to the current (v3.15) LSP specification.
 fullCaps :: ClientCapabilities
 fullCaps = capsForVersion (LSPVersion maxBound maxBound)
 
@@ -35,7 +34,7 @@ data LSPVersion = LSPVersion Int Int -- ^ Construct a major.minor version
 -- * 3.4 extended completion item and symbol item kinds
 -- * 3.0 dynamic registration
 capsForVersion :: LSPVersion -> ClientCapabilities
-capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) Nothing Nothing
+capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) (Just window) Nothing
   where
     w = WorkspaceClientCapabilities
           (Just True)
@@ -243,3 +242,5 @@ capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) Noth
     since x y a
       | maj >= x && min >= y = Just a
       | otherwise            = Nothing
+    
+    window = WindowClientCapabilities (since 3 15 True)

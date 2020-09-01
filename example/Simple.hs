@@ -36,9 +36,8 @@ handlers STextDocumentHover = Just $ \req responder -> do
 handlers _ = Nothing
 
 initCallbacks = InitializeCallbacks
-  { onInitialConfiguration = const $ Right ()
-  , onConfigurationChange = const $ pure $ Right ()
-  , onStartup = pure Nothing
+  { onConfigurationChange = const $ pure $ Right ()
+  , doInitialize = const $ pure Nothing
   }
 
 main = run initCallbacks handlers def

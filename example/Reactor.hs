@@ -70,14 +70,13 @@ run = flip E.catches handlers $ do
 
   let
     callbacks = InitializeCallbacks
-      { onInitialConfiguration = const $ pure (Config False 0)
-      , onConfigurationChange = \v -> case J.fromJSON v of
+      { onConfigurationChange = \v -> case J.fromJSON v of
           J.Error e -> pure $ Left (T.pack e)
           J.Success cfg -> do
             sendNotification J.SWindowShowMessage $
               J.ShowMessageParams J.MtInfo $ "Wibble factor set to " <> T.pack (show (wibbleFactor cfg))
             pure $ Right cfg
-      , onStartup = liftBaseDiscard forkIO (reactor rin) >> pure Nothing
+      , doInitialize = const $ liftBaseDiscard forkIO (reactor rin) >> pure Nothing
       }
 
   flip E.finally finalProc $ do
@@ -275,7 +274,7 @@ handle J.SWorkspaceExecuteCommand = Just $ \req responder -> do
 
   void $ withProgress "Executing some long running command" Cancellable $ \update ->
     forM [(0 :: Double)..10] $ \i -> do
-      update (Progress (Just (i * 10)) (Just "Doing stuff"))
+      update (ProgressAmount (Just (i * 10)) (Just "Doing stuff"))
       liftIO $ threadDelay (1 * 1000000)
 
 
