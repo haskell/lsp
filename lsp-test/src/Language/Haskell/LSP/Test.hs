@@ -196,7 +196,7 @@ runSessionWithHandles' serverProc serverIn serverOut config' caps rootDir sessio
 
     -- Because messages can be sent in between the request and response,
     -- collect them and then...
-    (inBetween, initRspMsg) <- manyTill_ anyMessage (responseForId initReqId)
+    (inBetween, initRspMsg) <- manyTill_ anyMessage (responseForId SInitialize initReqId)
 
     case initRspMsg ^. LSP.result of
       Left error -> liftIO $ putStrLn ("Error while initializing: " ++ show error)
@@ -229,10 +229,9 @@ runSessionWithHandles' serverProc serverIn serverOut config' caps rootDir sessio
   listenServer serverOut context = do
     msgBytes <- getNextMessage serverOut
 
-    msg <- modifyMVar (requestMap context) $ \reqMap -> do
-      let (msg, newReqMap) = decodeFromServerMsg reqMap msgBytes
-      writeChan (messageChan context) (ServerMessage msg)
-      pure (newReqMap, msg)
+    msg <- modifyMVar (requestMap context) $ \reqMap ->
+      pure $ decodeFromServerMsg reqMap msgBytes
+    writeChan (messageChan context) (ServerMessage msg)
 
     case msg of
       (FromServerRsp SShutdown _) -> return ()
@@ -296,7 +295,7 @@ getDocumentEdit doc = do
 -- @
 -- Note: will skip any messages in between the request and the response.
 request :: SClientMethod m -> MessageParams m -> Session (ResponseMessage m)
-request m = sendRequest m >=> skipManyTill anyMessage . responseForId
+request m = sendRequest m >=> skipManyTill anyMessage . responseForId m
 
 -- | The same as 'sendRequest', but discard the response.
 request_ :: SClientMethod (m :: Method FromClient Request) -> MessageParams m -> Session ()

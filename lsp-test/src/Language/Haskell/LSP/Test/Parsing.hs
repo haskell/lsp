@@ -28,24 +28,20 @@ import Control.Concurrent
 import Control.Lens
 import Control.Monad.IO.Class
 import Control.Monad
-import Data.Aeson
-import qualified Data.ByteString.Lazy.Char8 as B
 import Data.Conduit.Parser hiding (named)
 import qualified Data.Conduit.Parser (named)
+import Data.GADT.Compare
 import qualified Data.Text as T
 import Data.Typeable
 import Language.Haskell.LSP.Types
-import qualified Language.Haskell.LSP.Types.Lens as LSP
 import Language.Haskell.LSP.Test.Session
-import Data.GADT.Compare
-import Data.Type.Equality
 
 -- $receiving
--- To receive a message, just specify the type that expect:
+-- To receive a message, specify the method of the message to expect:
 --
 -- @
--- msg1 <- message :: Session ApplyWorkspaceEditRequest
--- msg2 <- message :: Session HoverResponse
+-- msg1 <- message SWorkspaceApplyEdit
+-- msg2 <- message STextDocumentHover
 -- @
 --
 -- 'Language.Haskell.LSP.Test.Session' is actually just a parser
@@ -56,15 +52,15 @@ import Data.Type.Equality
 -- For example, if you wanted to match either a definition or
 -- references request:
 --
--- > defOrImpl = (message :: Session DefinitionRequest)
--- >          <|> (message :: Session ReferencesRequest)
+-- > defOrImpl = message STextDocumentDefinition
+-- >          <|> message STextDocumentReferences
 --
 -- If you wanted to match any number of telemetry
 -- notifications immediately followed by a response:
 --
 -- @
 -- logThenDiags =
---  skipManyTill (message :: Session TelemetryNotification)
+--  skipManyTill (message STelemetryEvent)
 --               anyResponse
 -- @
 
@@ -78,8 +74,11 @@ satisfy pred = satisfyMaybe (\msg -> if pred msg then Just msg else Nothing)
 --
 -- @since 0.6.1.0
 satisfyMaybe :: (FromServerMessage -> Maybe a) -> Session a
-satisfyMaybe pred = do
+satisfyMaybe pred = satisfyMaybeM (pure . pred)
 
+satisfyMaybeM :: (FromServerMessage -> Session (Maybe a)) -> Session a
+satisfyMaybeM pred = do 
+  
   skipTimeout <- overridingTimeout <$> get
   timeoutId <- getCurTimeoutId
   unless skipTimeout $ do
@@ -95,7 +94,9 @@ satisfyMaybe pred = do
 
   modify $ \s -> s { lastReceivedMessage = Just x }
 
-  case pred x of
+  res <- pred x
+
+  case res of
     Just a -> do
       logMsg LogServer x
       return a
@@ -110,6 +111,16 @@ mEq m1 m2 = case (splitServerMethod m1, splitServerMethod m2) of
     Refl <- geq m1 m2
     pure HRefl
   (IsServerReq, IsServerReq) -> do
+    Refl <- geq m1 m2
+    pure HRefl
+  _ -> Nothing
+
+mEqClient :: SClientMethod m1 -> SClientMethod m2 -> Maybe (m1 :~~: m2)
+mEqClient m1 m2 = case (splitClientMethod m1, splitClientMethod m2) of
+  (IsClientNot, IsClientNot) -> do
+    Refl <- geq m1 m2
+    pure HRefl
+  (IsClientReq, IsClientReq) -> do
     Refl <- geq m1 m2
     pure HRefl
   _ -> Nothing
@@ -144,12 +155,17 @@ anyResponse = named "Any response" $ satisfy $ \case
   FromServerRsp _ _ -> True
 
 -- | Matches a response for a specific id.
-responseForId :: LspId (m :: Method FromClient Request) -> Session (ResponseMessage m)
-responseForId lid = named (T.pack $ "Response for id: " ++ show lid) $ do
+responseForId :: SMethod (m :: Method FromClient Request) -> LspId m -> Session (ResponseMessage m)
+responseForId m lid = named (T.pack $ "Response for id: " ++ show lid) $ do
   satisfyMaybe $ \msg -> do
     case msg of
       FromServerMess _ _ -> Nothing
-      FromServerRsp m rsp -> undefined -- TODO
+      FromServerRsp m' rspMsg@(ResponseMessage _ lid' _) ->
+        case mEqClient m m' of
+          Just HRefl -> do
+            guard (lid' == Just lid)
+            pure rspMsg
+          Nothing -> empty
 
 -- | Matches any type of message.
 anyMessage :: Session FromServerMessage

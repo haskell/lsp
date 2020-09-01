@@ -21,11 +21,9 @@ import           System.IO.Error
 import           Language.Haskell.LSP.Types
 import           Language.Haskell.LSP.Types.Lens
 import           Language.Haskell.LSP.Test.Exceptions
-import qualified Data.HashMap.Strict           as HM
 
 import Data.IxMap
 import Data.Kind
-import Data.Maybe
 
 getAllMessages :: Handle -> IO [B.ByteString]
 getAllMessages h = do
@@ -85,7 +83,7 @@ getRequestMap = foldl' helper emptyIxMap
         ReqMess msg -> fromJust $ updateRequestMap acc (msg ^. id) m
     _ -> acc
 
-decodeFromServerMsg :: RequestMap -> B.ByteString -> (FromServerMessage, RequestMap)
+decodeFromServerMsg :: RequestMap -> B.ByteString -> (RequestMap, FromServerMessage)
 decodeFromServerMsg reqMap bytes = unP $ fromJust $ parseMaybe p obj
   where obj = fromJust $ decode bytes :: Value
         p = parseServerMessage $ \lid ->
@@ -93,8 +91,8 @@ decodeFromServerMsg reqMap bytes = unP $ fromJust $ parseMaybe p obj
             in case mm of
               Nothing -> Nothing
               Just m -> Just $ (m, Pair m (Const newMap))
-        unP (FromServerMess m msg) = (FromServerMess m msg, reqMap)
-        unP (FromServerRsp (Pair m (Const newMap)) msg) = (FromServerRsp m msg, newMap)
+        unP (FromServerMess m msg) = (reqMap, FromServerMess m msg)
+        unP (FromServerRsp (Pair m (Const newMap)) msg) = (newMap, FromServerRsp m msg)
         {-
         WorkspaceWorkspaceFolders      -> error "ReqWorkspaceFolders not supported yet"
         WorkspaceConfiguration         -> error "ReqWorkspaceConfiguration not supported yet"
