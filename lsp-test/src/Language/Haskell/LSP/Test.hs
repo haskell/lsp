@@ -155,7 +155,16 @@ runSessionWithConfig config' serverExe caps rootDir session = do
   withServer serverExe (logStdErr config) $ \serverIn serverOut serverProc ->
     runSessionWithHandles' (Just serverProc) serverIn serverOut config caps rootDir session
 
-
+-- | Starts a new session, using the specified handles to communicate with the
+-- server. You can use this to host the server within the same process.
+-- An example with haskell-lsp might look like:
+--
+-- > (hinRead, hinWrite) <- createPipe
+-- > (houtRead, houtWrite) <- createPipe
+-- > 
+-- > forkIO $ void $ runWithHandles hinRead houtWrite initCallbacks handlers def
+-- > Test.runSessionWithHandles hinWrite houtRead defaultConfig fullCaps "." $ do
+-- >   -- ...
 runSessionWithHandles :: Handle -- ^ The input handle
                       -> Handle -- ^ The output handle
                       -> SessionConfig
