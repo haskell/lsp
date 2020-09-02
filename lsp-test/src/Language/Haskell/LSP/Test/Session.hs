@@ -269,21 +269,18 @@ runSession' serverIn serverOut mServerProc serverHandler config caps rootDir exi
       errorHandler = throwTo mainThreadId :: SessionException -> IO ()
       serverListenerLauncher =
         forkIO $ catch (serverHandler serverOut context) errorHandler
-      server = (Just serverIn, Just serverOut, Nothing, serverProc)
       msgTimeoutMs = messageTimeout config * 10^6
       serverAndListenerFinalizer tid = do
         let cleanup
-              | Just sp <- mServerProc = cleanupProcess (Just serverIn, Just serverOut, Nothing, sp)
+              | Just sp <- mServerProc = do
+                  -- Give the server some time to exit cleanly
+                  timeout msgTimeoutMs (waitForProcess sp)
+                  cleanupProcess (Just serverIn, Just serverOut, Nothing, sp)
               | otherwise = pure ()
-        finally (timeout msgTimeoutMs (runSession' exitServer)) $ do
+        finally (timeout msgTimeoutMs (runSession' exitServer))
                 -- Make sure to kill the listener first, before closing
                 -- handles etc via cleanupProcess
-                killThread tid
-                -- Give the server some time to exit cleanly
-#ifndef mingw32_HOST_OS
-                timeout msgTimeoutMs (waitForProcess serverProc)
-#endif
-                cleanup
+                (killThread tid >> cleanup)
 
   (result, _) <- bracket serverListenerLauncher
                          serverAndListenerFinalizer

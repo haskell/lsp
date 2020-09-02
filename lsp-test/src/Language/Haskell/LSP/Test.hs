@@ -230,7 +230,7 @@ runSessionWithHandles' serverProc serverIn serverOut config' caps rootDir sessio
   where
   -- | Asks the server to shutdown and exit politely
   exitServer :: Session ()
-  exitServer = request_ SShutdown (Nothing :: Maybe Value) >> sendNotification SExit Empty
+  exitServer = request_ SShutdown Empty >> sendNotification SExit Empty
 
   -- | Listens to the server output until the shutdown ack,
   -- makes sure it matches the record and signals any semaphores
