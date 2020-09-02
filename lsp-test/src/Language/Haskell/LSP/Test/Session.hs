@@ -110,11 +110,14 @@ data SessionConfig = SessionConfig
   -- 'Language.Haskell.LSP.Types.LogMessageNotification', defaults to False.
   --
   -- @since 0.9.0.0
+  , initialWorkspaceFolders :: Maybe [WorkspaceFolder]
+  -- ^ The initial workspace folders to send in the @initialize@ request.
+  -- Defaults to Nothing.
   }
 
 -- | The configuration used in 'Language.Haskell.LSP.Test.runSession'.
 defaultConfig :: SessionConfig
-defaultConfig = SessionConfig 60 False False True Nothing False
+defaultConfig = SessionConfig 60 False False True Nothing False Nothing
 
 instance Default SessionConfig where
   def = defaultConfig
@@ -201,8 +204,8 @@ instance (Monad m, (HasState s m)) => HasState s (ConduitParser a m)
   get = lift get
   put = lift . put
 
-runSessionasdf :: SessionContext -> SessionState -> Session a -> IO (a, SessionState)
-runSessionasdf context state (Session session) = runReaderT (runStateT conduit state) context
+runSessionMonad :: SessionContext -> SessionState -> Session a -> IO (a, SessionState)
+runSessionMonad context state (Session session) = runReaderT (runStateT conduit state) context
   where
     conduit = runConduit $ chanSource .| watchdog .| updateStateC .| runConduitParser (catchError session handler)
 
@@ -261,7 +264,7 @@ runSession' serverIn serverOut mServerProc serverHandler config caps rootDir exi
 
   let context = SessionContext serverIn absRootDir messageChan timeoutIdVar reqMap initRsp config caps
       initState vfs = SessionState 0 vfs mempty False Nothing mempty
-      runSession' ses = initVFS $ \vfs -> runSessionasdf context (initState vfs) ses
+      runSession' ses = initVFS $ \vfs -> runSessionMonad context (initState vfs) ses
 
       errorHandler = throwTo mainThreadId :: SessionException -> IO ()
       serverListenerLauncher =
@@ -284,7 +287,7 @@ runSession' serverIn serverOut mServerProc serverHandler config caps rootDir exi
 
   (result, _) <- bracket serverListenerLauncher
                          serverAndListenerFinalizer
-                         (const $ initVFS $ \vfs -> runSessionasdf context (initState vfs) session)
+                         (const $ initVFS $ \vfs -> runSessionMonad context (initState vfs) session)
   return result
 
 updateStateC :: ConduitM FromServerMessage FromServerMessage (StateT SessionState (ReaderT SessionContext IO)) ()

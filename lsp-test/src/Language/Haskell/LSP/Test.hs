@@ -197,7 +197,7 @@ runSessionWithHandles' serverProc serverIn serverOut config' caps rootDir sessio
                                           Nothing
                                           caps
                                           (Just TraceOff)
-                                          Nothing
+                                          (List <$> initialWorkspaceFolders config)
   runSession' serverIn serverOut serverProc listenServer config caps rootDir exitServer $ do
     -- Wrap the session around initialize and shutdown calls
     -- initRspMsg <- sendRequest Initialize initializeParams :: Session InitializeResponse
