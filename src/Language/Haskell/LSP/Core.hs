@@ -38,10 +38,10 @@ module Language.Haskell.LSP.Core (
   , LspM
   , LanguageContextEnv(..)
 
-  , clientCapabilities
-  , config
-  , rootPath
-  , workspaceFolders
+  , getClientCapabilities
+  , getConfig
+  , getRootPath
+  , getWorkspaceFolders
 
   , sendRequest
   , sendNotification
@@ -484,13 +484,6 @@ reverseFileMap = do
 
 -- ---------------------------------------------------------------------
 
--- | The current configuration from the client as set via the @initialize@ and
--- @workspace/didChangeConfiguration@ requests.
-config :: LspM config (Maybe config)
-config = getsState resConfig
-
--- ---------------------------------------------------------------------
-
 defaultProgressData :: ProgressData
 defaultProgressData = ProgressData 0 Map.empty
 
@@ -615,16 +608,23 @@ initializeRequestHandler InitializeCallbacks{..} vfs handlers options sendFunc r
     makeResponseMessage rid result = ResponseMessage "2.0" (Just rid) (Right result)
     makeResponseError origId err = ResponseMessage "2.0" (Just origId) (Left err)
 
-clientCapabilities :: LspM config J.ClientCapabilities
-clientCapabilities = LspT $ asks resClientCapabilities
+-- ---------------------------------------------------------------------
 
-rootPath :: LspM config (Maybe FilePath)
-rootPath = LspT $ asks resRootPath
+-- | The current configuration from the client as set via the @initialize@ and
+-- @workspace/didChangeConfiguration@ requests.
+getConfig :: LspM config (Maybe config)
+getConfig = getsState resConfig
+
+getClientCapabilities :: LspM config J.ClientCapabilities
+getClientCapabilities = LspT $ asks resClientCapabilities
+
+getRootPath :: LspM config (Maybe FilePath)
+getRootPath = LspT $ asks resRootPath
 
 -- | The current workspace folders, if the client supports workspace folders.
-workspaceFolders :: LspM config (Maybe [WorkspaceFolder])
-workspaceFolders = do
-  clientCaps <- clientCapabilities
+getWorkspaceFolders :: LspM config (Maybe [WorkspaceFolder])
+getWorkspaceFolders = do
+  clientCaps <- getClientCapabilities
   let clientSupportsWfs = fromMaybe False $ do
         let (J.ClientCapabilities mw _ _ _) = clientCaps
         (J.WorkspaceClientCapabilities _ _ _ _ _ _ mwf _) <- mw
@@ -825,7 +825,7 @@ clientSupportsProgress (J.ClientCapabilities _ _ wc _) = fromMaybe False $ do
 -- progress.
 withProgress :: Text -> ProgressCancellable -> ((ProgressAmount -> LspM config ()) -> LspM config a) -> LspM config a
 withProgress title cancellable f = do
-  clientCaps <- clientCapabilities
+  clientCaps <- getClientCapabilities
   if clientSupportsProgress clientCaps
     then withProgressBase False title cancellable f
     else f (const $ return ())
@@ -836,7 +836,7 @@ withProgress title cancellable f = do
 -- @since 0.10.0.0
 withIndefiniteProgress :: Text -> ProgressCancellable -> LspM config a -> LspM config a
 withIndefiniteProgress title cancellable f = do
-  clientCaps <- clientCapabilities
+  clientCaps <- getClientCapabilities
   if clientSupportsProgress clientCaps
     then withProgressBase True title cancellable (const f)
     else f

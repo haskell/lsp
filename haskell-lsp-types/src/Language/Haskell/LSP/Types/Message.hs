@@ -75,7 +75,7 @@ type family MessageParams (m :: Method p t) :: Type where
   -- General
   MessageParams Initialize                         = InitializeParams
   MessageParams Initialized                        = Maybe InitializedParams
-  MessageParams Shutdown                           = Maybe Value
+  MessageParams Shutdown                           = Empty
   MessageParams Exit                               = Empty
   -- Workspace
   MessageParams WorkspaceDidChangeWorkspaceFolders = DidChangeWorkspaceFoldersParams

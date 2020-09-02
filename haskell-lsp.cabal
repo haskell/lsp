@@ -124,7 +124,6 @@ test-suite haskell-lsp-test
                        URIFilePathSpec
                        VspSpec
                        WorkspaceEditSpec
-                       WorkspaceFoldersSpec
   build-depends:       base
                      , QuickCheck
                      , aeson
