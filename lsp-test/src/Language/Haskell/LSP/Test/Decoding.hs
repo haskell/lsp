@@ -116,6 +116,7 @@ matchResponseMsgType req = case req of
   TextDocumentDocumentLink      -> RspDocumentLink . decoded
   DocumentLinkResolve           -> RspDocumentLinkResolve . decoded
   TextDocumentWillSaveWaitUntil -> RspWillSaveWaitUntil . decoded
+  CustomClientMethod{}          -> RspCustomServer . decoded
   x                             -> error . ((show x ++ " is not a request: ") ++) . show
   where decoded x = fromMaybe (error $ "Couldn't decode response for the request type: "
                                         ++ show req ++ "\n" ++ show x)
