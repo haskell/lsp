@@ -71,7 +71,10 @@ import Language.Haskell.LSP.Test.Exceptions
 import System.Console.ANSI
 import System.Directory
 import System.IO
-import System.Process (waitForProcess, ProcessHandle())
+import System.Process (ProcessHandle())
+#ifndef mingw32_HOST_OS
+import System.Process (waitForProcess)
+#endif
 import System.Timeout
 
 -- | A session representing one instance of launching and connecting to a server.
@@ -271,7 +274,10 @@ runSessionWithHandles serverIn serverOut serverProc serverHandler config caps ro
           -- handles etc via cleanupProcess
           killThread tid
           -- Give the server some time to exit cleanly
+          -- It makes the server hangs in windows so we have to avoid it
+#ifndef mingw32_HOST_OS
           timeout msgTimeoutMs (waitForProcess serverProc)
+#endif
           cleanupProcess server
 
   (result, _) <- bracket serverListenerLauncher
