@@ -5,20 +5,20 @@
 {-# LANGUAGE FunctionalDependencies     #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE TypeSynonymInstances       #-}
-{-# LANGUAGE ScopedTypeVariables        #-}
 
 module Language.Haskell.LSP.Types.DataTypesJSON where
 
 import           Control.Applicative
-import qualified Data.Aeson                                 as A
+import qualified Data.Aeson as A
 import           Data.Aeson.TH
 import           Data.Aeson.Types
-import           Data.Bits                                  (testBit)
-import           Data.Scientific                            (floatingOrInteger)
-import           Data.Text                                  (Text)
-import qualified Data.Text                                  as T
+import           Data.Bits (testBit)
+import           Data.Scientific (floatingOrInteger)
+import           Data.Text (Text)
+import qualified Data.Text as T
 import           Language.Haskell.LSP.Types.ClientCapabilities
 import           Language.Haskell.LSP.Types.CodeAction
 import           Language.Haskell.LSP.Types.Command
@@ -597,6 +597,12 @@ interface ServerCapabilities {
          */
         executeCommandProvider?: ExecuteCommandOptions;
         /**
+	 * The server provides selection range support.
+	 *
+	 * @since 3.15.0
+	 */
+	selectionRangeProvider?: boolean | SelectionRangeOptions | SelectionRangeRegistrationOptions;
+        /**
          * Workspace specific server capabilities
          */
         workspace?: {
@@ -639,7 +645,7 @@ instance FromJSON TDS where
 
 instance ToJSON TDS where
     toJSON (TDSOptions x) = toJSON x
-    toJSON (TDSKind x) = toJSON x
+    toJSON (TDSKind x)    = toJSON x
 
 data GotoOptions = GotoOptionsStatic Bool
                  | GotoOptionsDynamic
@@ -648,7 +654,7 @@ data GotoOptions = GotoOptionsStatic Bool
                       _documentSelector :: Maybe DocumentSelector
                       -- | The id used to register the request. The id can be used to deregister
                       -- the request again. See also Registration#id.
-                    , _id :: Maybe Text
+                    , _id               :: Maybe Text
                     }
   deriving (Show, Read, Eq)
 
@@ -664,7 +670,7 @@ data ColorOptions = ColorOptionsStatic Bool
                       _documentSelector :: Maybe DocumentSelector
                       -- | The id used to register the request. The id can be used to deregister
                       -- the request again. See also Registration#id.
-                    , _id :: Maybe Text
+                    , _id               :: Maybe Text
                     }
   deriving (Show, Read, Eq)
 
@@ -674,17 +680,39 @@ deriveJSON lspOptions { sumEncoding = A.UntaggedValue } ''ColorOptions
 data FoldingRangeOptions = FoldingRangeOptionsStatic Bool
                          | FoldingRangeOptionsDynamic
                          | FoldingRangeOptionsDynamicDocument
-                           { -- | A document selector to identify the scope of the registration. If set to null
-                             -- the document selector provided on the client side will be used.
+                           { -- | A document selector to identify the
+                             -- scope of the registration. If set to
+                             -- null the document selector provided on
+                             -- the client side will be used.
                              _documentSelector :: Maybe DocumentSelector
-                             -- | The id used to register the request. The id can be used to deregister
-                             -- the request again. See also Registration#id.
-                           , _id :: Maybe Text
+                             -- | The id used to register the
+                             -- request. The id can be used to
+                             -- deregister the request again. See also
+                             -- Registration#id.
+                           , _id               :: Maybe Text
                            }
   deriving (Show, Read, Eq)
 
 deriveJSON lspOptions { sumEncoding = A.UntaggedValue } ''FoldingRangeOptions
 -- makeFieldsNoPrefix ''FoldingRangeOptions
+
+data SelectionRangeOptions = SelectionRangeOptionsStatic Bool
+                           | SelectionRangeOptionsDynamic
+                           | SelectionRangeOptionsDynamicDocument
+                           { -- | A document selector to identify the
+                             -- scope of the registration. If set to
+                             -- null the document selector provided on
+                             -- the client side will be used.
+                             _documentSelector :: Maybe DocumentSelector
+                             -- | The id used to register the
+                             -- request. The id can be used to
+                             -- deregister the request again. See also
+                             -- Registration#id.
+                           , _id               :: Maybe Text
+                           }
+  deriving (Show, Read, Eq)
+
+deriveJSON lspOptions { sumEncoding = A.UntaggedValue } ''SelectionRangeOptions
 
 data WorkspaceFolderChangeNotifications = WorkspaceFolderChangeNotificationsString Text
                                         | WorkspaceFolderChangeNotificationsBool Bool
@@ -695,7 +723,7 @@ deriveJSON lspOptions{ sumEncoding = A.UntaggedValue } ''WorkspaceFolderChangeNo
 data WorkspaceFolderOptions =
   WorkspaceFolderOptions
     { -- | The server has support for workspace folders
-      _supported :: Maybe Bool
+      _supported           :: Maybe Bool
       -- | Whether the server wants to receive workspace folder
       -- change notifications.
       -- If a strings is provided the string is treated as a ID
@@ -775,6 +803,8 @@ data InitializeResponseCapabilitiesInner =
     , _foldingRangeProvider             :: Maybe FoldingRangeOptions
       -- | The server provides execute command support.
     , _executeCommandProvider           :: Maybe ExecuteCommandOptions
+      -- | The server provides selection range support. Since LSP 3.15
+    , _selectionRangeProvider           :: Maybe SelectionRangeOptions
       -- | Workspace specific server capabilities
     , _workspace                        :: Maybe WorkspaceOptions
       -- | Experimental server capabilities.
@@ -1153,7 +1183,7 @@ data DidChangeWatchedFilesRegistrationOptions =
 data FileSystemWatcher =
   FileSystemWatcher {
     _globPattern :: String,
-    _kind :: Maybe WatchKind
+    _kind        :: Maybe WatchKind
   } deriving (Show, Read, Eq)
 
 data WatchKind =
@@ -2148,7 +2178,7 @@ Response
 
 data WorkspaceSymbolParams =
   WorkspaceSymbolParams
-    { _query :: Text -- ^ A query string to filter symbols by. Clients may send an empty string here to request all symbols.
+    { _query         :: Text -- ^ A query string to filter symbols by. Clients may send an empty string here to request all symbols.
     , _workDoneToken :: Maybe ProgressToken -- ^ An optional token that a server can use to report work done progress.
     } deriving (Read,Show,Eq)
 
@@ -2213,7 +2243,7 @@ interface CodeLens {
 
 data CodeLensParams =
   CodeLensParams
-    { _textDocument :: TextDocumentIdentifier
+    { _textDocument  :: TextDocumentIdentifier
     , _workDoneToken :: Maybe ProgressToken -- ^ An optional token that a server can use to report work done progress.
     } deriving (Read,Show,Eq)
 
@@ -2336,7 +2366,7 @@ export interface DocumentLinkRegistrationOptions extends TextDocumentRegistratio
 
 data DocumentLinkParams =
   DocumentLinkParams
-    { _textDocument :: TextDocumentIdentifier
+    { _textDocument  :: TextDocumentIdentifier
     , _workDoneToken :: Maybe ProgressToken -- ^ An optional token that a server can use to report work done progress.
     } deriving (Read,Show,Eq)
 
@@ -2444,8 +2474,8 @@ deriveJSON lspOptions ''FormattingOptions
 
 data DocumentFormattingParams =
   DocumentFormattingParams
-    { _textDocument :: TextDocumentIdentifier
-    , _options      :: FormattingOptions
+    { _textDocument  :: TextDocumentIdentifier
+    , _options       :: FormattingOptions
     , _workDoneToken :: Maybe ProgressToken -- ^ An optional token that a server can use to report work done progress.
     } deriving (Show,Read,Eq)
 
@@ -2495,9 +2525,9 @@ Response
 
 data DocumentRangeFormattingParams =
   DocumentRangeFormattingParams
-    { _textDocument :: TextDocumentIdentifier
-    , _range        :: Range
-    , _options      :: FormattingOptions
+    { _textDocument  :: TextDocumentIdentifier
+    , _range         :: Range
+    , _options       :: FormattingOptions
     , _workDoneToken :: Maybe ProgressToken -- ^ An optional token that a server can use to report work done progress.
     } deriving (Read,Show,Eq)
 
@@ -2627,9 +2657,9 @@ Registration Options: TextDocumentRegistrationOptions
 -}
 data RenameParams =
   RenameParams
-    { _textDocument :: TextDocumentIdentifier
-    , _position     :: Position
-    , _newName      :: Text
+    { _textDocument  :: TextDocumentIdentifier
+    , _position      :: Position
+    , _newName       :: Text
     , _workDoneToken :: Maybe ProgressToken -- ^ An optional token that a server can use to report work done progress.
     } deriving (Show, Read, Eq)
 
@@ -2672,7 +2702,7 @@ Response:
 data RangeWithPlaceholder =
   RangeWithPlaceholder
     {
-    _range :: Range
+    _range         :: Range
     , _placeholder :: Text
     }
 
@@ -2739,8 +2769,8 @@ export interface ExecuteCommandRegistrationOptions {
 
 data ExecuteCommandParams =
   ExecuteCommandParams
-    { _command   :: Text -- ^ The identifier of the actual command handler.
-    , _arguments :: Maybe (List A.Value) -- ^ Arguments that the command should be invoked with.
+    { _command       :: Text -- ^ The identifier of the actual command handler.
+    , _arguments     :: Maybe (List A.Value) -- ^ Arguments that the command should be invoked with.
     , _workDoneToken :: Maybe ProgressToken -- ^ An optional token that a server can use to report work done progress.
     } deriving (Show, Read, Eq)
 

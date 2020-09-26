@@ -1,10 +1,11 @@
-{-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE FlexibleInstances      #-}
-{-# LANGUAGE MultiParamTypeClasses  #-}
 {-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE MultiParamTypeClasses  #-}
+{-# LANGUAGE TemplateHaskell        #-}
 
 module Language.Haskell.LSP.Types.Lens where
 
+import           Control.Lens.TH
 import           Language.Haskell.LSP.Types.ClientCapabilities
 import           Language.Haskell.LSP.Types.CodeAction
 import           Language.Haskell.LSP.Types.Color
@@ -15,14 +16,14 @@ import           Language.Haskell.LSP.Types.Diagnostic
 import           Language.Haskell.LSP.Types.DocumentFilter
 import           Language.Haskell.LSP.Types.FoldingRange
 import           Language.Haskell.LSP.Types.Hover
-import           Language.Haskell.LSP.Types.Message
 import           Language.Haskell.LSP.Types.Location
+import           Language.Haskell.LSP.Types.Message
+import           Language.Haskell.LSP.Types.SelectionRange
 import           Language.Haskell.LSP.Types.Symbol
 import           Language.Haskell.LSP.Types.TextDocument
 import           Language.Haskell.LSP.Types.Window
 import           Language.Haskell.LSP.Types.WorkspaceEdit
 import           Language.Haskell.LSP.Types.WorkspaceFolders
-import           Control.Lens.TH
 
 -- client capabilities
 makeFieldsNoPrefix ''WorkspaceEditClientCapabilities
@@ -193,6 +194,10 @@ makeFieldsNoPrefix ''ColorPresentation
 -- Folding Range
 makeFieldsNoPrefix ''FoldingRange
 makeFieldsNoPrefix ''FoldingRangeParams
+
+-- SelectionRange
+makeFieldsNoPrefix ''SelectionRange
+makeFieldsNoPrefix ''SelectionRangeParams
 
 -- Window
 makeFieldsNoPrefix ''ShowMessageParams

@@ -1,7 +1,7 @@
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE BinaryLiterals      #-}
 {-# LANGUAGE GADTs               #-}
 {-# LANGUAGE MultiWayIf          #-}
-{-# LANGUAGE BinaryLiterals      #-}
+{-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -33,30 +33,30 @@ module Language.Haskell.LSP.Core (
 import           Control.Concurrent.Async
 import           Control.Concurrent.STM
 import qualified Control.Exception as E
+import           Control.Lens ((<&>), (^.), (^?), _Just)
 import           Control.Monad
 import           Control.Monad.IO.Class
-import           Control.Lens ( (<&>), (^.), (^?), _Just )
 import qualified Data.Aeson as J
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as B
 import           Data.Default
 import qualified Data.HashMap.Strict as HM
 import qualified Data.List as L
-import           Data.List.NonEmpty (NonEmpty(..))
+import           Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.Map as Map
 import           Data.Maybe
 import           Data.Monoid
+import           Data.Text (Text)
 import qualified Data.Text as T
-import           Data.Text ( Text )
 import           Language.Haskell.LSP.Capture
 import           Language.Haskell.LSP.Constant
+import           Language.Haskell.LSP.Diagnostics
 import           Language.Haskell.LSP.Messages
-import qualified Language.Haskell.LSP.Types.Capabilities    as C
-import qualified Language.Haskell.LSP.Types                 as J
-import qualified Language.Haskell.LSP.Types.Lens            as J
+import qualified Language.Haskell.LSP.Types as J
+import qualified Language.Haskell.LSP.Types.Capabilities as C
+import qualified Language.Haskell.LSP.Types.Lens as J
 import           Language.Haskell.LSP.Utility
 import           Language.Haskell.LSP.VFS
-import           Language.Haskell.LSP.Diagnostics
 import           System.Directory
 import           System.Exit
 import           System.IO
@@ -97,7 +97,7 @@ data ProgressData = ProgressData { progressNextId :: !Int
 
 data VFSData =
   VFSData
-    { vfsData :: !VFS
+    { vfsData    :: !VFS
     , reverseMap :: !(Map.Map FilePath FilePath)
     }
 
@@ -107,30 +107,30 @@ data VFSData =
 -- If you set handlers for some requests, you may need to set some of these options.
 data Options =
   Options
-    { textDocumentSync                 :: Maybe J.TextDocumentSyncOptions
+    { textDocumentSync                          :: Maybe J.TextDocumentSyncOptions
     -- |  The characters that trigger completion automatically.
-    , completionTriggerCharacters      :: Maybe [Char]
+    , completionTriggerCharacters               :: Maybe [Char]
     -- | The list of all possible characters that commit a completion. This field can be used
     -- if clients don't support individual commmit characters per completion item. See
     -- `_commitCharactersSupport`.
-    , completionAllCommitCharacters    :: Maybe [Char]
+    , completionAllCommitCharacters             :: Maybe [Char]
     -- | The characters that trigger signature help automatically.
-    , signatureHelpTriggerCharacters   :: Maybe [Char]
+    , signatureHelpTriggerCharacters            :: Maybe [Char]
     -- | List of characters that re-trigger signature help.
     -- These trigger characters are only active when signature help is already showing. All trigger characters
     -- are also counted as re-trigger characters.
-    , signatureHelpRetriggerCharacters :: Maybe [Char]
+    , signatureHelpRetriggerCharacters          :: Maybe [Char]
     -- | CodeActionKinds that this server may return.
     -- The list of kinds may be generic, such as `CodeActionKind.Refactor`, or the server
     -- may list out every specific kind they provide.
-    , codeActionKinds                  :: Maybe [J.CodeActionKind]
+    , codeActionKinds                           :: Maybe [J.CodeActionKind]
     -- | The list of characters that triggers on type formatting.
     -- If you set `documentOnTypeFormattingHandler`, you **must** set this.
     -- The first character is mandatory, so a 'NonEmpty' should be passed.
     , documentOnTypeFormattingTriggerCharacters :: Maybe (NonEmpty Char)
     -- | The commands to be executed on the server.
     -- If you set `executeCommandHandler`, you **must** set this.
-    , executeCommandCommands           :: Maybe [Text]
+    , executeCommandCommands                    :: Maybe [Text]
     }
 
 instance Default Options where
@@ -216,12 +216,12 @@ data InitializeCallbacks config =
       -- This callback should return either the parsed configuration data or an error indicating
       -- what went wrong. The parsed configuration object will be stored internally and passed to
       -- hanlder functions as context.
-    , onConfigurationChange :: J.DidChangeConfigurationNotification-> Either T.Text config
+    , onConfigurationChange  :: J.DidChangeConfigurationNotification-> Either T.Text config
       -- ^ Invoked whenever the clients sends a message with a changed client configuration.
       -- This callback should return either the parsed configuration data or an error indicating
       -- what went wrong. The parsed configuration object will be stored internally and passed to
       -- hanlder functions as context.
-    , onStartup :: LspFuncs config -> IO (Maybe J.ResponseError)
+    , onStartup              :: LspFuncs config -> IO (Maybe J.ResponseError)
       -- ^ Once the initial configuration has been received, this callback will be invoked to offer
       -- the language server implementation the chance to create any processes or start new threads
       -- that may be necesary for the server lifecycle.
@@ -259,6 +259,7 @@ data Handlers =
     , renameHandler                  :: !(Maybe (Handler J.RenameRequest))
     , prepareRenameHandler           :: !(Maybe (Handler J.PrepareRenameRequest))
     , foldingRangeHandler            :: !(Maybe (Handler J.FoldingRangeRequest))
+    , selectionRangeHandler          :: !(Maybe (Handler J.SelectionRangeRequest))
     -- new in 3.0
     , documentLinkHandler            :: !(Maybe (Handler J.DocumentLinkRequest))
     , documentLinkResolveHandler     :: !(Maybe (Handler J.DocumentLinkResolveRequest))
@@ -313,7 +314,7 @@ instance Default Handlers where
                               Nothing Nothing Nothing Nothing Nothing Nothing
                               Nothing Nothing Nothing Nothing Nothing Nothing
                               Nothing Nothing Nothing Nothing Nothing Nothing
-                              Nothing Nothing Nothing Nothing Nothing
+                              Nothing Nothing Nothing Nothing Nothing Nothing
 
 -- ---------------------------------------------------------------------
 nop :: Maybe (a -> b -> (a,[String]))
@@ -331,7 +332,7 @@ helper requestHandler tvarDat json =
         (J.Object o) -> case HM.lookup "id" o of
           Just olid -> case J.fromJSON olid of
             J.Success lid -> sendErrorResponse tvarDat lid msg
-            _ -> failLog
+            _             -> failLog
           _ -> failLog
         _ -> failLog
 
@@ -350,7 +351,7 @@ handlerMap _ h J.Exit                            =
       -- Capture exit notification
       case J.fromJSON v :: J.Result J.ExitNotification of
         J.Success n -> captureFromClient (NotExit n) (resCaptureContext ctx)
-        J.Error _ -> return ()
+        J.Error _   -> return ()
       logm $ B.pack "haskell-lsp:Got exit, exiting"
       exitSuccess
 handlerMap _ h J.CancelRequest                   = hh nop NotCancelRequestFromClient $ cancelNotificationHandler h
@@ -390,6 +391,8 @@ handlerMap _ h J.DocumentLinkResolve             = hh nop ReqDocumentLinkResolve
 handlerMap _ h J.TextDocumentRename              = hh nop ReqRename $ renameHandler h
 handlerMap _ h J.TextDocumentPrepareRename       = hh nop ReqPrepareRename $ prepareRenameHandler h
 handlerMap _ h J.TextDocumentFoldingRange        = hh nop ReqFoldingRange $ foldingRangeHandler h
+handlerMap _ h J.TextDocumentSelectionRange      = hh nop ReqSelectionRange
+                                                 $ selectionRangeHandler h
 handlerMap _ _ J.WorkDoneProgressCancel          = helper progressCancelHandler
 handlerMap _ h (J.CustomClientMethod _)          = \ctxData val ->
     case val of
@@ -554,7 +557,7 @@ persistVirtualFile tvarDat uri = join $ atomically $ do
         -- The reverse map should perhaps be (FilePath -> URI)
             case J.uriToFilePath (J.fromNormalizedUri uri) of
               Just uri_fp -> Map.insert fn uri_fp revMap
-              Nothing -> revMap
+              Nothing     -> revMap
 
       modifyVFSData tvarDat (\d -> (d { reverseMap = revMap' }, ()))
       return ((Just fn) <$ write)
@@ -741,11 +744,11 @@ initializeRequestHandler' onStartup mHandler tvarCtx req@(J.RequestMessage _ ori
 
     case mHandler of
       Just handler -> handler req
-      Nothing -> return ()
+      Nothing      -> return ()
 
     let wfs = case params ^. J.workspaceFolders of
                 Just (J.List xs) -> xs
-                Nothing -> []
+                Nothing          -> []
 
     atomically $ modifyTVar' tvarCtx (\c -> c { resWorkspaceFolders = wfs })
 
@@ -814,7 +817,7 @@ initializeRequestHandler' onStartup mHandler tvarCtx req@(J.RequestMessage _ ori
                 | indefinite = Nothing
                 | otherwise = Just 0
               cancellable' = case cancellable of
-                              Cancellable -> True
+                              Cancellable    -> True
                               NotCancellable -> False
 
           rId <- getLspId $ resLspId ctx0
@@ -914,6 +917,10 @@ serverCapabilities clientCaps o h =
                                               Just $ isJust $ documentLinkResolveHandler h
     , J._colorProvider                    = Just $ J.ColorOptionsStatic $ isJust $ documentColorHandler h
     , J._foldingRangeProvider             = Just $ J.FoldingRangeOptionsStatic $ isJust $ foldingRangeHandler h
+    , J._selectionRangeProvider           = Just
+                                          $ J.SelectionRangeOptionsStatic
+                                          $ isJust
+                                          $ selectionRangeHandler h
     , J._executeCommandProvider           = executeCommandProvider
     , J._workspace                        = Just workspace
     -- TODO: Add something for experimental
@@ -923,7 +930,7 @@ serverCapabilities clientCaps o h =
     supported x = supported' x True
 
     supported' (Just _) = Just
-    supported' Nothing = const Nothing
+    supported' Nothing  = const Nothing
 
     singleton :: a -> [a]
     singleton x = [x]
@@ -970,7 +977,7 @@ serverCapabilities clientCaps o h =
       | otherwise = Nothing
 
     sync = case textDocumentSync o of
-            Just x -> Just (J.TDSOptions x)
+            Just x  -> Just (J.TDSOptions x)
             Nothing -> Nothing
 
     workspace = J.WorkspaceOptions workspaceFolder
@@ -984,7 +991,7 @@ progressCancelHandler :: TVar (LanguageContextData config) -> J.WorkDoneProgress
 progressCancelHandler tvarCtx (J.NotificationMessage _ _ (J.WorkDoneProgressCancelParams tid)) = do
   mact <- Map.lookup tid . progressCancel . resProgressData <$> readTVarIO tvarCtx
   case mact of
-    Nothing -> return ()
+    Nothing           -> return ()
     Just cancelAction -> cancelAction
 
 

@@ -1,18 +1,19 @@
-{-# LANGUAGE DuplicateRecordFields  #-}
-{-# LANGUAGE TemplateHaskell        #-}
+{-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE TemplateHaskell       #-}
 
 module Language.Haskell.LSP.Types.ClientCapabilities where
 
-import           Data.Aeson.TH
 import qualified Data.Aeson as A
-import Data.Default
-import Language.Haskell.LSP.Types.Constants
-import Language.Haskell.LSP.Types.CodeAction
-import Language.Haskell.LSP.Types.Completion
-import Language.Haskell.LSP.Types.Diagnostic
-import Language.Haskell.LSP.Types.List
-import Language.Haskell.LSP.Types.MarkupContent
-import Language.Haskell.LSP.Types.Symbol
+import           Data.Aeson.TH
+import           Data.Default
+
+import           Language.Haskell.LSP.Types.CodeAction
+import           Language.Haskell.LSP.Types.Completion
+import           Language.Haskell.LSP.Types.Constants
+import           Language.Haskell.LSP.Types.Diagnostic
+import           Language.Haskell.LSP.Types.List
+import           Language.Haskell.LSP.Types.MarkupContent
+import           Language.Haskell.LSP.Types.Symbol
 
 -- ---------------------------------------------------------------------
 {-
@@ -148,16 +149,16 @@ $(deriveJSON lspOptions ''DidChangeWatchedFilesClientCapabilities)
 
 data SymbolKindClientCapabilities =
   SymbolKindClientCapabilities
-   { -- | The symbol kind values the client supports. When this
-     -- property exists the client also guarantees that it will
-     -- handle values outside its set gracefully and falls back
-     -- to a default value when unknown.
-     -- 
-     -- If this property is not present the client only supports
-     -- the symbol kinds from `File` to `Array` as defined in
-     -- the initial version of the protocol. 
-     _valueSet :: Maybe (List SymbolKind)
-   } deriving (Show, Read, Eq)
+    { -- | The symbol kind values the client supports. When this
+      -- property exists the client also guarantees that it will
+      -- handle values outside its set gracefully and falls back
+      -- to a default value when unknown.
+      --
+      -- If this property is not present the client only supports
+      -- the symbol kinds from `File` to `Array` as defined in
+      -- the initial version of the protocol.
+      _valueSet :: Maybe (List SymbolKind)
+    } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''SymbolKindClientCapabilities)
 
@@ -187,7 +188,7 @@ data SymbolClientCapabilities =
   SymbolClientCapabilities
     { _dynamicRegistration :: Maybe Bool -- ^Symbol request supports dynamic
                                          -- registration.
-    , _symbolKind :: Maybe SymbolKindClientCapabilities -- ^ Specific capabilities for the `SymbolKind`.
+    , _symbolKind          :: Maybe SymbolKindClientCapabilities -- ^ Specific capabilities for the `SymbolKind`.
     } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''SymbolClientCapabilities)
@@ -208,28 +209,28 @@ data WorkspaceClientCapabilities =
   WorkspaceClientCapabilities
     { -- | The client supports applying batch edits to the workspace by supporting
       -- the request 'workspace/applyEdit'
-      _applyEdit :: Maybe Bool
+      _applyEdit              :: Maybe Bool
 
       -- | Capabilities specific to `WorkspaceEdit`s
-    , _workspaceEdit :: Maybe WorkspaceEditClientCapabilities
+    , _workspaceEdit          :: Maybe WorkspaceEditClientCapabilities
 
       -- | Capabilities specific to the `workspace/didChangeConfiguration` notification.
     , _didChangeConfiguration :: Maybe DidChangeConfigurationClientCapabilities
 
        -- | Capabilities specific to the `workspace/didChangeWatchedFiles` notification.
-    , _didChangeWatchedFiles :: Maybe DidChangeWatchedFilesClientCapabilities
+    , _didChangeWatchedFiles  :: Maybe DidChangeWatchedFilesClientCapabilities
 
       -- | Capabilities specific to the `workspace/symbol` request.
-    , _symbol :: Maybe SymbolClientCapabilities
+    , _symbol                 :: Maybe SymbolClientCapabilities
 
       -- | Capabilities specific to the `workspace/executeCommand` request.
-    , _executeCommand :: Maybe ExecuteClientCapabilities
+    , _executeCommand         :: Maybe ExecuteClientCapabilities
 
       -- | The client has support for workspace folders.
-    , _workspaceFolders :: Maybe Bool
+    , _workspaceFolders       :: Maybe Bool
 
       -- | The client supports `workspace/configuration` requests.
-    , _configuration :: Maybe Bool
+    , _configuration          :: Maybe Bool
     } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''WorkspaceClientCapabilities)
@@ -583,10 +584,10 @@ export interface TextDocumentClientCapabilities {
                  */
                 relatedInformation?: boolean;
         };
-        
+
         /**
 	 * Capabilities specific to `textDocument/foldingRange` requests.
-	 * 
+	 *
 	 * Since 3.10.0
 	 */
 	foldingRange?: {
@@ -607,6 +608,21 @@ export interface TextDocumentClientCapabilities {
 		 */
 		lineFoldingOnly?: boolean;
 	};
+
+	/**
+	 * Capabilities specific to the `textDocument/selectionRange` request.
+	 *
+	 * Since 3.15.0
+	 */
+	selectionRange?: {
+	        /**
+	         * Whether implementation supports dynamic registration for selection range providers. If this is set to `true`
+	         * the client supports the new `(SelectionRangeProviderOptions & TextDocumentRegistrationOptions & StaticRegistrationOptions)` return value for the corresponding server
+	         * capability as well.
+	         */
+	        dynamicRegistration?: boolean;
+       };
+
 }
 
 -}
@@ -620,15 +636,15 @@ data SynchronizationTextDocumentClientCapabilities =
       _dynamicRegistration :: Maybe Bool
 
       -- | The client supports sending will save notifications.
-    , _willSave :: Maybe Bool
+    , _willSave            :: Maybe Bool
 
       -- | The client supports sending a will save request and waits for a
       -- response providing text edits which will be applied to the document
       -- before it is saved.
-    , _willSaveWaitUntil :: Maybe Bool
+    , _willSaveWaitUntil   :: Maybe Bool
 
       -- | The client supports did save notifications.
-    , _didSave :: Maybe Bool
+    , _didSave             :: Maybe Bool
     } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''SynchronizationTextDocumentClientCapabilities)
@@ -654,26 +670,26 @@ data CompletionItemClientCapabilities =
       -- `${3:foo}`. `$0` defines the final tab stop, it defaults to the end of
       -- the snippet. Placeholders with equal identifiers are linked, that is
       -- typing in one will update others too.
-      _snippetSupport :: Maybe Bool
+      _snippetSupport          :: Maybe Bool
 
       -- | Client supports commit characters on a completion item.
     , _commitCharactersSupport :: Maybe Bool
 
       -- | Client supports the follow content formats for the documentation
       -- property. The order describes the preferred format of the client.
-    , _documentationFormat :: Maybe (List MarkupKind)
+    , _documentationFormat     :: Maybe (List MarkupKind)
 
       -- | Client supports the deprecated property on a completion item.
-    , _deprecatedSupport :: Maybe Bool
+    , _deprecatedSupport       :: Maybe Bool
 
       -- | Client supports the preselect property on a completion item.
-    , _preselectSupport :: Maybe Bool
+    , _preselectSupport        :: Maybe Bool
 
       -- | Client supports the tag property on a completion item. Clients
       -- supporting tags have to handle unknown tags gracefully. Clients
       -- especially need to preserve unknown tags when sending a
       -- completion item back to the server in a resolve call.
-    , _tagSupport :: Maybe CompletionItemTagsClientCapabilities
+    , _tagSupport              :: Maybe CompletionItemTagsClientCapabilities
     } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''CompletionItemClientCapabilities)
@@ -694,9 +710,9 @@ data CompletionClientCapabilities =
   CompletionClientCapabilities
     { _dynamicRegistration :: Maybe Bool -- ^Whether completion supports dynamic
                                          -- registration.
-    , _completionItem :: Maybe CompletionItemClientCapabilities
-    , _completionItemKind :: Maybe CompletionItemKindClientCapabilities
-    , _contextSupport :: Maybe Bool
+    , _completionItem      :: Maybe CompletionItemClientCapabilities
+    , _completionItemKind  :: Maybe CompletionItemKindClientCapabilities
+    , _contextSupport      :: Maybe Bool
     } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''CompletionClientCapabilities)
@@ -706,14 +722,14 @@ $(deriveJSON lspOptions ''CompletionClientCapabilities)
 data HoverClientCapabilities =
   HoverClientCapabilities
     { _dynamicRegistration :: Maybe Bool
-    , _contentFormat :: Maybe (List MarkupKind)
+    , _contentFormat       :: Maybe (List MarkupKind)
     } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''HoverClientCapabilities)
 
 -- -------------------------------------
 
-data SignatureInformationClientCapabilities = 
+data SignatureInformationClientCapabilities =
   SignatureInformationClientCapabilities
     { -- | Client supports the follow content formats for the documentation
       -- property. The order describes the preferred format of the client.
@@ -726,8 +742,8 @@ $(deriveJSON lspOptions ''SignatureInformationClientCapabilities)
 data SignatureHelpClientCapabilities =
   SignatureHelpClientCapabilities
     { -- | Whether signature help supports dynamic registration.
-      _dynamicRegistration :: Maybe Bool
-      
+      _dynamicRegistration  :: Maybe Bool
+
       -- | The client supports the following `SignatureInformation`
       -- specific properties.
     , _signatureInformation :: Maybe SignatureInformationClientCapabilities
@@ -761,7 +777,7 @@ data DocumentSymbolKindClientCapabilities =
       --  property exists the client also guarantees that it will
       --  handle values outside its set gracefully and falls back
       --  to a default value when unknown.
-      --  
+      --
       --  If this property is not present the client only supports
       --  the symbol kinds from `File` to `Array` as defined in
       --  the initial version of the protocol.
@@ -774,9 +790,9 @@ $(deriveJSON lspOptions ''DocumentSymbolKindClientCapabilities)
 data DocumentSymbolClientCapabilities =
   DocumentSymbolClientCapabilities
     { -- | Whether document symbol supports dynamic registration.
-      _dynamicRegistration :: Maybe Bool
+      _dynamicRegistration               :: Maybe Bool
       -- | Specific capabilities for the `SymbolKind`.
-    , _symbolKind :: Maybe DocumentSymbolKindClientCapabilities
+    , _symbolKind                        :: Maybe DocumentSymbolKindClientCapabilities
     , _hierarchicalDocumentSymbolSupport :: Maybe Bool
     } deriving (Show, Read, Eq)
 
@@ -918,7 +934,7 @@ $(deriveJSON lspOptions ''ColorProviderClientCapabilities)
 data RenameClientCapabilities =
   RenameClientCapabilities
     { _dynamicRegistration :: Maybe Bool
-    , _prepareSupport :: Maybe Bool
+    , _prepareSupport      :: Maybe Bool
     } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''RenameClientCapabilities)
@@ -941,7 +957,7 @@ data PublishDiagnosticsClientCapabilities =
       -- diagnostic.
       --
       -- Clients supporting tags have to handle unknown tags gracefully.
-    , _tagSupport :: Maybe PublishDiagnosticsTagsClientCapabilities
+    , _tagSupport         :: Maybe PublishDiagnosticsTagsClientCapabilities
     } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''PublishDiagnosticsClientCapabilities)
@@ -968,69 +984,87 @@ $(deriveJSON lspOptions ''FoldingRangeClientCapabilities)
 
 -- -------------------------------------
 
+data SelectionRangeClientCapabilities =
+  SelectionRangeClientCapabilities
+    { -- | Whether implementation supports dynamic registration for
+      -- selection range providers. If this is set to `true` the
+      -- client supports the new `SelectionRangeRegistrationOptions`
+      -- return value for the corresponding server capability as well.
+      _dynamicRegistration :: Maybe Bool
+    } deriving (Show, Read, Eq)
+
+$(deriveJSON lspOptions ''SelectionRangeClientCapabilities)
+
+-- -------------------------------------
+
 data TextDocumentClientCapabilities =
   TextDocumentClientCapabilities
-    { _synchronization :: Maybe SynchronizationTextDocumentClientCapabilities
+    { _synchronization    :: Maybe SynchronizationTextDocumentClientCapabilities
 
       -- | Capabilities specific to the `textDocument/completion`
-    , _completion :: Maybe CompletionClientCapabilities
+    , _completion         :: Maybe CompletionClientCapabilities
 
       -- | Capabilities specific to the `textDocument/hover`
-    , _hover :: Maybe HoverClientCapabilities
+    , _hover              :: Maybe HoverClientCapabilities
 
       -- | Capabilities specific to the `textDocument/signatureHelp`
-    , _signatureHelp :: Maybe SignatureHelpClientCapabilities
+    , _signatureHelp      :: Maybe SignatureHelpClientCapabilities
 
       -- | Capabilities specific to the `textDocument/references`
-    , _references :: Maybe ReferencesClientCapabilities
+    , _references         :: Maybe ReferencesClientCapabilities
 
       -- | Capabilities specific to the `textDocument/documentHighlight`
-    , _documentHighlight :: Maybe DocumentHighlightClientCapabilities
+    , _documentHighlight  :: Maybe DocumentHighlightClientCapabilities
 
       -- | Capabilities specific to the `textDocument/documentSymbol`
-    , _documentSymbol :: Maybe DocumentSymbolClientCapabilities
+    , _documentSymbol     :: Maybe DocumentSymbolClientCapabilities
 
       -- | Capabilities specific to the `textDocument/formatting`
-    , _formatting :: Maybe FormattingClientCapabilities
+    , _formatting         :: Maybe FormattingClientCapabilities
 
       -- | Capabilities specific to the `textDocument/rangeFormatting`
-    , _rangeFormatting :: Maybe RangeFormattingClientCapabilities
+    , _rangeFormatting    :: Maybe RangeFormattingClientCapabilities
 
       -- | Capabilities specific to the `textDocument/onTypeFormatting`
-    , _onTypeFormatting :: Maybe OnTypeFormattingClientCapabilities
+    , _onTypeFormatting   :: Maybe OnTypeFormattingClientCapabilities
 
       -- | Capabilities specific to the `textDocument/definition`
-    , _definition :: Maybe DefinitionClientCapabilities
+    , _definition         :: Maybe DefinitionClientCapabilities
 
       -- | Capabilities specific to the `textDocument/typeDefinition`
-    , _typeDefinition :: Maybe TypeDefinitionClientCapabilities
+    , _typeDefinition     :: Maybe TypeDefinitionClientCapabilities
 
       -- | Capabilities specific to the `textDocument/implementation`
-    , _implementation :: Maybe ImplementationClientCapabilities
+    , _implementation     :: Maybe ImplementationClientCapabilities
 
       -- | Capabilities specific to the `textDocument/codeAction`
-    , _codeAction :: Maybe CodeActionClientCapabilities
+    , _codeAction         :: Maybe CodeActionClientCapabilities
 
       -- | Capabilities specific to the `textDocument/codeLens`
-    , _codeLens :: Maybe CodeLensClientCapabilities
+    , _codeLens           :: Maybe CodeLensClientCapabilities
 
       -- | Capabilities specific to the `textDocument/documentLink`
-    , _documentLink :: Maybe DocumentLinkClientCapabilities
+    , _documentLink       :: Maybe DocumentLinkClientCapabilities
 
       -- | Capabilities specific to the `textDocument/documentColor` and the
       -- `textDocument/colorPresentation` request
-    , _colorProvider :: Maybe ColorProviderClientCapabilities
+    , _colorProvider      :: Maybe ColorProviderClientCapabilities
 
       -- | Capabilities specific to the `textDocument/rename`
-    , _rename :: Maybe RenameClientCapabilities
+    , _rename             :: Maybe RenameClientCapabilities
 
       -- | Capabilities specific to `textDocument/publishDiagnostics`
     , _publishDiagnostics :: Maybe PublishDiagnosticsClientCapabilities
 
-      -- | Capabilities specific to `textDocument/foldingRange` requests. Since LSP 3.10.
+      -- | Capabilities specific to `textDocument/foldingRange` requests. Since
+      -- LSP 3.10.
       --
       -- @since 0.7.0.0
-    , _foldingRange :: Maybe FoldingRangeClientCapabilities
+    , _foldingRange       :: Maybe FoldingRangeClientCapabilities
+
+      -- | Capabilities specific to the `textDocument/selectionRange`
+      -- request. Since LSP 3.15.
+    , _selectionRange     :: Maybe SelectionRangeClientCapabilities
     } deriving (Show, Read, Eq)
 
 $(deriveJSON lspOptions ''TextDocumentClientCapabilities)
@@ -1038,12 +1072,12 @@ $(deriveJSON lspOptions ''TextDocumentClientCapabilities)
 instance Default TextDocumentClientCapabilities where
   def = TextDocumentClientCapabilities def def def def def def def def
                                        def def def def def def def def
-                                       def def def def
+                                       def def def def def
 
 -- ---------------------------------------------------------------------
 
 -- | Window specific client capabilities.
-data WindowClientCapabilities = 
+data WindowClientCapabilities =
   WindowClientCapabilities
     { -- | Whether client supports handling progress notifications.
       _workDoneProgress :: Maybe Bool
@@ -1109,7 +1143,7 @@ data ClientCapabilities =
     -- | Capabilities specific to `window/progress` requests. Experimental.
     --
     -- @since 0.10.0.0
-    , _window :: Maybe WindowClientCapabilities
+    , _window       :: Maybe WindowClientCapabilities
     , _experimental :: Maybe A.Object
     } deriving (Show, Read, Eq)
 

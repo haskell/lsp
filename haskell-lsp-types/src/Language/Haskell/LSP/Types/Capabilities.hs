@@ -6,9 +6,10 @@ module Language.Haskell.LSP.Types.Capabilities
   , capsForVersion
   ) where
 
-import Prelude hiding (min)
-import Language.Haskell.LSP.Types.ClientCapabilities
-import Language.Haskell.LSP.Types
+import           Prelude hiding (min)
+
+import           Language.Haskell.LSP.Types
+import           Language.Haskell.LSP.Types.ClientCapabilities
 
 -- | The whole shebang. The real deal.
 -- Capabilities for full conformance to the current (v3.10) LSP specification.
@@ -21,6 +22,7 @@ data LSPVersion = LSPVersion Int Int -- ^ Construct a major.minor version
 -- | Capabilities for full conformance to the LSP specification up until a version.
 -- Some important milestones:
 --
+-- * 3.15 textDocument/selectionRange request
 -- * 3.12 textDocument/prepareRename request
 -- * 3.11 CodeActionOptions provided by the server
 -- * 3.10 hierarchical document symbols, folding ranges
@@ -105,6 +107,7 @@ capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) Noth
           (Just (RenameClientCapabilities dynamicReg (since 3 12 True)))
           (Just publishDiagnosticsCapabilities)
           (since 3 10 foldingRangeCapability)
+          (since 3 15 selectionRangeCapability)
     sync =
       SynchronizationTextDocumentClientCapabilities
         dynamicReg
@@ -209,6 +212,10 @@ capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) Noth
         dynamicReg
         Nothing
         (Just False)
+
+    selectionRangeCapability =
+      SelectionRangeClientCapabilities
+        dynamicReg
 
     publishDiagnosticsCapabilities =
       PublishDiagnosticsClientCapabilities

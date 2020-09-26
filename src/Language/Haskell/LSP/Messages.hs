@@ -1,5 +1,5 @@
 {-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveGeneric  #-}
 
 module Language.Haskell.LSP.Messages
   ( module Language.Haskell.LSP.Types.MessageFuncs
@@ -8,10 +8,10 @@ module Language.Haskell.LSP.Messages
   )
 where
 
-import           Language.Haskell.LSP.Types.MessageFuncs
-import           Language.Haskell.LSP.Types
-import           GHC.Generics
 import           Data.Aeson
+import           GHC.Generics
+import           Language.Haskell.LSP.Types
+import           Language.Haskell.LSP.Types.MessageFuncs
 
 -- | A wrapper around a message that originates from the client
 -- and is sent to the server.
@@ -41,6 +41,7 @@ data FromClientMessage = ReqInitialize               InitializeRequest
                        | ReqRename                   RenameRequest
                        | ReqPrepareRename            PrepareRenameRequest
                        | ReqFoldingRange             FoldingRangeRequest
+                       | ReqSelectionRange           SelectionRangeRequest
                        | ReqExecuteCommand           ExecuteCommandRequest
                        | ReqWillSaveWaitUntil        WillSaveWaitUntilTextDocumentRequest
                        -- Responses
@@ -103,6 +104,7 @@ data FromServerMessage = ReqRegisterCapability       RegisterCapabilityRequest
                        | RspDocumentOnTypeFormatting DocumentOnTypeFormattingResponse
                        | RspRename                   RenameResponse
                        | RspFoldingRange             FoldingRangeResponse
+                       | RspSelectionRange           SelectionRangeResponse
                        | RspExecuteCommand           ExecuteCommandResponse
                        | RspError                    ErrorResponse
                        | RspWillSaveWaitUntil        WillSaveWaitUntilTextDocumentResponse

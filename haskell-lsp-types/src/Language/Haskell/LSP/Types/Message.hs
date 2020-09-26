@@ -1,14 +1,14 @@
-{-# LANGUAGE DuplicateRecordFields      #-}
-{-# LANGUAGE OverloadedStrings          #-}
-{-# LANGUAGE TemplateHaskell            #-}
+{-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE TemplateHaskell       #-}
 module Language.Haskell.LSP.Types.Message where
 
-import qualified Data.Aeson                                 as A
+import qualified Data.Aeson as A
 import           Data.Aeson.TH
 import           Data.Aeson.Types
 import           Data.Hashable
 -- For <= 8.2.2
-import           Data.Text                                  (Text)
+import           Data.Text (Text)
 import           Language.Haskell.LSP.Types.Constants
 
 
@@ -26,7 +26,7 @@ instance A.FromJSON LspId where
   parseJSON _              = mempty
 
 instance Hashable LspId where
-  hashWithSalt salt (IdInt i) = hashWithSalt salt i
+  hashWithSalt salt (IdInt i)    = hashWithSalt salt i
   hashWithSalt salt (IdString s) = hashWithSalt salt s
 
 -- ---------------------------------------------------------------------
@@ -51,9 +51,9 @@ instance A.FromJSON LspIdRsp where
   parseJSON _              = mempty
 
 instance Hashable LspIdRsp where
-  hashWithSalt salt (IdRspInt i) = hashWithSalt salt i
+  hashWithSalt salt (IdRspInt i)    = hashWithSalt salt i
   hashWithSalt salt (IdRspString s) = hashWithSalt salt s
-  hashWithSalt _ IdRspNull = 0
+  hashWithSalt _ IdRspNull          = 0
 
 -- | Converts an LspId to its LspIdRsp counterpart.
 responseId :: LspId -> LspIdRsp
@@ -114,6 +114,7 @@ data ClientMethod =
  | TextDocumentRename
  | TextDocumentPrepareRename
  | TextDocumentFoldingRange
+ | TextDocumentSelectionRange
  -- A custom message type. It is not enforced that this starts with $/.
  | CustomClientMethod Text
    deriving (Eq,Ord,Read,Show)
@@ -161,55 +162,57 @@ instance A.FromJSON ClientMethod where
   parseJSON (A.String "textDocument/rename")              = return TextDocumentRename
   parseJSON (A.String "textDocument/prepareRename")       = return TextDocumentPrepareRename
   parseJSON (A.String "textDocument/foldingRange")        = return TextDocumentFoldingRange
+  parseJSON (A.String "textDocument/selectionRange")      = return TextDocumentSelectionRange
   parseJSON (A.String "window/workDoneProgress/cancel")   = return WorkDoneProgressCancel
   parseJSON (A.String x)                                  = return (CustomClientMethod x)
   parseJSON _                                             = mempty
 
 instance A.ToJSON ClientMethod where
   -- General
-  toJSON Initialize                      = A.String "initialize"
-  toJSON Initialized                     = A.String "initialized"
-  toJSON Shutdown                        = A.String "shutdown"
-  toJSON Exit                            = A.String "exit"
-  toJSON CancelRequest                   = A.String "$/cancelRequest"
+  toJSON Initialize                         = A.String "initialize"
+  toJSON Initialized                        = A.String "initialized"
+  toJSON Shutdown                           = A.String "shutdown"
+  toJSON Exit                               = A.String "exit"
+  toJSON CancelRequest                      = A.String "$/cancelRequest"
   -- Workspace
   toJSON WorkspaceDidChangeWorkspaceFolders = A.String "workspace/didChangeWorkspaceFolders"
-  toJSON WorkspaceDidChangeConfiguration = A.String "workspace/didChangeConfiguration"
-  toJSON WorkspaceDidChangeWatchedFiles  = A.String "workspace/didChangeWatchedFiles"
-  toJSON WorkspaceSymbol                 = A.String "workspace/symbol"
-  toJSON WorkspaceExecuteCommand         = A.String "workspace/executeCommand"
+  toJSON WorkspaceDidChangeConfiguration    = A.String "workspace/didChangeConfiguration"
+  toJSON WorkspaceDidChangeWatchedFiles     = A.String "workspace/didChangeWatchedFiles"
+  toJSON WorkspaceSymbol                    = A.String "workspace/symbol"
+  toJSON WorkspaceExecuteCommand            = A.String "workspace/executeCommand"
   -- Document
-  toJSON TextDocumentDidOpen             = A.String "textDocument/didOpen"
-  toJSON TextDocumentDidChange           = A.String "textDocument/didChange"
-  toJSON TextDocumentWillSave            = A.String "textDocument/willSave"
-  toJSON TextDocumentWillSaveWaitUntil   = A.String "textDocument/willSaveWaitUntil"
-  toJSON TextDocumentDidSave             = A.String "textDocument/didSave"
-  toJSON TextDocumentDidClose            = A.String "textDocument/didClose"
-  toJSON TextDocumentCompletion          = A.String "textDocument/completion"
-  toJSON CompletionItemResolve           = A.String "completionItem/resolve"
-  toJSON TextDocumentHover               = A.String "textDocument/hover"
-  toJSON TextDocumentSignatureHelp       = A.String "textDocument/signatureHelp"
-  toJSON TextDocumentReferences          = A.String "textDocument/references"
-  toJSON TextDocumentDocumentHighlight   = A.String "textDocument/documentHighlight"
-  toJSON TextDocumentDocumentSymbol      = A.String "textDocument/documentSymbol"
-  toJSON TextDocumentDefinition          = A.String "textDocument/definition"
-  toJSON TextDocumentTypeDefinition      = A.String "textDocument/typeDefinition"
-  toJSON TextDocumentImplementation      = A.String "textDocument/implementation"
-  toJSON TextDocumentCodeAction          = A.String "textDocument/codeAction"
-  toJSON TextDocumentCodeLens            = A.String "textDocument/codeLens"
-  toJSON CodeLensResolve                 = A.String "codeLens/resolve"
-  toJSON TextDocumentDocumentColor       = A.String "textDocument/documentColor"
-  toJSON TextDocumentColorPresentation   = A.String "textDocument/colorPresentation"
-  toJSON TextDocumentFormatting          = A.String "textDocument/formatting"
-  toJSON TextDocumentRangeFormatting     = A.String "textDocument/rangeFormatting"
-  toJSON TextDocumentOnTypeFormatting    = A.String "textDocument/onTypeFormatting"
-  toJSON TextDocumentRename              = A.String "textDocument/rename"
-  toJSON TextDocumentPrepareRename       = A.String "textDocument/prepareRename"
-  toJSON TextDocumentFoldingRange        = A.String "textDocument/foldingRange"
-  toJSON TextDocumentDocumentLink        = A.String "textDocument/documentLink"
-  toJSON DocumentLinkResolve             = A.String "documentLink/resolve"
-  toJSON WorkDoneProgressCancel          = A.String "window/workDoneProgress/cancel"
-  toJSON (CustomClientMethod xs)         = A.String xs
+  toJSON TextDocumentDidOpen                = A.String "textDocument/didOpen"
+  toJSON TextDocumentDidChange              = A.String "textDocument/didChange"
+  toJSON TextDocumentWillSave               = A.String "textDocument/willSave"
+  toJSON TextDocumentWillSaveWaitUntil      = A.String "textDocument/willSaveWaitUntil"
+  toJSON TextDocumentDidSave                = A.String "textDocument/didSave"
+  toJSON TextDocumentDidClose               = A.String "textDocument/didClose"
+  toJSON TextDocumentCompletion             = A.String "textDocument/completion"
+  toJSON CompletionItemResolve              = A.String "completionItem/resolve"
+  toJSON TextDocumentHover                  = A.String "textDocument/hover"
+  toJSON TextDocumentSignatureHelp          = A.String "textDocument/signatureHelp"
+  toJSON TextDocumentReferences             = A.String "textDocument/references"
+  toJSON TextDocumentDocumentHighlight      = A.String "textDocument/documentHighlight"
+  toJSON TextDocumentDocumentSymbol         = A.String "textDocument/documentSymbol"
+  toJSON TextDocumentDefinition             = A.String "textDocument/definition"
+  toJSON TextDocumentTypeDefinition         = A.String "textDocument/typeDefinition"
+  toJSON TextDocumentImplementation         = A.String "textDocument/implementation"
+  toJSON TextDocumentCodeAction             = A.String "textDocument/codeAction"
+  toJSON TextDocumentCodeLens               = A.String "textDocument/codeLens"
+  toJSON CodeLensResolve                    = A.String "codeLens/resolve"
+  toJSON TextDocumentDocumentColor          = A.String "textDocument/documentColor"
+  toJSON TextDocumentColorPresentation      = A.String "textDocument/colorPresentation"
+  toJSON TextDocumentFormatting             = A.String "textDocument/formatting"
+  toJSON TextDocumentRangeFormatting        = A.String "textDocument/rangeFormatting"
+  toJSON TextDocumentOnTypeFormatting       = A.String "textDocument/onTypeFormatting"
+  toJSON TextDocumentRename                 = A.String "textDocument/rename"
+  toJSON TextDocumentPrepareRename          = A.String "textDocument/prepareRename"
+  toJSON TextDocumentFoldingRange           = A.String "textDocument/foldingRange"
+  toJSON TextDocumentSelectionRange         = A.String "textDocument/selectionRange"
+  toJSON TextDocumentDocumentLink           = A.String "textDocument/documentLink"
+  toJSON DocumentLinkResolve                = A.String "documentLink/resolve"
+  toJSON WorkDoneProgressCancel             = A.String "window/workDoneProgress/cancel"
+  toJSON (CustomClientMethod xs)            = A.String xs
 
 data ServerMethod =
   -- Window
@@ -257,24 +260,24 @@ instance A.FromJSON ServerMethod where
 
 instance A.ToJSON ServerMethod where
   -- Window
-  toJSON WindowShowMessage        = A.String "window/showMessage"
-  toJSON WindowShowMessageRequest = A.String "window/showMessageRequest"
-  toJSON WindowLogMessage         = A.String "window/logMessage"
-  toJSON WindowWorkDoneProgressCreate = A.String "window/workDoneProgress/create"
-  toJSON Progress                 = A.String "$/progress"
-  toJSON TelemetryEvent           = A.String "telemetry/event"
+  toJSON WindowShowMessage              = A.String "window/showMessage"
+  toJSON WindowShowMessageRequest       = A.String "window/showMessageRequest"
+  toJSON WindowLogMessage               = A.String "window/logMessage"
+  toJSON WindowWorkDoneProgressCreate   = A.String "window/workDoneProgress/create"
+  toJSON Progress                       = A.String "$/progress"
+  toJSON TelemetryEvent                 = A.String "telemetry/event"
   -- Client
-  toJSON ClientRegisterCapability   = A.String "client/registerCapability"
-  toJSON ClientUnregisterCapability = A.String "client/unregisterCapability"
+  toJSON ClientRegisterCapability       = A.String "client/registerCapability"
+  toJSON ClientUnregisterCapability     = A.String "client/unregisterCapability"
   -- Workspace
-  toJSON WorkspaceWorkspaceFolders = A.String "workspace/workspaceFolders"
-  toJSON WorkspaceConfiguration    = A.String "workspace/configuration"
-  toJSON WorkspaceApplyEdit        = A.String "workspace/applyEdit"
+  toJSON WorkspaceWorkspaceFolders      = A.String "workspace/workspaceFolders"
+  toJSON WorkspaceConfiguration         = A.String "workspace/configuration"
+  toJSON WorkspaceApplyEdit             = A.String "workspace/applyEdit"
   -- Document
   toJSON TextDocumentPublishDiagnostics = A.String "textDocument/publishDiagnostics"
   -- Cancelling
-  toJSON CancelRequestServer = A.String "$/cancelRequest"
-  toJSON (CustomServerMethod m) = A.String m
+  toJSON CancelRequestServer            = A.String "$/cancelRequest"
+  toJSON (CustomServerMethod m)         = A.String m
 
 data RequestMessage m req resp =
   RequestMessage
@@ -450,7 +453,7 @@ instance FromJSON a => FromJSON (ResponseMessage a) where
       ((Just err), Nothing   ) -> pure $ Left err
       (Nothing   , (Just res)) -> pure $ Right res
       ((Just   _), (Just   _)) -> fail $ "Both error and result cannot be present"
-      (Nothing, Nothing) -> fail "Both error and result cannot be Nothing"
+      (Nothing, Nothing)       -> fail "Both error and result cannot be Nothing"
     return $ ResponseMessage _jsonrpc _id $ result
 
 type ErrorResponse = ResponseMessage ()
