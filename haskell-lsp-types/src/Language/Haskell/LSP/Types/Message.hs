@@ -168,7 +168,7 @@ type family ResponseParams (m :: Method p Request) :: Type where
   ResponseParams TextDocumentCompletion        = List CompletionItem |? CompletionList
   ResponseParams CompletionItemResolve         = CompletionItem
   -- Language Queries
-  ResponseParams TextDocumentHover             = Hover
+  ResponseParams TextDocumentHover             = Maybe Hover
   ResponseParams TextDocumentSignatureHelp     = SignatureHelp
   ResponseParams TextDocumentDeclaration       = Location |? List Location |? List LocationLink
   ResponseParams TextDocumentDefinition        = Location |? List Location |? List LocationLink

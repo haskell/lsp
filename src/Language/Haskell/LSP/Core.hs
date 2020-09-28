@@ -882,7 +882,7 @@ inferServerCapabilities clientCaps o h =
 
     -- | For when we just return a simple @true@/@false@ to indicate if we
     -- support the capability
-    supportedBool = Just . J.L . supported_b
+    supportedBool = Just . J.InL . supported_b
 
     supported' m b
       | supported_b m = Just b
@@ -912,10 +912,10 @@ inferServerCapabilities clientCaps o h =
     codeActionProvider
       | clientSupportsCodeActionKinds
       , supported_b J.STextDocumentCodeAction = Just $
-          maybe (J.L True) (J.R . J.CodeActionOptions Nothing . Just . J.List)
+          maybe (J.InL True) (J.InR . J.CodeActionOptions Nothing . Just . J.List)
                 (codeActionKinds o)
-      | supported_b J.STextDocumentCodeAction = Just (J.L True)
-      | otherwise = Just (J.L False)
+      | supported_b J.STextDocumentCodeAction = Just (J.InL True)
+      | otherwise = Just (J.InL False)
 
     signatureHelpProvider
       | supported_b J.STextDocumentSignatureHelp = Just $
@@ -943,13 +943,13 @@ inferServerCapabilities clientCaps o h =
       | otherwise = Nothing
 
     sync = case textDocumentSync o of
-            Just x -> Just (J.L x)
+            Just x -> Just (J.InL x)
             Nothing -> Nothing
 
     workspace = J.WorkspaceServerCapabilities workspaceFolder
     workspaceFolder = supported' J.SWorkspaceDidChangeWorkspaceFolders $
         -- sign up to receive notifications
-        J.WorkspaceFoldersServerCapabilities (Just True) (Just (J.R True))
+        J.WorkspaceFoldersServerCapabilities (Just True) (Just (J.InR True))
 
 progressCancelHandler :: J.WorkDoneProgressCancelNotification -> LspM config ()
 progressCancelHandler (J.NotificationMessage _ _ (J.WorkDoneProgressCancelParams tid)) = do

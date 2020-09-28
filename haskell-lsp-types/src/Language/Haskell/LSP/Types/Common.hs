@@ -13,20 +13,20 @@ import GHC.Generics
 
 -- | A terser, isomorphic data type for 'Either', that does not get tagged when
 -- converting to and from JSON.
-data a |? b = L a
-            | R b
+data a |? b = InL a
+            | InR b
   deriving (Read,Show,Eq,Ord,Generic)
 infixr |?
 
 instance (ToJSON a, ToJSON b) => ToJSON (a |? b) where
-  toJSON (L x) = toJSON x
-  toJSON (R x) = toJSON x
+  toJSON (InL x) = toJSON x
+  toJSON (InR x) = toJSON x
 
 instance (FromJSON a, FromJSON b) => FromJSON (a |? b) where
   -- Important: Try to parse the **rightmost** type first, as in the specification
   -- the more complex types tend to appear on the right of the |, i.e.
   -- @colorProvider?: boolean | DocumentColorOptions | DocumentColorRegistrationOptions;@
-  parseJSON v = R <$> parseJSON v <|> L <$> parseJSON v
+  parseJSON v = InR <$> parseJSON v <|> InL <$> parseJSON v
 
 instance (NFData a, NFData b) => NFData (a |? b)
 
