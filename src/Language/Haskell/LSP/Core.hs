@@ -28,8 +28,11 @@ module Language.Haskell.LSP.Core (
   , InitializeCallbacks(..)
 
   -- * Handlers
-  , Handlers
+  , Handlers(..)
   , Handler
+  , notificationHandler
+  , requestHandler
+  , ClientMessageHandler(..)
 
   , Options(..)
 
@@ -159,7 +162,21 @@ data LanguageContextEnv config =
 
 -- | A mapping from methods to the static 'Handler's that should be used to
 -- handle responses when they come in from the client.
-type Handlers config = forall t (m :: Method FromClient t). SMethod m -> Maybe (Handler m config)
+data Handlers config
+  = Handlers
+  { reqHandlers :: DMap SMethod (ClientMessageHandler config Request)
+  , notHandlers :: DMap SMethod (ClientMessageHandler config Notification)
+  }
+instance Semigroup (Handlers config) where
+  Handlers r1 n1 <> Handlers r2 n2 = Handlers (r1 <> r2) (n1 <> n2)
+instance Monoid (Handlers config) where
+  mempty = Handlers mempty mempty
+
+notificationHandler :: forall (m :: Method FromClient Notification) config. SMethod m -> Handler m config -> Handlers config
+notificationHandler m h = Handlers mempty (DMap.singleton m (ClientMessageHandler h))
+
+requestHandler :: forall (m :: Method FromClient Request) config. SMethod m -> Handler m config -> Handlers config
+requestHandler m h = Handlers (DMap.singleton m (ClientMessageHandler h)) mempty
 
 -- | The type of a handler that handles requests and notifications coming in
 -- from the server or client
@@ -183,13 +200,13 @@ data LanguageContextState config =
 
 type ResponseMap config = IxMap LspId (Product SMethod (ServerResponseCallback config))
 
-type RegistrationMap (config :: Type) (t :: MethodType) = DMap SMethod (Product RegistrationId (RegistrationHandler config t))
+type RegistrationMap (config :: Type) (t :: MethodType) = DMap SMethod (Product RegistrationId (ClientMessageHandler config t))
 
 data RegistrationToken (m :: Method FromClient t) = RegistrationToken (SMethod m) (RegistrationId m)
 newtype RegistrationId (m :: Method FromClient t) = RegistrationId Text
   deriving Eq
 
-newtype RegistrationHandler config (t :: MethodType) (m :: Method FromClient t) = RegistrationHandler (Handler m config)
+newtype ClientMessageHandler config (t :: MethodType) (m :: Method FromClient t) = ClientMessageHandler (Handler m config)
 
 data ProgressData = ProgressData { progressNextId :: !Int
                                  , progressCancel :: !(Map.Map ProgressToken (IO ())) }
@@ -356,36 +373,35 @@ handle' mAction m msg = do
 
   dynReqHandlers <- getsState resRegistrationsReq
   dynNotHandlers <- getsState resRegistrationsNot
-  staticHandlers <- LspT $ asks resHandlers
-  let mStaticHandler = staticHandlers m
+  Handlers{reqHandlers, notHandlers} <- LspT $ asks resHandlers
 
   case splitClientMethod m of
-    IsClientNot -> case pickHandler dynNotHandlers mStaticHandler of
+    IsClientNot -> case pickHandler dynNotHandlers notHandlers of
       Just h -> h msg
       Nothing
         | SExit <- m -> exitNotificationHandler msg
         | otherwise -> reportMissingHandler
 
-    IsClientReq -> case pickHandler dynReqHandlers mStaticHandler of
+    IsClientReq -> case pickHandler dynReqHandlers reqHandlers of
       Just h -> h msg (mkRspCb msg)
       Nothing
         | SShutdown <- m -> shutdownRequestHandler msg (mkRspCb msg)
         | otherwise -> reportMissingHandler
 
     IsClientEither -> case msg of
-      NotMess noti -> case pickHandler dynNotHandlers mStaticHandler of
+      NotMess noti -> case pickHandler dynNotHandlers notHandlers of
         Just h -> h noti
         Nothing -> reportMissingHandler
-      ReqMess req -> case pickHandler dynReqHandlers mStaticHandler of
+      ReqMess req -> case pickHandler dynReqHandlers reqHandlers of
         Just h -> h req (mkRspCb req)
         Nothing -> reportMissingHandler
   where
     -- | Checks to see if there's a dynamic handler, and uses it in favour of the
     -- static handler, if it exists.
-    pickHandler :: RegistrationMap config t -> Maybe (Handler m config) -> Maybe (Handler m config)
-    pickHandler dynHandlerMap mStaticHandler = case (DMap.lookup m dynHandlerMap, mStaticHandler) of
-      (Just (Pair _ (RegistrationHandler h)), _) -> Just h
-      (Nothing, Just h) -> Just h
+    pickHandler :: RegistrationMap config t -> DMap SMethod (ClientMessageHandler config t) -> Maybe (Handler m config)
+    pickHandler dynHandlerMap staticHandler = case (DMap.lookup m dynHandlerMap, DMap.lookup m staticHandler) of
+      (Just (Pair _ (ClientMessageHandler h)), _) -> Just h
+      (Nothing, Just (ClientMessageHandler h)) -> Just h
       (Nothing, Nothing) -> Nothing
 
     -- '$/' notifications should/could be ignored by server.
@@ -645,7 +661,10 @@ registerCapability :: forall (config :: Type) t (m :: Method FromClient t).
 registerCapability method regOpts f = do
   clientCaps <- LspT $ asks resClientCapabilities
   handlers <- LspT $ asks resHandlers
-  let alreadyStaticallyRegistered = isJust $ handlers method
+  let alreadyStaticallyRegistered = case splitClientMethod method of
+        IsClientNot -> DMap.member method $ notHandlers handlers
+        IsClientReq -> DMap.member method $ reqHandlers handlers
+        IsClientEither -> error "Cannot register capability for custom methods"
   go clientCaps alreadyStaticallyRegistered
   where
     -- If the server has already registered statically, don't dynamically register
@@ -658,7 +677,7 @@ registerCapability method regOpts f = do
           let registration = J.Registration uuid method regOpts
               params = J.RegistrationParams (J.List [J.SomeRegistration registration])
               regId = RegistrationId uuid
-              pair = Pair regId (RegistrationHandler f)
+              pair = Pair regId (ClientMessageHandler f)
 
           ~() <- case splitClientMethod method of
             IsClientNot -> modifyState $ \ctx ->
@@ -892,7 +911,10 @@ inferServerCapabilities clientCaps o h =
     supported = Just . supported_b
 
     supported_b :: forall m. J.SClientMethod m -> Bool
-    supported_b m = isJust (h m)
+    supported_b m = case splitClientMethod m of
+      IsClientNot -> DMap.member m $ notHandlers h
+      IsClientReq -> DMap.member m $ reqHandlers h
+      IsClientEither -> error "capabilities depend on custom method"
 
     singleton :: a -> [a]
     singleton x = [x]

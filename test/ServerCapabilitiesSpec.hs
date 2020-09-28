@@ -27,7 +27,7 @@ spec = describe "server capabilities" $ do
   it "decodes" $
     let input = "{\"hoverProvider\": true, \"colorProvider\": {\"id\": \"abc123\", \"documentSelector\": " <> documentFiltersJson <> "}}"
         Just caps = decode input :: Maybe ServerCapabilities
-      in caps ^. colorProvider `shouldBe` Just (R $ R $ DocumentColorRegistrationOptions (Just documentFilters) (Just "abc123") Nothing)
+      in caps ^. colorProvider `shouldBe` Just (InR $ InR $ DocumentColorRegistrationOptions (Just documentFilters) (Just "abc123") Nothing)
   where
     documentFilters = List [DocumentFilter (Just "haskell") Nothing Nothing]
     documentFiltersJson = "[{\"language\": \"haskell\"}]"
