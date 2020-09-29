@@ -496,8 +496,8 @@ getDocumentSymbols :: TextDocumentIdentifier -> Session (Either [DocumentSymbol]
 getDocumentSymbols doc = do
   ResponseMessage _ rspLid res <- request STextDocumentDocumentSymbol (DocumentSymbolParams Nothing Nothing doc) :: Session DocumentSymbolsResponse
   case res of
-    Right (L (List xs)) -> return (Left xs)
-    Right (R (List xs)) -> return (Right xs)
+    Right (InL (List xs)) -> return (Left xs)
+    Right (InR (List xs)) -> return (Right xs)
     Left err -> throw (UnexpectedResponseError (SomeLspId $ fromJust rspLid) err)
 
 -- | Returns the code actions in the specified range.
@@ -604,8 +604,8 @@ getCompletions doc pos = do
   rsp <- request STextDocumentCompletion (CompletionParams doc pos Nothing Nothing Nothing)
 
   case getResponseResult rsp of
-    L (List items) -> return items
-    R (CompletionList _ (List items)) -> return items
+    InL (List items) -> return items
+    InR (CompletionList _ (List items)) -> return items
 
 -- | Returns the references for the position in the document.
 getReferences :: TextDocumentIdentifier -- ^ The document to lookup in.
@@ -656,9 +656,9 @@ getDeclarationyRequest method paramCons doc pos = do
   let params = paramCons doc pos Nothing Nothing
   rsp <- request method params
   case getResponseResult rsp of
-      L loc -> pure (L [loc])
-      R (L (List locs)) -> pure (L locs)
-      R (R (List locLinks)) -> pure (R locLinks)
+      InL loc -> pure (InL [loc])
+      InR (InL (List locs)) -> pure (InL locs)
+      InR (InR (List locLinks)) -> pure (InR locLinks)
 
 -- | Renames the term at the specified position.
 rename :: TextDocumentIdentifier -> Position -> String -> Session ()
@@ -670,7 +670,7 @@ rename doc pos newName = do
   updateState (FromServerMess SWorkspaceApplyEdit req)
 
 -- | Returns the hover information at the specified position.
-getHover :: TextDocumentIdentifier -> Position -> Session Hover
+getHover :: TextDocumentIdentifier -> Position -> Session (Maybe Hover)
 getHover doc pos =
   let params = HoverParams doc pos Nothing
   in getResponseResult <$> request STextDocumentHover params

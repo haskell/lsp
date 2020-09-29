@@ -67,8 +67,8 @@ mapUris f event =
     fromServerMsg (FromServerMess m@STextDocumentPublishDiagnostics n) = FromServerMess m $ swapUri params n
     fromServerMsg (FromServerRsp m@STextDocumentDocumentSymbol r) =
       let swapUri' :: (List DocumentSymbol |? List SymbolInformation) -> List DocumentSymbol |? List SymbolInformation
-          swapUri' (R si) = R (swapUri location <$> si)
-          swapUri' (L dss) = L dss -- no file locations here
+          swapUri' (InR si) = InR (swapUri location <$> si)
+          swapUri' (InL dss) = InL dss -- no file locations here
       in FromServerRsp m $ r & result %~ (fmap swapUri')
     fromServerMsg (FromServerRsp m@STextDocumentRename r) = FromServerRsp m $ r & result %~ (fmap swapWorkspaceEdit)
     fromServerMsg x = x
