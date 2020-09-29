@@ -35,3 +35,5 @@ data SomeLspId where
 deriving instance Show SomeLspId
 instance Eq SomeLspId where
   SomeLspId a == SomeLspId b = toBase a == toBase b
+instance Ord SomeLspId where
+  SomeLspId a `compare` SomeLspId b = toBase a `compare` toBase b
