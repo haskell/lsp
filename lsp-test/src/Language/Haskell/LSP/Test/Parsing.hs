@@ -1,4 +1,5 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE PolyKinds #-}
@@ -14,13 +15,15 @@ module Language.Haskell.LSP.Test.Parsing
     satisfy
   , satisfyMaybe
   , message
+  , responseForId
+  , customRequest
+  , customNotification
   , anyRequest
   , anyResponse
   , anyNotification
   , anyMessage
   , loggingNotification
   , publishDiagnosticsNotification
-  , responseForId
   ) where
 
 import Control.Applicative
@@ -125,6 +128,7 @@ mEqClient m1 m2 = case (splitClientMethod m1, splitClientMethod m2) of
     pure HRefl
   _ -> Nothing
 
+-- | Matches non-custom messages
 message :: SServerMethod m -> Session (ServerMessage m)
 message m1 = named (T.pack $ show m1) $ satisfyMaybe $ \case
   FromServerMess m2 msg -> do
@@ -132,11 +136,32 @@ message m1 = named (T.pack $ show m1) $ satisfyMaybe $ \case
     pure msg
   _ -> Nothing
 
+customRequest :: T.Text -> Session (ServerMessage (CustomMethod :: Method FromServer Request))
+customRequest m = named m $ satisfyMaybe $ \case
+  FromServerMess m1 msg -> case splitServerMethod m1 of
+    IsServerEither -> case msg of
+      ReqMess _ | m1 == SCustomMethod m -> Just msg
+      _ -> Nothing
+    _ -> Nothing
+  _ -> Nothing
+
+customNotification :: T.Text -> Session (ServerMessage (CustomMethod :: Method FromServer Notification))
+customNotification m = named m $ satisfyMaybe $ \case
+  FromServerMess m1 msg -> case splitServerMethod m1 of
+    IsServerEither -> case msg of
+      NotMess _ | m1 == SCustomMethod m -> Just msg
+      _ -> Nothing
+    _ -> Nothing
+  _ -> Nothing
+
 -- | Matches if the message is a notification.
 anyNotification :: Session FromServerMessage
 anyNotification = named "Any notification" $ satisfy $ \case
-  FromServerMess m _ -> case splitServerMethod m of
+  FromServerMess m msg -> case splitServerMethod m of
     IsServerNot -> True
+    IsServerEither -> case msg of
+      NotMess _ -> True
+      _ -> False
     _ -> False
   FromServerRsp _ _ -> False
 
@@ -165,7 +190,12 @@ responseForId m lid = named (T.pack $ "Response for id: " ++ show lid) $ do
           Just HRefl -> do
             guard (lid' == Just lid)
             pure rspMsg
-          Nothing -> empty
+          Nothing
+            | SCustomMethod tm <- m
+            , SCustomMethod tm' <- m'
+            , tm == tm'
+            , lid' == Just lid -> pure rspMsg
+          _ -> empty
 
 -- | Matches any type of message.
 anyMessage :: Session FromServerMessage
