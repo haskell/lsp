@@ -84,13 +84,12 @@ import           Control.Concurrent.STM
 import qualified Control.Exception as E
 import           Control.Monad
 import           Control.Applicative
-import           Control.Monad.Base
 import           Control.Monad.Fix
 import           Control.Monad.IO.Class
-import           Control.Monad.Trans.Control
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Reader
 import           Control.Monad.Trans.Class
+import           Control.Monad.IO.Unlift
 import           Control.Lens ( (<&>), (^.), (^?), _Just )
 import qualified Data.Aeson as J
 import qualified Data.Aeson.Types as J
@@ -134,15 +133,7 @@ import           System.Random
 -- ---------------------------------------------------------------------
 
 newtype LspT config m a = LspT { runLspT :: ReaderT (LanguageContextEnv config) m a }
-  deriving (Functor, Applicative, Monad, MonadIO, MonadTrans, MonadTransControl, MonadFix)
-
-instance MonadBase b m => MonadBase b (LspT config m) where
-  liftBase = liftBaseDefault
-
-instance MonadBaseControl b m => MonadBaseControl b (LspT config m) where
-    type StM (LspT config m) a = ComposeSt (LspT config) m a
-    liftBaseWith     = defaultLiftBaseWith
-    restoreM         = defaultRestoreM
+  deriving (Functor, Applicative, Monad, MonadIO, MonadTrans, MonadUnliftIO, MonadFix)
 
 type LspM config = LspT config IO
 
@@ -802,7 +793,7 @@ withProgressBase indefinite title cancellable f = do
       WorkDoneProgressBeginParams title (Just cancellable') Nothing initialPercentage
 
   -- Send the begin and done notifications via 'bracket_' so that they are always fired
-  res <- control $ \runInBase ->
+  res <- withRunInIO $ \runInBase ->
     E.bracket_
       -- Send begin notification
       (runInBase $ sendNotification SProgress $

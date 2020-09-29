@@ -22,14 +22,12 @@ To try out this server, install it with
 and plug it into your client of choice.
 -}
 module Main (main) where
-import           Control.Concurrent
 import           Control.Concurrent.STM.TChan
 import qualified Control.Exception                     as E
 import           Control.Lens
 import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.STM
-import           Control.Monad.Trans.Control
 import qualified Data.Aeson                            as J
 import           Data.Default
 import qualified Data.HashMap.Strict                   as H
@@ -44,6 +42,7 @@ import           Language.Haskell.LSP.VFS
 import           System.Exit
 import           System.Log.Logger
 import qualified Data.Dependent.Map as DMap
+import           UnliftIO.Concurrent
 
 
 -- ---------------------------------------------------------------------
@@ -77,7 +76,7 @@ run = flip E.catches handlers $ do
             sendNotification J.SWindowShowMessage $
               J.ShowMessageParams J.MtInfo $ "Wibble factor set to " <> T.pack (show (wibbleFactor cfg))
             pure $ Right cfg
-      , doInitialize = const $ liftBaseDiscard forkIO (reactor rin) >> pure Nothing
+      , doInitialize = const $ forkIO (reactor rin) >> pure Nothing
       }
 
   flip E.finally finalProc $ do
