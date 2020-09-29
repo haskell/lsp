@@ -441,20 +441,19 @@ parseServerMessage :: LookupFunc FromClient a -> Value -> Parser (FromServerMess
 parseServerMessage lookupId v@(Object o) = do
   case HM.lookup "method" o of
     Just cmd -> do
-      -- Request or Response
-      sm <- parseJSON cmd
-      case sm of
-        SomeServerMethod m -> case splitServerMethod m of
-          IsServerNot -> FromServerMess m <$> parseJSON v
-          IsServerReq -> FromServerMess m <$> parseJSON v
-          IsServerEither
-              | HM.member "id" o -- Request
-              , SCustomMethod cm <- m ->
-                  let m' = (SCustomMethod cm :: SMethod (CustomMethod :: Method FromServer Request))
-                      in FromServerMess m' <$> parseJSON v
-              | SCustomMethod cm <- m ->
-                  let m' = (SCustomMethod cm :: SMethod (CustomMethod :: Method FromServer Notification))
-                      in FromServerMess m' <$> parseJSON v
+      -- Request or Notification
+      SomeServerMethod m <- parseJSON cmd
+      case splitServerMethod m of
+        IsServerNot -> FromServerMess m <$> parseJSON v
+        IsServerReq -> FromServerMess m <$> parseJSON v
+        IsServerEither
+          | HM.member "id" o -- Request
+          , SCustomMethod cm <- m ->
+              let m' = (SCustomMethod cm :: SMethod (CustomMethod :: Method FromServer Request))
+                  in FromServerMess m' <$> parseJSON v
+          | SCustomMethod cm <- m ->
+              let m' = (SCustomMethod cm :: SMethod (CustomMethod :: Method FromServer Notification))
+                  in FromServerMess m' <$> parseJSON v
     Nothing -> do
       case HM.lookup "id" o of
         Just i' -> do
@@ -469,20 +468,19 @@ parseClientMessage :: LookupFunc FromServer a -> Value -> Parser (FromClientMess
 parseClientMessage lookupId v@(Object o) = do
   case HM.lookup "method" o of
     Just cmd -> do
-      -- Request or Response
-      sm <- parseJSON cmd
-      case sm of
-        SomeClientMethod m -> case splitClientMethod m of
-          IsClientNot -> FromClientMess m <$> parseJSON v
-          IsClientReq -> FromClientMess m <$> parseJSON v
-          IsClientEither
-              | HM.member "id" o -- Request
-              , SCustomMethod cm <- m ->
-                  let m' = (SCustomMethod cm :: SMethod (CustomMethod :: Method FromClient Request))
-                      in FromClientMess m' <$> parseJSON v
-              | SCustomMethod cm <- m ->
-                  let m' = (SCustomMethod cm :: SMethod (CustomMethod :: Method FromClient Notification))
-                      in FromClientMess m' <$> parseJSON v
+      -- Request or Notification
+      SomeClientMethod m <- parseJSON cmd
+      case splitClientMethod m of
+        IsClientNot -> FromClientMess m <$> parseJSON v
+        IsClientReq -> FromClientMess m <$> parseJSON v
+        IsClientEither
+          | HM.member "id" o -- Request
+          , SCustomMethod cm <- m ->
+              let m' = (SCustomMethod cm :: SMethod (CustomMethod :: Method FromClient Request))
+                  in FromClientMess m' <$> parseJSON v
+          | SCustomMethod cm <- m ->
+              let m' = (SCustomMethod cm :: SMethod (CustomMethod :: Method FromClient Notification))
+                  in FromClientMess m' <$> parseJSON v
     Nothing -> do
       case HM.lookup "id" o of
         Just i' -> do
