@@ -18,6 +18,10 @@ data a |? b = InL a
   deriving (Read,Show,Eq,Ord,Generic)
 infixr |?
 
+toEither :: a |? b -> Either a b
+toEither (InL a) = Left a
+toEither (InR b) = Right b
+
 instance (ToJSON a, ToJSON b) => ToJSON (a |? b) where
   toJSON (InL x) = toJSON x
   toJSON (InR x) = toJSON x
