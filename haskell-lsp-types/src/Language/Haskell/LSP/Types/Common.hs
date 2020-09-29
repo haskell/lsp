@@ -34,8 +34,9 @@ instance (FromJSON a, FromJSON b) => FromJSON (a |? b) where
 
 instance (NFData a, NFData b) => NFData (a |? b)
 
--- | This data type is used to host a FromJSON instance for the encoding used by
--- elisp, where an empty list shows up as "null"
+-- | All LSP types representing a list **must** use this type rather than '[]'.
+-- In particular this is necessary to change the 'FromJSON' instance to be compatible
+-- with Elisp (where empty lists show up as 'null')
 newtype List a = List [a]
                 deriving (Show,Read,Eq,Ord,Semigroup,Monoid,Functor,Foldable,Traversable,Generic)
 
