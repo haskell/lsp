@@ -18,6 +18,8 @@
 {-# LANGUAGE NamedFieldPuns       #-}
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 {-# OPTIONS_GHC -fprint-explicit-kinds #-}
 
@@ -30,6 +32,8 @@ module Language.Haskell.LSP.Core (
   -- * Handlers
   , Handlers(..)
   , Handler
+  , transmuteHandlers
+  , mapHandlers
   , notificationHandler
   , requestHandler
   , ClientMessageHandler(..)
@@ -39,7 +43,10 @@ module Language.Haskell.LSP.Core (
   -- * LspT and LspM
   , LspT(..)
   , LspM
+  , MonadLsp(..)
+  , runLspT
   , LanguageContextEnv(..)
+  , type (<~>)(..)
 
   , getClientCapabilities
   , getConfig
@@ -75,7 +82,6 @@ module Language.Haskell.LSP.Core (
   , setupLogger
   , reverseSortEdit
   , initializeRequestHandler
-  , runReaderT
   , FromServerMessage
   ) where
 
@@ -132,15 +138,24 @@ import           System.Random
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
 -- ---------------------------------------------------------------------
 
-newtype LspT config m a = LspT { runLspT :: ReaderT (LanguageContextEnv config) m a }
+newtype LspT config m a = LspT { unLspT :: ReaderT (LanguageContextEnv config) m a }
   deriving (Functor, Applicative, Monad, MonadIO, MonadTrans, MonadUnliftIO, MonadFix)
+
+runLspT :: LanguageContextEnv config -> LspT config m a -> m a
+runLspT env = flip runReaderT env . unLspT
 
 type LspM config = LspT config IO
 
+class MonadUnliftIO m => MonadLsp config m | m -> config where
+  getLspEnv :: m (LanguageContextEnv config)
+
+instance MonadUnliftIO m => MonadLsp config (LspT config m) where
+  getLspEnv = LspT ask
+
 data LanguageContextEnv config =
   LanguageContextEnv
-  { resHandlers            :: !(Handlers config)
-  , resParseConfig         :: !(J.Value -> LspM config (Either T.Text config))
+  { resHandlers            :: !(Handlers IO)
+  , resParseConfig         :: !(J.Value -> IO (Either T.Text config))
   , resSendMessage         :: !(FromServerMessage -> IO ())
   , resState               :: !(TVar (LanguageContextState config))
   , resClientCapabilities  :: !J.ClientCapabilities
@@ -153,27 +168,45 @@ data LanguageContextEnv config =
 
 -- | A mapping from methods to the static 'Handler's that should be used to
 -- handle responses when they come in from the client.
-data Handlers config
+data Handlers m
   = Handlers
-  { reqHandlers :: DMap SMethod (ClientMessageHandler config Request)
-  , notHandlers :: DMap SMethod (ClientMessageHandler config Notification)
+  { reqHandlers :: DMap SMethod (ClientMessageHandler m Request)
+  , notHandlers :: DMap SMethod (ClientMessageHandler m Notification)
   }
 instance Semigroup (Handlers config) where
   Handlers r1 n1 <> Handlers r2 n2 = Handlers (r1 <> r2) (n1 <> n2)
 instance Monoid (Handlers config) where
   mempty = Handlers mempty mempty
 
-notificationHandler :: forall (m :: Method FromClient Notification) config. SMethod m -> Handler m config -> Handlers config
+notificationHandler :: forall (m :: Method FromClient Notification) f. SMethod m -> Handler f m -> Handlers f
 notificationHandler m h = Handlers mempty (DMap.singleton m (ClientMessageHandler h))
 
-requestHandler :: forall (m :: Method FromClient Request) config. SMethod m -> Handler m config -> Handlers config
+requestHandler :: forall (m :: Method FromClient Request) f. SMethod m -> Handler f m  -> Handlers f
 requestHandler m h = Handlers (DMap.singleton m (ClientMessageHandler h)) mempty
 
 -- | The type of a handler that handles requests and notifications coming in
 -- from the server or client
-type family Handler (m :: Method p t) (config :: Type) = (result :: Type) | result -> config t m where
-  Handler (m :: Method p Request)      config = RequestMessage m -> (Either ResponseError (ResponseParams m) -> LspM config ()) -> LspM config ()
-  Handler (m :: Method p Notification) config = NotificationMessage m -> LspM config ()
+type family Handler (f :: Type -> Type) (m :: Method p t) = (result :: Type) | result -> f t m where
+  Handler f (m :: Method p Request)      = RequestMessage m -> (Either ResponseError (ResponseParams m) -> f ()) -> f ()
+  Handler f (m :: Method p Notification) = NotificationMessage m -> f ()
+
+data m <~> n
+  = Iso
+  { forward :: forall a. m a -> n a
+  , backward :: forall a. n a -> m a
+  }
+
+transmuteHandlers :: (m <~> n) -> Handlers m -> Handlers n
+transmuteHandlers nat = mapHandlers (\i m k -> forward nat (i m (backward nat . k))) (\i m -> forward nat (i m))
+
+mapHandlers
+  :: (forall (a :: Method FromClient Request). Handler m a -> Handler n a)
+  -> (forall (a :: Method FromClient Notification). Handler m a -> Handler n a)
+  -> Handlers m -> Handlers n
+mapHandlers mapReq mapNot (Handlers reqs nots) = Handlers reqs' nots'
+  where
+    reqs' = DMap.map (\(ClientMessageHandler i) -> ClientMessageHandler $ mapReq i) reqs
+    nots' = DMap.map (\(ClientMessageHandler i) -> ClientMessageHandler $ mapNot i) nots
 
 -- | state used by the LSP dispatcher to manage the message loop
 data LanguageContextState config =
@@ -183,21 +216,21 @@ data LanguageContextState config =
   , resConfig              :: !(Maybe config)
   , resWorkspaceFolders    :: ![WorkspaceFolder]
   , resProgressData        :: !ProgressData
-  , resPendingResponses    :: !(ResponseMap config)
-  , resRegistrationsNot    :: !(RegistrationMap config Notification)
-  , resRegistrationsReq    :: !(RegistrationMap config Request)
+  , resPendingResponses    :: !ResponseMap
+  , resRegistrationsNot    :: !(RegistrationMap Notification)
+  , resRegistrationsReq    :: !(RegistrationMap Request)
   , resLspId               :: !Int
   }
 
-type ResponseMap config = IxMap LspId (Product SMethod (ServerResponseCallback config))
+type ResponseMap = IxMap LspId (Product SMethod ServerResponseCallback)
 
-type RegistrationMap (config :: Type) (t :: MethodType) = DMap SMethod (Product RegistrationId (ClientMessageHandler config t))
+type RegistrationMap (t :: MethodType) = DMap SMethod (Product RegistrationId (ClientMessageHandler IO t))
 
 data RegistrationToken (m :: Method FromClient t) = RegistrationToken (SMethod m) (RegistrationId m)
 newtype RegistrationId (m :: Method FromClient t) = RegistrationId Text
   deriving Eq
 
-newtype ClientMessageHandler config (t :: MethodType) (m :: Method FromClient t) = ClientMessageHandler (Handler m config)
+newtype ClientMessageHandler f (t :: MethodType) (m :: Method FromClient t) = ClientMessageHandler (Handler f m)
 
 data ProgressData = ProgressData { progressNextId :: !Int
                                  , progressCancel :: !(Map.Map ProgressToken (IO ())) }
@@ -208,19 +241,19 @@ data VFSData =
     , reverseMap :: !(Map.Map FilePath FilePath)
     }
 
-modifyState :: (LanguageContextState config -> LanguageContextState config) -> LspM config ()
+modifyState :: MonadLsp config m => (LanguageContextState config -> LanguageContextState config) -> m ()
 modifyState f = do
-  tvarDat <- LspT $ asks resState
+  tvarDat <- resState <$> getLspEnv
   liftIO $ atomically $ modifyTVar' tvarDat f
 
-stateState :: (LanguageContextState config -> (a,LanguageContextState config)) -> LspM config a
+stateState :: MonadLsp config m => (LanguageContextState config -> (a,LanguageContextState config)) -> m a
 stateState f = do
-  tvarDat <- LspT $ asks resState
+  tvarDat <- resState <$> getLspEnv
   liftIO $ atomically $ stateTVar tvarDat f
 
-getsState :: (LanguageContextState config -> a) -> LspM config a
+getsState :: MonadLsp config m => (LanguageContextState config -> a) -> m a
 getsState f = do
-  tvarDat <- LspT $ asks resState
+  tvarDat <- resState <$> getLspEnv
   liftIO $ f <$> readTVarIO tvarDat
 
 -- ---------------------------------------------------------------------
@@ -283,51 +316,61 @@ data ProgressCancellable = Cancellable | NotCancellable
 -- | Contains all the callbacks to use for initialized the language server.
 -- it is parameterized over a config type variable representing the type for the
 -- specific configuration data the language server needs to use.
-data InitializeCallbacks config =
+data InitializeCallbacks config = forall m a.
   InitializeCallbacks
-    { onConfigurationChange :: J.Value -> LspM config (Either T.Text config)
+    { onConfigurationChange :: J.Value -> m (Either T.Text config)
       -- ^ @onConfigurationChange newConfig@ is called whenever the
       -- clients sends a message with a changed client configuration. This
       -- callback should return either the parsed configuration data or an error
       -- indicating what went wrong. The parsed configuration object will be
       -- stored internally and can be accessed via 'config'.
-    , doInitialize :: InitializeRequest -> LspM config (Maybe ResponseError)
+    , doInitialize :: InitializeRequest -> IO (Either ResponseError a)
       -- ^ Called after receiving the @initialize@ request and before returning the response.
       -- This callback will be invoked to offer the language server
       -- implementation the chance to create any processes or start new threads
       -- that may be necesary for the server lifecycle.
       -- It can also return an error in the initialization if necessary.
+    , staticHandlers :: Handlers m
+      -- ^ The actual handlers
+    , interpretHandler :: a -> LanguageContextEnv config -> (m <~> IO)
+      -- ^ How to run the handlers
+      -- Passed the result of 'doInitialize' as well as the LanguageContextEnv
     }
 
 -- | A function that a 'Handler' is passed that can be used to respond to a
 -- request with either an error, or the response params.
-newtype ServerResponseCallback config (m :: Method FromServer Request)
-  = ServerResponseCallback (Either ResponseError (ResponseParams m) -> LspM config ())
+newtype ServerResponseCallback (m :: Method FromServer Request)
+  = ServerResponseCallback (Either ResponseError (ResponseParams m) -> IO ())
 
 -- | Return value signals if response handler was inserted succesfully
 -- Might fail if the id was already in the map
-addResponseHandler :: LspId m -> (Product SMethod (ServerResponseCallback config)) m -> LspM config Bool
+addResponseHandler :: MonadLsp config f => LspId m -> (Product SMethod ServerResponseCallback) m -> f Bool
 addResponseHandler lid h = do
   stateState $ \ctx@LanguageContextState{resPendingResponses} ->
     case insertIxMap lid h resPendingResponses of
       Just m -> (True, ctx { resPendingResponses = m})
       Nothing -> (False, ctx)
 
-sendNotification :: forall (m :: Method FromServer Notification) config. SServerMethod m -> MessageParams m -> LspM config ()
+sendNotification
+  :: forall (m :: Method FromServer Notification) f config. MonadLsp config f
+  => SServerMethod m
+  -> MessageParams m
+  -> f ()
 sendNotification m params =
   let msg = NotificationMessage "2.0" m params
   in case splitServerMethod m of
         IsServerNot -> sendToClient $ fromServerNot msg
         IsServerEither -> sendToClient $ FromServerMess m $ NotMess msg
 
-sendRequest :: forall (m :: Method FromServer Request) config.
-               SServerMethod m
+sendRequest :: forall (m :: Method FromServer Request) f config. MonadLsp config f
+            => SServerMethod m
             -> MessageParams m
-            -> (Either ResponseError (ResponseParams m) -> LspM config ())
-            -> LspM config (LspId m)
+            -> (Either ResponseError (ResponseParams m) -> f ())
+            -> f (LspId m)
 sendRequest m params resHandler = do
   reqId <- IdInt <$> freshLspId
-  success <- addResponseHandler reqId (Pair m (ServerResponseCallback resHandler))
+  rio <- askRunInIO
+  success <- addResponseHandler reqId (Pair m (ServerResponseCallback (rio . resHandler)))
   unless success $ error "haskell-lsp: could not send FromServer request as id is reused"
 
   let msg = RequestMessage "2.0" reqId m params
@@ -364,32 +407,40 @@ handle' mAction m msg = do
 
   dynReqHandlers <- getsState resRegistrationsReq
   dynNotHandlers <- getsState resRegistrationsNot
-  Handlers{reqHandlers, notHandlers} <- LspT $ asks resHandlers
+
+  env <- getLspEnv
+  let Handlers{reqHandlers, notHandlers} = resHandlers env
+
+  let mkRspCb :: RequestMessage (m1 :: Method FromClient Request) -> Either ResponseError (ResponseParams m1) -> IO ()
+      mkRspCb req (Left  err) = runLspT env $ sendToClient $
+        FromServerRsp (req ^. J.method) $ ResponseMessage "2.0" (Just (req ^. J.id)) (Left err)
+      mkRspCb req (Right rsp) = runLspT env $ sendToClient $
+        FromServerRsp (req ^. J.method) $ ResponseMessage "2.0" (Just (req ^. J.id)) (Right rsp)
 
   case splitClientMethod m of
     IsClientNot -> case pickHandler dynNotHandlers notHandlers of
-      Just h -> h msg
+      Just h -> liftIO $ h msg
       Nothing
-        | SExit <- m -> exitNotificationHandler msg
+        | SExit <- m -> liftIO $ exitNotificationHandler msg
         | otherwise -> reportMissingHandler
 
     IsClientReq -> case pickHandler dynReqHandlers reqHandlers of
-      Just h -> h msg (mkRspCb msg)
+      Just h -> liftIO $ h msg (mkRspCb msg)
       Nothing
-        | SShutdown <- m -> shutdownRequestHandler msg (mkRspCb msg)
+        | SShutdown <- m -> liftIO $ shutdownRequestHandler msg (mkRspCb msg)
         | otherwise -> reportMissingHandler
 
     IsClientEither -> case msg of
       NotMess noti -> case pickHandler dynNotHandlers notHandlers of
-        Just h -> h noti
+        Just h -> liftIO $ h noti
         Nothing -> reportMissingHandler
       ReqMess req -> case pickHandler dynReqHandlers reqHandlers of
-        Just h -> h req (mkRspCb req)
+        Just h -> liftIO $ h req (mkRspCb req)
         Nothing -> reportMissingHandler
   where
     -- | Checks to see if there's a dynamic handler, and uses it in favour of the
     -- static handler, if it exists.
-    pickHandler :: RegistrationMap config t -> DMap SMethod (ClientMessageHandler config t) -> Maybe (Handler m config)
+    pickHandler :: RegistrationMap t -> DMap SMethod (ClientMessageHandler IO t) -> Maybe (Handler IO m)
     pickHandler dynHandlerMap staticHandler = case (DMap.lookup m dynHandlerMap, DMap.lookup m staticHandler) of
       (Just (Pair _ (ClientMessageHandler h)), _) -> Just h
       (Nothing, Just (ClientMessageHandler h)) -> Just h
@@ -408,19 +459,11 @@ handle' mAction m msg = do
       | "$/" `T.isPrefixOf` method = True
     isOptionalNotification _  = False
 
-    -- | Makes the callback function passed to a 'Handler'
-    mkRspCb :: RequestMessage (m1 :: Method FromClient Request)
-            -> ((Either ResponseError (ResponseParams m1))
-            -> LspM config ())
-    mkRspCb req (Left  err) = sendToClient $
-      FromServerRsp (req ^. J.method) $ ResponseMessage "2.0" (Just (req ^. J.id)) (Left err)
-    mkRspCb req (Right rsp) = sendToClient $
-      FromServerRsp (req ^. J.method) $ ResponseMessage "2.0" (Just (req ^. J.id)) (Right rsp)
 
 handleConfigChange :: DidChangeConfigurationNotification -> LspM config ()
 handleConfigChange req = do
   parseConfig <- LspT $ asks resParseConfig
-  res <- parseConfig (req ^. J.params . J.settings)
+  res <- liftIO $ parseConfig (req ^. J.params . J.settings)
   case res of
     Left err -> do
       let msg = T.pack $ unwords
@@ -446,15 +489,15 @@ updateWorkspaceFolders (NotificationMessage _ _ params) = do
 -- ---------------------------------------------------------------------
 
 -- | Return the 'VirtualFile' associated with a given 'NormalizedUri', if there is one.
-getVirtualFile :: NormalizedUri -> LspM config (Maybe VirtualFile)
+getVirtualFile :: MonadLsp config m => NormalizedUri -> m (Maybe VirtualFile)
 getVirtualFile uri = getsState $ Map.lookup uri . vfsMap . vfsData . resVFS
 
-getVirtualFiles :: LspM config VFS
+getVirtualFiles :: MonadLsp config m => m VFS
 getVirtualFiles = getsState $ vfsData . resVFS
 
 -- | Dump the current text for a given VFS file to a temporary file,
 -- and return the path to the file.
-persistVirtualFile :: NormalizedUri -> LspM config (Maybe FilePath)
+persistVirtualFile :: MonadLsp config m => NormalizedUri -> m (Maybe FilePath)
 persistVirtualFile uri = do
   join $ stateState $ \ctx@LanguageContextState{resVFS = vfs} ->
     case persistFileVFS (vfsData vfs) uri of
@@ -471,7 +514,7 @@ persistVirtualFile uri = do
         in (act, ctx{resVFS = vfs {reverseMap = revMap} })
 
 -- | Given a text document identifier, annotate it with the latest version.
-getVersionedTextDoc :: TextDocumentIdentifier -> LspM config VersionedTextDocumentIdentifier
+getVersionedTextDoc :: MonadLsp config m => TextDocumentIdentifier -> m VersionedTextDocumentIdentifier
 getVersionedTextDoc doc = do
   let uri = doc ^. J.uri
   mvf <- getVirtualFile (toNormalizedUri uri)
@@ -483,7 +526,7 @@ getVersionedTextDoc doc = do
 -- TODO: should this function return a URI?
 -- | If the contents of a VFS has been dumped to a temporary file, map
 -- the temporary file name back to the original one.
-reverseFileMap :: LspM config (FilePath -> FilePath)
+reverseFileMap :: MonadLsp config m => m (FilePath -> FilePath)
 reverseFileMap = do
   vfs <- getsState resVFS
   let f fp = fromMaybe fp . Map.lookup fp . reverseMap $ vfs
@@ -508,9 +551,9 @@ processMessage jsonStr = do
           pure $ handle m mess
         FromClientRsp (Pair (ServerResponseCallback f) (Const newMap)) res -> do
           modifyTVar' tvarDat (\c -> c { resPendingResponses = newMap })
-          pure $ f (res ^. J.result)
+          pure $ liftIO $ f (res ^. J.result)
   where
-    parser :: ResponseMap config -> J.Value -> J.Parser (FromClientMessage' (Product (ServerResponseCallback config) (Const (ResponseMap config))))
+    parser :: ResponseMap -> J.Value -> J.Parser (FromClientMessage' (Product ServerResponseCallback (Const ResponseMap)))
     parser rm = parseClientMessage $ \i ->
       let (mhandler, newMap) = pickFromIxMap i rm
         in (\(Pair m handler) -> (m,Pair handler (Const newMap))) <$> mhandler
@@ -526,14 +569,14 @@ processMessage jsonStr = do
 
 -- ---------------------------------------------------------------------
 
-sendToClient :: FromServerMessage -> LspM config ()
+sendToClient :: MonadLsp config m => FromServerMessage -> m ()
 sendToClient msg = do
-  f <- LspT $ asks resSendMessage
+  f <- resSendMessage <$> getLspEnv
   liftIO $ f msg
 
 -- ---------------------------------------------------------------------
 
-sendErrorLog :: Text -> LspM config ()
+sendErrorLog :: MonadLsp config m => Text -> m ()
 sendErrorLog msg =
   sendToClient $ fromServerNot $
     NotificationMessage "2.0" SWindowLogMessage (LogMessageParams MtError msg)
@@ -551,7 +594,7 @@ initializeErrorHandler sendResp e = do
 --
 -- Handlers
 
-freshLspId :: LspM config Int
+freshLspId :: MonadLsp config m => m Int
 freshLspId = do
   stateState $ \c ->
     (resLspId c, c{resLspId = resLspId c+1})
@@ -560,12 +603,11 @@ freshLspId = do
 initializeRequestHandler
   :: InitializeCallbacks config
   -> VFS
-  -> (Handlers config)
   -> Options
   -> (FromServerMessage -> IO ())
   -> Message Initialize
   -> IO (Maybe (LanguageContextEnv config))
-initializeRequestHandler InitializeCallbacks{..} vfs handlers options sendFunc req = do
+initializeRequestHandler InitializeCallbacks{..} vfs options sendFunc req = do
   let sendResp = sendFunc . FromServerRsp SInitialize
   flip E.catch (initializeErrorHandler $ sendResp . makeResponseError (req ^. J.id)) $ do
 
@@ -596,21 +638,21 @@ initializeRequestHandler InitializeCallbacks{..} vfs handlers options sendFunc r
         mempty
         0
 
-    -- Launch the given process once the project root directory has been set
-    let env = LanguageContextEnv handlers onConfigurationChange sendFunc tvarCtx (params ^. J.capabilities) rootDir
-
     -- Call the 'duringInitialization' callback to let the server kick stuff up
-    initializationResult <- flip runReaderT env $ runLspT $ doInitialize req
+    initializationResult <- liftIO $ doInitialize req
 
+    -- Launch the given process once the project root directory has been set
     case initializationResult of
-      Just errResp -> do
+      Left errResp -> do
         sendResp $ makeResponseError (req ^. J.id) errResp
-      Nothing -> do
+        pure Nothing
+      Right res -> do
+        let env = LanguageContextEnv handlers (forward interpreter . onConfigurationChange) sendFunc tvarCtx (params ^. J.capabilities) rootDir
+            handlers = transmuteHandlers interpreter staticHandlers
+            interpreter = interpretHandler res env
         let serverCaps = inferServerCapabilities (params ^. J.capabilities) options handlers
         sendResp $ makeResponseMessage (req ^. J.id) (InitializeResult serverCaps (serverInfo options))
-
-    return $ Just env
-
+        pure $ Just env
   where
     makeResponseMessage rid result = ResponseMessage "2.0" (Just rid) (Right result)
     makeResponseError origId err = ResponseMessage "2.0" (Just origId) (Left err)
@@ -619,17 +661,17 @@ initializeRequestHandler InitializeCallbacks{..} vfs handlers options sendFunc r
 
 -- | The current configuration from the client as set via the @initialize@ and
 -- @workspace/didChangeConfiguration@ requests.
-getConfig :: LspM config (Maybe config)
+getConfig :: MonadLsp config m => m (Maybe config)
 getConfig = getsState resConfig
 
-getClientCapabilities :: LspM config J.ClientCapabilities
-getClientCapabilities = LspT $ asks resClientCapabilities
+getClientCapabilities :: MonadLsp config m => m J.ClientCapabilities
+getClientCapabilities = resClientCapabilities <$> getLspEnv
 
-getRootPath :: LspM config (Maybe FilePath)
-getRootPath = LspT $ asks resRootPath
+getRootPath :: MonadLsp config m => m (Maybe FilePath)
+getRootPath = resRootPath <$> getLspEnv
 
 -- | The current workspace folders, if the client supports workspace folders.
-getWorkspaceFolders :: LspM config (Maybe [WorkspaceFolder])
+getWorkspaceFolders :: MonadLsp config m => m (Maybe [WorkspaceFolder])
 getWorkspaceFolders = do
   clientCaps <- getClientCapabilities
   let clientSupportsWfs = fromMaybe False $ do
@@ -644,14 +686,14 @@ getWorkspaceFolders = do
 -- a 'Method' with a 'Handler'. Returns 'Nothing' if the client does not
 -- support dynamic registration for the specified method, otherwise a
 -- 'RegistrationToken' which can be used to unregister it later.
-registerCapability :: forall (config :: Type) t (m :: Method FromClient t).
-                      SClientMethod m
+registerCapability :: forall f (m :: Method FromClient t) config. MonadLsp config f
+                   => SClientMethod m
                    -> RegistrationOptions m
-                   -> Handler m config
-                   -> LspM config (Maybe (RegistrationToken m))
+                   -> Handler f m
+                   -> f (Maybe (RegistrationToken m))
 registerCapability method regOpts f = do
-  clientCaps <- LspT $ asks resClientCapabilities
-  handlers <- LspT $ asks resHandlers
+  clientCaps <- resClientCapabilities <$> getLspEnv
+  handlers <- resHandlers <$> getLspEnv
   let alreadyStaticallyRegistered = case splitClientMethod method of
         IsClientNot -> DMap.member method $ notHandlers handlers
         IsClientReq -> DMap.member method $ reqHandlers handlers
@@ -668,14 +710,15 @@ registerCapability method regOpts f = do
           let registration = J.Registration uuid method regOpts
               params = J.RegistrationParams (J.List [J.SomeRegistration registration])
               regId = RegistrationId uuid
-              pair = Pair regId (ClientMessageHandler f)
-
+          rio <- askUnliftIO
           ~() <- case splitClientMethod method of
             IsClientNot -> modifyState $ \ctx ->
               let newRegs = DMap.insert method pair (resRegistrationsNot ctx)
+                  pair = Pair regId (ClientMessageHandler (unliftIO rio . f))
                 in ctx { resRegistrationsNot = newRegs }
             IsClientReq -> modifyState $ \ctx ->
               let newRegs = DMap.insert method pair (resRegistrationsReq ctx)
+                  pair = Pair regId (ClientMessageHandler (\msg k -> unliftIO rio $ f msg (liftIO . k)))
                 in ctx { resRegistrationsReq = newRegs }
             IsClientEither -> error "Cannot register capability for custom methods"
 
@@ -725,7 +768,7 @@ registerCapability method regOpts f = do
 
 -- | Sends a @client/unregisterCapability@ request and removes the handler
 -- for that associated registration.
-unregisterCapability :: RegistrationToken m -> LspM config ()
+unregisterCapability :: MonadLsp config f => RegistrationToken m -> f ()
 unregisterCapability (RegistrationToken m (RegistrationId uuid)) = do
   ~() <- case splitClientMethod m of
     IsClientReq -> do
@@ -746,25 +789,25 @@ unregisterCapability (RegistrationToken m (RegistrationId uuid)) = do
 -- PROGRESS
 --------------------------------------------------------------------------------
 
-storeProgress :: ProgressToken -> Async a -> LspM config ()
+storeProgress :: MonadLsp config m => ProgressToken -> Async a -> m ()
 storeProgress n a = do
   let f = Map.insert n (cancelWith a ProgressCancelledException) . progressCancel
   modifyState $ \ctx -> ctx { resProgressData = (resProgressData ctx) { progressCancel = f (resProgressData ctx)}}
 
-deleteProgress :: ProgressToken -> LspM config ()
+deleteProgress :: MonadLsp config m => ProgressToken -> m ()
 deleteProgress n = do
   let f = Map.delete n . progressCancel
   modifyState $ \ctx -> ctx { resProgressData = (resProgressData ctx) { progressCancel = f (resProgressData ctx)}}
 
 -- Get a new id for the progress session and make a new one
-getNewProgressId :: LspM config ProgressToken
+getNewProgressId :: MonadLsp config m => m ProgressToken
 getNewProgressId = do
   stateState $ \ctx@LanguageContextState{resProgressData} ->
     let x = progressNextId resProgressData
         ctx' = ctx { resProgressData = resProgressData { progressNextId = x + 1 }}
     in (ProgressNumericToken x, ctx')
 
-withProgressBase :: Bool -> Text -> ProgressCancellable -> ((ProgressAmount -> LspM c ()) -> LspM c a) -> LspM c a
+withProgressBase :: MonadLsp c m => Bool -> Text -> ProgressCancellable -> ((ProgressAmount -> m ()) -> m a) -> m a
 withProgressBase indefinite title cancellable f = do
 
   progId <- getNewProgressId
@@ -833,7 +876,7 @@ clientSupportsProgress (J.ClientCapabilities _ _ wc _) = fromMaybe False $ do
 -- If @cancellable@ is 'Cancellable', @f@ will be thrown a
 -- 'ProgressCancelledException' if the user cancels the action in
 -- progress.
-withProgress :: Text -> ProgressCancellable -> ((ProgressAmount -> LspM config ()) -> LspM config a) -> LspM config a
+withProgress :: MonadLsp c m => Text -> ProgressCancellable -> ((ProgressAmount -> m ()) -> m a) -> m a
 withProgress title cancellable f = do
   clientCaps <- getClientCapabilities
   if clientSupportsProgress clientCaps
@@ -844,7 +887,7 @@ withProgress title cancellable f = do
 -- precentage complete.
 --
 -- @since 0.10.0.0
-withIndefiniteProgress :: Text -> ProgressCancellable -> LspM config a -> LspM config a
+withIndefiniteProgress :: MonadLsp c m => Text -> ProgressCancellable -> m a -> m a
 withIndefiniteProgress title cancellable f = do
   clientCaps <- getClientCapabilities
   if clientSupportsProgress clientCaps
@@ -854,7 +897,7 @@ withIndefiniteProgress title cancellable f = do
 -- | Infers the capabilities based on registered handlers, and sets the appropriate options.
 -- A provider should be set to Nothing if the server does not support it, unless it is a
 -- static option.
-inferServerCapabilities :: J.ClientCapabilities -> Options -> Handlers config -> J.ServerCapabilities
+inferServerCapabilities :: J.ClientCapabilities -> Options -> Handlers m -> J.ServerCapabilities
 inferServerCapabilities clientCaps o h =
   J.ServerCapabilities
     { J._textDocumentSync                 = sync
@@ -971,13 +1014,13 @@ progressCancelHandler (J.NotificationMessage _ _ (J.WorkDoneProgressCancelParams
     Nothing -> return ()
     Just cancelAction -> liftIO $ cancelAction
 
-exitNotificationHandler :: Handler J.Exit c
-exitNotificationHandler =  \_ -> liftIO $ do
+exitNotificationHandler :: Handler IO J.Exit
+exitNotificationHandler =  \_ -> do
   noticeM "haskell-lsp.exitNotificationHandler" "Got exit, exiting"
   exitSuccess
 
 -- | Default Shutdown handler
-shutdownRequestHandler :: Handler J.Shutdown c
+shutdownRequestHandler :: Handler IO J.Shutdown
 shutdownRequestHandler = \_req k -> do
   k $ Right J.Empty
 
@@ -986,7 +1029,7 @@ shutdownRequestHandler = \_req k -> do
 -- | Aggregate all diagnostics pertaining to a particular version of a document,
 -- by source, and sends a @textDocument/publishDiagnostics@ notification with
 -- the total (limited by the first parameter) whenever it is updated.
-publishDiagnostics :: Int -> NormalizedUri -> TextDocumentVersion -> DiagnosticsBySource -> LspM config ()
+publishDiagnostics :: MonadLsp config m => Int -> NormalizedUri -> TextDocumentVersion -> DiagnosticsBySource -> m ()
 publishDiagnostics maxDiagnosticCount uri version diags = join $ stateState $ \ctx ->
   let ds = updateDiagnostics (resDiagnostics ctx) uri version diags
       ctx' = ctx{resDiagnostics = ds}
@@ -1001,8 +1044,8 @@ publishDiagnostics maxDiagnosticCount uri version diags = join $ stateState $ \c
 
 -- | Remove all diagnostics from a particular source, and send the updates to
 -- the client.
-flushDiagnosticsBySource :: Int -- ^ Max number of diagnostics to send
-                         -> Maybe DiagnosticSource -> LspM config ()
+flushDiagnosticsBySource :: MonadLsp config m => Int -- ^ Max number of diagnostics to send
+                         -> Maybe DiagnosticSource -> m ()
 flushDiagnosticsBySource maxDiagnosticCount msource = join $ stateState $ \ctx ->
   let ds = flushBySource (resDiagnostics ctx) msource
       ctx' = ctx {resDiagnostics = ds}

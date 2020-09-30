@@ -24,7 +24,7 @@ and plug it into your client of choice.
 module Main (main) where
 import           Control.Concurrent.STM.TChan
 import qualified Control.Exception                     as E
-import           Control.Lens
+import           Control.Lens hiding (Iso)
 import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.STM
@@ -41,8 +41,7 @@ import qualified Language.Haskell.LSP.Types.Lens       as J
 import           Language.Haskell.LSP.VFS
 import           System.Exit
 import           System.Log.Logger
-import qualified Data.Dependent.Map as DMap
-import           UnliftIO.Concurrent
+import           Control.Concurrent
 
 
 -- ---------------------------------------------------------------------
@@ -76,12 +75,14 @@ run = flip E.catches handlers $ do
             sendNotification J.SWindowShowMessage $
               J.ShowMessageParams J.MtInfo $ "Wibble factor set to " <> T.pack (show (wibbleFactor cfg))
             pure $ Right cfg
-      , doInitialize = const $ forkIO (reactor rin) >> pure Nothing
+      , doInitialize = const $ forkIO (reactor rin) >> pure (Right ())
+      , staticHandlers = lspHandlers rin
+      , interpretHandler = const $ \env -> Iso (runLspT env) liftIO
       }
 
   flip E.finally finalProc $ do
     setupLogger Nothing ["reactor"] DEBUG
-    CTRL.run callbacks (lspHandlers rin) lspOptions
+    CTRL.run callbacks lspOptions
 
   where
     handlers = [ E.Handler ioExcept
@@ -114,7 +115,7 @@ lspOptions = def { textDocumentSync = Just syncOptions
 -- reply sent.
 
 newtype ReactorInput
-  = ReactorAction (LspM Config ())
+  = ReactorAction (IO ())
 
 -- | Analyze the file and send any diagnostics to the client in a
 -- "textDocument/publishDiagnostics" notification
@@ -137,32 +138,30 @@ sendDiagnostics fileUri version = do
 -- | The single point that all events flow through, allowing management of state
 -- to stitch replies and requests together from the two asynchronous sides: lsp
 -- server and backend compiler
-reactor :: TChan ReactorInput -> LspM Config ()
+reactor :: TChan ReactorInput -> IO ()
 reactor inp = do
-  liftIO $ debugM "reactor" "Started the reactor"
+  debugM "reactor" "Started the reactor"
   forever $ do
-    ReactorAction act <- liftIO $ atomically $ readTChan inp
+    ReactorAction act <- atomically $ readTChan inp
     act
 
 -- | Check if we have a handler, and if we create a haskell-lsp handler to pass it as
 -- input into the reactor
-lspHandlers :: TChan ReactorInput -> Handlers Config
-lspHandlers rin = Handlers newReqHandlers newNotHandlers
+lspHandlers :: TChan ReactorInput -> Handlers (LspM Config)
+lspHandlers rin = mapHandlers goReq goNot handle
   where
-    Handlers oldReqHandlers oldNotHandlers = handle
-    newReqHandlers = DMap.map goRequest oldReqHandlers
-    newNotHandlers = DMap.map goNot oldNotHandlers
+    goReq :: forall (a :: J.Method J.FromClient J.Request). Handler (LspM Config) a -> Handler (LspM Config) a
+    goReq f = \msg k -> do
+      env <- getLspEnv
+      liftIO $ atomically $ writeTChan rin $ ReactorAction (runLspT env $ f msg k)
 
-    goRequest :: forall m. ClientMessageHandler Config J.Request m -> ClientMessageHandler Config J.Request m
-    goRequest (ClientMessageHandler f) = ClientMessageHandler $ \msg k -> liftIO $
-      atomically $ writeTChan rin $ ReactorAction (f msg k)
-
-    goNot :: forall m. ClientMessageHandler Config J.Notification m -> ClientMessageHandler Config J.Notification m
-    goNot (ClientMessageHandler f) = ClientMessageHandler $ \msg -> liftIO $
-      atomically $ writeTChan rin $ ReactorAction (f msg)
+    goNot :: forall (a :: J.Method J.FromClient J.Notification). Handler (LspM Config) a -> Handler (LspM Config) a
+    goNot f = \msg -> do
+      env <- getLspEnv
+      liftIO $ atomically $ writeTChan rin $ ReactorAction (runLspT env $ f msg)
 
 -- | Where the actual logic resides for handling requests and notifications.
-handle :: Handlers Config
+handle :: Handlers (LspM Config)
 handle = mconcat
   [ notificationHandler J.SInitialized $ \_msg -> do
       liftIO $ debugM "reactor.handle" "Processing the Initialized notification"

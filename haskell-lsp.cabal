@@ -102,6 +102,7 @@ executable lsp-demo-simple-server
                      , data-default
                      -- the package library. Comment this out if you want repl changes to propagate
                      , haskell-lsp
+                     , text
   if !flag(demo)
     buildable:         False
 

@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Language.Haskell.LSP.Control
   (
@@ -36,7 +37,6 @@ run :: Core.InitializeCallbacks config
                 -- ^ function to be called once initialize has
                 -- been received from the client. Further message
                 -- processing will start only after this returns.
-    -> Core.Handlers config
     -> Core.Options
     -- ^ File to capture the session to.
     -> IO Int
@@ -49,10 +49,9 @@ runWithHandles ::
     -> Handle
     -- ^ Handle to write output to.
     -> Core.InitializeCallbacks config
-    -> Core.Handlers config
     -> Core.Options
     -> IO Int         -- exit code
-runWithHandles hin hout initializeCallbacks h o = do
+runWithHandles hin hout initializeCallbacks o = do
 
   hSetBuffering hin NoBuffering
   hSetEncoding  hin utf8
@@ -67,7 +66,7 @@ runWithHandles hin hout initializeCallbacks h o = do
       BSL.hPut hout out
       hFlush hout
 
-  runWith clientIn clientOut initializeCallbacks h o
+  runWith clientIn clientOut initializeCallbacks o
 
 -- | Starts listening and sending requests and responses
 -- using the specified I/O.
@@ -77,10 +76,9 @@ runWith ::
     -> (BSL.ByteString -> IO ())
     -- ^ Function to provide output to.
     -> Core.InitializeCallbacks config
-    -> Core.Handlers config
     -> Core.Options
     -> IO Int         -- exit code
-runWith clientIn clientOut initializeCallbacks h o = do
+runWith clientIn clientOut initializeCallbacks o = do
 
   infoM "haskell-lsp.runWith" "\n\n\n\n\nhaskell-lsp:Starting up server ..."
 
@@ -90,7 +88,7 @@ runWith clientIn clientOut initializeCallbacks h o = do
   let sendMsg msg = atomically $ writeTChan cout $ J.toJSON msg
 
   initVFS $ \vfs -> do
-    ioLoop clientIn initializeCallbacks vfs h o sendMsg
+    ioLoop clientIn initializeCallbacks vfs o sendMsg
 
   return 1
 
@@ -100,11 +98,10 @@ ioLoop ::
      IO BS.ByteString
   -> Core.InitializeCallbacks config
   -> VFS
-  -> Core.Handlers config
   -> Core.Options
   -> (Core.FromServerMessage -> IO ())
   -> IO ()
-ioLoop clientIn initializeCallbacks vfs h o sendMsg = do
+ioLoop clientIn initializeCallbacks vfs o sendMsg = do
   minitialize <- parseOne (parse parser "")
   case minitialize of
     Nothing -> pure ()
@@ -114,7 +111,7 @@ ioLoop clientIn initializeCallbacks vfs h o sendMsg = do
           errorM "haskell-lsp.ioLoop" $
             "Got error while decoding initialize:\n" <> err <> "\n exiting 1 ...\n"
         Right initialize -> do
-          mInitResp <- Core.initializeRequestHandler initializeCallbacks vfs h o sendMsg initialize
+          mInitResp <- Core.initializeRequestHandler initializeCallbacks vfs o sendMsg initialize
           case mInitResp of
             Nothing -> pure ()
             Just env -> loop env (parse parser remainder)
@@ -144,7 +141,7 @@ ioLoop clientIn initializeCallbacks vfs h o sendMsg = do
           case res of
             Nothing -> pure ()
             Just (msg,remainder) -> do
-              Core.runReaderT (Core.runLspT (Core.processMessage $ BSL.fromStrict msg)) env
+              Core.runLspT env $ Core.processMessage $ BSL.fromStrict msg
               go (parse parser remainder)
 
     parser = do
