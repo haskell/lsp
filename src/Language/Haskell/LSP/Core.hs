@@ -20,6 +20,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE RecursiveDo #-}
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 {-# OPTIONS_GHC -fprint-explicit-kinds #-}
 
@@ -131,6 +132,7 @@ import qualified System.Log.Handler.Simple as LHS
 import           System.Log.Logger
 import qualified System.Log.Logger as L
 import           System.Random
+import           Control.Monad.Trans.Identity
 
 -- ---------------------------------------------------------------------
 {-# ANN module ("HLint: ignore Eta reduce"         :: String) #-}
@@ -151,6 +153,11 @@ class MonadUnliftIO m => MonadLsp config m | m -> config where
 
 instance MonadUnliftIO m => MonadLsp config (LspT config m) where
   getLspEnv = LspT ask
+
+instance MonadLsp c m => MonadLsp c (ReaderT r m) where
+  getLspEnv = lift getLspEnv
+instance MonadLsp c m => MonadLsp c (IdentityT m) where
+  getLspEnv = lift getLspEnv
 
 data LanguageContextEnv config =
   LanguageContextEnv
@@ -324,7 +331,7 @@ data InitializeCallbacks config = forall m a.
       -- callback should return either the parsed configuration data or an error
       -- indicating what went wrong. The parsed configuration object will be
       -- stored internally and can be accessed via 'config'.
-    , doInitialize :: InitializeRequest -> IO (Either ResponseError a)
+    , doInitialize :: LanguageContextEnv config -> InitializeRequest -> IO (Either ResponseError a)
       -- ^ Called after receiving the @initialize@ request and before returning the response.
       -- This callback will be invoked to offer the language server
       -- implementation the chance to create any processes or start new threads
@@ -332,7 +339,7 @@ data InitializeCallbacks config = forall m a.
       -- It can also return an error in the initialization if necessary.
     , staticHandlers :: Handlers m
       -- ^ The actual handlers
-    , interpretHandler :: a -> LanguageContextEnv config -> (m <~> IO)
+    , interpretHandler :: a -> (m <~> IO)
       -- ^ How to run the handlers
       -- Passed the result of 'doInitialize' as well as the LanguageContextEnv
     }
@@ -609,14 +616,18 @@ initializeRequestHandler
   -> IO (Maybe (LanguageContextEnv config))
 initializeRequestHandler InitializeCallbacks{..} vfs options sendFunc req = do
   let sendResp = sendFunc . FromServerRsp SInitialize
-  flip E.catch (initializeErrorHandler $ sendResp . makeResponseError (req ^. J.id)) $ do
+      handleErr (Left err) = do
+        sendResp $ makeResponseError (req ^. J.id) err
+        pure Nothing
+      handleErr (Right a) = pure $ Just a
+  flip E.catch (initializeErrorHandler $ sendResp . makeResponseError (req ^. J.id)) $ handleErr <=< runExceptT $ mdo
 
     let params = req ^. J.params
 
     let rootDir = getFirst $ foldMap First [ params ^. J.rootUri  >>= uriToFilePath
                                            , params ^. J.rootPath <&> T.unpack ]
 
-    case rootDir of
+    liftIO $ case rootDir of
       Nothing -> return ()
       Just dir -> do
         debugM "haskell-lsp.initializeRequestHandler" $ "Setting current dir to project root:" ++ dir
@@ -626,7 +637,7 @@ initializeRequestHandler InitializeCallbacks{..} vfs options sendFunc req = do
           Just (List xs) -> xs
           Nothing -> []
 
-    tvarCtx <- newTVarIO $
+    tvarCtx <- liftIO $ newTVarIO $
       LanguageContextState
         (VFSData vfs mempty)
         mempty
@@ -639,20 +650,14 @@ initializeRequestHandler InitializeCallbacks{..} vfs options sendFunc req = do
         0
 
     -- Call the 'duringInitialization' callback to let the server kick stuff up
-    initializationResult <- liftIO $ doInitialize req
+    let env = LanguageContextEnv handlers (forward interpreter . onConfigurationChange) sendFunc tvarCtx (params ^. J.capabilities) rootDir
+        handlers = transmuteHandlers interpreter staticHandlers
+        interpreter = interpretHandler initializationResult
+    initializationResult <- ExceptT $ doInitialize env req
 
-    -- Launch the given process once the project root directory has been set
-    case initializationResult of
-      Left errResp -> do
-        sendResp $ makeResponseError (req ^. J.id) errResp
-        pure Nothing
-      Right res -> do
-        let env = LanguageContextEnv handlers (forward interpreter . onConfigurationChange) sendFunc tvarCtx (params ^. J.capabilities) rootDir
-            handlers = transmuteHandlers interpreter staticHandlers
-            interpreter = interpretHandler res env
-        let serverCaps = inferServerCapabilities (params ^. J.capabilities) options handlers
-        sendResp $ makeResponseMessage (req ^. J.id) (InitializeResult serverCaps (serverInfo options))
-        pure $ Just env
+    let serverCaps = inferServerCapabilities (params ^. J.capabilities) options handlers
+    liftIO $ sendResp $ makeResponseMessage (req ^. J.id) (InitializeResult serverCaps (serverInfo options))
+    pure env
   where
     makeResponseMessage rid result = ResponseMessage "2.0" (Just rid) (Right result)
     makeResponseError origId err = ResponseMessage "2.0" (Just origId) (Left err)

@@ -40,9 +40,9 @@ handlers = mconcat
 initCallbacks :: InitializeCallbacks ()
 initCallbacks = InitializeCallbacks
   { onConfigurationChange = const $ pure $ Right ()
-  , doInitialize = const $ pure $ Right ()
+  , doInitialize = \env _req -> pure $ Right env
   , staticHandlers = handlers
-  , interpretHandler = const $ \env -> Iso (runLspT env) liftIO
+  , interpretHandler = \env -> Iso (runLspT env) liftIO
   }
 
 main :: IO Int

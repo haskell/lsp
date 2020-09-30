@@ -75,9 +75,9 @@ run = flip E.catches handlers $ do
             sendNotification J.SWindowShowMessage $
               J.ShowMessageParams J.MtInfo $ "Wibble factor set to " <> T.pack (show (wibbleFactor cfg))
             pure $ Right cfg
-      , doInitialize = const $ forkIO (reactor rin) >> pure (Right ())
+      , doInitialize = \env _ -> forkIO (reactor rin) >> pure (Right env)
       , staticHandlers = lspHandlers rin
-      , interpretHandler = const $ \env -> Iso (runLspT env) liftIO
+      , interpretHandler = \env -> Iso (runLspT env) liftIO
       }
 
   flip E.finally finalProc $ do
