@@ -193,9 +193,9 @@ requestHandler m h = Handlers (DMap.singleton m (ClientMessageHandler h)) mempty
 
 -- | The type of a handler that handles requests and notifications coming in
 -- from the server or client
-type family Handler (f :: Type -> Type) (m :: Method p t) = (result :: Type) | result -> f t m where
-  Handler f (m :: Method p Request)      = RequestMessage m -> (Either ResponseError (ResponseParams m) -> f ()) -> f ()
-  Handler f (m :: Method p Notification) = NotificationMessage m -> f ()
+type family Handler (f :: Type -> Type) (m :: Method from t) = (result :: Type) | result -> f t m where
+  Handler f (m :: Method from Request)      = RequestMessage m -> (Either ResponseError (ResponseParams m) -> f ()) -> f ()
+  Handler f (m :: Method from Notification) = NotificationMessage m -> f ()
 
 data m <~> n
   = Iso
@@ -691,7 +691,8 @@ getWorkspaceFolders = do
 -- a 'Method' with a 'Handler'. Returns 'Nothing' if the client does not
 -- support dynamic registration for the specified method, otherwise a
 -- 'RegistrationToken' which can be used to unregister it later.
-registerCapability :: forall f (m :: Method FromClient t) config. MonadLsp config f
+registerCapability :: forall f t (m :: Method FromClient t) config.
+                      MonadLsp config f
                    => SClientMethod m
                    -> RegistrationOptions m
                    -> Handler f m

@@ -70,7 +70,7 @@ import GHC.Generics
 -- ---------------------------------------------------------------------
 
 -- | Map a method to the message payload type
-type family MessageParams (m :: Method p t) :: Type where
+type family MessageParams (m :: Method f t) :: Type where
 -- Client
   -- General
   MessageParams Initialize                         = InitializeParams
@@ -149,7 +149,7 @@ type family MessageParams (m :: Method p t) :: Type where
   MessageParams CustomMethod                       = Value
 
 -- | Map a request method to the response payload type
-type family ResponseParams (m :: Method p Request) :: Type where
+type family ResponseParams (m :: Method f Request) :: Type where
 -- Even though the specification mentions that the result types are
 -- @x | y | ... | null@, they don't actually need to be wrapped in a Maybe since
 -- (we think) this is just to account for how the response field is always
@@ -225,7 +225,7 @@ starting with '$/' it is free to ignore them if they are unknown.
 
 -}
 
-data NotificationMessage (m :: Method p Notification) =
+data NotificationMessage (m :: Method f Notification) =
   NotificationMessage
     { _jsonrpc :: Text
     , _method  :: SMethod m
@@ -241,7 +241,7 @@ instance (ToJSON (MessageParams m)) => ToJSON (NotificationMessage m) where
   toJSON     = genericToJSON lspOptions
   toEncoding = genericToEncoding lspOptions
 
-data RequestMessage (m :: Method p Request) = RequestMessage
+data RequestMessage (m :: Method f Request) = RequestMessage
     { _jsonrpc :: Text
     , _id      :: LspId m
     , _method  :: SMethod m
@@ -260,9 +260,9 @@ instance (ToJSON (MessageParams m), FromJSON (SMethod m)) => ToJSON (RequestMess
 
 -- | A custom message data type is needed to distinguish between
 -- notifications and requests, since a CustomMethod can be both!
-data CustomMessage p t where
-  ReqMess :: RequestMessage (CustomMethod :: Method p Request) -> CustomMessage p Request
-  NotMess :: NotificationMessage (CustomMethod :: Method p Notification) -> CustomMessage p Notification
+data CustomMessage f t where
+  ReqMess :: RequestMessage (CustomMethod :: Method f Request) -> CustomMessage f Request
+  NotMess :: NotificationMessage (CustomMethod :: Method f Notification) -> CustomMessage f Notification
 
 deriving instance Show (CustomMessage p t)
 
@@ -332,7 +332,7 @@ data ResponseError =
 deriveJSON lspOptions ''ResponseError
 
 -- | Either result or error must be Just.
-data ResponseMessage (m :: Method p Request) =
+data ResponseMessage (m :: Method f Request) =
   ResponseMessage
     { _jsonrpc :: Text
     , _id      :: Maybe (LspId m)
@@ -373,10 +373,10 @@ instance FromJSON (ResponseParams a) => FromJSON (ResponseMessage a) where
 
 -- | Map a method to the Request/Notification type with the correct
 -- payload
-type family Message (m :: Method p t) :: Type where
-  Message (CustomMethod :: Method p t) = CustomMessage p t
-  Message (m :: Method p Request) = RequestMessage m
-  Message (m :: Method p Notification) = NotificationMessage m
+type family Message (m :: Method f t) :: Type where
+  Message (CustomMethod :: Method f t) = CustomMessage f t
+  Message (m :: Method f Request) = RequestMessage m
+  Message (m :: Method f Notification) = NotificationMessage m
 
 -- Some helpful type synonyms
 type ClientMessage (m :: Method FromClient t) = Message m
@@ -427,7 +427,7 @@ fromClientReq :: forall (m :: Method FromClient Request).
   Message m ~ RequestMessage m => RequestMessage m -> FromClientMessage
 fromClientReq m@RequestMessage{_method=meth} = FromClientMess meth m
 
-type LookupFunc p a = forall (m :: Method p Request). LspId m -> Maybe (SMethod m, a m)
+type LookupFunc f a = forall (m :: Method f Request). LspId m -> Maybe (SMethod m, a m)
 
 {-
 Message Types we must handle are the following

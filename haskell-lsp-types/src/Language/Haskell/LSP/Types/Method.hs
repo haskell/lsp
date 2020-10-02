@@ -20,10 +20,10 @@ import  Data.GADT.Compare.TH
 
 -- ---------------------------------------------------------------------
 
-data Provenance = FromServer   | FromClient
+data From       = FromServer   | FromClient
 data MethodType = Notification | Request
 
-data Method (p :: Provenance) (t :: MethodType) where
+data Method (f :: From) (t :: MethodType) where
 -- Client Methods
   -- General
   Initialize                         :: Method FromClient Request
@@ -98,13 +98,13 @@ data Method (p :: Provenance) (t :: MethodType) where
   TextDocumentPublishDiagnostics     :: Method FromServer Notification
 
 -- Cancelling
-  CancelRequest                      :: Method p Notification
+  CancelRequest                      :: Method f Notification
 
 -- Custom
   -- A custom message type. It is not enforced that this starts with $/.
-  CustomMethod                       :: Method p t
+  CustomMethod                       :: Method f t
 
-data SMethod (m :: Method p t) where
+data SMethod (m :: Method f t) where
   SInitialize                         :: SMethod Initialize
   SInitialized                        :: SMethod Initialized
   SShutdown                           :: SMethod Shutdown

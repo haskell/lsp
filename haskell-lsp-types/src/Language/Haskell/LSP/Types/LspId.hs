@@ -12,7 +12,7 @@ import           Data.IxMap
 import Language.Haskell.LSP.Types.Method
 
 -- | Id used for a request, Can be either a String or an Int
-data LspId (m :: Method p Request) = IdInt Int | IdString Text
+data LspId (m :: Method f Request) = IdInt Int | IdString Text
   deriving (Show,Read,Eq,Ord)
 
 instance A.ToJSON (LspId m) where
