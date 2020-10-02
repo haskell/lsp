@@ -1046,7 +1046,7 @@ setupLogger :: Maybe FilePath -> [String] -> Priority -> IO ()
 setupLogger mLogFile extraLogNames level = do
 
   logStream <- case mLogFile of
-    Just logFile -> openFile logFile AppendMode
+    Just logFile -> openFile logFile AppendMode `E.catch` handleIOException logFile
     Nothing      -> return stderr
   hSetEncoding logStream utf8
 
@@ -1065,6 +1065,11 @@ setupLogger mLogFile extraLogNames level = do
     L.updateGlobalLogger logName $ L.setHandlers [logHandler]
     L.updateGlobalLogger logName $ L.setLevel level
 
+
+handleIOException :: FilePath -> E.IOException ->  IO Handle
+handleIOException logFile _ = do
+  hPutStr stderr $ "Couldn't open log file " ++ logFile ++ "; falling back to stderr logging"
+  return stderr
 
 -- ---------------------------------------------------------------------
 
