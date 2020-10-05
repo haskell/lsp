@@ -42,7 +42,7 @@ library
                      , parser-combinators:Control.Applicative.Combinators
   default-language:    Haskell2010
   build-depends:       base >= 4.10 && < 5
-                     , haskell-lsp >= 0.22 && < 0.23
+                     , haskell-lsp >= 0.22 && < 0.24
                      , aeson
                      , aeson-pretty
                      , ansi-terminal
@@ -82,7 +82,7 @@ executable dummy-server
   hs-source-dirs:      test/dummy-server
   ghc-options:         -W
   build-depends:       base >= 4.10 && < 5
-                     , haskell-lsp
+                     , haskell-lsp >= 0.23 && < 0.24
                      , data-default
                      , aeson
                      , unordered-containers
@@ -101,7 +101,7 @@ test-suite tests
   build-depends:       base >= 4.10 && < 5
                      , hspec
                      , lens
-                     , haskell-lsp >= 0.22 && < 0.23
+                     , haskell-lsp >= 0.22 && < 0.24
                      , lsp-test
                      , data-default
                      , aeson
