@@ -543,7 +543,7 @@ executeCommand :: Command -> Session ()
 executeCommand cmd = do
   let args = decode $ encode $ fromJust $ cmd ^. arguments
       execParams = ExecuteCommandParams Nothing (cmd ^. command) args
-  request_ SWorkspaceExecuteCommand execParams
+  void $ sendRequest SWorkspaceExecuteCommand execParams
 
 -- | Executes a code action.
 -- Matching with the specification, if a code action
