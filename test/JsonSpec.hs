@@ -1,3 +1,6 @@
+{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE DataKinds            #-}
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE OverloadedStrings    #-}
@@ -42,10 +45,10 @@ jsonSpec = do
     prop "HoverContents"  (propertyJsonRoundtrip :: HoverContents -> Property)
     prop "ResponseError"  (propertyJsonRoundtrip :: ResponseError -> Property)
     prop "WatchedFiles"   (propertyJsonRoundtrip :: DidChangeWatchedFilesRegistrationOptions -> Property)
-    prop "ResponseMessage ()"
-         (propertyJsonRoundtrip :: ResponseMessage () -> Property)
-    prop "ResponseMessage JSON value"
-         (propertyJsonRoundtrip :: ResponseMessage J.Value -> Property)
+    prop "ResponseMessage Initialize"
+         (propertyJsonRoundtrip :: ResponseMessage 'TextDocumentHover -> Property)
+    -- prop "ResponseMessage JSON value"
+        --  (propertyJsonRoundtrip :: ResponseMessage J.Value -> Property)
   describe "JSON decoding regressions" $
     it "CompletionItem" $
       (J.decode "{\"jsonrpc\":\"2.0\",\"result\":[{\"label\":\"raisebox\"}],\"id\":1}" :: Maybe CompletionResponse)
@@ -58,17 +61,17 @@ responseMessageSpec = do
     it "decodes result = null" $ do
       let input = "{\"jsonrpc\": \"2.0\", \"id\": 123, \"result\": null}"
         in  J.decode input `shouldBe` Just
-              (ResponseMessage "2.0" (IdRspInt 123) (Right J.Null))
+              ((ResponseMessage "2.0" (Just (IdInt 123)) (Right J.Null)) :: ResponseMessage 'WorkspaceExecuteCommand)
   describe "invalid JSON" $ do
     it "throws if neither result nor error is present" $ do
-      (J.eitherDecode "{\"jsonrpc\":\"2.0\",\"id\":1}" :: Either String (ResponseMessage ())) 
-        `shouldBe` Left ("Error in $: Both error and result cannot be Nothing") 
+      (J.eitherDecode "{\"jsonrpc\":\"2.0\",\"id\":1}" :: Either String (ResponseMessage 'Initialize)) 
+        `shouldBe` Left ("Error in $: both error and result cannot be Nothing") 
     it "throws if both result and error are present" $ do
       (J.eitherDecode 
-        "{\"jsonrpc\":\"2.0\",\"id\": 1,\"result\":1,\"error\":{\"code\":-32700,\"message\":\"\",\"data\":null}}" 
-        :: Either String (ResponseMessage Int)) 
+        "{\"jsonrpc\":\"2.0\",\"id\": 1,\"result\":{\"capabilities\": {}},\"error\":{\"code\":-32700,\"message\":\"\",\"data\":null}}" 
+        :: Either String (ResponseMessage 'Initialize)) 
         `shouldSatisfy` 
-          (either (\err -> isPrefixOf "Error in $: Both error and result cannot be present" err) (\_ -> False))
+          (either (\err -> "Error in $: both error and result cannot be present" `isPrefixOf` err) (\_ -> False))
 
 -- ---------------------------------------------------------------------
 
@@ -94,7 +97,22 @@ instance Arbitrary HoverContents where
                     , HoverContents <$> arbitrary
                     ]
 
-instance Arbitrary a => Arbitrary (ResponseMessage a) where
+instance Arbitrary Uri where
+  arbitrary = Uri <$> arbitrary
+
+instance Arbitrary Position where
+  arbitrary = Position <$> arbitrary <*> arbitrary 
+
+instance Arbitrary Location where
+  arbitrary = Location <$> arbitrary <*> arbitrary
+
+instance Arbitrary Range where
+  arbitrary = Range <$> arbitrary <*> arbitrary
+
+instance Arbitrary Hover where
+  arbitrary = Hover <$> arbitrary <*> arbitrary
+
+instance Arbitrary (ResponseParams m) => Arbitrary (ResponseMessage m) where
   arbitrary =
     oneof
       [ ResponseMessage
@@ -107,8 +125,8 @@ instance Arbitrary a => Arbitrary (ResponseMessage a) where
           <*> (Left <$> arbitrary)
       ]
 
-instance Arbitrary LspIdRsp where
-  arbitrary = oneof [IdRspInt <$> arbitrary, IdRspString <$> arbitrary, pure IdRspNull]
+instance Arbitrary (LspId m) where
+  arbitrary = oneof [IdInt <$> arbitrary, IdString <$> arbitrary]
 
 instance Arbitrary ResponseError where
   arbitrary = ResponseError <$> arbitrary <*> arbitrary <*> pure Nothing

@@ -1,6 +1,8 @@
 module Language.Haskell.LSP.Types.Capabilities
   (
     module Language.Haskell.LSP.Types.ClientCapabilities
+  , module Language.Haskell.LSP.Types.ServerCapabilities
+  , module Language.Haskell.LSP.Types.WorkspaceEdit
   , fullCaps
   , LSPVersion(..)
   , capsForVersion
@@ -8,10 +10,11 @@ module Language.Haskell.LSP.Types.Capabilities
 
 import Prelude hiding (min)
 import Language.Haskell.LSP.Types.ClientCapabilities
+import Language.Haskell.LSP.Types.ServerCapabilities
+import Language.Haskell.LSP.Types.WorkspaceEdit
 import Language.Haskell.LSP.Types
 
--- | The whole shebang. The real deal.
--- Capabilities for full conformance to the current (v3.10) LSP specification.
+-- | Capabilities for full conformance to the current (v3.15) LSP specification.
 fullCaps :: ClientCapabilities
 fullCaps = capsForVersion (LSPVersion maxBound maxBound)
 
@@ -31,24 +34,33 @@ data LSPVersion = LSPVersion Int Int -- ^ Construct a major.minor version
 -- * 3.4 extended completion item and symbol item kinds
 -- * 3.0 dynamic registration
 capsForVersion :: LSPVersion -> ClientCapabilities
-capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) Nothing Nothing
+capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) (Just window) Nothing
   where
     w = WorkspaceClientCapabilities
           (Just True)
-          (Just (WorkspaceEditClientCapabilities (Just True)))
+          (Just (WorkspaceEditClientCapabilities
+                  (Just True)
+                  (since 3 13 resourceOperations)
+                  Nothing))
           (Just (DidChangeConfigurationClientCapabilities dynamicReg))
           (Just (DidChangeWatchedFilesClientCapabilities dynamicReg))
           (Just symbolCapabilities)
-          (Just (ExecuteClientCapabilities dynamicReg))
+          (Just (ExecuteCommandClientCapabilities dynamicReg))
           (since 3 6 True)
           (since 3 6 True)
+    
+    resourceOperations = List
+      [ ResourceOperationCreate
+      , ResourceOperationDelete
+      , ResourceOperationRename
+      ]
 
-    symbolCapabilities = SymbolClientCapabilities
+    symbolCapabilities = WorkspaceSymbolClientCapabilities
       dynamicReg
       (since 3 4 symbolKindCapabilities)
 
     symbolKindCapabilities =
-      SymbolKindClientCapabilities (Just sKs)
+      WorkspaceSymbolKindClientCapabilities (Just sKs)
 
     sKs
       | maj >= 3 && min >= 4 = List (oldSKs ++ newSKs)
@@ -92,21 +104,23 @@ capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) Noth
           (Just (ReferencesClientCapabilities dynamicReg))
           (Just (DocumentHighlightClientCapabilities dynamicReg))
           (Just documentSymbolCapability)
-          (Just (FormattingClientCapabilities (Just True)))
-          (Just (RangeFormattingClientCapabilities dynamicReg))
-          (Just (OnTypeFormattingClientCapabilities dynamicReg))
-          (Just (DefinitionClientCapabilities dynamicReg))
-          (since 3 6 (TypeDefinitionClientCapabilities dynamicReg))
-          (since 3 6 (ImplementationClientCapabilities dynamicReg))
+          (Just (DocumentFormattingClientCapabilities dynamicReg))
+          (Just (DocumentRangeFormattingClientCapabilities dynamicReg))
+          (Just (DocumentOnTypeFormattingClientCapabilities dynamicReg))
+          (since 3 14 (DeclarationClientCapabilities dynamicReg (Just True)))
+          (Just (DefinitionClientCapabilities dynamicReg (since 3 14 True)))
+          (since 3 6 (TypeDefinitionClientCapabilities dynamicReg (since 3 14 True)))
+          (since 3 6 (ImplementationClientCapabilities dynamicReg (since 3 14 True)))
           (Just codeActionCapability)
           (Just (CodeLensClientCapabilities dynamicReg))
-          (Just (DocumentLinkClientCapabilities dynamicReg))
-          (since 3 6 (ColorProviderClientCapabilities dynamicReg))
+          (Just (DocumentLinkClientCapabilities dynamicReg (since 3 15 True)))
+          (since 3 6 (DocumentColorClientCapabilities dynamicReg))
           (Just (RenameClientCapabilities dynamicReg (since 3 12 True)))
           (Just publishDiagnosticsCapabilities)
           (since 3 10 foldingRangeCapability)
+          (since 3 5 (SelectionRangeClientCapabilities dynamicReg))
     sync =
-      SynchronizationTextDocumentClientCapabilities
+      TextDocumentSyncClientCapabilities
         dynamicReg
         (Just True)
         (Just True)
@@ -175,6 +189,7 @@ capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) Noth
       = CodeActionClientCapabilities
           dynamicReg
           (since 3 8 (CodeActionLiteralSupport caKs))
+          (since 3 15 True)
     caKs = CodeActionKindClientCapabilities
               (List [ CodeActionQuickFix
                     , CodeActionRefactor
@@ -189,10 +204,11 @@ capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) Noth
       SignatureHelpClientCapabilities
         dynamicReg
         (Just signatureInformationCapability)
+        Nothing
 
     signatureInformationCapability =
-      SignatureInformationClientCapabilities
-        (Just (List [MkPlainText, MkMarkdown]))
+      SignatureHelpSignatureInformation
+        (Just (List [MkPlainText, MkMarkdown])) Nothing
 
     documentSymbolCapability =
       DocumentSymbolClientCapabilities
@@ -214,6 +230,7 @@ capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) Noth
       PublishDiagnosticsClientCapabilities
         (since 3 7 True)
         (since 3 15 publishDiagnosticsTagsCapabilities)
+        (since 3 15 True)
 
     publishDiagnosticsTagsCapabilities =
       PublishDiagnosticsTagsClientCapabilities
@@ -225,3 +242,5 @@ capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) Noth
     since x y a
       | maj >= x && min >= y = Just a
       | otherwise            = Nothing
+    
+    window = WindowClientCapabilities (since 3 15 True)

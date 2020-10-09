@@ -91,7 +91,7 @@ getDiagnosticParamsFor :: Int -> DiagnosticStore -> J.NormalizedUri -> Maybe J.P
 getDiagnosticParamsFor maxDiagnostics ds uri =
   case HM.lookup uri ds of
     Nothing -> Nothing
-    Just (StoreItem _ diags) ->
-      Just $ J.PublishDiagnosticsParams (J.fromNormalizedUri uri) (J.List (take maxDiagnostics $ SL.fromSortedList $ mconcat $ Map.elems diags))
+    Just (StoreItem mv diags) ->
+      Just $ J.PublishDiagnosticsParams (J.fromNormalizedUri uri) mv (J.List (take maxDiagnostics $ SL.fromSortedList $ mconcat $ Map.elems diags))
 
 -- ---------------------------------------------------------------------

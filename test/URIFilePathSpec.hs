@@ -1,21 +1,14 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE OverloadedStrings #-}
 module URIFilePathSpec where
 
 import Control.Monad                          (when)
 import Data.List
-#if __GLASGOW_HASKELL__ < 808
-import Data.Monoid                            ((<>))
-#endif
 import Data.Text                              (Text, pack)
 import Language.Haskell.LSP.Types
 
 import Network.URI
 import Test.Hspec
 import Test.QuickCheck
-#if !MIN_VERSION_QuickCheck(2,10,0)
-import Data.Char                              (GeneralCategory(..), generalCategory)
-#endif
 import qualified System.FilePath.Windows as FPW
 import System.FilePath                        (normalise)
 import qualified System.Info
@@ -254,14 +247,6 @@ genPosixFilePath = do
 genValidUnicodeChar :: Gen Char
 genValidUnicodeChar = arbitraryUnicodeChar `suchThat` isCharacter
   where isCharacter x = x /= '\65534' && x /= '\65535'
-
-#if !MIN_VERSION_QuickCheck(2,10,0)
-arbitraryUnicodeChar :: Gen Char
-arbitraryUnicodeChar =
-  arbitraryBoundedEnum `suchThat` (not . isSurrogate)
-  where
-    isSurrogate c = generalCategory c == Surrogate
-#endif
 
 normalizedFilePathSpec :: Spec
 normalizedFilePathSpec = do

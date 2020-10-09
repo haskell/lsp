@@ -3,9 +3,14 @@ resolver: lts-12.26 # GHC 8.4.4
 packages:
 - '.'
 - ./haskell-lsp-types
+- ./func-test
 
 extra-deps:
 - rope-utf16-splay-0.3.1.0
+- some-1.0.1@sha256:26e5bab7276f48b25ea8660d3fd1166c0f20fd497dac879a40f408e23211f93e,2055
+- parser-combinators-1.2.1@sha256:16c3490e007ec10b1255a2b36fb483d000156d555269107131241d9e0fa96412,1788
+- github: bubba/lsp-test
+  commit: e251176a4b2ff4dead7846fe5d0a4e1dbea69fd4
 
 flags: {}
 extra-package-dbs: []

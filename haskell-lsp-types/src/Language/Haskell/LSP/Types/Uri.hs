@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -25,9 +24,6 @@ import qualified Data.Aeson                                 as A
 import           Data.Binary                                (Binary, Get, put, get)
 import           Data.Hashable
 import           Data.List                                  (stripPrefix)
-#if __GLASGOW_HASKELL__ < 804
-import           Data.Monoid                                ((<>))
-#endif
 import           Data.String                                (IsString, fromString)
 import           Data.Text                                  (Text)
 import qualified Data.Text                                  as T
@@ -113,8 +109,8 @@ platformAdjustFromUriPath systemOS authority srcPath =
   if systemOS /= windowsOS || null srcPath then srcPath
     else let
       firstSegment:rest = (FPP.splitDirectories . tail) srcPath  -- Drop leading '/' for absolute Windows paths
-      drive = if FPW.isDrive firstSegment 
-              then FPW.addTrailingPathSeparator firstSegment 
+      drive = if FPW.isDrive firstSegment
+              then FPW.addTrailingPathSeparator firstSegment
               else firstSegment
       in FPW.joinDrive drive $ FPW.joinPath rest
 

@@ -1,328 +1,283 @@
+{-# LANGUAGE DataKinds                  #-}
+{-# LANGUAGE GADTs                      #-}
+{-# LANGUAGE TypeOperators              #-}
+{-# LANGUAGE UndecidableInstances       #-}
+{-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE RankNTypes                 #-}
+{-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE DuplicateRecordFields      #-}
-{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE ConstraintKinds            #-}
 {-# LANGUAGE TemplateHaskell            #-}
+{-# LANGUAGE PolyKinds                  #-}
+{-# LANGUAGE StandaloneDeriving         #-}
+{-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE TupleSections              #-}
+{-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
+
 module Language.Haskell.LSP.Types.Message where
 
-import qualified Data.Aeson                                 as A
-import           Data.Aeson.TH
-import           Data.Aeson.Types
-import           Data.Hashable
--- For <= 8.2.2
-import           Data.Text                                  (Text)
-import           Language.Haskell.LSP.Types.Constants
+import           Language.Haskell.LSP.Types.Cancellation
+import           Language.Haskell.LSP.Types.CodeAction
+import           Language.Haskell.LSP.Types.CodeLens
+import           Language.Haskell.LSP.Types.Command
+import           Language.Haskell.LSP.Types.Common
+import           Language.Haskell.LSP.Types.Configuration
+import           Language.Haskell.LSP.Types.Completion
+import           Language.Haskell.LSP.Types.Declaration
+import           Language.Haskell.LSP.Types.Definition
+import           Language.Haskell.LSP.Types.Diagnostic
+import           Language.Haskell.LSP.Types.DocumentColor
+import           Language.Haskell.LSP.Types.DocumentHighlight
+import           Language.Haskell.LSP.Types.DocumentLink
+import           Language.Haskell.LSP.Types.DocumentSymbol
+import           Language.Haskell.LSP.Types.FoldingRange
+import           Language.Haskell.LSP.Types.Formatting
+import           Language.Haskell.LSP.Types.Hover
+import           Language.Haskell.LSP.Types.Implementation
+import           Language.Haskell.LSP.Types.Initialize
+import           Language.Haskell.LSP.Types.Location
+import           Language.Haskell.LSP.Types.LspId
+import           Language.Haskell.LSP.Types.Method
+import           Language.Haskell.LSP.Types.Progress
+import           Language.Haskell.LSP.Types.Registration
+import           Language.Haskell.LSP.Types.Rename
+import           Language.Haskell.LSP.Types.References
+import           Language.Haskell.LSP.Types.SelectionRange
+import           Language.Haskell.LSP.Types.SignatureHelp
+import           Language.Haskell.LSP.Types.TextDocument
+import           Language.Haskell.LSP.Types.TypeDefinition
+import           Language.Haskell.LSP.Types.Utils
+import           Language.Haskell.LSP.Types.Window
+import           Language.Haskell.LSP.Types.WatchedFiles
+import           Language.Haskell.LSP.Types.WorkspaceEdit
+import           Language.Haskell.LSP.Types.WorkspaceFolders
+import           Language.Haskell.LSP.Types.WorkspaceSymbol
+import qualified Data.HashMap.Strict as HM
 
-
--- | Id used for a request, Can be either a String or an Int
-data LspId = IdInt Int | IdString Text
-            deriving (Show,Read,Eq,Ord)
-
-instance A.ToJSON LspId where
-  toJSON (IdInt i)    = toJSON i
-  toJSON (IdString s) = toJSON s
-
-instance A.FromJSON LspId where
-  parseJSON v@(A.Number _) = IdInt <$> parseJSON v
-  parseJSON  (A.String  s) = return (IdString s)
-  parseJSON _              = mempty
-
-instance Hashable LspId where
-  hashWithSalt salt (IdInt i) = hashWithSalt salt i
-  hashWithSalt salt (IdString s) = hashWithSalt salt s
-
--- ---------------------------------------------------------------------
-
--- | Id used for a response, Can be either a String or an Int, or Null. If a
--- request doesn't provide a result value the receiver of a request still needs
--- to return a response message to conform to the JSON RPC specification. The
--- result property of the ResponseMessage should be set to null in this case to
--- signal a successful request.
-data LspIdRsp = IdRspInt Int | IdRspString Text | IdRspNull
-            deriving (Show,Read,Eq)
-
-instance A.ToJSON LspIdRsp where
-  toJSON (IdRspInt i)    = toJSON i
-  toJSON (IdRspString s) = toJSON s
-  toJSON IdRspNull       = A.Null
-
-instance A.FromJSON LspIdRsp where
-  parseJSON v@(A.Number _) = IdRspInt <$> parseJSON v
-  parseJSON  (A.String  s) = return $ IdRspString s
-  parseJSON  A.Null        = return IdRspNull
-  parseJSON _              = mempty
-
-instance Hashable LspIdRsp where
-  hashWithSalt salt (IdRspInt i) = hashWithSalt salt i
-  hashWithSalt salt (IdRspString s) = hashWithSalt salt s
-  hashWithSalt _ IdRspNull = 0
-
--- | Converts an LspId to its LspIdRsp counterpart.
-responseId :: LspId -> LspIdRsp
-responseId (IdInt    i) = IdRspInt i
-responseId (IdString s) = IdRspString s
-
--- | Converts an LspIdRsp to its LspId counterpart.
-requestId :: LspIdRsp -> LspId
-requestId (IdRspInt    i) = IdInt i
-requestId (IdRspString s) = IdString s
-requestId IdRspNull       = error "Null response id"
+import Data.Kind
+import Data.Aeson
+import Data.Aeson.Types
+import Data.Aeson.TH
+import Data.Text (Text)
+import Data.Function (on)
+import GHC.Generics
 
 -- ---------------------------------------------------------------------
+-- PARAMS definition
+-- Map Methods to params/responses
+-- ---------------------------------------------------------------------
 
--- Client Methods
-data ClientMethod =
- -- General
-   Initialize
- | Initialized
- | Shutdown
- | Exit
- | CancelRequest
- -- Workspace
- | WorkspaceDidChangeWorkspaceFolders
- | WorkspaceDidChangeConfiguration
- | WorkspaceDidChangeWatchedFiles
- | WorkspaceSymbol
- | WorkspaceExecuteCommand
- -- Progress
- | WorkDoneProgressCancel
- -- Document
- | TextDocumentDidOpen
- | TextDocumentDidChange
- | TextDocumentWillSave
- | TextDocumentWillSaveWaitUntil
- | TextDocumentDidSave
- | TextDocumentDidClose
- | TextDocumentCompletion
- | CompletionItemResolve
- | TextDocumentHover
- | TextDocumentSignatureHelp
- | TextDocumentDefinition
- | TextDocumentTypeDefinition
- | TextDocumentImplementation
- | TextDocumentReferences
- | TextDocumentDocumentHighlight
- | TextDocumentDocumentSymbol
- | TextDocumentCodeAction
- | TextDocumentCodeLens
- | CodeLensResolve
- | TextDocumentDocumentLink
- | DocumentLinkResolve
- | TextDocumentDocumentColor
- | TextDocumentColorPresentation
- | TextDocumentFormatting
- | TextDocumentRangeFormatting
- | TextDocumentOnTypeFormatting
- | TextDocumentRename
- | TextDocumentPrepareRename
- | TextDocumentFoldingRange
- -- A custom message type. It is not enforced that this starts with $/.
- | CustomClientMethod Text
-   deriving (Eq,Ord,Read,Show)
-
-instance A.FromJSON ClientMethod where
+-- | Map a method to the message payload type
+type family MessageParams (m :: Method f t) :: Type where
+-- Client
   -- General
-  parseJSON (A.String "initialize")                       = return Initialize
-  parseJSON (A.String "initialized")                      = return Initialized
-  parseJSON (A.String "shutdown")                         = return Shutdown
-  parseJSON (A.String "exit")                             = return Exit
-  parseJSON (A.String "$/cancelRequest")                  = return CancelRequest
- -- Workspace
-  parseJSON (A.String "workspace/didChangeWorkspaceFolders") = return WorkspaceDidChangeWorkspaceFolders
-  parseJSON (A.String "workspace/didChangeConfiguration") = return WorkspaceDidChangeConfiguration
-  parseJSON (A.String "workspace/didChangeWatchedFiles")  = return WorkspaceDidChangeWatchedFiles
-  parseJSON (A.String "workspace/symbol")                 = return WorkspaceSymbol
-  parseJSON (A.String "workspace/executeCommand")         = return WorkspaceExecuteCommand
- -- Document
-  parseJSON (A.String "textDocument/didOpen")             = return TextDocumentDidOpen
-  parseJSON (A.String "textDocument/didChange")           = return TextDocumentDidChange
-  parseJSON (A.String "textDocument/willSave")            = return TextDocumentWillSave
-  parseJSON (A.String "textDocument/willSaveWaitUntil")   = return TextDocumentWillSaveWaitUntil
-  parseJSON (A.String "textDocument/didSave")             = return TextDocumentDidSave
-  parseJSON (A.String "textDocument/didClose")            = return TextDocumentDidClose
-  parseJSON (A.String "textDocument/completion")          = return TextDocumentCompletion
-  parseJSON (A.String "completionItem/resolve")           = return CompletionItemResolve
-  parseJSON (A.String "textDocument/hover")               = return TextDocumentHover
-  parseJSON (A.String "textDocument/signatureHelp")       = return TextDocumentSignatureHelp
-  parseJSON (A.String "textDocument/definition")          = return TextDocumentDefinition
-  parseJSON (A.String "textDocument/typeDefinition")      = return TextDocumentTypeDefinition
-  parseJSON (A.String "textDocument/implementation")      = return TextDocumentImplementation
-  parseJSON (A.String "textDocument/references")          = return TextDocumentReferences
-  parseJSON (A.String "textDocument/documentHighlight")   = return TextDocumentDocumentHighlight
-  parseJSON (A.String "textDocument/documentSymbol")      = return TextDocumentDocumentSymbol
-  parseJSON (A.String "textDocument/codeAction")          = return TextDocumentCodeAction
-  parseJSON (A.String "textDocument/codeLens")            = return TextDocumentCodeLens
-  parseJSON (A.String "codeLens/resolve")                 = return CodeLensResolve
-  parseJSON (A.String "textDocument/documentLink")        = return TextDocumentDocumentLink
-  parseJSON (A.String "documentLink/resolve")             = return DocumentLinkResolve
-  parseJSON (A.String "textDocument/documentColor")       = return TextDocumentDocumentColor
-  parseJSON (A.String "textDocument/colorPresentation")   = return TextDocumentColorPresentation
-  parseJSON (A.String "textDocument/formatting")          = return TextDocumentFormatting
-  parseJSON (A.String "textDocument/rangeFormatting")     = return TextDocumentRangeFormatting
-  parseJSON (A.String "textDocument/onTypeFormatting")    = return TextDocumentOnTypeFormatting
-  parseJSON (A.String "textDocument/rename")              = return TextDocumentRename
-  parseJSON (A.String "textDocument/prepareRename")       = return TextDocumentPrepareRename
-  parseJSON (A.String "textDocument/foldingRange")        = return TextDocumentFoldingRange
-  parseJSON (A.String "window/workDoneProgress/cancel")   = return WorkDoneProgressCancel
-  parseJSON (A.String x)                                  = return (CustomClientMethod x)
-  parseJSON _                                             = mempty
+  MessageParams Initialize                         = InitializeParams
+  MessageParams Initialized                        = Maybe InitializedParams
+  MessageParams Shutdown                           = Empty
+  MessageParams Exit                               = Empty
+  -- Workspace
+  MessageParams WorkspaceDidChangeWorkspaceFolders = DidChangeWorkspaceFoldersParams
+  MessageParams WorkspaceDidChangeConfiguration    = DidChangeConfigurationParams
+  MessageParams WorkspaceDidChangeWatchedFiles     = DidChangeWatchedFilesParams
+  MessageParams WorkspaceSymbol                    = WorkspaceSymbolParams
+  MessageParams WorkspaceExecuteCommand            = ExecuteCommandParams
+  -- Sync/Document state
+  MessageParams TextDocumentDidOpen                = DidOpenTextDocumentParams
+  MessageParams TextDocumentDidChange              = DidChangeTextDocumentParams
+  MessageParams TextDocumentWillSave               = WillSaveTextDocumentParams
+  MessageParams TextDocumentWillSaveWaitUntil      = WillSaveTextDocumentParams
+  MessageParams TextDocumentDidSave                = DidSaveTextDocumentParams
+  MessageParams TextDocumentDidClose               = DidCloseTextDocumentParams
+  -- Completion
+  MessageParams TextDocumentCompletion             = CompletionParams
+  MessageParams CompletionItemResolve              = CompletionItem
+  -- Language Queries
+  MessageParams TextDocumentHover                  = HoverParams
+  MessageParams TextDocumentSignatureHelp          = SignatureHelpParams
+  MessageParams TextDocumentDeclaration            = DeclarationParams
+  MessageParams TextDocumentDefinition             = DefinitionParams
+  MessageParams TextDocumentTypeDefinition         = TypeDefinitionParams
+  MessageParams TextDocumentImplementation         = ImplementationParams
+  MessageParams TextDocumentReferences             = ReferenceParams
+  MessageParams TextDocumentDocumentHighlight      = DocumentHighlightParams
+  MessageParams TextDocumentDocumentSymbol         = DocumentSymbolParams
+  -- Code Action/Lens/Link
+  MessageParams TextDocumentCodeAction             = CodeActionParams
+  MessageParams TextDocumentCodeLens               = CodeLensParams
+  MessageParams CodeLensResolve                    = CodeLens
+  MessageParams TextDocumentDocumentLink           = DocumentLinkParams
+  MessageParams DocumentLinkResolve                = DocumentLink
+  -- Syntax highlighting/coloring
+  MessageParams TextDocumentDocumentColor          = DocumentColorParams
+  MessageParams TextDocumentColorPresentation      = ColorPresentationParams
+  -- Formatting
+  MessageParams TextDocumentFormatting             = DocumentFormattingParams
+  MessageParams TextDocumentRangeFormatting        = DocumentRangeFormattingParams
+  MessageParams TextDocumentOnTypeFormatting       = DocumentOnTypeFormattingParams
+  -- Rename
+  MessageParams TextDocumentRename                 = RenameParams
+  MessageParams TextDocumentPrepareRename          = PrepareRenameParams
+  -- Folding Range
+  MessageParams TextDocumentFoldingRange           = FoldingRangeParams
+  -- Selection Range
+  MessageParams TextDocumentSelectionRange         = SelectionRangeParams
+-- Server
+    -- Window
+  MessageParams WindowShowMessage                  = ShowMessageParams
+  MessageParams WindowShowMessageRequest           = ShowMessageRequestParams
+  MessageParams WindowLogMessage                   = LogMessageParams
+  -- Progress
+  MessageParams WindowWorkDoneProgressCreate       = WorkDoneProgressCreateParams
+  MessageParams WindowWorkDoneProgressCancel       = WorkDoneProgressCancelParams
+  MessageParams Progress                           = ProgressParams SomeProgressParams
+  -- Telemetry
+  MessageParams TelemetryEvent                     = Value
+  -- Client
+  MessageParams ClientRegisterCapability           = RegistrationParams
+  MessageParams ClientUnregisterCapability         = UnregistrationParams
+  -- Workspace
+  MessageParams WorkspaceWorkspaceFolders          = Empty
+  MessageParams WorkspaceConfiguration             = ConfigurationParams
+  MessageParams WorkspaceApplyEdit                 = ApplyWorkspaceEditParams
+  -- Document/Diagnostic
+  MessageParams TextDocumentPublishDiagnostics     = PublishDiagnosticsParams
+  -- Cancel
+  MessageParams CancelRequest                      = CancelParams
+  -- Custom
+  MessageParams CustomMethod                       = Value
 
-instance A.ToJSON ClientMethod where
+-- | Map a request method to the response payload type
+type family ResponseParams (m :: Method f Request) :: Type where
+-- Even though the specification mentions that the result types are
+-- @x | y | ... | null@, they don't actually need to be wrapped in a Maybe since
+-- (we think) this is just to account for how the response field is always
+-- nullable. I.e. if it is null, then the error field is set
+
+-- Client
   -- General
-  toJSON Initialize                      = A.String "initialize"
-  toJSON Initialized                     = A.String "initialized"
-  toJSON Shutdown                        = A.String "shutdown"
-  toJSON Exit                            = A.String "exit"
-  toJSON CancelRequest                   = A.String "$/cancelRequest"
+  ResponseParams Initialize                    = InitializeResult
+  ResponseParams Shutdown                      = Empty
   -- Workspace
-  toJSON WorkspaceDidChangeWorkspaceFolders = A.String "workspace/didChangeWorkspaceFolders"
-  toJSON WorkspaceDidChangeConfiguration = A.String "workspace/didChangeConfiguration"
-  toJSON WorkspaceDidChangeWatchedFiles  = A.String "workspace/didChangeWatchedFiles"
-  toJSON WorkspaceSymbol                 = A.String "workspace/symbol"
-  toJSON WorkspaceExecuteCommand         = A.String "workspace/executeCommand"
-  -- Document
-  toJSON TextDocumentDidOpen             = A.String "textDocument/didOpen"
-  toJSON TextDocumentDidChange           = A.String "textDocument/didChange"
-  toJSON TextDocumentWillSave            = A.String "textDocument/willSave"
-  toJSON TextDocumentWillSaveWaitUntil   = A.String "textDocument/willSaveWaitUntil"
-  toJSON TextDocumentDidSave             = A.String "textDocument/didSave"
-  toJSON TextDocumentDidClose            = A.String "textDocument/didClose"
-  toJSON TextDocumentCompletion          = A.String "textDocument/completion"
-  toJSON CompletionItemResolve           = A.String "completionItem/resolve"
-  toJSON TextDocumentHover               = A.String "textDocument/hover"
-  toJSON TextDocumentSignatureHelp       = A.String "textDocument/signatureHelp"
-  toJSON TextDocumentReferences          = A.String "textDocument/references"
-  toJSON TextDocumentDocumentHighlight   = A.String "textDocument/documentHighlight"
-  toJSON TextDocumentDocumentSymbol      = A.String "textDocument/documentSymbol"
-  toJSON TextDocumentDefinition          = A.String "textDocument/definition"
-  toJSON TextDocumentTypeDefinition      = A.String "textDocument/typeDefinition"
-  toJSON TextDocumentImplementation      = A.String "textDocument/implementation"
-  toJSON TextDocumentCodeAction          = A.String "textDocument/codeAction"
-  toJSON TextDocumentCodeLens            = A.String "textDocument/codeLens"
-  toJSON CodeLensResolve                 = A.String "codeLens/resolve"
-  toJSON TextDocumentDocumentColor       = A.String "textDocument/documentColor"
-  toJSON TextDocumentColorPresentation   = A.String "textDocument/colorPresentation"
-  toJSON TextDocumentFormatting          = A.String "textDocument/formatting"
-  toJSON TextDocumentRangeFormatting     = A.String "textDocument/rangeFormatting"
-  toJSON TextDocumentOnTypeFormatting    = A.String "textDocument/onTypeFormatting"
-  toJSON TextDocumentRename              = A.String "textDocument/rename"
-  toJSON TextDocumentPrepareRename       = A.String "textDocument/prepareRename"
-  toJSON TextDocumentFoldingRange        = A.String "textDocument/foldingRange"
-  toJSON TextDocumentDocumentLink        = A.String "textDocument/documentLink"
-  toJSON DocumentLinkResolve             = A.String "documentLink/resolve"
-  toJSON WorkDoneProgressCancel          = A.String "window/workDoneProgress/cancel"
-  toJSON (CustomClientMethod xs)         = A.String xs
-
-data ServerMethod =
+  ResponseParams WorkspaceSymbol               = List SymbolInformation
+  ResponseParams WorkspaceExecuteCommand       = Value
+  -- Sync/Document state
+  ResponseParams TextDocumentWillSaveWaitUntil = List TextEdit
+  -- Completion
+  ResponseParams TextDocumentCompletion        = List CompletionItem |? CompletionList
+  ResponseParams CompletionItemResolve         = CompletionItem
+  -- Language Queries
+  ResponseParams TextDocumentHover             = Maybe Hover
+  ResponseParams TextDocumentSignatureHelp     = SignatureHelp
+  ResponseParams TextDocumentDeclaration       = Location |? List Location |? List LocationLink
+  ResponseParams TextDocumentDefinition        = Location |? List Location |? List LocationLink
+  ResponseParams TextDocumentTypeDefinition    = Location |? List Location |? List LocationLink
+  ResponseParams TextDocumentImplementation    = Location |? List Location |? List LocationLink
+  ResponseParams TextDocumentReferences        = List Location
+  ResponseParams TextDocumentDocumentHighlight = List DocumentHighlight
+  ResponseParams TextDocumentDocumentSymbol    = List DocumentSymbol |? List SymbolInformation
+  -- Code Action/Lens/Link
+  ResponseParams TextDocumentCodeAction        = List (Command |? CodeAction)
+  ResponseParams TextDocumentCodeLens          = List CodeLens
+  ResponseParams CodeLensResolve               = CodeLens
+  ResponseParams TextDocumentDocumentLink      = List DocumentLink
+  ResponseParams DocumentLinkResolve           = DocumentLink
+  -- Syntax highlighting/coloring
+  ResponseParams TextDocumentDocumentColor     = List ColorInformation
+  ResponseParams TextDocumentColorPresentation = List ColorPresentation
+  -- Formatting
+  ResponseParams TextDocumentFormatting        = List TextEdit
+  ResponseParams TextDocumentRangeFormatting   = List TextEdit
+  ResponseParams TextDocumentOnTypeFormatting  = List TextEdit
+  -- Rename
+  ResponseParams TextDocumentRename            = WorkspaceEdit
+  ResponseParams TextDocumentPrepareRename     = Range |? RangeWithPlaceholder
+  -- FoldingRange
+  ResponseParams TextDocumentFoldingRange      = List FoldingRange
+  ResponseParams TextDocumentSelectionRange    = List SelectionRange
+  -- Custom can be either a notification or a message
+-- Server
   -- Window
-    WindowShowMessage
-  | WindowShowMessageRequest
-  | WindowLogMessage
-  | WindowWorkDoneProgressCreate
-  | Progress
-  | TelemetryEvent
-  -- Client
-  | ClientRegisterCapability
-  | ClientUnregisterCapability
+  ResponseParams WindowShowMessageRequest      = Maybe MessageActionItem
+  ResponseParams WindowWorkDoneProgressCreate  = ()
+  -- Capability
+  ResponseParams ClientRegisterCapability      = Empty
+  ResponseParams ClientUnregisterCapability    = Empty
   -- Workspace
-  | WorkspaceWorkspaceFolders
-  | WorkspaceConfiguration
-  | WorkspaceApplyEdit
-  -- Document
-  | TextDocumentPublishDiagnostics
-  -- Cancelling
-  | CancelRequestServer
-  | CustomServerMethod Text
-   deriving (Eq,Ord,Read,Show)
+  ResponseParams WorkspaceWorkspaceFolders     = Maybe (List WorkspaceFolder)
+  ResponseParams WorkspaceConfiguration        = List Value
+  ResponseParams WorkspaceApplyEdit            = ApplyWorkspaceEditResponseBody
+-- Custom
+  ResponseParams CustomMethod                  = Value
 
-instance A.FromJSON ServerMethod where
-  -- Window
-  parseJSON (A.String "window/showMessage")              = return WindowShowMessage
-  parseJSON (A.String "window/showMessageRequest")       = return WindowShowMessageRequest
-  parseJSON (A.String "window/logMessage")               = return WindowLogMessage
-  parseJSON (A.String "window/workDoneProgress/create")  = return WindowWorkDoneProgressCreate
-  parseJSON (A.String "$/progress")                      = return Progress
-  parseJSON (A.String "telemetry/event")                 = return TelemetryEvent
-  -- Client
-  parseJSON (A.String "client/registerCapability")       = return ClientRegisterCapability
-  parseJSON (A.String "client/unregisterCapability")     = return ClientUnregisterCapability
-  -- Workspace
-  parseJSON (A.String "workspace/workspaceFolders")      = return WorkspaceWorkspaceFolders
-  parseJSON (A.String "workspace/configuration")         = return WorkspaceConfiguration
-  parseJSON (A.String "workspace/applyEdit")             = return WorkspaceApplyEdit
-  -- Document
-  parseJSON (A.String "textDocument/publishDiagnostics") = return TextDocumentPublishDiagnostics
-  -- Cancelling
-  parseJSON (A.String "$/cancelRequest")                 = return CancelRequestServer
-  parseJSON (A.String m)                                 = return (CustomServerMethod m)
-  parseJSON _                                            = mempty
-
-instance A.ToJSON ServerMethod where
-  -- Window
-  toJSON WindowShowMessage        = A.String "window/showMessage"
-  toJSON WindowShowMessageRequest = A.String "window/showMessageRequest"
-  toJSON WindowLogMessage         = A.String "window/logMessage"
-  toJSON WindowWorkDoneProgressCreate = A.String "window/workDoneProgress/create"
-  toJSON Progress                 = A.String "$/progress"
-  toJSON TelemetryEvent           = A.String "telemetry/event"
-  -- Client
-  toJSON ClientRegisterCapability   = A.String "client/registerCapability"
-  toJSON ClientUnregisterCapability = A.String "client/unregisterCapability"
-  -- Workspace
-  toJSON WorkspaceWorkspaceFolders = A.String "workspace/workspaceFolders"
-  toJSON WorkspaceConfiguration    = A.String "workspace/configuration"
-  toJSON WorkspaceApplyEdit        = A.String "workspace/applyEdit"
-  -- Document
-  toJSON TextDocumentPublishDiagnostics = A.String "textDocument/publishDiagnostics"
-  -- Cancelling
-  toJSON CancelRequestServer = A.String "$/cancelRequest"
-  toJSON (CustomServerMethod m) = A.String m
-
-data RequestMessage m req resp =
-  RequestMessage
-    { _jsonrpc :: Text
-    , _id      :: LspId
-    , _method  :: m
-    , _params  :: req
-    } deriving (Read,Show,Eq)
-
-deriveJSON lspOptions ''RequestMessage
 
 -- ---------------------------------------------------------------------
 {-
-interface ResponseError<D> {
-    /**
-     * A number indicating the error type that occurred.
-     */
-    code: number;
+$ Notifications and Requests
 
-    /**
-     * A string providing a short description of the error.
-     */
-    message: string;
+Notification and requests ids starting with '$/' are messages which are protocol
+implementation dependent and might not be implementable in all clients or
+servers. For example if the server implementation uses a single threaded
+synchronous programming language then there is little a server can do to react
+to a '$/cancelRequest'. If a server or client receives notifications or requests
+starting with '$/' it is free to ignore them if they are unknown.
 
-    /**
-     * A Primitive or Structured value that contains additional
-     * information about the error. Can be omitted.
-     */
-    data?: D;
-}
-
-export namespace ErrorCodes {
-        // Defined by JSON RPC
-        export const ParseError: number = -32700;
-        export const InvalidRequest: number = -32600;
-        export const MethodNotFound: number = -32601;
-        export const InvalidParams: number = -32602;
-        export const InternalError: number = -32603;
-        export const serverErrorStart: number = -32099;
-        export const serverErrorEnd: number = -32000;
-        export const ServerNotInitialized: number = -32002;
-        export const UnknownErrorCode: number = -32001;
-
-        // Defined by the protocol.
-        export const RequestCancelled: number = -32800;
-        export const ContentModified: number = -32801;
-}
 -}
+
+data NotificationMessage (m :: Method f Notification) =
+  NotificationMessage
+    { _jsonrpc :: Text
+    , _method  :: SMethod m
+    , _params  :: MessageParams m
+    } deriving Generic
+
+deriving instance Eq   (MessageParams m) => Eq (NotificationMessage m)
+deriving instance Show (MessageParams m) => Show (NotificationMessage m)
+
+instance (FromJSON (MessageParams m), FromJSON (SMethod m)) => FromJSON (NotificationMessage m) where
+  parseJSON = genericParseJSON lspOptions
+instance (ToJSON (MessageParams m)) => ToJSON (NotificationMessage m) where
+  toJSON     = genericToJSON lspOptions
+  toEncoding = genericToEncoding lspOptions
+
+data RequestMessage (m :: Method f Request) = RequestMessage
+    { _jsonrpc :: Text
+    , _id      :: LspId m
+    , _method  :: SMethod m
+    , _params  :: MessageParams m
+    } deriving Generic
+
+deriving instance Eq   (MessageParams m) => Eq (RequestMessage m)
+deriving instance (Read (SMethod m), Read (MessageParams m)) => Read (RequestMessage m)
+deriving instance Show (MessageParams m) => Show (RequestMessage m)
+
+instance (FromJSON (MessageParams m), FromJSON (SMethod m)) => FromJSON (RequestMessage m) where
+  parseJSON = genericParseJSON lspOptions
+instance (ToJSON (MessageParams m), FromJSON (SMethod m)) => ToJSON (RequestMessage m) where
+  toJSON     = genericToJSON lspOptions
+  toEncoding = genericToEncoding lspOptions
+
+-- | A custom message data type is needed to distinguish between
+-- notifications and requests, since a CustomMethod can be both!
+data CustomMessage f t where
+  ReqMess :: RequestMessage (CustomMethod :: Method f Request) -> CustomMessage f Request
+  NotMess :: NotificationMessage (CustomMethod :: Method f Notification) -> CustomMessage f Notification
+
+deriving instance Show (CustomMessage p t)
+
+instance ToJSON (CustomMessage p t) where
+  toJSON (ReqMess a) = toJSON a
+  toJSON (NotMess a) = toJSON a
+
+instance FromJSON (CustomMessage p Request) where
+  parseJSON v = ReqMess <$> parseJSON v
+instance FromJSON (CustomMessage p Notification) where
+  parseJSON v = NotMess <$> parseJSON v
+
+-- ---------------------------------------------------------------------
+-- Response Message
+-- ---------------------------------------------------------------------
 
 data ErrorCode = ParseError
                | InvalidRequest
@@ -338,98 +293,57 @@ data ErrorCode = ParseError
                -- ^ Note: server error codes are reserved from -32099 to -32000
                deriving (Read,Show,Eq)
 
-instance A.ToJSON ErrorCode where
-  toJSON ParseError           = A.Number (-32700)
-  toJSON InvalidRequest       = A.Number (-32600)
-  toJSON MethodNotFound       = A.Number (-32601)
-  toJSON InvalidParams        = A.Number (-32602)
-  toJSON InternalError        = A.Number (-32603)
-  toJSON ServerErrorStart     = A.Number (-32099)
-  toJSON ServerErrorEnd       = A.Number (-32000)
-  toJSON ServerNotInitialized = A.Number (-32002)
-  toJSON UnknownErrorCode     = A.Number (-32001)
-  toJSON RequestCancelled     = A.Number (-32800)
-  toJSON ContentModified      = A.Number (-32801)
+instance ToJSON ErrorCode where
+  toJSON ParseError           = Number (-32700)
+  toJSON InvalidRequest       = Number (-32600)
+  toJSON MethodNotFound       = Number (-32601)
+  toJSON InvalidParams        = Number (-32602)
+  toJSON InternalError        = Number (-32603)
+  toJSON ServerErrorStart     = Number (-32099)
+  toJSON ServerErrorEnd       = Number (-32000)
+  toJSON ServerNotInitialized = Number (-32002)
+  toJSON UnknownErrorCode     = Number (-32001)
+  toJSON RequestCancelled     = Number (-32800)
+  toJSON ContentModified      = Number (-32801)
 
-instance A.FromJSON ErrorCode where
-  parseJSON (A.Number (-32700)) = pure ParseError
-  parseJSON (A.Number (-32600)) = pure InvalidRequest
-  parseJSON (A.Number (-32601)) = pure MethodNotFound
-  parseJSON (A.Number (-32602)) = pure InvalidParams
-  parseJSON (A.Number (-32603)) = pure InternalError
-  parseJSON (A.Number (-32099)) = pure ServerErrorStart
-  parseJSON (A.Number (-32000)) = pure ServerErrorEnd
-  parseJSON (A.Number (-32002)) = pure ServerNotInitialized
-  parseJSON (A.Number (-32001)) = pure UnknownErrorCode
-  parseJSON (A.Number (-32800)) = pure RequestCancelled
-  parseJSON (A.Number (-32801)) = pure ContentModified
+instance FromJSON ErrorCode where
+  parseJSON (Number (-32700)) = pure ParseError
+  parseJSON (Number (-32600)) = pure InvalidRequest
+  parseJSON (Number (-32601)) = pure MethodNotFound
+  parseJSON (Number (-32602)) = pure InvalidParams
+  parseJSON (Number (-32603)) = pure InternalError
+  parseJSON (Number (-32099)) = pure ServerErrorStart
+  parseJSON (Number (-32000)) = pure ServerErrorEnd
+  parseJSON (Number (-32002)) = pure ServerNotInitialized
+  parseJSON (Number (-32001)) = pure UnknownErrorCode
+  parseJSON (Number (-32800)) = pure RequestCancelled
+  parseJSON (Number (-32801)) = pure ContentModified
   parseJSON _                   = mempty
 
 -- -------------------------------------
-
-{-
-  https://microsoft.github.io/language-server-protocol/specification#responseMessage
-
-  interface ResponseError {
-    /**
-    * A number indicating the error type that occurred.
-    */
-    code: number;
-
-    /**
-    * A string providing a short description of the error.
-    */
-    message: string;
-
-    /**
-    * A primitive or structured value that contains additional
-    * information about the error. Can be omitted.
-    */
-    data?: string | number | boolean | array | object | null;
-  }
--}
 
 data ResponseError =
   ResponseError
     { _code    :: ErrorCode
     , _message :: Text
-    , _xdata   :: Maybe A.Value
+    , _xdata   :: Maybe Value
     } deriving (Read,Show,Eq)
 
-deriveJSON lspOptions{ fieldLabelModifier = customModifier } ''ResponseError
+deriveJSON lspOptions ''ResponseError
 
--- ---------------------------------------------------------------------
-
-{-
-  https://microsoft.github.io/language-server-protocol/specification#responseMessage
-
-  interface ResponseMessage extends Message {
-    /**
-    * The request id.
-    */
-    id: number | string | null;
-
-    /**
-    * The result of a request. This member is REQUIRED on success.
-    * This member MUST NOT exist if there was an error invoking the method.
-    */
-    result?: string | number | boolean | object | null;
-
-    /**
-    * The error object in case a request fails.
-    */
-    error?: ResponseError;
-  }
--}
-
-data ResponseMessage a =
+-- | Either result or error must be Just.
+data ResponseMessage (m :: Method f Request) =
   ResponseMessage
     { _jsonrpc :: Text
-    , _id      :: LspIdRsp
-    , _result  :: Either ResponseError a
-    } deriving (Read,Show,Eq)
+    , _id      :: Maybe (LspId m)
+    , _result  :: Either ResponseError (ResponseParams m)
+    } deriving Generic
 
-instance ToJSON a => ToJSON (ResponseMessage a) where
+deriving instance Eq   (ResponseParams m) => Eq (ResponseMessage m)
+deriving instance Read (ResponseParams m) => Read (ResponseMessage m)
+deriving instance Show (ResponseParams m) => Show (ResponseMessage m)
+
+instance (ToJSON (ResponseParams m)) => ToJSON (ResponseMessage m) where
   toJSON (ResponseMessage { _jsonrpc = jsonrpc, _id = lspid, _result = result })
     = object
       [ "jsonrpc" .= jsonrpc
@@ -439,7 +353,7 @@ instance ToJSON a => ToJSON (ResponseMessage a) where
         Right a   -> "result" .= a
       ]
 
-instance FromJSON a => FromJSON (ResponseMessage a) where
+instance FromJSON (ResponseParams a) => FromJSON (ResponseMessage a) where
   parseJSON = withObject "Response" $ \o -> do
     _jsonrpc <- o .: "jsonrpc"
     _id      <- o .: "id"
@@ -449,73 +363,251 @@ instance FromJSON a => FromJSON (ResponseMessage a) where
     result   <- case (_error, _result) of
       ((Just err), Nothing   ) -> pure $ Left err
       (Nothing   , (Just res)) -> pure $ Right res
-      ((Just   _), (Just   _)) -> fail $ "Both error and result cannot be present"
-      (Nothing, Nothing) -> fail "Both error and result cannot be Nothing"
+      ((Just _err), (Just _res)) -> fail $ "both error and result cannot be present: " ++ show o
+      (Nothing, Nothing) -> fail "both error and result cannot be Nothing"
     return $ ResponseMessage _jsonrpc _id $ result
 
-type ErrorResponse = ResponseMessage ()
-
+-- ---------------------------------------------------------------------
+-- Helper Type Families
 -- ---------------------------------------------------------------------
 
-type BareResponseMessage = ResponseMessage A.Value
+-- | Map a method to the Request/Notification type with the correct
+-- payload
+type family Message (m :: Method f t) :: Type where
+  Message (CustomMethod :: Method f t) = CustomMessage f t
+  Message (m :: Method f Request) = RequestMessage m
+  Message (m :: Method f Notification) = NotificationMessage m
+
+-- Some helpful type synonyms
+type ClientMessage (m :: Method FromClient t) = Message m
+type ServerMessage (m :: Method FromServer t) = Message m
 
 -- ---------------------------------------------------------------------
+-- Working with arbritary messages
+-- ---------------------------------------------------------------------
+
+data FromServerMessage' a where
+  FromServerMess :: forall t (m :: Method FromServer t) a. SMethod m -> Message m -> FromServerMessage' a
+  FromServerRsp  :: forall (m :: Method FromClient Request) a. a m -> ResponseMessage m -> FromServerMessage' a
+
+type FromServerMessage = FromServerMessage' SMethod
+
+instance Eq FromServerMessage where
+  (==) = (==) `on` toJSON
+instance Show FromServerMessage where
+  show = show . toJSON
+
+instance ToJSON FromServerMessage where
+  toJSON (FromServerMess m p) = serverMethodJSON m (toJSON p)
+  toJSON (FromServerRsp m p) = clientResponseJSON m (toJSON p)
+
+fromServerNot :: forall (m :: Method FromServer Notification).
+  Message m ~ NotificationMessage m => NotificationMessage m -> FromServerMessage
+fromServerNot m@NotificationMessage{_method=meth} = FromServerMess meth m
+
+fromServerReq :: forall (m :: Method FromServer Request).
+  Message m ~ RequestMessage m => RequestMessage m -> FromServerMessage
+fromServerReq m@RequestMessage{_method=meth} = FromServerMess meth m
+
+data FromClientMessage' a where
+  FromClientMess :: forall t (m :: Method FromClient t) a. SMethod m -> Message m -> FromClientMessage' a
+  FromClientRsp  :: forall (m :: Method FromServer Request) a. a m -> ResponseMessage m -> FromClientMessage' a
+
+type FromClientMessage = FromClientMessage' SMethod
+
+instance ToJSON FromClientMessage where
+  toJSON (FromClientMess m p) = clientMethodJSON m (toJSON p)
+  toJSON (FromClientRsp m p) = serverResponseJSON m (toJSON p)
+
+fromClientNot :: forall (m :: Method FromClient Notification).
+  Message m ~ NotificationMessage m => NotificationMessage m -> FromClientMessage
+fromClientNot m@NotificationMessage{_method=meth} = FromClientMess meth m
+
+fromClientReq :: forall (m :: Method FromClient Request).
+  Message m ~ RequestMessage m => RequestMessage m -> FromClientMessage
+fromClientReq m@RequestMessage{_method=meth} = FromClientMess meth m
+
+type LookupFunc f a = forall (m :: Method f Request). LspId m -> Maybe (SMethod m, a m)
+
 {-
-$ Notifications and Requests
-
-Notification and requests ids starting with '$/' are messages which are protocol
-implementation dependent and might not be implementable in all clients or
-servers. For example if the server implementation uses a single threaded
-synchronous programming language then there is little a server can do to react
-to a '$/cancelRequest'. If a server or client receives notifications or requests
-starting with '$/' it is free to ignore them if they are unknown.
+Message Types we must handle are the following
+ 
+Request      | jsonrpc | id | method | params?
+Response     | jsonrpc | id |        |         | response? | error?
+Notification | jsonrpc |    | method | params?
 -}
 
-data NotificationMessage m a =
-  NotificationMessage
-    { _jsonrpc :: Text
-    , _method  :: m
-    , _params  :: a
-    } deriving (Read,Show,Eq)
+parseServerMessage :: LookupFunc FromClient a -> Value -> Parser (FromServerMessage' a)
+parseServerMessage lookupId v@(Object o) = do
+  case HM.lookup "method" o of
+    Just cmd -> do
+      -- Request or Notification
+      SomeServerMethod m <- parseJSON cmd
+      case splitServerMethod m of
+        IsServerNot -> FromServerMess m <$> parseJSON v
+        IsServerReq -> FromServerMess m <$> parseJSON v
+        IsServerEither
+          | HM.member "id" o -- Request
+          , SCustomMethod cm <- m ->
+              let m' = (SCustomMethod cm :: SMethod (CustomMethod :: Method FromServer Request))
+                  in FromServerMess m' <$> parseJSON v
+          | SCustomMethod cm <- m ->
+              let m' = (SCustomMethod cm :: SMethod (CustomMethod :: Method FromServer Notification))
+                  in FromServerMess m' <$> parseJSON v
+    Nothing -> do
+      case HM.lookup "id" o of
+        Just i' -> do
+          i <- parseJSON i'
+          case lookupId i of
+            Just (m,res) -> clientResponseJSON m $ FromServerRsp res <$> parseJSON v
+            Nothing -> fail $ unwords ["Failed in looking up response type of", show v]
+        Nothing -> fail $ unwords ["Got unexpected message without method or id"]
+parseServerMessage _ v = fail $ unwords ["parseServerMessage expected object, got:",show v]
 
-deriveJSON lspOptions ''NotificationMessage
+parseClientMessage :: LookupFunc FromServer a -> Value -> Parser (FromClientMessage' a)
+parseClientMessage lookupId v@(Object o) = do
+  case HM.lookup "method" o of
+    Just cmd -> do
+      -- Request or Notification
+      SomeClientMethod m <- parseJSON cmd
+      case splitClientMethod m of
+        IsClientNot -> FromClientMess m <$> parseJSON v
+        IsClientReq -> FromClientMess m <$> parseJSON v
+        IsClientEither
+          | HM.member "id" o -- Request
+          , SCustomMethod cm <- m ->
+              let m' = (SCustomMethod cm :: SMethod (CustomMethod :: Method FromClient Request))
+                  in FromClientMess m' <$> parseJSON v
+          | SCustomMethod cm <- m ->
+              let m' = (SCustomMethod cm :: SMethod (CustomMethod :: Method FromClient Notification))
+                  in FromClientMess m' <$> parseJSON v
+    Nothing -> do
+      case HM.lookup "id" o of
+        Just i' -> do
+          i <- parseJSON i'
+          case lookupId i of
+            Just (m,res) -> serverResponseJSON m $ FromClientRsp res <$> parseJSON v
+            Nothing -> fail $ unwords ["Failed in looking up response type of", show v]
+        Nothing -> fail $ unwords ["Got unexpected message without method or id"]
+parseClientMessage _ v = fail $ unwords ["parseClientMessage expected object, got:",show v]
 
 -- ---------------------------------------------------------------------
-{-
-Cancellation Support
-
-https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#cancellation-support
-
-    New: The base protocol now offers support for request cancellation. To
-    cancel a request, a notification message with the following properties is
-    sent:
-
-Notification:
-
-    method: '$/cancelRequest'
-    params: CancelParams defined as follows:
-
-interface CancelParams {
-    /**
-     * The request id to cancel.
-     */
-    id: number | string;
-}
-
-A request that got canceled still needs to return from the server and send a
-response back. It can not be left open / hanging. This is in line with the JSON
-RPC protocol that requires that every request sends a response back. In addition
-it allows for returning partial results on cancel.
--}
-
-data CancelParams =
-  CancelParams
-    { _id :: LspId
-    } deriving (Read,Show,Eq)
-
-deriveJSON lspOptions ''CancelParams
-
-type CancelNotification = NotificationMessage ClientMethod CancelParams
-type CancelNotificationServer = NotificationMessage ServerMethod CancelParams
-
+-- Helper Utilities
 -- ---------------------------------------------------------------------
+
+clientResponseJSON :: SClientMethod m -> (HasJSON (ResponseMessage m) => x) -> x
+clientResponseJSON m x = case splitClientMethod m of
+  IsClientReq -> x
+  IsClientEither -> x
+
+serverResponseJSON :: SServerMethod m -> (HasJSON (ResponseMessage m) => x) -> x
+serverResponseJSON m x = case splitServerMethod m of
+  IsServerReq -> x
+  IsServerEither -> x
+
+clientMethodJSON :: SClientMethod m -> (ToJSON (ClientMessage m) => x) -> x
+clientMethodJSON m x =
+  case splitClientMethod m of
+    IsClientNot -> x
+    IsClientReq -> x
+    IsClientEither -> x
+
+serverMethodJSON :: SServerMethod m -> (ToJSON (ServerMessage m) => x) -> x
+serverMethodJSON m x =
+  case splitServerMethod m of
+    IsServerNot -> x
+    IsServerReq -> x
+    IsServerEither -> x
+
+type HasJSON a = (ToJSON a,FromJSON a,Eq a)
+
+-- Reify universal properties about Client/Server Messages
+
+data ClientNotOrReq (m :: Method FromClient t) where
+  IsClientNot
+    :: ( HasJSON (ClientMessage m)
+       , Message m ~ NotificationMessage m)
+    => ClientNotOrReq (m :: Method FromClient Notification)
+  IsClientReq
+    :: forall (m :: Method FromClient Request).
+    ( HasJSON (ClientMessage m)
+    , HasJSON (ResponseMessage m)
+    , Message m ~ RequestMessage m)
+    => ClientNotOrReq m
+  IsClientEither
+    :: ClientNotOrReq CustomMethod
+
+data ServerNotOrReq (m :: Method FromServer t) where
+  IsServerNot
+    :: ( HasJSON (ServerMessage m)
+       , Message m ~ NotificationMessage m)
+    => ServerNotOrReq (m :: Method FromServer Notification)
+  IsServerReq
+    :: forall (m :: Method FromServer Request).
+    ( HasJSON (ServerMessage m)
+    , HasJSON (ResponseMessage m)
+    , Message m ~ RequestMessage m)
+    => ServerNotOrReq m
+  IsServerEither
+    :: ServerNotOrReq CustomMethod
+
+splitClientMethod :: SClientMethod m -> ClientNotOrReq m
+splitClientMethod SInitialize = IsClientReq
+splitClientMethod SInitialized = IsClientNot
+splitClientMethod SShutdown = IsClientReq
+splitClientMethod SExit = IsClientNot
+splitClientMethod SWorkspaceDidChangeWorkspaceFolders = IsClientNot
+splitClientMethod SWorkspaceDidChangeConfiguration = IsClientNot
+splitClientMethod SWorkspaceDidChangeWatchedFiles = IsClientNot
+splitClientMethod SWorkspaceSymbol = IsClientReq
+splitClientMethod SWorkspaceExecuteCommand = IsClientReq
+splitClientMethod SWindowWorkDoneProgressCancel = IsClientNot
+splitClientMethod STextDocumentDidOpen = IsClientNot
+splitClientMethod STextDocumentDidChange = IsClientNot
+splitClientMethod STextDocumentWillSave = IsClientNot
+splitClientMethod STextDocumentWillSaveWaitUntil = IsClientReq
+splitClientMethod STextDocumentDidSave = IsClientNot
+splitClientMethod STextDocumentDidClose = IsClientNot
+splitClientMethod STextDocumentCompletion = IsClientReq
+splitClientMethod SCompletionItemResolve = IsClientReq
+splitClientMethod STextDocumentHover = IsClientReq
+splitClientMethod STextDocumentSignatureHelp = IsClientReq
+splitClientMethod STextDocumentDeclaration = IsClientReq
+splitClientMethod STextDocumentDefinition = IsClientReq
+splitClientMethod STextDocumentTypeDefinition = IsClientReq
+splitClientMethod STextDocumentImplementation = IsClientReq
+splitClientMethod STextDocumentReferences = IsClientReq
+splitClientMethod STextDocumentDocumentHighlight = IsClientReq
+splitClientMethod STextDocumentDocumentSymbol = IsClientReq
+splitClientMethod STextDocumentCodeAction = IsClientReq
+splitClientMethod STextDocumentCodeLens = IsClientReq
+splitClientMethod SCodeLensResolve = IsClientReq
+splitClientMethod STextDocumentDocumentLink = IsClientReq
+splitClientMethod SDocumentLinkResolve = IsClientReq
+splitClientMethod STextDocumentDocumentColor = IsClientReq
+splitClientMethod STextDocumentColorPresentation = IsClientReq
+splitClientMethod STextDocumentFormatting = IsClientReq
+splitClientMethod STextDocumentRangeFormatting = IsClientReq
+splitClientMethod STextDocumentOnTypeFormatting = IsClientReq
+splitClientMethod STextDocumentRename = IsClientReq
+splitClientMethod STextDocumentPrepareRename = IsClientReq
+splitClientMethod STextDocumentFoldingRange = IsClientReq
+splitClientMethod STextDocumentSelectionRange = IsClientReq
+splitClientMethod SCancelRequest = IsClientNot
+splitClientMethod SCustomMethod{} = IsClientEither
+
+splitServerMethod :: SServerMethod m -> ServerNotOrReq m
+splitServerMethod SWindowShowMessage = IsServerNot
+splitServerMethod SWindowShowMessageRequest = IsServerReq
+splitServerMethod SWindowLogMessage = IsServerNot
+splitServerMethod SWindowWorkDoneProgressCreate = IsServerReq
+splitServerMethod SProgress = IsServerNot
+splitServerMethod STelemetryEvent = IsServerNot
+splitServerMethod SClientRegisterCapability = IsServerReq
+splitServerMethod SClientUnregisterCapability = IsServerReq
+splitServerMethod SWorkspaceWorkspaceFolders = IsServerReq
+splitServerMethod SWorkspaceConfiguration = IsServerReq
+splitServerMethod SWorkspaceApplyEdit = IsServerReq
+splitServerMethod STextDocumentPublishDiagnostics = IsServerNot
+splitServerMethod SCancelRequest = IsServerNot
+splitServerMethod SCustomMethod{} = IsServerEither

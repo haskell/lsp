@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, DataKinds #-}
 module MethodSpec where
 
 
@@ -79,12 +79,12 @@ diagnosticsSpec = do
   describe "Client Methods" $ do
     it "maintains roundtrip consistency" $ do
       forM_ clientMethods $ \m -> do
-        (J.toJSON <$> (J.fromJSON (J.String m) :: J.Result J.ClientMethod))
+        (J.toJSON <$> (J.fromJSON (J.String m) :: J.Result (J.SomeClientMethod)))
           `shouldBe` (J.Success $ J.String m)
   describe "Server Methods" $ do
     it "maintains roundtrip consistency" $ do
       forM_ serverMethods $ \m -> do
-        (J.toJSON <$> (J.fromJSON (J.String m) :: J.Result J.ServerMethod))
+        (J.toJSON <$> (J.fromJSON (J.String m) :: J.Result (J.SomeServerMethod)))
           `shouldBe` (J.Success $ J.String m)
 
     -- ---------------------------------

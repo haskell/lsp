@@ -36,14 +36,14 @@ It can also be used with emacs, see https://github.com/emacs-lsp/lsp-haskell
 
 ## Using the example server
 
-    stack install :lsp-hello --flag haskell-lsp:demo
+    stack install :lsp-demo-reactor-server --flag haskell-lsp:demo
 
-will generate a `lsp-hello` executable.
+will generate a `:lsp-demo-reactor-server` executable.
 
-Changing the server to be called in the [`vscode-hie-server`](https://github.com/alanz/vscode-hie-server/blob/master/hie-vscode.sh#L21) plugin from `hie` to
-`lsp-hello` will run the example server instead of hie.
+Changing the server executable in the [`vscode-haskell`](https://github.com/haskell/vscode-haskell) plugin to
+`lsp-demo-reactor-server` to test it out.
 
-Likewise, changing the executable in `lsp-haskell` for emacs.
+Likewise, you can change the executable in `lsp-haskell` for emacs.
 
 ## Useful links
 

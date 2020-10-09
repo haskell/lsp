@@ -1,9 +1,7 @@
-{-# LANGUAGE CPP                 #-}
-{-# LANGUAGE GADTs               #-}
-{-# LANGUAGE MultiWayIf          #-}
-{-# LANGUAGE BinaryLiterals      #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Language.Haskell.LSP.Control
   (
@@ -14,7 +12,6 @@ module Language.Haskell.LSP.Control
 
 import           Control.Concurrent
 import           Control.Concurrent.STM.TChan
-import           Control.Concurrent.STM.TVar
 import           Control.Monad
 import           Control.Monad.STM
 import qualified Data.Aeson as J
@@ -23,46 +20,39 @@ import Data.Attoparsec.ByteString.Char8
 import qualified Data.ByteString as BS
 import Data.ByteString.Builder.Extra (defaultChunkSize)
 import qualified Data.ByteString.Lazy as BSL
-import qualified Data.ByteString.Lazy.Char8 as B
-import           Data.Time.Clock
-import           Data.Time.Format
-#if __GLASGOW_HASKELL__ < 804
-import           Data.Monoid
-#endif
-import           Language.Haskell.LSP.Capture
+import qualified Data.Text.Lazy as TL
+import qualified Data.Text.Lazy.Encoding as TL
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as T
+import           Data.List
 import qualified Language.Haskell.LSP.Core as Core
-import           Language.Haskell.LSP.Messages
 import           Language.Haskell.LSP.VFS
-import           Language.Haskell.LSP.Utility
 import           System.IO
-import           System.FilePath
+import           System.Log.Logger
 
 -- ---------------------------------------------------------------------
 
 -- | Convenience function for 'runWithHandles stdin stdout'.
-run :: (Show configs) => Core.InitializeCallbacks configs
+run :: Core.InitializeCallbacks config
                 -- ^ function to be called once initialize has
                 -- been received from the client. Further message
                 -- processing will start only after this returns.
-    -> Core.Handlers
     -> Core.Options
-    -> Maybe FilePath
     -- ^ File to capture the session to.
     -> IO Int
 run = runWithHandles stdin stdout
 
 -- | Convenience function for 'runWith' using the specified handles.
-runWithHandles :: (Show config) =>
+runWithHandles ::
        Handle
     -- ^ Handle to read client input from.
     -> Handle
     -- ^ Handle to write output to.
     -> Core.InitializeCallbacks config
-    -> Core.Handlers
     -> Core.Options
-    -> Maybe FilePath
     -> IO Int         -- exit code
-runWithHandles hin hout initializeCallbacks h o captureFp = do
+runWithHandles hin hout initializeCallbacks o = do
+
   hSetBuffering hin NoBuffering
   hSetEncoding  hin utf8
 
@@ -76,68 +66,84 @@ runWithHandles hin hout initializeCallbacks h o captureFp = do
       BSL.hPut hout out
       hFlush hout
 
-  runWith clientIn clientOut initializeCallbacks h o captureFp
+  runWith clientIn clientOut initializeCallbacks o
 
 -- | Starts listening and sending requests and responses
 -- using the specified I/O.
-runWith :: (Show config) =>
+runWith ::
        IO BS.ByteString
     -- ^ Client input.
     -> (BSL.ByteString -> IO ())
     -- ^ Function to provide output to.
     -> Core.InitializeCallbacks config
-    -> Core.Handlers
     -> Core.Options
-    -> Maybe FilePath
     -> IO Int         -- exit code
-runWith clientIn clientOut initializeCallbacks h o captureFp = do
+runWith clientIn clientOut initializeCallbacks o = do
 
-  logm $ B.pack "\n\n\n\n\nhaskell-lsp:Starting up server ..."
+  infoM "haskell-lsp.runWith" "\n\n\n\n\nhaskell-lsp:Starting up server ..."
 
-  timestamp <- formatTime defaultTimeLocale (iso8601DateFormat (Just "%H-%M-%S")) <$> getCurrentTime
-  let timestampCaptureFp = fmap (\f -> dropExtension f ++ timestamp ++ takeExtension f)
-                                captureFp
-  captureCtx <- maybe (return noCapture) captureToFile timestampCaptureFp
+  cout <- atomically newTChan :: IO (TChan J.Value)
+  _rhpid <- forkIO $ sendServer cout clientOut
 
-  cout <- atomically newTChan :: IO (TChan FromServerMessage)
-  _rhpid <- forkIO $ sendServer cout clientOut captureCtx
+  let sendMsg msg = atomically $ writeTChan cout $ J.toJSON msg
 
-
-  let sendFunc :: Core.SendFunc
-      sendFunc msg = atomically $ writeTChan cout msg
-  let lf = error "LifeCycle error, ClientCapabilities not set yet via initialize maessage"
-
-  tvarId <- atomically $ newTVar 0
   initVFS $ \vfs -> do
-    tvarDat <- atomically $ newTVar $ Core.defaultLanguageContextData h o lf tvarId sendFunc captureCtx vfs
-
-    ioLoop clientIn initializeCallbacks tvarDat
+    ioLoop clientIn initializeCallbacks vfs o sendMsg
 
   return 1
 
-
 -- ---------------------------------------------------------------------
 
-ioLoop :: (Show config) => IO BS.ByteString
-                   -> Core.InitializeCallbacks config
-                   -> TVar (Core.LanguageContextData config)
-                   -> IO ()
-ioLoop clientIn dispatcherProc tvarDat =
-  go (parse parser "")
+ioLoop ::
+     IO BS.ByteString
+  -> Core.InitializeCallbacks config
+  -> VFS
+  -> Core.Options
+  -> (Core.FromServerMessage -> IO ())
+  -> IO ()
+ioLoop clientIn initializeCallbacks vfs o sendMsg = do
+  minitialize <- parseOne (parse parser "")
+  case minitialize of
+    Nothing -> pure ()
+    Just (msg,remainder) -> do
+      case J.eitherDecode $ BSL.fromStrict msg of
+        Left err ->
+          errorM "haskell-lsp.ioLoop" $
+            "Got error while decoding initialize:\n" <> err <> "\n exiting 1 ...\n"
+        Right initialize -> do
+          mInitResp <- Core.initializeRequestHandler initializeCallbacks vfs o sendMsg initialize
+          case mInitResp of
+            Nothing -> pure ()
+            Just env -> loop env (parse parser remainder)
   where
-    go :: Result BS.ByteString -> IO ()
-    go (Fail _ ctxs err) = logm $ B.pack
-      "\nhaskell-lsp: Failed to parse message header:\n" <> B.intercalate " > " (map str2lbs ctxs) <> ": " <>
-      str2lbs err <> "\n exiting 1 ...\n"
-    go (Partial c) = do
+
+    parseOne :: Result BS.ByteString -> IO (Maybe (BS.ByteString,BS.ByteString))
+    parseOne (Fail _ ctxs err) = do
+      errorM "haskell-lsp.parseOne" $
+        "Failed to parse message header:\n" <> intercalate " > " ctxs <> ": " <>
+        err <> "\n exiting 1 ...\n"
+      pure Nothing
+    parseOne (Partial c) = do
       bs <- clientIn
       if BS.null bs
-        then logm $ B.pack "\nhaskell-lsp:Got EOF, exiting 1 ...\n"
-        else go (c bs)
-    go (Done remainder msg) = do
-      logm $ B.pack "---> " <> BSL.fromStrict msg
-      Core.handleMessage dispatcherProc tvarDat (BSL.fromStrict msg)
-      go (parse parser remainder)
+        then do
+          errorM "haskell-lsp.parseON" "haskell-lsp:Got EOF, exiting 1 ...\n"
+          pure Nothing
+        else parseOne (c bs)
+    parseOne (Done remainder msg) = do
+      debugM "haskell-lsp.parseOne" $ "---> " <> T.unpack (T.decodeUtf8 msg)
+      pure $ Just (msg,remainder)
+
+    loop env = go
+      where
+        go r = do
+          res <- parseOne r
+          case res of
+            Nothing -> pure ()
+            Just (msg,remainder) -> do
+              Core.runLspT env $ Core.processMessage $ BSL.fromStrict msg
+              go (parse parser remainder)
+
     parser = do
       _ <- string "Content-Length: "
       len <- decimal
@@ -147,25 +153,22 @@ ioLoop clientIn dispatcherProc tvarDat =
 -- ---------------------------------------------------------------------
 
 -- | Simple server to make sure all output is serialised
-sendServer :: TChan FromServerMessage -> (BSL.ByteString -> IO ()) -> CaptureContext -> IO ()
-sendServer msgChan clientOut captureCtxt =
+sendServer :: TChan J.Value -> (BSL.ByteString -> IO ()) -> IO ()
+sendServer msgChan clientOut = do
   forever $ do
     msg <- atomically $ readTChan msgChan
 
     -- We need to make sure we only send over the content of the message,
     -- and no other tags/wrapper stuff
-    let str = J.encode $
-                J.genericToJSON (J.defaultOptions { J.sumEncoding = J.UntaggedValue }) msg
+    let str = J.encode msg
 
     let out = BSL.concat
-                 [ str2lbs $ "Content-Length: " ++ show (BSL.length str)
-                 , BSL.fromStrict _TWO_CRLF
-                 , str ]
+                [ TL.encodeUtf8 $ TL.pack $ "Content-Length: " ++ show (BSL.length str)
+                , BSL.fromStrict _TWO_CRLF
+                , str ]
 
     clientOut out
-    logm $ B.pack "<--2--" <> str
-
-    captureFromServer msg captureCtxt
+    debugM "haskell-lsp.sendServer" $ "<--2--" <> TL.unpack (TL.decodeUtf8 str)
 
 -- |
 --

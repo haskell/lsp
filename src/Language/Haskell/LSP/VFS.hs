@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -54,12 +53,12 @@ import           Data.Rope.UTF16 ( Rope )
 import qualified Data.Rope.UTF16 as Rope
 import qualified Language.Haskell.LSP.Types           as J
 import qualified Language.Haskell.LSP.Types.Lens      as J
-import           Language.Haskell.LSP.Utility
 import           System.FilePath
 import           Data.Hashable
 import           System.Directory
 import           System.IO 
 import           System.IO.Temp
+import           System.Log.Logger
 
 -- ---------------------------------------------------------------------
 {-# ANN module ("hlint: ignore Eta reduce" :: String) #-}
@@ -132,14 +131,14 @@ updateVFS f vfs@VFS{vfsMap} = vfs { vfsMap = f vfsMap }
 -- ^ Applies the changes from a 'ApplyWorkspaceEditRequest' to the 'VFS'
 changeFromServerVFS :: VFS -> J.ApplyWorkspaceEditRequest -> IO VFS
 changeFromServerVFS initVfs (J.RequestMessage _ _ _ params) = do
-  let J.ApplyWorkspaceEditParams edit = params
+  let J.ApplyWorkspaceEditParams _label edit = params
       J.WorkspaceEdit mChanges mDocChanges = edit
   case mDocChanges of
     Just (J.List textDocEdits) -> applyEdits textDocEdits
     Nothing -> case mChanges of
       Just cs -> applyEdits $ HashMap.foldlWithKey' changeToTextDocumentEdit [] cs
       Nothing -> do
-        logs "haskell-lsp:changeVfs:no changes"
+        debugM "haskell-lsp.changeVfs" "No changes"
         return initVfs
 
   where
@@ -158,9 +157,9 @@ changeFromServerVFS initVfs (J.RequestMessage _ _ _ params) = do
       let sortedEdits = sortOn (Down . (^. J.range)) edits
           changeEvents = map editToChangeEvent sortedEdits
           ps = J.DidChangeTextDocumentParams vid (J.List changeEvents)
-          notif = J.NotificationMessage "" J.TextDocumentDidChange ps
+          notif = J.NotificationMessage "" J.STextDocumentDidChange ps
       let (vfs',ls) = changeFromClientVFS vfs notif
-      mapM_ logs ls
+      mapM_ (debugM "haskell-lsp.changeFromServerVFS") ls
       return vfs'
 
     editToChangeEvent (J.TextEdit range text) = J.TextDocumentContentChangeEvent (Just range) Nothing text
@@ -195,7 +194,7 @@ persistFileVFS vfs uri =
                     hSetNewlineMode h noNewlineTranslation
                     hSetEncoding h utf8
                     hPutStr h contents
-               logs  $ "haskell-lsp:persistFileVFS: Writing virtual file: " 
+               debugM "haskell-lsp.persistFileVFS" $ "Writing virtual file: " 
                     ++ "uri = " ++ show uri ++ ", virtual file = " ++ show tfn
                withFile tfn WriteMode writeRaw
       in Just (tfn, action)

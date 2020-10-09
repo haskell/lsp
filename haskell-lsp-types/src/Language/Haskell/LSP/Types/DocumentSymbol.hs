@@ -1,111 +1,36 @@
 {-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE DuplicateRecordFields      #-}
-module Language.Haskell.LSP.Types.Symbol where
+module Language.Haskell.LSP.Types.DocumentSymbol where
 
-import           Control.Applicative
 import           Data.Aeson
 import           Data.Aeson.TH
 import           Data.Scientific
 import           Data.Text                                      (Text)
-import           Language.Haskell.LSP.Types.Constants
+
 import           Language.Haskell.LSP.Types.TextDocument
-import           Language.Haskell.LSP.Types.List
+import           Language.Haskell.LSP.Types.Common
 import           Language.Haskell.LSP.Types.Location
-import           Language.Haskell.LSP.Types.Message
 import           Language.Haskell.LSP.Types.Progress
+import           Language.Haskell.LSP.Types.Utils
 
 -- ---------------------------------------------------------------------
-{-
-Document Symbols Request
 
-https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#document-symbols-request
+makeExtendingDatatype "DocumentSymbolOptions" [''WorkDoneProgressOptions] []
+deriveJSON lspOptions ''DocumentSymbolOptions
 
-The document symbol request is sent from the client to the server to list all
-symbols found in a given text document.
+makeExtendingDatatype "DocumentSymbolRegistrationOptions"
+  [ ''TextDocumentRegistrationOptions
+  , ''DocumentSymbolOptions
+  ] []
+deriveJSON lspOptions ''DocumentSymbolRegistrationOptions
 
-    Changed: In 2.0 the request uses DocumentSymbolParams instead of a single
-             uri.
+-- ---------------------------------------------------------------------
 
-Request
-
-    method: 'textDocument/documentSymbol'
-    params: DocumentSymbolParams defined as follows:
-
-interface DocumentSymbolParams {
-    /**
-     * The text document.
-     */
-    textDocument: TextDocumentIdentifier;
-}
-
-Response
-
-    result: SymbolInformation[] defined as follows:
-
-/**
- * Represents information about programming constructs like variables, classes,
- * interfaces etc.
- */
-interface SymbolInformation {
-    /**
-     * The name of this symbol.
-     */
-    name: string;
-
-    /**
-     * The kind of this symbol.
-     */
-    kind: number;
-
-    /**
-     * The location of this symbol.
-     */
-    location: Location;
-
-    /**
-     * The name of the symbol containing this symbol.
-     */
-    containerName?: string;
-}
-
-Where the kind is defined like this:
-
-/**
- * A symbol kind.
- */
-export enum SymbolKind {
-    File = 1,
-    Module = 2,
-    Namespace = 3,
-    Package = 4,
-    Class = 5,
-    Method = 6,
-    Property = 7,
-    Field = 8,
-    Constructor = 9,
-    Enum = 10,
-    Interface = 11,
-    Function = 12,
-    Variable = 13,
-    Constant = 14,
-    Text = 15,
-    Number = 16,
-    Boolean = 17,
-    Array = 18,
-}
-
-    error: code and message set in case an exception happens during the document
-           symbol request.
-
-Registration Options: TextDocumentRegistrationOptions
--}
-
-data DocumentSymbolParams =
-  DocumentSymbolParams
-    { _textDocument :: TextDocumentIdentifier
-    , _workDoneToken :: Maybe ProgressToken -- ^ An optional token that a server can use to report work done progress.
-    } deriving (Read,Show,Eq)
-
+makeExtendingDatatype "DocumentSymbolParams"
+  [ ''WorkDoneProgressParams
+  , ''PartialResultParams
+  ]
+  [ ("_textDocument", [t| TextDocumentIdentifier |])]
 deriveJSON lspOptions ''DocumentSymbolParams
 
 -- -------------------------------------
@@ -198,6 +123,36 @@ instance FromJSON SymbolKind where
   parseJSON (Number 26) = pure SkTypeParameter
   parseJSON (Number x)  = pure (SkUnknown x)
   parseJSON _           = mempty
+  
+-- -------------------------------------
+
+data DocumentSymbolKindClientCapabilities =
+  DocumentSymbolKindClientCapabilities
+    { -- | The symbol kind values the client supports. When this
+      --  property exists the client also guarantees that it will
+      --  handle values outside its set gracefully and falls back
+      --  to a default value when unknown.
+      --
+      --  If this property is not present the client only supports
+      --  the symbol kinds from `File` to `Array` as defined in
+      --  the initial version of the protocol.
+      _valueSet :: Maybe (List SymbolKind)
+    }
+  deriving (Show, Read, Eq)
+
+deriveJSON lspOptions ''DocumentSymbolKindClientCapabilities
+
+data DocumentSymbolClientCapabilities =
+  DocumentSymbolClientCapabilities
+    { -- | Whether document symbol supports dynamic registration.
+      _dynamicRegistration :: Maybe Bool
+      -- | Specific capabilities for the `SymbolKind`.
+    , _symbolKind :: Maybe DocumentSymbolKindClientCapabilities
+    , _hierarchicalDocumentSymbolSupport :: Maybe Bool
+    } deriving (Show, Read, Eq)
+
+deriveJSON lspOptions ''DocumentSymbolClientCapabilities
+
 
 -- ---------------------------------------------------------------------
 
@@ -254,20 +209,3 @@ data SymbolInformation =
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''SymbolInformation
-
--- -------------------------------------
-
-data DSResult = DSDocumentSymbols (List DocumentSymbol)
-              | DSSymbolInformation (List SymbolInformation)
-  deriving (Read,Show,Eq)
-
-instance FromJSON DSResult where
-  parseJSON x = DSDocumentSymbols <$> parseJSON x <|> DSSymbolInformation <$> parseJSON x
-
-instance ToJSON DSResult where
-  toJSON (DSDocumentSymbols x) = toJSON x
-  toJSON (DSSymbolInformation x) = toJSON x
-
-
-type DocumentSymbolRequest = RequestMessage ClientMethod DocumentSymbolParams DSResult
-type DocumentSymbolsResponse = ResponseMessage DSResult

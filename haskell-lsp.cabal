@@ -24,13 +24,9 @@ library
   reexported-modules:  Language.Haskell.LSP.Types
                      , Language.Haskell.LSP.Types.Capabilities
                      , Language.Haskell.LSP.Types.Lens
-  exposed-modules:     Language.Haskell.LSP.Capture
-                     , Language.Haskell.LSP.Constant
-                     , Language.Haskell.LSP.Core
+  exposed-modules:     Language.Haskell.LSP.Core
                      , Language.Haskell.LSP.Control
                      , Language.Haskell.LSP.Diagnostics
-                     , Language.Haskell.LSP.Messages
-                     , Language.Haskell.LSP.Utility
                      , Language.Haskell.LSP.VFS
   -- other-modules:
  -- other-extensions:
@@ -47,25 +43,32 @@ library
                      , hslogger
                      , hashable
                      , haskell-lsp-types == 0.23.*
+                     , dependent-map
                      , lens >= 4.15.2
                      , mtl
                      , network-uri
                      , rope-utf16-splay >= 0.3.1.0
                      , sorted-list == 0.2.1.*
                      , stm
+                     , scientific
                      , temporary
                      , text
+                     , transformers
                      , time
                      , unordered-containers
+                     , unliftio-core
+                     -- used for generating random uuids for dynamic registration
+                     , random
+                     , uuid >= 1.3
   hs-source-dirs:      src
   default-language:    Haskell2010
+  ghc-options: -Wall -fprint-explicit-kinds
 
-executable lsp-hello
-  main-is:             Main.hs
+executable lsp-demo-reactor-server
+  main-is:             Reactor.hs
   hs-source-dirs:      example
-                       -- src
   default-language:    Haskell2010
-  ghc-options:         -Wall
+  ghc-options:         -Wall -Wno-unticked-promoted-constructors
 
   build-depends:       base >= 4.9 && < 4.15
                      , aeson
@@ -73,25 +76,38 @@ executable lsp-hello
                      , containers
                      , directory
                      , data-default
+                     , dependent-map
                      , filepath
                      , hslogger
                      , lens >= 4.15.2
                      , mtl
                      , network-uri
-                     , rope-utf16-splay >= 0.2
                      , stm
                      , text
                      , time
                      , transformers
                      , unordered-containers
-                     , vector
+                     , unliftio
                      -- the package library. Comment this out if you want repl changes to propagate
                      , haskell-lsp
   if !flag(demo)
     buildable:         False
 
+executable lsp-demo-simple-server
+  main-is:             Simple.hs
+  hs-source-dirs:      example
+  default-language:    Haskell2010
+  ghc-options:         -Wall -Wno-unticked-promoted-constructors
+  build-depends:       base >= 4.9 && < 5
+                     , data-default
+                     -- the package library. Comment this out if you want repl changes to propagate
+                     , haskell-lsp
+                     , text
+  if !flag(demo)
+    buildable:         False
+
 flag demo {
-  description: Build the lsp-hello demo executable
+  description: Build the demo executables
   default:     False
 }
 
@@ -110,8 +126,6 @@ test-suite haskell-lsp-test
                        URIFilePathSpec
                        VspSpec
                        WorkspaceEditSpec
-                       WorkspaceFoldersSpec
-                       InitialConfigurationSpec
   build-depends:       base
                      , QuickCheck
                      , aeson
