@@ -1,6 +1,6 @@
 packages:
          ./
-         ./haskell-lsp-types/
+         ./lsp-types/
          ./func-test/
 
 package haskell-lsp

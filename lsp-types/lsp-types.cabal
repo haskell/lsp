@@ -1,11 +1,11 @@
-name:                haskell-lsp-types
-version:             0.23.0.0
+name:                lsp-types
+version:             1.0.0.0
 synopsis:            Haskell library for the Microsoft Language Server Protocol, data types
 
 description:         An implementation of the types to allow language implementors to
                      support the Language Server Protocol for their specific language.
 
-homepage:            https://github.com/alanz/haskell-lsp
+homepage:            https://github.com/alanz/lsp
 license:             MIT
 license-file:        LICENSE
 author:              Alan Zimmerman

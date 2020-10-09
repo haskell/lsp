@@ -1,5 +1,5 @@
-name:                haskell-lsp
-version:             0.23.0.0
+name:                lsp
+version:             1.0.0.0
 synopsis:            Haskell library for the Microsoft Language Server Protocol
 
 description:         An implementation of the types, and basic message server to
@@ -9,7 +9,7 @@ description:         An implementation of the types, and basic message server to
                      An example of this is for Haskell via the Haskell IDE
                      Engine, at https://github.com/haskell/haskell-ide-engine
 
-homepage:            https://github.com/alanz/haskell-lsp
+homepage:            https://github.com/alanz/lsp
 license:             MIT
 license-file:        LICENSE
 author:              Alan Zimmerman
@@ -42,7 +42,7 @@ library
                      , filepath
                      , hslogger
                      , hashable
-                     , haskell-lsp-types == 0.23.*
+                     , lsp-types == 1.0.*
                      , dependent-map
                      , lens >= 4.15.2
                      , mtl
@@ -89,7 +89,7 @@ executable lsp-demo-reactor-server
                      , unordered-containers
                      , unliftio
                      -- the package library. Comment this out if you want repl changes to propagate
-                     , haskell-lsp
+                     , lsp
   if !flag(demo)
     buildable:         False
 
@@ -101,7 +101,7 @@ executable lsp-demo-simple-server
   build-depends:       base >= 4.9 && < 5
                      , data-default
                      -- the package library. Comment this out if you want repl changes to propagate
-                     , haskell-lsp
+                     , lsp
                      , text
   if !flag(demo)
     buildable:         False
@@ -111,7 +111,7 @@ flag demo {
   default:     False
 }
 
-test-suite haskell-lsp-test
+test-suite unit-tests
   type:                exitcode-stdio-1.0
   -- hs-source-dirs:      test src
   hs-source-dirs:      test
@@ -135,7 +135,7 @@ test-suite haskell-lsp-test
                      , directory
                      , filepath
                      , hashable
-                     , haskell-lsp
+                     , lsp
                      , hspec
                      -- , hspec-jenkins
                      , lens >= 4.15.2
@@ -159,4 +159,4 @@ test-suite haskell-lsp-test
 
 source-repository head
   type:     git
-  location: https://github.com/alanz/haskell-lsp
+  location: https://github.com/alanz/lsp
