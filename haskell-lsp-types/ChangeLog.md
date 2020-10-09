@@ -1,5 +1,18 @@
 # Revision history for haskell-lsp-types
 
+## 0.23.0.0
+
+* Add runWith for transporots other than stdio (@paulyoung)
+* Fix race condition in event captures (@bgamari)
+* Tweak the sectionSeparator (@alanz)
+* Add hashWithSaltInstances (@ndmitchell)
+* Fix CompletionItem.tags not being optional (@bubba)
+* Avoid unnecessary normalisation in Binary instance for
+  NormalizedFilePath (@cocreature)
+* Fix ordering of TH splices (@fendor)
+
+## 0.22.0.0
+
 * ResponseMessage results are now an Either type (@greenhat)
 * Support for GHC 8.10.1
 
