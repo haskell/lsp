@@ -1,3 +1,5 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -15,7 +17,6 @@ import           Control.Concurrent
 import           Control.Monad.IO.Class
 import           Control.Monad
 import           Control.Lens hiding (List)
-import           Language.Haskell.LSP.Messages
 import           Language.Haskell.LSP.Test
 import           Language.Haskell.LSP.Types
 import           Language.Haskell.LSP.Types.Lens hiding
@@ -25,6 +26,7 @@ import           Language.Haskell.LSP.Types.Capabilities as LSP
 import           System.Directory
 import           System.FilePath
 import           System.Timeout
+import Data.Type.Equality
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
 {-# ANN module ("HLint: ignore Unnecessary hiding" :: String) #-}
@@ -51,7 +53,7 @@ main = findServer >>= \serverExe -> hspec $ do
                     -- won't receive a request - will timeout
                     -- incoming logging requests shouldn't increase the
                     -- timeout
-                    withTimeout 5 $ skipManyTill anyMessage message :: Session ApplyWorkspaceEditRequest
+                    withTimeout 5 $ skipManyTill anyMessage (message SWorkspaceApplyEdit) :: Session ApplyWorkspaceEditRequest
           -- wait just a bit longer than 5 seconds so we have time
           -- to open the document
           in timeout 6000000 sesh `shouldThrow` anySessionException
@@ -90,7 +92,7 @@ main = findServer >>= \serverExe -> hspec $ do
                 withTimeout 10 $ liftIO $ threadDelay 7000000
                 getDocumentSymbols doc
                 -- should now timeout
-                skipManyTill anyMessage message :: Session ApplyWorkspaceEditRequest
+                skipManyTill anyMessage (message SWorkspaceApplyEdit)
             isTimeout (Timeout _) = True
             isTimeout _ = False
         in sesh `shouldThrow` isTimeout
@@ -100,7 +102,7 @@ main = findServer >>= \serverExe -> hspec $ do
       it "throw on time out" $
         let sesh = runSessionWithConfig (def {messageTimeout = 10}) serverExe fullCaps "test/data/renamePass" $ do
                 skipMany loggingNotification
-                _ <- message :: Session ApplyWorkspaceEditRequest
+                _ <- message SWorkspaceApplyEdit
                 return ()
         in sesh `shouldThrow` anySessionException
 
@@ -112,41 +114,19 @@ main = findServer >>= \serverExe -> hspec $ do
 
       describe "UnexpectedMessageException" $ do
         it "throws when there's an unexpected message" $
-          let selector (UnexpectedMessage "Publish diagnostics notification" (NotLogMessage _)) = True
+          let selector (UnexpectedMessage "Publish diagnostics notification" (FromServerMess SWindowLogMessage _)) = True
               selector _ = False
             in runSession serverExe fullCaps "test/data/renamePass" publishDiagnosticsNotification `shouldThrow` selector
         it "provides the correct types that were expected and received" $
-          let selector (UnexpectedMessage "ResponseMessage WorkspaceEdit" (RspDocumentSymbols _)) = True
+          let selector (UnexpectedMessage "STextDocumentRename" (FromServerRsp STextDocumentDocumentSymbol _)) = True
               selector _ = False
               sesh = do
                 doc <- openDoc "Desktop/simple.hs" "haskell"
-                sendRequest TextDocumentDocumentSymbol (DocumentSymbolParams doc Nothing)
+                sendRequest STextDocumentDocumentSymbol (DocumentSymbolParams Nothing Nothing doc)
                 skipMany anyNotification
-                message :: Session RenameResponse -- the wrong type
+                response STextDocumentRename -- the wrong type
             in runSession serverExe fullCaps "test/data/renamePass" sesh
               `shouldThrow` selector
-
-  -- This is too fickle at the moment
-  -- describe "replaySession" $
-  --   it "passes a test" $
-  --     replaySession serverExe "test/data/renamePass"
-  --   it "fails a test" $
-  --     let selector (ReplayOutOfOrder _ _) = True
-  --         selector _ = False
-  --       in replaySession serverExe "test/data/renameFail" `shouldThrow` selector
-
-  -- describe "manual javascript session" $
-  --   it "passes a test" $
-  --     runSession "javascript-typescript-stdio" fullCaps "test/data/javascriptPass" $ do
-  --       doc <- openDoc "test.js" "javascript"
-
-  --       noDiagnostics
-
-  --       Right (fooSymbol:_) <- getDocumentSymbols doc
-
-  --       liftIO $ do
-  --         fooSymbol ^. name `shouldBe` "foo"
-  --         fooSymbol ^. kind `shouldBe` SkFunction
 
   describe "text document VFS" $
     it "sends back didChange notifications" $
@@ -154,10 +134,10 @@ main = findServer >>= \serverExe -> hspec $ do
         doc <- openDoc "Main.hs" "haskell"
 
         let args = toJSON (doc ^. uri)
-            reqParams = ExecuteCommandParams "doAnEdit" (Just (List [args])) Nothing
-        request_ WorkspaceExecuteCommand reqParams
+            reqParams = ExecuteCommandParams Nothing "doAnEdit" (Just (List [args]))
+        request_ SWorkspaceExecuteCommand reqParams
 
-        editReq <- message :: Session ApplyWorkspaceEditRequest
+        editReq <- message SWorkspaceApplyEdit
         liftIO $ do
           let (Just cs) = editReq ^. params . edit . changes
               [(u, List es)] = HM.toList cs
@@ -172,8 +152,8 @@ main = findServer >>= \serverExe -> hspec $ do
         doc <- openDoc "Main.hs" "haskell"
 
         let args = toJSON (doc ^. uri)
-            reqParams = ExecuteCommandParams "doAnEdit" (Just (List [args])) Nothing
-        request_ WorkspaceExecuteCommand reqParams
+            reqParams = ExecuteCommandParams Nothing "doAnEdit" (Just (List [args]))
+        request_ SWorkspaceExecuteCommand reqParams
         contents <- getDocumentEdit doc
         liftIO $ contents `shouldBe` "howdy:: IO Int\nmain = return (42)\n"
 
@@ -181,7 +161,7 @@ main = findServer >>= \serverExe -> hspec $ do
     it "works" $ runSession serverExe fullCaps "test/data/refactor" $ do
       doc <- openDoc "Main.hs" "haskell"
       waitForDiagnostics
-      [CACodeAction action] <- getCodeActions doc (Range (Position 1 14) (Position 1 18))
+      [InR action] <- getCodeActions doc (Range (Position 1 14) (Position 1 18))
       liftIO $ action ^. title `shouldBe` "Delete this"
 
   describe "getAllCodeActions" $
@@ -190,9 +170,9 @@ main = findServer >>= \serverExe -> hspec $ do
       _ <- waitForDiagnostics
       actions <- getAllCodeActions doc
       liftIO $ do
-        let [CACodeAction action] = actions
+        let [InR action] = actions
         action ^. title `shouldBe` "Delete this"
-        action ^. command . _Just . command `shouldBe` "deleteThis"
+        action ^. command . _Just . command  `shouldBe` "deleteThis"
 
   describe "getDocumentSymbols" $
     it "works" $ runSession serverExe fullCaps "test/data/renamePass" $ do
@@ -311,7 +291,7 @@ main = findServer >>= \serverExe -> hspec $ do
   describe "satisfy" $
     it "works" $ runSession serverExe fullCaps "test/data" $ do
       openDoc "Format.hs" "haskell"
-      let pred (NotLogMessage _) = True
+      let pred (FromServerMess SWindowLogMessage _) = True
           pred _ = False
       void $ satisfy pred
 
@@ -319,32 +299,34 @@ main = findServer >>= \serverExe -> hspec $ do
     it "works" $
       runSessionWithConfig (defaultConfig { ignoreLogNotifications = True }) serverExe  fullCaps "test/data" $ do
         openDoc "Format.hs" "haskell"
-        void publishDiagnosticsNotification
+        void publishDiagnosticsNotification       
 
   describe "dynamic capabilities" $ do
+    
     it "keeps track" $ runSession serverExe fullCaps "test/data" $ do
       loggingNotification -- initialized log message
 
       createDoc ".register" "haskell" ""
-      message :: Session RegisterCapabilityRequest
+      message SClientRegisterCapability
 
       doc <- createDoc "Foo.watch" "haskell" ""
-      NotLogMessage msg <- loggingNotification
+      msg <- message SWindowLogMessage
       liftIO $ msg ^. params . LSP.message `shouldBe` "got workspace/didChangeWatchedFiles"
 
-      caps <- getRegisteredCapabilities
-      liftIO $ caps `shouldBe`
-        [ Registration "0" WorkspaceDidChangeWatchedFiles $ Just $ toJSON $
-          DidChangeWatchedFilesRegistrationOptions $ List
-          [ FileSystemWatcher "*.watch" (Just (WatchKind True True True)) ]
-        ]
+      [SomeRegistration (Registration _ regMethod regOpts)] <- getRegisteredCapabilities
+      liftIO $ do
+        case regMethod `mEqClient` SWorkspaceDidChangeWatchedFiles of
+          Just HRefl ->
+            regOpts `shouldBe` (DidChangeWatchedFilesRegistrationOptions $ List
+                                [ FileSystemWatcher "*.watch" (Just (WatchKind True True True)) ])
+          Nothing -> expectationFailure "Registration wasn't on workspace/didChangeWatchedFiles"
 
       -- now unregister it by sending a specific createDoc
       createDoc ".unregister" "haskell" ""
-      message :: Session UnregisterCapabilityRequest
+      message SClientUnregisterCapability
 
       createDoc "Bar.watch" "haskell" ""
-      void $ sendRequest TextDocumentHover $ TextDocumentPositionParams doc (Position 0 0) Nothing
+      void $ sendRequest STextDocumentHover $ HoverParams doc (Position 0 0) Nothing
       count 0 $ loggingNotification
       void $ anyResponse
 
@@ -354,24 +336,21 @@ main = findServer >>= \serverExe -> hspec $ do
       loggingNotification -- initialized log message
 
       createDoc ".register.abs" "haskell" ""
-      message :: Session RegisterCapabilityRequest
+      message SClientRegisterCapability
 
       doc <- createDoc (curDir </> "Foo.watch") "haskell" ""
-      NotLogMessage msg <- loggingNotification
+      msg <- message SWindowLogMessage
       liftIO $ msg ^. params . LSP.message `shouldBe` "got workspace/didChangeWatchedFiles"
 
       -- now unregister it by sending a specific createDoc
       createDoc ".unregister.abs" "haskell" ""
-      message :: Session UnregisterCapabilityRequest
+      message SClientUnregisterCapability
 
       createDoc (curDir </> "Bar.watch") "haskell" ""
-      void $ sendRequest TextDocumentHover $ TextDocumentPositionParams doc (Position 0 0) Nothing
+      void $ sendRequest STextDocumentHover $ HoverParams doc (Position 0 0) Nothing
       count 0 $ loggingNotification
       void $ anyResponse
 
-
-mkRange :: Int -> Int -> Int -> Int -> Range
-mkRange sl sc el ec = Range (Position sl sc) (Position el ec)
 
 didChangeCaps :: ClientCapabilities
 didChangeCaps = def { _workspace = Just workspaceCaps }
@@ -383,7 +362,7 @@ docChangesCaps :: ClientCapabilities
 docChangesCaps = def { _workspace = Just workspaceCaps }
   where
     workspaceCaps = def { _workspaceEdit = Just editCaps }
-    editCaps = WorkspaceEditClientCapabilities (Just True)
+    editCaps = WorkspaceEditClientCapabilities (Just True) Nothing Nothing
 
 
 findExeRecursive :: FilePath -> FilePath -> IO (Maybe FilePath)

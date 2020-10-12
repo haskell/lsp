@@ -15,6 +15,7 @@ module Language.Haskell.LSP.Test.Parsing
     satisfy
   , satisfyMaybe
   , message
+  , response
   , responseForId
   , customRequest
   , customNotification
@@ -28,12 +29,10 @@ module Language.Haskell.LSP.Test.Parsing
 
 import Control.Applicative
 import Control.Concurrent
-import Control.Lens
 import Control.Monad.IO.Class
 import Control.Monad
 import Data.Conduit.Parser hiding (named)
 import qualified Data.Conduit.Parser (named)
-import Data.GADT.Compare
 import qualified Data.Text as T
 import Data.Typeable
 import Language.Haskell.LSP.Types
@@ -108,31 +107,12 @@ satisfyMaybeM pred = do
 named :: T.Text -> Session a -> Session a
 named s (Session x) = Session (Data.Conduit.Parser.named s x)
 
-mEq :: SServerMethod m1 -> SServerMethod m2 -> Maybe (m1 :~~: m2)
-mEq m1 m2 = case (splitServerMethod m1, splitServerMethod m2) of
-  (IsServerNot, IsServerNot) -> do
-    Refl <- geq m1 m2
-    pure HRefl
-  (IsServerReq, IsServerReq) -> do
-    Refl <- geq m1 m2
-    pure HRefl
-  _ -> Nothing
 
-mEqClient :: SClientMethod m1 -> SClientMethod m2 -> Maybe (m1 :~~: m2)
-mEqClient m1 m2 = case (splitClientMethod m1, splitClientMethod m2) of
-  (IsClientNot, IsClientNot) -> do
-    Refl <- geq m1 m2
-    pure HRefl
-  (IsClientReq, IsClientReq) -> do
-    Refl <- geq m1 m2
-    pure HRefl
-  _ -> Nothing
-
--- | Matches non-custom messages
+-- | Matches a request or a notification coming from the server.
 message :: SServerMethod m -> Session (ServerMessage m)
 message m1 = named (T.pack $ show m1) $ satisfyMaybe $ \case
   FromServerMess m2 msg -> do
-    HRefl <- mEq m1 m2
+    HRefl <- mEqServer m1 m2
     pure msg
   _ -> Nothing
 
@@ -179,7 +159,15 @@ anyResponse = named "Any response" $ satisfy $ \case
   FromServerMess _ _ -> False
   FromServerRsp _ _ -> True
 
--- | Matches a response for a specific id.
+-- | Matches a response coming from the server.
+response :: SMethod (m :: Method FromClient Request) -> Session (ResponseMessage m)
+response m1 = named (T.pack $ show m1) $ satisfyMaybe $ \case
+  FromServerRsp m2 msg -> do
+    HRefl <- mEqClient m1 m2
+    pure msg
+  _ -> Nothing
+
+-- | Like 'response', but matches a response for a specific id.
 responseForId :: SMethod (m :: Method FromClient Request) -> LspId m -> Session (ResponseMessage m)
 responseForId m lid = named (T.pack $ "Response for id: " ++ show lid) $ do
   satisfyMaybe $ \msg -> do

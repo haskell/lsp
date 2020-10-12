@@ -33,7 +33,7 @@ instance Show SessionException where
   show (UnexpectedMessage expected lastMsg) =
     "Received an unexpected message from the server:\n" ++
     "Was parsing: " ++ expected ++ "\n" ++
-    "Last message received:\n" ++ B.unpack (encodePretty lastMsg)
+    "But the last message received was:\n" ++ B.unpack (encodePretty lastMsg)
   show (ReplayOutOfOrder received expected) =
     let expected' = nub expected
         getJsonDiff = lines . B.unpack . encodePretty

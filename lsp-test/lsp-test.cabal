@@ -22,7 +22,7 @@ build-type:          Simple
 cabal-version:       2.0
 extra-source-files:  README.md
                    , ChangeLog.md
-tested-with:         GHC == 8.4.4, GHC == 8.6.5, GHC == 8.8.3, GHC == 8.10.1
+tested-with:         GHC == 8.4.4, GHC == 8.6.5, GHC == 8.8.3, GHC == 8.10.1, GHC == 8.10.2
 
 source-repository head
   type:     git
@@ -36,13 +36,12 @@ Flag DummyServer
 library
   hs-source-dirs:      src
   exposed-modules:     Language.Haskell.LSP.Test
-                     , Language.Haskell.LSP.Test.Replay
-  reexported-modules:  haskell-lsp:Language.Haskell.LSP.Types
-                     , haskell-lsp:Language.Haskell.LSP.Types.Capabilities
+  reexported-modules:  lsp-types:Language.Haskell.LSP.Types
+                     , lsp-types:Language.Haskell.LSP.Types.Capabilities
                      , parser-combinators:Control.Applicative.Combinators
   default-language:    Haskell2010
   build-depends:       base >= 4.10 && < 5
-                     , haskell-lsp >= 0.22 && < 0.24
+                     , lsp-types == 1.0.*
                      , aeson
                      , time
                      , aeson-pretty
@@ -83,12 +82,14 @@ executable dummy-server
   hs-source-dirs:      test/dummy-server
   ghc-options:         -W
   build-depends:       base >= 4.10 && < 5
-                     , haskell-lsp >= 0.23 && < 0.24
+                     , lsp == 1.0.*
                      , data-default
                      , aeson
                      , unordered-containers
                      , directory
                      , filepath
+                     , unliftio
+                     , mtl
   default-language:    Haskell2010
   scope:               private
   if !flag(DummyServer)
@@ -102,7 +103,7 @@ test-suite tests
   build-depends:       base >= 4.10 && < 5
                      , hspec
                      , lens
-                     , haskell-lsp >= 0.22 && < 0.24
+                     , lsp-types == 1.0.*
                      , lsp-test
                      , data-default
                      , aeson
@@ -111,4 +112,4 @@ test-suite tests
                      , directory
                      , filepath
   default-language:    Haskell2010
-  build-tool-depends: lsp-test:dummy-server
+  build-tool-depends:  lsp-test:dummy-server
