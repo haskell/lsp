@@ -2,7 +2,7 @@
 module WorkspaceEditSpec where
 
 import Test.Hspec
-import Language.Haskell.LSP.Types
+import Language.LSP.Types
 
 spec :: Spec
 spec = do

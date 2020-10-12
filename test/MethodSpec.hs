@@ -4,7 +4,7 @@ module MethodSpec where
 
 import           Control.Monad
 import qualified Data.Aeson as J
-import qualified Language.Haskell.LSP.Types            as J
+import qualified Language.LSP.Types            as J
 import           Test.Hspec
 import qualified Data.Text as T
 

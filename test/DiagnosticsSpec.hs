@@ -6,8 +6,8 @@ import qualified Data.Map                              as Map
 import qualified Data.HashMap.Strict                   as HM
 import qualified Data.SortedList                       as SL
 import           Data.Text                             (Text)
-import           Language.Haskell.LSP.Diagnostics
-import qualified Language.Haskell.LSP.Types            as J
+import           Language.LSP.Diagnostics
+import qualified Language.LSP.Types            as J
 
 import           Test.Hspec
 

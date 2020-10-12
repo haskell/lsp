@@ -33,12 +33,12 @@ import           Data.Default
 import qualified Data.HashMap.Strict                   as H
 import qualified Data.Text                             as T
 import           GHC.Generics (Generic)
-import qualified Language.Haskell.LSP.Control          as CTRL
-import           Language.Haskell.LSP.Core
-import           Language.Haskell.LSP.Diagnostics
-import qualified Language.Haskell.LSP.Types            as J
-import qualified Language.Haskell.LSP.Types.Lens       as J
-import           Language.Haskell.LSP.VFS
+import qualified Language.LSP.Control          as CTRL
+import           Language.LSP.Core
+import           Language.LSP.Diagnostics
+import qualified Language.LSP.Types            as J
+import qualified Language.LSP.Types.Lens       as J
+import           Language.LSP.VFS
 import           System.Exit
 import           System.Log.Logger
 import           Control.Concurrent

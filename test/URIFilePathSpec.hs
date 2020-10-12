@@ -4,7 +4,7 @@ module URIFilePathSpec where
 import Control.Monad                          (when)
 import Data.List
 import Data.Text                              (Text, pack)
-import Language.Haskell.LSP.Types
+import Language.LSP.Types
 
 import Network.URI
 import Test.Hspec

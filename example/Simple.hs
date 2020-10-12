@@ -2,9 +2,9 @@
 {-# LANGUAGE TypeFamilies #-}
 
 import Data.Default
-import Language.Haskell.LSP.Control
-import Language.Haskell.LSP.Core
-import Language.Haskell.LSP.Types
+import Language.LSP.Control
+import Language.LSP.Core
+import Language.LSP.Types
 import Control.Monad.IO.Class
 import qualified Data.Text as T
 
