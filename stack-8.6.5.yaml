@@ -2,7 +2,7 @@ resolver: lts-14.11 # GHC 8.6.5
 
 packages:
 - '.'
-- ./haskell-lsp-types
+- ./lsp-types
 - ./func-test
 
 extra-deps:

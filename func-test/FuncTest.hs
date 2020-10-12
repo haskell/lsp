@@ -10,15 +10,14 @@ import Language.Haskell.LSP.Types
 import Language.Haskell.LSP.Types.Lens
 import Control.Monad.IO.Class
 import System.IO
-import Control.Concurrent
 import Control.Monad
 import System.Process
 import Control.Applicative.Combinators
-import Control.Monad.Trans.Control
-import Control.Lens hiding (List)
+import Control.Lens hiding (List, Iso)
 import Test.Hspec
 import Data.Maybe
-import Control.Concurrent.Async
+import UnliftIO
+import UnliftIO.Concurrent
 import Control.Exception
 import System.Exit
 
@@ -33,20 +32,23 @@ main = hspec $ do
 
       let initCallbacks = InitializeCallbacks
             { onConfigurationChange = const $ pure $ Right ()
-            , doInitialize = const $ pure Nothing
+            , doInitialize = \env _req -> pure $ Right env
+            , staticHandlers = handlers killVar
+            , interpretHandler = \env -> Iso (runLspT env) liftIO
             }
 
-          handlers :: MVar () -> Handlers ()
-          handlers killVar SInitialized = Just $ \noti -> do
-            tid <- liftBaseDiscard forkIO $
-              withProgress "Doing something" NotCancellable $ \updater ->
-                liftIO $ threadDelay (1 * 1000000)
-            liftIO $ void $ forkIO $ do
-              takeMVar killVar
-              killThread tid
-          handlers _ _ = Nothing
+          handlers :: MVar () -> Handlers (LspM ())
+          handlers killVar =
+            notificationHandler SInitialized $ \noti -> do
+              tid <- withRunInIO $ \runInIO ->
+                forkIO $ runInIO $
+                  withProgress "Doing something" NotCancellable $ \updater ->
+                    liftIO $ threadDelay (1 * 1000000)
+              liftIO $ void $ forkIO $ do
+                takeMVar killVar
+                killThread tid
       
-      forkIO $ void $ runWithHandles hinRead houtWrite initCallbacks (handlers killVar) def
+      forkIO $ void $ runWithHandles hinRead houtWrite initCallbacks def
       
       Test.runSessionWithHandles hinWrite houtRead Test.defaultConfig Test.fullCaps "." $ do
         -- First make sure that we get a $/progress begin notification
@@ -79,29 +81,32 @@ main = hspec $ do
           
           initCallbacks = InitializeCallbacks
             { onConfigurationChange = const $ pure $ Right ()
-            , doInitialize = const $ pure Nothing
+            , doInitialize = \env _req -> pure $ Right env
+            , staticHandlers = handlers
+            , interpretHandler = \env -> Iso (runLspT env) liftIO
             }
 
-          handlers :: Handlers ()
-          handlers SInitialized = Just $ \noti -> do
-            wfs <- fromJust <$> getWorkspaceFolders
-            liftIO $ wfs `shouldContain` [wf0]
-          handlers SWorkspaceDidChangeWorkspaceFolders = Just $ \noti -> do
-            i <- liftIO $ modifyMVar countVar (\i -> pure (i + 1, i))
-            wfs <- fromJust <$> getWorkspaceFolders
-            liftIO $ case i of
-              0 -> do
-                wfs `shouldContain` [wf1]
-                wfs `shouldContain` [wf0]
-              1 -> do
-                wfs `shouldNotContain` [wf1]
-                wfs `shouldContain` [wf0]
-                wfs `shouldContain` [wf2]
-              _ -> error "Shouldn't be here"
-          handlers _ = Nothing
+          handlers :: Handlers (LspM ())
+          handlers = mconcat
+            [ notificationHandler SInitialized $ \noti -> do
+                wfs <- fromJust <$> getWorkspaceFolders
+                liftIO $ wfs `shouldContain` [wf0]
+            , notificationHandler SWorkspaceDidChangeWorkspaceFolders $ \noti -> do
+                i <- liftIO $ modifyMVar countVar (\i -> pure (i + 1, i))
+                wfs <- fromJust <$> getWorkspaceFolders
+                liftIO $ case i of
+                  0 -> do
+                    wfs `shouldContain` [wf1]
+                    wfs `shouldContain` [wf0]
+                  1 -> do
+                    wfs `shouldNotContain` [wf1]
+                    wfs `shouldContain` [wf0]
+                    wfs `shouldContain` [wf2]
+                  _ -> error "Shouldn't be here"
+            ]
                 
       
-      server <- async $ void $ runWithHandles hinRead houtWrite initCallbacks handlers def
+      server <- async $ void $ runWithHandles hinRead houtWrite initCallbacks def
       
       let config = Test.defaultConfig
             { Test.initialWorkspaceFolders = Just [wf0]

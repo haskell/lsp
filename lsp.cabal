@@ -1,3 +1,4 @@
+cabal-version:       2.4
 name:                lsp
 version:             1.0.0.0
 synopsis:            Haskell library for the Microsoft Language Server Protocol
@@ -18,16 +19,15 @@ copyright:           Alan Zimmerman, 2016-2020
 category:            Development
 build-type:          Simple
 extra-source-files:  ChangeLog.md, README.md
-cabal-version:       1.22
 
 library
   reexported-modules:  Language.Haskell.LSP.Types
                      , Language.Haskell.LSP.Types.Capabilities
                      , Language.Haskell.LSP.Types.Lens
+                     , Language.Haskell.LSP.VFS
   exposed-modules:     Language.Haskell.LSP.Core
                      , Language.Haskell.LSP.Control
                      , Language.Haskell.LSP.Diagnostics
-                     , Language.Haskell.LSP.VFS
   -- other-modules:
  -- other-extensions:
   ghc-options:         -Wall
@@ -47,11 +47,9 @@ library
                      , lens >= 4.15.2
                      , mtl
                      , network-uri
-                     , rope-utf16-splay >= 0.3.1.0
                      , sorted-list == 0.2.1.*
                      , stm
                      , scientific
-                     , temporary
                      , text
                      , transformers
                      , time
@@ -106,10 +104,10 @@ executable lsp-demo-simple-server
   if !flag(demo)
     buildable:         False
 
-flag demo {
+flag demo
   description: Build the demo executables
   default:     False
-}
+
 
 test-suite unit-tests
   type:                exitcode-stdio-1.0

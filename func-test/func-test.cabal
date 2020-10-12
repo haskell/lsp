@@ -8,11 +8,11 @@ test-suite func-test
   type:                exitcode-stdio-1.0
   build-depends:       base <4.15
                      , lsp-test
-                     , haskell-lsp
+                     , lsp
                      , data-default
                      , process
                      , lens
-                     , monad-control
+                     , unliftio
                      , hspec
                      , async
   default-language:    Haskell2010

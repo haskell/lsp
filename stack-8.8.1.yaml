@@ -2,7 +2,7 @@ resolver: nightly-2020-01-21 # last GHC 8.8.1
 
 packages:
 - '.'
-- ./haskell-lsp-types
+- ./lsp-types
 - ./func-test
 
 extra-deps:
