@@ -60,7 +60,9 @@ import Data.Kind
 import Data.Aeson
 import Data.Aeson.Types
 import Data.Aeson.TH
+import Data.GADT.Compare
 import Data.Text (Text)
+import Data.Type.Equality
 import Data.Function (on)
 import GHC.Generics
 
@@ -611,3 +613,25 @@ splitServerMethod SWorkspaceApplyEdit = IsServerReq
 splitServerMethod STextDocumentPublishDiagnostics = IsServerNot
 splitServerMethod SCancelRequest = IsServerNot
 splitServerMethod SCustomMethod{} = IsServerEither
+
+-- | Heterogeneous equality on singleton server methods
+mEqServer :: SServerMethod m1 -> SServerMethod m2 -> Maybe (m1 :~~: m2)
+mEqServer m1 m2 = case (splitServerMethod m1, splitServerMethod m2) of
+  (IsServerNot, IsServerNot) -> do
+    Refl <- geq m1 m2
+    pure HRefl
+  (IsServerReq, IsServerReq) -> do
+    Refl <- geq m1 m2
+    pure HRefl
+  _ -> Nothing
+
+-- | Heterogeneous equality on singlton client methods
+mEqClient :: SClientMethod m1 -> SClientMethod m2 -> Maybe (m1 :~~: m2)
+mEqClient m1 m2 = case (splitClientMethod m1, splitClientMethod m2) of
+  (IsClientNot, IsClientNot) -> do
+    Refl <- geq m1 m2
+    pure HRefl
+  (IsClientReq, IsClientReq) -> do
+    Refl <- geq m1 m2
+    pure HRefl
+  _ -> Nothing
