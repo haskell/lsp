@@ -3,6 +3,7 @@
 {-# LANGUAGE PolyKinds             #-}
 {-# LANGUAGE StandaloneDeriving    #-}
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE ExistentialQuantification #-}
 module Language.Haskell.LSP.Types.Cancellation where
   
 import Data.Aeson.TH
