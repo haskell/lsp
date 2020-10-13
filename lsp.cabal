@@ -21,13 +21,13 @@ build-type:          Simple
 extra-source-files:  ChangeLog.md, README.md
 
 library
-  reexported-modules:  Language.Haskell.LSP.Types
-                     , Language.Haskell.LSP.Types.Capabilities
-                     , Language.Haskell.LSP.Types.Lens
-                     , Language.Haskell.LSP.VFS
-  exposed-modules:     Language.Haskell.LSP.Core
-                     , Language.Haskell.LSP.Control
-                     , Language.Haskell.LSP.Diagnostics
+  reexported-modules:  Language.LSP.Types
+                     , Language.LSP.Types.Capabilities
+                     , Language.LSP.Types.Lens
+                     , Language.LSP.VFS
+  exposed-modules:     Language.LSP.Core
+                     , Language.LSP.Control
+                     , Language.LSP.Diagnostics
   -- other-modules:
  -- other-extensions:
   ghc-options:         -Wall

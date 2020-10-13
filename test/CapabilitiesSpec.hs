@@ -1,7 +1,7 @@
 module CapabilitiesSpec where
 
-import Language.Haskell.LSP.Types
-import Language.Haskell.LSP.Types.Capabilities
+import Language.LSP.Types
+import Language.LSP.Types.Capabilities
 import Test.Hspec
 
 spec :: Spec

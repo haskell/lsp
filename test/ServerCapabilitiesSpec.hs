@@ -3,9 +3,9 @@ module ServerCapabilitiesSpec where
 
 import Control.Lens.Operators
 import Data.Aeson
-import Language.Haskell.LSP.Types
-import Language.Haskell.LSP.Types.Capabilities
-import Language.Haskell.LSP.Types.Lens
+import Language.LSP.Types
+import Language.LSP.Types.Capabilities
+import Language.LSP.Types.Lens
 import Test.Hspec
 
 spec :: Spec

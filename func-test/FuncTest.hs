@@ -3,11 +3,11 @@
 module Main where
 
 import Data.Default
-import Language.Haskell.LSP.Core
-import Language.Haskell.LSP.Control
-import qualified Language.Haskell.LSP.Test as Test
-import Language.Haskell.LSP.Types
-import Language.Haskell.LSP.Types.Lens
+import Language.LSP.Core
+import Language.LSP.Control
+import qualified Language.LSP.Test as Test
+import Language.LSP.Types
+import Language.LSP.Types.Lens
 import Control.Monad.IO.Class
 import System.IO
 import Control.Monad

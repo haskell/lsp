@@ -11,7 +11,7 @@
 -- | Test for JSON serialization
 module JsonSpec where
 
-import           Language.Haskell.LSP.Types
+import           Language.LSP.Types
 
 import qualified Data.Aeson                    as J
 import           Data.List(isPrefixOf)

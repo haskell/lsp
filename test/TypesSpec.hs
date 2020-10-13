@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module TypesSpec where
 
-import qualified Language.Haskell.LSP.Types as J
+import qualified Language.LSP.Types as J
 import           Test.Hspec
 
 -- ---------------------------------------------------------------------

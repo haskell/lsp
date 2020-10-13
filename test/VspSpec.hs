@@ -4,8 +4,8 @@ module VspSpec where
 
 import           Data.String
 import qualified Data.Rope.UTF16 as Rope
-import           Language.Haskell.LSP.VFS
-import qualified Language.Haskell.LSP.Types as J
+import           Language.LSP.VFS
+import qualified Language.LSP.Types as J
 import qualified Data.Text as T
 
 import           Test.Hspec
