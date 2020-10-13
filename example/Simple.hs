@@ -1,10 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies #-}
 
-import Data.Default
-import Language.LSP.Control
-import Language.LSP.Core
 import Language.LSP.Types
+import Language.LSP.Server
 import Control.Monad.IO.Class
 import qualified Data.Text as T
 
@@ -37,13 +35,14 @@ handlers = mconcat
       responder (Right $ Just rsp)
   ]
 
-initCallbacks :: InitializeCallbacks ()
-initCallbacks = InitializeCallbacks
+initCallbacks :: ServerDefinition ()
+initCallbacks = ServerDefinition
   { onConfigurationChange = const $ pure $ Right ()
   , doInitialize = \env _req -> pure $ Right env
   , staticHandlers = handlers
   , interpretHandler = \env -> Iso (runLspT env) liftIO
+  , options = defaultOptions
   }
 
 main :: IO Int
-main = run initCallbacks def
+main = runServer initCallbacks
