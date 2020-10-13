@@ -7,6 +7,6 @@ haddock-quickjump: True
 source-repository-package
     type: git
     location: https://github.com/alanz/lsp.git
-    tag: fd92be6d65f82f098cc0576e7e2200e38fb1cf94
+    tag: ba6a7409f830be09f815489265a76499d7b7debb
     subdir: .
             lsp-types

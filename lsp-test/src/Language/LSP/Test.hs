@@ -10,7 +10,7 @@
 {-# LANGUAGE ExistentialQuantification #-}
 
 {-|
-Module      : Language.Haskell.LSP.Test
+Module      : Language.LSP.Test
 Description : A functional testing framework for LSP servers.
 Maintainer  : luke_lau@icloud.com
 Stability   : experimental
@@ -18,9 +18,9 @@ Portability : non-portable
 
 Provides the framework to start functionally testing
 <https://github.com/Microsoft/language-server-protocol Language Server Protocol servers>.
-You should import "Language.Haskell.LSP.Types" alongside this.
+You should import "Language.LSP.Types" alongside this.
 -}
-module Language.Haskell.LSP.Test
+module Language.LSP.Test
   (
   -- * Sessions
     Session
@@ -32,7 +32,7 @@ module Language.Haskell.LSP.Test
   , defaultConfig
   , C.fullCaps
   -- ** Exceptions
-  , module Language.Haskell.LSP.Test.Exceptions
+  , module Language.LSP.Test.Exceptions
   , withTimeout
   -- * Sending
   , request
@@ -41,7 +41,7 @@ module Language.Haskell.LSP.Test
   , sendNotification
   , sendResponse
   -- * Receving
-  , module Language.Haskell.LSP.Test.Parsing
+  , module Language.LSP.Test.Parsing
   -- * Utilities
   -- | Quick helper functions for common tasks.
 
@@ -109,18 +109,18 @@ import Data.Default
 import qualified Data.HashMap.Strict as HashMap
 import Data.List
 import Data.Maybe
-import Language.Haskell.LSP.Types
-import Language.Haskell.LSP.Types.Lens hiding
+import Language.LSP.Types
+import Language.LSP.Types.Lens hiding
   (id, capabilities, message, executeCommand, applyEdit, rename)
-import qualified Language.Haskell.LSP.Types.Lens as LSP
-import qualified Language.Haskell.LSP.Types.Capabilities as C
-import Language.Haskell.LSP.VFS
-import Language.Haskell.LSP.Test.Compat
-import Language.Haskell.LSP.Test.Decoding
-import Language.Haskell.LSP.Test.Exceptions
-import Language.Haskell.LSP.Test.Parsing
-import Language.Haskell.LSP.Test.Session
-import Language.Haskell.LSP.Test.Server
+import qualified Language.LSP.Types.Lens as LSP
+import qualified Language.LSP.Types.Capabilities as C
+import Language.LSP.VFS
+import Language.LSP.Test.Compat
+import Language.LSP.Test.Decoding
+import Language.LSP.Test.Exceptions
+import Language.LSP.Test.Parsing
+import Language.LSP.Test.Session
+import Language.LSP.Test.Server
 import System.Environment
 import System.IO
 import System.Directory
@@ -471,7 +471,7 @@ waitForDiagnostics = do
   return diags
 
 -- | The same as 'waitForDiagnostics', but will only match a specific
--- 'Language.Haskell.LSP.Types._source'.
+-- 'Language.LSP.Types._source'.
 waitForDiagnosticsSource :: String -> Session [Diagnostic]
 waitForDiagnosticsSource src = do
   diags <- waitForDiagnostics

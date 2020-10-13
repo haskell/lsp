@@ -1,7 +1,7 @@
-module Language.Haskell.LSP.Test.Exceptions where
+module Language.LSP.Test.Exceptions where
 
 import Control.Exception
-import Language.Haskell.LSP.Types
+import Language.LSP.Types
 import Data.Aeson
 import Data.Aeson.Encode.Pretty
 import Data.Algorithm.Diff

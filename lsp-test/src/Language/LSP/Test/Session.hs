@@ -7,7 +7,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
 
-module Language.Haskell.LSP.Test.Session
+module Language.LSP.Test.Session
   ( Session(..)
   , SessionConfig(..)
   , defaultConfig
@@ -60,14 +60,14 @@ import qualified Data.Text.IO as T
 import qualified Data.HashMap.Strict as HashMap
 import Data.Maybe
 import Data.Function
-import Language.Haskell.LSP.Types.Capabilities
-import Language.Haskell.LSP.Types
-import Language.Haskell.LSP.Types.Lens
-import qualified Language.Haskell.LSP.Types.Lens as LSP
-import Language.Haskell.LSP.VFS
-import Language.Haskell.LSP.Test.Compat
-import Language.Haskell.LSP.Test.Decoding
-import Language.Haskell.LSP.Test.Exceptions
+import Language.LSP.Types.Capabilities
+import Language.LSP.Types
+import Language.LSP.Types.Lens
+import qualified Language.LSP.Types.Lens as LSP
+import Language.LSP.VFS
+import Language.LSP.Test.Compat
+import Language.LSP.Test.Decoding
+import Language.LSP.Test.Exceptions
 import System.Console.ANSI
 import System.Directory
 import System.IO
@@ -80,9 +80,9 @@ import System.Timeout
 -- | A session representing one instance of launching and connecting to a server.
 --
 -- You can send and receive messages to the server within 'Session' via
--- 'Language.Haskell.LSP.Test.message',
--- 'Language.Haskell.LSP.Test.sendRequest' and
--- 'Language.Haskell.LSP.Test.sendNotification'.
+-- 'Language.LSP.Test.message',
+-- 'Language.LSP.Test.sendRequest' and
+-- 'Language.LSP.Test.sendNotification'.
 
 newtype Session a = Session (ConduitParser FromServerMessage (StateT SessionState (ReaderT SessionContext IO)) a)
   deriving (Functor, Applicative, Monad, MonadIO, Alternative)
@@ -106,8 +106,8 @@ data SessionConfig = SessionConfig
   , logColor       :: Bool -- ^ Add ANSI color to the logged messages, defaults to True.
   , lspConfig      :: Maybe Value -- ^ The initial LSP config as JSON value, defaults to Nothing.
   , ignoreLogNotifications :: Bool
-  -- ^ Whether or not to ignore 'Language.Haskell.LSP.Types.ShowMessageNotification' and
-  -- 'Language.Haskell.LSP.Types.LogMessageNotification', defaults to False.
+  -- ^ Whether or not to ignore 'Language.LSP.Types.ShowMessageNotification' and
+  -- 'Language.LSP.Types.LogMessageNotification', defaults to False.
   --
   -- @since 0.9.0.0
   , initialWorkspaceFolders :: Maybe [WorkspaceFolder]
@@ -115,7 +115,7 @@ data SessionConfig = SessionConfig
   -- Defaults to Nothing.
   }
 
--- | The configuration used in 'Language.Haskell.LSP.Test.runSession'.
+-- | The configuration used in 'Language.LSP.Test.runSession'.
 defaultConfig :: SessionConfig
 defaultConfig = SessionConfig 60 False False True Nothing False Nothing
 
@@ -397,7 +397,7 @@ sendMessage msg = do
   logMsg LogClient msg
   liftIO $ B.hPut h (addHeader $ encode msg)
 
--- | Execute a block f that will throw a 'Language.Haskell.LSP.Test.Exception.Timeout' exception
+-- | Execute a block f that will throw a 'Language.LSP.Test.Exception.Timeout' exception
 -- after duration seconds. This will override the global timeout
 -- for waiting for messages to arrive defined in 'SessionConfig'.
 withTimeout :: Int -> Session a -> Session a

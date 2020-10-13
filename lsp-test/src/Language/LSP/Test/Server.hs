@@ -1,8 +1,8 @@
-module Language.Haskell.LSP.Test.Server (withServer) where
+module Language.LSP.Test.Server (withServer) where
 
 import Control.Concurrent.Async
 import Control.Monad
-import Language.Haskell.LSP.Test.Compat
+import Language.LSP.Test.Compat
 import System.IO
 import System.Process hiding (withCreateProcess)
 

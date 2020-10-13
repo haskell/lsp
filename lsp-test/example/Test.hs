@@ -1,7 +1,7 @@
 import Control.Applicative.Combinators
 import Control.Monad.IO.Class
-import Language.Haskell.LSP.Test
-import Language.Haskell.LSP.Types
+import Language.LSP.Test
+import Language.LSP.Types
 
 main = runSession "haskell-language-server" fullCaps "../test/data/" $ do
   doc <- openDoc "Rename.hs" "haskell"

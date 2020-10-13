@@ -17,12 +17,12 @@ import           Control.Concurrent
 import           Control.Monad.IO.Class
 import           Control.Monad
 import           Control.Lens hiding (List)
-import           Language.Haskell.LSP.Test
-import           Language.Haskell.LSP.Types
-import           Language.Haskell.LSP.Types.Lens hiding
+import           Language.LSP.Test
+import           Language.LSP.Types
+import           Language.LSP.Types.Lens hiding
   (capabilities, message, rename, applyEdit)
-import qualified Language.Haskell.LSP.Types.Lens as LSP
-import           Language.Haskell.LSP.Types.Capabilities as LSP
+import qualified Language.LSP.Types.Lens as LSP
+import           Language.LSP.Types.Capabilities as LSP
 import           System.Directory
 import           System.FilePath
 import           System.Timeout

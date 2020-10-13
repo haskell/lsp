@@ -4,14 +4,14 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE OverloadedStrings #-}
-module Language.Haskell.LSP.Test.Files
+module Language.LSP.Test.Files
   ( swapFiles
   , rootDir
   )
 where
 
-import           Language.Haskell.LSP.Types
-import           Language.Haskell.LSP.Types.Lens
+import           Language.LSP.Types
+import           Language.LSP.Types.Lens
 import           Control.Lens
 import qualified Data.HashMap.Strict           as HM
 import qualified Data.Text                     as T

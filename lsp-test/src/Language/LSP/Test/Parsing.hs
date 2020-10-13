@@ -10,7 +10,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Language.Haskell.LSP.Test.Parsing
+module Language.LSP.Test.Parsing
   ( -- $receiving
     satisfy
   , satisfyMaybe
@@ -35,8 +35,8 @@ import Data.Conduit.Parser hiding (named)
 import qualified Data.Conduit.Parser (named)
 import qualified Data.Text as T
 import Data.Typeable
-import Language.Haskell.LSP.Types
-import Language.Haskell.LSP.Test.Session
+import Language.LSP.Types
+import Language.LSP.Test.Session
 
 -- $receiving
 -- To receive a message, specify the method of the message to expect:
@@ -46,7 +46,7 @@ import Language.Haskell.LSP.Test.Session
 -- msg2 <- message STextDocumentHover
 -- @
 --
--- 'Language.Haskell.LSP.Test.Session' is actually just a parser
+-- 'Language.LSP.Test.Session' is actually just a parser
 -- that operates on messages under the hood. This means that you
 -- can create and combine parsers to match speicifc sequences of
 -- messages that you expect.
@@ -198,7 +198,7 @@ loggingNotification = named "Logging notification" $ satisfy shouldSkip
     shouldSkip (FromServerMess SWindowShowMessageRequest _) = True
     shouldSkip _ = False
 
--- | Matches a 'Language.Haskell.LSP.Test.PublishDiagnosticsNotification'
+-- | Matches a 'Language.LSP.Test.PublishDiagnosticsNotification'
 -- (textDocument/publishDiagnostics) notification.
 publishDiagnosticsNotification :: Session PublishDiagnosticsNotification
 publishDiagnosticsNotification = named "Publish diagnostics notification" $

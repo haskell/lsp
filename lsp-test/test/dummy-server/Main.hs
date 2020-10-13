@@ -7,9 +7,9 @@ import Data.Aeson
 import Data.Default
 import qualified Data.HashMap.Strict as HM
 import Data.List (isSuffixOf)
-import Language.Haskell.LSP.Control
-import Language.Haskell.LSP.Core
-import Language.Haskell.LSP.Types
+import Language.LSP.Control
+import Language.LSP.Core
+import Language.LSP.Types
 import System.Directory
 import System.FilePath
 import UnliftIO

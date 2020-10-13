@@ -3,11 +3,11 @@
 -- Control.Monad.IO.Class but it's needed for
 -- MonadIO
 {-# OPTIONS_GHC -Wunused-imports #-}
-module Language.Haskell.LSP.Test.Compat where
+module Language.LSP.Test.Compat where
 
 import Data.Maybe
 import System.IO
-import Language.Haskell.LSP.Types
+import Language.LSP.Types
 
 #if MIN_VERSION_process(1,6,3)
 -- We have to hide cleanupProcess for process-1.6.3.0

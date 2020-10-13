@@ -4,7 +4,7 @@
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE DataKinds #-}
-module Language.Haskell.LSP.Test.Decoding where
+module Language.LSP.Test.Decoding where
 
 import           Prelude                 hiding ( id )
 import           Data.Aeson
@@ -18,9 +18,9 @@ import qualified Data.ByteString.Lazy.Char8    as B
 import           Data.Maybe
 import           System.IO
 import           System.IO.Error
-import           Language.Haskell.LSP.Types
-import           Language.Haskell.LSP.Types.Lens
-import           Language.Haskell.LSP.Test.Exceptions
+import           Language.LSP.Types
+import           Language.LSP.Types.Lens
+import           Language.LSP.Test.Exceptions
 
 import Data.IxMap
 import Data.Kind
