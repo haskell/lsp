@@ -274,7 +274,10 @@ runSession' serverIn serverOut mServerProc serverHandler config caps rootDir exi
         let cleanup
               | Just sp <- mServerProc = do
                   -- Give the server some time to exit cleanly
+                  -- It makes the server hangs in windows so we have to avoid it
+#ifndef mingw32_HOST_OS
                   timeout msgTimeoutMs (waitForProcess sp)
+#endif
                   cleanupProcess (Just serverIn, Just serverOut, Nothing, sp)
               | otherwise = pure ()
         finally (timeout msgTimeoutMs (runSession' exitServer))
