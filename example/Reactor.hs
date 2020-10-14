@@ -5,8 +5,7 @@
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE RankNTypes            #-}
 {-# LANGUAGE GADTs                 #-}
-{-# LANGUAGE PolyKinds             #-}
-{-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE TypeInType            #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 
 {- |

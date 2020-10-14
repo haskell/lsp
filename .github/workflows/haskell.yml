@@ -1,0 +1,42 @@
+name: Haskell CI
+
+on: [push, pull_request]
+jobs:
+  build:
+
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        ghc: ['8.10.2', '8.8.3', '8.6.5', '8.4.4']
+        os: [ubuntu-latest, macOS-latest, windows-latest]
+        exclude:
+          - os: windows-latest
+            ghc: '8.8.3' # fails due to segfault
+
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-haskell@v1
+      with:
+        ghc-version: ${{ matrix.ghc }}
+        cabal-version: '3.2'
+
+    - name: Cache
+      uses: actions/cache@v1
+      env:
+        cache-name: cache-cabal
+      with:
+        path: ~/.cabal
+        key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/*.cabal') }}-${{ hashFiles('**/cabal.project') }}
+        restore-keys: |
+          ${{ runner.os }}-build-${{ env.cache-name }}-
+          ${{ runner.os }}-build-
+          ${{ runner.os }}-
+
+    - name: Build
+      run: cabal build
+    - name: Test
+      run: cabal test
+    - name: Func tests
+      run: cabal run func-test
