@@ -73,7 +73,9 @@ main = runServer $ ServerDefinition
 ```
 
 Whilst `Reactor.hs` shows how a reactor design can be used to handle all
-requests on a single thread. They can be installed from source with
+requests on a single thread, such in a way that we could then execute them on
+multiple threads without blocking server communication. They can be installed
+from source with
 
     cabal install lsp-demo-simple-server lsp-demo-reactor-server
     stack install :lsp-demo-simple-server :lsp-demo-reactor-server --flag haskell-lsp:demo
