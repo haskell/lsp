@@ -295,7 +295,7 @@ data ServerDefinition config = forall m a.
       -- 'LspT'.
       --
       -- @
-      --  InitializeCallbacks { ...
+      --  ServerDefinition { ...
       --  , doInitialize = \env _req -> pure $ Right env
       --  , interpretHandler = \env -> Iso 
       --     (runLspT env) -- how to convert from IO ~> m
