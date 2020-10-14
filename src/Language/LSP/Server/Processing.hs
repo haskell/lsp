@@ -273,7 +273,7 @@ handle' mAction m msg = do
   env <- getLspEnv
   let Handlers{reqHandlers, notHandlers} = resHandlers env
 
-  let mkRspCb :: RequestMessage (m1 :: Method FromClient Request) -> Either ResponseError (ResponseParams m1) -> IO ()
+  let mkRspCb :: RequestMessage (m1 :: Method FromClient Request) -> Either ResponseError (ResponseResult m1) -> IO ()
       mkRspCb req (Left  err) = runLspT env $ sendToClient $
         FromServerRsp (req ^. LSP.method) $ ResponseMessage "2.0" (Just (req ^. LSP.id)) (Left err)
       mkRspCb req (Right rsp) = runLspT env $ sendToClient $

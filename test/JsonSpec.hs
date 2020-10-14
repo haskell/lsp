@@ -112,7 +112,7 @@ instance Arbitrary Range where
 instance Arbitrary Hover where
   arbitrary = Hover <$> arbitrary <*> arbitrary
 
-instance Arbitrary (ResponseParams m) => Arbitrary (ResponseMessage m) where
+instance Arbitrary (ResponseResult m) => Arbitrary (ResponseMessage m) where
   arbitrary =
     oneof
       [ ResponseMessage

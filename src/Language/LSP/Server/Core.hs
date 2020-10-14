@@ -138,7 +138,7 @@ newtype ClientMessageHandler f (t :: MethodType) (m :: Method FromClient t) = Cl
 -- | The type of a handler that handles requests and notifications coming in
 -- from the server or client
 type family Handler (f :: Type -> Type) (m :: Method from t) = (result :: Type) | result -> f t m where
-  Handler f (m :: Method _from Request)      = RequestMessage m -> (Either ResponseError (ResponseParams m) -> f ()) -> f ()
+  Handler f (m :: Method _from Request)      = RequestMessage m -> (Either ResponseError (ResponseResult m) -> f ()) -> f ()
   Handler f (m :: Method _from Notification) = NotificationMessage m -> f ()
 
 -- | How to convert two isomorphic data structures between each other.
@@ -309,7 +309,7 @@ data ServerDefinition config = forall m a.
 -- | A function that a 'Handler' is passed that can be used to respond to a
 -- request with either an error, or the response params.
 newtype ServerResponseCallback (m :: Method FromServer Request)
-  = ServerResponseCallback (Either ResponseError (ResponseParams m) -> IO ())
+  = ServerResponseCallback (Either ResponseError (ResponseResult m) -> IO ())
 
 -- | Return value signals if response handler was inserted succesfully
 -- Might fail if the id was already in the map
@@ -334,7 +334,7 @@ sendNotification m params =
 sendRequest :: forall (m :: Method FromServer Request) f config. MonadLsp config f
             => SServerMethod m
             -> MessageParams m
-            -> (Either ResponseError (ResponseParams m) -> f ())
+            -> (Either ResponseError (ResponseResult m) -> f ())
             -> f (LspId m)
 sendRequest m params resHandler = do
   reqId <- IdInt <$> freshLspId

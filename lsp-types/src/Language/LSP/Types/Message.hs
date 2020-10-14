@@ -151,7 +151,7 @@ type family MessageParams (m :: Method f t) :: Type where
   MessageParams CustomMethod                       = Value
 
 -- | Map a request method to the response payload type
-type family ResponseParams (m :: Method f Request) :: Type where
+type family ResponseResult (m :: Method f Request) :: Type where
 -- Even though the specification mentions that the result types are
 -- @x | y | ... | null@, they don't actually need to be wrapped in a Maybe since
 -- (we think) this is just to account for how the response field is always
@@ -159,59 +159,59 @@ type family ResponseParams (m :: Method f Request) :: Type where
 
 -- Client
   -- General
-  ResponseParams Initialize                    = InitializeResult
-  ResponseParams Shutdown                      = Empty
+  ResponseResult Initialize                    = InitializeResult
+  ResponseResult Shutdown                      = Empty
   -- Workspace
-  ResponseParams WorkspaceSymbol               = List SymbolInformation
-  ResponseParams WorkspaceExecuteCommand       = Value
+  ResponseResult WorkspaceSymbol               = List SymbolInformation
+  ResponseResult WorkspaceExecuteCommand       = Value
   -- Sync/Document state
-  ResponseParams TextDocumentWillSaveWaitUntil = List TextEdit
+  ResponseResult TextDocumentWillSaveWaitUntil = List TextEdit
   -- Completion
-  ResponseParams TextDocumentCompletion        = List CompletionItem |? CompletionList
-  ResponseParams CompletionItemResolve         = CompletionItem
+  ResponseResult TextDocumentCompletion        = List CompletionItem |? CompletionList
+  ResponseResult CompletionItemResolve         = CompletionItem
   -- Language Queries
-  ResponseParams TextDocumentHover             = Maybe Hover
-  ResponseParams TextDocumentSignatureHelp     = SignatureHelp
-  ResponseParams TextDocumentDeclaration       = Location |? List Location |? List LocationLink
-  ResponseParams TextDocumentDefinition        = Location |? List Location |? List LocationLink
-  ResponseParams TextDocumentTypeDefinition    = Location |? List Location |? List LocationLink
-  ResponseParams TextDocumentImplementation    = Location |? List Location |? List LocationLink
-  ResponseParams TextDocumentReferences        = List Location
-  ResponseParams TextDocumentDocumentHighlight = List DocumentHighlight
-  ResponseParams TextDocumentDocumentSymbol    = List DocumentSymbol |? List SymbolInformation
+  ResponseResult TextDocumentHover             = Maybe Hover
+  ResponseResult TextDocumentSignatureHelp     = SignatureHelp
+  ResponseResult TextDocumentDeclaration       = Location |? List Location |? List LocationLink
+  ResponseResult TextDocumentDefinition        = Location |? List Location |? List LocationLink
+  ResponseResult TextDocumentTypeDefinition    = Location |? List Location |? List LocationLink
+  ResponseResult TextDocumentImplementation    = Location |? List Location |? List LocationLink
+  ResponseResult TextDocumentReferences        = List Location
+  ResponseResult TextDocumentDocumentHighlight = List DocumentHighlight
+  ResponseResult TextDocumentDocumentSymbol    = List DocumentSymbol |? List SymbolInformation
   -- Code Action/Lens/Link
-  ResponseParams TextDocumentCodeAction        = List (Command |? CodeAction)
-  ResponseParams TextDocumentCodeLens          = List CodeLens
-  ResponseParams CodeLensResolve               = CodeLens
-  ResponseParams TextDocumentDocumentLink      = List DocumentLink
-  ResponseParams DocumentLinkResolve           = DocumentLink
+  ResponseResult TextDocumentCodeAction        = List (Command |? CodeAction)
+  ResponseResult TextDocumentCodeLens          = List CodeLens
+  ResponseResult CodeLensResolve               = CodeLens
+  ResponseResult TextDocumentDocumentLink      = List DocumentLink
+  ResponseResult DocumentLinkResolve           = DocumentLink
   -- Syntax highlighting/coloring
-  ResponseParams TextDocumentDocumentColor     = List ColorInformation
-  ResponseParams TextDocumentColorPresentation = List ColorPresentation
+  ResponseResult TextDocumentDocumentColor     = List ColorInformation
+  ResponseResult TextDocumentColorPresentation = List ColorPresentation
   -- Formatting
-  ResponseParams TextDocumentFormatting        = List TextEdit
-  ResponseParams TextDocumentRangeFormatting   = List TextEdit
-  ResponseParams TextDocumentOnTypeFormatting  = List TextEdit
+  ResponseResult TextDocumentFormatting        = List TextEdit
+  ResponseResult TextDocumentRangeFormatting   = List TextEdit
+  ResponseResult TextDocumentOnTypeFormatting  = List TextEdit
   -- Rename
-  ResponseParams TextDocumentRename            = WorkspaceEdit
-  ResponseParams TextDocumentPrepareRename     = Range |? RangeWithPlaceholder
+  ResponseResult TextDocumentRename            = WorkspaceEdit
+  ResponseResult TextDocumentPrepareRename     = Range |? RangeWithPlaceholder
   -- FoldingRange
-  ResponseParams TextDocumentFoldingRange      = List FoldingRange
-  ResponseParams TextDocumentSelectionRange    = List SelectionRange
+  ResponseResult TextDocumentFoldingRange      = List FoldingRange
+  ResponseResult TextDocumentSelectionRange    = List SelectionRange
   -- Custom can be either a notification or a message
 -- Server
   -- Window
-  ResponseParams WindowShowMessageRequest      = Maybe MessageActionItem
-  ResponseParams WindowWorkDoneProgressCreate  = ()
+  ResponseResult WindowShowMessageRequest      = Maybe MessageActionItem
+  ResponseResult WindowWorkDoneProgressCreate  = ()
   -- Capability
-  ResponseParams ClientRegisterCapability      = Empty
-  ResponseParams ClientUnregisterCapability    = Empty
+  ResponseResult ClientRegisterCapability      = Empty
+  ResponseResult ClientUnregisterCapability    = Empty
   -- Workspace
-  ResponseParams WorkspaceWorkspaceFolders     = Maybe (List WorkspaceFolder)
-  ResponseParams WorkspaceConfiguration        = List Value
-  ResponseParams WorkspaceApplyEdit            = ApplyWorkspaceEditResponseBody
+  ResponseResult WorkspaceWorkspaceFolders     = Maybe (List WorkspaceFolder)
+  ResponseResult WorkspaceConfiguration        = List Value
+  ResponseResult WorkspaceApplyEdit            = ApplyWorkspaceEditResponseBody
 -- Custom
-  ResponseParams CustomMethod                  = Value
+  ResponseResult CustomMethod                  = Value
 
 
 -- ---------------------------------------------------------------------
@@ -338,14 +338,14 @@ data ResponseMessage (m :: Method f Request) =
   ResponseMessage
     { _jsonrpc :: Text
     , _id      :: Maybe (LspId m)
-    , _result  :: Either ResponseError (ResponseParams m)
+    , _result  :: Either ResponseError (ResponseResult m)
     } deriving Generic
 
-deriving instance Eq   (ResponseParams m) => Eq (ResponseMessage m)
-deriving instance Read (ResponseParams m) => Read (ResponseMessage m)
-deriving instance Show (ResponseParams m) => Show (ResponseMessage m)
+deriving instance Eq   (ResponseResult m) => Eq (ResponseMessage m)
+deriving instance Read (ResponseResult m) => Read (ResponseMessage m)
+deriving instance Show (ResponseResult m) => Show (ResponseMessage m)
 
-instance (ToJSON (ResponseParams m)) => ToJSON (ResponseMessage m) where
+instance (ToJSON (ResponseResult m)) => ToJSON (ResponseMessage m) where
   toJSON (ResponseMessage { _jsonrpc = jsonrpc, _id = lspid, _result = result })
     = object
       [ "jsonrpc" .= jsonrpc
@@ -355,7 +355,7 @@ instance (ToJSON (ResponseParams m)) => ToJSON (ResponseMessage m) where
         Right a   -> "result" .= a
       ]
 
-instance FromJSON (ResponseParams a) => FromJSON (ResponseMessage a) where
+instance FromJSON (ResponseResult a) => FromJSON (ResponseMessage a) where
   parseJSON = withObject "Response" $ \o -> do
     _jsonrpc <- o .: "jsonrpc"
     _id      <- o .: "id"
