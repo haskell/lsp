@@ -1,55 +1,88 @@
-[![CircleCI](https://circleci.com/gh/alanz/haskell-lsp/tree/master.svg?style=svg)](https://circleci.com/gh/alanz/haskell-lsp/tree/master)
-[![Hackage](https://img.shields.io/hackage/v/haskell-lsp.svg)](https://hackage.haskell.org/package/haskell-lsp)
+[![CircleCI](https://circleci.com/gh/alanz/lsp/tree/master.svg?style=svg)](https://circleci.com/gh/alanz/lsp/tree/master)
+[![Hackage](https://img.shields.io/hackage/v/lsp.svg)](https://hackage.haskell.org/package/lsp)
 
-# haskell-lsp
-Haskell library for the Microsoft Language Server Protocol
+# lsp
+Haskell library for the Microsoft Language Server Protocol.
+It currently implements all of the [3.15 specification](https://microsoft.github.io/language-server-protocol/specifications/specification-3-15/).
 
-Warning: this library and its associated ecosystem is under development at the
-moment. So do not have high expectations, it is not ready for casual use.
+It is split into two separate packages, `lsp` and `lsp-types`
+- `lsp-types` provides *type-safe* definitions that match up with the
+typescript definitions laid out in the specification
+- `lsp` is a library for building language servers, handling:
+  - JSON-RPC transport
+  - Keeping track of the document state in memory with the Virtual File System (VFS)
+  - Responding to notifications and requests via handlers
+  - Setting the server capabilities in the initialize request based on registered handlers
+  - Dynamic registration of capabilities
+  - Cancellable requests and progress notifications
+  - Publishing and flushing of diagnostics
 
-## Hacking
+## Language servers built on lsp
+- [ghcide](https://github.com/haskell/ghcide)
+- [haskell-language-server](https://github.com/haskell/haskell-language-server)
+- [dhall-lsp-server](https://github.com/dhall-lang/dhall-haskell/tree/master/dhall-lsp-server#readme)
 
-To see this library in use you need to install the [haskell-ide-engine](https://github.com/alanz/haskell-ide-engine/)
+## Example language servers
+There are two example language servers in the `example/` folder. `Simple.hs` provides a minimal example:
 
-    git clone https://github.com/haskell/haskell-ide-engine --recursive
-    cd haskell-ide-engine
-    stack install
+```haskell
+{-# LANGUAGE OverloadedStrings #-}
 
-This will put the `hie` executable in your path.
+import Language.LSP.Server
+import Language.LSP.Types
+import Control.Monad.IO.Class
+import qualified Data.Text as T
 
-Then, run the plugin in vscode:
+handlers :: Handlers (LspM ())
+handlers = mconcat
+  [ notificationHandler SInitialized $ \_not -> do
+      let params = ShowMessageRequestParams MtInfo "Turn on code lenses?"
+            (Just [MessageActionItem "Turn on", MessageActionItem "Don't"])
+      _ <- sendRequest SWindowShowMessageRequest params $ \res ->
+        case res of
+          Right (Just (MessageActionItem "Turn on")) -> do
+            let regOpts = CodeLensRegistrationOptions Nothing Nothing (Just False)
+              
+            _ <- registerCapability STextDocumentCodeLens regOpts $ \_req responder -> do
+              let cmd = Command "Say hello" "lsp-hello-command" Nothing
+                  rsp = List [CodeLens (mkRange 0 0 0 100) (Just cmd) Nothing]
+              responder (Right rsp)
+            pure ()
+          Right _ ->
+            sendNotification SWindowShowMessage (ShowMessageParams MtInfo "Not turning on code lenses")
+          Left err ->
+            sendNotification SWindowShowMessage (ShowMessageParams MtError $ "Something went wrong!\n" <> T.pack (show err))
+      pure ()
+  , requestHandler STextDocumentHover $ \req responder -> do
+      let RequestMessage _ _ _ (HoverParams _doc pos _workDone) = req
+          Position _l _c' = pos
+          rsp = Hover ms (Just range)
+          ms = HoverContents $ markedUpContent "lsp-demo-simple-server" "Hello world"
+          range = Range pos pos
+      responder (Right $ Just rsp)
+  ]
 
-    git clone https://github.com/alanz/vscode-hie-server
-    cd vscode-hie-server
-    code .
+main :: IO Int
+main = runServer $ ServerDefinition
+  { onConfigurationChange = const $ pure $ Right ()
+  , doInitialize = \env _req -> pure $ Right env
+  , staticHandlers = handlers
+  , interpretHandler = \env -> Iso (runLspT env) liftIO
+  , options = defaultOptions
+  }
+```
 
-In vscode, press F5 to run the extension in development mode.
+Whilst `Reactor.hs` shows how a reactor design can be used to handle all
+requests on a single thread. They can be installed from source with
 
-You can see a log from `hie` by doing
-
-    tail -F /tmp/hie-vscode.log
-
-There are also facilities on the code to send back language-server-protocol log
-and show events.
-
-It can also be used with emacs, see https://github.com/emacs-lsp/lsp-haskell
-
-## Using the example server
-
-    stack install :lsp-demo-reactor-server --flag haskell-lsp:demo
-
-will generate a `:lsp-demo-reactor-server` executable.
-
-Changing the server executable in the [`vscode-haskell`](https://github.com/haskell/vscode-haskell) plugin to
-`lsp-demo-reactor-server` to test it out.
-
-Likewise, you can change the executable in `lsp-haskell` for emacs.
+    cabal install lsp-demo-simple-server lsp-demo-reactor-server
+    stack install :lsp-demo-simple-server :lsp-demo-reactor-server --flag haskell-lsp:demo
 
 ## Useful links
 
 - https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md
 
-## Other resource
+## Other resources
 
 See #haskell-ide-engine on IRC freenode
 

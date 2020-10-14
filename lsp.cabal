@@ -73,16 +73,12 @@ executable lsp-demo-reactor-server
                      , bytestring
                      , containers
                      , directory
-                     , data-default
-                     , dependent-map
                      , filepath
                      , hslogger
                      , lens >= 4.15.2
                      , mtl
-                     , network-uri
                      , stm
                      , text
-                     , time
                      , transformers
                      , unordered-containers
                      , unliftio
@@ -97,8 +93,7 @@ executable lsp-demo-simple-server
   default-language:    Haskell2010
   ghc-options:         -Wall -Wno-unticked-promoted-constructors
   build-depends:       base >= 4.9 && < 5
-                     , data-default
-                     -- the package library. Comment this out if you want repl changes to propagate
+                    -- the package library. Comment this out if you want repl changes to propagate
                      , lsp
                      , text
   if !flag(demo)

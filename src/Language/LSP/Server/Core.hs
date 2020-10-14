@@ -31,17 +31,13 @@ import           Control.Concurrent.Async
 import           Control.Concurrent.STM
 import qualified Control.Exception as E
 import           Control.Monad
-import           Control.Applicative
 import           Control.Monad.Fix
 import           Control.Monad.IO.Class
-import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Reader
 import           Control.Monad.Trans.Class
 import           Control.Monad.IO.Unlift
-import           Control.Lens ( (<&>), (^.), (^?), _Just )
+import           Control.Lens ( (^.), (^?), _Just )
 import qualified Data.Aeson as J
-import qualified Data.Aeson.Types as J
-import qualified Data.ByteString.Lazy as BSL
 import           Data.Default
 import           Data.Functor.Product
 import           Data.IxMap
@@ -53,19 +49,14 @@ import qualified Data.List as L
 import           Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.Map as Map
 import           Data.Maybe
-import           Data.Monoid hiding (Product)
 import qualified Data.Text as T
 import           Data.Text ( Text )
-import qualified Data.Text.Lazy as TL
-import qualified Data.Text.Lazy.Encoding as TL
 import qualified Data.UUID as UUID
 import qualified Language.LSP.Types.Capabilities    as J
 import Language.LSP.Types as J
 import qualified Language.LSP.Types.Lens as J
 import           Language.LSP.VFS
 import           Language.LSP.Diagnostics
-import           System.Directory
-import           System.Exit
 import           System.IO
 import qualified System.Log.Formatter as L
 import qualified System.Log.Handler as LH

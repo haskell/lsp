@@ -1,6 +1,6 @@
-[![Hackage](https://img.shields.io/hackage/v/haskell-lsp-types.svg)](https://hackage.haskell.org/package/haskell-lsp-types)
+[![Hackage](https://img.shields.io/hackage/v/lsp-types.svg)](https://hackage.haskell.org/package/lsp-types)
 
-# haskell-lsp-types
+# lsp-types
 Haskell library for the data types for Microsoft Language Server Protocol
 
 ## Useful links
