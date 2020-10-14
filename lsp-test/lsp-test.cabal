@@ -83,7 +83,6 @@ executable dummy-server
   ghc-options:         -W
   build-depends:       base >= 4.10 && < 5
                      , lsp == 1.0.*
-                     , data-default
                      , aeson
                      , unordered-containers
                      , directory

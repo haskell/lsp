@@ -366,7 +366,7 @@ sendNotification method params =
     IsClientEither -> sendMessage (NotMess $ NotificationMessage "2.0" method params)
 
 -- | Sends a response to the server.
-sendResponse :: ToJSON (ResponseParams m) => ResponseMessage m -> Session ()
+sendResponse :: ToJSON (ResponseResult m) => ResponseMessage m -> Session ()
 sendResponse = sendMessage
 
 -- | Returns the initialize response that was received from the server.
@@ -642,7 +642,7 @@ getImplementations :: TextDocumentIdentifier -- ^ The document the term is in.
 getImplementations = getDeclarationyRequest STextDocumentImplementation ImplementationParams
 
 
-getDeclarationyRequest :: (ResponseParams m ~ (Location |? (List Location |? List LocationLink)))
+getDeclarationyRequest :: (ResponseResult m ~ (Location |? (List Location |? List LocationLink)))
                        => SClientMethod m
                        -> (TextDocumentIdentifier
                             -> Position
@@ -683,7 +683,7 @@ getHighlights doc pos =
 
 -- | Checks the response for errors and throws an exception if needed.
 -- Returns the result if successful.
-getResponseResult :: ResponseMessage m -> ResponseParams m
+getResponseResult :: ResponseMessage m -> ResponseResult m
 getResponseResult rsp =
   case rsp ^. result of
     Right x -> x

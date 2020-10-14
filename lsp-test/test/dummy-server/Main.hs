@@ -3,12 +3,10 @@
 
 import Control.Monad
 import Control.Monad.Reader
-import Data.Aeson
-import Data.Default
+import Data.Aeson hiding (defaultOptions)
 import qualified Data.HashMap.Strict as HM
 import Data.List (isSuffixOf)
-import Language.LSP.Control
-import Language.LSP.Core
+import Language.LSP.Server
 import Language.LSP.Types
 import System.Directory
 import System.FilePath
@@ -17,18 +15,16 @@ import UnliftIO.Concurrent
 
 main = do
   handlerEnv <- HandlerEnv <$> newEmptyMVar <*> newEmptyMVar
-  let initCbs =
-        InitializeCallbacks
-          { doInitialize = \env _req -> pure $ Right env,
-            onConfigurationChange = const $ pure $ Right (),
-            staticHandlers = handlers,
-            interpretHandler = \env ->
-              Iso
-                (\m -> runLspT env (runReaderT m handlerEnv))
-                liftIO
-          }
-      options = def {executeCommandCommands = Just ["doAnEdit"]}
-  run initCbs options
+  runServer $ ServerDefinition
+    { doInitialize = \env _req -> pure $ Right env,
+      onConfigurationChange = const $ pure $ Right (),
+      staticHandlers = handlers,
+      interpretHandler = \env ->
+        Iso
+          (\m -> runLspT env (runReaderT m handlerEnv))
+          liftIO,
+      options = defaultOptions {executeCommandCommands = Just ["doAnEdit"]}
+    }
 
 data HandlerEnv = HandlerEnv
   { relRegToken :: MVar (RegistrationToken WorkspaceDidChangeWatchedFiles),
