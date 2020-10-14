@@ -1,4 +1,4 @@
-{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TypeInType #-}
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
 module Language.LSP.Types.Synonyms where

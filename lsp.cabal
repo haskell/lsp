@@ -48,10 +48,10 @@ library
                      , mtl
                      , network-uri
                      , sorted-list == 0.2.1.*
-                     , stm
+                     , stm == 2.5.*
                      , scientific
                      , text
-                     , transformers
+                     , transformers >= 0.5.6 && < 0.6
                      , time
                      , unordered-containers
                      , unliftio-core
