@@ -1,5 +1,123 @@
 # Revision history for haskell-lsp-types
 
+## 1.0.0.0
+
+1.0.0.0 is a major rework with both internal and external facing changes, and
+will require manual migration.
+
+* The package has been renamed from `haskell-lsp` to `lsp`, and similarly for `haskell-lsp-types` to `lsp-types`
+  * Because of this, all modules are now exported from `Language.LSP.X` rather than `Language.Haskell.X`.
+* Both `lsp` and `lsp-types` have been reworked to be much more *type safe*
+* The 3.15 specification should be fully supported now. If you find anything in
+  the specification that isn't in lsp-types, please let us know
+* The Capture module has been removed as it will be reworked later on and moved to lsp-test
+* `lsp` can now handle dynamic registration through the `registerCapability` and
+  `unregisterCapability` functions
+
+### Type safety
+There are three types of concrete messages, `NotificationMessage`,
+`RequestMessage` and `ResponseMessage`. They are parameterised by their
+`Method`, which determines what type their parameters or response result must be.
+
+```haskell
+data RequestMessage (m :: Method f Request) = RequestMessage
+    { _jsonrpc :: Text
+    , _id      :: LspId m
+    , _method  :: SMethod m
+    , _params  :: MessageParams m
+    }
+```
+
+A `Method` in turn is parameterised by whether it originates from the client or
+the server, and whether it is used for notifications or requests:
+
+```haskell
+TextDocumentFoldingRange           :: Method FromClient Request
+TextDocumentSelectionRange         :: Method FromClient Request
+WindowShowMessage                  :: Method FromServer Notification
+WindowShowMessageRequest           :: Method FromServer Request
+```
+
+Each `Method` also has a singleton counterpart which allows it to be used at the
+term level, for example in `RequestMessage._method`:
+
+```haskell
+STextDocumentFoldingRange           :: SMethod TextDocumentFoldingRange
+STextDocumentSelectionRange         :: SMethod TextDocumentSelectionRange
+
+SWindowShowMessage                  :: SMethod WindowShowMessage
+SWindowShowMessageRequest           :: SMethod WindowShowMessageRequest
+```
+
+The type families `MessageParams` and `ResponseResult` map each `Method` to the
+appropriate type to be used in a response:
+
+```haskell
+ResponseResult TextDocumentRename            = WorkspaceEdit
+ResponseResult TextDocumentPrepareRename     = Range |? RangeWithPlaceholder
+```
+
+Also new is the `|?` type which represents [union types in
+TypeScript](https://www.typescriptlang.org/docs/handbook/unions-and-intersections.html#union-types),
+and is used throughout the specification where a field can accept several
+different types.
+
+As an example of this in action, the types of your handlers will now depend on
+whether or not they are a request or a notification. They will pass along the
+precise type for the parameters the method you are handling, and in the case of
+a request handler, will expect that the response you give back is of the correct
+type as well.
+
+```haskell
+type family Handler (f :: Type -> Type) (m :: Method from t) = (result :: Type) | result -> f t m where
+  Handler f (m :: Method _from Request)      = RequestMessage m -> (Either ResponseError (ResponseResult m) -> f ()) -> f ()
+  Handler f (m :: Method _from Notification) = NotificationMessage m -> f ()
+```
+
+### LspT
+`LspFuncs` has been removed and instead functionality is exposed through
+functions in the `MonadLsp` class.
+
+```haskell
+getVirtualFile :: MonadLsp config m => NormalizedUri -> m (Maybe VirtualFile)
+sendRequest :: forall (m :: Method FromServer Request) f config. MonadLsp config f
+            => SServerMethod m
+            -> MessageParams m
+            -> (Either ResponseError (ResponseResult m) -> f ())
+            -> f (LspId m)
+```
+
+It is parameterised over the server's LSP configuration type and the underlying
+monad.
+We recommend that you build your own monad for your server on top of the `LspT`
+transformer, so it will automatically become an instance of `MonadLsp`.
+
+Inside the new `ServerDefinition` data type which gets passed to `runServer`,
+you need to specify how to convert from IO to your monad and back in
+`interpretHandler` so that `lsp` can execute your monad inside the handlers. You
+can use the result returned from `doInitialize` to pass along the
+`LanguageContextEnv` needed to run an `LspT`, as well as anything else your
+monad needs.
+```haskell
+type 
+ServerDefinition { ...
+, doInitialize = \env _req -> pure $ Right env
+, interpretHandler = \env -> Iso 
+   (runLspT env) -- how to convert from IO ~> m
+   liftIO        -- how to convert from m ~> IO
+}
+```
+
+### Steps to migrate
+
+1. In your `.cabal` file change any `haskell-lsp` dependencies to `lsp`
+2. Replace your existing imports with `Haskell.LSP.Server`
+3. If necessary define your own monad and fill in `interpretHandler`
+4. Migrate your handlers to use `notificationHandler` and `requestHandler`,
+   passing along the corresponding `SMethod` (See `example/Simple.hs`)
+5. Remove any storage/use of `LspFuncs` and instead call the corresponding
+   functions directly from your monad instead of `IO`
+
 ## 0.23.0.0
 
 * Add runWith for transporots other than stdio (@paulyoung)
