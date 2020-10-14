@@ -25,11 +25,11 @@ library
                      , Language.LSP.Types.Capabilities
                      , Language.LSP.Types.Lens
                      , Language.LSP.VFS
-  exposed-modules:     Language.LSP.Core
-                     , Language.LSP.Control
+  exposed-modules:     Language.LSP.Server
                      , Language.LSP.Diagnostics
-  -- other-modules:
- -- other-extensions:
+  other-modules:       Language.LSP.Server.Core
+                     , Language.LSP.Server.Control
+                     , Language.LSP.Server.Processing
   ghc-options:         -Wall
   build-depends:       base >= 4.9 && < 4.15
                      , async
@@ -109,7 +109,7 @@ flag demo
   default:     False
 
 
-test-suite unit-tests
+test-suite unit-test
   type:                exitcode-stdio-1.0
   -- hs-source-dirs:      test src
   hs-source-dirs:      test

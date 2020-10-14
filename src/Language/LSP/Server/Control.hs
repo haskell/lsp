@@ -3,11 +3,12 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Language.LSP.Control
+module Language.LSP.Server.Control
   (
-    run
-  , runWith
-  , runWithHandles
+  -- * Running
+    runServer
+  , runServerWith
+  , runServerWithHandles
   ) where
 
 import           Control.Concurrent
@@ -25,33 +26,34 @@ import qualified Data.Text.Lazy.Encoding as TL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import           Data.List
-import qualified Language.LSP.Core as Core
+import           Language.LSP.Server.Core
+import           Language.LSP.Server.Processing
+import           Language.LSP.Types
 import           Language.LSP.VFS
 import           System.IO
 import           System.Log.Logger
 
+
 -- ---------------------------------------------------------------------
 
--- | Convenience function for 'runWithHandles stdin stdout'.
-run :: Core.InitializeCallbacks config
+-- | Convenience function for 'runServerWithHandles stdin stdout'.
+runServer :: ServerDefinition config
                 -- ^ function to be called once initialize has
                 -- been received from the client. Further message
                 -- processing will start only after this returns.
-    -> Core.Options
-    -- ^ File to capture the session to.
     -> IO Int
-run = runWithHandles stdin stdout
+runServer = runServerWithHandles stdin stdout
 
--- | Convenience function for 'runWith' using the specified handles.
-runWithHandles ::
+-- | Starts a language server over the specified handles. 
+-- This function will return once the @exit@ notification is received.
+runServerWithHandles ::
        Handle
     -- ^ Handle to read client input from.
     -> Handle
     -- ^ Handle to write output to.
-    -> Core.InitializeCallbacks config
-    -> Core.Options
+    -> ServerDefinition config
     -> IO Int         -- exit code
-runWithHandles hin hout initializeCallbacks o = do
+runServerWithHandles hin hout serverDefinition = do
 
   hSetBuffering hin NoBuffering
   hSetEncoding  hin utf8
@@ -66,19 +68,18 @@ runWithHandles hin hout initializeCallbacks o = do
       BSL.hPut hout out
       hFlush hout
 
-  runWith clientIn clientOut initializeCallbacks o
+  runServerWith clientIn clientOut serverDefinition
 
 -- | Starts listening and sending requests and responses
 -- using the specified I/O.
-runWith ::
+runServerWith ::
        IO BS.ByteString
     -- ^ Client input.
     -> (BSL.ByteString -> IO ())
     -- ^ Function to provide output to.
-    -> Core.InitializeCallbacks config
-    -> Core.Options
+    -> ServerDefinition config
     -> IO Int         -- exit code
-runWith clientIn clientOut initializeCallbacks o = do
+runServerWith clientIn clientOut serverDefinition = do
 
   infoM "haskell-lsp.runWith" "\n\n\n\n\nhaskell-lsp:Starting up server ..."
 
@@ -88,7 +89,7 @@ runWith clientIn clientOut initializeCallbacks o = do
   let sendMsg msg = atomically $ writeTChan cout $ J.toJSON msg
 
   initVFS $ \vfs -> do
-    ioLoop clientIn initializeCallbacks vfs o sendMsg
+    ioLoop clientIn serverDefinition vfs sendMsg
 
   return 1
 
@@ -96,12 +97,11 @@ runWith clientIn clientOut initializeCallbacks o = do
 
 ioLoop ::
      IO BS.ByteString
-  -> Core.InitializeCallbacks config
+  -> ServerDefinition config
   -> VFS
-  -> Core.Options
-  -> (Core.FromServerMessage -> IO ())
+  -> (FromServerMessage -> IO ())
   -> IO ()
-ioLoop clientIn initializeCallbacks vfs o sendMsg = do
+ioLoop clientIn serverDefinition vfs sendMsg = do
   minitialize <- parseOne (parse parser "")
   case minitialize of
     Nothing -> pure ()
@@ -111,7 +111,7 @@ ioLoop clientIn initializeCallbacks vfs o sendMsg = do
           errorM "haskell-lsp.ioLoop" $
             "Got error while decoding initialize:\n" <> err <> "\n exiting 1 ...\n"
         Right initialize -> do
-          mInitResp <- Core.initializeRequestHandler initializeCallbacks vfs o sendMsg initialize
+          mInitResp <- initializeRequestHandler serverDefinition vfs sendMsg initialize
           case mInitResp of
             Nothing -> pure ()
             Just env -> loop env (parse parser remainder)
@@ -141,7 +141,7 @@ ioLoop clientIn initializeCallbacks vfs o sendMsg = do
           case res of
             Nothing -> pure ()
             Just (msg,remainder) -> do
-              Core.runLspT env $ Core.processMessage $ BSL.fromStrict msg
+              runLspT env $ processMessage $ BSL.fromStrict msg
               go (parse parser remainder)
 
     parser = do

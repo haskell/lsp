@@ -29,12 +29,10 @@ import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.STM
 import qualified Data.Aeson                            as J
-import           Data.Default
 import qualified Data.HashMap.Strict                   as H
 import qualified Data.Text                             as T
 import           GHC.Generics (Generic)
-import qualified Language.LSP.Control          as CTRL
-import           Language.LSP.Core
+import           Language.LSP.Server
 import           Language.LSP.Diagnostics
 import qualified Language.LSP.Types            as J
 import qualified Language.LSP.Types.Lens       as J
@@ -68,7 +66,7 @@ run = flip E.catches handlers $ do
   rin  <- atomically newTChan :: IO (TChan ReactorInput)
 
   let
-    callbacks = InitializeCallbacks
+    serverDefinition = ServerDefinition
       { onConfigurationChange = \v -> case J.fromJSON v of
           J.Error e -> pure $ Left (T.pack e)
           J.Success cfg -> do
@@ -78,11 +76,12 @@ run = flip E.catches handlers $ do
       , doInitialize = \env _ -> forkIO (reactor rin) >> pure (Right env)
       , staticHandlers = lspHandlers rin
       , interpretHandler = \env -> Iso (runLspT env) liftIO
+      , options = lspOptions
       }
 
   flip E.finally finalProc $ do
     setupLogger Nothing ["reactor"] DEBUG
-    CTRL.run callbacks lspOptions
+    runServer serverDefinition
 
   where
     handlers = [ E.Handler ioExcept
@@ -104,9 +103,10 @@ syncOptions = J.TextDocumentSyncOptions
   }
 
 lspOptions :: Options
-lspOptions = def { textDocumentSync = Just syncOptions
-                 , executeCommandCommands = Just ["lsp-hello-command"]
-                 }
+lspOptions = defaultOptions
+  { textDocumentSync = Just syncOptions
+  , executeCommandCommands = Just ["lsp-hello-command"]
+  }
 
 -- ---------------------------------------------------------------------
 

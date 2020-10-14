@@ -7,12 +7,12 @@
 #          https://github.com/digital-asset/ghcide/issues/113
 cradle:
   cabal:
-      - path: "./haskell-lsp-types"
-        component: "haskell-lsp-types"
+      - path: "./lsp-types"
+        component: "lsp-types"
       - path: "./src"
-        component: "haskell-lsp"
+        component: "lsp"
       - path: "./test"
-        component: "haskell-lsp-test"
+        component: "unit-test"
       - path: "./func-test"
         component: "func-test"
       - path: "./example/Reactor.hs"

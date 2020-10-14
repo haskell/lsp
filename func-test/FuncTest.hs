@@ -2,12 +2,10 @@
 {-# LANGUAGE GADTs, OverloadedStrings #-}
 module Main where
 
-import Data.Default
-import Language.LSP.Core
-import Language.LSP.Control
+import Language.LSP.Server
 import qualified Language.LSP.Test as Test
 import Language.LSP.Types
-import Language.LSP.Types.Lens
+import Language.LSP.Types.Lens hiding (options)
 import Control.Monad.IO.Class
 import System.IO
 import Control.Monad
@@ -30,11 +28,12 @@ main = hspec $ do
       
       killVar <- newEmptyMVar
 
-      let initCallbacks = InitializeCallbacks
+      let definition = ServerDefinition
             { onConfigurationChange = const $ pure $ Right ()
             , doInitialize = \env _req -> pure $ Right env
             , staticHandlers = handlers killVar
             , interpretHandler = \env -> Iso (runLspT env) liftIO
+            , options = defaultOptions
             }
 
           handlers :: MVar () -> Handlers (LspM ())
@@ -48,7 +47,7 @@ main = hspec $ do
                 takeMVar killVar
                 killThread tid
       
-      forkIO $ void $ runWithHandles hinRead houtWrite initCallbacks def
+      forkIO $ void $ runServerWithHandles hinRead houtWrite definition
       
       Test.runSessionWithHandles hinWrite houtRead Test.defaultConfig Test.fullCaps "." $ do
         -- First make sure that we get a $/progress begin notification
@@ -79,11 +78,12 @@ main = hspec $ do
           wf1 = WorkspaceFolder "/foo/bar" "My workspace"
           wf2 = WorkspaceFolder "/foo/baz" "My other workspace"
           
-          initCallbacks = InitializeCallbacks
+          definition = ServerDefinition
             { onConfigurationChange = const $ pure $ Right ()
             , doInitialize = \env _req -> pure $ Right env
             , staticHandlers = handlers
             , interpretHandler = \env -> Iso (runLspT env) liftIO
+            , options = defaultOptions
             }
 
           handlers :: Handlers (LspM ())
@@ -106,7 +106,7 @@ main = hspec $ do
             ]
                 
       
-      server <- async $ void $ runWithHandles hinRead houtWrite initCallbacks def
+      server <- async $ void $ runServerWithHandles hinRead houtWrite definition
       
       let config = Test.defaultConfig
             { Test.initialWorkspaceFolders = Just [wf0]

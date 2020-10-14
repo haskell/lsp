@@ -1,14 +1,15 @@
 packages:
          ./
          ./lsp-types/
+         ./func-test
 
 package lsp
   flags: +demo
 
--- source-repository-package
---     type: git
---     location: https://github.com/wz1000/lsp-test.git
---     tag: 84e2707604b3a64c00062104fa40e2ea76040155
+source-repository-package
+    type: git
+    location: https://github.com/wz1000/lsp-test.git
+    tag: cf9e06e2eb79b113ff861866690f14166d1fa4e7
 
 tests: True
 test-show-details: direct
