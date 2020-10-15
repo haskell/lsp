@@ -6,6 +6,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE DataKinds #-}
 
 module Language.LSP.Test.Session
   ( Session(..)
@@ -134,7 +135,7 @@ data SessionContext = SessionContext
   -- Keep curTimeoutId in SessionContext, as its tied to messageChan
   , curTimeoutId :: MVar Int -- ^ The current timeout we are waiting on
   , requestMap :: MVar RequestMap
-  , initRsp :: MVar InitializeResponse
+  , initRsp :: MVar (ResponseMessage Initialize)
   , config :: SessionConfig
   , sessionCapabilities :: ClientCapabilities
   }

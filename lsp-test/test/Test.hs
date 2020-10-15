@@ -53,7 +53,7 @@ main = findServer >>= \serverExe -> hspec $ do
                     -- won't receive a request - will timeout
                     -- incoming logging requests shouldn't increase the
                     -- timeout
-                    withTimeout 5 $ skipManyTill anyMessage (message SWorkspaceApplyEdit) :: Session ApplyWorkspaceEditRequest
+                    withTimeout 5 $ skipManyTill anyMessage (message SWorkspaceApplyEdit)
           -- wait just a bit longer than 5 seconds so we have time
           -- to open the document
           in timeout 6000000 sesh `shouldThrow` anySessionException

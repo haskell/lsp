@@ -134,7 +134,7 @@ import qualified System.FilePath.Glob as Glob
 -- >   diags <- waitForDiagnostics
 -- >   let pos = Position 12 5
 -- >       params = TextDocumentPositionParams doc
--- >   hover <- request TextDocumentHover params
+-- >   hover <- request STextdocumentHover params
 runSession :: String -- ^ The command to run the server.
            -> C.ClientCapabilities -- ^ The capabilities that the client should declare.
            -> FilePath -- ^ The filepath to the root directory for the session.
@@ -156,13 +156,13 @@ runSessionWithConfig config' serverExe caps rootDir session = do
 
 -- | Starts a new session, using the specified handles to communicate with the
 -- server. You can use this to host the server within the same process.
--- An example with haskell-lsp might look like:
+-- An example with lsp might look like:
 --
 -- > (hinRead, hinWrite) <- createPipe
 -- > (houtRead, houtWrite) <- createPipe
 -- > 
--- > forkIO $ void $ runWithHandles hinRead houtWrite initCallbacks handlers def
--- > Test.runSessionWithHandles hinWrite houtRead defaultConfig fullCaps "." $ do
+-- > forkIO $ void $ runServerWithHandles hinRead houtWrite serverDefinition
+-- > runSessionWithHandles hinWrite houtRead defaultConfig fullCaps "." $ do
 -- >   -- ...
 runSessionWithHandles :: Handle -- ^ The input handle
                       -> Handle -- ^ The output handle
@@ -199,7 +199,6 @@ runSessionWithHandles' serverProc serverIn serverOut config' caps rootDir sessio
                                           (List <$> initialWorkspaceFolders config)
   runSession' serverIn serverOut serverProc listenServer config caps rootDir exitServer $ do
     -- Wrap the session around initialize and shutdown calls
-    -- initRspMsg <- sendRequest Initialize initializeParams :: Session InitializeResponse
     initReqId <- sendRequest SInitialize initializeParams
 
     -- Because messages can be sent in between the request and response,
@@ -284,14 +283,12 @@ getDocumentEdit doc = do
 
   documentContents doc
   where
-    checkDocumentChanges :: ApplyWorkspaceEditRequest -> Bool
     checkDocumentChanges req =
       let changes = req ^. params . edit . documentChanges
           maybeDocs = fmap (fmap (^. textDocument . uri)) changes
       in case maybeDocs of
         Just docs -> (doc ^. uri) `elem` docs
         Nothing -> False
-    checkChanges :: ApplyWorkspaceEditRequest -> Bool
     checkChanges req =
       let mMap = req ^. params . edit . changes
         in maybe False (HashMap.member (doc ^. uri)) mMap
@@ -299,7 +296,7 @@ getDocumentEdit doc = do
 -- | Sends a request to the server and waits for its response.
 -- Will skip any messages in between the request and the response
 -- @
--- rsp <- request TextDocumentDocumentSymbol params :: Session DocumentSymbolsResponse
+-- rsp <- request STextDocumentDocumentSymbol params
 -- @
 -- Note: will skip any messages in between the request and the response.
 request :: SClientMethod m -> MessageParams m -> Session (ResponseMessage m)
@@ -371,7 +368,7 @@ sendResponse = sendMessage
 -- | Returns the initialize response that was received from the server.
 -- The initialize requests and responses are not included the session,
 -- so if you need to test it use this.
-initializeResponse :: Session InitializeResponse
+initializeResponse :: Session (ResponseMessage Initialize)
 initializeResponse = initRsp <$> ask >>= (liftIO . readMVar)
 
 -- | /Creates/ a new text document. This is different from 'openDoc'
@@ -493,7 +490,7 @@ noDiagnostics = do
 -- | Returns the symbols in a document.
 getDocumentSymbols :: TextDocumentIdentifier -> Session (Either [DocumentSymbol] [SymbolInformation])
 getDocumentSymbols doc = do
-  ResponseMessage _ rspLid res <- request STextDocumentDocumentSymbol (DocumentSymbolParams Nothing Nothing doc) :: Session DocumentSymbolsResponse
+  ResponseMessage _ rspLid res <- request STextDocumentDocumentSymbol (DocumentSymbolParams Nothing Nothing doc)
   case res of
     Right (InL (List xs)) -> return (Left xs)
     Right (InR (List xs)) -> return (Right xs)
@@ -663,7 +660,7 @@ getDeclarationyRequest method paramCons doc pos = do
 rename :: TextDocumentIdentifier -> Position -> String -> Session ()
 rename doc pos newName = do
   let params = RenameParams doc pos Nothing (T.pack newName)
-  rsp <- request STextDocumentRename params :: Session RenameResponse
+  rsp <- request STextDocumentRename params
   let wEdit = getResponseResult rsp
       req = RequestMessage "" (IdInt 0) SWorkspaceApplyEdit (ApplyWorkspaceEditParams Nothing wEdit)
   updateState (FromServerMess SWorkspaceApplyEdit req)
@@ -712,7 +709,7 @@ applyTextEdits doc edits =
 -- | Returns the code lenses for the specified document.
 getCodeLenses :: TextDocumentIdentifier -> Session [CodeLens]
 getCodeLenses tId = do
-    rsp <- request STextDocumentCodeLens (CodeLensParams Nothing Nothing tId) :: Session CodeLensResponse
+    rsp <- request STextDocumentCodeLens (CodeLensParams Nothing Nothing tId)
     case getResponseResult rsp of
         List res -> pure res
 

@@ -198,9 +198,9 @@ loggingNotification = named "Logging notification" $ satisfy shouldSkip
     shouldSkip (FromServerMess SWindowShowMessageRequest _) = True
     shouldSkip _ = False
 
--- | Matches a 'Language.LSP.Test.PublishDiagnosticsNotification'
+-- | Matches a 'Language.LSP.Types.TextDocumentPublishDiagnostics'
 -- (textDocument/publishDiagnostics) notification.
-publishDiagnosticsNotification :: Session PublishDiagnosticsNotification
+publishDiagnosticsNotification :: Session (Message TextDocumentPublishDiagnostics)
 publishDiagnosticsNotification = named "Publish diagnostics notification" $
   satisfyMaybe $ \msg -> case msg of
     FromServerMess STextDocumentPublishDiagnostics diags -> Just diags
