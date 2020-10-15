@@ -31,7 +31,6 @@ module Language.LSP.Types
   , module Language.LSP.Types.SignatureHelp
   , module Language.LSP.Types.StaticRegistrationOptions
   , module Language.LSP.Types.SelectionRange
-  , module Language.LSP.Types.Synonyms
   , module Language.LSP.Types.TextDocument
   , module Language.LSP.Types.TypeDefinition
   , module Language.LSP.Types.Uri
@@ -75,7 +74,6 @@ import           Language.LSP.Types.Rename
 import           Language.LSP.Types.SelectionRange
 import           Language.LSP.Types.SignatureHelp
 import           Language.LSP.Types.StaticRegistrationOptions
-import           Language.LSP.Types.Synonyms
 import           Language.LSP.Types.TextDocument
 import           Language.LSP.Types.TypeDefinition
 import           Language.LSP.Types.Uri

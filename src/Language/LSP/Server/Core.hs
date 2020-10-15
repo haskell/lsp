@@ -276,7 +276,7 @@ data ServerDefinition config = forall m a.
       -- callback should return either the parsed configuration data or an error
       -- indicating what went wrong. The parsed configuration object will be
       -- stored internally and can be accessed via 'config'.
-    , doInitialize :: LanguageContextEnv config -> InitializeRequest -> IO (Either ResponseError a)
+    , doInitialize :: LanguageContextEnv config -> Message Initialize -> IO (Either ResponseError a)
       -- ^ Called *after* receiving the @initialize@ request and *before*
       -- returning the response. This callback will be invoked to offer the
       -- language server implementation the chance to create any processes or

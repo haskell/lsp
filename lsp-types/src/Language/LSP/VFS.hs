@@ -5,6 +5,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE DataKinds #-}
 
 {-|
 Handles the "Language.LSP.Types.TextDocumentDidChange" \/
@@ -95,8 +96,8 @@ initVFS k = withSystemTempDirectory "haskell-lsp" $ \temp_dir -> k (VFS mempty t
 
 -- ---------------------------------------------------------------------
 
--- ^ Applies the changes from a 'DidOpenTextDocumentNotification' to the 'VFS'
-openVFS :: VFS -> J.DidOpenTextDocumentNotification -> (VFS, [String])
+-- | Applies the changes from a 'J.DidOpenTextDocument' to the 'VFS'
+openVFS :: VFS -> J.Message 'J.TextDocumentDidOpen -> (VFS, [String])
 openVFS vfs (J.NotificationMessage _ _ params) =
   let J.DidOpenTextDocumentParams
          (J.TextDocumentItem uri _ version text) = params
@@ -107,7 +108,7 @@ openVFS vfs (J.NotificationMessage _ _ params) =
 -- ---------------------------------------------------------------------
 
 -- ^ Applies a 'DidChangeTextDocumentNotification' to the 'VFS'
-changeFromClientVFS :: VFS -> J.DidChangeTextDocumentNotification -> (VFS,[String])
+changeFromClientVFS :: VFS -> J.Message 'J.TextDocumentDidChange -> (VFS,[String])
 changeFromClientVFS vfs (J.NotificationMessage _ _ params) =
   let
     J.DidChangeTextDocumentParams vid (J.List changes) = params
@@ -129,7 +130,7 @@ updateVFS f vfs@VFS{vfsMap} = vfs { vfsMap = f vfsMap }
 -- ---------------------------------------------------------------------
 
 -- ^ Applies the changes from a 'ApplyWorkspaceEditRequest' to the 'VFS'
-changeFromServerVFS :: VFS -> J.ApplyWorkspaceEditRequest -> IO VFS
+changeFromServerVFS :: VFS -> J.Message 'J.WorkspaceApplyEdit -> IO VFS
 changeFromServerVFS initVfs (J.RequestMessage _ _ _ params) = do
   let J.ApplyWorkspaceEditParams _label edit = params
       J.WorkspaceEdit mChanges mDocChanges = edit
@@ -201,7 +202,7 @@ persistFileVFS vfs uri =
 
 -- ---------------------------------------------------------------------
 
-closeVFS :: VFS -> J.DidCloseTextDocumentNotification -> (VFS, [String])
+closeVFS :: VFS -> J.Message 'J.TextDocumentDidClose -> (VFS, [String])
 closeVFS vfs (J.NotificationMessage _ _ params) =
   let J.DidCloseTextDocumentParams (J.TextDocumentIdentifier uri) = params
   in (updateVFS (Map.delete (J.toNormalizedUri uri)) vfs,["Closed: " ++ show uri])

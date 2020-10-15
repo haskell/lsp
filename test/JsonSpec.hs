@@ -50,7 +50,7 @@ jsonSpec = do
         --  (propertyJsonRoundtrip :: ResponseMessage J.Value -> Property)
   describe "JSON decoding regressions" $
     it "CompletionItem" $
-      (J.decode "{\"jsonrpc\":\"2.0\",\"result\":[{\"label\":\"raisebox\"}],\"id\":1}" :: Maybe CompletionResponse)
+      (J.decode "{\"jsonrpc\":\"2.0\",\"result\":[{\"label\":\"raisebox\"}],\"id\":1}" :: Maybe (ResponseMessage 'TextDocumentCompletion))
         `shouldNotBe` Nothing
   
 

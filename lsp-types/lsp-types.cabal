@@ -56,7 +56,6 @@ library
                      , Language.LSP.Types.ServerCapabilities
                      , Language.LSP.Types.SignatureHelp
                      , Language.LSP.Types.StaticRegistrationOptions
-                     , Language.LSP.Types.Synonyms
                      , Language.LSP.Types.TextDocument
                      , Language.LSP.Types.TypeDefinition
                      , Language.LSP.Types.Uri

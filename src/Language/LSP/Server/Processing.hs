@@ -320,7 +320,7 @@ handle' mAction m msg = do
       | "$/" `T.isPrefixOf` method = True
     isOptionalNotification _  = False
 
-progressCancelHandler :: WorkDoneProgressCancelNotification -> LspM config ()
+progressCancelHandler :: Message WindowWorkDoneProgressCancel -> LspM config ()
 progressCancelHandler (NotificationMessage _ _ (WorkDoneProgressCancelParams tid)) = do
   mact <- getsState $ Map.lookup tid . progressCancel . resProgressData
   case mact of
@@ -339,7 +339,7 @@ shutdownRequestHandler = \_req k -> do
 
 
 
-handleConfigChange :: DidChangeConfigurationNotification -> LspM config ()
+handleConfigChange :: Message WorkspaceDidChangeConfiguration -> LspM config ()
 handleConfigChange req = do
   parseConfig <- LspT $ asks resParseConfig
   res <- liftIO $ parseConfig (req ^. LSP.params . LSP.settings)
