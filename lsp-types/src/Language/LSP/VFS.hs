@@ -5,7 +5,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TypeInType #-}
 
 {-|
 Handles the "Language.LSP.Types.TextDocumentDidChange" \/
