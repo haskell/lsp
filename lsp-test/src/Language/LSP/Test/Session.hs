@@ -6,7 +6,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TypeInType #-}
 
 module Language.LSP.Test.Session
   ( Session(..)

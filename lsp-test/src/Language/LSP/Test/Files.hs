@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TypeInType #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE OverloadedStrings #-}

@@ -1,4 +1,4 @@
-{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TypeInType #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE OverloadedStrings #-}
