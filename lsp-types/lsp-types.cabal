@@ -1,5 +1,5 @@
 name:                lsp-types
-version:             1.0.0.0
+version:             1.0.0.1
 synopsis:            Haskell library for the Microsoft Language Server Protocol, data types
 
 description:         An implementation of the types to allow language implementors to
@@ -67,7 +67,7 @@ library
                      , Language.LSP.Types.WorkspaceSymbol
  -- other-extensions:
   ghc-options:         -Wall
-  build-depends:       base >= 4.9 && < 4.15
+  build-depends:       base >= 4.11 && < 4.15
                      , aeson >=1.2.2.0
                      , binary
                      , bytestring
