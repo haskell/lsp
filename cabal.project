@@ -9,7 +9,7 @@ package lsp
 source-repository-package
     type: git
     location: https://github.com/wz1000/lsp-test.git
-    tag: b1910277907e46b9e9f051bc97134a1c33a52f83
+    tag: d1ecbc5e8f324895701293429976a6c2f74d82a2
 
 tests: True
 test-show-details: direct
