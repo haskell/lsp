@@ -72,7 +72,15 @@ import           Control.Monad.Trans.Identity
 -- ---------------------------------------------------------------------
 
 newtype LspT config m a = LspT { unLspT :: ReaderT (LanguageContextEnv config) m a }
-  deriving (Functor, Applicative, Monad, MonadIO, MonadTrans, MonadUnliftIO, MonadFix)
+  deriving (Functor, Applicative, Monad, MonadIO, MonadTrans, MonadFix)
+
+-- Manually deriving LspT as an instance of MonadUnliftIO
+instance MonadUnliftIO m => MonadUnliftIO (LspT config m) where 
+  withRunInIO inner = 
+    LspT $ 
+    ReaderT $ \config -> 
+      withRunInIO $ \run -> 
+        inner (run . flip runReaderT config . unLspT)
 
 runLspT :: LanguageContextEnv config -> LspT config m a -> m a
 runLspT env = flip runReaderT env . unLspT
