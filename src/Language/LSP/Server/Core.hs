@@ -20,6 +20,7 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE RecursiveDo #-}
+{-# LANGUAGE RoleAnnotations #-}
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 {-# OPTIONS_GHC -fprint-explicit-kinds #-}
 
@@ -72,15 +73,10 @@ import           Control.Monad.Trans.Identity
 -- ---------------------------------------------------------------------
 
 newtype LspT config m a = LspT { unLspT :: ReaderT (LanguageContextEnv config) m a }
-  deriving (Functor, Applicative, Monad, MonadIO, MonadTrans, MonadFix)
+  deriving (Functor, Applicative, Monad, MonadIO, MonadTrans, MonadUnliftIO, MonadFix)
 
--- Manually deriving LspT as an instance of MonadUnliftIO
-instance MonadUnliftIO m => MonadUnliftIO (LspT config m) where 
-  withRunInIO inner = 
-    LspT $ 
-    ReaderT $ \config -> 
-      withRunInIO $ \run -> 
-        inner (run . flip runReaderT config . unLspT)
+-- for deriving the instance of MonadUnliftIO
+type role LspT representational representational nominal
 
 runLspT :: LanguageContextEnv config -> LspT config m a -> m a
 runLspT env = flip runReaderT env . unLspT
