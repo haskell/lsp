@@ -153,7 +153,7 @@ inferServerCapabilities clientCaps o h =
     , _documentFormattingProvider       = supportedBool STextDocumentFormatting
     , _documentRangeFormattingProvider  = supportedBool STextDocumentRangeFormatting
     , _documentOnTypeFormattingProvider = documentOnTypeFormattingProvider
-    , _renameProvider                   = supportedBool STextDocumentRename
+    , _renameProvider                   = renameProvider
     , _documentLinkProvider             = supported' STextDocumentDocumentLink $ DocumentLinkOptions
                                               (Just False)
                                               (supported SDocumentLinkResolve)
@@ -232,6 +232,17 @@ inferServerCapabilities clientCaps o h =
       , Nothing <- executeCommandCommands o =
           error "executeCommandCommands needs to be set if a executeCommandHandler is set"
       | otherwise = Nothing
+
+    clientSupportsPrepareRename = fromMaybe False $
+      clientCaps ^? LSP.textDocument . _Just . LSP.rename . _Just . LSP.prepareSupport . _Just
+
+    renameProvider
+      | clientSupportsPrepareRename
+      , supported_b STextDocumentRename
+      , supported_b STextDocumentPrepareRename = Just $
+          InR . RenameOptions Nothing . Just $ True
+      | supported_b STextDocumentRename = Just (InL True)
+      | otherwise = Just (InL False)
 
     sync = case textDocumentSync o of
             Just x -> Just (InL x)
