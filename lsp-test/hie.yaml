@@ -1,0 +1,16 @@
+cradle:
+  multi:
+    - path: "./test/data/"
+      config: { cradle: { none:  } }
+    - path: "./example/"
+      config: { cradle: { none:  } }
+    - path: "./"
+      config:
+        cradle:
+          cabal:
+            - path: "src"
+              component: "lib:lsp-test"
+            - path: "test/dummy-server"
+              component: "exe:dummy-server"
+            - path: "test"
+              component: "test:tests"

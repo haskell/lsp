@@ -1,19 +1,21 @@
 {-# LANGUAGE CPP               #-}
+{-# LANGUAGE GADTs             #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TypeInType #-}
 
-module Language.Haskell.LSP.Test.Session
+module Language.LSP.Test.Session
   ( Session(..)
   , SessionConfig(..)
   , defaultConfig
   , SessionMessage(..)
   , SessionContext(..)
   , SessionState(..)
-  , runSessionWithHandles
+  , runSession'
   , get
   , put
   , modify
@@ -59,15 +61,14 @@ import qualified Data.Text.IO as T
 import qualified Data.HashMap.Strict as HashMap
 import Data.Maybe
 import Data.Function
-import Language.Haskell.LSP.Messages
-import Language.Haskell.LSP.Types.Capabilities
-import Language.Haskell.LSP.Types
-import Language.Haskell.LSP.Types.Lens
-import qualified Language.Haskell.LSP.Types.Lens as LSP
-import Language.Haskell.LSP.VFS
-import Language.Haskell.LSP.Test.Compat
-import Language.Haskell.LSP.Test.Decoding
-import Language.Haskell.LSP.Test.Exceptions
+import Language.LSP.Types.Capabilities
+import Language.LSP.Types
+import Language.LSP.Types.Lens
+import qualified Language.LSP.Types.Lens as LSP
+import Language.LSP.VFS
+import Language.LSP.Test.Compat
+import Language.LSP.Test.Decoding
+import Language.LSP.Test.Exceptions
 import System.Console.ANSI
 import System.Directory
 import System.IO
@@ -80,9 +81,9 @@ import System.Timeout
 -- | A session representing one instance of launching and connecting to a server.
 --
 -- You can send and receive messages to the server within 'Session' via
--- 'Language.Haskell.LSP.Test.message',
--- 'Language.Haskell.LSP.Test.sendRequest' and
--- 'Language.Haskell.LSP.Test.sendNotification'.
+-- 'Language.LSP.Test.message',
+-- 'Language.LSP.Test.sendRequest' and
+-- 'Language.LSP.Test.sendNotification'.
 
 newtype Session a = Session (ConduitParser FromServerMessage (StateT SessionState (ReaderT SessionContext IO)) a)
   deriving (Functor, Applicative, Monad, MonadIO, Alternative)
@@ -106,15 +107,18 @@ data SessionConfig = SessionConfig
   , logColor       :: Bool -- ^ Add ANSI color to the logged messages, defaults to True.
   , lspConfig      :: Maybe Value -- ^ The initial LSP config as JSON value, defaults to Nothing.
   , ignoreLogNotifications :: Bool
-  -- ^ Whether or not to ignore 'Language.Haskell.LSP.Types.ShowMessageNotification' and
-  -- 'Language.Haskell.LSP.Types.LogMessageNotification', defaults to False.
+  -- ^ Whether or not to ignore 'Language.LSP.Types.ShowMessageNotification' and
+  -- 'Language.LSP.Types.LogMessageNotification', defaults to False.
   --
   -- @since 0.9.0.0
+  , initialWorkspaceFolders :: Maybe [WorkspaceFolder]
+  -- ^ The initial workspace folders to send in the @initialize@ request.
+  -- Defaults to Nothing.
   }
 
--- | The configuration used in 'Language.Haskell.LSP.Test.runSession'.
+-- | The configuration used in 'Language.LSP.Test.runSession'.
 defaultConfig :: SessionConfig
-defaultConfig = SessionConfig 60 False False True Nothing False
+defaultConfig = SessionConfig 60 False False True Nothing False Nothing
 
 instance Default SessionConfig where
   def = defaultConfig
@@ -131,7 +135,7 @@ data SessionContext = SessionContext
   -- Keep curTimeoutId in SessionContext, as its tied to messageChan
   , curTimeoutId :: MVar Int -- ^ The current timeout we are waiting on
   , requestMap :: MVar RequestMap
-  , initRsp :: MVar InitializeResponse
+  , initRsp :: MVar (ResponseMessage Initialize)
   , config :: SessionConfig
   , sessionCapabilities :: ClientCapabilities
   }
@@ -160,14 +164,14 @@ bumpTimeoutId prev = do
 
 data SessionState = SessionState
   {
-    curReqId :: LspId
+    curReqId :: Int
   , vfs :: VFS
   , curDiagnostics :: Map.Map NormalizedUri [Diagnostic]
   , overridingTimeout :: Bool
   -- ^ The last received message from the server.
   -- Used for providing exception information
   , lastReceivedMessage :: Maybe FromServerMessage
-  , curDynCaps :: Map.Map T.Text Registration
+  , curDynCaps :: Map.Map T.Text SomeRegistration
   -- ^ The capabilities that the server has dynamically registered with us so
   -- far
   }
@@ -201,8 +205,8 @@ instance (Monad m, (HasState s m)) => HasState s (ConduitParser a m)
   get = lift get
   put = lift . put
 
-runSession :: SessionContext -> SessionState -> Session a -> IO (a, SessionState)
-runSession context state (Session session) = runReaderT (runStateT conduit state) context
+runSessionMonad :: SessionContext -> SessionState -> Session a -> IO (a, SessionState)
+runSessionMonad context state (Session session) = runReaderT (runStateT conduit state) context
   where
     conduit = runConduit $ chanSource .| watchdog .| updateStateC .| runConduitParser (catchError session handler)
 
@@ -219,8 +223,8 @@ runSession context state (Session session) = runReaderT (runStateT conduit state
         yield msg
       chanSource
 
-    isLogNotification (ServerMessage (NotShowMessage _)) = True
-    isLogNotification (ServerMessage (NotLogMessage _)) = True
+    isLogNotification (ServerMessage (FromServerMess SWindowShowMessage _)) = True
+    isLogNotification (ServerMessage (FromServerMess SWindowLogMessage _)) = True
     isLogNotification _ = False
 
     watchdog :: ConduitM SessionMessage FromServerMessage (StateT SessionState (ReaderT SessionContext IO)) ()
@@ -232,17 +236,17 @@ runSession context state (Session session) = runReaderT (runStateT conduit state
 
 -- | An internal version of 'runSession' that allows for a custom handler to listen to the server.
 -- It also does not automatically send initialize and exit messages.
-runSessionWithHandles :: Handle -- ^ Server in
-                      -> Handle -- ^ Server out
-                      -> ProcessHandle -- ^ Server process
-                      -> (Handle -> SessionContext -> IO ()) -- ^ Server listener
-                      -> SessionConfig
-                      -> ClientCapabilities
-                      -> FilePath -- ^ Root directory
-                      -> Session () -- ^ To exit the Server properly
-                      -> Session a
-                      -> IO a
-runSessionWithHandles serverIn serverOut serverProc serverHandler config caps rootDir exitServer session = do
+runSession' :: Handle -- ^ Server in
+            -> Handle -- ^ Server out
+            -> Maybe ProcessHandle -- ^ Server process
+            -> (Handle -> SessionContext -> IO ()) -- ^ Server listener
+            -> SessionConfig
+            -> ClientCapabilities
+            -> FilePath -- ^ Root directory
+            -> Session () -- ^ To exit the Server properly
+            -> Session a
+            -> IO a
+runSession' serverIn serverOut mServerProc serverHandler config caps rootDir exitServer session = do
   absRootDir <- canonicalizePath rootDir
 
   hSetBuffering serverIn  NoBuffering
@@ -260,29 +264,31 @@ runSessionWithHandles serverIn serverOut serverProc serverHandler config caps ro
   mainThreadId <- myThreadId
 
   let context = SessionContext serverIn absRootDir messageChan timeoutIdVar reqMap initRsp config caps
-      initState vfs = SessionState (IdInt 0) vfs mempty False Nothing mempty
-      runSession' ses = initVFS $ \vfs -> runSession context (initState vfs) ses
+      initState vfs = SessionState 0 vfs mempty False Nothing mempty
+      runSession' ses = initVFS $ \vfs -> runSessionMonad context (initState vfs) ses
 
       errorHandler = throwTo mainThreadId :: SessionException -> IO ()
       serverListenerLauncher =
         forkIO $ catch (serverHandler serverOut context) errorHandler
-      server = (Just serverIn, Just serverOut, Nothing, serverProc)
       msgTimeoutMs = messageTimeout config * 10^6
       serverAndListenerFinalizer tid = do
-        finally (timeout msgTimeoutMs (runSession' exitServer)) $ do
-          -- Make sure to kill the listener first, before closing
-          -- handles etc via cleanupProcess
-          killThread tid
-          -- Give the server some time to exit cleanly
-          -- It makes the server hangs in windows so we have to avoid it
+        let cleanup
+              | Just sp <- mServerProc = do
+                  -- Give the server some time to exit cleanly
+                  -- It makes the server hangs in windows so we have to avoid it
 #ifndef mingw32_HOST_OS
-          timeout msgTimeoutMs (waitForProcess serverProc)
+                  timeout msgTimeoutMs (waitForProcess sp)
 #endif
-          cleanupProcess server
+                  cleanupProcess (Just serverIn, Just serverOut, Nothing, sp)
+              | otherwise = pure ()
+        finally (timeout msgTimeoutMs (runSession' exitServer))
+                -- Make sure to kill the listener first, before closing
+                -- handles etc via cleanupProcess
+                (killThread tid >> cleanup)
 
   (result, _) <- bracket serverListenerLauncher
                          serverAndListenerFinalizer
-                         (const $ runSession' session)
+                         (const $ initVFS $ \vfs -> runSessionMonad context (initState vfs) session)
   return result
 
 updateStateC :: ConduitM FromServerMessage FromServerMessage (StateT SessionState (ReaderT SessionContext IO)) ()
@@ -294,25 +300,25 @@ updateState :: (MonadIO m, HasReader SessionContext m, HasState SessionState m)
             => FromServerMessage -> m ()
 
 -- Keep track of dynamic capability registration
-updateState (ReqRegisterCapability req) = do
-  let List newRegs = (\r -> (r ^. LSP.id, r)) <$> req ^. params . registrations
+updateState (FromServerMess SClientRegisterCapability req) = do
+  let List newRegs = (\sr@(SomeRegistration r) -> (r ^. LSP.id, sr)) <$> req ^. params . registrations
   modify $ \s ->
     s { curDynCaps = Map.union (Map.fromList newRegs) (curDynCaps s) }
 
-updateState (ReqUnregisterCapability req) = do
-  let List unRegs = (^. LSP.id) <$> req ^. params . unregistrations
+updateState (FromServerMess SClientUnregisterCapability req) = do
+  let List unRegs = (^. LSP.id) <$> req ^. params . unregisterations
   modify $ \s ->
     let newCurDynCaps = foldr' Map.delete (curDynCaps s) unRegs
     in s { curDynCaps = newCurDynCaps }
 
-updateState (NotPublishDiagnostics n) = do
+updateState (FromServerMess STextDocumentPublishDiagnostics n) = do
   let List diags = n ^. params . diagnostics
       doc = n ^. params . uri
   modify $ \s ->
     let newDiags = Map.insert (toNormalizedUri doc) diags (curDiagnostics s)
       in s { curDiagnostics = newDiags }
 
-updateState (ReqApplyWorkspaceEdit r) = do
+updateState (FromServerMess SWorkspaceApplyEdit r) = do
 
   -- First, prefer the versioned documentChanges field
   allChangeParams <- case r ^. params . edit . documentChanges of
@@ -335,7 +341,7 @@ updateState (ReqApplyWorkspaceEdit r) = do
       mergedParams = map mergeParams groupedParams
 
   -- TODO: Don't do this when replaying a session
-  forM_ mergedParams (sendMessage . NotificationMessage "2.0" TextDocumentDidChange)
+  forM_ mergedParams (sendMessage . NotificationMessage "2.0" STextDocumentDidChange)
 
   -- Update VFS to new document versions
   let sortedVersions = map (sortBy (compare `on` (^. textDocument . version))) groupedParams
@@ -358,7 +364,7 @@ updateState (ReqApplyWorkspaceEdit r) = do
             let fp = fromJust $ uriToFilePath uri
             contents <- liftIO $ T.readFile fp
             let item = TextDocumentItem (filePathToUri fp) "" 0 contents
-                msg = NotificationMessage "2.0" TextDocumentDidOpen (DidOpenTextDocumentParams item)
+                msg = NotificationMessage "2.0" STextDocumentDidOpen (DidOpenTextDocumentParams item)
             liftIO $ B.hPut (serverIn ctx) $ addHeader (encode msg)
 
             modifyM $ \s -> do
@@ -395,7 +401,7 @@ sendMessage msg = do
   logMsg LogClient msg
   liftIO $ B.hPut h (addHeader $ encode msg)
 
--- | Execute a block f that will throw a 'Language.Haskell.LSP.Test.Exception.Timeout' exception
+-- | Execute a block f that will throw a 'Language.LSP.Test.Exception.Timeout' exception
 -- after duration seconds. This will override the global timeout
 -- for waiting for messages to arrive defined in 'SessionConfig'.
 withTimeout :: Int -> Session a -> Session a

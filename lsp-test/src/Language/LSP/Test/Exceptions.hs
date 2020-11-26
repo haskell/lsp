@@ -1,8 +1,7 @@
-module Language.Haskell.LSP.Test.Exceptions where
+module Language.LSP.Test.Exceptions where
 
 import Control.Exception
-import Language.Haskell.LSP.Messages
-import Language.Haskell.LSP.Types
+import Language.LSP.Types
 import Data.Aeson
 import Data.Aeson.Encode.Pretty
 import Data.Algorithm.Diff
@@ -17,7 +16,7 @@ data SessionException = Timeout (Maybe FromServerMessage)
                       | ReplayOutOfOrder FromServerMessage [FromServerMessage]
                       | UnexpectedDiagnostics
                       | IncorrectApplyEditRequest String
-                      | UnexpectedResponseError LspIdRsp ResponseError
+                      | UnexpectedResponseError SomeLspId  ResponseError
                       | UnexpectedServerTermination
                       | IllegalInitSequenceMessage FromServerMessage
   deriving Eq
@@ -34,7 +33,7 @@ instance Show SessionException where
   show (UnexpectedMessage expected lastMsg) =
     "Received an unexpected message from the server:\n" ++
     "Was parsing: " ++ expected ++ "\n" ++
-    "Last message received:\n" ++ B.unpack (encodePretty lastMsg)
+    "But the last message received was:\n" ++ B.unpack (encodePretty lastMsg)
   show (ReplayOutOfOrder received expected) =
     let expected' = nub expected
         getJsonDiff = lines . B.unpack . encodePretty

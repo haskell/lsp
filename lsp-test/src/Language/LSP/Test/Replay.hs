@@ -1,7 +1,7 @@
 -- | A testing tool for replaying captured client logs back to a server,
 -- and validating that the server output matches up with another log.
-module Language.Haskell.LSP.Test.Replay
-  ( replaySession
+module Language.LSP.Test.Replay
+  ( -- replaySession
   )
 where
 
@@ -10,10 +10,8 @@ import           Control.Concurrent
 import           Control.Monad.IO.Class
 import qualified Data.ByteString.Lazy.Char8    as B
 import qualified Data.Text                     as T
-import           Language.Haskell.LSP.Capture
-import           Language.Haskell.LSP.Messages
-import           Language.Haskell.LSP.Types
-import           Language.Haskell.LSP.Types.Lens as LSP
+import           Language.LSP.Types
+import           Language.LSP.Types.Lens as LSP
 import           Data.Aeson
 import           Data.Default
 import           Data.List
@@ -22,14 +20,14 @@ import           Control.Lens hiding (List)
 import           Control.Monad
 import           System.FilePath
 import           System.IO
-import           Language.Haskell.LSP.Test
-import           Language.Haskell.LSP.Test.Compat
-import           Language.Haskell.LSP.Test.Files
-import           Language.Haskell.LSP.Test.Decoding
-import           Language.Haskell.LSP.Test.Messages
-import           Language.Haskell.LSP.Test.Server
-import           Language.Haskell.LSP.Test.Session
+import           Language.LSP.Test
+import           Language.LSP.Test.Compat
+import           Language.LSP.Test.Files
+import           Language.LSP.Test.Decoding
+import           Language.LSP.Test.Server
+import           Language.LSP.Test.Session
 
+{-
 -- | Replays a captured client output and
 -- makes sure it matches up with an expected response.
 -- The session directory should have a captured session file in it
@@ -235,3 +233,4 @@ swapPid :: Int -> T.Text -> T.Text
 swapPid pid t
   | hasPid t = T.append (T.pack $ show pid) $ T.dropWhile (/= ':') t
   | otherwise = t
+-}

@@ -2,7 +2,7 @@
 lsp-test is a functional testing framework for Language Server Protocol servers.
 
 ```haskell
-import Language.Haskell.LSP.Test
+import Language.LSP.Test
 main = runSession "hie" fullCaps "proj/dir" $ do
   doc <- openDoc "Foo.hs" "haskell"
   skipMany anyNotification

@@ -1,122 +1,171 @@
+{-# LANGUAGE TypeInType #-}
 {-# LANGUAGE OverloadedStrings #-}
-import Data.Aeson
-import Data.Default
-import Data.List (isSuffixOf)
-import qualified Data.HashMap.Strict as HM
-import Language.Haskell.LSP.Core
-import Language.Haskell.LSP.Control
-import Language.Haskell.LSP.Messages
-import Language.Haskell.LSP.Types
-import Control.Concurrent
+
 import Control.Monad
+import Control.Monad.Reader
+import Data.Aeson hiding (defaultOptions)
+import qualified Data.HashMap.Strict as HM
+import Data.List (isSuffixOf)
+import Language.LSP.Server
+import Language.LSP.Types
 import System.Directory
 import System.FilePath
+import UnliftIO
+import UnliftIO.Concurrent
 
 main = do
-  lfvar <- newEmptyMVar
-  let initCbs = InitializeCallbacks
-        { onInitialConfiguration = const $ Right ()
-        , onConfigurationChange = const $ Right ()
-        , onStartup = \lf -> do
-            putMVar lfvar lf
+  handlerEnv <- HandlerEnv <$> newEmptyMVar <*> newEmptyMVar
+  runServer $ ServerDefinition
+    { doInitialize = \env _req -> pure $ Right env,
+      onConfigurationChange = const $ pure $ Right (),
+      staticHandlers = handlers,
+      interpretHandler = \env ->
+        Iso
+          (\m -> runLspT env (runReaderT m handlerEnv))
+          liftIO,
+      options = defaultOptions {executeCommandCommands = Just ["doAnEdit"]}
+    }
 
-            return Nothing
-        }
-      options = def
-        { executeCommandCommands = Just ["doAnEdit"]
-        }
-  run initCbs (handlers lfvar) options Nothing
-
-handlers :: MVar (LspFuncs ()) -> Handlers
-handlers lfvar = def
-  { initializedHandler = pure $ \_ -> send $ NotLogMessage $ fmServerLogMessageNotification MtLog "initialized"
-  , hoverHandler = pure $ \req -> send $
-      RspHover $ makeResponseMessage req (Just (Hover (HoverContents (MarkupContent MkPlainText "hello")) Nothing))
-  , documentSymbolHandler = pure $ \req -> send $
-      RspDocumentSymbols $ makeResponseMessage req $ DSDocumentSymbols $
-        List [ DocumentSymbol "foo"
-                              Nothing
-                              SkObject
-                              Nothing
-                              (mkRange 0 0 3 6)
-                              (mkRange 0 0 3 6)
-                              Nothing
-             ]
-  , didOpenTextDocumentNotificationHandler = pure $ \noti -> do
-      let NotificationMessage _ _ (DidOpenTextDocumentParams doc) = noti
-          TextDocumentItem uri _ _ _ = doc
-          Just fp = uriToFilePath uri
-          diag = Diagnostic (mkRange 0 0 0 1)
-                            (Just DsWarning)
-                            (Just (NumberValue 42))
-                            (Just "dummy-server")
-                            "Here's a warning"
-                            Nothing
-                            Nothing
-      when (".hs" `isSuffixOf` fp) $ void $ forkIO $ do
-        threadDelay (2 * 10^6)
-        send $ NotPublishDiagnostics $
-          fmServerPublishDiagnosticsNotification $ PublishDiagnosticsParams uri $ List [diag]
-
-      -- also act as a registerer for workspace/didChangeWatchedFiles
-      when (".register" `isSuffixOf` fp) $ do
-        reqId <- readMVar lfvar >>= getNextReqId
-        send $ ReqRegisterCapability $ fmServerRegisterCapabilityRequest reqId $
-          RegistrationParams $ List $
-            [ Registration "0" WorkspaceDidChangeWatchedFiles $ Just $ toJSON $
-                DidChangeWatchedFilesRegistrationOptions $ List
-                [ FileSystemWatcher "*.watch" (Just (WatchKind True True True)) ]
-            ]
-      when (".register.abs" `isSuffixOf` fp) $ do
-        curDir <- getCurrentDirectory
-        reqId <- readMVar lfvar >>= getNextReqId
-        send $ ReqRegisterCapability $ fmServerRegisterCapabilityRequest reqId $
-          RegistrationParams $ List $
-            [ Registration "1" WorkspaceDidChangeWatchedFiles $ Just $ toJSON $
-                DidChangeWatchedFilesRegistrationOptions $ List
-                [ FileSystemWatcher (curDir </> "*.watch") (Just (WatchKind True True True)) ]
-            ]
-
-      -- also act as an unregisterer for workspace/didChangeWatchedFiles
-      when (".unregister" `isSuffixOf` fp) $ do
-        reqId <- readMVar lfvar >>= getNextReqId
-        send $ ReqUnregisterCapability $ fmServerUnregisterCapabilityRequest reqId $
-          UnregistrationParams $ List [ Unregistration "0" "workspace/didChangeWatchedFiles" ]
-      when (".unregister.abs" `isSuffixOf` fp) $ do
-        reqId <- readMVar lfvar >>= getNextReqId
-        send $ ReqUnregisterCapability $ fmServerUnregisterCapabilityRequest reqId $
-          UnregistrationParams $ List [ Unregistration "1" "workspace/didChangeWatchedFiles" ]
-  , executeCommandHandler = pure $ \req -> do
-      send $ RspExecuteCommand $ makeResponseMessage req Null
-      reqId <- readMVar lfvar >>= getNextReqId
-      let RequestMessage _ _ _ (ExecuteCommandParams "doAnEdit" (Just (List [val])) _) = req
-          Success docUri = fromJSON val
-          edit = List [TextEdit (mkRange 0 0 0 5) "howdy"]
-      send $ ReqApplyWorkspaceEdit $ fmServerApplyWorkspaceEditRequest reqId $
-        ApplyWorkspaceEditParams $ WorkspaceEdit (Just (HM.singleton docUri edit))
-                                                 Nothing
-  , codeActionHandler = pure $ \req -> do
-      let RequestMessage _ _ _ params = req
-          CodeActionParams _ _ cactx _ = params
-          CodeActionContext diags _ = cactx
-          caresults = fmap diag2caresult diags
-          diag2caresult d = CACodeAction $
-            CodeAction "Delete this"
-                       Nothing
-                       (Just (List [d]))
-                       Nothing
-                      (Just (Command "" "deleteThis" Nothing))
-      send $ RspCodeAction $ makeResponseMessage req caresults
-  , didChangeWatchedFilesNotificationHandler = pure $ \_ ->
-      send $ NotLogMessage $ fmServerLogMessageNotification MtLog "got workspace/didChangeWatchedFiles"
-  , completionHandler = pure $ \req -> do
-      let res = CompletionList (CompletionListType False (List [item]))
-          item =
-            CompletionItem "foo" (Just CiConstant) (Just (List [])) Nothing
-            Nothing Nothing Nothing Nothing Nothing Nothing Nothing
-            Nothing Nothing Nothing Nothing Nothing
-      send $ RspCompletion $ makeResponseMessage req res
+data HandlerEnv = HandlerEnv
+  { relRegToken :: MVar (RegistrationToken WorkspaceDidChangeWatchedFiles),
+    absRegToken :: MVar (RegistrationToken WorkspaceDidChangeWatchedFiles)
   }
-  where send msg = readMVar lfvar >>= \lf -> (sendFunc lf) msg
 
-mkRange sl sc el ec = Range (Position sl sc) (Position el ec)
+handlers :: Handlers (ReaderT HandlerEnv (LspM ()))
+handlers =
+  mconcat
+    [ notificationHandler SInitialized $
+        \_noti ->
+          sendNotification SWindowLogMessage $
+            LogMessageParams MtLog "initialized",
+      requestHandler STextDocumentHover $
+        \_req responder ->
+          responder $
+            Right $
+              Just $
+                Hover (HoverContents (MarkupContent MkPlainText "hello")) Nothing,
+      requestHandler STextDocumentDocumentSymbol $
+        \_req responder ->
+          responder $
+            Right $
+              InL $
+                List
+                  [ DocumentSymbol
+                      "foo"
+                      Nothing
+                      SkObject
+                      Nothing
+                      (mkRange 0 0 3 6)
+                      (mkRange 0 0 3 6)
+                      Nothing
+                  ],
+      notificationHandler STextDocumentDidOpen $
+        \noti -> do
+          let NotificationMessage _ _ (DidOpenTextDocumentParams doc) = noti
+              TextDocumentItem uri _ _ _ = doc
+              Just fp = uriToFilePath uri
+              diag =
+                Diagnostic
+                  (mkRange 0 0 0 1)
+                  (Just DsWarning)
+                  (Just (InL 42))
+                  (Just "dummy-server")
+                  "Here's a warning"
+                  Nothing
+                  Nothing
+          withRunInIO $
+            \runInIO -> do
+              when (".hs" `isSuffixOf` fp) $
+                void $
+                  forkIO $
+                    do
+                      threadDelay (2 * 10 ^ 6)
+                      runInIO $
+                        sendNotification STextDocumentPublishDiagnostics $
+                          PublishDiagnosticsParams uri Nothing (List [diag])
+              -- also act as a registerer for workspace/didChangeWatchedFiles
+              when (".register" `isSuffixOf` fp) $
+                do
+                  let regOpts =
+                        DidChangeWatchedFilesRegistrationOptions $
+                          List
+                            [ FileSystemWatcher
+                                "*.watch"
+                                (Just (WatchKind True True True))
+                            ]
+                  Just token <- runInIO $
+                    registerCapability SWorkspaceDidChangeWatchedFiles regOpts $
+                      \_noti ->
+                        sendNotification SWindowLogMessage $
+                          LogMessageParams MtLog "got workspace/didChangeWatchedFiles"
+                  runInIO $ asks relRegToken >>= \v -> putMVar v token
+              when (".register.abs" `isSuffixOf` fp) $
+                do
+                  curDir <- getCurrentDirectory
+                  let regOpts =
+                        DidChangeWatchedFilesRegistrationOptions $
+                          List
+                            [ FileSystemWatcher
+                                (curDir </> "*.watch")
+                                (Just (WatchKind True True True))
+                            ]
+                  Just token <- runInIO $
+                    registerCapability SWorkspaceDidChangeWatchedFiles regOpts $
+                      \_noti ->
+                        sendNotification SWindowLogMessage $
+                          LogMessageParams MtLog "got workspace/didChangeWatchedFiles"
+                  runInIO $ asks absRegToken >>= \v -> putMVar v token
+              -- also act as an unregisterer for workspace/didChangeWatchedFiles
+              when (".unregister" `isSuffixOf` fp) $
+                do
+                  Just token <- runInIO $ asks relRegToken >>= tryReadMVar
+                  runInIO $ unregisterCapability token
+              when (".unregister.abs" `isSuffixOf` fp) $
+                do
+                  Just token <- runInIO $ asks absRegToken >>= tryReadMVar
+                  runInIO $ unregisterCapability token,
+      requestHandler SWorkspaceExecuteCommand $ \req resp -> do
+        let RequestMessage _ _ _ (ExecuteCommandParams Nothing "doAnEdit" (Just (List [val]))) = req
+            Success docUri = fromJSON val
+            edit = List [TextEdit (mkRange 0 0 0 5) "howdy"]
+            params =
+              ApplyWorkspaceEditParams (Just "Howdy edit") $
+                WorkspaceEdit (Just (HM.singleton docUri edit)) Nothing
+        resp $ Right Null
+        void $ sendRequest SWorkspaceApplyEdit params (const (pure ())),
+      requestHandler STextDocumentCodeAction $ \req resp -> do
+        let RequestMessage _ _ _ params = req
+            CodeActionParams _ _ _ _ cactx = params
+            CodeActionContext diags _ = cactx
+            codeActions = fmap diag2ca diags
+            diag2ca d =
+              CodeAction
+                "Delete this"
+                Nothing
+                (Just (List [d]))
+                Nothing
+                Nothing
+                (Just (Command "" "deleteThis" Nothing))
+        resp $ Right $ InR <$> codeActions,
+      requestHandler STextDocumentCompletion $ \_req resp -> do
+        let res = CompletionList True (List [item])
+            item =
+              CompletionItem
+                "foo"
+                (Just CiConstant)
+                (Just (List []))
+                Nothing
+                Nothing
+                Nothing
+                Nothing
+                Nothing
+                Nothing
+                Nothing
+                Nothing
+                Nothing
+                Nothing
+                Nothing
+                Nothing
+                Nothing
+        resp $ Right $ InR res
+    ]
