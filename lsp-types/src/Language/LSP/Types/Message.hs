@@ -193,7 +193,7 @@ type family ResponseResult (m :: Method f Request) :: Type where
   ResponseResult TextDocumentOnTypeFormatting  = List TextEdit
   -- Rename
   ResponseResult TextDocumentRename            = WorkspaceEdit
-  ResponseResult TextDocumentPrepareRename     = Range |? RangeWithPlaceholder
+  ResponseResult TextDocumentPrepareRename     = Maybe (Range |? RangeWithPlaceholder)
   -- FoldingRange
   ResponseResult TextDocumentFoldingRange      = List FoldingRange
   ResponseResult TextDocumentSelectionRange    = List SelectionRange
