@@ -257,6 +257,13 @@ makeFieldsNoPrefix ''DocumentFilter
 makeFieldsNoPrefix ''TextEdit
 makeFieldsNoPrefix ''VersionedTextDocumentIdentifier
 makeFieldsNoPrefix ''TextDocumentEdit
+makeFieldsNoPrefix ''FileResourceChangeKind
+makeFieldsNoPrefix ''CreateFileOptions
+makeFieldsNoPrefix ''CreateFile
+makeFieldsNoPrefix ''RenameFileOptions
+makeFieldsNoPrefix ''RenameFile
+makeFieldsNoPrefix ''DeleteFileOptions
+makeFieldsNoPrefix ''DeleteFile
 makeFieldsNoPrefix ''WorkspaceEdit
 
 -- Workspace Folders

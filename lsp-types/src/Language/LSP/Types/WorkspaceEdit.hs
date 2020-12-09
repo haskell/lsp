@@ -38,6 +38,98 @@ deriveJSON lspOptions ''TextDocumentEdit
 
 -- ---------------------------------------------------------------------
 
+-- | For tagging `CreateFile`/`RenameFile`/`DeleteFile`
+-- Should this be merged with `ResourceOperationKind` ?
+data FileResourceChangeKind
+  = FileResourceChangeCreate
+  | FileResourceChangeRename
+  | FileResourceChangeDelete 
+  deriving (Read, Show, Eq)
+  
+instance ToJSON FileResourceChangeKind where
+  toJSON FileResourceChangeCreate = String "create"
+  toJSON FileResourceChangeRename = String "rename"
+  toJSON FileResourceChangeDelete = String "delete"
+
+instance FromJSON FileResourceChangeKind where
+  parseJSON (String "create") = pure FileResourceChangeCreate
+  parseJSON (String "rename") = pure FileResourceChangeRename
+  parseJSON (String "delete") = pure FileResourceChangeDelete
+  parseJSON _                 = mempty
+
+-- | Options to create a file.
+data CreateFileOptions =
+  CreateFileOptions
+    { -- | Overwrite existing file. Overwrite wins over `ignoreIfExists`
+      _overwrite      :: Bool
+      -- | Ignore if exists.
+    , _ignoreIfExists :: Bool
+    } deriving (Show, Read, Eq)
+
+deriveJSON lspOptions ''CreateFileOptions
+
+-- | Create file operation
+data CreateFile =
+  CreateFile
+    { _kind     :: FileResourceChangeKind
+      -- | The resource to create.
+    , _uri      :: Text
+      -- | Additional options
+    , _options  :: Maybe CreateFileOptions
+    } deriving (Show, Read, Eq)
+
+deriveJSON lspOptions ''CreateFile
+
+-- Rename file options
+data RenameFileOptions =
+  RenameFileOptions
+    { -- | Overwrite target if existing. Overwrite wins over `ignoreIfExists`
+      _overwrite      :: Bool
+      -- | Ignores if target exists.
+    , _ignoreIfExists :: Bool
+    } deriving (Show, Read, Eq)
+
+deriveJSON lspOptions ''RenameFileOptions
+
+-- | Rename file operation
+data RenameFile =
+  RenameFile
+    { _kind     :: FileResourceChangeKind
+      -- | The old (existing) location.
+    , _oldUri   :: Text
+      -- | The new location.
+    , _newUri   :: Text
+      -- | Rename options.
+    , _options  :: Maybe RenameFileOptions
+    } deriving (Show, Read, Eq)
+
+deriveJSON lspOptions ''RenameFile
+
+-- Delete file options
+data DeleteFileOptions =
+  DeleteFileOptions
+    { -- | Delete the content recursively if a folder is denoted.
+      _recursive          :: Bool
+      -- | Ignore the operation if the file doesn't exist.
+    , _ignoreIfNotExists  :: Bool
+    } deriving (Show, Read, Eq)
+
+deriveJSON lspOptions ''DeleteFileOptions
+
+-- | Delete file operation
+data DeleteFile =
+  DeleteFile
+    { _kind     :: FileResourceChangeKind
+      -- | The file to delete.
+    , _uri      :: Text
+      -- | Delete options.
+    , _options  :: Maybe DeleteFileOptions
+    } deriving (Show, Read, Eq)
+
+deriveJSON lspOptions ''DeleteFile
+
+-- ---------------------------------------------------------------------
+
 type WorkspaceEditMap = H.HashMap Uri (List TextEdit)
 
 data WorkspaceEdit =
