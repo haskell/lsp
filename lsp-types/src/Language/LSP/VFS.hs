@@ -133,14 +133,35 @@ applyCreateFile :: J.CreateFile -> VFS -> VFS
 applyCreateFile (J.CreateFile _ uri options) = 
   updateVFS $ Map.insertWith 
                 (\ new old -> if shouldOverwrite then new else old)
-                (J.toNormalizedUri (J.Uri uri)) 
+                (J.toNormalizedUri (J.Uri uri))
                 (VirtualFile 0 0 (Rope.fromText ""))
   where 
     shouldOverwrite :: Bool 
     shouldOverwrite = case options of 
-        Just (J.CreateFileOptions False False) -> True   -- `ignoreIfExists` is False
-        Just (J.CreateFileOptions True  _    ) -> True   -- `overwrite` is True
-        _                                      -> False  -- otherwise don't overwrite  
+        Just (J.CreateFileOptions True  _) -> True  -- `overwrite` is True
+        Just (J.CreateFileOptions False _) -> False -- `overwrite` wins over `ignoreIfExists`
+        Nothing                            -> False 
+
+applyRenameFile :: J.RenameFile -> VFS -> VFS
+applyRenameFile (J.RenameFile _ oldUri' newUri' options) vfs = 
+  let oldUri = J.toNormalizedUri (J.Uri oldUri')
+      newUri = J.toNormalizedUri (J.Uri newUri')
+  in  case Map.lookup oldUri (vfsMap vfs) of 
+        -- nothing to rename 
+        Nothing -> vfs 
+        Just file -> case Map.lookup newUri (vfsMap vfs) of 
+          -- the target does not exist, just move over 
+          Nothing -> updateVFS (Map.insert newUri file . Map.delete oldUri) vfs
+          Just _  -> if shouldOverwrite 
+                      then updateVFS (Map.insert newUri file . Map.delete oldUri) vfs
+                      else vfs 
+  where 
+    shouldOverwrite :: Bool 
+    shouldOverwrite = case options of 
+        Just (J.RenameFileOptions True  _) -> True  -- `overwrite` is True
+        Just (J.RenameFileOptions False _) -> False -- `overwrite` wins over `ignoreIfExists`
+        Nothing                            -> False 
+
 
 -- ^ Applies the changes from a 'ApplyWorkspaceEditRequest' to the 'VFS'
 changeFromServerVFS :: VFS -> J.Message 'J.WorkspaceApplyEdit -> IO VFS
