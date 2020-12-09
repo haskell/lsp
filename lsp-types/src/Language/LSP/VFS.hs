@@ -129,6 +129,19 @@ updateVFS f vfs@VFS{vfsMap} = vfs { vfsMap = f vfsMap }
 
 -- ---------------------------------------------------------------------
 
+applyCreateFile :: J.CreateFile -> VFS -> VFS
+applyCreateFile (J.CreateFile _ uri options) = 
+  updateVFS $ Map.insertWith 
+                (\ new old -> if shouldOverwrite then new else old)
+                (J.toNormalizedUri (J.Uri uri)) 
+                (VirtualFile 0 0 (Rope.fromText ""))
+  where 
+    shouldOverwrite :: Bool 
+    shouldOverwrite = case options of 
+        Just (J.CreateFileOptions False False) -> True   -- `ignoreIfExists` is False
+        Just (J.CreateFileOptions True  _    ) -> True   -- `overwrite` is True
+        _                                      -> False  -- otherwise don't overwrite  
+
 -- ^ Applies the changes from a 'ApplyWorkspaceEditRequest' to the 'VFS'
 changeFromServerVFS :: VFS -> J.Message 'J.WorkspaceApplyEdit -> IO VFS
 changeFromServerVFS initVfs (J.RequestMessage _ _ _ params) = do
