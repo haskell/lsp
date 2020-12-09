@@ -1,6 +1,8 @@
 {-# LANGUAGE DuplicateRecordFields      #-}
 {-# LANGUAGE TemplateHaskell            #-}
+{-# LANGUAGE TypeOperators              #-}
 {-# LANGUAGE OverloadedStrings          #-}
+
 module Language.LSP.Types.WorkspaceEdit where
 
 import           Data.Aeson
@@ -127,6 +129,11 @@ data DeleteFile =
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''DeleteFile
+
+-- ---------------------------------------------------------------------
+
+-- | `TextDocumentEdit |? CreateFile |? RenameFile |? DeleteFile` is a bit mouthful, here's the synonym
+type DocumentChange = TextDocumentEdit |? CreateFile |? RenameFile |? DeleteFile
 
 -- ---------------------------------------------------------------------
 
