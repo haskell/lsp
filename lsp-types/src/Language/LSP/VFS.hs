@@ -162,6 +162,10 @@ applyRenameFile (J.RenameFile _ oldUri' newUri' options) vfs =
         Just (J.RenameFileOptions False _) -> False -- `overwrite` wins over `ignoreIfExists`
         Nothing                            -> False 
 
+-- NOTE: we are ignoring the `recursive` option here because we don't know which file is a directory
+applyDeleteFile :: J.DeleteFile -> VFS -> VFS
+applyDeleteFile (J.DeleteFile _ uri _options) = 
+  updateVFS $ Map.delete (J.toNormalizedUri (J.Uri uri))
 
 -- ^ Applies the changes from a 'ApplyWorkspaceEditRequest' to the 'VFS'
 changeFromServerVFS :: VFS -> J.Message 'J.WorkspaceApplyEdit -> IO VFS
