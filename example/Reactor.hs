@@ -225,7 +225,7 @@ handle = mconcat
       let edit = J.TextEdit (J.mkRange l c l (c + T.length newName)) newName
           tde = J.TextDocumentEdit vdoc (J.List [edit])
           -- "documentChanges" field is preferred over "changes"
-          rsp = J.WorkspaceEdit Nothing (Just (J.List [tde]))
+          rsp = J.WorkspaceEdit Nothing (Just (J.List [J.InL tde]))
       responder (Right rsp)
 
   , requestHandler J.STextDocumentHover $ \req responder -> do
