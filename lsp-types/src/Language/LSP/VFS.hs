@@ -167,6 +167,28 @@ applyDeleteFile :: J.DeleteFile -> VFS -> VFS
 applyDeleteFile (J.DeleteFile _ uri _options) = 
   updateVFS $ Map.delete (J.toNormalizedUri (J.Uri uri))
 
+
+applyTextDocumentEdit :: J.TextDocumentEdit -> VFS -> IO VFS
+applyTextDocumentEdit (J.TextDocumentEdit vid (J.List edits)) vfs = do
+  -- all edits are supposed to be applied at once
+  -- so apply from bottom up so they don't affect others
+  let sortedEdits = sortOn (Down . (^. J.range)) edits
+      changeEvents = map editToChangeEvent sortedEdits
+      ps = J.DidChangeTextDocumentParams vid (J.List changeEvents)
+      notif = J.NotificationMessage "" J.STextDocumentDidChange ps
+  let (vfs',ls) = changeFromClientVFS vfs notif
+  mapM_ (debugM "haskell-lsp.applyTextDocumentEdit") ls
+  return vfs'
+
+  where 
+    editToChangeEvent (J.TextEdit range text) = J.TextDocumentContentChangeEvent (Just range) Nothing text
+
+applyDocumentChange :: J.DocumentChange -> VFS -> IO VFS 
+applyDocumentChange (J.InL               change)   = applyTextDocumentEdit change
+applyDocumentChange (J.InR (J.InL        change))  = return . applyCreateFile change
+applyDocumentChange (J.InR (J.InR (J.InL change))) = return . applyRenameFile change
+applyDocumentChange (J.InR (J.InR (J.InR change))) = return . applyDeleteFile change
+
 -- ^ Applies the changes from a 'ApplyWorkspaceEditRequest' to the 'VFS'
 changeFromServerVFS :: VFS -> J.Message 'J.WorkspaceApplyEdit -> IO VFS
 changeFromServerVFS initVfs (J.RequestMessage _ _ _ params) = do
@@ -202,7 +224,7 @@ changeFromServerVFS initVfs (J.RequestMessage _ _ _ params) = do
       return vfs'
 
     editToChangeEvent (J.TextEdit range text) = J.TextDocumentContentChangeEvent (Just range) Nothing text
-
+    
 -- ---------------------------------------------------------------------
 virtualFileName :: FilePath -> J.NormalizedUri -> VirtualFile -> FilePath
 virtualFileName prefix uri (VirtualFile _ file_ver _) =
