@@ -142,7 +142,7 @@ type WorkspaceEditMap = H.HashMap Uri (List TextEdit)
 data WorkspaceEdit =
   WorkspaceEdit
     { _changes         :: Maybe WorkspaceEditMap
-    , _documentChanges :: Maybe (List TextDocumentEdit)
+    , _documentChanges :: Maybe (List DocumentChange)
     } deriving (Show, Read, Eq)
 
 instance Semigroup WorkspaceEdit where

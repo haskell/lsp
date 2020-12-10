@@ -195,36 +195,25 @@ changeFromServerVFS initVfs (J.RequestMessage _ _ _ params) = do
   let J.ApplyWorkspaceEditParams _label edit = params
       J.WorkspaceEdit mChanges mDocChanges = edit
   case mDocChanges of
-    Just (J.List textDocEdits) -> applyEdits textDocEdits
+    Just (J.List docChanges) -> applyDocumentChanges docChanges
     Nothing -> case mChanges of
-      Just cs -> applyEdits $ HashMap.foldlWithKey' changeToTextDocumentEdit [] cs
+      Just cs -> applyDocumentChanges $ map J.InL $ HashMap.foldlWithKey' changeToTextDocumentEdit [] cs
       Nothing -> do
         debugM "haskell-lsp.changeVfs" "No changes"
         return initVfs
 
   where
-
     changeToTextDocumentEdit acc uri edits =
       acc ++ [J.TextDocumentEdit (J.VersionedTextDocumentIdentifier uri (Just 0)) edits]
 
-    -- applyEdits :: [J.TextDocumentEdit] -> VFS
-    applyEdits :: [J.TextDocumentEdit] -> IO VFS
-    applyEdits = foldM f initVfs . sortOn (^. J.textDocument . J.version)
+    applyDocumentChanges :: [J.DocumentChange] -> IO VFS 
+    applyDocumentChanges = foldM (flip applyDocumentChange) initVfs . sortOn project
+        
+    -- for sorting [DocumentChange]
+    project :: J.DocumentChange -> J.TextDocumentVersion -- type TextDocumentVersion = Maybe Int
+    project (J.InL textDocumentEdit) = textDocumentEdit ^. J.textDocument . J.version
+    project _ = Nothing
 
-    f :: VFS -> J.TextDocumentEdit -> IO VFS
-    f vfs (J.TextDocumentEdit vid (J.List edits)) = do
-      -- all edits are supposed to be applied at once
-      -- so apply from bottom up so they don't affect others
-      let sortedEdits = sortOn (Down . (^. J.range)) edits
-          changeEvents = map editToChangeEvent sortedEdits
-          ps = J.DidChangeTextDocumentParams vid (J.List changeEvents)
-          notif = J.NotificationMessage "" J.STextDocumentDidChange ps
-      let (vfs',ls) = changeFromClientVFS vfs notif
-      mapM_ (debugM "haskell-lsp.changeFromServerVFS") ls
-      return vfs'
-
-    editToChangeEvent (J.TextEdit range text) = J.TextDocumentContentChangeEvent (Just range) Nothing text
-    
 -- ---------------------------------------------------------------------
 virtualFileName :: FilePath -> J.NormalizedUri -> VirtualFile -> FilePath
 virtualFileName prefix uri (VirtualFile _ file_ver _) =
