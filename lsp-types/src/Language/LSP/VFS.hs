@@ -130,7 +130,7 @@ updateVFS f vfs@VFS{vfsMap} = vfs { vfsMap = f vfsMap }
 -- ---------------------------------------------------------------------
 
 applyCreateFile :: J.CreateFile -> VFS -> VFS
-applyCreateFile (J.CreateFile _ uri options) = 
+applyCreateFile (J.CreateFile uri options) = 
   updateVFS $ Map.insertWith 
                 (\ new old -> if shouldOverwrite then new else old)
                 (J.toNormalizedUri (J.Uri uri))
@@ -150,7 +150,7 @@ applyCreateFile (J.CreateFile _ uri options) =
         Just (J.CreateFileOptions (Just False)  (Just False)) -> False  -- `overwrite` wins over `ignoreIfExists`
 
 applyRenameFile :: J.RenameFile -> VFS -> VFS
-applyRenameFile (J.RenameFile _ oldUri' newUri' options) vfs = 
+applyRenameFile (J.RenameFile oldUri' newUri' options) vfs = 
   let oldUri = J.toNormalizedUri (J.Uri oldUri')
       newUri = J.toNormalizedUri (J.Uri newUri')
   in  case Map.lookup oldUri (vfsMap vfs) of 
@@ -178,7 +178,7 @@ applyRenameFile (J.RenameFile _ oldUri' newUri' options) vfs =
 
 -- NOTE: we are ignoring the `recursive` option here because we don't know which file is a directory
 applyDeleteFile :: J.DeleteFile -> VFS -> VFS
-applyDeleteFile (J.DeleteFile _ uri _options) = 
+applyDeleteFile (J.DeleteFile uri _options) = 
   updateVFS $ Map.delete (J.toNormalizedUri (J.Uri uri))
 
 

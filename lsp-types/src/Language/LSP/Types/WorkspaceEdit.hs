@@ -2,12 +2,15 @@
 {-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE TypeOperators              #-}
 {-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE RecordWildCards            #-}
 
 module Language.LSP.Types.WorkspaceEdit where
 
+import           Control.Monad                              (unless)
 import           Data.Aeson
 import           Data.Aeson.TH
 import qualified Data.HashMap.Strict                        as H
+import           Data.Maybe                                 (catMaybes)
 import           Data.Text                                  (Text)
 import qualified Data.Text                                  as T
 
@@ -40,25 +43,6 @@ deriveJSON lspOptions ''TextDocumentEdit
 
 -- ---------------------------------------------------------------------
 
--- | For tagging `CreateFile`/`RenameFile`/`DeleteFile`
--- Should this be merged with `ResourceOperationKind` ?
-data FileResourceChangeKind
-  = FileResourceChangeCreate
-  | FileResourceChangeRename
-  | FileResourceChangeDelete 
-  deriving (Read, Show, Eq)
-  
-instance ToJSON FileResourceChangeKind where
-  toJSON FileResourceChangeCreate = String "create"
-  toJSON FileResourceChangeRename = String "rename"
-  toJSON FileResourceChangeDelete = String "delete"
-
-instance FromJSON FileResourceChangeKind where
-  parseJSON (String "create") = pure FileResourceChangeCreate
-  parseJSON (String "rename") = pure FileResourceChangeRename
-  parseJSON (String "delete") = pure FileResourceChangeDelete
-  parseJSON _                 = mempty
-
 -- | Options to create a file.
 data CreateFileOptions =
   CreateFileOptions
@@ -73,14 +57,28 @@ deriveJSON lspOptions ''CreateFileOptions
 -- | Create file operation
 data CreateFile =
   CreateFile
-    { _kind     :: FileResourceChangeKind
-      -- | The resource to create.
-    , _uri      :: Text
+    { -- | The resource to create.
+      _uri      :: Text
       -- | Additional options
     , _options  :: Maybe CreateFileOptions
     } deriving (Show, Read, Eq)
 
-deriveJSON lspOptions ''CreateFile
+instance ToJSON CreateFile where
+    toJSON CreateFile{..} =
+      object $ catMaybes
+        [ Just $ "kind" .= ("create" :: Text)
+        , Just $ "uri" .= _uri
+        , ("options" .=) <$> _options
+        ]
+
+instance FromJSON CreateFile where
+    parseJSON = withObject "CreateFile" $ \o -> do
+        kind <- o .: "kind"
+        unless (kind == ("create" :: Text)) 
+          $ fail $ "Expected kind \"create\" but got " ++ show kind
+        _uri <- o .: "uri"
+        _options <- o .:? "options"
+        pure CreateFile{..}
 
 -- Rename file options
 data RenameFileOptions =
@@ -96,16 +94,32 @@ deriveJSON lspOptions ''RenameFileOptions
 -- | Rename file operation
 data RenameFile =
   RenameFile
-    { _kind     :: FileResourceChangeKind
-      -- | The old (existing) location.
-    , _oldUri   :: Text
+    { -- | The old (existing) location.
+      _oldUri   :: Text
       -- | The new location.
     , _newUri   :: Text
       -- | Rename options.
     , _options  :: Maybe RenameFileOptions
     } deriving (Show, Read, Eq)
 
-deriveJSON lspOptions ''RenameFile
+instance ToJSON RenameFile where
+    toJSON RenameFile{..} =
+      object $ catMaybes
+        [ Just $ "kind" .= ("rename" :: Text)
+        , Just $ "oldUri" .= _oldUri
+        , Just $ "newUri" .= _newUri
+        , ("options" .=) <$> _options
+        ]
+
+instance FromJSON RenameFile where
+    parseJSON = withObject "RenameFile" $ \o -> do
+        kind <- o .: "kind"
+        unless (kind == ("rename" :: Text)) 
+          $ fail $ "Expected kind \"rename\" but got " ++ show kind
+        _oldUri <- o .: "oldUri"
+        _newUri <- o .: "newUri"
+        _options <- o .:? "options"
+        pure RenameFile{..}
 
 -- Delete file options
 data DeleteFileOptions =
@@ -121,14 +135,29 @@ deriveJSON lspOptions ''DeleteFileOptions
 -- | Delete file operation
 data DeleteFile =
   DeleteFile
-    { _kind     :: FileResourceChangeKind
-      -- | The file to delete.
-    , _uri      :: Text
+    { -- | The file to delete.
+      _uri      :: Text
       -- | Delete options.
     , _options  :: Maybe DeleteFileOptions
     } deriving (Show, Read, Eq)
 
-deriveJSON lspOptions ''DeleteFile
+instance ToJSON DeleteFile where
+    toJSON DeleteFile{..} =
+      object $ catMaybes
+        [ Just $ "kind" .= ("delete" :: Text)
+        , Just $ "uri" .= _uri
+        , ("options" .=) <$> _options
+        ]
+
+instance FromJSON DeleteFile where
+    parseJSON = withObject "DeleteFile" $ \o -> do
+        kind <- o .: "kind"
+        unless (kind == ("delete" :: Text)) 
+          $ fail $ "Expected kind \"delete\" but got " ++ show kind
+        _uri <- o .: "uri"
+        _options <- o .:? "options"
+        pure DeleteFile{..}
+
 
 -- ---------------------------------------------------------------------
 

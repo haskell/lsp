@@ -257,7 +257,6 @@ makeFieldsNoPrefix ''DocumentFilter
 makeFieldsNoPrefix ''TextEdit
 makeFieldsNoPrefix ''VersionedTextDocumentIdentifier
 makeFieldsNoPrefix ''TextDocumentEdit
-makeFieldsNoPrefix ''FileResourceChangeKind
 makeFieldsNoPrefix ''CreateFileOptions
 makeFieldsNoPrefix ''CreateFile
 makeFieldsNoPrefix ''RenameFileOptions
