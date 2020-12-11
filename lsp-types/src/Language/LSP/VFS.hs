@@ -138,9 +138,16 @@ applyCreateFile (J.CreateFile _ uri options) =
   where 
     shouldOverwrite :: Bool 
     shouldOverwrite = case options of 
-        Just (J.CreateFileOptions True  _) -> True  -- `overwrite` is True
-        Just (J.CreateFileOptions False _) -> False -- `overwrite` wins over `ignoreIfExists`
-        Nothing                            -> False 
+        Nothing                                               -> False  -- default
+        Just (J.CreateFileOptions Nothing       Nothing     ) -> False  -- default
+        Just (J.CreateFileOptions Nothing       (Just True) ) -> False  -- `ignoreIfExists` is True 
+        Just (J.CreateFileOptions Nothing       (Just False)) -> True   -- `ignoreIfExists` is False 
+        Just (J.CreateFileOptions (Just True)   Nothing     ) -> True   -- `overwrite` is True
+        Just (J.CreateFileOptions (Just True)   (Just True) ) -> True   -- `overwrite` wins over `ignoreIfExists`
+        Just (J.CreateFileOptions (Just True)   (Just False)) -> True   -- `overwrite` is True
+        Just (J.CreateFileOptions (Just False)  Nothing     ) -> False  -- `overwrite` is False
+        Just (J.CreateFileOptions (Just False)  (Just True) ) -> False  -- `overwrite` is False
+        Just (J.CreateFileOptions (Just False)  (Just False)) -> False  -- `overwrite` wins over `ignoreIfExists`
 
 applyRenameFile :: J.RenameFile -> VFS -> VFS
 applyRenameFile (J.RenameFile _ oldUri' newUri' options) vfs = 
@@ -158,9 +165,16 @@ applyRenameFile (J.RenameFile _ oldUri' newUri' options) vfs =
   where 
     shouldOverwrite :: Bool 
     shouldOverwrite = case options of 
-        Just (J.RenameFileOptions True  _) -> True  -- `overwrite` is True
-        Just (J.RenameFileOptions False _) -> False -- `overwrite` wins over `ignoreIfExists`
-        Nothing                            -> False 
+        Nothing                                               -> False  -- default
+        Just (J.RenameFileOptions Nothing       Nothing     ) -> False  -- default
+        Just (J.RenameFileOptions Nothing       (Just True) ) -> False  -- `ignoreIfExists` is True 
+        Just (J.RenameFileOptions Nothing       (Just False)) -> True   -- `ignoreIfExists` is False 
+        Just (J.RenameFileOptions (Just True)   Nothing     ) -> True   -- `overwrite` is True
+        Just (J.RenameFileOptions (Just True)   (Just True) ) -> True   -- `overwrite` wins over `ignoreIfExists`
+        Just (J.RenameFileOptions (Just True)   (Just False)) -> True   -- `overwrite` is True
+        Just (J.RenameFileOptions (Just False)  Nothing     ) -> False  -- `overwrite` is False
+        Just (J.RenameFileOptions (Just False)  (Just True) ) -> False  -- `overwrite` is False
+        Just (J.RenameFileOptions (Just False)  (Just False)) -> False  -- `overwrite` wins over `ignoreIfExists`
 
 -- NOTE: we are ignoring the `recursive` option here because we don't know which file is a directory
 applyDeleteFile :: J.DeleteFile -> VFS -> VFS

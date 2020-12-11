@@ -63,9 +63,9 @@ instance FromJSON FileResourceChangeKind where
 data CreateFileOptions =
   CreateFileOptions
     { -- | Overwrite existing file. Overwrite wins over `ignoreIfExists`
-      _overwrite      :: Bool
+      _overwrite      :: Maybe Bool
       -- | Ignore if exists.
-    , _ignoreIfExists :: Bool
+    , _ignoreIfExists :: Maybe Bool
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''CreateFileOptions
@@ -86,9 +86,9 @@ deriveJSON lspOptions ''CreateFile
 data RenameFileOptions =
   RenameFileOptions
     { -- | Overwrite target if existing. Overwrite wins over `ignoreIfExists`
-      _overwrite      :: Bool
+      _overwrite      :: Maybe Bool
       -- | Ignores if target exists.
-    , _ignoreIfExists :: Bool
+    , _ignoreIfExists :: Maybe Bool
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''RenameFileOptions
@@ -111,9 +111,9 @@ deriveJSON lspOptions ''RenameFile
 data DeleteFileOptions =
   DeleteFileOptions
     { -- | Delete the content recursively if a folder is denoted.
-      _recursive          :: Bool
+      _recursive          :: Maybe Bool
       -- | Ignore the operation if the file doesn't exist.
-    , _ignoreIfNotExists  :: Bool
+    , _ignoreIfNotExists  :: Maybe Bool
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''DeleteFileOptions
