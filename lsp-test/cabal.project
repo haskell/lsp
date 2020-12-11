@@ -3,3 +3,14 @@ packages: .
 flags: +DummyServer
 test-show-details: direct
 haddock-quickjump: True
+
+source-repository-package
+    type: git
+    location: https://github.com/banacorn/lsp.git
+    tag: 0556d22fc66f24bb526f671666183a86b485837e
+    subdir: lsp-types
+
+source-repository-package
+    type: git
+    location: https://github.com/banacorn/lsp.git
+    tag: 0556d22fc66f24bb526f671666183a86b485837e

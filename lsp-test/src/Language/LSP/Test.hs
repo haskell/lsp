@@ -285,7 +285,7 @@ getDocumentEdit doc = do
   where
     checkDocumentChanges req =
       let changes = req ^. params . edit . documentChanges
-          maybeDocs = fmap (fmap (^. textDocument . uri)) changes
+          maybeDocs = fmap (fmap documentChangeUri) changes
       in case maybeDocs of
         Just docs -> (doc ^. uri) `elem` docs
         Nothing -> False
@@ -583,7 +583,7 @@ applyEdit doc edit = do
   let wEdit = if supportsDocChanges
       then
         let docEdit = TextDocumentEdit verDoc (List [edit])
-        in WorkspaceEdit Nothing (Just (List [docEdit]))
+        in WorkspaceEdit Nothing (Just (List [InL docEdit]))
       else
         let changes = HashMap.singleton (doc ^. uri) (List [edit])
         in WorkspaceEdit (Just changes) Nothing
