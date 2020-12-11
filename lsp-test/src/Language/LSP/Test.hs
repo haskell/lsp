@@ -283,13 +283,6 @@ getDocumentEdit doc = do
 
   documentContents doc
   where
-    -- extract Uri out from DocumentChange
-    documentChangeUri :: DocumentChange -> Uri
-    documentChangeUri (InL x) = x ^. textDocument . uri
-    documentChangeUri (InR (InL x)) = x ^. uri
-    documentChangeUri (InR (InR (InL x))) = x ^. oldUri
-    documentChangeUri (InR (InR (InR x))) = x ^. uri
-
     checkDocumentChanges req =
       let changes = req ^. params . edit . documentChanges
           maybeDocs = fmap (fmap documentChangeUri) changes

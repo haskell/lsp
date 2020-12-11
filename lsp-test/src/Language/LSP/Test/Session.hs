@@ -29,6 +29,7 @@ module Language.LSP.Test.Session
   , bumpTimeoutId
   , logMsg
   , LogMsgType(..)
+  , documentChangeUri
   )
 
 where
@@ -296,8 +297,8 @@ updateStateC = awaitForever $ \msg -> do
   updateState msg
   yield msg
 
-
 -- extract Uri out from DocumentChange
+-- didn't put this in `lsp-types` because TH was getting in the way
 documentChangeUri :: DocumentChange -> Uri
 documentChangeUri (InL x) = x ^. textDocument . uri
 documentChangeUri (InR (InL x)) = x ^. uri
