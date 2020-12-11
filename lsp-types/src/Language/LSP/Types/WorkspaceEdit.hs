@@ -58,7 +58,7 @@ deriveJSON lspOptions ''CreateFileOptions
 data CreateFile =
   CreateFile
     { -- | The resource to create.
-      _uri      :: Text
+      _uri      :: Uri
       -- | Additional options
     , _options  :: Maybe CreateFileOptions
     } deriving (Show, Read, Eq)
@@ -95,9 +95,9 @@ deriveJSON lspOptions ''RenameFileOptions
 data RenameFile =
   RenameFile
     { -- | The old (existing) location.
-      _oldUri   :: Text
+      _oldUri   :: Uri
       -- | The new location.
-    , _newUri   :: Text
+    , _newUri   :: Uri
       -- | Rename options.
     , _options  :: Maybe RenameFileOptions
     } deriving (Show, Read, Eq)
@@ -136,7 +136,7 @@ deriveJSON lspOptions ''DeleteFileOptions
 data DeleteFile =
   DeleteFile
     { -- | The file to delete.
-      _uri      :: Text
+      _uri      :: Uri
       -- | Delete options.
     , _options  :: Maybe DeleteFileOptions
     } deriving (Show, Read, Eq)

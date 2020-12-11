@@ -133,7 +133,7 @@ applyCreateFile :: J.CreateFile -> VFS -> VFS
 applyCreateFile (J.CreateFile uri options) = 
   updateVFS $ Map.insertWith 
                 (\ new old -> if shouldOverwrite then new else old)
-                (J.toNormalizedUri (J.Uri uri))
+                (J.toNormalizedUri uri)
                 (VirtualFile 0 0 (Rope.fromText ""))
   where 
     shouldOverwrite :: Bool 
@@ -151,8 +151,8 @@ applyCreateFile (J.CreateFile uri options) =
 
 applyRenameFile :: J.RenameFile -> VFS -> VFS
 applyRenameFile (J.RenameFile oldUri' newUri' options) vfs = 
-  let oldUri = J.toNormalizedUri (J.Uri oldUri')
-      newUri = J.toNormalizedUri (J.Uri newUri')
+  let oldUri = J.toNormalizedUri oldUri'
+      newUri = J.toNormalizedUri newUri'
   in  case Map.lookup oldUri (vfsMap vfs) of 
         -- nothing to rename 
         Nothing -> vfs 
@@ -179,7 +179,7 @@ applyRenameFile (J.RenameFile oldUri' newUri' options) vfs =
 -- NOTE: we are ignoring the `recursive` option here because we don't know which file is a directory
 applyDeleteFile :: J.DeleteFile -> VFS -> VFS
 applyDeleteFile (J.DeleteFile uri _options) = 
-  updateVFS $ Map.delete (J.toNormalizedUri (J.Uri uri))
+  updateVFS $ Map.delete (J.toNormalizedUri uri)
 
 
 applyTextDocumentEdit :: J.TextDocumentEdit -> VFS -> IO VFS
