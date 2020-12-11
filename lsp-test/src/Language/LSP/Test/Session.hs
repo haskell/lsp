@@ -296,6 +296,14 @@ updateStateC = awaitForever $ \msg -> do
   updateState msg
   yield msg
 
+
+-- extract Uri out from DocumentChange
+documentChangeUri :: DocumentChange -> Uri
+documentChangeUri (InL x) = x ^. textDocument . uri
+documentChangeUri (InR (InL x)) = x ^. uri
+documentChangeUri (InR (InR (InL x))) = x ^. oldUri
+documentChangeUri (InR (InR (InR x))) = x ^. uri
+
 updateState :: (MonadIO m, HasReader SessionContext m, HasState SessionState m)
             => FromServerMessage -> m ()
 
@@ -323,8 +331,8 @@ updateState (FromServerMess SWorkspaceApplyEdit r) = do
   -- First, prefer the versioned documentChanges field
   allChangeParams <- case r ^. params . edit . documentChanges of
     Just (List cs) -> do
-      mapM_ (checkIfNeedsOpened . (^. textDocument . uri)) cs
-      return $ map getParams cs
+      mapM_ (checkIfNeedsOpened . documentChangeUri) cs
+      return $ mapMaybe getParamsFromDocumentChange cs
     -- Then fall back to the changes field
     Nothing -> case r ^. params . edit . changes of
       Just cs -> do
@@ -371,9 +379,15 @@ updateState (FromServerMess SWorkspaceApplyEdit r) = do
               let (newVFS,_) = openVFS (vfs s) msg
               return $ s { vfs = newVFS }
 
-        getParams (TextDocumentEdit docId (List edits)) =
+        getParamsFromTextDocumentEdit :: TextDocumentEdit -> DidChangeTextDocumentParams
+        getParamsFromTextDocumentEdit (TextDocumentEdit docId (List edits)) = 
           let changeEvents = map (\e -> TextDocumentContentChangeEvent (Just (e ^. range)) Nothing (e ^. newText)) edits
             in DidChangeTextDocumentParams docId (List changeEvents)
+
+        getParamsFromDocumentChange :: DocumentChange -> Maybe DidChangeTextDocumentParams
+        getParamsFromDocumentChange (InL textDocumentEdit) = Just $ getParamsFromTextDocumentEdit textDocumentEdit
+        getParamsFromDocumentChange _ = Nothing
+
 
         -- For a uri returns an infinite list of versions [n,n+1,n+2,...]
         -- where n is the current version
@@ -387,8 +401,8 @@ updateState (FromServerMess SWorkspaceApplyEdit r) = do
           vers <- textDocumentVersions uri
           pure $ map (\(v, e) -> TextDocumentEdit v (List [e])) $ zip vers edits
 
-        getChangeParams uri (List edits) =
-          map <$> pure getParams <*> textDocumentEdits uri (reverse edits)
+        getChangeParams uri (List edits) = do 
+          map <$> pure getParamsFromTextDocumentEdit <*> textDocumentEdits uri (reverse edits)
 
         mergeParams :: [DidChangeTextDocumentParams] -> DidChangeTextDocumentParams
         mergeParams params = let events = concat (toList (map (toList . (^. contentChanges)) params))
