@@ -11,7 +11,7 @@ module Language.LSP.Test.Files
 where
 
 import           Language.LSP.Types
-import           Language.LSP.Types.Lens
+import           Language.LSP.Types.Lens hiding (id)
 import           Control.Lens
 import qualified Data.HashMap.Strict           as HM
 import qualified Data.Text                     as T
@@ -75,9 +75,16 @@ mapUris f event =
 
     swapWorkspaceEdit :: WorkspaceEdit -> WorkspaceEdit
     swapWorkspaceEdit e =
-      let newDocChanges = fmap (fmap (swapUri textDocument)) $ e ^. documentChanges
+      let swapDocumentChangeUri :: DocumentChange -> DocumentChange
+          swapDocumentChangeUri (InL textDocEdit) = InL $ swapUri textDocument textDocEdit
+          swapDocumentChangeUri (InR (InL createFile)) = InR $ InL $ swapUri id createFile
+          -- for RenameFile, we swap `newUri`
+          swapDocumentChangeUri (InR (InR (InL renameFile))) = InR $ InR $ InL $ newUri .~ f (renameFile ^. newUri) $ renameFile
+          swapDocumentChangeUri (InR (InR (InR deleteFile))) = InR $ InR $ InR $ swapUri id deleteFile
+
+          newDocChanges = fmap (fmap swapDocumentChangeUri) $ e ^. documentChanges
           newChanges = fmap (swapKeys f) $ e ^. changes
-      in WorkspaceEdit newChanges newDocChanges
+       in WorkspaceEdit newChanges newDocChanges
 
     swapKeys :: (Uri -> Uri) -> HM.HashMap Uri b -> HM.HashMap Uri b
     swapKeys f = HM.foldlWithKey' (\acc k v -> HM.insert (f k) v acc) HM.empty
