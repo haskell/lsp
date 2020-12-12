@@ -8,8 +8,8 @@ package lsp
 
 source-repository-package
     type: git
-    location: https://github.com/wz1000/lsp-test.git
-    tag: d1ecbc5e8f324895701293429976a6c2f74d82a2
+    location: https://github.com/bubba/lsp-test.git
+    tag: cd644f52c5c564403b5f3b0a8652e7f4154f8d6a
 
 tests: True
 test-show-details: direct
