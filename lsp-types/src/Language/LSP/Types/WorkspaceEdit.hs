@@ -1,11 +1,16 @@
 {-# LANGUAGE DuplicateRecordFields      #-}
 {-# LANGUAGE TemplateHaskell            #-}
+{-# LANGUAGE TypeOperators              #-}
 {-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE RecordWildCards            #-}
+
 module Language.LSP.Types.WorkspaceEdit where
 
+import           Control.Monad                              (unless)
 import           Data.Aeson
 import           Data.Aeson.TH
 import qualified Data.HashMap.Strict                        as H
+import           Data.Maybe                                 (catMaybes)
 import           Data.Text                                  (Text)
 import qualified Data.Text                                  as T
 
@@ -38,12 +43,135 @@ deriveJSON lspOptions ''TextDocumentEdit
 
 -- ---------------------------------------------------------------------
 
+-- | Options to create a file.
+data CreateFileOptions =
+  CreateFileOptions
+    { -- | Overwrite existing file. Overwrite wins over `ignoreIfExists`
+      _overwrite      :: Maybe Bool
+      -- | Ignore if exists.
+    , _ignoreIfExists :: Maybe Bool
+    } deriving (Show, Read, Eq)
+
+deriveJSON lspOptions ''CreateFileOptions
+
+-- | Create file operation
+data CreateFile =
+  CreateFile
+    { -- | The resource to create.
+      _uri      :: Uri
+      -- | Additional options
+    , _options  :: Maybe CreateFileOptions
+    } deriving (Show, Read, Eq)
+
+instance ToJSON CreateFile where
+    toJSON CreateFile{..} =
+      object $ catMaybes
+        [ Just $ "kind" .= ("create" :: Text)
+        , Just $ "uri" .= _uri
+        , ("options" .=) <$> _options
+        ]
+
+instance FromJSON CreateFile where
+    parseJSON = withObject "CreateFile" $ \o -> do
+        kind <- o .: "kind"
+        unless (kind == ("create" :: Text)) 
+          $ fail $ "Expected kind \"create\" but got " ++ show kind
+        _uri <- o .: "uri"
+        _options <- o .:? "options"
+        pure CreateFile{..}
+
+-- Rename file options
+data RenameFileOptions =
+  RenameFileOptions
+    { -- | Overwrite target if existing. Overwrite wins over `ignoreIfExists`
+      _overwrite      :: Maybe Bool
+      -- | Ignores if target exists.
+    , _ignoreIfExists :: Maybe Bool
+    } deriving (Show, Read, Eq)
+
+deriveJSON lspOptions ''RenameFileOptions
+
+-- | Rename file operation
+data RenameFile =
+  RenameFile
+    { -- | The old (existing) location.
+      _oldUri   :: Uri
+      -- | The new location.
+    , _newUri   :: Uri
+      -- | Rename options.
+    , _options  :: Maybe RenameFileOptions
+    } deriving (Show, Read, Eq)
+
+instance ToJSON RenameFile where
+    toJSON RenameFile{..} =
+      object $ catMaybes
+        [ Just $ "kind" .= ("rename" :: Text)
+        , Just $ "oldUri" .= _oldUri
+        , Just $ "newUri" .= _newUri
+        , ("options" .=) <$> _options
+        ]
+
+instance FromJSON RenameFile where
+    parseJSON = withObject "RenameFile" $ \o -> do
+        kind <- o .: "kind"
+        unless (kind == ("rename" :: Text)) 
+          $ fail $ "Expected kind \"rename\" but got " ++ show kind
+        _oldUri <- o .: "oldUri"
+        _newUri <- o .: "newUri"
+        _options <- o .:? "options"
+        pure RenameFile{..}
+
+-- Delete file options
+data DeleteFileOptions =
+  DeleteFileOptions
+    { -- | Delete the content recursively if a folder is denoted.
+      _recursive          :: Maybe Bool
+      -- | Ignore the operation if the file doesn't exist.
+    , _ignoreIfNotExists  :: Maybe Bool
+    } deriving (Show, Read, Eq)
+
+deriveJSON lspOptions ''DeleteFileOptions
+
+-- | Delete file operation
+data DeleteFile =
+  DeleteFile
+    { -- | The file to delete.
+      _uri      :: Uri
+      -- | Delete options.
+    , _options  :: Maybe DeleteFileOptions
+    } deriving (Show, Read, Eq)
+
+instance ToJSON DeleteFile where
+    toJSON DeleteFile{..} =
+      object $ catMaybes
+        [ Just $ "kind" .= ("delete" :: Text)
+        , Just $ "uri" .= _uri
+        , ("options" .=) <$> _options
+        ]
+
+instance FromJSON DeleteFile where
+    parseJSON = withObject "DeleteFile" $ \o -> do
+        kind <- o .: "kind"
+        unless (kind == ("delete" :: Text)) 
+          $ fail $ "Expected kind \"delete\" but got " ++ show kind
+        _uri <- o .: "uri"
+        _options <- o .:? "options"
+        pure DeleteFile{..}
+
+
+-- ---------------------------------------------------------------------
+
+-- | `TextDocumentEdit |? CreateFile |? RenameFile |? DeleteFile` is a bit mouthful, here's the synonym
+type DocumentChange = TextDocumentEdit |? CreateFile |? RenameFile |? DeleteFile
+
+-- ---------------------------------------------------------------------
+
 type WorkspaceEditMap = H.HashMap Uri (List TextEdit)
 
 data WorkspaceEdit =
   WorkspaceEdit
     { _changes         :: Maybe WorkspaceEditMap
-    , _documentChanges :: Maybe (List TextDocumentEdit)
+    , _documentChanges :: Maybe (List DocumentChange)
     } deriving (Show, Read, Eq)
 
 instance Semigroup WorkspaceEdit where

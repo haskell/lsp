@@ -744,15 +744,16 @@ reverseSortEdit (J.WorkspaceEdit cs dcs) = J.WorkspaceEdit cs' dcs'
     cs' :: Maybe J.WorkspaceEditMap
     cs' = (fmap . fmap ) sortTextEdits cs
 
-    dcs' :: Maybe (J.List J.TextDocumentEdit)
-    dcs' = (fmap . fmap ) sortTextDocumentEdits dcs
+    dcs' :: Maybe (J.List J.DocumentChange)
+    dcs' = (fmap . fmap) sortOnlyTextDocumentEdits dcs
 
     sortTextEdits :: J.List J.TextEdit -> J.List J.TextEdit
     sortTextEdits (J.List edits) = J.List (L.sortBy down edits)
 
-    sortTextDocumentEdits :: J.TextDocumentEdit -> J.TextDocumentEdit
-    sortTextDocumentEdits (J.TextDocumentEdit td (J.List edits)) = J.TextDocumentEdit td (J.List edits')
+    sortOnlyTextDocumentEdits :: J.DocumentChange -> J.DocumentChange
+    sortOnlyTextDocumentEdits (J.InL (J.TextDocumentEdit td (J.List edits))) = J.InL $ J.TextDocumentEdit td (J.List edits')
       where
         edits' = L.sortBy down edits
+    sortOnlyTextDocumentEdits (J.InR others) = J.InR others
 
     down (J.TextEdit r1 _) (J.TextEdit r2 _) = r2 `compare` r1
