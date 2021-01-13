@@ -1,5 +1,9 @@
 # Revision history for haskell-lsp
 
+## 0.24.0.0
+
+* Add and 'isPreferred' and 'disabled' fields to CodeAction
+
 ## 0.23.0.0
 
 * Add runWith for transporots other than stdio (@paulyoung)
