@@ -57,6 +57,7 @@ import Data.Default
 import Data.Foldable
 import Data.List
 import qualified Data.Map as Map
+import qualified Data.Set as Set
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import qualified Data.HashMap.Strict as HashMap
@@ -175,6 +176,7 @@ data SessionState = SessionState
   , curDynCaps :: Map.Map T.Text SomeRegistration
   -- ^ The capabilities that the server has dynamically registered with us so
   -- far
+  , curProgressSessions :: Set.Set ProgressToken
   }
 
 class Monad m => HasState s m where
@@ -265,7 +267,7 @@ runSession' serverIn serverOut mServerProc serverHandler config caps rootDir exi
   mainThreadId <- myThreadId
 
   let context = SessionContext serverIn absRootDir messageChan timeoutIdVar reqMap initRsp config caps
-      initState vfs = SessionState 0 vfs mempty False Nothing mempty
+      initState vfs = SessionState 0 vfs mempty False Nothing mempty mempty
       runSession' ses = initVFS $ \vfs -> runSessionMonad context (initState vfs) ses
 
       errorHandler = throwTo mainThreadId :: SessionException -> IO ()
@@ -307,6 +309,12 @@ documentChangeUri (InR (InR (InR x))) = x ^. uri
 
 updateState :: (MonadIO m, HasReader SessionContext m, HasState SessionState m)
             => FromServerMessage -> m ()
+updateState (FromServerMess SProgress req) = case req ^. params . value of
+  Begin _ ->
+    modify $ \s -> s { curProgressSessions = Set.insert (req ^. params . token) $ curProgressSessions s }
+  End _ ->
+    modify $ \s -> s { curProgressSessions = Set.delete (req ^. params . token) $ curProgressSessions s }
+  _ -> pure ()
 
 -- Keep track of dynamic capability registration
 updateState (FromServerMess SClientRegisterCapability req) = do
