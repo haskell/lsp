@@ -199,17 +199,13 @@ data CodeAction =
     --
     -- Since LSP 3.15.0
     _isPreferred :: Maybe Bool,
+    _disabled    :: Maybe Reason, -- ^ Marks that the code action cannot currently be applied.
     -- | The workspace edit this code action performs.
     _edit :: Maybe WorkspaceEdit,
     -- | A command this code action executes. If a code action
     -- provides an edit and a command, first the edit is
     -- executed and then the command.
-    _command :: Maybe Command,
-    _isPreferred :: Maybe Bool, -- ^ Marks this as a preferred action.
-                              -- Preferred actions are used by the `auto fix` command and can be targeted by keybindings.
-                              -- A quick fix should be marked preferred if it properly addresses the underlying error.
-                              -- A refactoring should be marked preferred if it is the most reasonable choice of actions to take.
-    _disabled    :: Maybe Reason -- ^ Marks that the code action cannot currently be applied.
+    _command :: Maybe Command
   }
   deriving (Read, Show, Eq)
 deriveJSON lspOptions ''CodeAction
