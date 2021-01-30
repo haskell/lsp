@@ -16,7 +16,7 @@ import           Data.Text                                  (Text)
 import           Language.LSP.Types.Utils
 import           Data.Function (on)
 import Control.Applicative
-import  Data.GADT.Compare.TH
+import Data.GADT.Compare.TH
 
 -- ---------------------------------------------------------------------
 
