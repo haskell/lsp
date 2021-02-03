@@ -37,14 +37,14 @@ handlers =
     [ notificationHandler SInitialized $
         \_noti ->
           sendNotification SWindowLogMessage $
-            LogMessageParams MtLog "initialized",
-      requestHandler STextDocumentHover $
+            LogMessageParams MtLog "initialized"
+    , requestHandler STextDocumentHover $
         \_req responder ->
           responder $
             Right $
               Just $
-                Hover (HoverContents (MarkupContent MkPlainText "hello")) Nothing,
-      requestHandler STextDocumentDocumentSymbol $
+                Hover (HoverContents (MarkupContent MkPlainText "hello")) Nothing
+    , requestHandler STextDocumentDocumentSymbol $
         \_req responder ->
           responder $
             Right $
@@ -58,8 +58,8 @@ handlers =
                       (mkRange 0 0 3 6)
                       (mkRange 0 0 3 6)
                       Nothing
-                  ],
-      notificationHandler STextDocumentDidOpen $
+                  ]
+     , notificationHandler STextDocumentDidOpen $
         \noti -> do
           let NotificationMessage _ _ (DidOpenTextDocumentParams doc) = noti
               TextDocumentItem uri _ _ _ = doc
@@ -123,8 +123,8 @@ handlers =
               when (".unregister.abs" `isSuffixOf` fp) $
                 do
                   Just token <- runInIO $ asks absRegToken >>= tryReadMVar
-                  runInIO $ unregisterCapability token,
-      requestHandler SWorkspaceExecuteCommand $ \req resp -> do
+                  runInIO $ unregisterCapability token
+     , requestHandler SWorkspaceExecuteCommand $ \req resp -> do
         let RequestMessage _ _ _ (ExecuteCommandParams Nothing "doAnEdit" (Just (List [val]))) = req
             Success docUri = fromJSON val
             edit = List [TextEdit (mkRange 0 0 0 5) "howdy"]
@@ -132,8 +132,8 @@ handlers =
               ApplyWorkspaceEditParams (Just "Howdy edit") $
                 WorkspaceEdit (Just (HM.singleton docUri edit)) Nothing
         resp $ Right Null
-        void $ sendRequest SWorkspaceApplyEdit params (const (pure ())),
-      requestHandler STextDocumentCodeAction $ \req resp -> do
+        void $ sendRequest SWorkspaceApplyEdit params (const (pure ()))
+     , requestHandler STextDocumentCodeAction $ \req resp -> do
         let RequestMessage _ _ _ params = req
             CodeActionParams _ _ _ _ cactx = params
             CodeActionContext diags _ = cactx
@@ -145,9 +145,10 @@ handlers =
                 (Just (List [d]))
                 Nothing
                 Nothing
+                Nothing
                 (Just (Command "" "deleteThis" Nothing))
-        resp $ Right $ InR <$> codeActions,
-      requestHandler STextDocumentCompletion $ \_req resp -> do
+        resp $ Right $ InR <$> codeActions
+     , requestHandler STextDocumentCompletion $ \_req resp -> do
         let res = CompletionList True (List [item])
             item =
               CompletionItem
