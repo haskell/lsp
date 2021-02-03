@@ -398,7 +398,7 @@ createDoc file languageId contents = do
       watchHits :: FileSystemWatcher -> Bool
       watchHits (FileSystemWatcher pattern kind) =
         -- If WatchKind is exlcuded, defaults to all true as per spec
-        fileMatches pattern && createHits (fromMaybe (WatchKind True True True) kind)
+        fileMatches (T.unpack pattern) && createHits (fromMaybe (WatchKind True True True) kind)
 
       fileMatches pattern = Glob.match (Glob.compile pattern) relOrAbs
         -- If the pattern is absolute then match against the absolute fp
