@@ -10,6 +10,7 @@ import Data.Scientific
 import Language.LSP.Types.Common
 import Language.LSP.Types.Uri
 import Language.LSP.Types.Utils
+import Data.Text (Text)
 
 -- -------------------------------------
 
@@ -38,7 +39,7 @@ data FileSystemWatcher =
     -- - @{}@ to group conditions (e.g. @**​/*.{ts,js}@ matches all TypeScript and JavaScript files)
     -- - @[]@ to declare a range of characters to match in a path segment (e.g., @example.[0-9]@ to match on @example.0@, @example.1@, …)
     -- - @[!...]@ to negate a range of characters to match in a path segment (e.g., @example.[!0-9]@ to match on @example.a@, @example.b@, but not @example.0@)
-    _globPattern :: String,
+    _globPattern :: Text,
     -- | The kind of events of interest. If omitted it defaults
     -- to WatchKind.Create | WatchKind.Change | WatchKind.Delete
     -- which is 7.

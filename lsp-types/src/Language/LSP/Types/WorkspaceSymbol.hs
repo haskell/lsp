@@ -9,6 +9,7 @@ import Language.LSP.Types.Common
 import Language.LSP.Types.DocumentSymbol
 import Language.LSP.Types.Progress
 import Language.LSP.Types.Utils
+import Data.Text (Text)
 
 data WorkspaceSymbolKindClientCapabilities =
   WorkspaceSymbolKindClientCapabilities
@@ -71,6 +72,6 @@ makeExtendingDatatype "WorkspaceSymbolParams"
   [ ''WorkDoneProgressParams
   , ''PartialResultParams
   ]
-  [("_query", [t| String |])]
+  [("_query", [t| Text |])]
 
 deriveJSON lspOptions ''WorkspaceSymbolParams

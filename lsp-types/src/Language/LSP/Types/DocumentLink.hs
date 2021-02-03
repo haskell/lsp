@@ -10,6 +10,7 @@ import Language.LSP.Types.Progress
 import Language.LSP.Types.TextDocument
 import Language.LSP.Types.Uri
 import Language.LSP.Types.Utils
+import Data.Text (Text)
 
 data DocumentLinkClientCapabilities =
   DocumentLinkClientCapabilities
@@ -62,7 +63,7 @@ data DocumentLink =
     -- localization.
     --
     -- Since LSP 3.15.0
-  , _tooltip :: Maybe String
+  , _tooltip :: Maybe Text
     -- | A data entry field that is preserved on a document link between a
     -- DocumentLinkRequest and a DocumentLinkResolveRequest.
   , _xdata :: Maybe Value
