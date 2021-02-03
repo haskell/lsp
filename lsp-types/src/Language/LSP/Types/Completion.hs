@@ -303,8 +303,8 @@ instance A.FromJSON CompletionTriggerKind where
   parseJSON _          = mempty
 
 makeExtendingDatatype "CompletionOptions" [''WorkDoneProgressOptions]
-  [ ("_triggerCharacters", [t| Maybe [String] |])
-  , ("_allCommitCharacters", [t| Maybe [String] |])
+  [ ("_triggerCharacters", [t| Maybe [Text] |])
+  , ("_allCommitCharacters", [t| Maybe [Text] |])
   , ("_resolveProvider", [t| Maybe Bool|])
   ]
 deriveJSON lspOptions ''CompletionOptions

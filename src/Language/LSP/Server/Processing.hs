@@ -192,8 +192,8 @@ inferServerCapabilities clientCaps o h =
       | supported_b STextDocumentCompletion = Just $
           CompletionOptions
             Nothing
-            (map singleton <$> completionTriggerCharacters o)
-            (map singleton <$> completionAllCommitCharacters o)
+            (map T.singleton <$> completionTriggerCharacters o)
+            (map T.singleton <$> completionAllCommitCharacters o)
             (supported SCompletionItemResolve)
       | otherwise = Nothing
 
@@ -212,8 +212,8 @@ inferServerCapabilities clientCaps o h =
       | supported_b STextDocumentSignatureHelp = Just $
           SignatureHelpOptions
             Nothing
-            (List . map singleton <$> signatureHelpTriggerCharacters o)
-            (List . map singleton <$> signatureHelpRetriggerCharacters o)
+            (List . map T.singleton <$> signatureHelpTriggerCharacters o)
+            (List . map T.singleton <$> signatureHelpRetriggerCharacters o)
       | otherwise = Nothing
 
     documentOnTypeFormattingProvider
