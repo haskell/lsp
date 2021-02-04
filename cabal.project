@@ -9,7 +9,7 @@ package lsp
 source-repository-package
     type: git
     location: https://github.com/bubba/lsp-test.git
-    tag: cd644f52c5c564403b5f3b0a8652e7f4154f8d6a
+    tag: 4e142f8f3d28cbbec21b86f5579060ecce5d03e1
 
 tests: True
 test-show-details: direct
