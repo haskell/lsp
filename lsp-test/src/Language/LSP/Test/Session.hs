@@ -309,6 +309,8 @@ documentChangeUri (InR (InR (InR x))) = x ^. uri
 
 updateState :: (MonadIO m, HasReader SessionContext m, HasState SessionState m)
             => FromServerMessage -> m ()
+updateState (FromServerMess SWindowWorkDoneProgressCreate req) =
+  sendMessage $ ResponseMessage "2.0" (Just $ req ^. LSP.id) (Right ())
 updateState (FromServerMess SProgress req) = case req ^. params . value of
   Begin _ ->
     modify $ \s -> s { curProgressSessions = Set.insert (req ^. params . token) $ curProgressSessions s }
@@ -359,6 +361,8 @@ updateState (FromServerMess SWorkspaceApplyEdit r) = do
 
   -- TODO: Don't do this when replaying a session
   forM_ mergedParams (sendMessage . NotificationMessage "2.0" STextDocumentDidChange)
+
+  sendMessage $ ResponseMessage "2.0" (Just $ r ^. LSP.id) (Right $ ApplyWorkspaceEditResponseBody True Nothing)
 
   -- Update VFS to new document versions
   let sortedVersions = map (sortBy (compare `on` (^. textDocument . version))) groupedParams
