@@ -110,7 +110,7 @@ named s (Session x) = Session (Data.Conduit.Parser.named s x)
 
 -- | Matches a request or a notification coming from the server.
 message :: SServerMethod m -> Session (ServerMessage m)
-message m1 = named (T.pack $ show m1) $ satisfyMaybe $ \case
+message m1 = named (T.pack $ "Request for: " <> show m1) $ satisfyMaybe $ \case
   FromServerMess m2 msg -> do
     HRefl <- mEqServer m1 m2
     pure msg
@@ -161,7 +161,7 @@ anyResponse = named "Any response" $ satisfy $ \case
 
 -- | Matches a response coming from the server.
 response :: SMethod (m :: Method FromClient Request) -> Session (ResponseMessage m)
-response m1 = named (T.pack $ show m1) $ satisfyMaybe $ \case
+response m1 = named (T.pack $ "Response for: " <> show m1) $ satisfyMaybe $ \case
   FromServerRsp m2 msg -> do
     HRefl <- mEqClient m1 m2
     pure msg

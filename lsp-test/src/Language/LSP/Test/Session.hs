@@ -297,7 +297,16 @@ runSession' serverIn serverOut mServerProc serverHandler config caps rootDir exi
 updateStateC :: ConduitM FromServerMessage FromServerMessage (StateT SessionState (ReaderT SessionContext IO)) ()
 updateStateC = awaitForever $ \msg -> do
   updateState msg
+  respond msg
   yield msg
+  where
+    respond :: (MonadIO m, HasReader SessionContext m) => FromServerMessage -> m ()
+    respond (FromServerMess SWindowWorkDoneProgressCreate req) =
+      sendMessage $ ResponseMessage "2.0" (Just $ req ^. LSP.id) (Right ())
+    respond (FromServerMess SWorkspaceApplyEdit r) = do
+      sendMessage $ ResponseMessage "2.0" (Just $ r ^. LSP.id) (Right $ ApplyWorkspaceEditResponseBody True Nothing)
+    respond _ = pure ()
+
 
 -- extract Uri out from DocumentChange
 -- didn't put this in `lsp-types` because TH was getting in the way
@@ -309,8 +318,6 @@ documentChangeUri (InR (InR (InR x))) = x ^. uri
 
 updateState :: (MonadIO m, HasReader SessionContext m, HasState SessionState m)
             => FromServerMessage -> m ()
-updateState (FromServerMess SWindowWorkDoneProgressCreate req) =
-  sendMessage $ ResponseMessage "2.0" (Just $ req ^. LSP.id) (Right ())
 updateState (FromServerMess SProgress req) = case req ^. params . value of
   Begin _ ->
     modify $ \s -> s { curProgressSessions = Set.insert (req ^. params . token) $ curProgressSessions s }
@@ -361,8 +368,6 @@ updateState (FromServerMess SWorkspaceApplyEdit r) = do
 
   -- TODO: Don't do this when replaying a session
   forM_ mergedParams (sendMessage . NotificationMessage "2.0" STextDocumentDidChange)
-
-  sendMessage $ ResponseMessage "2.0" (Just $ r ^. LSP.id) (Right $ ApplyWorkspaceEditResponseBody True Nothing)
 
   -- Update VFS to new document versions
   let sortedVersions = map (sortBy (compare `on` (^. textDocument . version))) groupedParams
