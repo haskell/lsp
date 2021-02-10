@@ -15,3 +15,23 @@ constraints: some == 1.0.1,
              dependent-sum == 0.7.1.0
 
 max-backjumps: 10000
+
+allow-newer:
+  lens:template-haskell,
+  parallel:base,
+  hashable:base,
+  async:base,
+  quickcheck-instances:base,
+  time-compat:base,
+  these:base,
+  assoc:base,
+  cryptohash-sha1:base,
+  cryptohash-md5:base,
+  split:base,
+  constraints-extras:base,
+  constraints-extras:template-haskell,
+  dependent-sum:some,
+  hslogger:base,
+  entropy:Cabal,
+  lens:Cabal
+
