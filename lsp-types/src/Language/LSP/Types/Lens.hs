@@ -291,8 +291,19 @@ makeFieldsNoPrefix ''DiagnosticRelatedInformation
 
 -- Hover
 makeFieldsNoPrefix ''Hover
+makeFieldsNoPrefix ''HoverParams
 makeFieldsNoPrefix ''HoverRegistrationOptions
+makeFieldsNoPrefix ''HoverOptions
 
+-- Definition
+makeFieldsNoPrefix ''DefinitionOptions
+makeFieldsNoPrefix ''DefinitionRegistrationOptions
+makeFieldsNoPrefix ''DefinitionParams
+
+-- Type Definition
+makeFieldsNoPrefix ''TypeDefinitionOptions
+makeFieldsNoPrefix ''TypeDefinitionRegistrationOptions
+makeFieldsNoPrefix ''TypeDefinitionParams
 
 -- Window
 makeFieldsNoPrefix ''ShowMessageParams
