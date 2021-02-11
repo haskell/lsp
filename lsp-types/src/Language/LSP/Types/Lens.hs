@@ -301,8 +301,9 @@ makeFieldsNoPrefix ''PublishDiagnosticsParams
 -- Hover
 makeFieldsNoPrefix ''HoverClientCapabilities
 makeFieldsNoPrefix ''Hover
-makeFieldsNoPrefix ''HoverRegistrationOptions
 makeFieldsNoPrefix ''HoverParams
+makeFieldsNoPrefix ''HoverOptions
+makeFieldsNoPrefix ''HoverRegistrationOptions
 makeFieldsNoPrefix ''LanguageString
 
 -- Implementation
@@ -310,6 +311,16 @@ makeFieldsNoPrefix ''ImplementationClientCapabilities
 makeFieldsNoPrefix ''ImplementationOptions
 makeFieldsNoPrefix ''ImplementationRegistrationOptions
 makeFieldsNoPrefix ''ImplementationParams
+
+-- Definition
+makeFieldsNoPrefix ''DefinitionOptions
+makeFieldsNoPrefix ''DefinitionRegistrationOptions
+makeFieldsNoPrefix ''DefinitionParams
+
+-- Type Definition
+makeFieldsNoPrefix ''TypeDefinitionOptions
+makeFieldsNoPrefix ''TypeDefinitionRegistrationOptions
+makeFieldsNoPrefix ''TypeDefinitionParams
 
 -- Window
 makeFieldsNoPrefix ''ShowMessageParams

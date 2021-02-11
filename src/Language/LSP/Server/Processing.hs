@@ -192,8 +192,8 @@ inferServerCapabilities clientCaps o h =
       | supported_b STextDocumentCompletion = Just $
           CompletionOptions
             Nothing
-            (map singleton <$> completionTriggerCharacters o)
-            (map singleton <$> completionAllCommitCharacters o)
+            (map T.singleton <$> completionTriggerCharacters o)
+            (map T.singleton <$> completionAllCommitCharacters o)
             (supported SCompletionItemResolve)
       | otherwise = Nothing
 
@@ -212,8 +212,8 @@ inferServerCapabilities clientCaps o h =
       | supported_b STextDocumentSignatureHelp = Just $
           SignatureHelpOptions
             Nothing
-            (List . map singleton <$> signatureHelpTriggerCharacters o)
-            (List . map singleton <$> signatureHelpRetriggerCharacters o)
+            (List . map T.singleton <$> signatureHelpTriggerCharacters o)
+            (List . map T.singleton <$> signatureHelpRetriggerCharacters o)
       | otherwise = Nothing
 
     documentOnTypeFormattingProvider
@@ -294,13 +294,18 @@ handle' mAction m msg = do
       Just h -> liftIO $ h msg
       Nothing
         | SExit <- m -> liftIO $ exitNotificationHandler msg
-        | otherwise -> reportMissingHandler
+        | otherwise -> do
+            reportMissingHandler
 
     IsClientReq -> case pickHandler dynReqHandlers reqHandlers of
       Just h -> liftIO $ h msg (mkRspCb msg)
       Nothing
         | SShutdown <- m -> liftIO $ shutdownRequestHandler msg (mkRspCb msg)
-        | otherwise -> reportMissingHandler
+        | otherwise -> do
+            let errorMsg = T.pack $ unwords ["haskell-lsp:no handler for: ", show m]
+                err = ResponseError MethodNotFound errorMsg Nothing
+            sendToClient $
+              FromServerRsp (msg ^. LSP.method) $ ResponseMessage "2.0" (Just (msg ^. LSP.id)) (Left err)
 
     IsClientEither -> case msg of
       NotMess noti -> case pickHandler dynNotHandlers notHandlers of
@@ -308,7 +313,11 @@ handle' mAction m msg = do
         Nothing -> reportMissingHandler
       ReqMess req -> case pickHandler dynReqHandlers reqHandlers of
         Just h -> liftIO $ h req (mkRspCb req)
-        Nothing -> reportMissingHandler
+        Nothing -> do
+          let errorMsg = T.pack $ unwords ["haskell-lsp:no handler for: ", show m]
+              err = ResponseError MethodNotFound errorMsg Nothing
+          sendToClient $
+            FromServerRsp (req ^. LSP.method) $ ResponseMessage "2.0" (Just (req ^. LSP.id)) (Left err)
   where
     -- | Checks to see if there's a dynamic handler, and uses it in favour of the
     -- static handler, if it exists.

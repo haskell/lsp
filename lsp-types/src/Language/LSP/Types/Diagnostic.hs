@@ -82,7 +82,7 @@ data Diagnostic =
   Diagnostic
     { _range              :: Range
     , _severity           :: Maybe DiagnosticSeverity
-    , _code               :: Maybe (Int |? String)
+    , _code               :: Maybe (Int |? Text)
     , _source             :: Maybe DiagnosticSource
     , _message            :: Text
     , _tags               :: Maybe (List DiagnosticTag)

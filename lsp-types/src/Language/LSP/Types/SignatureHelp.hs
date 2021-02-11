@@ -59,8 +59,8 @@ deriveJSON lspOptions ''SignatureHelpClientCapabilities
 -- -------------------------------------
 
 makeExtendingDatatype "SignatureHelpOptions" [''WorkDoneProgressOptions]
-  [ ("_triggerCharacters", [t| Maybe (List String) |])
-  , ("_retriggerCharacters", [t| Maybe (List String) |])
+  [ ("_triggerCharacters", [t| Maybe (List Text) |])
+  , ("_retriggerCharacters", [t| Maybe (List Text) |])
   ]
 deriveJSON lspOptions ''SignatureHelpOptions
 
@@ -126,7 +126,7 @@ data SignatureHelpContext =
       -- | Character that caused signature help to be triggered. This is
       -- undefined when @triggerKind !==
       -- SignatureHelpTriggerKind.TriggerCharacter@
-    , _triggerCharacter :: Maybe String
+    , _triggerCharacter :: Maybe Text
       -- | 'True' if signature help was already showing when it was triggered.
       -- 
       -- Retriggers occur when the signature help is already active and can be

@@ -107,7 +107,7 @@ makeExtendingDatatype "DocumentOnTypeFormattingRegistrationOptions"
 deriveJSON lspOptions ''DocumentOnTypeFormattingRegistrationOptions
 
 makeExtendingDatatype "DocumentOnTypeFormattingParams" [''TextDocumentPositionParams]
-  [ ("_ch", [t| String |])
+  [ ("_ch", [t| Text |])
   , ("_options", [t| FormattingOptions |])
   ]
 deriveJSON lspOptions ''DocumentOnTypeFormattingParams
