@@ -297,7 +297,16 @@ runSession' serverIn serverOut mServerProc serverHandler config caps rootDir exi
 updateStateC :: ConduitM FromServerMessage FromServerMessage (StateT SessionState (ReaderT SessionContext IO)) ()
 updateStateC = awaitForever $ \msg -> do
   updateState msg
+  respond msg
   yield msg
+  where
+    respond :: (MonadIO m, HasReader SessionContext m) => FromServerMessage -> m ()
+    respond (FromServerMess SWindowWorkDoneProgressCreate req) =
+      sendMessage $ ResponseMessage "2.0" (Just $ req ^. LSP.id) (Right ())
+    respond (FromServerMess SWorkspaceApplyEdit r) = do
+      sendMessage $ ResponseMessage "2.0" (Just $ r ^. LSP.id) (Right $ ApplyWorkspaceEditResponseBody True Nothing)
+    respond _ = pure ()
+
 
 -- extract Uri out from DocumentChange
 -- didn't put this in `lsp-types` because TH was getting in the way
