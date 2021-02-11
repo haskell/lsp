@@ -30,6 +30,7 @@ import           Language.LSP.Types.Hover
 import           Language.LSP.Types.Implementation
 import           Language.LSP.Types.Initialize
 import           Language.LSP.Types.Location
+import           Language.LSP.Types.MarkupContent
 import           Language.LSP.Types.Progress
 import           Language.LSP.Types.Registration
 import           Language.LSP.Types.References
@@ -37,6 +38,7 @@ import           Language.LSP.Types.Rename
 import           Language.LSP.Types.SignatureHelp
 import           Language.LSP.Types.SelectionRange
 import           Language.LSP.Types.ServerCapabilities
+import           Language.LSP.Types.StaticRegistrationOptions
 import           Language.LSP.Types.DocumentSymbol
 import           Language.LSP.Types.TextDocument
 import           Language.LSP.Types.TypeDefinition
@@ -51,64 +53,22 @@ import           Control.Lens.TH
 -- TODO: This is out of date and very unmantainable, use TH to call all these!!
 
 -- client capabilities
-makeFieldsNoPrefix ''WorkspaceEditClientCapabilities
-makeFieldsNoPrefix ''DidChangeConfigurationClientCapabilities
-makeFieldsNoPrefix ''ExecuteCommandClientCapabilities
 makeFieldsNoPrefix ''WorkspaceClientCapabilities
-makeFieldsNoPrefix ''TextDocumentSyncClientCapabilities
-makeFieldsNoPrefix ''CompletionItemTagsClientCapabilities
-makeFieldsNoPrefix ''CompletionItemClientCapabilities
-makeFieldsNoPrefix ''CompletionItemKindClientCapabilities
-makeFieldsNoPrefix ''CompletionClientCapabilities
-makeFieldsNoPrefix ''HoverClientCapabilities
-makeFieldsNoPrefix ''SignatureHelpSignatureInformation
-makeFieldsNoPrefix ''SignatureHelpParameterInformation
-makeFieldsNoPrefix ''SignatureHelpClientCapabilities
-makeFieldsNoPrefix ''ReferencesClientCapabilities
-makeFieldsNoPrefix ''DefinitionClientCapabilities
-makeFieldsNoPrefix ''TypeDefinitionClientCapabilities
-makeFieldsNoPrefix ''ImplementationClientCapabilities
-makeFieldsNoPrefix ''PublishDiagnosticsClientCapabilities
-makeFieldsNoPrefix ''PublishDiagnosticsTagsClientCapabilities
-makeFieldsNoPrefix ''TextDocumentClientCapabilities
+makeFieldsNoPrefix ''WindowClientCapabilities
 makeFieldsNoPrefix ''ClientCapabilities
 
 -- ---------------------------------------------------------------------
 
-makeFieldsNoPrefix ''CompletionOptions
-makeFieldsNoPrefix ''SignatureHelpOptions
-makeFieldsNoPrefix ''ExecuteCommandOptions
 makeFieldsNoPrefix ''SaveOptions
-makeFieldsNoPrefix ''TextDocumentSyncOptions
 makeFieldsNoPrefix ''WorkspaceServerCapabilities
 makeFieldsNoPrefix ''WorkspaceFoldersServerCapabilities
 makeFieldsNoPrefix ''ServerCapabilities
 makeFieldsNoPrefix ''Registration
 makeFieldsNoPrefix ''RegistrationParams
-makeFieldsNoPrefix ''TextDocumentRegistrationOptions
 makeFieldsNoPrefix ''Unregistration
 makeFieldsNoPrefix ''UnregistrationParams
-makeFieldsNoPrefix ''DidChangeConfigurationParams
-makeFieldsNoPrefix ''ConfigurationItem
-makeFieldsNoPrefix ''ConfigurationParams
-makeFieldsNoPrefix ''DidOpenTextDocumentParams
-makeFieldsNoPrefix ''TextDocumentContentChangeEvent
-makeFieldsNoPrefix ''DidChangeTextDocumentParams
-makeFieldsNoPrefix ''TextDocumentChangeRegistrationOptions
-makeFieldsNoPrefix ''WillSaveTextDocumentParams
-makeFieldsNoPrefix ''DidSaveTextDocumentParams
-makeFieldsNoPrefix ''TextDocumentSaveRegistrationOptions
-makeFieldsNoPrefix ''DidCloseTextDocumentParams
-makeFieldsNoPrefix ''PublishDiagnosticsParams
-makeFieldsNoPrefix ''LanguageString
 makeFieldsNoPrefix ''ParameterInformation
 makeFieldsNoPrefix ''SignatureInformation
-makeFieldsNoPrefix ''SignatureHelp
-makeFieldsNoPrefix ''SignatureHelpRegistrationOptions
-makeFieldsNoPrefix ''ReferenceContext
-makeFieldsNoPrefix ''ReferenceParams
-makeFieldsNoPrefix ''ExecuteCommandParams
-makeFieldsNoPrefix ''ExecuteCommandRegistrationOptions
 makeFieldsNoPrefix ''ApplyWorkspaceEditParams
 makeFieldsNoPrefix ''ApplyWorkspaceEditResponseBody
 
@@ -121,6 +81,12 @@ makeFieldsNoPrefix ''InitializeResult
 makeFieldsNoPrefix ''ClientInfo
 makeFieldsNoPrefix ''ServerInfo
 makeFieldsNoPrefix ''InitializedParams
+
+-- Configuration
+makeFieldsNoPrefix ''DidChangeConfigurationParams
+makeFieldsNoPrefix ''ConfigurationItem
+makeFieldsNoPrefix ''ConfigurationParams
+makeFieldsNoPrefix ''DidChangeConfigurationClientCapabilities
 
 -- Watched files
 makeFieldsNoPrefix ''DidChangeWatchedFilesClientCapabilities
@@ -141,19 +107,35 @@ makeFieldsNoPrefix ''WorkspaceSymbolParams
 makeFieldsNoPrefix ''Position
 makeFieldsNoPrefix ''Range
 makeFieldsNoPrefix ''Location
+makeFieldsNoPrefix ''LocationLink
+
+-- Markup
+makeFieldsNoPrefix ''MarkupContent
 
 -- Completion
 makeFieldsNoPrefix ''CompletionItem
 makeFieldsNoPrefix ''CompletionContext
 makeFieldsNoPrefix ''CompletionList
 makeFieldsNoPrefix ''CompletionParams
+makeFieldsNoPrefix ''CompletionOptions
 makeFieldsNoPrefix ''CompletionRegistrationOptions
+makeFieldsNoPrefix ''CompletionItemTagsClientCapabilities
+makeFieldsNoPrefix ''CompletionItemClientCapabilities
+makeFieldsNoPrefix ''CompletionItemKindClientCapabilities
+makeFieldsNoPrefix ''CompletionClientCapabilities
 
 -- Declaration
 makeFieldsNoPrefix ''DeclarationClientCapabilities
 makeFieldsNoPrefix ''DeclarationOptions
 makeFieldsNoPrefix ''DeclarationRegistrationOptions
 makeFieldsNoPrefix ''DeclarationParams
+
+-- Definition
+makeFieldsNoPrefix ''DefinitionClientCapabilities
+makeFieldsNoPrefix ''TypeDefinitionClientCapabilities
+makeFieldsNoPrefix ''DefinitionOptions
+makeFieldsNoPrefix ''DefinitionRegistrationOptions
+makeFieldsNoPrefix ''DefinitionParams
 
 -- CodeActions
 makeFieldsNoPrefix ''CodeActionKindClientCapabilities
@@ -220,6 +202,13 @@ makeFieldsNoPrefix ''RenameParams
 makeFieldsNoPrefix ''PrepareRenameParams
 makeFieldsNoPrefix ''RangeWithPlaceholder
 
+-- References
+makeFieldsNoPrefix ''ReferencesClientCapabilities
+makeFieldsNoPrefix ''ReferenceOptions
+makeFieldsNoPrefix ''ReferenceRegistrationOptions
+makeFieldsNoPrefix ''ReferenceContext
+makeFieldsNoPrefix ''ReferenceParams
+
 -- FoldingRange
 makeFieldsNoPrefix ''FoldingRangeClientCapabilities
 makeFieldsNoPrefix ''FoldingRangeOptions
@@ -264,6 +253,7 @@ makeFieldsNoPrefix ''RenameFile
 makeFieldsNoPrefix ''DeleteFileOptions
 makeFieldsNoPrefix ''DeleteFile
 makeFieldsNoPrefix ''WorkspaceEdit
+makeFieldsNoPrefix ''WorkspaceEditClientCapabilities
 
 -- Workspace Folders
 makeFieldsNoPrefix ''WorkspaceFolder
@@ -281,18 +271,45 @@ makeFieldsNoPrefix ''CancelParams
 makeFieldsNoPrefix ''TextDocumentItem
 makeFieldsNoPrefix ''TextDocumentIdentifier
 makeFieldsNoPrefix ''TextDocumentPositionParams
+makeFieldsNoPrefix ''TextDocumentSyncClientCapabilities
+makeFieldsNoPrefix ''TextDocumentClientCapabilities
+makeFieldsNoPrefix ''TextDocumentRegistrationOptions
+makeFieldsNoPrefix ''TextDocumentSyncOptions
+makeFieldsNoPrefix ''DidOpenTextDocumentParams
+makeFieldsNoPrefix ''TextDocumentContentChangeEvent
+makeFieldsNoPrefix ''DidChangeTextDocumentParams
+makeFieldsNoPrefix ''TextDocumentChangeRegistrationOptions
+makeFieldsNoPrefix ''WillSaveTextDocumentParams
+makeFieldsNoPrefix ''DidSaveTextDocumentParams
+makeFieldsNoPrefix ''TextDocumentSaveRegistrationOptions
+makeFieldsNoPrefix ''DidCloseTextDocumentParams
 
 -- Command
 makeFieldsNoPrefix ''Command
+makeFieldsNoPrefix ''ExecuteCommandParams
+makeFieldsNoPrefix ''ExecuteCommandRegistrationOptions
+makeFieldsNoPrefix ''ExecuteCommandClientCapabilities
+makeFieldsNoPrefix ''ExecuteCommandOptions
 
 -- Diagnostic
-makeFieldsNoPrefix ''Diagnostic
 makeFieldsNoPrefix ''DiagnosticRelatedInformation
+makeFieldsNoPrefix ''Diagnostic
+makeFieldsNoPrefix ''PublishDiagnosticsTagsClientCapabilities
+makeFieldsNoPrefix ''PublishDiagnosticsClientCapabilities
+makeFieldsNoPrefix ''PublishDiagnosticsParams
 
 -- Hover
+makeFieldsNoPrefix ''HoverClientCapabilities
 makeFieldsNoPrefix ''Hover
 makeFieldsNoPrefix ''HoverRegistrationOptions
+makeFieldsNoPrefix ''HoverParams
+makeFieldsNoPrefix ''LanguageString
 
+-- Implementation
+makeFieldsNoPrefix ''ImplementationClientCapabilities
+makeFieldsNoPrefix ''ImplementationOptions
+makeFieldsNoPrefix ''ImplementationRegistrationOptions
+makeFieldsNoPrefix ''ImplementationParams
 
 -- Window
 makeFieldsNoPrefix ''ShowMessageParams
@@ -305,3 +322,17 @@ makeFieldsNoPrefix ''WorkDoneProgressReportParams
 makeFieldsNoPrefix ''WorkDoneProgressEndParams
 makeFieldsNoPrefix ''WorkDoneProgressCancelParams
 makeFieldsNoPrefix ''WorkDoneProgressCreateParams
+makeFieldsNoPrefix ''WorkDoneProgressOptions
+makeFieldsNoPrefix ''WorkDoneProgressParams
+makeFieldsNoPrefix ''PartialResultParams
+
+-- Signature Help
+makeFieldsNoPrefix ''SignatureHelpSignatureInformation
+makeFieldsNoPrefix ''SignatureHelpParameterInformation
+makeFieldsNoPrefix ''SignatureHelpClientCapabilities
+makeFieldsNoPrefix ''SignatureHelpOptions
+makeFieldsNoPrefix ''SignatureHelpRegistrationOptions
+makeFieldsNoPrefix ''SignatureHelp
+
+-- Static registration
+makeFieldsNoPrefix ''StaticRegistrationOptions
