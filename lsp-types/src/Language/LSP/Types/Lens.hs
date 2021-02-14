@@ -130,13 +130,6 @@ makeFieldsNoPrefix ''DeclarationOptions
 makeFieldsNoPrefix ''DeclarationRegistrationOptions
 makeFieldsNoPrefix ''DeclarationParams
 
--- Definition
-makeFieldsNoPrefix ''DefinitionClientCapabilities
-makeFieldsNoPrefix ''TypeDefinitionClientCapabilities
-makeFieldsNoPrefix ''DefinitionOptions
-makeFieldsNoPrefix ''DefinitionRegistrationOptions
-makeFieldsNoPrefix ''DefinitionParams
-
 -- CodeActions
 makeFieldsNoPrefix ''CodeActionKindClientCapabilities
 makeFieldsNoPrefix ''CodeActionLiteralSupport
@@ -316,11 +309,13 @@ makeFieldsNoPrefix ''ImplementationParams
 makeFieldsNoPrefix ''DefinitionOptions
 makeFieldsNoPrefix ''DefinitionRegistrationOptions
 makeFieldsNoPrefix ''DefinitionParams
+makeFieldsNoPrefix ''DefinitionClientCapabilities
 
 -- Type Definition
 makeFieldsNoPrefix ''TypeDefinitionOptions
 makeFieldsNoPrefix ''TypeDefinitionRegistrationOptions
 makeFieldsNoPrefix ''TypeDefinitionParams
+makeFieldsNoPrefix ''TypeDefinitionClientCapabilities
 
 -- Window
 makeFieldsNoPrefix ''ShowMessageParams
