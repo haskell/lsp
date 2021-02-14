@@ -6,6 +6,7 @@ import Control.Monad.Reader
 import Data.Aeson hiding (defaultOptions)
 import qualified Data.HashMap.Strict as HM
 import Data.List (isSuffixOf)
+import Data.String
 import Language.LSP.Server
 import Language.LSP.Types
 import System.Directory
@@ -106,7 +107,7 @@ handlers =
                         DidChangeWatchedFilesRegistrationOptions $
                           List
                             [ FileSystemWatcher
-                                (curDir </> "*.watch")
+                                (fromString $ curDir </> "*.watch")
                                 (Just (WatchKind True True True))
                             ]
                   Just token <- runInIO $
