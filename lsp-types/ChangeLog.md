@@ -1,5 +1,38 @@
 # Revision history for haskell-lsp-types
 
+## 1.1.0.0
+
+* Fix prepareRename reponse and prepareProvider (@kirelagin)
+* Fix deriving instance of MonadUnliftIO (@banacorn)
+* Add support for file and folder operations in WorkspaceEdit (@banacorn)
+Instead of having TextDocumentEdit in WorkspaceEdit
+
+```haskell
+data WorkspaceEdit =
+  WorkspaceEdit
+    { _changes         :: Maybe WorkspaceEditMap
+    , _documentChanges :: Maybe (List TextDocumentEdit)
+    } deriving (Show, Read, Eq)
+```
+It is now replaced by a new type called DocumentChange
+
+```haskell
+data WorkspaceEdit =
+  WorkspaceEdit
+    { _changes         :: Maybe WorkspaceEditMap
+    , _documentChanges :: Maybe (List DocumentChange)
+    } deriving (Show, Read, Eq)
+```
+Which is just a synonym of union of WorkspaceEdit and other operations
+
+```haskell
+type DocumentChange = TextDocumentEdit |? CreateFile |? RenameFile |? DeleteFile
+```
+* Add new CodeAction features (isPreferred, disabled) (@pepeiborra)
+* Respond to requests with missing handlers (@wz1000)
+* Use Text over String in more places (@wz1000)
+* Add missing lenses (@wz1000, @bubba)
+
 ## 1.0.0.0
 
 1.0.0.0 is a major rework with both internal and external facing changes, and

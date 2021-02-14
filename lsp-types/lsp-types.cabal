@@ -1,5 +1,5 @@
 name:                lsp-types
-version:             1.0.0.1
+version:             1.1.0.0
 synopsis:            Haskell library for the Microsoft Language Server Protocol, data types
 
 description:         An implementation of the types to allow language implementors to
@@ -10,7 +10,7 @@ license:             MIT
 license-file:        LICENSE
 author:              Alan Zimmerman
 maintainer:          alan.zimm@gmail.com
-copyright:           Alan Zimmerman, 2016-2020
+copyright:           Alan Zimmerman, 2016-2021
 category:            Development
 build-type:          Simple
 extra-source-files:  ChangeLog.md, README.md
@@ -94,4 +94,4 @@ library
 
 source-repository head
   type:     git
-  location: https://github.com/alanz/haskell-lsp
+  location: https://github.com/alanz/lsp
