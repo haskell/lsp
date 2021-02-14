@@ -1,5 +1,15 @@
 # Revision history for lsp-test
 
+## 0.13.0.0 -- 2021-02-14
+
+* Add support for lsp-types-1.1 (@wz1000)
+* Automatically respond to `workspace/applyEdit` and
+  `window/workDoneProgress/create` messages (@wz1000)
+
+## 0.12.0.0 -- 2021-01-25
+* Add `getIncompleteProgressSessions` to track ongoing progress sessions
+  (@wz1000)
+
 ## 0.11.0.0 -- 2020-05-14
 
 * Replace `openDoc'` with `createDoc` which now sends

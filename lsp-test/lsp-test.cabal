@@ -1,5 +1,5 @@
 name:                lsp-test
-version:             0.11.0.7
+version:             0.13.0.0
 synopsis:            Functional test framework for LSP servers.
 description:
   A test framework for writing tests against
@@ -16,7 +16,7 @@ license-file:        LICENSE
 author:              Luke Lau
 maintainer:          luke_lau@icloud.com
 bug-reports:         https://github.com/bubba/lsp-test/issues
-copyright:           2020 Luke Lau
+copyright:           2021 Luke Lau
 category:            Testing
 build-type:          Simple
 cabal-version:       2.0
@@ -41,7 +41,7 @@ library
                      , parser-combinators:Control.Applicative.Combinators
   default-language:    Haskell2010
   build-depends:       base >= 4.10 && < 5
-                     , lsp-types >= 1.0.0.1 && < 1.1
+                     , lsp-types == 1.1.*
                      , aeson
                      , time
                      , aeson-pretty
@@ -82,7 +82,7 @@ executable dummy-server
   hs-source-dirs:      test/dummy-server
   ghc-options:         -W
   build-depends:       base >= 4.11 && < 5
-                     , lsp >= 1.0.0.1 && < 1.1
+                     , lsp == 1.1.*
                      , aeson
                      , unordered-containers
                      , directory
@@ -102,7 +102,7 @@ test-suite tests
   build-depends:       base >= 4.10 && < 5
                      , hspec
                      , lens
-                     , lsp-types >= 1.0.0.1 && < 1.1
+                     , lsp-types == 1.1.*
                      , lsp-test
                      , data-default
                      , aeson

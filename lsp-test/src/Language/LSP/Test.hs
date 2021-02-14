@@ -371,7 +371,7 @@ sendResponse = sendMessage
 -- The initialize requests and responses are not included the session,
 -- so if you need to test it use this.
 initializeResponse :: Session (ResponseMessage Initialize)
-initializeResponse = initRsp <$> ask >>= (liftIO . readMVar)
+initializeResponse = ask >>= (liftIO . readMVar) . initRsp
 
 -- | /Creates/ a new text document. This is different from 'openDoc'
 -- as it sends a workspace/didChangeWatchedFiles notification letting the server
@@ -383,7 +383,7 @@ initializeResponse = initRsp <$> ask >>= (liftIO . readMVar)
 --
 -- @since 11.0.0.0
 createDoc :: FilePath -- ^ The path to the document to open, __relative to the root directory__.
-          -> String -- ^ The text document's language identifier, e.g. @"haskell"@.
+          -> T.Text -- ^ The text document's language identifier, e.g. @"haskell"@.
           -> T.Text -- ^ The content of the text document to create.
           -> Session TextDocumentIdentifier -- ^ The identifier of the document just created.
 createDoc file languageId contents = do
@@ -423,7 +423,7 @@ createDoc file languageId contents = do
 
 -- | Opens a text document that /exists on disk/, and sends a
 -- textDocument/didOpen notification to the server.
-openDoc :: FilePath -> String -> Session TextDocumentIdentifier
+openDoc :: FilePath -> T.Text -> Session TextDocumentIdentifier
 openDoc file languageId = do
   context <- ask
   let fp = rootDir context </> file
@@ -432,12 +432,12 @@ openDoc file languageId = do
 
 -- | This is a variant of `openDoc` that takes the file content as an argument.
 -- Use this is the file exists /outside/ of the current workspace.
-openDoc' :: FilePath -> String -> T.Text -> Session TextDocumentIdentifier
+openDoc' :: FilePath -> T.Text -> T.Text -> Session TextDocumentIdentifier
 openDoc' file languageId contents = do
   context <- ask
   let fp = rootDir context </> file
       uri = filePathToUri fp
-      item = TextDocumentItem uri (T.pack languageId) 0 contents
+      item = TextDocumentItem uri languageId 0 contents
   sendNotification STextDocumentDidOpen (DidOpenTextDocumentParams item)
   pure $ TextDocumentIdentifier uri
 
@@ -724,4 +724,4 @@ getCodeLenses tId = do
 --
 -- @since 0.11.0.0
 getRegisteredCapabilities :: Session [SomeRegistration]
-getRegisteredCapabilities = (Map.elems . curDynCaps) <$> get
+getRegisteredCapabilities = Map.elems . curDynCaps <$> get
