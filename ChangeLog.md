@@ -1,5 +1,9 @@
 # Revision history for lsp
 
+## 1.1.1.0
+
+* Don't send begin progress notification twice (@wz1000)
+
 ## 1.1.0.0
 
 * Fix prepareRename reponse and prepareProvider (@kirelagin)
