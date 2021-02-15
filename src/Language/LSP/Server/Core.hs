@@ -597,11 +597,6 @@ withProgressBase indefinite title cancellable f = do
             Left _err -> pure ()
             Right () -> pure ()
 
-  -- Send initial notification
-  sendNotification SProgress $
-    fmap Begin $ ProgressParams progId $
-      WorkDoneProgressBeginParams title (Just cancellable') Nothing initialPercentage
-
   -- Send the begin and done notifications via 'bracket_' so that they are always fired
   res <- withRunInIO $ \runInBase ->
     E.bracket_
