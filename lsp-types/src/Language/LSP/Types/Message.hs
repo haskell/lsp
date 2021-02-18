@@ -253,8 +253,15 @@ deriving instance Eq   (MessageParams m) => Eq (RequestMessage m)
 deriving instance (Read (SMethod m), Read (MessageParams m)) => Read (RequestMessage m)
 deriving instance Show (MessageParams m) => Show (RequestMessage m)
 
+-- | Replace a missing field in an object with a null field, to simplify parsing
+-- This is a hack to allow other types than Maybe to work like Maybe in allowing the field to be missing.
+-- See also this issue: https://github.com/haskell/aeson/issues/646
+addNullField :: Text -> Value -> Value
+addNullField s (Object o) = Object $ HM.insertWith (\_new old -> old) s Null o
+addNullField _ v = v
+
 instance (FromJSON (MessageParams m), FromJSON (SMethod m)) => FromJSON (RequestMessage m) where
-  parseJSON = genericParseJSON lspOptions
+  parseJSON = genericParseJSON lspOptions . addNullField "params"
 instance (ToJSON (MessageParams m), FromJSON (SMethod m)) => ToJSON (RequestMessage m) where
   toJSON     = genericToJSON lspOptions
   toEncoding = genericToEncoding lspOptions
@@ -432,7 +439,7 @@ type LookupFunc f a = forall (m :: Method f Request). LspId m -> Maybe (SMethod 
 
 {-
 Message Types we must handle are the following
- 
+
 Request      | jsonrpc | id | method | params?
 Response     | jsonrpc | id |        |         | response? | error?
 Notification | jsonrpc |    | method | params?
