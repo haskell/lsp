@@ -52,7 +52,7 @@ jsonSpec = do
     it "CompletionItem" $
       (J.decode "{\"jsonrpc\":\"2.0\",\"result\":[{\"label\":\"raisebox\"}],\"id\":1}" :: Maybe (ResponseMessage 'TextDocumentCompletion))
         `shouldNotBe` Nothing
-  
+
 
 responseMessageSpec :: Spec
 responseMessageSpec = do
@@ -61,15 +61,18 @@ responseMessageSpec = do
       let input = "{\"jsonrpc\": \"2.0\", \"id\": 123, \"result\": null}"
         in  J.decode input `shouldBe` Just
               ((ResponseMessage "2.0" (Just (IdInt 123)) (Right J.Null)) :: ResponseMessage 'WorkspaceExecuteCommand)
+    it "handles missing params field" $ do
+      J.eitherDecode "{ \"jsonrpc\": \"2.0\", \"id\": 15, \"method\": \"shutdown\"}"
+        `shouldBe` Right (RequestMessage "2.0" (IdInt 15) SShutdown Empty)
   describe "invalid JSON" $ do
     it "throws if neither result nor error is present" $ do
-      (J.eitherDecode "{\"jsonrpc\":\"2.0\",\"id\":1}" :: Either String (ResponseMessage 'Initialize)) 
-        `shouldBe` Left ("Error in $: both error and result cannot be Nothing") 
+      (J.eitherDecode "{\"jsonrpc\":\"2.0\",\"id\":1}" :: Either String (ResponseMessage 'Initialize))
+        `shouldBe` Left ("Error in $: both error and result cannot be Nothing")
     it "throws if both result and error are present" $ do
-      (J.eitherDecode 
-        "{\"jsonrpc\":\"2.0\",\"id\": 1,\"result\":{\"capabilities\": {}},\"error\":{\"code\":-32700,\"message\":\"\",\"data\":null}}" 
-        :: Either String (ResponseMessage 'Initialize)) 
-        `shouldSatisfy` 
+      (J.eitherDecode
+        "{\"jsonrpc\":\"2.0\",\"id\": 1,\"result\":{\"capabilities\": {}},\"error\":{\"code\":-32700,\"message\":\"\",\"data\":null}}"
+        :: Either String (ResponseMessage 'Initialize))
+        `shouldSatisfy`
           (either (\err -> "Error in $: both error and result cannot be present" `isPrefixOf` err) (\_ -> False))
 
 -- ---------------------------------------------------------------------
@@ -100,7 +103,7 @@ instance Arbitrary Uri where
   arbitrary = Uri <$> arbitrary
 
 instance Arbitrary Position where
-  arbitrary = Position <$> arbitrary <*> arbitrary 
+  arbitrary = Position <$> arbitrary <*> arbitrary
 
 instance Arbitrary Location where
   arbitrary = Location <$> arbitrary <*> arbitrary
@@ -171,5 +174,5 @@ instance Arbitrary FileSystemWatcher where
 
 instance Arbitrary WatchKind where
   arbitrary = WatchKind <$> arbitrary <*> arbitrary <*> arbitrary
-  
+
 -- ---------------------------------------------------------------------
