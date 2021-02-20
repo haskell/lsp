@@ -8,6 +8,7 @@
 {-# LANGUAGE RankNTypes             #-}
 {-# LANGUAGE FlexibleContexts       #-}
 {-# LANGUAGE DataKinds              #-}
+{-# LANGUAGE TypeInType             #-}
 
 module Language.LSP.Types.Lens where
 
