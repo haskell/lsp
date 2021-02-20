@@ -7,6 +7,7 @@
 {-# LANGUAGE UndecidableInstances   #-}
 {-# LANGUAGE RankNTypes             #-}
 {-# LANGUAGE FlexibleContexts       #-}
+{-# LANGUAGE DataKinds              #-}
 
 module Language.LSP.Types.Lens where
 
