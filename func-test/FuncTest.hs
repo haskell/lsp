@@ -29,7 +29,8 @@ main = hspec $ do
       killVar <- newEmptyMVar
 
       let definition = ServerDefinition
-            { onConfigurationChange = const $ pure $ Right ()
+            { onConfigurationChange = const $ const $ Right ()
+            , defaultConfig = ()
             , doInitialize = \env _req -> pure $ Right env
             , staticHandlers = handlers killVar
             , interpretHandler = \env -> Iso (runLspT env) liftIO
@@ -79,7 +80,8 @@ main = hspec $ do
           wf2 = WorkspaceFolder "/foo/baz" "My other workspace"
           
           definition = ServerDefinition
-            { onConfigurationChange = const $ pure $ Right ()
+            { onConfigurationChange = const $ const $ Right ()
+            , defaultConfig = ()
             , doInitialize = \env _req -> pure $ Right env
             , staticHandlers = handlers
             , interpretHandler = \env -> Iso (runLspT env) liftIO
