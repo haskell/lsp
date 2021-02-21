@@ -97,7 +97,7 @@ instance MonadLsp c m => MonadLsp c (IdentityT m) where
 data LanguageContextEnv config =
   LanguageContextEnv
   { resHandlers            :: !(Handlers IO)
-  , resParseConfig         :: !(J.Value -> IO (Either T.Text config))
+  , resParseConfig         :: !(config -> J.Value -> (Either T.Text config))
   , resSendMessage         :: !(FromServerMessage -> IO ())
   -- We keep the state in a TVar to be thread safe
   , resState               :: !(TVar (LanguageContextState config))
@@ -168,7 +168,7 @@ data LanguageContextState config =
   LanguageContextState
   { resVFS                 :: !VFSData
   , resDiagnostics         :: !DiagnosticStore
-  , resConfig              :: !(Maybe config)
+  , resConfig              :: !config
   , resWorkspaceFolders    :: ![WorkspaceFolder]
   , resProgressData        :: !ProgressData
   , resPendingResponses    :: !ResponseMap
@@ -274,12 +274,15 @@ data ProgressCancellable = Cancellable | NotCancellable
 -- specific configuration data the language server needs to use.
 data ServerDefinition config = forall m a.
   ServerDefinition
-    { onConfigurationChange :: J.Value -> m (Either T.Text config)
-      -- ^ @onConfigurationChange newConfig@ is called whenever the
+    { defaultConfig :: config
+      -- ^ The default value we initialize the config variable to.
+    , onConfigurationChange :: config -> J.Value -> Either T.Text config
+      -- ^ @onConfigurationChange oldConfig newConfig@ is called whenever the
       -- clients sends a message with a changed client configuration. This
       -- callback should return either the parsed configuration data or an error
       -- indicating what went wrong. The parsed configuration object will be
       -- stored internally and can be accessed via 'config'.
+      -- It is also called on the `initializationOptions` field of the InitializeParams
     , doInitialize :: LanguageContextEnv config -> Message Initialize -> IO (Either ResponseError a)
       -- ^ Called *after* receiving the @initialize@ request and *before*
       -- returning the response. This callback will be invoked to offer the
@@ -427,7 +430,7 @@ freshLspId = do
 
 -- | The current configuration from the client as set via the @initialize@ and
 -- @workspace/didChangeConfiguration@ requests.
-getConfig :: MonadLsp config m => m (Maybe config)
+getConfig :: MonadLsp config m => m config
 getConfig = getsState resConfig
 
 getClientCapabilities :: MonadLsp config m => m J.ClientCapabilities

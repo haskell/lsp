@@ -59,7 +59,7 @@ main = do
 -- ---------------------------------------------------------------------
 
 data Config = Config { fooTheBar :: Bool, wibbleFactor :: Int }
-  deriving (Generic, J.ToJSON, J.FromJSON)
+  deriving (Generic, J.ToJSON, J.FromJSON, Show)
 
 run :: IO Int
 run = flip E.catches handlers $ do
@@ -68,12 +68,11 @@ run = flip E.catches handlers $ do
 
   let
     serverDefinition = ServerDefinition
-      { onConfigurationChange = \v -> case J.fromJSON v of
-          J.Error e -> pure $ Left (T.pack e)
-          J.Success cfg -> do
-            sendNotification J.SWindowShowMessage $
-              J.ShowMessageParams J.MtInfo $ "Wibble factor set to " <> T.pack (show (wibbleFactor cfg))
-            pure $ Right cfg
+      { defaultConfig = Config {fooTheBar = False, wibbleFactor = 0 }
+      , onConfigurationChange = \_old v -> do
+          case J.fromJSON v of
+            J.Error e -> Left (T.pack e)
+            J.Success cfg -> Right cfg
       , doInitialize = \env _ -> forkIO (reactor rin) >> pure (Right env)
       , staticHandlers = lspHandlers rin
       , interpretHandler = \env -> Iso (runLspT env) liftIO
@@ -195,6 +194,12 @@ handle = mconcat
         fileName =  J.uriToFilePath doc
     liftIO $ debugM "reactor.handle" $ "Processing DidOpenTextDocument for: " ++ show fileName
     sendDiagnostics (J.toNormalizedUri doc) (Just 0)
+
+  , notificationHandler J.SWorkspaceDidChangeConfiguration $ \msg -> do
+      cfg <- getConfig
+      liftIO $ debugM "configuration changed: " (show (msg,cfg))
+      sendNotification J.SWindowShowMessage $
+        J.ShowMessageParams J.MtInfo $ "Wibble factor set to " <> T.pack (show (wibbleFactor cfg))
 
   , notificationHandler J.STextDocumentDidChange $ \msg -> do
     let doc  = msg ^. J.params

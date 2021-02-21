@@ -96,11 +96,15 @@ initializeRequestHandler ServerDefinition{..} vfs sendFunc req = do
           Just (List xs) -> xs
           Nothing -> []
 
+        initialConfig = case onConfigurationChange defaultConfig <$> (req ^. LSP.params . LSP.initializationOptions) of
+          Just (Right newConfig) -> newConfig
+          _ -> defaultConfig
+
     tvarCtx <- liftIO $ newTVarIO $
       LanguageContextState
         (VFSData vfs mempty)
         mempty
-        Nothing
+        initialConfig
         initialWfs
         defaultProgressData
         emptyIxMap
@@ -109,7 +113,7 @@ initializeRequestHandler ServerDefinition{..} vfs sendFunc req = do
         0
 
     -- Call the 'duringInitialization' callback to let the server kick stuff up
-    let env = LanguageContextEnv handlers (forward interpreter . onConfigurationChange) sendFunc tvarCtx (params ^. LSP.capabilities) rootDir
+    let env = LanguageContextEnv handlers onConfigurationChange sendFunc tvarCtx (params ^. LSP.capabilities) rootDir
         handlers = transmuteHandlers interpreter staticHandlers
         interpreter = interpretHandler initializationResult
     initializationResult <- ExceptT $ doInitialize env req
@@ -357,19 +361,18 @@ shutdownRequestHandler :: Handler IO Shutdown
 shutdownRequestHandler = \_req k -> do
   k $ Right Empty
 
-
-
 handleConfigChange :: Message WorkspaceDidChangeConfiguration -> LspM config ()
 handleConfigChange req = do
   parseConfig <- LspT $ asks resParseConfig
-  res <- liftIO $ parseConfig (req ^. LSP.params . LSP.settings)
+  res <- stateState $ \ctx -> case parseConfig (resConfig ctx) (req ^. LSP.params . LSP.settings) of
+    Left err -> (Left err, ctx)
+    Right newConfig -> (Right (), ctx { resConfig = newConfig })
   case res of
     Left err -> do
       let msg = T.pack $ unwords
             ["haskell-lsp:configuration parse error.", show req, show err]
       sendErrorLog msg
-    Right newConfig ->
-      modifyState $ \ctx -> ctx { resConfig = Just newConfig }
+    Right () -> pure ()
 
 vfsFunc :: (VFS -> b -> (VFS, [String])) -> b -> LspM config ()
 vfsFunc modifyVfs req = do
