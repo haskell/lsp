@@ -6,6 +6,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE BangPatterns #-}
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 module Language.LSP.Server.Processing where
 
@@ -42,16 +43,16 @@ import System.Exit
 
 processMessage :: BSL.ByteString -> LspM config ()
 processMessage jsonStr = do
-  tvarDat <- LspT $ asks resState
+  pendingResponsesVar <- LspT $ asks $ resPendingResponses . resState
   join $ liftIO $ atomically $ fmap handleErrors $ runExceptT $ do
       val <- except $ eitherDecode jsonStr
-      ctx <- lift   $ readTVar tvarDat
-      msg <- except $ parseEither (parser $ resPendingResponses ctx) val
+      pending <- lift $ readTVar pendingResponsesVar
+      msg <- except $ parseEither (parser pending) val
       lift $ case msg of
         FromClientMess m mess ->
           pure $ handle m mess
-        FromClientRsp (Pair (ServerResponseCallback f) (Const newMap)) res -> do
-          modifyTVar' tvarDat (\c -> c { resPendingResponses = newMap })
+        FromClientRsp (Pair (ServerResponseCallback f) (Const !newMap)) res -> do
+          writeTVar pendingResponsesVar newMap
           pure $ liftIO $ f (res ^. LSP.result)
   where
     parser :: ResponseMap -> Value -> Parser (FromClientMessage' (Product ServerResponseCallback (Const ResponseMap)))
@@ -100,20 +101,23 @@ initializeRequestHandler ServerDefinition{..} vfs sendFunc req = do
           Just (Right newConfig) -> newConfig
           _ -> defaultConfig
 
-    tvarCtx <- liftIO $ newTVarIO $
-      LanguageContextState
-        (VFSData vfs mempty)
-        mempty
-        initialConfig
-        initialWfs
-        defaultProgressData
-        emptyIxMap
-        mempty
-        mempty
-        0
+    stateVars <- liftIO $ do
+      resVFS              <- newTVarIO (VFSData vfs mempty)
+      resDiagnostics      <- newTVarIO mempty
+      resConfig           <- newTVarIO initialConfig
+      resWorkspaceFolders <- newTVarIO initialWfs
+      resProgressData     <- do
+        progressNextId <- newTVarIO 0
+        progressCancel <- newTVarIO mempty
+        pure ProgressData{..}
+      resPendingResponses <- newTVarIO emptyIxMap
+      resRegistrationsNot <- newTVarIO mempty
+      resRegistrationsReq <- newTVarIO mempty
+      resLspId            <- newTVarIO 0
+      pure LanguageContextState{..}
 
     -- Call the 'duringInitialization' callback to let the server kick stuff up
-    let env = LanguageContextEnv handlers onConfigurationChange sendFunc tvarCtx (params ^. LSP.capabilities) rootDir
+    let env = LanguageContextEnv handlers onConfigurationChange sendFunc stateVars (params ^. LSP.capabilities) rootDir
         handlers = transmuteHandlers interpreter staticHandlers
         interpreter = interpretHandler initializationResult
     initializationResult <- ExceptT $ doInitialize env req
@@ -346,7 +350,7 @@ handle' mAction m msg = do
 
 progressCancelHandler :: Message WindowWorkDoneProgressCancel -> LspM config ()
 progressCancelHandler (NotificationMessage _ _ (WorkDoneProgressCancelParams tid)) = do
-  mact <- getsState $ Map.lookup tid . progressCancel . resProgressData
+  mact <- Map.lookup tid <$> getsState (progressCancel . resProgressData)
   case mact of
     Nothing -> return ()
     Just cancelAction -> liftIO $ cancelAction
@@ -364,9 +368,9 @@ shutdownRequestHandler = \_req k -> do
 handleConfigChange :: Message WorkspaceDidChangeConfiguration -> LspM config ()
 handleConfigChange req = do
   parseConfig <- LspT $ asks resParseConfig
-  res <- stateState $ \ctx -> case parseConfig (resConfig ctx) (req ^. LSP.params . LSP.settings) of
-    Left err -> (Left err, ctx)
-    Right newConfig -> (Right (), ctx { resConfig = newConfig })
+  res <- stateState resConfig $ \oldConfig -> case parseConfig oldConfig (req ^. LSP.params . LSP.settings) of
+    Left err -> (Left err, oldConfig)
+    Right !newConfig -> (Right (), newConfig)
   case res of
     Left err -> do
       let msg = T.pack $ unwords
@@ -376,9 +380,9 @@ handleConfigChange req = do
 
 vfsFunc :: (VFS -> b -> (VFS, [String])) -> b -> LspM config ()
 vfsFunc modifyVfs req = do
-  join $ stateState $ \ctx@LanguageContextState{resVFS = VFSData vfs rm} ->
-    let (vfs', ls) = modifyVfs vfs req
-    in (liftIO $ mapM_ (debugM "haskell-lsp.vfsFunc") ls,ctx{ resVFS = VFSData vfs' rm})
+  join $ stateState resVFS $ \(VFSData vfs rm) ->
+    let (!vfs', ls) = modifyVfs vfs req
+    in (liftIO $ mapM_ (debugM "haskell-lsp.vfsFunc") ls,VFSData vfs' rm)
 
 -- | Updates the list of workspace folders
 updateWorkspaceFolders :: Message WorkspaceDidChangeWorkspaceFolders -> LspM config ()
@@ -386,7 +390,7 @@ updateWorkspaceFolders (NotificationMessage _ _ params) = do
   let List toRemove = params ^. LSP.event . LSP.removed
       List toAdd = params ^. LSP.event . LSP.added
       newWfs oldWfs = foldr delete oldWfs toRemove <> toAdd
-  modifyState $ \c -> c {resWorkspaceFolders = newWfs $ resWorkspaceFolders c}
+  modifyState resWorkspaceFolders newWfs
 
 -- ---------------------------------------------------------------------
 

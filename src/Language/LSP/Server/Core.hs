@@ -1,6 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE BangPatterns         #-}
 {-# LANGUAGE LambdaCase           #-}
 {-# LANGUAGE GADTs                #-}
 {-# LANGUAGE MultiWayIf           #-}
@@ -63,7 +64,7 @@ import qualified System.Log.Handler as LH
 import qualified System.Log.Handler.Simple as LHS
 import           System.Log.Logger
 import qualified System.Log.Logger as L
-import           System.Random
+import           System.Random hiding (next)
 import           Control.Monad.Trans.Identity
 
 -- ---------------------------------------------------------------------
@@ -100,7 +101,7 @@ data LanguageContextEnv config =
   , resParseConfig         :: !(config -> J.Value -> (Either T.Text config))
   , resSendMessage         :: !(FromServerMessage -> IO ())
   -- We keep the state in a TVar to be thread safe
-  , resState               :: !(TVar (LanguageContextState config))
+  , resState               :: !(LanguageContextState config)
   , resClientCapabilities  :: !J.ClientCapabilities
   , resRootPath            :: !(Maybe FilePath)
   }
@@ -121,8 +122,8 @@ data LanguageContextEnv config =
 -- @ 
 data Handlers m
   = Handlers
-  { reqHandlers :: DMap SMethod (ClientMessageHandler m Request)
-  , notHandlers :: DMap SMethod (ClientMessageHandler m Notification)
+  { reqHandlers :: !(DMap SMethod (ClientMessageHandler m Request))
+  , notHandlers :: !(DMap SMethod (ClientMessageHandler m Notification))
   }
 instance Semigroup (Handlers config) where
   Handlers r1 n1 <> Handlers r2 n2 = Handlers (r1 <> r2) (n1 <> n2)
@@ -166,15 +167,15 @@ mapHandlers mapReq mapNot (Handlers reqs nots) = Handlers reqs' nots'
 -- | state used by the LSP dispatcher to manage the message loop
 data LanguageContextState config =
   LanguageContextState
-  { resVFS                 :: !VFSData
-  , resDiagnostics         :: !DiagnosticStore
-  , resConfig              :: !config
-  , resWorkspaceFolders    :: ![WorkspaceFolder]
+  { resVFS                 :: !(TVar VFSData)
+  , resDiagnostics         :: !(TVar DiagnosticStore)
+  , resConfig              :: !(TVar config)
+  , resWorkspaceFolders    :: !(TVar [WorkspaceFolder])
   , resProgressData        :: !ProgressData
-  , resPendingResponses    :: !ResponseMap
-  , resRegistrationsNot    :: !(RegistrationMap Notification)
-  , resRegistrationsReq    :: !(RegistrationMap Request)
-  , resLspId               :: !Int
+  , resPendingResponses    :: !(TVar ResponseMap)
+  , resRegistrationsNot    :: !(TVar (RegistrationMap Notification))
+  , resRegistrationsReq    :: !(TVar (RegistrationMap Request))
+  , resLspId               :: !(TVar Int)
   }
 
 type ResponseMap = IxMap LspId (Product SMethod ServerResponseCallback)
@@ -185,8 +186,8 @@ data RegistrationToken (m :: Method FromClient t) = RegistrationToken (SMethod m
 newtype RegistrationId (m :: Method FromClient t) = RegistrationId Text
   deriving Eq
 
-data ProgressData = ProgressData { progressNextId :: !Int
-                                 , progressCancel :: !(Map.Map ProgressToken (IO ())) }
+data ProgressData = ProgressData { progressNextId :: !(TVar Int)
+                                 , progressCancel :: !(TVar (Map.Map ProgressToken (IO ()))) }
 
 data VFSData =
   VFSData
@@ -194,20 +195,20 @@ data VFSData =
     , reverseMap :: !(Map.Map FilePath FilePath)
     }
 
-modifyState :: MonadLsp config m => (LanguageContextState config -> LanguageContextState config) -> m ()
-modifyState f = do
-  tvarDat <- resState <$> getLspEnv
+modifyState :: MonadLsp config m => (LanguageContextState config -> TVar a) -> (a -> a) -> m ()
+modifyState sel f = do
+  tvarDat <- sel . resState <$> getLspEnv
   liftIO $ atomically $ modifyTVar' tvarDat f
 
-stateState :: MonadLsp config m => (LanguageContextState config -> (a,LanguageContextState config)) -> m a
-stateState f = do
-  tvarDat <- resState <$> getLspEnv
+stateState :: MonadLsp config m => (LanguageContextState config -> TVar s) -> (s -> (a,s)) -> m a
+stateState sel f = do
+  tvarDat <- sel . resState <$> getLspEnv
   liftIO $ atomically $ stateTVar tvarDat f
 
-getsState :: MonadLsp config m => (LanguageContextState config -> a) -> m a
+getsState :: MonadLsp config m => (LanguageContextState config -> TVar a) -> m a
 getsState f = do
-  tvarDat <- resState <$> getLspEnv
-  liftIO $ f <$> readTVarIO tvarDat
+  tvarDat <- f . resState <$> getLspEnv
+  liftIO $ readTVarIO tvarDat
 
 -- ---------------------------------------------------------------------
 
@@ -321,10 +322,10 @@ newtype ServerResponseCallback (m :: Method FromServer Request)
 -- Might fail if the id was already in the map
 addResponseHandler :: MonadLsp config f => LspId m -> (Product SMethod ServerResponseCallback) m -> f Bool
 addResponseHandler lid h = do
-  stateState $ \ctx@LanguageContextState{resPendingResponses} ->
-    case insertIxMap lid h resPendingResponses of
-      Just m -> (True, ctx { resPendingResponses = m})
-      Nothing -> (False, ctx)
+  stateState resPendingResponses $ \pending ->
+    case insertIxMap lid h pending of
+      Just !m -> (True, m)
+      Nothing -> (False, pending)
 
 sendNotification
   :: forall (m :: Method FromServer Notification) f config. MonadLsp config f
@@ -358,28 +359,29 @@ sendRequest m params resHandler = do
 
 -- | Return the 'VirtualFile' associated with a given 'NormalizedUri', if there is one.
 getVirtualFile :: MonadLsp config m => NormalizedUri -> m (Maybe VirtualFile)
-getVirtualFile uri = getsState $ Map.lookup uri . vfsMap . vfsData . resVFS
+getVirtualFile uri = Map.lookup uri . vfsMap . vfsData <$> getsState resVFS
 
 getVirtualFiles :: MonadLsp config m => m VFS
-getVirtualFiles = getsState $ vfsData . resVFS
+getVirtualFiles = vfsData <$> getsState resVFS
 
 -- | Dump the current text for a given VFS file to a temporary file,
 -- and return the path to the file.
 persistVirtualFile :: MonadLsp config m => NormalizedUri -> m (Maybe FilePath)
 persistVirtualFile uri = do
-  join $ stateState $ \ctx@LanguageContextState{resVFS = vfs} ->
+  join $ stateState resVFS $ \vfs ->
     case persistFileVFS (vfsData vfs) uri of
-      Nothing -> (return Nothing, ctx)
+      Nothing -> (return Nothing, vfs)
       Just (fn, write) ->
-        let revMap = case uriToFilePath (fromNormalizedUri uri) of
+        let !revMap = case uriToFilePath (fromNormalizedUri uri) of
               Just uri_fp -> Map.insert fn uri_fp $ reverseMap vfs
               -- TODO: Does the VFS make sense for URIs which are not files?
               -- The reverse map should perhaps be (FilePath -> URI)
               Nothing -> reverseMap vfs
+            !vfs' = vfs {reverseMap = revMap}
             act = do
               liftIO write
               pure (Just fn)
-        in (act, ctx{resVFS = vfs {reverseMap = revMap} })
+        in (act, vfs')
 
 -- | Given a text document identifier, annotate it with the latest version.
 getVersionedTextDoc :: MonadLsp config m => TextDocumentIdentifier -> m VersionedTextDocumentIdentifier
@@ -402,11 +404,6 @@ reverseFileMap = do
 
 -- ---------------------------------------------------------------------
 
-defaultProgressData :: ProgressData
-defaultProgressData = ProgressData 0 Map.empty
-
--- ---------------------------------------------------------------------
-
 sendToClient :: MonadLsp config m => FromServerMessage -> m ()
 sendToClient msg = do
   f <- resSendMessage <$> getLspEnv
@@ -423,8 +420,8 @@ sendErrorLog msg =
 
 freshLspId :: MonadLsp config m => m Int
 freshLspId = do
-  stateState $ \c ->
-    (resLspId c, c{resLspId = resLspId c+1})
+  stateState resLspId $ \cur ->
+    let !next = cur+1 in (cur, next)
 
 -- ---------------------------------------------------------------------
 
@@ -482,14 +479,12 @@ registerCapability method regOpts f = do
               regId = RegistrationId uuid
           rio <- askUnliftIO
           ~() <- case splitClientMethod method of
-            IsClientNot -> modifyState $ \ctx ->
-              let newRegs = DMap.insert method pair (resRegistrationsNot ctx)
-                  pair = Pair regId (ClientMessageHandler (unliftIO rio . f))
-                in ctx { resRegistrationsNot = newRegs }
-            IsClientReq -> modifyState $ \ctx ->
-              let newRegs = DMap.insert method pair (resRegistrationsReq ctx)
-                  pair = Pair regId (ClientMessageHandler (\msg k -> unliftIO rio $ f msg (liftIO . k)))
-                in ctx { resRegistrationsReq = newRegs }
+            IsClientNot -> modifyState resRegistrationsNot $ \oldRegs ->
+              let pair = Pair regId (ClientMessageHandler (unliftIO rio . f))
+                in DMap.insert method pair oldRegs
+            IsClientReq -> modifyState resRegistrationsReq $ \oldRegs ->
+              let pair = Pair regId (ClientMessageHandler (\msg k -> unliftIO rio $ f msg (liftIO . k)))
+                in DMap.insert method pair oldRegs
             IsClientEither -> error "Cannot register capability for custom methods"
 
           -- TODO: handle the scenario where this returns an error
@@ -541,14 +536,8 @@ registerCapability method regOpts f = do
 unregisterCapability :: MonadLsp config f => RegistrationToken m -> f ()
 unregisterCapability (RegistrationToken m (RegistrationId uuid)) = do
   ~() <- case splitClientMethod m of
-    IsClientReq -> do
-      reqRegs <- getsState resRegistrationsReq
-      let newMap = DMap.delete m reqRegs
-      modifyState (\ctx -> ctx { resRegistrationsReq = newMap })
-    IsClientNot -> do
-      notRegs <- getsState resRegistrationsNot
-      let newMap = DMap.delete m notRegs
-      modifyState (\ctx -> ctx { resRegistrationsNot = newMap })
+    IsClientReq -> modifyState resRegistrationsReq $ DMap.delete m
+    IsClientNot -> modifyState resRegistrationsNot $ DMap.delete m
     IsClientEither -> error "Cannot unregister capability for custom methods"
 
   let unregistration = J.Unregistration uuid (J.SomeClientMethod m)
@@ -560,22 +549,17 @@ unregisterCapability (RegistrationToken m (RegistrationId uuid)) = do
 --------------------------------------------------------------------------------
 
 storeProgress :: MonadLsp config m => ProgressToken -> Async a -> m ()
-storeProgress n a = do
-  let f = Map.insert n (cancelWith a ProgressCancelledException) . progressCancel
-  modifyState $ \ctx -> ctx { resProgressData = (resProgressData ctx) { progressCancel = f (resProgressData ctx)}}
+storeProgress n a = modifyState (progressCancel . resProgressData) $ Map.insert n (cancelWith a ProgressCancelledException)
 
 deleteProgress :: MonadLsp config m => ProgressToken -> m ()
-deleteProgress n = do
-  let f = Map.delete n . progressCancel
-  modifyState $ \ctx -> ctx { resProgressData = (resProgressData ctx) { progressCancel = f (resProgressData ctx)}}
+deleteProgress n = modifyState (progressCancel . resProgressData) $ Map.delete n
 
 -- Get a new id for the progress session and make a new one
 getNewProgressId :: MonadLsp config m => m ProgressToken
 getNewProgressId = do
-  stateState $ \ctx@LanguageContextState{resProgressData} ->
-    let x = progressNextId resProgressData
-        ctx' = ctx { resProgressData = resProgressData { progressNextId = x + 1 }}
-    in (ProgressNumericToken x, ctx')
+  stateState (progressNextId . resProgressData) $ \cur ->
+    let !next = cur+1
+    in (ProgressNumericToken cur, next)
 
 withProgressBase :: MonadLsp c m => Bool -> Text -> ProgressCancellable -> ((ProgressAmount -> m ()) -> m a) -> m a
 withProgressBase indefinite title cancellable f = do
@@ -665,15 +649,14 @@ withIndefiniteProgress title cancellable f = do
 -- by source, and sends a @textDocument/publishDiagnostics@ notification with
 -- the total (limited by the first parameter) whenever it is updated.
 publishDiagnostics :: MonadLsp config m => Int -> NormalizedUri -> TextDocumentVersion -> DiagnosticsBySource -> m ()
-publishDiagnostics maxDiagnosticCount uri version diags = join $ stateState $ \ctx ->
-  let ds = updateDiagnostics (resDiagnostics ctx) uri version diags
-      ctx' = ctx{resDiagnostics = ds}
-      mdp = getDiagnosticParamsFor maxDiagnosticCount ds uri
+publishDiagnostics maxDiagnosticCount uri version diags = join $ stateState resDiagnostics $ \oldDiags->
+  let !newDiags = updateDiagnostics oldDiags uri version diags
+      mdp = getDiagnosticParamsFor maxDiagnosticCount newDiags uri
       act = case mdp of
         Nothing -> return ()
         Just params ->
           sendToClient $ J.fromServerNot $ J.NotificationMessage "2.0" J.STextDocumentPublishDiagnostics params
-      in (act,ctx')
+      in (act,newDiags)
 
 -- ---------------------------------------------------------------------
 
@@ -681,17 +664,16 @@ publishDiagnostics maxDiagnosticCount uri version diags = join $ stateState $ \c
 -- the client.
 flushDiagnosticsBySource :: MonadLsp config m => Int -- ^ Max number of diagnostics to send
                          -> Maybe DiagnosticSource -> m ()
-flushDiagnosticsBySource maxDiagnosticCount msource = join $ stateState $ \ctx ->
-  let ds = flushBySource (resDiagnostics ctx) msource
-      ctx' = ctx {resDiagnostics = ds}
+flushDiagnosticsBySource maxDiagnosticCount msource = join $ stateState resDiagnostics $ \oldDiags ->
+  let !newDiags = flushBySource oldDiags msource
       -- Send the updated diagnostics to the client
-      act = forM_ (HM.keys ds) $ \uri -> do
-        let mdp = getDiagnosticParamsFor maxDiagnosticCount ds uri
+      act = forM_ (HM.keys newDiags) $ \uri -> do
+        let mdp = getDiagnosticParamsFor maxDiagnosticCount newDiags uri
         case mdp of
           Nothing -> return ()
           Just params -> do
             sendToClient $ J.fromServerNot $ J.NotificationMessage "2.0" J.STextDocumentPublishDiagnostics params
-      in (act,ctx')
+      in (act,newDiags)
 
 -- =====================================================================
 --
