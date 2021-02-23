@@ -82,16 +82,23 @@ type role LspT representational representational nominal
 runLspT :: LanguageContextEnv config -> LspT config m a -> m a
 runLspT env = flip runReaderT env . unLspT
 
+{-# INLINE runLspT #-}
+
 type LspM config = LspT config IO
 
 class MonadUnliftIO m => MonadLsp config m | m -> config where
   getLspEnv :: m (LanguageContextEnv config)
 
 instance MonadUnliftIO m => MonadLsp config (LspT config m) where
+  {-# SPECIALIZE instance MonadLsp config (LspT config IO) #-}
+  {-# INLINE getLspEnv #-}
   getLspEnv = LspT ask
 
 instance MonadLsp c m => MonadLsp c (ReaderT r m) where
+  {-# SPECIALIZE instance MonadLsp config (ReaderT r (LspT config IO)) #-}
+  {-# INLINE getLspEnv #-}
   getLspEnv = lift getLspEnv
+
 instance MonadLsp c m => MonadLsp c (IdentityT m) where
   getLspEnv = lift getLspEnv
 
@@ -195,16 +202,19 @@ data VFSData =
     , reverseMap :: !(Map.Map FilePath FilePath)
     }
 
+{-# INLINE modifyState #-}
 modifyState :: MonadLsp config m => (LanguageContextState config -> TVar a) -> (a -> a) -> m ()
 modifyState sel f = do
   tvarDat <- sel . resState <$> getLspEnv
   liftIO $ atomically $ modifyTVar' tvarDat f
 
+{-# INLINE stateState #-}
 stateState :: MonadLsp config m => (LanguageContextState config -> TVar s) -> (s -> (a,s)) -> m a
 stateState sel f = do
   tvarDat <- sel . resState <$> getLspEnv
   liftIO $ atomically $ stateTVar tvarDat f
 
+{-# INLINE getsState #-}
 getsState :: MonadLsp config m => (LanguageContextState config -> TVar a) -> m a
 getsState f = do
   tvarDat <- f . resState <$> getLspEnv
@@ -361,8 +371,12 @@ sendRequest m params resHandler = do
 getVirtualFile :: MonadLsp config m => NormalizedUri -> m (Maybe VirtualFile)
 getVirtualFile uri = Map.lookup uri . vfsMap . vfsData <$> getsState resVFS
 
+{-# INLINE getVirtualFile #-}
+
 getVirtualFiles :: MonadLsp config m => m VFS
 getVirtualFiles = vfsData <$> getsState resVFS
+
+{-# INLINE getVirtualFiles #-}
 
 -- | Dump the current text for a given VFS file to a temporary file,
 -- and return the path to the file.
@@ -393,6 +407,8 @@ getVersionedTextDoc doc = do
         Nothing -> Nothing
   return (VersionedTextDocumentIdentifier uri ver)
 
+{-# INLINE getVersionedTextDoc #-}
+
 -- TODO: should this function return a URI?
 -- | If the contents of a VFS has been dumped to a temporary file, map
 -- the temporary file name back to the original one.
@@ -402,12 +418,16 @@ reverseFileMap = do
   let f fp = fromMaybe fp . Map.lookup fp . reverseMap $ vfs
   return f
 
+{-# INLINE reverseFileMap #-}
+
 -- ---------------------------------------------------------------------
 
 sendToClient :: MonadLsp config m => FromServerMessage -> m ()
 sendToClient msg = do
   f <- resSendMessage <$> getLspEnv
   liftIO $ f msg
+
+{-# INLINE sendToClient #-}
 
 -- ---------------------------------------------------------------------
 
@@ -416,12 +436,16 @@ sendErrorLog msg =
   sendToClient $ fromServerNot $
     NotificationMessage "2.0" SWindowLogMessage (LogMessageParams MtError msg)
 
+{-# INLINE sendErrorLog #-}
+
 -- ---------------------------------------------------------------------
 
 freshLspId :: MonadLsp config m => m Int
 freshLspId = do
   stateState resLspId $ \cur ->
     let !next = cur+1 in (cur, next)
+
+{-# INLINE freshLspId #-}
 
 -- ---------------------------------------------------------------------
 
@@ -430,11 +454,17 @@ freshLspId = do
 getConfig :: MonadLsp config m => m config
 getConfig = getsState resConfig
 
+{-# INLINE getConfig #-}
+
 getClientCapabilities :: MonadLsp config m => m J.ClientCapabilities
 getClientCapabilities = resClientCapabilities <$> getLspEnv
 
+{-# INLINE getClientCapabilities #-}
+
 getRootPath :: MonadLsp config m => m (Maybe FilePath)
 getRootPath = resRootPath <$> getLspEnv
+
+{-# INLINE getRootPath #-}
 
 -- | The current workspace folders, if the client supports workspace folders.
 getWorkspaceFolders :: MonadLsp config m => m (Maybe [WorkspaceFolder])
@@ -447,6 +477,8 @@ getWorkspaceFolders = do
   if clientSupportsWfs
     then Just <$> getsState resWorkspaceFolders
     else pure Nothing
+
+{-# INLINE getWorkspaceFolders #-}
 
 -- | Sends a @client/registerCapability@ request and dynamically registers
 -- a 'Method' with a 'Handler'. Returns 'Nothing' if the client does not
@@ -551,8 +583,12 @@ unregisterCapability (RegistrationToken m (RegistrationId uuid)) = do
 storeProgress :: MonadLsp config m => ProgressToken -> Async a -> m ()
 storeProgress n a = modifyState (progressCancel . resProgressData) $ Map.insert n (cancelWith a ProgressCancelledException)
 
+{-# INLINE storeProgress #-}
+
 deleteProgress :: MonadLsp config m => ProgressToken -> m ()
 deleteProgress n = modifyState (progressCancel . resProgressData) $ Map.delete n
+
+{-# INLINE deleteProgress #-}
 
 -- Get a new id for the progress session and make a new one
 getNewProgressId :: MonadLsp config m => m ProgressToken
@@ -560,6 +596,8 @@ getNewProgressId = do
   stateState (progressNextId . resProgressData) $ \cur ->
     let !next = cur+1
     in (ProgressNumericToken cur, next)
+
+{-# INLINE getNewProgressId #-}
 
 withProgressBase :: MonadLsp c m => Bool -> Text -> ProgressCancellable -> ((ProgressAmount -> m ()) -> m a) -> m a
 withProgressBase indefinite title cancellable f = do
@@ -615,6 +653,8 @@ clientSupportsProgress :: J.ClientCapabilities -> Bool
 clientSupportsProgress (J.ClientCapabilities _ _ wc _) = fromMaybe False $ do
   (J.WindowClientCapabilities mProgress) <- wc
   mProgress
+
+{-# INLINE clientSupportsProgress #-}
 
 -- | Wrapper for reporting progress to the client during a long running
 -- task.
