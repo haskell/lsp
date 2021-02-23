@@ -21,7 +21,7 @@ module Language.LSP.Diagnostics
   ) where
 
 import qualified Data.SortedList as SL
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import qualified Data.HashMap.Strict as HM
 import qualified Language.LSP.Types      as J
 

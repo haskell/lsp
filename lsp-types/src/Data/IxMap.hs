@@ -3,10 +3,11 @@
 {-# LANGUAGE RankNTypes       #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ViewPatterns     #-}
+{-# LANGUAGE BangPatterns     #-}
 
 module Data.IxMap where
 
-import qualified Data.Map as M
+import qualified Data.Map.Strict as M
 import Data.Some
 import Data.Kind
 import Unsafe.Coerce
@@ -36,5 +37,5 @@ lookupIxMap i (IxMap m) =
 pickFromIxMap :: IxOrd k => k m -> IxMap k f -> (Maybe (f m), IxMap k f)
 pickFromIxMap i (IxMap m) =
   case M.updateLookupWithKey (\_ _ -> Nothing) (toBase i) m of
-    (Nothing,m') -> (Nothing,IxMap m')
-    (Just (Some k),m') -> (Just (unsafeCoerce k),IxMap m')
+    (Nothing,!m') -> (Nothing,IxMap m')
+    (Just (Some k),!m') -> (Just (unsafeCoerce k),IxMap m')

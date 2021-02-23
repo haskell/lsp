@@ -48,7 +48,7 @@ import qualified Data.HashMap.Strict as HM
 import           Data.Kind
 import qualified Data.List as L
 import           Data.List.NonEmpty (NonEmpty(..))
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import           Data.Maybe
 import qualified Data.Text as T
 import           Data.Text ( Text )

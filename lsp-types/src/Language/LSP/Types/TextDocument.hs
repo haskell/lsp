@@ -162,12 +162,12 @@ makeExtendingDatatype "TextDocumentChangeRegistrationOptions"
 
 deriveJSON lspOptions ''TextDocumentChangeRegistrationOptions
 
-{-# DEPRECATED _rangeLength "Use _range instead" #-}
 data TextDocumentContentChangeEvent =
   TextDocumentContentChangeEvent
     { -- | The range of the document that changed.
       _range       :: Maybe Range
       -- | The optional length of the range that got replaced.
+      -- Deprecated, use _range instead
     , _rangeLength :: Maybe Int
       -- | The new text for the provided range, if provided.
       -- Otherwise the new text of the whole document.

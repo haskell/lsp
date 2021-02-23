@@ -48,7 +48,7 @@ import qualified Data.Text as T
 import           Data.List
 import           Data.Ord
 import qualified Data.HashMap.Strict as HashMap
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import           Data.Maybe
 import           Data.Rope.UTF16 ( Rope )
 import qualified Data.Rope.UTF16 as Rope
