@@ -24,6 +24,7 @@ module Language.LSP.Types
   , module Language.LSP.Types.MarkupContent
   , module Language.LSP.Types.Method
   , module Language.LSP.Types.Message
+  , module Language.LSP.Types.Parsing
   , module Language.LSP.Types.Progress
   , module Language.LSP.Types.References
   , module Language.LSP.Types.Registration
@@ -67,6 +68,7 @@ import           Language.LSP.Types.LspId
 import           Language.LSP.Types.MarkupContent
 import           Language.LSP.Types.Method
 import           Language.LSP.Types.Message
+import           Language.LSP.Types.Parsing
 import           Language.LSP.Types.Progress
 import           Language.LSP.Types.References
 import           Language.LSP.Types.Registration
