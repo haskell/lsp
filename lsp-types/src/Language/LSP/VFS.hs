@@ -71,14 +71,14 @@ data VirtualFile =
       _lsp_version :: !Int  -- ^ The LSP version of the document
     , _file_version :: !Int -- ^ This number is only incremented whilst the file
                            -- remains in the map.
-    , _text    :: Rope  -- ^ The full contents of the document
+    , _text    :: !Rope  -- ^ The full contents of the document
     } deriving (Show)
 
 
 type VFSMap = Map.Map J.NormalizedUri VirtualFile
 
-data VFS = VFS { vfsMap :: Map.Map J.NormalizedUri VirtualFile
-               , vfsTempDir :: FilePath -- ^ This is where all the temporary files will be written to
+data VFS = VFS { vfsMap :: !(Map.Map J.NormalizedUri VirtualFile)
+               , vfsTempDir :: !FilePath -- ^ This is where all the temporary files will be written to
                } deriving Show
 
 ---
@@ -318,19 +318,19 @@ changeChars str start len new = mconcat [before, Rope.fromText new, after']
 -- TODO:AZ:move this to somewhere sane
 -- | Describes the line at the current cursor position
 data PosPrefixInfo = PosPrefixInfo
-  { fullLine :: T.Text
+  { fullLine :: !T.Text
     -- ^ The full contents of the line the cursor is at
 
-  , prefixModule :: T.Text
+  , prefixModule :: !T.Text
     -- ^ If any, the module name that was typed right before the cursor position.
     --  For example, if the user has typed "Data.Maybe.from", then this property
     --  will be "Data.Maybe"
 
-  , prefixText :: T.Text
+  , prefixText :: !T.Text
     -- ^ The word right before the cursor position, after removing the module part.
     -- For example if the user has typed "Data.Maybe.from",
     -- then this property will be "from"
-  , cursorPos :: J.Position
+  , cursorPos :: !J.Position
     -- ^ The cursor position
   } deriving (Show,Eq)
 
