@@ -112,8 +112,10 @@ named s (Session x) = Session (Data.Conduit.Parser.named s x)
 message :: SServerMethod m -> Session (ServerMessage m)
 message m1 = named (T.pack $ "Request for: " <> show m1) $ satisfyMaybe $ \case
   FromServerMess m2 msg -> do
-    HRefl <- mEqServer m1 m2
-    pure msg
+    res <- mEqServer m1 m2
+    case res of
+      Right HRefl -> pure msg
+      Left f -> Nothing
   _ -> Nothing
 
 customRequest :: T.Text -> Session (ServerMessage (CustomMethod :: Method FromServer Request))
@@ -163,7 +165,7 @@ anyResponse = named "Any response" $ satisfy $ \case
 response :: SMethod (m :: Method FromClient Request) -> Session (ResponseMessage m)
 response m1 = named (T.pack $ "Response for: " <> show m1) $ satisfyMaybe $ \case
   FromServerRsp m2 msg -> do
-    HRefl <- mEqClient m1 m2
+    HRefl <- runEq mEqClient m1 m2
     pure msg
   _ -> Nothing
 
@@ -173,17 +175,10 @@ responseForId m lid = named (T.pack $ "Response for id: " ++ show lid) $ do
   satisfyMaybe $ \msg -> do
     case msg of
       FromServerMess _ _ -> Nothing
-      FromServerRsp m' rspMsg@(ResponseMessage _ lid' _) ->
-        case mEqClient m m' of
-          Just HRefl -> do
-            guard (lid' == Just lid)
-            pure rspMsg
-          Nothing
-            | SCustomMethod tm <- m
-            , SCustomMethod tm' <- m'
-            , tm == tm'
-            , lid' == Just lid -> pure rspMsg
-          _ -> empty
+      FromServerRsp m' rspMsg@(ResponseMessage _ lid' _) -> do
+        HRefl <- runEq mEqClient m m'
+        guard (Just lid == lid')
+        pure rspMsg
 
 -- | Matches any type of message.
 anyMessage :: Session FromServerMessage
