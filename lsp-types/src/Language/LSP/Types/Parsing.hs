@@ -12,6 +12,7 @@
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE TupleSections              #-}
+{-# LANGUAGE TypeApplications           #-}
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
 module Language.LSP.Types.Parsing where
@@ -272,12 +273,9 @@ splitServerMethod SCustomMethod{} = IsServerEither
 -- | Given a witness that two custom methods are of the same type, produce a witness that the methods are the same
 data CustomEq m1 m2 where
   CustomEq
-    :: (m1 ~ CustomMethod, m2 ~ CustomMethod)
-    => (t1 :~: t2 -> m1 :~~: m2)
-    -> CustomEq (m1 :: Method f t1) (m2 :: Method f t2)
-
-applyCustomEq :: (t1 :~: t2) -> CustomEq (m1 :: Method f t1) (m2 :: Method f t2) -> m1 :~~: m2
-applyCustomEq x (CustomEq f) = f x
+    :: (m1 ~ CustomMethod @f @t1, m2 ~ CustomMethod @f @t2)
+    => { runCustomEq :: (t1 ~ t2 => m1 :~~: m2) }
+    -> CustomEq m1 m2
 
 runEq :: (t1 ~ t2)
       => (SMethod m1 -> SMethod m2 -> Maybe (Either (CustomEq m1 m2) (m1 :~~: m2)))
@@ -288,7 +286,7 @@ runEq f m1 m2 = do
   res <- f m1 m2
   pure $ case res of
     Right eq -> eq
-    Left ceq -> applyCustomEq Refl ceq
+    Left ceq -> runCustomEq ceq
 
 -- | Heterogeneous equality on singleton server methods
 mEqServer :: SServerMethod m1 -> SServerMethod m2 -> Maybe (Either (CustomEq m1 m2) (m1 :~~: m2))
@@ -304,7 +302,7 @@ mEqServer m1 m2 = go (splitServerMethod m1) (splitServerMethod m2)
       | SCustomMethod c1 <- m1
       , SCustomMethod c2 <- m2
       , c1 == c2
-      = Just $ Left $ CustomEq $ \Refl -> HRefl
+      = Just $ Left $ CustomEq HRefl
     go _ _ = Nothing
 
 -- | Heterogeneous equality on singleton client methods
@@ -321,5 +319,5 @@ mEqClient m1 m2 = go (splitClientMethod m1) (splitClientMethod m2)
       | SCustomMethod c1 <- m1
       , SCustomMethod c2 <- m2
       , c1 == c2
-      = Just $ Left $ CustomEq $ \Refl -> HRefl
+      = Just $ Left $ CustomEq HRefl
     go _ _ = Nothing
