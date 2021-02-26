@@ -36,6 +36,7 @@ data SignatureHelpSignatureInformation =
     , _parameterInformation :: Maybe SignatureHelpParameterInformation
       -- | The client supports the `activeParameter` property on
       -- 'SignatureInformation' literal.
+      --
       -- @since 3.16.0
     , _activeParameterSuport :: Maybe Bool
     }
@@ -89,9 +90,28 @@ instance FromJSON SignatureHelpDoc where
 
 -- -------------------------------------
 
+data ParameterLabel = ParameterLabelString Text | ParameterLabelOffset Int Int
+  deriving (Read,Show,Eq)
+
+instance ToJSON ParameterLabel where
+  toJSON (ParameterLabelString t) = toJSON t
+  toJSON (ParameterLabelOffset l h) = toJSON [l, h]
+
+instance FromJSON ParameterLabel where
+  parseJSON x = ParameterLabelString <$> parseJSON x <|> parseInterval x
+    where
+      parseInterval v@(Array _) = do
+        is <- parseJSON v
+        case is of
+          [l, h] -> pure $ ParameterLabelOffset l h
+          _ -> mempty
+      parseInterval _ = mempty
+
+-- -------------------------------------
+
 data ParameterInformation =
   ParameterInformation
-    { _label         :: Text
+    { _label         :: ParameterLabel
     , _documentation :: Maybe SignatureHelpDoc
     } deriving (Read,Show,Eq)
 deriveJSON lspOptions ''ParameterInformation
