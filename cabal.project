@@ -2,6 +2,7 @@ packages:
          ./
          ./lsp-types/
          ./func-test
+         ./bench/
 
 package lsp
   flags: +demo
