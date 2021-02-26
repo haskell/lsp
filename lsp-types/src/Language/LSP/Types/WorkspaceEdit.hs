@@ -274,6 +274,9 @@ applyTextEdit (TextEdit (Range sp ep) newText) oldText =
   where
     splitAtPos :: Position -> Text -> (Text, Text)
     splitAtPos (Position sl sc) t =
+      -- If we are looking for a line beyond the end of the text, this will give us an index
+      -- past the end. Fortunately, T.splitAt is fine with this, and just gives us the whole
+      -- string and an empty string, which is what we want.
       let index = sc + startLineIndex sl t
         in T.splitAt index t
 
@@ -282,7 +285,9 @@ applyTextEdit (TextEdit (Range sp ep) newText) oldText =
     startLineIndex line t' =
       case T.findIndex (== '\n') t' of
         Just i -> i + 1 + startLineIndex (line - 1) (T.drop (i + 1) t')
-        Nothing -> 0
+        -- i != 0, and there are no newlines, so this is a line beyond the end of the text.
+        -- In this case give the "start index" as the end, so we will at least append the text.
+        Nothing -> T.length t'
 
 -- | 'editTextEdit' @outer@ @inner@ applies @inner@ to the text inside @outer@.
 editTextEdit :: TextEdit -> TextEdit -> TextEdit
