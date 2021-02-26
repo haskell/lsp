@@ -12,6 +12,7 @@ import Language.LSP.Types.MarkupContent
 import Language.LSP.Types.Progress
 import Language.LSP.Types.TextDocument
 import Language.LSP.Types.Utils
+import Control.Applicative (Alternative((<|>)))
 
 -- -------------------------------------
 
@@ -72,10 +73,22 @@ deriveJSON lspOptions ''SignatureHelpRegistrationOptions
 
 -- -------------------------------------
 
+data SignatureHelpDoc = SignatureHelpDocString Text | SignatureHelpDocMarkup MarkupContent
+  deriving (Read,Show,Eq)
+
+instance ToJSON SignatureHelpDoc where
+  toJSON (SignatureHelpDocString t) = toJSON t
+  toJSON (SignatureHelpDocMarkup m) = toJSON m
+
+instance FromJSON SignatureHelpDoc where
+  parseJSON x = SignatureHelpDocString <$> parseJSON x <|> SignatureHelpDocMarkup <$> parseJSON x
+
+-- -------------------------------------
+
 data ParameterInformation =
   ParameterInformation
     { _label         :: Text
-    , _documentation :: Maybe Text
+    , _documentation :: Maybe SignatureHelpDoc
     } deriving (Read,Show,Eq)
 deriveJSON lspOptions ''ParameterInformation
 
