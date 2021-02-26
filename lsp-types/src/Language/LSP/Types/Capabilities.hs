@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Language.LSP.Types.Capabilities
   (
     module Language.LSP.Types.ClientCapabilities
@@ -141,6 +142,7 @@ capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) (Jus
       (since 3 9 True)
       (since 3 15 completionItemTagsCapabilities)
       (since 3 16 True)
+      (since 3 16 (CompletionItemResolveClientCapabilities (List ["documentation", "details"])))
       (since 3 16 (CompletionItemInsertTextModeClientCapabilities (List [])))
 
     completionItemKindCapabilities =

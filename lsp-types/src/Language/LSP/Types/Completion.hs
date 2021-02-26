@@ -119,6 +119,14 @@ data CompletionItemTagsClientCapabilities =
 
 deriveJSON lspOptions ''CompletionItemTagsClientCapabilities
 
+data CompletionItemResolveClientCapabilities =
+  CompletionItemResolveClientCapabilities
+    { -- | The properties that a client can resolve lazily.
+      _valueSet :: List Text
+    } deriving (Show, Read, Eq)
+
+deriveJSON lspOptions ''CompletionItemResolveClientCapabilities
+
 {-|
 How whitespace and indentation is handled during completion
 item insertion.
@@ -193,6 +201,12 @@ data CompletionItemClientCapabilities =
       --
       -- @since 3.16.0
     , _insertReplaceSupport :: Maybe Bool
+      -- | Indicates which properties a client can resolve lazily on a
+      -- completion item. Before version 3.16.0 only the predefined properties
+      -- `documentation` and `details` could be resolved lazily.
+      --
+      -- @since 3.16.0
+    , _resolveSupport :: Maybe CompletionItemResolveClientCapabilities
       -- | The client supports the `insertTextMode` property on
       -- a completion item to override the whitespace handling mode
       -- as defined by the client (see `insertTextMode`).
