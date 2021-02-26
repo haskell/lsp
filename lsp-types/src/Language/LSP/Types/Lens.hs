@@ -123,6 +123,7 @@ makeFieldsNoPrefix ''CompletionParams
 makeFieldsNoPrefix ''CompletionOptions
 makeFieldsNoPrefix ''CompletionRegistrationOptions
 makeFieldsNoPrefix ''CompletionItemTagsClientCapabilities
+makeFieldsNoPrefix ''CompletionItemInsertTextModeClientCapabilities
 makeFieldsNoPrefix ''CompletionItemClientCapabilities
 makeFieldsNoPrefix ''CompletionItemKindClientCapabilities
 makeFieldsNoPrefix ''CompletionClientCapabilities

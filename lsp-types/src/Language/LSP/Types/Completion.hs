@@ -119,6 +119,45 @@ data CompletionItemTagsClientCapabilities =
 
 deriveJSON lspOptions ''CompletionItemTagsClientCapabilities
 
+{-|
+How whitespace and indentation is handled during completion
+item insertion.
+
+@since 3.16.0
+-}
+data InsertTextMode =
+  -- | The insertion or replace strings is taken as it is. If the
+  -- value is multi line the lines below the cursor will be
+  -- inserted using the indentation defined in the string value.
+  -- The client will not apply any kind of adjustments to the
+  -- string.
+  AsIs
+  -- | The editor adjusts leading whitespace of new lines so that
+  -- they match the indentation up to the cursor of the line for
+  -- which the item is accepted.
+  --
+  -- Consider a line like this: <2tabs><cursor><3tabs>foo. Accepting a
+  -- multi line completion item is indented using 2 tabs and all
+  -- following lines inserted will be indented using 2 tabs as well.
+  | AdjustIndentation
+  deriving (Read,Show,Eq)
+
+instance A.ToJSON InsertTextMode where
+  toJSON AsIs              = A.Number 1
+  toJSON AdjustIndentation = A.Number 2
+
+instance A.FromJSON InsertTextMode where
+  parseJSON (A.Number 1) = pure AsIs
+  parseJSON (A.Number 2) = pure AdjustIndentation
+  parseJSON _          = mempty
+
+data CompletionItemInsertTextModeClientCapabilities =
+  CompletionItemInsertTextModeClientCapabilities
+    { _valueSet :: List InsertTextMode
+    } deriving (Show, Read, Eq)
+
+deriveJSON lspOptions ''CompletionItemInsertTextModeClientCapabilities
+
 data CompletionItemClientCapabilities =
   CompletionItemClientCapabilities
     { -- | Client supports snippets as insert text.
@@ -154,6 +193,12 @@ data CompletionItemClientCapabilities =
       --
       -- @since 3.16.0
     , _insertReplaceSupport :: Maybe Bool
+      -- | The client supports the `insertTextMode` property on
+      -- a completion item to override the whitespace handling mode
+      -- as defined by the client (see `insertTextMode`).
+      --
+      -- @since 3.16.0
+    , _insertTextModeSupport :: Maybe CompletionItemInsertTextModeClientCapabilities
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''CompletionItemClientCapabilities
@@ -266,6 +311,10 @@ data CompletionItem =
          -- ^ The format of the insert text. The format applies to both the
          -- `insertText` property and the `newText` property of a provided
          -- `textEdit`.
+    , _insertTextMode      :: Maybe InsertTextMode
+         -- ^ How whitespace and indentation is handled during completion
+         -- item insertion. If not provided the client's default value depends on
+         -- the @textDocument.completion.insertTextMode@ client capability.
     , _textEdit            :: Maybe CompletionEdit
          -- ^ An edit which is applied to a document when selecting this
          -- completion. When an edit is provided the value of `insertText` is
