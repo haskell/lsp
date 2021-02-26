@@ -115,6 +115,7 @@ makeFieldsNoPrefix ''LocationLink
 makeFieldsNoPrefix ''MarkupContent
 
 -- Completion
+makeFieldsNoPrefix ''InsertReplaceEdit
 makeFieldsNoPrefix ''CompletionItem
 makeFieldsNoPrefix ''CompletionContext
 makeFieldsNoPrefix ''CompletionList

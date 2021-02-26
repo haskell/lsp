@@ -140,6 +140,7 @@ capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) (Jus
       (Just True)
       (since 3 9 True)
       (since 3 15 completionItemTagsCapabilities)
+      (since 3 16 True)
 
     completionItemKindCapabilities =
       CompletionItemKindClientCapabilities (Just ciKs)

@@ -15,6 +15,7 @@ import           Language.LSP.Types.Progress
 import           Language.LSP.Types.TextDocument
 import           Language.LSP.Types.Utils
 import           Language.LSP.Types.WorkspaceEdit
+import           Language.LSP.Types.Location (Range)
 
 data CompletionItemKind = CiText
                         | CiMethod
@@ -145,7 +146,14 @@ data CompletionItemClientCapabilities =
       -- supporting tags have to handle unknown tags gracefully. Clients
       -- especially need to preserve unknown tags when sending a
       -- completion item back to the server in a resolve call.
+      --
+      -- @since 3.15.0
     , _tagSupport :: Maybe CompletionItemTagsClientCapabilities
+      -- | Client supports insert replace edit to control different behavior if
+      -- completion item is inserted in the text or should replace text.
+      --
+      -- @since 3.16.0
+    , _insertReplaceSupport :: Maybe Bool
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''CompletionItemClientCapabilities
@@ -208,6 +216,25 @@ instance A.ToJSON CompletionDoc where
 instance A.FromJSON CompletionDoc where
   parseJSON x = CompletionDocString <$> A.parseJSON x <|> CompletionDocMarkup <$> A.parseJSON x
 
+data InsertReplaceEdit =
+  InsertReplaceEdit
+    { _newText :: Text -- ^ The string to be inserted.
+    , _insert  :: Range -- ^ The range if the insert is requested
+    , _repalce :: Range -- ^ The range if the replace is requested.
+    }
+  deriving (Read,Show,Eq)
+deriveJSON lspOptions ''InsertReplaceEdit
+
+data CompletionEdit = CompletionEditText TextEdit | CompletionEditInsertReplace InsertReplaceEdit
+  deriving (Read,Show,Eq)
+
+instance A.ToJSON CompletionEdit where
+  toJSON (CompletionEditText te)          = A.toJSON te
+  toJSON (CompletionEditInsertReplace ir) = A.toJSON ir
+
+instance A.FromJSON CompletionEdit where
+  parseJSON x = CompletionEditText <$> A.parseJSON x <|> CompletionEditInsertReplace <$> A.parseJSON x
+
 data CompletionItem =
   CompletionItem
     { _label               :: Text -- ^ The label of this completion item. By default also
@@ -239,7 +266,7 @@ data CompletionItem =
          -- ^ The format of the insert text. The format applies to both the
          -- `insertText` property and the `newText` property of a provided
          -- `textEdit`.
-    , _textEdit            :: Maybe TextEdit
+    , _textEdit            :: Maybe CompletionEdit
          -- ^ An edit which is applied to a document when selecting this
          -- completion. When an edit is provided the value of `insertText` is
          -- ignored.
