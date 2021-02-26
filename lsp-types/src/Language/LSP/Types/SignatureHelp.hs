@@ -34,6 +34,10 @@ data SignatureHelpSignatureInformation =
       _documentationFormat :: Maybe (List MarkupKind)
       -- | Client capabilities specific to parameter information.
     , _parameterInformation :: Maybe SignatureHelpParameterInformation
+      -- | The client supports the `activeParameter` property on
+      -- 'SignatureInformation' literal.
+      -- @since 3.16.0
+    , _activeParameterSuport :: Maybe Bool
     }
   deriving (Show, Read, Eq)
 
@@ -96,9 +100,10 @@ deriveJSON lspOptions ''ParameterInformation
 
 data SignatureInformation =
   SignatureInformation
-    { _label         :: Text
-    , _documentation :: Maybe Text
-    , _parameters    :: Maybe (List ParameterInformation)
+    { _label           :: Text
+    , _documentation   :: Maybe SignatureHelpDoc
+    , _parameters      :: Maybe (List ParameterInformation)
+    , _activeParameter :: Maybe Int -- ^ The index of the active parameter.
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''SignatureInformation
