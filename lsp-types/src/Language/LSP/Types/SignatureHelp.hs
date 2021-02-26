@@ -109,39 +109,57 @@ instance FromJSON ParameterLabel where
 
 -- -------------------------------------
 
+{-| 
+Represents a parameter of a callable-signature. A parameter can
+have a label and a doc-comment.
+-}
 data ParameterInformation =
   ParameterInformation
-    { _label         :: ParameterLabel
-    , _documentation :: Maybe SignatureHelpDoc
+    { _label         :: ParameterLabel -- ^ The label of this parameter information.
+    , _documentation :: Maybe SignatureHelpDoc -- ^ The human-readable doc-comment of this parameter.
     } deriving (Read,Show,Eq)
 deriveJSON lspOptions ''ParameterInformation
 
 -- -------------------------------------
 
+{-|
+Represents the signature of something callable. A signature
+can have a label, like a function-name, a doc-comment, and
+a set of parameters.
+-}
 data SignatureInformation =
   SignatureInformation
-    { _label           :: Text
-    , _documentation   :: Maybe SignatureHelpDoc
-    , _parameters      :: Maybe (List ParameterInformation)
+    { _label           :: Text -- ^ The label of the signature.
+    , _documentation   :: Maybe SignatureHelpDoc -- ^ The human-readable doc-comment of this signature.
+    , _parameters      :: Maybe (List ParameterInformation) -- ^ The parameters of this signature.
     , _activeParameter :: Maybe Int -- ^ The index of the active parameter.
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''SignatureInformation
 
+
+{-|
+Signature help represents the signature of something
+callable. There can be multiple signature but only one
+active and only one active parameter.
+-}
 data SignatureHelp =
   SignatureHelp
-    { _signatures      :: List SignatureInformation
-    , _activeSignature :: Maybe Int -- ^ The active signature
-    , _activeParameter :: Maybe Int -- ^ The active parameter of the active signature
+    { _signatures      :: List SignatureInformation -- ^ One or more signatures.
+    , _activeSignature :: Maybe Int -- ^ The active signature.
+    , _activeParameter :: Maybe Int -- ^ The active parameter of the active signature.
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''SignatureHelp
 
 -- -------------------------------------
 
-data SignatureHelpTriggerKind = SHTKInvoked
-                              | SHTKTriggerCharacter
-                              | SHTKContentChange
+-- | How a signature help was triggered.
+--
+-- @since 3.15.0
+data SignatureHelpTriggerKind = SHTKInvoked -- ^ Signature help was invoked manually by the user or by a command.
+                              | SHTKTriggerCharacter -- ^ Signature help was triggered by a trigger character.
+                              | SHTKContentChange -- ^ Signature help was triggered by the cursor moving or by the document content changing.
   deriving (Read,Show,Eq)
 
 instance ToJSON SignatureHelpTriggerKind where
@@ -157,6 +175,8 @@ instance FromJSON SignatureHelpTriggerKind where
 
 -- | Additional information about the context in which a signature help request
 -- was triggered.
+--
+-- @since 3.15.0
 data SignatureHelpContext = 
   SignatureHelpContext
     { -- | Action that caused signature help to be triggered.
