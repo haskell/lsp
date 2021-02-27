@@ -83,16 +83,21 @@ satisfyMaybeM pred = do
   
   skipTimeout <- overridingTimeout <$> get
   timeoutId <- getCurTimeoutId
-  unless skipTimeout $ do
-    chan <- asks messageChan
-    timeout <- asks (messageTimeout . config)
-    void $ liftIO $ forkIO $ do
-      threadDelay (timeout * 1000000)
-      writeChan chan (TimeoutMessage timeoutId)
+  mtid <-
+    if skipTimeout
+    then pure Nothing
+    else Just <$> do
+      chan <- asks messageChan
+      timeout <- asks (messageTimeout . config)
+      liftIO $ forkIO $ do
+        threadDelay (timeout * 1000000)
+        writeChan chan (TimeoutMessage timeoutId)
 
   x <- Session await
 
-  unless skipTimeout (bumpTimeoutId timeoutId)
+  forM_ mtid $ \tid -> do
+    bumpTimeoutId timeoutId
+    liftIO $ killThread tid
 
   modify $ \s -> s { lastReceivedMessage = Just x }
 
