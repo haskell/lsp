@@ -9,7 +9,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ghc: ['8.10.2', '8.8.3', '8.6.5', '8.4.4']
+        ghc: ['8.10.4', '8.8.3', '8.6.5', '8.4.4']
         os: [ubuntu-latest, macOS-latest, windows-latest]
         exclude:
           - os: windows-latest
@@ -38,5 +38,7 @@ jobs:
       run: cabal build
     - name: Test
       run: cabal test
-    - name: Func tests
-      run: cabal run func-test
+    - name: Func test
+      run: cabal test func-test
+    - name: Test lsp-test
+      run: cabal test lsp-test

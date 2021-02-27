@@ -15,7 +15,7 @@ license:             BSD3
 license-file:        LICENSE
 author:              Luke Lau
 maintainer:          luke_lau@icloud.com
-bug-reports:         https://github.com/bubba/lsp-test/issues
+bug-reports:         https://github.com/alanz/lsp/issues
 copyright:           2021 Luke Lau
 category:            Testing
 build-type:          Simple
@@ -26,12 +26,7 @@ tested-with:         GHC == 8.4.4, GHC == 8.6.5, GHC == 8.8.3, GHC == 8.10.1, GH
 
 source-repository head
   type:     git
-  location: https://github.com/bubba/lsp-test/
-
-Flag DummyServer
-  Description: Build the dummy server executable used in testing
-  Default:     False
-  Manual:      True
+  location: https://github.com/alanz/lsp
 
 library
   hs-source-dirs:      src
@@ -77,32 +72,16 @@ library
                        Language.LSP.Test.Session
   ghc-options:         -W
 
-executable dummy-server
-  main-is:             Main.hs
-  hs-source-dirs:      test/dummy-server
-  ghc-options:         -W
-  build-depends:       base >= 4.11 && < 5
-                     , lsp == 1.1.*
-                     , aeson
-                     , unordered-containers
-                     , directory
-                     , filepath
-                     , unliftio
-                     , mtl
-  default-language:    Haskell2010
-  scope:               private
-  if !flag(DummyServer)
-    buildable:         False
-
 test-suite tests
   type:                exitcode-stdio-1.0
   main-is:             Test.hs
+  other-modules:       DummyServer
   hs-source-dirs:      test
   ghc-options:         -W
   build-depends:       base >= 4.10 && < 5
                      , hspec
                      , lens
-                     , lsp-types == 1.1.*
+                     , lsp == 1.1.*
                      , lsp-test
                      , data-default
                      , aeson
@@ -110,5 +89,8 @@ test-suite tests
                      , text
                      , directory
                      , filepath
+                     , unliftio
+                     , process
+                     , mtl
+                     , aeson
   default-language:    Haskell2010
-  build-tool-depends:  lsp-test:dummy-server

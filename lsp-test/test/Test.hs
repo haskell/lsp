@@ -5,6 +5,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DeriveAnyClass #-}
 
+import DummyServer
 import           Test.Hspec
 import           Data.Aeson
 import           Data.Default
@@ -12,11 +13,12 @@ import qualified Data.HashMap.Strict as HM
 import           Data.Either
 import           Data.Maybe
 import qualified Data.Text as T
+import           Data.Type.Equality
 import           Control.Applicative.Combinators
 import           Control.Concurrent
 import           Control.Monad.IO.Class
 import           Control.Monad
-import           Control.Lens hiding (List)
+import           Control.Lens hiding (List, Iso)
 import           Language.LSP.Test
 import           Language.LSP.Types
 import           Language.LSP.Types.Lens hiding
@@ -26,30 +28,30 @@ import           Language.LSP.Types.Capabilities as LSP
 import           System.Directory
 import           System.FilePath
 import           System.Timeout
-import Data.Type.Equality
+
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
 {-# ANN module ("HLint: ignore Unnecessary hiding" :: String) #-}
 
 
-main = findServer >>= \serverExe -> hspec $ do
+main = hspec $ around withDummyServer $ do
   describe "Session" $ do
-    it "fails a test" $ do
-      let session = runSession serverExe fullCaps "test/data/renamePass" $ do
-                      openDoc "Desktop/simple.hs" "haskell"
+    it "fails a test" $ \(hin, hout) ->
+      let session = runSessionWithHandles hin hout def fullCaps "." $ do
+                      openDoc "test/data/renamePass/Desktop/simple.hs" "haskell"
                       anyRequest
         in session `shouldThrow` anySessionException
-    it "initializeResponse" $ runSession serverExe fullCaps "test/data/renamePass" $ do
+    it "initializeResponse" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "." $ do
       rsp <- initializeResponse
       liftIO $ rsp ^. result `shouldSatisfy` isRight
 
-    it "runSessionWithConfig" $
-      runSession serverExe didChangeCaps "test/data/renamePass" $ return ()
+    it "runSessionWithConfig" $ \(hin, hout) ->
+      runSessionWithHandles hin hout def didChangeCaps "." $ return ()
 
     describe "withTimeout" $ do
-      it "times out" $
-        let sesh = runSession serverExe fullCaps "test/data/renamePass" $ do
-                    openDoc "Desktop/simple.hs" "haskell"
+      it "times out" $ \(hin, hout) ->
+        let sesh = runSessionWithHandles hin hout def fullCaps "." $ do
+                    openDoc "test/data/renamePass/Desktop/simple.hs" "haskell"
                     -- won't receive a request - will timeout
                     -- incoming logging requests shouldn't increase the
                     -- timeout
@@ -58,36 +60,37 @@ main = findServer >>= \serverExe -> hspec $ do
           -- to open the document
           in timeout 6000000 sesh `shouldThrow` anySessionException
 
-      it "doesn't time out" $
-        let sesh = runSession serverExe fullCaps "test/data/renamePass" $ do
-                    openDoc "Desktop/simple.hs" "haskell"
+      it "doesn't time out" $ \(hin, hout) ->
+        let sesh = runSessionWithHandles hin hout def fullCaps "." $ do
+                    openDoc "test/data/renamePass/Desktop/simple.hs" "haskell"
                     withTimeout 5 $ skipManyTill anyMessage publishDiagnosticsNotification
           in void $ timeout 6000000 sesh
 
-      it "further timeout messages are ignored" $ runSession serverExe fullCaps "test/data/renamePass" $ do
-        doc <- openDoc "Desktop/simple.hs" "haskell"
-        -- shouldn't timeout
-        withTimeout 3 $ getDocumentSymbols doc
-        -- longer than the original timeout
-        liftIO $ threadDelay (5 * 10^6)
-        -- shouldn't throw an exception
-        getDocumentSymbols doc
-        return ()
+      it "further timeout messages are ignored" $ \(hin, hout) ->
+        runSessionWithHandles hin hout def fullCaps "." $ do
+          doc <- openDoc "test/data/renamePass/Desktop/simple.hs" "haskell"
+          -- shouldn't timeout
+          withTimeout 3 $ getDocumentSymbols doc
+          -- longer than the original timeout
+          liftIO $ threadDelay (5 * 10^6)
+          -- shouldn't throw an exception
+          getDocumentSymbols doc
+          return ()
 
-      it "overrides global message timeout" $
+      it "overrides global message timeout" $ \(hin, hout) ->
         let sesh =
-              runSessionWithConfig (def { messageTimeout = 5 }) serverExe fullCaps "test/data/renamePass" $ do
-                doc <- openDoc "Desktop/simple.hs" "haskell"
+              runSessionWithHandles hin hout (def { messageTimeout = 5 }) fullCaps "." $ do
+                doc <- openDoc "test/data/renamePass/Desktop/simple.hs" "haskell"
                 -- shouldn't time out in here since we are overriding it
                 withTimeout 10 $ liftIO $ threadDelay 7000000
                 getDocumentSymbols doc
                 return True
         in sesh `shouldReturn` True
 
-      it "unoverrides global message timeout" $
+      it "unoverrides global message timeout" $ \(hin, hout) ->
         let sesh =
-              runSessionWithConfig (def { messageTimeout = 5 }) serverExe fullCaps "test/data/renamePass" $ do
-                doc <- openDoc "Desktop/simple.hs" "haskell"
+              runSessionWithHandles hin hout (def { messageTimeout = 5 }) fullCaps "." $ do
+                doc <- openDoc "test/data/renamePass/Desktop/simple.hs" "haskell"
                 -- shouldn't time out in here since we are overriding it
                 withTimeout 10 $ liftIO $ threadDelay 7000000
                 getDocumentSymbols doc
@@ -99,39 +102,40 @@ main = findServer >>= \serverExe -> hspec $ do
 
 
     describe "SessionException" $ do
-      it "throw on time out" $
-        let sesh = runSessionWithConfig (def {messageTimeout = 10}) serverExe fullCaps "test/data/renamePass" $ do
+      it "throw on time out" $ \(hin, hout) ->
+        let sesh = runSessionWithHandles hin hout (def {messageTimeout = 10}) fullCaps "." $ do
                 skipMany loggingNotification
                 _ <- message SWorkspaceApplyEdit
                 return ()
         in sesh `shouldThrow` anySessionException
 
-      it "don't throw when no time out" $ runSessionWithConfig (def {messageTimeout = 5}) serverExe fullCaps "test/data/renamePass" $ do
-        loggingNotification
-        liftIO $ threadDelay $ 6 * 1000000
-        _ <- openDoc "Desktop/simple.hs" "haskell"
-        return ()
+      it "don't throw when no time out" $ \(hin, hout) ->
+        runSessionWithHandles hin hout (def {messageTimeout = 5}) fullCaps "." $ do
+          loggingNotification
+          liftIO $ threadDelay $ 6 * 1000000
+          _ <- openDoc "test/data/renamePass/Desktop/simple.hs" "haskell"
+          return ()
 
       describe "UnexpectedMessageException" $ do
-        it "throws when there's an unexpected message" $
+        it "throws when there's an unexpected message" $ \(hin, hout) ->
           let selector (UnexpectedMessage "Publish diagnostics notification" (FromServerMess SWindowLogMessage _)) = True
               selector _ = False
-            in runSession serverExe fullCaps "test/data/renamePass" publishDiagnosticsNotification `shouldThrow` selector
-        it "provides the correct types that were expected and received" $
+            in runSessionWithHandles hin hout def fullCaps "." publishDiagnosticsNotification `shouldThrow` selector
+        it "provides the correct types that were expected and received" $ \(hin, hout) ->
           let selector (UnexpectedMessage "Response for: STextDocumentRename" (FromServerRsp STextDocumentDocumentSymbol _)) = True
               selector _ = False
               sesh = do
-                doc <- openDoc "Desktop/simple.hs" "haskell"
+                doc <- openDoc "test/data/renamePass/Desktop/simple.hs" "haskell"
                 sendRequest STextDocumentDocumentSymbol (DocumentSymbolParams Nothing Nothing doc)
                 skipMany anyNotification
                 response STextDocumentRename -- the wrong type
-            in runSession serverExe fullCaps "test/data/renamePass" sesh
+            in runSessionWithHandles hin hout def fullCaps "." sesh
               `shouldThrow` selector
 
   describe "text document VFS" $
-    it "sends back didChange notifications" $
-      runSession serverExe def "test/data/refactor" $ do
-        doc <- openDoc "Main.hs" "haskell"
+    it "sends back didChange notifications" $ \(hin, hout) ->
+      runSessionWithHandles hin hout def fullCaps "." $ do
+        doc <- openDoc "test/data/refactor/Main.hs" "haskell"
 
         let args = toJSON (doc ^. uri)
             reqParams = ExecuteCommandParams Nothing "doAnEdit" (Just (List [args]))
@@ -147,9 +151,9 @@ main = findServer >>= \serverExe -> hspec $ do
         liftIO $ contents `shouldBe` "howdy:: IO Int\nmain = return (42)\n"
 
   describe "getDocumentEdit" $
-    it "automatically consumes applyedit requests" $
-      runSession serverExe fullCaps "test/data/refactor" $ do
-        doc <- openDoc "Main.hs" "haskell"
+    it "automatically consumes applyedit requests" $ \(hin, hout) ->
+      runSessionWithHandles hin hout def fullCaps "." $ do
+        doc <- openDoc "test/data/refactor/Main.hs" "haskell"
 
         let args = toJSON (doc ^. uri)
             reqParams = ExecuteCommandParams Nothing "doAnEdit" (Just (List [args]))
@@ -158,8 +162,8 @@ main = findServer >>= \serverExe -> hspec $ do
         liftIO $ contents `shouldBe` "howdy:: IO Int\nmain = return (42)\n"
 
   describe "getCodeActions" $
-    it "works" $ runSession serverExe fullCaps "test/data/refactor" $ do
-      doc <- openDoc "Main.hs" "haskell"
+    it "works" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "." $ do
+      doc <- openDoc "test/data/refactor/Main.hs" "haskell"
       waitForDiagnostics
       [InR action] <- getCodeActions doc (Range (Position 0 0) (Position 0 2))
       actions <- getCodeActions doc (Range (Position 1 14) (Position 1 18))
@@ -167,8 +171,8 @@ main = findServer >>= \serverExe -> hspec $ do
       liftIO $ actions `shouldSatisfy` null
 
   describe "getAllCodeActions" $
-    it "works" $ runSession serverExe fullCaps "test/data/refactor" $ do
-      doc <- openDoc "Main.hs" "haskell"
+    it "works" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "." $ do
+      doc <- openDoc "test/data/refactor/Main.hs" "haskell"
       _ <- waitForDiagnostics
       actions <- getAllCodeActions doc
       liftIO $ do
@@ -177,8 +181,8 @@ main = findServer >>= \serverExe -> hspec $ do
         action ^. command . _Just . command  `shouldBe` "deleteThis"
 
   describe "getDocumentSymbols" $
-    it "works" $ runSession serverExe fullCaps "test/data/renamePass" $ do
-      doc <- openDoc "Desktop/simple.hs" "haskell"
+    it "works" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "." $ do
+      doc <- openDoc "test/data/renamePass/Desktop/simple.hs" "haskell"
 
       skipMany loggingNotification
 
@@ -190,30 +194,30 @@ main = findServer >>= \serverExe -> hspec $ do
         mainSymbol ^. range `shouldBe` mkRange 0 0 3 6
 
   describe "applyEdit" $ do
-    it "increments the version" $ runSession serverExe docChangesCaps "test/data/renamePass" $ do
-      doc <- openDoc "Desktop/simple.hs" "haskell"
+    it "increments the version" $ \(hin, hout) -> runSessionWithHandles hin hout def docChangesCaps "." $ do
+      doc <- openDoc "test/data/renamePass/Desktop/simple.hs" "haskell"
       VersionedTextDocumentIdentifier _ (Just oldVersion) <- getVersionedDoc doc
       let edit = TextEdit (Range (Position 1 1) (Position 1 3)) "foo"
       VersionedTextDocumentIdentifier _ (Just newVersion) <- applyEdit doc edit
       liftIO $ newVersion `shouldBe` oldVersion + 1
-    it "changes the document contents" $ runSession serverExe fullCaps "test/data/renamePass" $ do
-      doc <- openDoc "Desktop/simple.hs" "haskell"
+    it "changes the document contents" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "." $ do
+      doc <- openDoc "test/data/renamePass/Desktop/simple.hs" "haskell"
       let edit = TextEdit (Range (Position 0 0) (Position 0 2)) "foo"
       applyEdit doc edit
       contents <- documentContents doc
       liftIO $ contents `shouldSatisfy` T.isPrefixOf "foodule"
 
   describe "getCompletions" $
-    it "works" $ runSession serverExe def "test/data/renamePass" $ do
-      doc <- openDoc "Desktop/simple.hs" "haskell"
+    it "works" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "." $ do
+      doc <- openDoc "test/data/renamePass/Desktop/simple.hs" "haskell"
 
       comps <- getCompletions doc (Position 5 5)
       let item = head comps
       liftIO $ item ^. label `shouldBe` "foo"
 
   -- describe "getReferences" $
-  --   it "works" $ runSession serverExe fullCaps "test/data/renamePass" $ do
-  --     doc <- openDoc "Desktop/simple.hs" "haskell"
+  --   it "works" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "." $ do
+  --     doc <- openDoc "test/data/renamePass/Desktop/simple.hs" "haskell"
   --     let pos = Position 40 3 -- interactWithUser
   --         uri = doc ^. LSP.uri
   --     refs <- getReferences doc pos True
@@ -224,88 +228,88 @@ main = findServer >>= \serverExe -> hspec $ do
   --       ]
 
   -- describe "getDefinitions" $
-  --   it "works" $ runSession serverExe fullCaps "test/data/renamePass" $ do
-  --     doc <- openDoc "Desktop/simple.hs" "haskell"
+  --   it "works" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "." $ do
+  --     doc <- openDoc "test/data/renamePass/Desktop/simple.hs" "haskell"
   --     let pos = Position 49 25 -- addItem
   --     defs <- getDefinitions doc pos
   --     liftIO $ defs `shouldBe` [Location (doc ^. uri) (mkRange 28 0 28 7)]
 
   -- describe "getTypeDefinitions" $
-  --   it "works" $ runSession serverExe fullCaps "test/data/renamePass" $ do
-  --     doc <- openDoc "Desktop/simple.hs" "haskell"
+  --   it "works" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "." $ do
+  --     doc <- openDoc "test/data/renamePass/Desktop/simple.hs" "haskell"
   --     let pos = Position 20 23  -- Quit value
   --     defs <- getTypeDefinitions doc pos
   --     liftIO $ defs `shouldBe` [Location (doc ^. uri) (mkRange 10 0 14 19)]  -- Type definition
 
   describe "waitForDiagnosticsSource" $
-    it "works" $ runSession serverExe fullCaps "test/data" $ do
-      openDoc "Error.hs" "haskell"
+    it "works" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "." $ do
+      openDoc "test/data/Error.hs" "haskell"
       [diag] <- waitForDiagnosticsSource "dummy-server"
       liftIO $ do
         diag ^. severity `shouldBe` Just DsWarning
         diag ^. source `shouldBe` Just "dummy-server"
 
   -- describe "rename" $ do
-  --   it "works" $ pendingWith "HaRe not in hie-bios yet"
+  --   it "works" $ \(hin, hout) -> pendingWith "HaRe not in hie-bios yet"
   --   it "works on javascript" $
-  --     runSession "javascript-typescript-stdio" fullCaps "test/data/javascriptPass" $ do
+  --     runSessionWithHandles hin hout "javascript-typescript-stdio" fullCaps "test/data/javascriptPass" $ do
   --       doc <- openDoc "test.js" "javascript"
   --       rename doc (Position 2 11) "bar"
   --       documentContents doc >>= liftIO . (`shouldContain` "function bar()") . T.unpack
 
   describe "getHover" $
-    it "works" $ runSession serverExe fullCaps "test/data/renamePass" $ do
-      doc <- openDoc "Desktop/simple.hs" "haskell"
+    it "works" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "." $ do
+      doc <- openDoc "test/data/renamePass/Desktop/simple.hs" "haskell"
       hover <- getHover doc (Position 45 9)
       liftIO $ hover `shouldSatisfy` isJust
 
   -- describe "getHighlights" $
-  --   it "works" $ runSession serverExe fullCaps "test/data/renamePass" $ do
-  --     doc <- openDoc "Desktop/simple.hs" "haskell"
+  --   it "works" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "." $ do
+  --     doc <- openDoc "test/data/renamePass/Desktop/simple.hs" "haskell"
   --     skipManyTill loggingNotification $ count 2 noDiagnostics
   --     highlights <- getHighlights doc (Position 27 4) -- addItem
   --     liftIO $ length highlights `shouldBe` 4
 
   -- describe "formatDoc" $
-  --   it "works" $ runSession serverExe fullCaps "test/data" $ do
-  --     doc <- openDoc "Format.hs" "haskell"
+  --   it "works" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "." $ do
+  --     doc <- openDoc "test/data/Format.hs" "haskell"
   --     oldContents <- documentContents doc
   --     formatDoc doc (FormattingOptions 4 True)
   --     documentContents doc >>= liftIO . (`shouldNotBe` oldContents)
 
   -- describe "formatRange" $
-  --   it "works" $ runSession serverExe fullCaps "test/data" $ do
-  --     doc <- openDoc "Format.hs" "haskell"
+  --   it "works" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "." $ do
+  --     doc <- openDoc "test/data/Format.hs" "haskell"
   --     oldContents <- documentContents doc
   --     formatRange doc (FormattingOptions 4 True) (Range (Position 1 10) (Position 2 10))
   --     documentContents doc >>= liftIO . (`shouldNotBe` oldContents)
 
   describe "closeDoc" $
-    it "works" $
+    it "works" $ \(hin, hout) ->
       let sesh =
-            runSession serverExe fullCaps "test/data" $ do
-              doc <- openDoc "Format.hs" "haskell"
+            runSessionWithHandles hin hout def fullCaps "." $ do
+              doc <- openDoc "test/data/Format.hs" "haskell"
               closeDoc doc
               -- need to evaluate to throw
               documentContents doc >>= liftIO . print
       in sesh `shouldThrow` anyException
 
   describe "satisfy" $
-    it "works" $ runSession serverExe fullCaps "test/data" $ do
-      openDoc "Format.hs" "haskell"
+    it "works" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "." $ do
+      openDoc "test/data/Format.hs" "haskell"
       let pred (FromServerMess SWindowLogMessage _) = True
           pred _ = False
       void $ satisfy pred
 
   describe "ignoreLogNotifications" $
-    it "works" $
-      runSessionWithConfig (defaultConfig { ignoreLogNotifications = True }) serverExe  fullCaps "test/data" $ do
-        openDoc "Format.hs" "haskell"
+    it "works" $ \(hin, hout) ->
+      runSessionWithHandles hin hout (def { ignoreLogNotifications = True }) fullCaps "." $ do
+        openDoc "test/data/Format.hs" "haskell"
         void publishDiagnosticsNotification       
 
   describe "dynamic capabilities" $ do
     
-    it "keeps track" $ runSession serverExe fullCaps "test/data" $ do
+    it "keeps track" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "." $ do
       loggingNotification -- initialized log message
 
       createDoc ".register" "haskell" ""
@@ -318,10 +322,10 @@ main = findServer >>= \serverExe -> hspec $ do
       [SomeRegistration (Registration _ regMethod regOpts)] <- getRegisteredCapabilities
       liftIO $ do
         case regMethod `mEqClient` SWorkspaceDidChangeWatchedFiles of
-          Just HRefl ->
+          Just (Right HRefl) ->
             regOpts `shouldBe` (DidChangeWatchedFilesRegistrationOptions $ List
                                 [ FileSystemWatcher "*.watch" (Just (WatchKind True True True)) ])
-          Nothing -> expectationFailure "Registration wasn't on workspace/didChangeWatchedFiles"
+          _ -> expectationFailure "Registration wasn't on workspace/didChangeWatchedFiles"
 
       -- now unregister it by sending a specific createDoc
       createDoc ".unregister" "haskell" ""
@@ -332,7 +336,7 @@ main = findServer >>= \serverExe -> hspec $ do
       count 0 $ loggingNotification
       void $ anyResponse
 
-    it "handles absolute patterns" $ runSession serverExe fullCaps "" $ do
+    it "handles absolute patterns" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "" $ do
       curDir <- liftIO $ getCurrentDirectory
 
       loggingNotification -- initialized log message
@@ -365,25 +369,3 @@ docChangesCaps = def { _workspace = Just workspaceCaps }
   where
     workspaceCaps = def { _workspaceEdit = Just editCaps }
     editCaps = WorkspaceEditClientCapabilities (Just True) Nothing Nothing
-
-
-findExeRecursive :: FilePath -> FilePath -> IO (Maybe FilePath)
-findExeRecursive exe dir = do
-  me <- listToMaybe <$> findExecutablesInDirectories [dir] exe
-  case me of
-    Just e -> return (Just e)
-    Nothing -> do
-      subdirs <- (fmap (dir </>)) <$> listDirectory dir >>= filterM doesDirectoryExist
-      foldM (\acc subdir -> case acc of
-                              Just y -> pure $ Just y
-                              Nothing -> findExeRecursive exe subdir)
-            Nothing
-            subdirs
-
--- | So we can find the dummy-server with cabal run
--- since it doesnt put build tools on the path (only cabal test)
-findServer = do
-  let serverName = "dummy-server"
-  e <- findExecutable serverName
-  e' <- findExeRecursive serverName "dist-newstyle"
-  pure $ fromJust $ e <|> e'

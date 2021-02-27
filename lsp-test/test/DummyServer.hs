@@ -1,5 +1,6 @@
 {-# LANGUAGE TypeInType #-}
 {-# LANGUAGE OverloadedStrings #-}
+module DummyServer where
 
 import Control.Monad
 import Control.Monad.Reader
@@ -7,29 +8,40 @@ import Data.Aeson hiding (defaultOptions)
 import qualified Data.HashMap.Strict as HM
 import Data.List (isSuffixOf)
 import Data.String
+import UnliftIO.Concurrent
 import Language.LSP.Server
-import Language.LSP.Types
+import System.IO
+import UnliftIO
 import System.Directory
 import System.FilePath
-import UnliftIO
-import UnliftIO.Concurrent
-
-main = do
+import System.Process
+import Language.LSP.Types
+  
+withDummyServer :: ((Handle, Handle) -> IO ()) -> IO ()
+withDummyServer f = do
+  (hinRead, hinWrite) <- createPipe
+  (houtRead, houtWrite) <- createPipe
+  
   handlerEnv <- HandlerEnv <$> newEmptyMVar <*> newEmptyMVar
-  runServer $ ServerDefinition
-    { doInitialize = \env _req -> pure $ Right env,
-      onConfigurationChange = const $ pure $ Right (),
-      staticHandlers = handlers,
-      interpretHandler = \env ->
-        Iso
-          (\m -> runLspT env (runReaderT m handlerEnv))
-          liftIO,
-      options = defaultOptions {executeCommandCommands = Just ["doAnEdit"]}
-    }
+  let definition = ServerDefinition
+        { doInitialize = \env _req -> pure $ Right env
+        , defaultConfig = ()
+        , onConfigurationChange = const $ pure $ Right ()
+        , staticHandlers = handlers
+        , interpretHandler = \env ->
+            Iso (\m -> runLspT env (runReaderT m handlerEnv)) liftIO
+        , options = defaultOptions {executeCommandCommands = Just ["doAnEdit"]}
+        }
+
+  bracket
+    (forkIO $ void $ runServerWithHandles hinRead houtWrite definition)
+    killThread
+    (const $ f (hinWrite, houtRead))
+
 
 data HandlerEnv = HandlerEnv
-  { relRegToken :: MVar (RegistrationToken WorkspaceDidChangeWatchedFiles),
-    absRegToken :: MVar (RegistrationToken WorkspaceDidChangeWatchedFiles)
+  { relRegToken :: MVar (RegistrationToken WorkspaceDidChangeWatchedFiles)
+  , absRegToken :: MVar (RegistrationToken WorkspaceDidChangeWatchedFiles)
   }
 
 handlers :: Handlers (ReaderT HandlerEnv (LspM ()))
@@ -156,6 +168,7 @@ handlers =
                 "foo"
                 (Just CiConstant)
                 (Just (List []))
+                Nothing
                 Nothing
                 Nothing
                 Nothing
