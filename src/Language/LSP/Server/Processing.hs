@@ -38,7 +38,7 @@ import System.Log.Logger
 import qualified Data.Dependent.Map as DMap
 import Data.Maybe
 import Data.Dependent.Map (DMap)
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import System.Exit
 
 processMessage :: BSL.ByteString -> LspM config ()
@@ -63,7 +63,7 @@ processMessage jsonStr = do
     handleErrors = either (sendErrorLog . errMsg) id
 
     errMsg err = TL.toStrict $ TL.unwords
-      [ "haskell-lsp:incoming message parse error."
+      [ "lsp:incoming message parse error."
       , TL.decodeUtf8 jsonStr
       , TL.pack err
       ] <> "\n"
@@ -310,7 +310,7 @@ handle' mAction m msg = do
       Nothing
         | SShutdown <- m -> liftIO $ shutdownRequestHandler msg (mkRspCb msg)
         | otherwise -> do
-            let errorMsg = T.pack $ unwords ["haskell-lsp:no handler for: ", show m]
+            let errorMsg = T.pack $ unwords ["lsp:no handler for: ", show m]
                 err = ResponseError MethodNotFound errorMsg Nothing
             sendToClient $
               FromServerRsp (msg ^. LSP.method) $ ResponseMessage "2.0" (Just (msg ^. LSP.id)) (Left err)
@@ -322,7 +322,7 @@ handle' mAction m msg = do
       ReqMess req -> case pickHandler dynReqHandlers reqHandlers of
         Just h -> liftIO $ h req (mkRspCb req)
         Nothing -> do
-          let errorMsg = T.pack $ unwords ["haskell-lsp:no handler for: ", show m]
+          let errorMsg = T.pack $ unwords ["lsp:no handler for: ", show m]
               err = ResponseError MethodNotFound errorMsg Nothing
           sendToClient $
             FromServerRsp (req ^. LSP.method) $ ResponseMessage "2.0" (Just (req ^. LSP.id)) (Left err)
@@ -342,7 +342,7 @@ handle' mAction m msg = do
     reportMissingHandler
       | isOptionalNotification m = return ()
       | otherwise = do
-          let errorMsg = T.pack $ unwords ["haskell-lsp:no handler for: ", show m]
+          let errorMsg = T.pack $ unwords ["lsp:no handler for: ", show m]
           sendErrorLog errorMsg
     isOptionalNotification (SCustomMethod method)
       | "$/" `T.isPrefixOf` method = True
@@ -374,7 +374,7 @@ handleConfigChange req = do
   case res of
     Left err -> do
       let msg = T.pack $ unwords
-            ["haskell-lsp:configuration parse error.", show req, show err]
+            ["lsp:configuration parse error.", show req, show err]
       sendErrorLog msg
     Right () -> pure ()
 
@@ -382,7 +382,7 @@ vfsFunc :: (VFS -> b -> (VFS, [String])) -> b -> LspM config ()
 vfsFunc modifyVfs req = do
   join $ stateState resVFS $ \(VFSData vfs rm) ->
     let (!vfs', ls) = modifyVfs vfs req
-    in (liftIO $ mapM_ (debugM "haskell-lsp.vfsFunc") ls,VFSData vfs' rm)
+    in (liftIO $ mapM_ (debugM "lsp.vfsFunc") ls,VFSData vfs' rm)
 
 -- | Updates the list of workspace folders
 updateWorkspaceFolders :: Message WorkspaceDidChangeWorkspaceFolders -> LspM config ()

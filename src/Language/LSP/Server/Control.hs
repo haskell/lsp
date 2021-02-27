@@ -81,7 +81,7 @@ runServerWith ::
     -> IO Int         -- exit code
 runServerWith clientIn clientOut serverDefinition = do
 
-  infoM "haskell-lsp.runWith" "\n\n\n\n\nhaskell-lsp:Starting up server ..."
+  infoM "lsp.runWith" "\n\n\n\n\nlsp:Starting up server ..."
 
   cout <- atomically newTChan :: IO (TChan J.Value)
   _rhpid <- forkIO $ sendServer cout clientOut
@@ -108,7 +108,7 @@ ioLoop clientIn serverDefinition vfs sendMsg = do
     Just (msg,remainder) -> do
       case J.eitherDecode $ BSL.fromStrict msg of
         Left err ->
-          errorM "haskell-lsp.ioLoop" $
+          errorM "lsp.ioLoop" $
             "Got error while decoding initialize:\n" <> err <> "\n exiting 1 ...\n"
         Right initialize -> do
           mInitResp <- initializeRequestHandler serverDefinition vfs sendMsg initialize
@@ -119,7 +119,7 @@ ioLoop clientIn serverDefinition vfs sendMsg = do
 
     parseOne :: Result BS.ByteString -> IO (Maybe (BS.ByteString,BS.ByteString))
     parseOne (Fail _ ctxs err) = do
-      errorM "haskell-lsp.parseOne" $
+      errorM "lsp.parseOne" $
         "Failed to parse message header:\n" <> intercalate " > " ctxs <> ": " <>
         err <> "\n exiting 1 ...\n"
       pure Nothing
@@ -127,11 +127,11 @@ ioLoop clientIn serverDefinition vfs sendMsg = do
       bs <- clientIn
       if BS.null bs
         then do
-          errorM "haskell-lsp.parseON" "haskell-lsp:Got EOF, exiting 1 ...\n"
+          errorM "lsp.parseON" "lsp:Got EOF, exiting 1 ...\n"
           pure Nothing
         else parseOne (c bs)
     parseOne (Done remainder msg) = do
-      debugM "haskell-lsp.parseOne" $ "---> " <> T.unpack (T.decodeUtf8 msg)
+      debugM "lsp.parseOne" $ "---> " <> T.unpack (T.decodeUtf8 msg)
       pure $ Just (msg,remainder)
 
     loop env = go
@@ -168,7 +168,7 @@ sendServer msgChan clientOut = do
                 , str ]
 
     clientOut out
-    debugM "haskell-lsp.sendServer" $ "<--2--" <> TL.unpack (TL.decodeUtf8 str)
+    debugM "lsp.sendServer" $ "<--2--" <> TL.unpack (TL.decodeUtf8 str)
 
 -- |
 --

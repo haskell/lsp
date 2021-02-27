@@ -12,7 +12,7 @@ import           Data.IxMap
 import Language.LSP.Types.Method
 
 -- | Id used for a request, Can be either a String or an Int
-data LspId (m :: Method f Request) = IdInt Int | IdString Text
+data LspId (m :: Method f Request) = IdInt !Int | IdString !Text
   deriving (Show,Read,Eq,Ord)
 
 instance A.ToJSON (LspId m) where
@@ -25,15 +25,21 @@ instance A.FromJSON (LspId m) where
   parseJSON _              = mempty
 
 instance IxOrd LspId where
-  type Base LspId = Either Int Text
-  toBase (IdInt i) = Left i
-  toBase (IdString s) = Right s
+  type Base LspId = SomeLspId
+  toBase = SomeLspId
 
 data SomeLspId where
-  SomeLspId :: LspId m -> SomeLspId
+  SomeLspId :: !(LspId m) -> SomeLspId
 
 deriving instance Show SomeLspId
 instance Eq SomeLspId where
-  SomeLspId a == SomeLspId b = toBase a == toBase b
+  SomeLspId (IdInt a) == SomeLspId (IdInt b) = a == b
+  SomeLspId (IdString a) == SomeLspId (IdString b) = a == b
+  _ == _ = False
 instance Ord SomeLspId where
-  SomeLspId a `compare` SomeLspId b = toBase a `compare` toBase b
+  compare (SomeLspId x) (SomeLspId y) = go x y
+    where
+      go (IdInt    a) (IdInt    b) = a `compare` b
+      go (IdString a) (IdString b) = a `compare` b
+      go (IdInt    _) (IdString _) = LT
+      go (IdString _) (IdInt    _) = GT

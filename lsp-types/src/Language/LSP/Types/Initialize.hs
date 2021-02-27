@@ -51,8 +51,6 @@ makeExtendingDatatype "InitializeParams" [''WorkDoneProgressParams]
   , ("_workspaceFolders",      [t| Maybe (List WorkspaceFolder) |])
   ]
 
-{-# DEPRECATED _rootPath "Use _rootUri" #-}
-
 deriveJSON lspOptions ''InitializeParams
 
 data InitializeError =
