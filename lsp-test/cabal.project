@@ -1,0 +1,6 @@
+packages: .
+          ./example
+flags: +DummyServer
+test-show-details: direct
+haddock-quickjump: True
+

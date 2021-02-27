@@ -1,0 +1,34 @@
+name: Test
+
+on: [push, pull_request]
+jobs:
+  build:
+
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        ghc: ['8.10.3', '8.8.3', '8.6.5', '8.4.4']
+        os: [ubuntu-latest, macOS-latest, windows-latest]
+        exclude:
+          - os: windows-latest
+            ghc: '8.8.3' # fails due to segfault
+
+    steps:
+    - uses: actions/checkout@v2
+    - uses: haskell/actions/setup@v1
+      with:
+        ghc-version: ${{ matrix.ghc }}
+        cabal-version: '3.2'
+
+    - name: Cache Cabal
+      uses: actions/cache@v1.2.0
+      with:
+        path: ~/.cabal
+        key: ${{ runner.OS }}-${{ matrix.ghc }}-cabal-0
+
+    - name: Build
+      run: cabal build
+    - name: Test
+      run: cabal test

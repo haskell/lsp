@@ -1,0 +1,114 @@
+name:                lsp-test
+version:             0.13.0.0
+synopsis:            Functional test framework for LSP servers.
+description:
+  A test framework for writing tests against
+  <https://microsoft.github.io/language-server-protocol/ Language Server Protocol servers>.
+  @Language.LSP.Test@ launches your server as a subprocess and allows you to simulate a session
+  down to the wire, and @Language.LSP.Test@ can replay captured sessions from
+  <haskell-lsp https://hackage.haskell.org/package/haskell-lsp>.
+  To see examples of it in action, check out <https://github.com/haskell/haskell-ide-engine haskell-ide-engine>,
+  <https://github.com/haskell/haskell-language-server haskell-language-server> and
+  <https://github.com/digital-asset/ghcide ghcide>.
+homepage:            https://github.com/bubba/lsp-test#readme
+license:             BSD3
+license-file:        LICENSE
+author:              Luke Lau
+maintainer:          luke_lau@icloud.com
+bug-reports:         https://github.com/bubba/lsp-test/issues
+copyright:           2021 Luke Lau
+category:            Testing
+build-type:          Simple
+cabal-version:       2.0
+extra-source-files:  README.md
+                   , ChangeLog.md
+tested-with:         GHC == 8.4.4, GHC == 8.6.5, GHC == 8.8.3, GHC == 8.10.1, GHC == 8.10.2
+
+source-repository head
+  type:     git
+  location: https://github.com/bubba/lsp-test/
+
+Flag DummyServer
+  Description: Build the dummy server executable used in testing
+  Default:     False
+  Manual:      True
+
+library
+  hs-source-dirs:      src
+  exposed-modules:     Language.LSP.Test
+  reexported-modules:  lsp-types:Language.LSP.Types
+                     , lsp-types:Language.LSP.Types.Capabilities
+                     , parser-combinators:Control.Applicative.Combinators
+  default-language:    Haskell2010
+  build-depends:       base >= 4.10 && < 5
+                     , lsp-types == 1.1.*
+                     , aeson
+                     , time
+                     , aeson-pretty
+                     , ansi-terminal
+                     , async
+                     , bytestring
+                     , conduit
+                     , conduit-parse == 0.2.*
+                     , containers >= 0.5.9
+                     , data-default
+                     , Diff
+                     , directory
+                     , filepath
+                     , Glob >= 0.9 && < 0.11
+                     , lens
+                     , mtl
+                     , parser-combinators >= 1.2
+                     , process >= 1.6
+                     , text
+                     , transformers
+                     , unordered-containers
+                     , some
+  if os(windows)
+    build-depends:     Win32
+  else
+    build-depends:     unix
+  other-modules:       Language.LSP.Test.Compat
+                       Language.LSP.Test.Decoding
+                       Language.LSP.Test.Exceptions
+                       Language.LSP.Test.Files
+                       Language.LSP.Test.Parsing
+                       Language.LSP.Test.Server
+                       Language.LSP.Test.Session
+  ghc-options:         -W
+
+executable dummy-server
+  main-is:             Main.hs
+  hs-source-dirs:      test/dummy-server
+  ghc-options:         -W
+  build-depends:       base >= 4.11 && < 5
+                     , lsp == 1.1.*
+                     , aeson
+                     , unordered-containers
+                     , directory
+                     , filepath
+                     , unliftio
+                     , mtl
+  default-language:    Haskell2010
+  scope:               private
+  if !flag(DummyServer)
+    buildable:         False
+
+test-suite tests
+  type:                exitcode-stdio-1.0
+  main-is:             Test.hs
+  hs-source-dirs:      test
+  ghc-options:         -W
+  build-depends:       base >= 4.10 && < 5
+                     , hspec
+                     , lens
+                     , lsp-types == 1.1.*
+                     , lsp-test
+                     , data-default
+                     , aeson
+                     , unordered-containers
+                     , text
+                     , directory
+                     , filepath
+  default-language:    Haskell2010
+  build-tool-depends:  lsp-test:dummy-server
