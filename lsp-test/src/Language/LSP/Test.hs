@@ -7,6 +7,7 @@
 {-# LANGUAGE TypeInType #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 
 {-|
 Module      : Language.LSP.Test
@@ -501,7 +502,7 @@ getDocumentSymbols doc = do
 -- | Returns the code actions in the specified range.
 getCodeActions :: TextDocumentIdentifier -> Range -> Session [Command |? CodeAction]
 getCodeActions doc range = do
-  ctx <- getCodeActionContext doc
+  ctx <- getCodeActionContextInRange doc range
   rsp <- request STextDocumentCodeAction (CodeActionParams Nothing Nothing doc range ctx)
 
   case rsp ^. result of
@@ -525,6 +526,26 @@ getAllCodeActions doc = do
       case res of
         Left e -> throw (UnexpectedResponseError (SomeLspId $ fromJust rspLid) e)
         Right (List cmdOrCAs) -> pure (acc ++ cmdOrCAs)
+
+getCodeActionContextInRange :: TextDocumentIdentifier -> Range -> Session CodeActionContext
+getCodeActionContextInRange doc caRange = do
+  curDiags <- getCurrentDiagnostics doc
+  let diags = [ d | d@Diagnostic{_range=range} <- curDiags
+                  , overlappingRange caRange range
+              ]
+  return $ CodeActionContext (List diags) Nothing
+  where
+    overlappingRange :: Range -> Range -> Bool
+    overlappingRange (Range s e) range =
+         positionInRange s range
+      || positionInRange e range
+
+    positionInRange :: Position -> Range -> Bool
+    positionInRange (Position pl po) (Range (Position sl so) (Position el eo)) =
+         pl >  sl && pl <  el
+      || pl == sl && pl == el && po >= so && po <= eo
+      || pl == sl && po >= so
+      || pl == el && po <= eo
 
 getCodeActionContext :: TextDocumentIdentifier -> Session CodeActionContext
 getCodeActionContext doc = do

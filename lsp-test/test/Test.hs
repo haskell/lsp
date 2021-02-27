@@ -161,8 +161,10 @@ main = findServer >>= \serverExe -> hspec $ do
     it "works" $ runSession serverExe fullCaps "test/data/refactor" $ do
       doc <- openDoc "Main.hs" "haskell"
       waitForDiagnostics
-      [InR action] <- getCodeActions doc (Range (Position 1 14) (Position 1 18))
+      [InR action] <- getCodeActions doc (Range (Position 0 0) (Position 0 2))
+      actions <- getCodeActions doc (Range (Position 1 14) (Position 1 18))
       liftIO $ action ^. title `shouldBe` "Delete this"
+      liftIO $ actions `shouldSatisfy` null
 
   describe "getAllCodeActions" $
     it "works" $ runSession serverExe fullCaps "test/data/refactor" $ do
