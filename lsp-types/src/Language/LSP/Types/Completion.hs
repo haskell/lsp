@@ -15,6 +15,7 @@ import           Language.LSP.Types.Progress
 import           Language.LSP.Types.TextDocument
 import           Language.LSP.Types.Utils
 import           Language.LSP.Types.WorkspaceEdit
+import           Language.LSP.Types.Location (Range)
 
 data CompletionItemKind = CiText
                         | CiMethod
@@ -118,6 +119,53 @@ data CompletionItemTagsClientCapabilities =
 
 deriveJSON lspOptions ''CompletionItemTagsClientCapabilities
 
+data CompletionItemResolveClientCapabilities =
+  CompletionItemResolveClientCapabilities
+    { -- | The properties that a client can resolve lazily.
+      _valueSet :: List Text
+    } deriving (Show, Read, Eq)
+
+deriveJSON lspOptions ''CompletionItemResolveClientCapabilities
+
+{-|
+How whitespace and indentation is handled during completion
+item insertion.
+
+@since 3.16.0
+-}
+data InsertTextMode =
+  -- | The insertion or replace strings is taken as it is. If the
+  -- value is multi line the lines below the cursor will be
+  -- inserted using the indentation defined in the string value.
+  -- The client will not apply any kind of adjustments to the
+  -- string.
+  AsIs
+  -- | The editor adjusts leading whitespace of new lines so that
+  -- they match the indentation up to the cursor of the line for
+  -- which the item is accepted.
+  --
+  -- Consider a line like this: <2tabs><cursor><3tabs>foo. Accepting a
+  -- multi line completion item is indented using 2 tabs and all
+  -- following lines inserted will be indented using 2 tabs as well.
+  | AdjustIndentation
+  deriving (Read,Show,Eq)
+
+instance A.ToJSON InsertTextMode where
+  toJSON AsIs              = A.Number 1
+  toJSON AdjustIndentation = A.Number 2
+
+instance A.FromJSON InsertTextMode where
+  parseJSON (A.Number 1) = pure AsIs
+  parseJSON (A.Number 2) = pure AdjustIndentation
+  parseJSON _          = mempty
+
+data CompletionItemInsertTextModeClientCapabilities =
+  CompletionItemInsertTextModeClientCapabilities
+    { _valueSet :: List InsertTextMode
+    } deriving (Show, Read, Eq)
+
+deriveJSON lspOptions ''CompletionItemInsertTextModeClientCapabilities
+
 data CompletionItemClientCapabilities =
   CompletionItemClientCapabilities
     { -- | Client supports snippets as insert text.
@@ -145,7 +193,26 @@ data CompletionItemClientCapabilities =
       -- supporting tags have to handle unknown tags gracefully. Clients
       -- especially need to preserve unknown tags when sending a
       -- completion item back to the server in a resolve call.
+      --
+      -- @since 3.15.0
     , _tagSupport :: Maybe CompletionItemTagsClientCapabilities
+      -- | Client supports insert replace edit to control different behavior if
+      -- completion item is inserted in the text or should replace text.
+      --
+      -- @since 3.16.0
+    , _insertReplaceSupport :: Maybe Bool
+      -- | Indicates which properties a client can resolve lazily on a
+      -- completion item. Before version 3.16.0 only the predefined properties
+      -- `documentation` and `details` could be resolved lazily.
+      --
+      -- @since 3.16.0
+    , _resolveSupport :: Maybe CompletionItemResolveClientCapabilities
+      -- | The client supports the `insertTextMode` property on
+      -- a completion item to override the whitespace handling mode
+      -- as defined by the client (see `insertTextMode`).
+      --
+      -- @since 3.16.0
+    , _insertTextModeSupport :: Maybe CompletionItemInsertTextModeClientCapabilities
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''CompletionItemClientCapabilities
@@ -208,6 +275,25 @@ instance A.ToJSON CompletionDoc where
 instance A.FromJSON CompletionDoc where
   parseJSON x = CompletionDocString <$> A.parseJSON x <|> CompletionDocMarkup <$> A.parseJSON x
 
+data InsertReplaceEdit =
+  InsertReplaceEdit
+    { _newText :: Text -- ^ The string to be inserted.
+    , _insert  :: Range -- ^ The range if the insert is requested
+    , _repalce :: Range -- ^ The range if the replace is requested.
+    }
+  deriving (Read,Show,Eq)
+deriveJSON lspOptions ''InsertReplaceEdit
+
+data CompletionEdit = CompletionEditText TextEdit | CompletionEditInsertReplace InsertReplaceEdit
+  deriving (Read,Show,Eq)
+
+instance A.ToJSON CompletionEdit where
+  toJSON (CompletionEditText te)          = A.toJSON te
+  toJSON (CompletionEditInsertReplace ir) = A.toJSON ir
+
+instance A.FromJSON CompletionEdit where
+  parseJSON x = CompletionEditText <$> A.parseJSON x <|> CompletionEditInsertReplace <$> A.parseJSON x
+
 data CompletionItem =
   CompletionItem
     { _label               :: Text -- ^ The label of this completion item. By default also
@@ -239,7 +325,11 @@ data CompletionItem =
          -- ^ The format of the insert text. The format applies to both the
          -- `insertText` property and the `newText` property of a provided
          -- `textEdit`.
-    , _textEdit            :: Maybe TextEdit
+    , _insertTextMode      :: Maybe InsertTextMode
+         -- ^ How whitespace and indentation is handled during completion
+         -- item insertion. If not provided the client's default value depends on
+         -- the @textDocument.completion.insertTextMode@ client capability.
+    , _textEdit            :: Maybe CompletionEdit
          -- ^ An edit which is applied to a document when selecting this
          -- completion. When an edit is provided the value of `insertText` is
          -- ignored.
