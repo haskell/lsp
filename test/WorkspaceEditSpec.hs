@@ -16,6 +16,9 @@ spec = do
     it "edits a multiline text" $
       let te = TextEdit (Range (Position 1 0) (Position 2 0)) "slorem"
         in applyTextEdit te "lorem\nipsum\ndolor" `shouldBe` "lorem\nsloremdolor"
+    it "inserts text past the last line" $
+      let te = TextEdit (Range (Position 3 2) (Position 3 2)) "foo"
+        in applyTextEdit te "lorem\nipsum\ndolor" `shouldBe` "lorem\nipsum\ndolorfoo"
 
   describe "editTextEdit" $
     it "edits a multiline text edit" $
