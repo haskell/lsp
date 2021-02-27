@@ -48,6 +48,7 @@ library
                      , Language.LSP.Types.MarkupContent
                      , Language.LSP.Types.Method
                      , Language.LSP.Types.Message
+                     , Language.LSP.Types.Parsing
                      , Language.LSP.Types.Progress
                      , Language.LSP.Types.Registration
                      , Language.LSP.Types.References
