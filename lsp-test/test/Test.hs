@@ -118,7 +118,7 @@ main = findServer >>= \serverExe -> hspec $ do
               selector _ = False
             in runSession serverExe fullCaps "test/data/renamePass" publishDiagnosticsNotification `shouldThrow` selector
         it "provides the correct types that were expected and received" $
-          let selector (UnexpectedMessage "STextDocumentRename" (FromServerRsp STextDocumentDocumentSymbol _)) = True
+          let selector (UnexpectedMessage "Response for: STextDocumentRename" (FromServerRsp STextDocumentDocumentSymbol _)) = True
               selector _ = False
               sesh = do
                 doc <- openDoc "Desktop/simple.hs" "haskell"
