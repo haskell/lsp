@@ -1,16 +1,14 @@
 packages:
          ./
          ./lsp-types/
-         ./func-test
+         ./lsp-test/
+         ./lsp-test/example
+         ./func-test/
          ./bench/
 
 package lsp
   flags: +demo
 
-source-repository-package
-    type: git
-    location: https://github.com/bubba/lsp-test.git
-    tag: 55ae6885312a90117aab35acdfc470790f30cfca
-
 tests: True
 test-show-details: direct
+haddock-quickjump: True

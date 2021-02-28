@@ -273,7 +273,7 @@ splitServerMethod SCustomMethod{} = IsServerEither
 -- | Given a witness that two custom methods are of the same type, produce a witness that the methods are the same
 data CustomEq m1 m2 where
   CustomEq
-    :: (m1 ~ CustomMethod @f @t1, m2 ~ CustomMethod @f @t2)
+    :: (m1 ~ (CustomMethod :: Method f t1), m2 ~ (CustomMethod :: Method f t2))
     => { runCustomEq :: (t1 ~ t2 => m1 :~~: m2) }
     -> CustomEq m1 m2
 
