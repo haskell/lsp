@@ -197,7 +197,7 @@ type family ResponseResult (m :: Method f Request) :: Type where
 -- Server
   -- Window
   ResponseResult WindowShowMessageRequest      = Maybe MessageActionItem
-  ResponseResult WindowWorkDoneProgressCreate  = ()
+  ResponseResult WindowWorkDoneProgressCreate  = Empty
   -- Capability
   ResponseResult ClientRegisterCapability      = Empty
   ResponseResult ClientUnregisterCapability    = Empty
