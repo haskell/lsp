@@ -620,7 +620,7 @@ withProgressBase indefinite title cancellable f = do
             -- An error ocurred when the client was setting it up
             -- No need to do anything then, as per the spec
             Left _err -> pure ()
-            Right () -> pure ()
+            Right Empty -> pure ()
 
   -- Send the begin and done notifications via 'bracket_' so that they are always fired
   res <- withRunInIO $ \runInBase ->

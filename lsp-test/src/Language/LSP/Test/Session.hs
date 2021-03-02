@@ -38,7 +38,7 @@ where
 import Control.Applicative
 import Control.Concurrent hiding (yield)
 import Control.Exception
-import Control.Lens hiding (List)
+import Control.Lens hiding (List, Empty)
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Except
@@ -304,7 +304,7 @@ updateStateC = awaitForever $ \msg -> do
   where
     respond :: (MonadIO m, HasReader SessionContext m) => FromServerMessage -> m ()
     respond (FromServerMess SWindowWorkDoneProgressCreate req) =
-      sendMessage $ ResponseMessage "2.0" (Just $ req ^. LSP.id) (Right ())
+      sendMessage $ ResponseMessage "2.0" (Just $ req ^. LSP.id) (Right Empty)
     respond (FromServerMess SWorkspaceApplyEdit r) = do
       sendMessage $ ResponseMessage "2.0" (Just $ r ^. LSP.id) (Right $ ApplyWorkspaceEditResponseBody True Nothing)
     respond _ = pure ()
