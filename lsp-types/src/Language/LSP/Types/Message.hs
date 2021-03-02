@@ -197,7 +197,7 @@ type family ResponseResult (m :: Method f Request) :: Type where
 -- Server
   -- Window
   ResponseResult WindowShowMessageRequest      = Maybe MessageActionItem
-  ResponseResult WindowWorkDoneProgressCreate  = ()
+  ResponseResult WindowWorkDoneProgressCreate  = Empty
   -- Capability
   ResponseResult ClientRegisterCapability      = Empty
   ResponseResult ClientUnregisterCapability    = Empty
@@ -233,7 +233,7 @@ deriving instance Eq   (MessageParams m) => Eq (NotificationMessage m)
 deriving instance Show (MessageParams m) => Show (NotificationMessage m)
 
 instance (FromJSON (MessageParams m), FromJSON (SMethod m)) => FromJSON (NotificationMessage m) where
-  parseJSON = genericParseJSON lspOptions
+  parseJSON = genericParseJSON lspOptions . addNullField "params"
 instance (ToJSON (MessageParams m)) => ToJSON (NotificationMessage m) where
   toJSON     = genericToJSON lspOptions
   toEncoding = genericToEncoding lspOptions
