@@ -114,13 +114,15 @@ named s (Session x) = Session (Data.Conduit.Parser.named s x)
 
 
 -- | Matches a request or a notification coming from the server.
+-- Doesn't match Custom Messages
 message :: SServerMethod m -> Session (ServerMessage m)
+message (SCustomMethod _) = error "message can't be used with CustomMethod, use customRequest or customNotification instead"
 message m1 = named (T.pack $ "Request for: " <> show m1) $ satisfyMaybe $ \case
   FromServerMess m2 msg -> do
     res <- mEqServer m1 m2
     case res of
       Right HRefl -> pure msg
-      Left f -> Nothing
+      Left _f -> Nothing
   _ -> Nothing
 
 customRequest :: T.Text -> Session (ServerMessage (CustomMethod :: Method FromServer Request))
