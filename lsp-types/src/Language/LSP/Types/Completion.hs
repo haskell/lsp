@@ -3,7 +3,6 @@
 {-# LANGUAGE TemplateHaskell            #-}
 module Language.LSP.Types.Completion where
 
-import           Control.Applicative
 import qualified Data.Aeson                    as A
 import           Data.Aeson.TH
 import           Data.Scientific                ( Scientific )
@@ -268,12 +267,7 @@ data CompletionDoc = CompletionDocString Text
                    | CompletionDocMarkup MarkupContent
   deriving (Show, Read, Eq)
 
-instance A.ToJSON CompletionDoc where
-  toJSON (CompletionDocString x) = A.toJSON x
-  toJSON (CompletionDocMarkup x) = A.toJSON x
-
-instance A.FromJSON CompletionDoc where
-  parseJSON x = CompletionDocString <$> A.parseJSON x <|> CompletionDocMarkup <$> A.parseJSON x
+deriveJSON lspOptionsUntagged ''CompletionDoc
 
 data InsertReplaceEdit =
   InsertReplaceEdit
@@ -287,12 +281,7 @@ deriveJSON lspOptions ''InsertReplaceEdit
 data CompletionEdit = CompletionEditText TextEdit | CompletionEditInsertReplace InsertReplaceEdit
   deriving (Read,Show,Eq)
 
-instance A.ToJSON CompletionEdit where
-  toJSON (CompletionEditText te)          = A.toJSON te
-  toJSON (CompletionEditInsertReplace ir) = A.toJSON ir
-
-instance A.FromJSON CompletionEdit where
-  parseJSON x = CompletionEditText <$> A.parseJSON x <|> CompletionEditInsertReplace <$> A.parseJSON x
+deriveJSON lspOptionsUntagged ''CompletionEdit
 
 data CompletionItem =
   CompletionItem

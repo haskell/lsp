@@ -8,6 +8,7 @@ module Language.LSP.Types.Utils
   , makeRegHelper
   , makeExtendingDatatype
   , lspOptions
+  , lspOptionsUntagged
   ) where
 
 import Control.Monad
@@ -115,4 +116,8 @@ lspOptions = defaultOptions { omitNothingFields = True, fieldLabelModifier = mod
   modifier "_xdata" = "data"
   modifier "_xtype" = "type"
   modifier xs = drop 1 xs
+
+-- | Standard options for use when generating JSON instances for an untagged union
+lspOptionsUntagged :: Options
+lspOptionsUntagged = lspOptions { sumEncoding = UntaggedValue }
 
