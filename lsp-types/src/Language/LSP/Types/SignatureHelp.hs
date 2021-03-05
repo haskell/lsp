@@ -81,12 +81,7 @@ deriveJSON lspOptions ''SignatureHelpRegistrationOptions
 data SignatureHelpDoc = SignatureHelpDocString Text | SignatureHelpDocMarkup MarkupContent
   deriving (Read,Show,Eq)
 
-instance ToJSON SignatureHelpDoc where
-  toJSON (SignatureHelpDocString t) = toJSON t
-  toJSON (SignatureHelpDocMarkup m) = toJSON m
-
-instance FromJSON SignatureHelpDoc where
-  parseJSON x = SignatureHelpDocString <$> parseJSON x <|> SignatureHelpDocMarkup <$> parseJSON x
+deriveJSON lspOptionsUntagged ''SignatureHelpDoc
 
 -- -------------------------------------
 

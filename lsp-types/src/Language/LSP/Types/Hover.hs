@@ -2,8 +2,6 @@
 {-# LANGUAGE DuplicateRecordFields      #-}
 module Language.LSP.Types.Hover where
 
-import           Control.Applicative
-import           Data.Aeson
 import           Data.Aeson.TH
 import           Data.Text                      ( Text )
 
@@ -49,12 +47,7 @@ data MarkedString =
   | CodeString LanguageString
     deriving (Eq,Read,Show)
 
-instance ToJSON MarkedString where
-  toJSON (PlainString x) = toJSON x
-  toJSON (CodeString  x) = toJSON x
-instance FromJSON MarkedString where
-  parseJSON (String t) = pure $ PlainString t
-  parseJSON o            = CodeString <$> parseJSON o
+deriveJSON lspOptionsUntagged ''MarkedString
 
 -- -------------------------------------
 
@@ -63,15 +56,7 @@ data HoverContents =
   | HoverContents   MarkupContent
   deriving (Read,Show,Eq)
 
-instance ToJSON HoverContents where
-  toJSON (HoverContentsMS  x) = toJSON x
-  toJSON (HoverContents    x) = toJSON x
-instance FromJSON HoverContents where
-  parseJSON v@(String _) = HoverContentsMS <$> parseJSON v
-  parseJSON v@(Array _)  = HoverContentsMS <$> parseJSON v
-  parseJSON v@(Object _) = HoverContents   <$> parseJSON v
-                         <|> HoverContentsMS <$> parseJSON v
-  parseJSON _ = mempty
+deriveJSON lspOptionsUntagged ''HoverContents
 
 -- -------------------------------------
 

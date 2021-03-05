@@ -6,7 +6,6 @@
 
 module Language.LSP.Types.Progress where
 
-import           Control.Applicative
 import           Control.Monad (unless)
 import qualified Data.Aeson as A
 import           Data.Aeson.TH
@@ -22,14 +21,7 @@ data ProgressToken
     | ProgressTextToken Text
     deriving (Show, Read, Eq, Ord)
 
-instance A.ToJSON ProgressToken where
-    toJSON (ProgressNumericToken i) = A.toJSON i
-    toJSON (ProgressTextToken t) = A.toJSON t
-
-instance A.FromJSON ProgressToken where
-    parseJSON (A.String t) = pure $ ProgressTextToken t
-    parseJSON (A.Number i) = ProgressNumericToken <$> A.parseJSON (A.Number i)
-    parseJSON v = fail $ "Invalid progress token: " ++ show v
+deriveJSON lspOptionsUntagged ''ProgressToken
 
 -- | Parameters for a $/progress notification.
 data ProgressParams t =
@@ -39,23 +31,6 @@ data ProgressParams t =
     } deriving (Show, Read, Eq, Functor)
 
 deriveJSON lspOptions ''ProgressParams
-
-data SomeProgressParams
-  = Begin WorkDoneProgressBeginParams
-  | Report WorkDoneProgressReportParams
-  | End WorkDoneProgressEndParams
-  deriving Eq
-
-instance A.FromJSON SomeProgressParams where
-  parseJSON x =
-       (Begin  <$> A.parseJSON x)
-   <|> (Report <$> A.parseJSON x)
-   <|> (End    <$> A.parseJSON x)
-
-instance A.ToJSON SomeProgressParams where
-  toJSON (Begin  x) = A.toJSON x
-  toJSON (Report x) = A.toJSON x
-  toJSON (End    x) = A.toJSON x
 
 -- | Parameters for 'WorkDoneProgressBeginNotification'.
 --
@@ -220,6 +195,14 @@ data WorkDoneProgressParams =
       _workDoneToken :: Maybe ProgressToken
     } deriving (Read,Show,Eq)
 deriveJSON lspOptions ''WorkDoneProgressParams
+
+data SomeProgressParams
+  = Begin WorkDoneProgressBeginParams
+  | Report WorkDoneProgressReportParams
+  | End WorkDoneProgressEndParams
+  deriving Eq
+
+deriveJSON lspOptionsUntagged ''SomeProgressParams
 
 data PartialResultParams =
   PartialResultParams
