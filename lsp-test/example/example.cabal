@@ -9,3 +9,4 @@ test-suite tests
   build-depends: base
                , lsp-test
                , parser-combinators
+  build-tool-depends: lsp:lsp-demo-reactor-server

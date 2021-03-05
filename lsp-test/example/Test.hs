@@ -1,13 +1,14 @@
+{-# LANGUAGE OverloadedStrings #-}
 import Control.Applicative.Combinators
 import Control.Monad.IO.Class
 import Language.LSP.Test
 import Language.LSP.Types
 
-main = runSession "haskell-language-server" fullCaps "../test/data/" $ do
+main = runSession "lsp-demo-reactor-server" fullCaps "../test/data/" $ do
   doc <- openDoc "Rename.hs" "haskell"
   
   -- Use your favourite favourite combinators.
-  skipManyTill loggingNotification (count 2 publishDiagnosticsNotification)
+  skipManyTill loggingNotification (count 1 publishDiagnosticsNotification)
 
   -- Send requests and notifications and receive responses
   rsp <- request STextDocumentDocumentSymbol $
