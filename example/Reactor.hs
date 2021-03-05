@@ -242,6 +242,14 @@ handle = mconcat
           range = J.Range pos pos
       responder (Right $ Just rsp)
 
+  , requestHandler J.STextDocumentDocumentSymbol $ \req responder -> do
+      liftIO $ debugM "reactor.handle" "Processing a textDocument/documentSymbol request"
+      let J.DocumentSymbolParams _ _ doc = req ^. J.params
+          loc = J.Location (doc ^. J.uri) (J.Range (J.Position 0 0) (J.Position 0 0))
+          sym = J.SymbolInformation "lsp-hello" J.SkFunction Nothing loc Nothing
+          rsp = J.InR (J.List [sym])
+      responder (Right rsp)
+
   , requestHandler J.STextDocumentCodeAction $ \req responder -> do
       liftIO $ debugM "reactor.handle" $ "Processing a textDocument/codeAction request"
       let params = req ^. J.params

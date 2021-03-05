@@ -35,10 +35,6 @@ jobs:
           ${{ runner.os }}-
 
     - name: Build
-      run: cabal build
+      run: cabal build all
     - name: Test
-      run: cabal test
-    - name: Func test
-      run: cabal test func-test
-    - name: Test lsp-test
-      run: cabal test lsp-test
+      run: cabal test all
