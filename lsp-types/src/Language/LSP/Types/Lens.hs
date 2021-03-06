@@ -139,6 +139,7 @@ makeFieldsNoPrefix ''DeclarationParams
 makeFieldsNoPrefix ''CodeActionKindClientCapabilities
 makeFieldsNoPrefix ''CodeActionLiteralSupport
 makeFieldsNoPrefix ''CodeActionClientCapabilities
+makeFieldsNoPrefix ''CodeActionResolveClientCapabilities
 makeFieldsNoPrefix ''CodeActionOptions
 makeFieldsNoPrefix ''CodeActionRegistrationOptions
 makeFieldsNoPrefix ''CodeActionContext

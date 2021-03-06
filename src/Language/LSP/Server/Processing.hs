@@ -210,9 +210,9 @@ inferServerCapabilities clientCaps o h =
 
     codeActionProvider
       | clientSupportsCodeActionKinds
-      , supported_b STextDocumentCodeAction = Just $
-          maybe (InL True) (InR . CodeActionOptions Nothing . Just . List)
-                (codeActionKinds o)
+      , supported_b STextDocumentCodeAction = Just $ case codeActionKinds o of
+          Just ks -> InR $ CodeActionOptions Nothing (Just (List ks)) (supported SCodeLensResolve)
+          Nothing -> InL True
       | supported_b STextDocumentCodeAction = Just (InL True)
       | otherwise = Just (InL False)
 

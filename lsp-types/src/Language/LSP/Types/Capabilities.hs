@@ -194,6 +194,10 @@ capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) (Jus
           dynamicReg
           (since 3 8 (CodeActionLiteralSupport caKs))
           (since 3 15 True)
+          (since 3 16 True)
+          (since 3 16 True)
+          (since 3 16 (CodeActionResolveClientCapabilities (List [])))
+          (since 3 16 True)
     caKs = CodeActionKindClientCapabilities
               (List [ CodeActionQuickFix
                     , CodeActionRefactor

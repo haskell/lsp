@@ -160,6 +160,7 @@ handlers =
                 Nothing
                 Nothing
                 (Just (Command "" "deleteThis" Nothing))
+                Nothing
         resp $ Right $ InR <$> codeActions
      , requestHandler STextDocumentCompletion $ \_req resp -> do
         let res = CompletionList True (List [item])
