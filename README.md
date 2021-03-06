@@ -6,7 +6,7 @@
 Haskell library for the Microsoft Language Server Protocol.
 It currently implements all of the [3.15 specification](https://microsoft.github.io/language-server-protocol/specifications/specification-3-15/).
 
-It is split into two separate packages, `lsp` and `lsp-types`
+It is split into three separate packages, `lsp`, `lsp-types`, and `lsp-test`:
 - `lsp-types` provides *type-safe* definitions that match up with the
 typescript definitions laid out in the specification
 - `lsp` is a library for building language servers, handling:
@@ -17,6 +17,7 @@ typescript definitions laid out in the specification
   - Dynamic registration of capabilities
   - Cancellable requests and progress notifications
   - Publishing and flushing of diagnostics
+- `lsp-test` is a library to support testing servers written using `lsp`
 
 ## Language servers built on lsp
 - [ghcide](https://github.com/haskell/ghcide)
@@ -24,7 +25,7 @@ typescript definitions laid out in the specification
 - [dhall-lsp-server](https://github.com/dhall-lang/dhall-haskell/tree/master/dhall-lsp-server#readme)
 
 ## Example language servers
-There are two example language servers in the `example/` folder. `Simple.hs` provides a minimal example:
+There are two example language servers in the `lsp/example/` folder. `Simple.hs` provides a minimal example:
 
 ```haskell
 {-# LANGUAGE OverloadedStrings #-}
