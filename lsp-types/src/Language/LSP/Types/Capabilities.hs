@@ -59,9 +59,13 @@ capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) (Jus
     symbolCapabilities = WorkspaceSymbolClientCapabilities
       dynamicReg
       (since 3 4 symbolKindCapabilities)
+      (since 3 16 symbolTagCapabilities)
 
     symbolKindCapabilities =
       WorkspaceSymbolKindClientCapabilities (Just sKs)
+
+    symbolTagCapabilities =
+      WorkspaceSymbolTagClientCapabilities (Just (List [StDeprecated]))
 
     sKs
       | maj >= 3 && min >= 4 = List (oldSKs ++ newSKs)
