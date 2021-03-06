@@ -1,6 +1,7 @@
 ![CI](https://github.com/alanz/lsp/workflows/Haskell%20CI/badge.svg)
 [![Hackage](https://img.shields.io/hackage/v/lsp?label=lsp)](https://hackage.haskell.org/package/lsp)
 [![Hackage](https://img.shields.io/hackage/v/lsp?label=lsp-types)](https://hackage.haskell.org/package/lsp-types)
+[![Hackage](https://img.shields.io/hackage/v/lsp?label=lsp-test)](https://hackage.haskell.org/package/lsp-test)
 
 # lsp
 Haskell library for the Microsoft Language Server Protocol.
@@ -17,10 +18,9 @@ typescript definitions laid out in the specification
   - Dynamic registration of capabilities
   - Cancellable requests and progress notifications
   - Publishing and flushing of diagnostics
-- `lsp-test` is a library to support testing servers written using `lsp`
+- `lsp-test` is a functional testing framework for Language Server Protocol servers.
 
 ## Language servers built on lsp
-- [ghcide](https://github.com/haskell/ghcide)
 - [haskell-language-server](https://github.com/haskell/haskell-language-server)
 - [dhall-lsp-server](https://github.com/dhall-lang/dhall-haskell/tree/master/dhall-lsp-server#readme)
 
@@ -81,12 +81,61 @@ from source with
 
     cabal install lsp-demo-simple-server lsp-demo-reactor-server
     stack install :lsp-demo-simple-server :lsp-demo-reactor-server --flag haskell-lsp:demo
+    
+## Examples of using lsp-test
+
+### Setting up a session
+
+```haskell
+import Language.LSP.Test
+main = runSession "hie" fullCaps "proj/dir" $ do
+  doc <- openDoc "Foo.hs" "haskell"
+  skipMany anyNotification
+  symbols <- getDocumentSymbols doc
+```
+
+### Unit tests with HSpec
+
+```haskell
+describe "diagnostics" $
+  it "report errors" $ runSession "hie" fullCaps "test/data" $ do
+    openDoc "Error.hs" "haskell"
+    [diag] <- waitForDiagnosticsSource "ghcmod"
+    liftIO $ do
+      diag ^. severity `shouldBe` Just DsError
+      diag ^. source `shouldBe` Just "ghcmod"
+```
+
+### Replaying captured session
+```haskell
+replaySession "hie" "test/data/renamePass"
+```
+
+### Parsing with combinators
+```haskell
+skipManyTill loggingNotification publishDiagnosticsNotification
+count 4 (message :: Session ApplyWorkspaceEditRequest)
+anyRequest <|> anyResponse
+```
+
+Try out the example tests in the `lsp-test/example` directory with `cabal test`.
+For more examples check the [Wiki](https://github.com/bubba/lsp-test/wiki/Introduction), or see this [introductory blog post](https://lukelau.me/haskell/posts/lsp-test/).
+
+Whilst writing your tests you may want to debug them to see what's going wrong.
+You can set the `logMessages` and `logStdErr` options in `SessionConfig` to see what the server is up to.
+There are also corresponding environment variables so you can turn them on from the command line:
+```
+LSP_TEST_LOG_MESSAGES=1 LSP_TEST_LOG_STDERR=1 cabal test
+```
+
+## Troubleshooting
+Seeing funny stuff when running lsp-test via stack? If your server is built upon Haskell tooling, [keep in mind that stack sets some environment variables related to GHC, and you may want to unset them.](https://github.com/alanz/haskell-ide-engine/blob/bfb16324d396da71000ef81d51acbebbdaa854ab/test/utils/TestUtils.hs#L290-L298)
 
 ## Useful links
 
-- https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md
+- [Language Server Protocol Specification](https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md)
 
 ## Other resources
 
-See #haskell-ide-engine on IRC freenode
+See #haskell-language-server  on IRC freenode.
 

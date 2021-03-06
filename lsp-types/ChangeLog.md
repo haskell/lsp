@@ -1,4 +1,4 @@
-# Revision history for haskell-lsp-types
+# Revision history for lsp-types
 
 ## 1.1.0.0
 
