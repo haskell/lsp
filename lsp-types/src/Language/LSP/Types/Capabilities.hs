@@ -224,10 +224,15 @@ capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) (Jus
         dynamicReg
         (since 3 4 documentSymbolKind)
         (since 3 10 True)
+        (since 3 16 documentSymbolTag)
+        (since 3 16 True)
 
     documentSymbolKind =
       DocumentSymbolKindClientCapabilities
         (Just sKs) -- same as workspace symbol kinds
+
+    documentSymbolTag =
+      DocumentSymbolTagClientCapabilities (Just (List [StDeprecated]))
 
     foldingRangeCapability =
       FoldingRangeClientCapabilities

@@ -15,7 +15,9 @@ import           Language.LSP.Types.Utils
 
 -- ---------------------------------------------------------------------
 
-makeExtendingDatatype "DocumentSymbolOptions" [''WorkDoneProgressOptions] []
+makeExtendingDatatype "DocumentSymbolOptions"
+  [''WorkDoneProgressOptions]
+  [ ("_label", [t| Maybe Bool |])]
 deriveJSON lspOptions ''DocumentSymbolOptions
 
 makeExtendingDatatype "DocumentSymbolRegistrationOptions"
@@ -123,6 +125,25 @@ instance FromJSON SymbolKind where
   parseJSON (Number 26) = pure SkTypeParameter
   parseJSON (Number x)  = pure (SkUnknown x)
   parseJSON _           = mempty
+
+{-|
+Symbol tags are extra annotations that tweak the rendering of a symbol.
+
+@since 3.16.0
+-}
+data SymbolTag =
+  StDeprecated -- ^ Render a symbol as obsolete, usually using a strike-out.
+  | StUnknown Scientific
+  deriving (Read, Show, Eq)
+
+instance ToJSON SymbolTag where
+  toJSON StDeprecated          = Number 1
+  toJSON (StUnknown x)   = Number x
+
+instance FromJSON SymbolTag where
+  parseJSON (Number  1) = pure StDeprecated
+  parseJSON (Number x)  = pure (StUnknown x)
+  parseJSON _           = mempty
   
 -- -------------------------------------
 
@@ -142,6 +163,15 @@ data DocumentSymbolKindClientCapabilities =
 
 deriveJSON lspOptions ''DocumentSymbolKindClientCapabilities
 
+data DocumentSymbolTagClientCapabilities =
+  DocumentSymbolTagClientCapabilities
+    { -- | The tags supported by the client.
+      _valueSet :: Maybe (List SymbolTag)
+    }
+  deriving (Show, Read, Eq)
+
+deriveJSON lspOptions ''DocumentSymbolTagClientCapabilities
+
 data DocumentSymbolClientCapabilities =
   DocumentSymbolClientCapabilities
     { -- | Whether document symbol supports dynamic registration.
@@ -149,10 +179,19 @@ data DocumentSymbolClientCapabilities =
       -- | Specific capabilities for the `SymbolKind`.
     , _symbolKind :: Maybe DocumentSymbolKindClientCapabilities
     , _hierarchicalDocumentSymbolSupport :: Maybe Bool
+      -- | The client supports tags on `SymbolInformation`.
+      -- Clients supporting tags have to handle unknown tags gracefully.
+      --
+      -- @since 3.16.0
+    , _tagSupport :: Maybe DocumentSymbolTagClientCapabilities
+      -- | The client supports an additional label presented in the UI when
+      -- registering a document symbol provider.
+      --
+      -- @since 3.16.0
+    , _labelSupport :: Maybe Bool
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''DocumentSymbolClientCapabilities
-
 
 -- ---------------------------------------------------------------------
 
@@ -167,7 +206,8 @@ data DocumentSymbol =
     -- provided the name is used.
     , _detail         :: Maybe Text
     , _kind           :: SymbolKind -- ^ The kind of this symbol.
-    , _deprecated     :: Maybe Bool -- ^ Indicates if this symbol is deprecated.
+    , _tags           :: Maybe (List SymbolTag) -- ^ Tags for this document symbol.
+    , _deprecated     :: Maybe Bool -- ^ Indicates if this symbol is deprecated. Deprecated, use tags instead.
     -- | The range enclosing this symbol not including leading/trailing
     -- whitespace but everything else like comments. This information is
     -- typically used to determine if the the clients cursor is inside the symbol
@@ -190,7 +230,8 @@ data SymbolInformation =
   SymbolInformation
     { _name          :: Text -- ^ The name of this symbol.
     , _kind          :: SymbolKind -- ^ The kind of this symbol.
-    , _deprecated    :: Maybe Bool -- ^ Indicates if this symbol is deprecated.
+    , _tags          :: Maybe (List SymbolTag) -- ^ Tags for this symbol.
+    , _deprecated    :: Maybe Bool -- ^ Indicates if this symbol is deprecated. Deprecated, use tags instead.
     -- | The location of this symbol. The location's range is used by a tool
     -- to reveal the location in the editor. If the symbol is selected in the
     -- tool the range's start information is used to position the cursor. So
@@ -207,5 +248,6 @@ data SymbolInformation =
     -- symbols.
     , _containerName :: Maybe Text
     } deriving (Read,Show,Eq)
+{-# DEPRECATED _deprecated "Use tags instead" #-}
 
 deriveJSON lspOptions ''SymbolInformation
