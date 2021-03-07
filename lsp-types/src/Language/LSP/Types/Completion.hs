@@ -100,14 +100,16 @@ instance A.FromJSON CompletionItemKind where
 
 data CompletionItemTag
   -- | Render a completion as obsolete, usually using a strike-out.
-  = CtDeprecated
+  = CitDeprecated
+  | CitUnknown Scientific
   deriving (Eq, Ord, Show, Read)
 
 instance A.ToJSON CompletionItemTag where
-  toJSON CtDeprecated  = A.Number 1
+  toJSON CitDeprecated  = A.Number 1
+  toJSON (CitUnknown i) = A.Number i
 
 instance A.FromJSON CompletionItemTag where
-  parseJSON (A.Number 1) = pure CtDeprecated
+  parseJSON (A.Number 1) = pure CitDeprecated
   parseJSON _            = mempty
 
 data CompletionItemTagsClientCapabilities =

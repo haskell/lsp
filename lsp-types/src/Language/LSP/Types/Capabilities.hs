@@ -149,7 +149,7 @@ capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) (Jus
       CompletionItemKindClientCapabilities (Just ciKs)
 
     completionItemTagsCapabilities =
-      CompletionItemTagsClientCapabilities (List [ CtDeprecated ])
+      CompletionItemTagsClientCapabilities (List [ CitDeprecated ])
 
     ciKs
       | maj >= 3 && min >= 4 = List (oldCiKs ++ newCiKs)
