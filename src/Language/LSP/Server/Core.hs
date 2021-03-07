@@ -50,6 +50,7 @@ import qualified Data.List as L
 import           Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.Map.Strict as Map
 import           Data.Maybe
+import           Data.Ord (Down (Down))
 import qualified Data.Text as T
 import           Data.Text ( Text )
 import qualified Data.UUID as UUID
@@ -759,7 +760,7 @@ handleIOException logFile _ = do
 -- | The changes in a workspace edit should be applied from the end of the file
 -- toward the start. Sort them into this order.
 reverseSortEdit :: J.WorkspaceEdit -> J.WorkspaceEdit
-reverseSortEdit (J.WorkspaceEdit cs dcs) = J.WorkspaceEdit cs' dcs'
+reverseSortEdit (J.WorkspaceEdit cs dcs anns) = J.WorkspaceEdit cs' dcs' anns
   where
     cs' :: Maybe J.WorkspaceEditMap
     cs' = (fmap . fmap ) sortTextEdits cs
@@ -768,12 +769,14 @@ reverseSortEdit (J.WorkspaceEdit cs dcs) = J.WorkspaceEdit cs' dcs'
     dcs' = (fmap . fmap) sortOnlyTextDocumentEdits dcs
 
     sortTextEdits :: J.List J.TextEdit -> J.List J.TextEdit
-    sortTextEdits (J.List edits) = J.List (L.sortBy down edits)
+    sortTextEdits (J.List edits) = J.List (L.sortOn (Down . (^. J.range)) edits)
 
     sortOnlyTextDocumentEdits :: J.DocumentChange -> J.DocumentChange
     sortOnlyTextDocumentEdits (J.InL (J.TextDocumentEdit td (J.List edits))) = J.InL $ J.TextDocumentEdit td (J.List edits')
       where
-        edits' = L.sortBy down edits
+        edits' = L.sortOn (Down . editRange) edits
     sortOnlyTextDocumentEdits (J.InR others) = J.InR others
 
-    down (J.TextEdit r1 _) (J.TextEdit r2 _) = r2 `compare` r1
+    editRange :: J.TextEdit J.|? J.AnnotatedTextEdit -> J.Range
+    editRange (J.InR e) = e ^. J.range
+    editRange (J.InL e) = e ^. J.range

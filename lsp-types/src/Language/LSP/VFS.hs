@@ -6,6 +6,7 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TypeInType #-}
+{-# LANGUAGE TypeOperators #-}
 
 {-|
 Handles the "Language.LSP.Types.TextDocumentDidChange" \/
@@ -130,7 +131,7 @@ updateVFS f vfs@VFS{vfsMap} = vfs { vfsMap = f vfsMap }
 -- ---------------------------------------------------------------------
 
 applyCreateFile :: J.CreateFile -> VFS -> VFS
-applyCreateFile (J.CreateFile uri options) = 
+applyCreateFile (J.CreateFile uri options _ann) = 
   updateVFS $ Map.insertWith 
                 (\ new old -> if shouldOverwrite then new else old)
                 (J.toNormalizedUri uri)
@@ -150,7 +151,7 @@ applyCreateFile (J.CreateFile uri options) =
         Just (J.CreateFileOptions (Just False)  (Just False)) -> False  -- `overwrite` wins over `ignoreIfExists`
 
 applyRenameFile :: J.RenameFile -> VFS -> VFS
-applyRenameFile (J.RenameFile oldUri' newUri' options) vfs = 
+applyRenameFile (J.RenameFile oldUri' newUri' options _ann) vfs = 
   let oldUri = J.toNormalizedUri oldUri'
       newUri = J.toNormalizedUri newUri'
   in  case Map.lookup oldUri (vfsMap vfs) of 
@@ -178,7 +179,7 @@ applyRenameFile (J.RenameFile oldUri' newUri' options) vfs =
 
 -- NOTE: we are ignoring the `recursive` option here because we don't know which file is a directory
 applyDeleteFile :: J.DeleteFile -> VFS -> VFS
-applyDeleteFile (J.DeleteFile uri _options) = 
+applyDeleteFile (J.DeleteFile uri _options _ann) = 
   updateVFS $ Map.delete (J.toNormalizedUri uri)
 
 
@@ -186,7 +187,7 @@ applyTextDocumentEdit :: J.TextDocumentEdit -> VFS -> IO VFS
 applyTextDocumentEdit (J.TextDocumentEdit vid (J.List edits)) vfs = do
   -- all edits are supposed to be applied at once
   -- so apply from bottom up so they don't affect others
-  let sortedEdits = sortOn (Down . (^. J.range)) edits
+  let sortedEdits = sortOn (Down . editRange) edits
       changeEvents = map editToChangeEvent sortedEdits
       ps = J.DidChangeTextDocumentParams vid (J.List changeEvents)
       notif = J.NotificationMessage "" J.STextDocumentDidChange ps
@@ -194,8 +195,14 @@ applyTextDocumentEdit (J.TextDocumentEdit vid (J.List edits)) vfs = do
   mapM_ (debugM "haskell-lsp.applyTextDocumentEdit") ls
   return vfs'
 
-  where 
-    editToChangeEvent (J.TextEdit range text) = J.TextDocumentContentChangeEvent (Just range) Nothing text
+  where
+    editRange :: J.TextEdit J.|? J.AnnotatedTextEdit -> J.Range
+    editRange (J.InR e) = e ^. J.range
+    editRange (J.InL e) = e ^. J.range
+
+    editToChangeEvent :: J.TextEdit J.|? J.AnnotatedTextEdit -> J.TextDocumentContentChangeEvent
+    editToChangeEvent (J.InR e) = J.TextDocumentContentChangeEvent (Just $ e ^. J.range) Nothing (e ^. J.newText)
+    editToChangeEvent (J.InL e) = J.TextDocumentContentChangeEvent (Just $ e ^. J.range) Nothing (e ^. J.newText)
 
 applyDocumentChange :: J.DocumentChange -> VFS -> IO VFS 
 applyDocumentChange (J.InL               change)   = applyTextDocumentEdit change
@@ -207,7 +214,7 @@ applyDocumentChange (J.InR (J.InR (J.InR change))) = return . applyDeleteFile ch
 changeFromServerVFS :: VFS -> J.Message 'J.WorkspaceApplyEdit -> IO VFS
 changeFromServerVFS initVfs (J.RequestMessage _ _ _ params) = do
   let J.ApplyWorkspaceEditParams _label edit = params
-      J.WorkspaceEdit mChanges mDocChanges = edit
+      J.WorkspaceEdit mChanges mDocChanges _anns = edit
   case mDocChanges of
     Just (J.List docChanges) -> applyDocumentChanges docChanges
     Nothing -> case mChanges of
@@ -218,7 +225,7 @@ changeFromServerVFS initVfs (J.RequestMessage _ _ _ params) = do
 
   where
     changeToTextDocumentEdit acc uri edits =
-      acc ++ [J.TextDocumentEdit (J.VersionedTextDocumentIdentifier uri (Just 0)) edits]
+      acc ++ [J.TextDocumentEdit (J.VersionedTextDocumentIdentifier uri (Just 0)) (fmap J.InL edits)]
 
     applyDocumentChanges :: [J.DocumentChange] -> IO VFS 
     applyDocumentChanges = foldM (flip applyDocumentChange) initVfs . sortOn project

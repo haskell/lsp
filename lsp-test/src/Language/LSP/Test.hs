@@ -604,16 +604,16 @@ applyEdit doc edit = do
   let supportsDocChanges = fromMaybe False $ do
         let mWorkspace = caps ^. LSP.workspace
         C.WorkspaceClientCapabilities _ mEdit _ _ _ _ _ _ <- mWorkspace
-        C.WorkspaceEditClientCapabilities mDocChanges _ _ <- mEdit
+        C.WorkspaceEditClientCapabilities mDocChanges _ _ _ _ <- mEdit
         mDocChanges
 
   let wEdit = if supportsDocChanges
       then
-        let docEdit = TextDocumentEdit verDoc (List [edit])
-        in WorkspaceEdit Nothing (Just (List [InL docEdit]))
+        let docEdit = TextDocumentEdit verDoc (List [InL edit])
+        in WorkspaceEdit Nothing (Just (List [InL docEdit])) Nothing
       else
         let changes = HashMap.singleton (doc ^. uri) (List [edit])
-        in WorkspaceEdit (Just changes) Nothing
+        in WorkspaceEdit (Just changes) Nothing Nothing
 
   let req = RequestMessage "" (IdInt 0) SWorkspaceApplyEdit (ApplyWorkspaceEditParams Nothing wEdit)
   updateState (FromServerMess SWorkspaceApplyEdit req)
@@ -728,7 +728,7 @@ formatRange doc opts range = do
 
 applyTextEdits :: TextDocumentIdentifier -> List TextEdit -> Session ()
 applyTextEdits doc edits =
-  let wEdit = WorkspaceEdit (Just (HashMap.singleton (doc ^. uri) edits)) Nothing
+  let wEdit = WorkspaceEdit (Just (HashMap.singleton (doc ^. uri) edits)) Nothing Nothing
       -- Send a dummy message to updateState so it can do bookkeeping
       req = RequestMessage "" (IdInt 0) SWorkspaceApplyEdit (ApplyWorkspaceEditParams Nothing wEdit)
   in updateState (FromServerMess SWorkspaceApplyEdit req)

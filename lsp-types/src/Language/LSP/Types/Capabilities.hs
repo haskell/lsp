@@ -42,7 +42,9 @@ capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) (Jus
           (Just (WorkspaceEditClientCapabilities
                   (Just True)
                   (since 3 13 resourceOperations)
-                  Nothing))
+                  Nothing
+                  (since 3 16 True)
+                  (since 3 16 (WorkspaceEditChangeAnnotationClientCapabilities (Just True)))))
           (Just (DidChangeConfigurationClientCapabilities dynamicReg))
           (Just (DidChangeWatchedFilesClientCapabilities dynamicReg))
           (Just symbolCapabilities)

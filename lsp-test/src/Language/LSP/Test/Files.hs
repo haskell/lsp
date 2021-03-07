@@ -84,7 +84,7 @@ mapUris f event =
 
           newDocChanges = fmap (fmap swapDocumentChangeUri) $ e ^. documentChanges
           newChanges = fmap (swapKeys f) $ e ^. changes
-       in WorkspaceEdit newChanges newDocChanges
+       in WorkspaceEdit newChanges newDocChanges Nothing
 
     swapKeys :: (Uri -> Uri) -> HM.HashMap Uri b -> HM.HashMap Uri b
     swapKeys f = HM.foldlWithKey' (\acc k v -> HM.insert (f k) v acc) HM.empty

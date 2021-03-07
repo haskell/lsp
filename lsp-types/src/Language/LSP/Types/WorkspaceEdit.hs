@@ -3,6 +3,7 @@
 {-# LANGUAGE TypeOperators              #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE RecordWildCards            #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Language.LSP.Types.WorkspaceEdit where
 
@@ -13,6 +14,7 @@ import qualified Data.HashMap.Strict                        as H
 import           Data.Maybe                                 (catMaybes)
 import           Data.Text                                  (Text)
 import qualified Data.Text                                  as T
+import           Data.Hashable
 
 import           Language.LSP.Types.Common
 import           Language.LSP.Types.Location
@@ -30,13 +32,47 @@ data TextEdit =
 
 deriveJSON lspOptions ''TextEdit
 
+-- ---------------------------------------------------------------------
+
+{-|
+Additional information that describes document changes.
+
+@since 3.16.0
+-}
+data ChangeAnnotation =
+  ChangeAnnotation
+    { -- | A human-readable string describing the actual change. The string
+      -- is rendered prominent in the user interface.
+      _label             :: Text
+      -- | A flag which indicates that user confirmation is needed
+      -- before applying the change.
+    , _needsConfirmation :: Maybe Bool
+      -- | A human-readable string which is rendered less prominent in
+      -- the user interface.
+    , _description       :: Maybe Text
+    } deriving (Show, Read, Eq)
+
+deriveJSON lspOptions ''ChangeAnnotation
+
+{-|
+An identifier referring to a change annotation managed by a workspace
+edit.
+
+@since 3.16.0
+-}
+newtype ChangeAnnotationIdentifier = ChangeAnnotationIdentifierId Text
+  deriving (Show, Read, Eq, FromJSON, ToJSON, ToJSONKey, FromJSONKey, Hashable)
+
+makeExtendingDatatype "AnnotatedTextEdit" [''TextEdit]
+  [("_annotationId", [t| ChangeAnnotationIdentifier |]) ]
+deriveJSON lspOptions ''AnnotatedTextEdit
 
 -- ---------------------------------------------------------------------
 
 data TextDocumentEdit =
   TextDocumentEdit
     { _textDocument :: VersionedTextDocumentIdentifier
-    , _edits        :: List TextEdit
+    , _edits        :: List (TextEdit |? AnnotatedTextEdit)
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''TextDocumentEdit
@@ -61,6 +97,10 @@ data CreateFile =
       _uri      :: Uri
       -- | Additional options
     , _options  :: Maybe CreateFileOptions
+      -- | An optional annotation identifer describing the operation.
+      --
+      -- @since 3.16.0
+    , _annotationId  :: Maybe ChangeAnnotationIdentifier
     } deriving (Show, Read, Eq)
 
 instance ToJSON CreateFile where
@@ -69,6 +109,7 @@ instance ToJSON CreateFile where
         [ Just $ "kind" .= ("create" :: Text)
         , Just $ "uri" .= _uri
         , ("options" .=) <$> _options
+        , ("annotationId" .=) <$> _annotationId
         ]
 
 instance FromJSON CreateFile where
@@ -78,6 +119,7 @@ instance FromJSON CreateFile where
           $ fail $ "Expected kind \"create\" but got " ++ show kind
         _uri <- o .: "uri"
         _options <- o .:? "options"
+        _annotationId <- o .:? "annotationId"
         pure CreateFile{..}
 
 -- Rename file options
@@ -100,6 +142,10 @@ data RenameFile =
     , _newUri   :: Uri
       -- | Rename options.
     , _options  :: Maybe RenameFileOptions
+      -- | An optional annotation identifer describing the operation.
+      --
+      -- @since 3.16.0
+    , _annotationId  :: Maybe ChangeAnnotationIdentifier
     } deriving (Show, Read, Eq)
 
 instance ToJSON RenameFile where
@@ -109,6 +155,7 @@ instance ToJSON RenameFile where
         , Just $ "oldUri" .= _oldUri
         , Just $ "newUri" .= _newUri
         , ("options" .=) <$> _options
+        , ("annotationId" .=) <$> _annotationId
         ]
 
 instance FromJSON RenameFile where
@@ -119,6 +166,7 @@ instance FromJSON RenameFile where
         _oldUri <- o .: "oldUri"
         _newUri <- o .: "newUri"
         _options <- o .:? "options"
+        _annotationId <- o .:? "annotationId"
         pure RenameFile{..}
 
 -- Delete file options
@@ -139,6 +187,10 @@ data DeleteFile =
       _uri      :: Uri
       -- | Delete options.
     , _options  :: Maybe DeleteFileOptions
+      -- | An optional annotation identifer describing the operation.
+      --
+      -- @since 3.16.0
+    , _annotationId  :: Maybe ChangeAnnotationIdentifier
     } deriving (Show, Read, Eq)
 
 instance ToJSON DeleteFile where
@@ -147,6 +199,7 @@ instance ToJSON DeleteFile where
         [ Just $ "kind" .= ("delete" :: Text)
         , Just $ "uri" .= _uri
         , ("options" .=) <$> _options
+        , ("annotationId" .=) <$> _annotationId
         ]
 
 instance FromJSON DeleteFile where
@@ -156,8 +209,8 @@ instance FromJSON DeleteFile where
           $ fail $ "Expected kind \"delete\" but got " ++ show kind
         _uri <- o .: "uri"
         _options <- o .:? "options"
+        _annotationId <- o .:? "annotationId"
         pure DeleteFile{..}
-
 
 -- ---------------------------------------------------------------------
 
@@ -167,17 +220,42 @@ type DocumentChange = TextDocumentEdit |? CreateFile |? RenameFile |? DeleteFile
 -- ---------------------------------------------------------------------
 
 type WorkspaceEditMap = H.HashMap Uri (List TextEdit)
+type ChangeAnnotationMap = H.HashMap ChangeAnnotationIdentifier ChangeAnnotation
 
 data WorkspaceEdit =
   WorkspaceEdit
-    { _changes         :: Maybe WorkspaceEditMap
-    , _documentChanges :: Maybe (List DocumentChange)
+    {
+      -- | Holds changes to existing resources.
+      _changes           :: Maybe WorkspaceEditMap
+      -- | Depending on the client capability
+      -- `workspace.workspaceEdit.resourceOperations` document changes are either
+      -- an array of `TextDocumentEdit`s to express changes to n different text
+      -- documents where each text document edit addresses a specific version of
+      -- a text document. Or it can contain above `TextDocumentEdit`s mixed with
+      -- create, rename and delete file / folder operations.
+      --
+      -- Whether a client supports versioned document edits is expressed via
+      -- `workspace.workspaceEdit.documentChanges` client capability.
+      --
+      -- If a client neither supports `documentChanges` nor
+      -- `workspace.workspaceEdit.resourceOperations` then only plain `TextEdit`s
+      -- using the `changes` property are supported.
+    , _documentChanges   :: Maybe (List DocumentChange)
+      -- | A map of change annotations that can be referenced in
+      -- `AnnotatedTextEdit`s or create, rename and delete file / folder
+      -- operations.
+      --
+      -- Whether clients honor this property depends on the client capability
+      -- `workspace.changeAnnotationSupport`.
+      --
+      -- @since 3.16.0
+    , _changeAnnotations :: Maybe ChangeAnnotationMap
     } deriving (Show, Read, Eq)
 
 instance Semigroup WorkspaceEdit where
-  (WorkspaceEdit a b) <> (WorkspaceEdit c d) = WorkspaceEdit (a <> c) (b <> d)
+  (WorkspaceEdit a b c) <> (WorkspaceEdit a' b' c') = WorkspaceEdit (a <> a') (b <> b') (c <> c')
 instance Monoid WorkspaceEdit where
-  mempty = WorkspaceEdit Nothing Nothing
+  mempty = WorkspaceEdit Nothing Nothing Nothing
 
 deriveJSON lspOptions ''WorkspaceEdit
 
@@ -220,6 +298,17 @@ instance FromJSON FailureHandlingKind where
   parseJSON (String "undo")                  = pure FailureHandlingUndo
   parseJSON _                                = mempty
 
+data WorkspaceEditChangeAnnotationClientCapabilities =
+  WorkspaceEditChangeAnnotationClientCapabilities
+  {
+    -- | Whether the client groups edits with equal labels into tree nodes,
+    -- for instance all edits labelled with "Changes in Strings" would
+    -- be a tree node.
+    groupsOnLabel :: Maybe Bool
+  } deriving (Show, Read, Eq)
+
+deriveJSON lspOptions ''WorkspaceEditChangeAnnotationClientCapabilities
+
 data WorkspaceEditClientCapabilities =
   WorkspaceEditClientCapabilities
   { _documentChanges :: Maybe Bool -- ^The client supports versioned document
@@ -230,6 +319,19 @@ data WorkspaceEditClientCapabilities =
     -- | The failure handling strategy of a client if applying the workspace edit
     -- fails.
   , _failureHandling :: Maybe FailureHandlingKind
+    -- | Whether the client normalizes line endings to the client specific
+    -- setting.
+    --
+    -- If set to `true` the client will normalize line ending characters
+    -- in a workspace edit to the client specific new line character(s).
+    --
+    -- @since 3.16.0
+  , _normalizesLineEndings :: Maybe Bool
+    -- | Whether the client in general supports change annotations on text edits,
+    -- create file, rename file and delete file changes.
+    --
+    -- @since 3.16.0
+  , _changeAnnotationSupport :: Maybe WorkspaceEditChangeAnnotationClientCapabilities
   } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''WorkspaceEditClientCapabilities

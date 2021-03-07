@@ -368,4 +368,4 @@ docChangesCaps :: ClientCapabilities
 docChangesCaps = def { _workspace = Just workspaceCaps }
   where
     workspaceCaps = def { _workspaceEdit = Just editCaps }
-    editCaps = WorkspaceEditClientCapabilities (Just True) Nothing Nothing
+    editCaps = WorkspaceEditClientCapabilities (Just True) Nothing Nothing Nothing Nothing

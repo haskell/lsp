@@ -243,6 +243,8 @@ makeFieldsNoPrefix ''DocumentFilter
 
 -- WorkspaceEdit
 makeFieldsNoPrefix ''TextEdit
+makeFieldsNoPrefix ''ChangeAnnotation
+makeFieldsNoPrefix ''AnnotatedTextEdit
 makeFieldsNoPrefix ''VersionedTextDocumentIdentifier
 makeFieldsNoPrefix ''TextDocumentEdit
 makeFieldsNoPrefix ''CreateFileOptions
@@ -253,6 +255,7 @@ makeFieldsNoPrefix ''DeleteFileOptions
 makeFieldsNoPrefix ''DeleteFile
 makeFieldsNoPrefix ''WorkspaceEdit
 makeFieldsNoPrefix ''WorkspaceEditClientCapabilities
+makeFieldsNoPrefix ''WorkspaceEditChangeAnnotationClientCapabilities
 
 -- Workspace Folders
 makeFieldsNoPrefix ''WorkspaceFolder

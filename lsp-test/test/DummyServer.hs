@@ -143,7 +143,7 @@ handlers =
             edit = List [TextEdit (mkRange 0 0 0 5) "howdy"]
             params =
               ApplyWorkspaceEditParams (Just "Howdy edit") $
-                WorkspaceEdit (Just (HM.singleton docUri edit)) Nothing
+                WorkspaceEdit (Just (HM.singleton docUri edit)) Nothing Nothing
         resp $ Right Null
         void $ sendRequest SWorkspaceApplyEdit params (const (pure ()))
      , requestHandler STextDocumentCodeAction $ \req resp -> do

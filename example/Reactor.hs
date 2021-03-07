@@ -227,10 +227,10 @@ handle = mconcat
           newName = params ^. J.newName
       vdoc <- getVersionedTextDoc (params ^. J.textDocument)
       -- Replace some text at the position with what the user entered
-      let edit = J.TextEdit (J.mkRange l c l (c + T.length newName)) newName
+      let edit = J.InL $ J.TextEdit (J.mkRange l c l (c + T.length newName)) newName
           tde = J.TextDocumentEdit vdoc (J.List [edit])
           -- "documentChanges" field is preferred over "changes"
-          rsp = J.WorkspaceEdit Nothing (Just (J.List [J.InL tde]))
+          rsp = J.WorkspaceEdit Nothing (Just (J.List [J.InL tde])) Nothing
       responder (Right rsp)
 
   , requestHandler J.STextDocumentHover $ \req responder -> do
