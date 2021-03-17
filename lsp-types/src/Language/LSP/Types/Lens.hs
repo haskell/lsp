@@ -115,7 +115,8 @@ makeFieldsNoPrefix ''LocationLink
 makeFieldsNoPrefix ''MarkupContent
 
 -- Completion
-makeFieldsNoPrefix ''InsertReplaceEdit
+makeFieldsNoPrefix ''CompletionDoc
+makeFieldsNoPrefix ''CompletionEdit
 makeFieldsNoPrefix ''CompletionItem
 makeFieldsNoPrefix ''CompletionContext
 makeFieldsNoPrefix ''CompletionList
@@ -128,6 +129,7 @@ makeFieldsNoPrefix ''CompletionItemInsertTextModeClientCapabilities
 makeFieldsNoPrefix ''CompletionItemClientCapabilities
 makeFieldsNoPrefix ''CompletionItemKindClientCapabilities
 makeFieldsNoPrefix ''CompletionClientCapabilities
+makeFieldsNoPrefix ''InsertReplaceEdit
 
 -- Declaration
 makeFieldsNoPrefix ''DeclarationClientCapabilities
@@ -196,6 +198,7 @@ makeFieldsNoPrefix ''RenameClientCapabilities
 makeFieldsNoPrefix ''RenameOptions
 makeFieldsNoPrefix ''RenameRegistrationOptions
 makeFieldsNoPrefix ''RenameParams
+makeFieldsNoPrefix ''PrepareSupportDefaultBehavior
 
 -- PrepareRename
 makeFieldsNoPrefix ''PrepareRenameParams
