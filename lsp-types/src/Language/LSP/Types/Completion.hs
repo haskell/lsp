@@ -123,7 +123,7 @@ deriveJSON lspOptions ''CompletionItemTagsClientCapabilities
 data CompletionItemResolveClientCapabilities =
   CompletionItemResolveClientCapabilities
     { -- | The properties that a client can resolve lazily.
-      _valueSet :: List Text
+      _properties :: List Text
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''CompletionItemResolveClientCapabilities
