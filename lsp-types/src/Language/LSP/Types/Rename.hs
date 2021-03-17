@@ -3,13 +3,28 @@
 
 module Language.LSP.Types.Rename where
 
+import Data.Aeson
 import Data.Aeson.TH
 import Data.Text (Text)
+import Data.Scientific (Scientific)
 
 import Language.LSP.Types.Location
 import Language.LSP.Types.TextDocument
 import Language.LSP.Types.Progress
 import Language.LSP.Types.Utils
+
+data PrepareSupportDefaultBehavior =
+  PsIdentifier |
+  PsUnknown Scientific
+  deriving (Read, Show, Eq)
+
+instance ToJSON PrepareSupportDefaultBehavior where
+  toJSON PsIdentifier  = Number 1
+  toJSON (PsUnknown i) = Number i
+
+instance FromJSON PrepareSupportDefaultBehavior where
+  parseJSON (Number 1) = pure PsIdentifier
+  parseJSON _          = mempty
 
 data RenameClientCapabilities =
   RenameClientCapabilities
@@ -20,6 +35,21 @@ data RenameClientCapabilities =
       --
       -- Since LSP 3.12.0
     , _prepareSupport :: Maybe Bool
+      -- | Client supports the default behavior result
+      -- (`{ defaultBehavior: boolean }`).
+      --
+      -- The value indicates the default behavior used by the client.
+      --
+      -- @since 3.16.0
+    , prepareSupportDefaultBehavior :: Maybe PrepareSupportDefaultBehavior
+      -- | Whether the client honors the change annotations in
+      -- text edits and resource operations returned via the
+      -- rename request's workspace edit by for example presenting
+      -- the workspace edit in the user interface and asking
+      -- for confirmation.
+      --
+      -- @since 3.16.0
+    , honorsChangeAnnotations :: Maybe Bool
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''RenameClientCapabilities

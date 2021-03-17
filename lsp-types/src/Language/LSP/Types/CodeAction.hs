@@ -116,6 +116,13 @@ data CodeActionLiteralSupport =
 
 deriveJSON lspOptions ''CodeActionLiteralSupport
 
+data CodeActionResolveClientCapabilities =
+  CodeActionResolveClientCapabilities
+    { _properties :: List Text -- ^ The properties that a client can resolve lazily.
+    } deriving (Show, Read, Eq)
+
+deriveJSON lspOptions ''CodeActionResolveClientCapabilities
+
 data CodeActionClientCapabilities = CodeActionClientCapabilities
   { -- | Whether code action supports dynamic registration.
     _dynamicRegistration :: Maybe Bool,
@@ -124,7 +131,30 @@ data CodeActionClientCapabilities = CodeActionClientCapabilities
     -- Since 3.8.0
     _codeActionLiteralSupport :: Maybe CodeActionLiteralSupport,
     -- | Whether code action supports the `isPreferred` property. Since LSP 3.15.0
-    _isPreferredSupport :: Maybe Bool
+    _isPreferredSupport :: Maybe Bool,
+    -- | Whether code action supports the `disabled` property.
+    --
+    -- @since 3.16.0
+    _disabledSupport :: Maybe Bool,
+    -- | Whether code action supports the `data` property which is
+    -- preserved between a `textDocument/codeAction` and a
+    -- `codeAction/resolve` request.
+    --
+    -- @since 3.16.0
+    _dataSupport :: Maybe Bool,
+    -- | Whether the client supports resolving additional code action
+    -- properties via a separate `codeAction/resolve` request.
+    --
+    -- @since 3.16.0
+    _resolveSupport :: Maybe CodeActionResolveClientCapabilities,
+    -- | Whether the client honors the change annotations in
+    -- text edits and resource operations returned via the
+    -- `CodeAction#edit` property by for example presenting
+    -- the workspace edit in the user interface and asking
+    -- for confirmation.
+    --
+    -- @since 3.16.0
+    _honorsChangeAnnotations :: Maybe Bool
   }
   deriving (Show, Read, Eq)
 
@@ -133,7 +163,7 @@ deriveJSON lspOptions ''CodeActionClientCapabilities
 -- -------------------------------------
 
 makeExtendingDatatype "CodeActionOptions" [''WorkDoneProgressOptions]
-  [("_codeActionKinds", [t| Maybe (List CodeActionKind) |])]
+  [("_codeActionKinds", [t| Maybe (List CodeActionKind) |]), ("_resolveProvider", [t| Maybe Bool |]) ]
 deriveJSON lspOptions ''CodeActionOptions
 
 makeExtendingDatatype "CodeActionRegistrationOptions"
@@ -205,7 +235,12 @@ data CodeAction =
     -- | A command this code action executes. If a code action
     -- provides an edit and a command, first the edit is
     -- executed and then the command.
-    _command :: Maybe Command
+    _command :: Maybe Command,
+    -- | A data entry field that is preserved on a code action between
+    -- a `textDocument/codeAction` and a `codeAction/resolve` request.
+    --
+    -- @since 3.16.0
+    _xdata :: Maybe Value
   }
   deriving (Read, Show, Eq)
 deriveJSON lspOptions ''CodeAction

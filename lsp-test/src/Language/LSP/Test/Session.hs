@@ -8,6 +8,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeInType #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Language.LSP.Test.Session
   ( Session(..)
@@ -400,9 +401,12 @@ updateState (FromServerMess SWorkspaceApplyEdit r) = do
               return $ s { vfs = newVFS }
 
         getParamsFromTextDocumentEdit :: TextDocumentEdit -> DidChangeTextDocumentParams
-        getParamsFromTextDocumentEdit (TextDocumentEdit docId (List edits)) = 
-          let changeEvents = map (\e -> TextDocumentContentChangeEvent (Just (e ^. range)) Nothing (e ^. newText)) edits
-            in DidChangeTextDocumentParams docId (List changeEvents)
+        getParamsFromTextDocumentEdit (TextDocumentEdit docId (List edits)) =
+          DidChangeTextDocumentParams docId (List $ map editToChangeEvent edits)
+
+        editToChangeEvent :: TextEdit |? AnnotatedTextEdit -> TextDocumentContentChangeEvent
+        editToChangeEvent (InR e) = TextDocumentContentChangeEvent (Just $ e ^. range) Nothing (e ^. newText)
+        editToChangeEvent (InL e) = TextDocumentContentChangeEvent (Just $ e ^. range) Nothing (e ^. newText)
 
         getParamsFromDocumentChange :: DocumentChange -> Maybe DidChangeTextDocumentParams
         getParamsFromDocumentChange (InL textDocumentEdit) = Just $ getParamsFromTextDocumentEdit textDocumentEdit
@@ -419,7 +423,7 @@ updateState (FromServerMess SWorkspaceApplyEdit r) = do
 
         textDocumentEdits uri edits = do
           vers <- textDocumentVersions uri
-          pure $ map (\(v, e) -> TextDocumentEdit v (List [e])) $ zip vers edits
+          pure $ map (\(v, e) -> TextDocumentEdit v (List [InL e])) $ zip vers edits
 
         getChangeParams uri (List edits) = do 
           map <$> pure getParamsFromTextDocumentEdit <*> textDocumentEdits uri (reverse edits)

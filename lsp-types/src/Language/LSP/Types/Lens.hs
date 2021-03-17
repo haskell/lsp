@@ -139,6 +139,7 @@ makeFieldsNoPrefix ''DeclarationParams
 makeFieldsNoPrefix ''CodeActionKindClientCapabilities
 makeFieldsNoPrefix ''CodeActionLiteralSupport
 makeFieldsNoPrefix ''CodeActionClientCapabilities
+makeFieldsNoPrefix ''CodeActionResolveClientCapabilities
 makeFieldsNoPrefix ''CodeActionOptions
 makeFieldsNoPrefix ''CodeActionRegistrationOptions
 makeFieldsNoPrefix ''CodeActionContext
@@ -242,6 +243,8 @@ makeFieldsNoPrefix ''DocumentFilter
 
 -- WorkspaceEdit
 makeFieldsNoPrefix ''TextEdit
+makeFieldsNoPrefix ''ChangeAnnotation
+makeFieldsNoPrefix ''AnnotatedTextEdit
 makeFieldsNoPrefix ''VersionedTextDocumentIdentifier
 makeFieldsNoPrefix ''TextDocumentEdit
 makeFieldsNoPrefix ''CreateFileOptions
@@ -252,6 +255,7 @@ makeFieldsNoPrefix ''DeleteFileOptions
 makeFieldsNoPrefix ''DeleteFile
 makeFieldsNoPrefix ''WorkspaceEdit
 makeFieldsNoPrefix ''WorkspaceEditClientCapabilities
+makeFieldsNoPrefix ''WorkspaceEditChangeAnnotationClientCapabilities
 
 -- Workspace Folders
 makeFieldsNoPrefix ''WorkspaceFolder

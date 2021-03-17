@@ -42,7 +42,9 @@ capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) (Jus
           (Just (WorkspaceEditClientCapabilities
                   (Just True)
                   (since 3 13 resourceOperations)
-                  Nothing))
+                  Nothing
+                  (since 3 16 True)
+                  (since 3 16 (WorkspaceEditChangeAnnotationClientCapabilities (Just True)))))
           (Just (DidChangeConfigurationClientCapabilities dynamicReg))
           (Just (DidChangeWatchedFilesClientCapabilities dynamicReg))
           (Just symbolCapabilities)
@@ -120,7 +122,7 @@ capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) (Jus
           (Just (CodeLensClientCapabilities dynamicReg))
           (Just (DocumentLinkClientCapabilities dynamicReg (since 3 15 True)))
           (since 3 6 (DocumentColorClientCapabilities dynamicReg))
-          (Just (RenameClientCapabilities dynamicReg (since 3 12 True)))
+          (Just (RenameClientCapabilities dynamicReg (since 3 12 True) (since 3 16 PsIdentifier) (since 3 16 True)))
           (Just publishDiagnosticsCapabilities)
           (since 3 10 foldingRangeCapability)
           (since 3 5 (SelectionRangeClientCapabilities dynamicReg))
@@ -153,7 +155,7 @@ capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) (Jus
       CompletionItemKindClientCapabilities (Just ciKs)
 
     completionItemTagsCapabilities =
-      CompletionItemTagsClientCapabilities (List [ CtDeprecated ])
+      CompletionItemTagsClientCapabilities (List [ CitDeprecated ])
 
     ciKs
       | maj >= 3 && min >= 4 = List (oldCiKs ++ newCiKs)
@@ -198,6 +200,10 @@ capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) (Jus
           dynamicReg
           (since 3 8 (CodeActionLiteralSupport caKs))
           (since 3 15 True)
+          (since 3 16 True)
+          (since 3 16 True)
+          (since 3 16 (CodeActionResolveClientCapabilities (List [])))
+          (since 3 16 True)
     caKs = CodeActionKindClientCapabilities
               (List [ CodeActionQuickFix
                     , CodeActionRefactor
