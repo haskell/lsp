@@ -26,6 +26,15 @@ data WorkspaceSymbolKindClientCapabilities =
 
 deriveJSON lspOptions ''WorkspaceSymbolKindClientCapabilities
 
+data WorkspaceSymbolTagClientCapabilities =
+  WorkspaceSymbolTagClientCapabilities
+    { -- | The tags supported by the client.
+      _valueSet :: Maybe (List SymbolTag)
+    }
+  deriving (Show, Read, Eq)
+
+deriveJSON lspOptions ''WorkspaceSymbolTagClientCapabilities
+
 instance Default WorkspaceSymbolKindClientCapabilities where
   def = WorkspaceSymbolKindClientCapabilities (Just $ List allKinds)
     where allKinds = [ SkFile
@@ -53,6 +62,11 @@ data WorkspaceSymbolClientCapabilities =
     { _dynamicRegistration :: Maybe Bool -- ^Symbol request supports dynamic
                                          -- registration.
     , _symbolKind :: Maybe WorkspaceSymbolKindClientCapabilities -- ^ Specific capabilities for the `SymbolKind`.
+      -- | The client supports tags on `SymbolInformation`.
+      -- Clients supporting tags have to handle unknown tags gracefully.
+      --
+      -- @since 3.16.0
+    , _tagSupport :: Maybe WorkspaceSymbolTagClientCapabilities 
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''WorkspaceSymbolClientCapabilities

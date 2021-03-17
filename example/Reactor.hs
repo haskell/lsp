@@ -246,7 +246,7 @@ handle = mconcat
       liftIO $ debugM "reactor.handle" "Processing a textDocument/documentSymbol request"
       let J.DocumentSymbolParams _ _ doc = req ^. J.params
           loc = J.Location (doc ^. J.uri) (J.Range (J.Position 0 0) (J.Position 0 0))
-          sym = J.SymbolInformation "lsp-hello" J.SkFunction Nothing loc Nothing
+          sym = J.SymbolInformation "lsp-hello" J.SkFunction Nothing Nothing loc Nothing
           rsp = J.InR (J.List [sym])
       responder (Right rsp)
 

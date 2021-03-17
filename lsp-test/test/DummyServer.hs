@@ -68,6 +68,7 @@ handlers =
                       Nothing
                       SkObject
                       Nothing
+                      Nothing
                       (mkRange 0 0 3 6)
                       (mkRange 0 0 3 6)
                       Nothing
