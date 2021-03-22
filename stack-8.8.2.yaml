@@ -1,9 +1,9 @@
 resolver: nightly-2020-01-31
 
 packages:
-- '.'
+- ./lsp
 - ./lsp-types
-- ./func-test
+- ./lsp-test
 
 extra-deps:
 - dependent-map-0.4.0.0@sha256:ca2b131046f4340a1c35d138c5a003fe4a5be96b14efc26291ed35fd08c62221,1657

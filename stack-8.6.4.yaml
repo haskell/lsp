@@ -1,9 +1,9 @@
 resolver: lts-13.16 # GHC 8.6.4
 
 packages:
-- '.'
+- ./lsp
 - ./lsp-types
-- ./func-test
+- ./lsp-test
 
 extra-deps:
 - rope-utf16-splay-0.3.1.0

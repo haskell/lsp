@@ -4,7 +4,7 @@ import Control.Monad.IO.Class
 import Language.LSP.Test
 import Language.LSP.Types
 
-main = runSession "lsp-demo-reactor-server" fullCaps "../test/data/" $ do
+main = runSession "lsp-demo-reactor-server" fullCaps "test/data/" $ do
   doc <- openDoc "Rename.hs" "haskell"
   
   -- Use your favourite favourite combinators.

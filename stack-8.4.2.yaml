@@ -1,9 +1,9 @@
 resolver: nightly-2018-05-30 # last nightly for GHC 8.4.2
 
 packages:
-- '.'
+- ./lsp
 - ./lsp-types
-- ./func-test
+- ./lsp-test
 
 extra-deps:
 - rope-utf16-splay-0.3.1.0

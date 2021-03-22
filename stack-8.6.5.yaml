@@ -1,9 +1,9 @@
 resolver: lts-14.11 # GHC 8.6.5
 
 packages:
-- '.'
+- ./lsp
 - ./lsp-types
-- ./func-test
+- ./lsp-test
 
 extra-deps:
 - some-1.0.1@sha256:26e5bab7276f48b25ea8660d3fd1166c0f20fd497dac879a40f408e23211f93e,2055

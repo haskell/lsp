@@ -1,14 +1,12 @@
 packages:
-         ./
+         ./lsp
          ./lsp-types/
          ./lsp-test/
-         ./lsp-test/example
-         ./func-test/
-         ./bench/
 
 package lsp
   flags: +demo
 
 tests: True
+benchmarks: True
 test-show-details: direct
 haddock-quickjump: True
