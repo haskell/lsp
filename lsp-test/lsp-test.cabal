@@ -10,12 +10,12 @@ description:
   To see examples of it in action, check out <https://github.com/haskell/haskell-ide-engine haskell-ide-engine>,
   <https://github.com/haskell/haskell-language-server haskell-language-server> and
   <https://github.com/digital-asset/ghcide ghcide>.
-homepage:            https://github.com/bubba/lsp-test#readme
+homepage:            https://github.com/haskell/lsp/blob/master/lsp-test/README.md
 license:             BSD3
 license-file:        LICENSE
 author:              Luke Lau
 maintainer:          luke_lau@icloud.com
-bug-reports:         https://github.com/alanz/lsp/issues
+bug-reports:         https://github.com/haskell/lsp/issues
 copyright:           2021 Luke Lau
 category:            Testing
 build-type:          Simple
@@ -26,7 +26,7 @@ tested-with:         GHC == 8.4.4, GHC == 8.6.5, GHC == 8.8.3, GHC == 8.10.1, GH
 
 source-repository head
   type:     git
-  location: https://github.com/alanz/lsp
+  location: https://github.com/haskell/lsp
 
 library
   hs-source-dirs:      src
