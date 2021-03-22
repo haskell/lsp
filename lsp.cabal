@@ -10,7 +10,7 @@ description:         An implementation of the types, and basic message server to
                      An example of this is for Haskell via the Haskell IDE
                      Engine, at https://github.com/haskell/haskell-ide-engine
 
-homepage:            https://github.com/alanz/lsp
+homepage:            https://github.com/haskell/lsp
 license:             MIT
 license-file:        LICENSE
 author:              Alan Zimmerman
@@ -152,4 +152,4 @@ test-suite unit-test
 
 source-repository head
   type:     git
-  location: https://github.com/alanz/lsp
+  location: https://github.com/haskell/lsp
