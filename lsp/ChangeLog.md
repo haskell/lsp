@@ -1,5 +1,12 @@
 # Revision history for lsp
 
+## 1.2.0.0
+
+* Parse config from initializeOptions and pass in the old value of config to onConfigurationChange (#285) (wz1000)
+* Break up big TVar record into lots of small TVars (#286) (@wz1000)
+* Add some INLINE pragmas (@wz1000)
+* Make method equality work for CustomMethods (@wz1000)
+
 ## 1.1.1.0
 
 * Don't send begin progress notification twice (@wz1000)
