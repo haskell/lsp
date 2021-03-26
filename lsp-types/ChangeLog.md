@@ -1,5 +1,22 @@
 # Revision history for lsp-types
 
+## 1.2.0.0
+
+* Prevent crashing when optional fields are missing (@anka-213)
+* Use StrictData (@wz1000)
+* Add MarkupContent in SignatureHelp types (@michaelpj)
+* Add activeParameter support in SignatureInformation (@michaelpj)
+* Add label offset support in SignatureHelp (@michaelpj)
+* Add some documentation comments to SignatureHelp types (@michaelpj)
+* Add support for InsertReplaceEdit (@michaelpj)
+* Add support for InsertTextMode (@michaelpj)
+* Add resolveSupport (@michaelpj)
+* Fix applying a TextEdit past the end of the document (#271) (@michaelpj)
+* Use Empty instead of () as progress create response (#295) (@wz1000)
+* Add tag support for DocumentSymbol, SymbolInformation, and document symbol provider label (#301) (@michaelpj)
+* Support change annotations (#302) (@michaelpj)
+* Add some more missing lenses (#307) (@michaelpj)
+
 ## 1.1.0.0
 
 * Fix prepareRename reponse and prepareProvider (@kirelagin)

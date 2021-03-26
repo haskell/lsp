@@ -1,5 +1,11 @@
 # Revision history for lsp-test
 
+## 0.13.0.0 -- 2021-03-26
+
+* Update for lsp-types-1.2 (@wz1000)
+* Limit diagnostics by range in getCodeActions (@aufarg)
+* Kill timeout thread to avoid building up thousands of old TimeoutMessages (@wz1000)
+
 ## 0.13.0.0 -- 2021-02-14
 
 * Add support for lsp-types-1.1 (@wz1000)
