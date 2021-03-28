@@ -5,8 +5,7 @@ description:
   A test framework for writing tests against
   <https://microsoft.github.io/language-server-protocol/ Language Server Protocol servers>.
   @Language.LSP.Test@ launches your server as a subprocess and allows you to simulate a session
-  down to the wire, and @Language.LSP.Test@ can replay captured sessions from
-  <haskell-lsp https://hackage.haskell.org/package/haskell-lsp>.
+  down to the wire. 
   To see examples of it in action, check out <https://github.com/haskell/haskell-ide-engine haskell-ide-engine>,
   <https://github.com/haskell/haskell-language-server haskell-language-server> and
   <https://github.com/digital-asset/ghcide ghcide>.
@@ -114,6 +113,7 @@ test-suite example
   main-is:             Test.hs
   hs-source-dirs:      example
   type:                exitcode-stdio-1.0
+  default-language:    Haskell2010
   build-depends:       base
                      , lsp-test
                      , parser-combinators
