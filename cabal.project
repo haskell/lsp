@@ -18,22 +18,10 @@ max-backjumps: 10000
 
 allow-newer:
   lens:template-haskell,
-  parallel:base,
-  hashable:base,
-  async:base,
-  quickcheck-instances:base,
-  time-compat:base,
-  these:base,
-  assoc:base,
   cryptohash-sha1:base,
   cryptohash-md5:base,
-  split:base,
-  constraints-extras:base,
-  constraints-extras:template-haskell,
-  dependent-sum:some,
   hslogger:base,
   entropy:Cabal,
-  lens:Cabal
 
 -- Required for ghc-9.0.1 support
 source-repository-package
