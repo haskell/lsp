@@ -2,7 +2,7 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 
 module Language.LSP.Types.WatchedFiles where
-  
+
 import Data.Aeson
 import Data.Aeson.TH
 import Data.Bits
@@ -71,9 +71,8 @@ instance FromJSON WatchKind where
     | otherwise = fail "WatchKind"
   parseJSON _            = fail "WatchKind"
 
-deriveJSON lspOptions ''DidChangeWatchedFilesRegistrationOptions
 deriveJSON lspOptions ''FileSystemWatcher
-
+deriveJSON lspOptions ''DidChangeWatchedFilesRegistrationOptions
 -- | The file event type.
 data FileChangeType = FcCreated -- ^ The file got created.
                     | FcChanged -- ^ The file got changed.

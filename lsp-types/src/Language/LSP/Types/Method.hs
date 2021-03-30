@@ -312,7 +312,6 @@ instance A.FromJSON SomeServerMethod where
   parseJSON _                                                = fail "SomeServerMethod"
 
 -- instance FromJSON (SMethod m)
-makeSingletonFromJSON 'SomeMethod ''SMethod
 
 -- ---------------------------------------------------------------------
 -- TO JSON
@@ -396,3 +395,5 @@ instance A.ToJSON (SMethod m) where
   toJSON SCancelRequest                      = A.String "$/cancelRequest"
 -- Custom
   toJSON (SCustomMethod m)                   = A.String m
+
+makeSingletonFromJSON 'SomeMethod ''SMethod
