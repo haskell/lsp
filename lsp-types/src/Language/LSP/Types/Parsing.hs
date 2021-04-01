@@ -253,6 +253,11 @@ splitClientMethod STextDocumentSelectionRange = IsClientReq
 splitClientMethod STextDocumentPrepareCallHierarchy = IsClientReq
 splitClientMethod SCallHierarchyIncomingCalls = IsClientReq
 splitClientMethod SCallHierarchyOutgoingCalls = IsClientReq
+splitClientMethod STextDocumentSemanticTokens = IsClientReq
+splitClientMethod STextDocumentSemanticTokensFull = IsClientReq
+splitClientMethod STextDocumentSemanticTokensFullDelta = IsClientReq
+splitClientMethod STextDocumentSemanticTokensRange = IsClientReq
+splitClientMethod SWorkspaceSemanticTokensRefresh  = IsClientReq
 splitClientMethod SCancelRequest = IsClientNot
 splitClientMethod SCustomMethod{} = IsClientEither
 

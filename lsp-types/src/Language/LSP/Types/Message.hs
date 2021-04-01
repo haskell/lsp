@@ -45,6 +45,7 @@ import           Language.LSP.Types.Registration
 import           Language.LSP.Types.Rename
 import           Language.LSP.Types.References
 import           Language.LSP.Types.SelectionRange
+import           Language.LSP.Types.SemanticTokens
 import           Language.LSP.Types.SignatureHelp
 import           Language.LSP.Types.TextDocument
 import           Language.LSP.Types.TypeDefinition
@@ -125,8 +126,14 @@ type family MessageParams (m :: Method f t) :: Type where
   MessageParams TextDocumentPrepareCallHierarchy   = CallHierarchyPrepareParams
   MessageParams CallHierarchyIncomingCalls         = CallHierarchyIncomingCallsParams
   MessageParams CallHierarchyOutgoingCalls         = CallHierarchyOutgoingCallsParams
+  -- Semantic tokens 
+  MessageParams TextDocumentSemanticTokens         = Empty
+  MessageParams TextDocumentSemanticTokensFull     = SemanticTokensParams
+  MessageParams TextDocumentSemanticTokensFullDelta = SemanticTokensDeltaParams
+  MessageParams TextDocumentSemanticTokensRange    = SemanticTokensRangeParams 
+  MessageParams WorkspaceSemanticTokensRefresh     = Empty
 -- Server
-    -- Window
+  -- Window
   MessageParams WindowShowMessage                  = ShowMessageParams
   MessageParams WindowShowMessageRequest           = ShowMessageRequestParams
   MessageParams WindowLogMessage                   = LogMessageParams
@@ -202,6 +209,12 @@ type family ResponseResult (m :: Method f Request) :: Type where
   ResponseResult TextDocumentPrepareCallHierarchy = Maybe (List CallHierarchyItem)
   ResponseResult CallHierarchyIncomingCalls    = Maybe (List CallHierarchyIncomingCall)
   ResponseResult CallHierarchyOutgoingCalls    = Maybe (List CallHierarchyOutgoingCall)
+  -- Semantic tokens 
+  ResponseResult TextDocumentSemanticTokens          = Empty
+  ResponseResult TextDocumentSemanticTokensFull      = Maybe SemanticTokens
+  ResponseResult TextDocumentSemanticTokensFullDelta = Maybe (SemanticTokens |? SemanticTokensDelta)
+  ResponseResult TextDocumentSemanticTokensRange     = Maybe SemanticTokens 
+  ResponseResult WorkspaceSemanticTokensRefresh      = Empty
   -- Custom can be either a notification or a message
 -- Server
   -- Window

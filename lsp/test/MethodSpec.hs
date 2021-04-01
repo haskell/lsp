@@ -31,6 +31,7 @@ clientMethods = [
   ,"workspace/didChangeWatchedFiles"
   ,"workspace/symbol"
   ,"workspace/executeCommand"
+  ,"workspace/semanticTokens/refresh"
  -- Document
   ,"textDocument/didOpen"
   ,"textDocument/didChange"
@@ -59,6 +60,11 @@ clientMethods = [
   ,"textDocument/prepareCallHierarchy"
   ,"callHierarchy/incomingCalls"
   ,"callHierarchy/outgoingCalls"
+
+  ,"textDocument/semanticTokens"
+  ,"textDocument/semanticTokens/full"
+  ,"textDocument/semanticTokens/full/delta"
+  ,"textDocument/semanticTokens/range"
   ]
 
 serverMethods :: [T.Text]

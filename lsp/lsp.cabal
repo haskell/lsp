@@ -116,6 +116,7 @@ test-suite unit-test
                        DiagnosticsSpec
                        MethodSpec
                        ServerCapabilitiesSpec
+                       SemanticTokensSpec
                        TypesSpec
                        URIFilePathSpec
                        VspSpec

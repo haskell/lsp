@@ -92,11 +92,14 @@ module Language.LSP.Test
   , applyEdit
   -- ** Code lenses
   , getCodeLenses
-  -- ** Capabilities
-  , getRegisteredCapabilities
+  -- ** Call hierarchy
   , prepareCallHierarchy
   , incomingCalls
   , outgoingCalls
+  -- ** SemanticTokens
+  , getSemanticTokens
+  -- ** Capabilities
+  , getRegisteredCapabilities
   ) where
 
 import Control.Applicative.Combinators
@@ -606,7 +609,7 @@ applyEdit doc edit = do
 
   let supportsDocChanges = fromMaybe False $ do
         let mWorkspace = caps ^. LSP.workspace
-        C.WorkspaceClientCapabilities _ mEdit _ _ _ _ _ _ <- mWorkspace
+        C.WorkspaceClientCapabilities _ mEdit _ _ _ _ _ _ _ <- mWorkspace
         C.WorkspaceEditClientCapabilities mDocChanges _ _ _ _ <- mEdit
         mDocChanges
 
@@ -743,13 +746,6 @@ getCodeLenses tId = do
     case getResponseResult rsp of
         List res -> pure res
 
--- | Returns a list of capabilities that the server has requested to /dynamically/
--- register during the 'Session'.
---
--- @since 0.11.0.0
-getRegisteredCapabilities :: Session [SomeRegistration]
-getRegisteredCapabilities = Map.elems . curDynCaps <$> get
-
 -- | Pass a param and return the response from `prepareCallHierarchy`
 prepareCallHierarchy :: CallHierarchyPrepareParams -> Session [CallHierarchyItem]
 prepareCallHierarchy = resolveRequestWithListResp STextDocumentPrepareCallHierarchy
@@ -768,3 +764,17 @@ resolveRequestWithListResp method params = do
   case getResponseResult rsp of
     Nothing -> pure []
     Just (List x) -> pure x
+
+-- | Pass a param and return the response from `prepareCallHierarchy`
+getSemanticTokens :: TextDocumentIdentifier -> Session (Maybe SemanticTokens)
+getSemanticTokens doc = do
+  let params = SemanticTokensParams Nothing Nothing doc
+  rsp <- request STextDocumentSemanticTokensFull params
+  pure $ getResponseResult rsp 
+
+-- | Returns a list of capabilities that the server has requested to /dynamically/
+-- register during the 'Session'.
+--
+-- @since 0.11.0.0
+getRegisteredCapabilities :: Session [SomeRegistration]
+getRegisteredCapabilities = Map.elems . curDynCaps <$> get

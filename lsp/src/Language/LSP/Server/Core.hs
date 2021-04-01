@@ -474,7 +474,7 @@ getWorkspaceFolders = do
   clientCaps <- getClientCapabilities
   let clientSupportsWfs = fromMaybe False $ do
         let (J.ClientCapabilities mw _ _ _) = clientCaps
-        (J.WorkspaceClientCapabilities _ _ _ _ _ _ mwf _) <- mw
+        (J.WorkspaceClientCapabilities _ _ _ _ _ _ mwf _ _) <- mw
         mwf
   if clientSupportsWfs
     then Just <$> getsState resWorkspaceFolders
@@ -564,6 +564,7 @@ registerCapability method regOpts f = do
       STextDocumentFoldingRange         -> capDyn $ clientCaps ^? J.textDocument . _Just . J.foldingRange . _Just
       STextDocumentSelectionRange       -> capDyn $ clientCaps ^? J.textDocument . _Just . J.selectionRange . _Just
       STextDocumentPrepareCallHierarchy -> capDyn $ clientCaps ^? J.textDocument . _Just . J.callHierarchy . _Just
+      STextDocumentSemanticTokens       -> capDyn $ clientCaps ^? J.textDocument . _Just . J.semanticTokens . _Just
       _                                 -> False
 
 -- | Sends a @client/unregisterCapability@ request and removes the handler

@@ -26,6 +26,7 @@ import Language.LSP.Types.Implementation
 import Language.LSP.Types.References
 import Language.LSP.Types.Rename
 import Language.LSP.Types.SelectionRange
+import Language.LSP.Types.SemanticTokens
 import Language.LSP.Types.SignatureHelp
 import Language.LSP.Types.TextDocument
 import Language.LSP.Types.TypeDefinition
@@ -120,6 +121,10 @@ data ServerCapabilities =
     , _selectionRangeProvider           :: Maybe (Bool |? SelectionRangeOptions |? SelectionRangeRegistrationOptions)
       -- | The server provides call hierarchy support.
     , _callHierarchyProvider            :: Maybe (Bool |? CallHierarchyOptions |? CallHierarchyRegistrationOptions)
+      -- | The server provides semantic tokens support.
+      --
+      -- @since 3.16.0
+    , _semanticTokensProvider           :: Maybe (SemanticTokensOptions |? SemanticTokensRegistrationOptions)
       -- | The server provides workspace symbol support.
     , _workspaceSymbolProvider          :: Maybe Bool
       -- | Workspace specific server capabilities

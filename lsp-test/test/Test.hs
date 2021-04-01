@@ -394,6 +394,11 @@ main = hspec $ around withDummyServer $ do
       [CallHierarchyOutgoingCall _ (List fromRanges)] <- outgoingCalls (CallHierarchyOutgoingCallsParams Nothing Nothing item)
       liftIO $ head fromRanges `shouldBe` Range (Position 4 5) (Position 2 3)
 
+  describe "semantic tokens" $ do
+    it "full works" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "." $ do
+      let doc = TextDocumentIdentifier (Uri "")
+      Just toks <- getSemanticTokens doc
+      liftIO $ toks ^. xdata `shouldBe` List [0,1,2,0,0]
 
 didChangeCaps :: ClientCapabilities
 didChangeCaps = def { _workspace = Just workspaceCaps }
