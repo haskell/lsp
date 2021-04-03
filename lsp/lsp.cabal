@@ -39,6 +39,7 @@ library
                      , containers
                      , directory
                      , data-default
+                     , exceptions
                      , filepath
                      , hslogger
                      , hashable
