@@ -67,6 +67,7 @@ import           System.Log.Logger
 import qualified System.Log.Logger as L
 import           System.Random hiding (next)
 import           Control.Monad.Trans.Identity
+import           Control.Monad.Catch (MonadMask, MonadCatch, MonadThrow)
 
 -- ---------------------------------------------------------------------
 {-# ANN module ("HLint: ignore Eta reduce"         :: String) #-}
@@ -75,7 +76,7 @@ import           Control.Monad.Trans.Identity
 -- ---------------------------------------------------------------------
 
 newtype LspT config m a = LspT { unLspT :: ReaderT (LanguageContextEnv config) m a }
-  deriving (Functor, Applicative, Monad, MonadIO, MonadTrans, MonadUnliftIO, MonadFix)
+  deriving (Functor, Applicative, Monad, MonadCatch, MonadIO, MonadMask, MonadThrow, MonadTrans, MonadUnliftIO, MonadFix)
 
 -- for deriving the instance of MonadUnliftIO
 type role LspT representational representational nominal
@@ -127,7 +128,7 @@ data LanguageContextEnv config =
 --   notificationHandler SInitialized $ \notif -> pure ()
 -- , requestHandler STextDocumentHover $ \req responder -> pure ()
 -- ]
--- @ 
+-- @
 data Handlers m
   = Handlers
   { reqHandlers :: !(DMap SMethod (ClientMessageHandler m Request))
@@ -306,7 +307,7 @@ data ServerDefinition config = forall m a.
       -- The handlers here cannot be unregistered during the server's lifetime
       -- and will be regsitered statically in the initialize request.
     , interpretHandler :: a -> (m <~> IO)
-      -- ^ How to run the handlers in your own monad of choice, @m@. 
+      -- ^ How to run the handlers in your own monad of choice, @m@.
       -- It is passed the result of 'doInitialize', so typically you will want
       -- to thread along the 'LanguageContextEnv' as well as any other state you
       -- need to run your monad. @m@ should most likely be built on top of
@@ -315,7 +316,7 @@ data ServerDefinition config = forall m a.
       -- @
       --  ServerDefinition { ...
       --  , doInitialize = \env _req -> pure $ Right env
-      --  , interpretHandler = \env -> Iso 
+      --  , interpretHandler = \env -> Iso
       --     (runLspT env) -- how to convert from IO ~> m
       --     liftIO        -- how to convert from m ~> IO
       --  }
@@ -683,7 +684,7 @@ withIndefiniteProgress title cancellable f = do
   if clientSupportsProgress clientCaps
     then withProgressBase True title cancellable (const f)
     else f
-    
+
 -- ---------------------------------------------------------------------
 
 -- | Aggregate all diagnostics pertaining to a particular version of a document,
