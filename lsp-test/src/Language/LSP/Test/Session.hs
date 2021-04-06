@@ -386,7 +386,6 @@ updateState (FromServerMess SWorkspaceApplyEdit r) = do
 
   where checkIfNeedsOpened uri = do
           oldVFS <- vfs <$> get
-          ctx <- ask
 
           -- if its not open, open it
           unless (toNormalizedUri uri `Map.member` vfsMap oldVFS) $ do
@@ -394,7 +393,7 @@ updateState (FromServerMess SWorkspaceApplyEdit r) = do
             contents <- liftIO $ T.readFile fp
             let item = TextDocumentItem (filePathToUri fp) "" 0 contents
                 msg = NotificationMessage "2.0" STextDocumentDidOpen (DidOpenTextDocumentParams item)
-            liftIO $ B.hPut (serverIn ctx) $ addHeader (encode msg)
+            sendMessage msg
 
             modifyM $ \s -> do
               let (newVFS,_) = openVFS (vfs s) msg
@@ -437,7 +436,7 @@ sendMessage :: (MonadIO m, HasReader SessionContext m, ToJSON a) => a -> m ()
 sendMessage msg = do
   h <- serverIn <$> ask
   logMsg LogClient msg
-  liftIO $ B.hPut h (addHeader $ encode msg)
+  liftIO $ B.hPut h (addHeader $ encode msg) `catch` (throw . MessageSendError (toJSON msg))
 
 -- | Execute a block f that will throw a 'Language.LSP.Test.Exception.Timeout' exception
 -- after duration seconds. This will override the global timeout
