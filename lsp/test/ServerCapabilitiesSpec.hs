@@ -28,6 +28,13 @@ spec = describe "server capabilities" $ do
     let input = "{\"hoverProvider\": true, \"colorProvider\": {\"id\": \"abc123\", \"documentSelector\": " <> documentFiltersJson <> "}}"
         Just caps = decode input :: Maybe ServerCapabilities
       in caps ^. colorProvider `shouldBe` Just (InR $ InR $ DocumentColorRegistrationOptions (Just documentFilters) (Just "abc123") Nothing)
+  describe "client/registerCapability" $
+    it "allows empty registerOptions" $
+      let input = "{\"registrations\":[{\"registerOptions\":{},\"method\":\"workspace/didChangeConfiguration\",\"id\":\"4a56f5ca-7188-4f4c-a366-652d6f9d63aa\"}]}"
+          Just registrationParams = decode input :: Maybe RegistrationParams
+        in registrationParams ^. registrations `shouldBe`
+             List [SomeRegistration $ Registration "4a56f5ca-7188-4f4c-a366-652d6f9d63aa"
+                                      SWorkspaceDidChangeConfiguration Empty]
   where
     documentFilters = List [DocumentFilter (Just "haskell") Nothing Nothing]
     documentFiltersJson = "[{\"language\": \"haskell\"}]"
