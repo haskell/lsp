@@ -54,4 +54,4 @@ instance ToJSON Empty where
   toJSON Empty = Null
 instance FromJSON Empty where
   parseJSON Null = pure Empty
-  parseJSON _ = mempty
+  parseJSON _ = fail "expected 'null'"

@@ -124,7 +124,7 @@ instance FromJSON SymbolKind where
   parseJSON (Number 25) = pure SkOperator
   parseJSON (Number 26) = pure SkTypeParameter
   parseJSON (Number x)  = pure (SkUnknown x)
-  parseJSON _           = mempty
+  parseJSON _           = fail "SymbolKind"
 
 {-|
 Symbol tags are extra annotations that tweak the rendering of a symbol.
@@ -143,7 +143,7 @@ instance ToJSON SymbolTag where
 instance FromJSON SymbolTag where
   parseJSON (Number  1) = pure StDeprecated
   parseJSON (Number x)  = pure (StUnknown x)
-  parseJSON _           = mempty
+  parseJSON _           = fail "SymbolTag"
   
 -- -------------------------------------
 

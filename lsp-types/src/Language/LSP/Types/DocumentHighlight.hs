@@ -53,7 +53,7 @@ instance FromJSON DocumentHighlightKind where
   parseJSON (Number 1) = pure HkText
   parseJSON (Number 2) = pure HkRead
   parseJSON (Number 3) = pure HkWrite
-  parseJSON _            = mempty
+  parseJSON _          = mempty "DocumentHighlightKind"
 
 -- -------------------------------------
 

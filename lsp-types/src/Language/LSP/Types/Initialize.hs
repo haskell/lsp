@@ -28,8 +28,8 @@ instance FromJSON Trace where
     "off"      -> return TraceOff
     "messages" -> return TraceMessages
     "verbose"  -> return TraceVerbose
-    _          -> mempty
-  parseJSON _          = mempty
+    _          -> fail "Trace"
+  parseJSON _          = fail "Trace"
 
 data ClientInfo =
   ClientInfo
@@ -89,7 +89,7 @@ data InitializedParams =
 
 instance FromJSON InitializedParams where
   parseJSON (Object _) = pure InitializedParams
-  parseJSON _            = mempty
+  parseJSON _          = fail "InitializedParams"
 
 instance ToJSON InitializedParams where
   toJSON InitializedParams = Object mempty

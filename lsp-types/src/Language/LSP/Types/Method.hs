@@ -273,7 +273,7 @@ instance FromJSON SomeClientMethod where
   parseJSON (A.String "$/cancelRequest")                     = pure $ SomeClientMethod SCancelRequest
 -- Custom
   parseJSON (A.String m)                                     = pure $ SomeClientMethod (SCustomMethod m)
-  parseJSON _                                                = mempty
+  parseJSON _                                                = fail "SomeClientMethod"
 
 instance A.FromJSON SomeServerMethod where
 -- Server
@@ -299,7 +299,7 @@ instance A.FromJSON SomeServerMethod where
 
 -- Custom
   parseJSON (A.String m)                                     = pure $ SomeServerMethod (SCustomMethod m)
-  parseJSON _                                                = mempty
+  parseJSON _                                                = fail "SomeServerMethod"
 
 -- instance FromJSON (SMethod m)
 makeSingletonFromJSON 'SomeMethod ''SMethod

@@ -83,15 +83,16 @@ getRequestMap = foldl' helper emptyIxMap
     _ -> acc
 
 decodeFromServerMsg :: RequestMap -> B.ByteString -> (RequestMap, FromServerMessage)
-decodeFromServerMsg reqMap bytes = unP $ fromJust $ parseMaybe p obj
+decodeFromServerMsg reqMap bytes = unP $ parse p obj
   where obj = fromJust $ decode bytes :: Value
         p = parseServerMessage $ \lid ->
           let (mm, newMap) = pickFromIxMap lid reqMap
             in case mm of
               Nothing -> Nothing
               Just m -> Just $ (m, Pair m (Const newMap))
-        unP (FromServerMess m msg) = (reqMap, FromServerMess m msg)
-        unP (FromServerRsp (Pair m (Const newMap)) msg) = (newMap, FromServerRsp m msg)
+        unP (Success (FromServerMess m msg)) = (reqMap, FromServerMess m msg)
+        unP (Success (FromServerRsp (Pair m (Const newMap)) msg)) = (newMap, FromServerRsp m msg)
+        unP (Error e) = error e
         {-
         WorkspaceWorkspaceFolders      -> error "ReqWorkspaceFolders not supported yet"
         WorkspaceConfiguration         -> error "ReqWorkspaceConfiguration not supported yet"

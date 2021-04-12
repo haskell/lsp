@@ -22,7 +22,7 @@ instance A.ToJSON (LspId m) where
 instance A.FromJSON (LspId m) where
   parseJSON v@(A.Number _) = IdInt <$> A.parseJSON v
   parseJSON  (A.String  s) = return (IdString s)
-  parseJSON _              = mempty
+  parseJSON _              = fail "LspId"
 
 instance IxOrd LspId where
   type Base LspId = SomeLspId

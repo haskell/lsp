@@ -73,7 +73,7 @@ instance A.FromJSON FoldingRangeKind where
   parseJSON (A.String "imports") = pure FoldingRangeImports
   parseJSON (A.String "region")  = pure FoldingRangeRegion
   parseJSON (A.String x)         = pure (FoldingRangeUnknown x)
-  parseJSON _                    = mempty
+  parseJSON _                    = fail "FoldingRangeKind"
 
 -- | Represents a folding range.
 data FoldingRange =

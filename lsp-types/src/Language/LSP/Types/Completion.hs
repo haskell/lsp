@@ -96,7 +96,7 @@ instance A.FromJSON CompletionItemKind where
   parseJSON (A.Number 23) = pure CiEvent
   parseJSON (A.Number 24) = pure CiOperator
   parseJSON (A.Number 25) = pure CiTypeParameter
-  parseJSON _             = mempty
+  parseJSON _             = fail "CompletionItemKind"
 
 data CompletionItemTag
   -- | Render a completion as obsolete, usually using a strike-out.
@@ -110,7 +110,7 @@ instance A.ToJSON CompletionItemTag where
 
 instance A.FromJSON CompletionItemTag where
   parseJSON (A.Number 1) = pure CitDeprecated
-  parseJSON _            = mempty
+  parseJSON _            = fail "CompletionItemTag"
 
 data CompletionItemTagsClientCapabilities =
   CompletionItemTagsClientCapabilities
@@ -158,7 +158,7 @@ instance A.ToJSON InsertTextMode where
 instance A.FromJSON InsertTextMode where
   parseJSON (A.Number 1) = pure AsIs
   parseJSON (A.Number 2) = pure AdjustIndentation
-  parseJSON _          = mempty
+  parseJSON _            = fail "InsertTextMode"
 
 data CompletionItemInsertTextModeClientCapabilities =
   CompletionItemInsertTextModeClientCapabilities
@@ -263,7 +263,7 @@ instance A.ToJSON InsertTextFormat where
 instance A.FromJSON InsertTextFormat where
   parseJSON (A.Number  1) = pure PlainText
   parseJSON (A.Number  2) = pure Snippet
-  parseJSON _             = mempty
+  parseJSON _             = fail "InsertTextFormat"
 
 data CompletionDoc = CompletionDocString Text
                    | CompletionDocMarkup MarkupContent
@@ -381,7 +381,7 @@ instance A.FromJSON CompletionTriggerKind where
   parseJSON (A.Number 2) = pure CtTriggerCharacter
   parseJSON (A.Number 3) = pure CtTriggerForIncompleteCompletions
   parseJSON (A.Number x) = pure (CtUnknown x)
-  parseJSON _          = mempty
+  parseJSON _            = fail "CompletionTriggerKind"
 
 makeExtendingDatatype "CompletionOptions" [''WorkDoneProgressOptions]
   [ ("_triggerCharacters", [t| Maybe [Text] |])

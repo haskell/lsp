@@ -28,7 +28,7 @@ instance A.FromJSON MessageType where
   parseJSON (A.Number 2) = pure MtWarning
   parseJSON (A.Number 3) = pure MtInfo
   parseJSON (A.Number 4) = pure MtLog
-  parseJSON _            = mempty
+  parseJSON _            = fail "MessageType"
 
 -- ---------------------------------------
 

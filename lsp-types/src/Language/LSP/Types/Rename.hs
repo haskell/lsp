@@ -24,7 +24,7 @@ instance ToJSON PrepareSupportDefaultBehavior where
 
 instance FromJSON PrepareSupportDefaultBehavior where
   parseJSON (Number 1) = pure PsIdentifier
-  parseJSON _          = mempty
+  parseJSON _          = fail "PrepareSupportDefaultBehavior"
 
 data RenameClientCapabilities =
   RenameClientCapabilities

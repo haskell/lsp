@@ -37,7 +37,7 @@ instance A.FromJSON DiagnosticSeverity where
   parseJSON (A.Number 2) = pure DsWarning
   parseJSON (A.Number 3) = pure DsInfo
   parseJSON (A.Number 4) = pure DsHint
-  parseJSON _            = mempty
+  parseJSON _            = fail "DiagnosticSeverity"
 
 data DiagnosticTag
   -- | Unused or unnecessary code.
@@ -61,7 +61,7 @@ instance A.ToJSON DiagnosticTag where
 instance A.FromJSON DiagnosticTag where
   parseJSON (A.Number 1) = pure DtUnnecessary
   parseJSON (A.Number 2) = pure DtDeprecated
-  parseJSON _            = mempty
+  parseJSON _            = fail "DiagnosticTag"
 
 -- ---------------------------------------------------------------------
 

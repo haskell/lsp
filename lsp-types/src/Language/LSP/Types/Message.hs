@@ -322,7 +322,7 @@ instance FromJSON ErrorCode where
   parseJSON (Number (-32001)) = pure UnknownErrorCode
   parseJSON (Number (-32800)) = pure RequestCancelled
   parseJSON (Number (-32801)) = pure ContentModified
-  parseJSON _                   = mempty
+  parseJSON _                 = fail "ErrorCode"
 
 -- -------------------------------------
 
