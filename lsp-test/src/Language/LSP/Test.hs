@@ -40,7 +40,7 @@ module Language.LSP.Test
   , sendRequest
   , sendNotification
   , sendResponse
-  -- * Receving
+  -- * Receiving
   , module Language.LSP.Test.Parsing
   -- * Utilities
   -- | Quick helper functions for common tasks.

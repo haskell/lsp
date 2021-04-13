@@ -48,7 +48,7 @@ import Language.LSP.Test.Session
 --
 -- 'Language.LSP.Test.Session' is actually just a parser
 -- that operates on messages under the hood. This means that you
--- can create and combine parsers to match speicifc sequences of
+-- can create and combine parsers to match specific sequences of
 -- messages that you expect.
 --
 -- For example, if you wanted to match either a definition or
