@@ -68,8 +68,8 @@ instance FromJSON WatchKind where
     | Right i <- floatingOrInteger n :: Either Double Int
     , 0 <= i && i <= 7 =
         pure $ WatchKind (testBit i 0x0) (testBit i 0x1) (testBit i 0x2)
-    | otherwise = mempty
-  parseJSON _            = mempty
+    | otherwise = fail "WatchKind"
+  parseJSON _            = fail "WatchKind"
 
 deriveJSON lspOptions ''DidChangeWatchedFilesRegistrationOptions
 deriveJSON lspOptions ''FileSystemWatcher
@@ -89,7 +89,7 @@ instance FromJSON FileChangeType where
   parseJSON (Number 1) = pure FcCreated
   parseJSON (Number 2) = pure FcChanged
   parseJSON (Number 3) = pure FcDeleted
-  parseJSON _            = mempty
+  parseJSON _          = fail "FileChangetype"
 
 
 -- -------------------------------------

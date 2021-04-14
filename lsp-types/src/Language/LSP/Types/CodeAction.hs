@@ -83,7 +83,7 @@ instance FromJSON CodeActionKind where
   parseJSON (String "source")                 = pure CodeActionSource
   parseJSON (String "source.organizeImports") = pure CodeActionSourceOrganizeImports
   parseJSON (String s)                        = pure (CodeActionUnknown s)
-  parseJSON _                                 = mempty
+  parseJSON _                                 = fail "CodeActionKind"
   
 -- -------------------------------------
 

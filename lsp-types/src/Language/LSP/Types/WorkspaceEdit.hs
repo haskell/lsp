@@ -276,7 +276,7 @@ instance FromJSON ResourceOperationKind where
   parseJSON (String "create") = pure ResourceOperationCreate
   parseJSON (String "rename") = pure ResourceOperationRename
   parseJSON (String "delete") = pure ResourceOperationDelete
-  parseJSON _                 = mempty
+  parseJSON _                 = fail "ResourceOperationKind"
 
 data FailureHandlingKind
   = FailureHandlingAbort -- ^ Applying the workspace change is simply aborted if one of the changes provided fails. All operations executed before the failing operation stay executed.
@@ -296,7 +296,7 @@ instance FromJSON FailureHandlingKind where
   parseJSON (String "transactional")         = pure FailureHandlingTransactional
   parseJSON (String "textOnlyTransactional") = pure FailureHandlingTextOnlyTransactional
   parseJSON (String "undo")                  = pure FailureHandlingUndo
-  parseJSON _                                = mempty
+  parseJSON _                                = fail "FailureHandlingKind"
 
 data WorkspaceEditChangeAnnotationClientCapabilities =
   WorkspaceEditChangeAnnotationClientCapabilities

@@ -99,8 +99,8 @@ instance FromJSON ParameterLabel where
         is <- parseJSON v
         case is of
           [l, h] -> pure $ ParameterLabelOffset l h
-          _ -> mempty
-      parseInterval _ = mempty
+          _ -> fail "ParameterLabel"
+      parseInterval _ = fail "ParameterLabel"
 
 -- -------------------------------------
 
@@ -166,7 +166,7 @@ instance FromJSON SignatureHelpTriggerKind where
   parseJSON (Number 1) = pure SHTKInvoked
   parseJSON (Number 2) = pure SHTKTriggerCharacter
   parseJSON (Number 3) = pure SHTKContentChange
-  parseJSON _          = mempty
+  parseJSON _          = fail "SignatureHelpTriggerKind"
 
 -- | Additional information about the context in which a signature help request
 -- was triggered.

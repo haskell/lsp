@@ -106,7 +106,7 @@ instance FromJSON TextDocumentSyncKind where
   parseJSON (Number 0) = pure TdSyncNone
   parseJSON (Number 1) = pure TdSyncFull
   parseJSON (Number 2) = pure TdSyncIncremental
-  parseJSON _            = mempty
+  parseJSON _          = fail "TextDocumentSyncKind"
   
 data TextDocumentSyncOptions =
   TextDocumentSyncOptions
@@ -220,7 +220,7 @@ instance FromJSON TextDocumentSaveReason where
   parseJSON (Number 1) = pure SaveManual
   parseJSON (Number 2) = pure SaveAfterDelay
   parseJSON (Number 3) = pure SaveFocusOut
-  parseJSON _          = mempty
+  parseJSON _          = fail "TextDocumentSaveReason"
 
 data WillSaveTextDocumentParams =
   WillSaveTextDocumentParams

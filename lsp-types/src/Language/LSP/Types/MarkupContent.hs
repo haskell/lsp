@@ -27,7 +27,7 @@ instance ToJSON MarkupKind where
 instance FromJSON MarkupKind where
   parseJSON (String "plaintext") = pure MkPlainText
   parseJSON (String "markdown")  = pure MkMarkdown
-  parseJSON _                    = mempty
+  parseJSON _                    = fail "MarkupKind"
 
 -- | A `MarkupContent` literal represents a string value which content is interpreted base on its
 -- | kind flag. Currently the protocol supports `plaintext` and `markdown` as markup kinds.
