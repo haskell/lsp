@@ -19,6 +19,7 @@ data SessionException = Timeout (Maybe FromServerMessage)
                       | UnexpectedResponseError SomeLspId  ResponseError
                       | UnexpectedServerTermination
                       | IllegalInitSequenceMessage FromServerMessage
+                      | MessageSendError Value IOError
   deriving Eq
 
 instance Exception SessionException
@@ -53,6 +54,8 @@ instance Show SessionException where
   show (IllegalInitSequenceMessage msg) =
     "Received an illegal message between the initialize request and response:\n"
       ++  B.unpack (encodePretty msg)
+  show (MessageSendError msg e) =
+    "IO exception:\n" ++ show e ++ "\narose while trying to send message:\n" ++ B.unpack (encodePretty msg)
 
 -- | A predicate that matches on any 'SessionException'
 anySessionException :: SessionException -> Bool
