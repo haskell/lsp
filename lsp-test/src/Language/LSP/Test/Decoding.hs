@@ -24,16 +24,6 @@ import           Language.LSP.Test.Exceptions
 import Data.IxMap
 import Data.Kind
 
-getAllMessages :: Handle -> IO [B.ByteString]
-getAllMessages h = do
-  done <- hIsEOF h
-  if done
-    then return []
-    else do
-      msg <- getNextMessage h
-
-      (msg :) <$> getAllMessages h
-
 -- | Fetches the next message bytes based on
 -- the Content-Length header
 getNextMessage :: Handle -> IO B.ByteString
