@@ -87,12 +87,6 @@ initializeRequestHandler ServerDefinition{..} vfs sendFunc req = do
         rootDir = getFirst $ foldMap First [ params ^. LSP.rootUri  >>= uriToFilePath
                                            , params ^. LSP.rootPath <&> T.unpack ]
 
-    liftIO $ case rootDir of
-      Nothing -> return ()
-      Just dir -> do
-        debugM "lsp.initializeRequestHandler" $ "Setting current dir to project root:" ++ dir
-        unless (null dir) $ setCurrentDirectory dir
-
     let initialWfs = case params ^. LSP.workspaceFolders of
           Just (List xs) -> xs
           Nothing -> []
@@ -128,7 +122,7 @@ initializeRequestHandler ServerDefinition{..} vfs sendFunc req = do
   where
     makeResponseMessage rid result = ResponseMessage "2.0" (Just rid) (Right result)
     makeResponseError origId err = ResponseMessage "2.0" (Just origId) (Left err)
-    
+
     initializeErrorHandler :: (ResponseError -> IO ()) -> E.SomeException -> IO (Maybe a)
     initializeErrorHandler sendResp e = do
         sendResp $ ResponseError InternalError msg Nothing
