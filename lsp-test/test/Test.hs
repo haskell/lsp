@@ -301,6 +301,22 @@ main = hspec $ around withDummyServer $ do
           pred _ = False
       void $ satisfy pred
 
+  describe "satisfyMaybe" $ do
+    it "returns matched data on match" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "." $ do
+      -- Wait for window/logMessage "initialized" from the server.
+      let pred (FromServerMess SWindowLogMessage _) = Just "match" :: Maybe String
+          pred _ = Nothing :: Maybe String
+      result <- satisfyMaybe pred
+      liftIO $ result `shouldBe` "match"
+
+    it "doesn't return if no match" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "." $ do
+      let pred (FromServerMess STextDocumentPublishDiagnostics _) = Just "matched" :: Maybe String
+          pred _ = Nothing :: Maybe String
+      -- We expect a window/logMessage from the server, but
+      -- not a textDocument/publishDiagnostics.
+      result <- satisfyMaybe pred <|> (message SWindowLogMessage *> pure "no match")
+      liftIO $ result `shouldBe` "no match"
+
   describe "ignoreLogNotifications" $
     it "works" $ \(hin, hout) ->
       runSessionWithHandles hin hout (def { ignoreLogNotifications = True }) fullCaps "." $ do
