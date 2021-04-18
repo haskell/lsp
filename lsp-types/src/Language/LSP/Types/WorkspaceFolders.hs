@@ -10,7 +10,7 @@ import           Language.LSP.Types.Utils
 
 data WorkspaceFolder =
   WorkspaceFolder
-    { -- | The name of the workspace folder. Defaults to the uri's basename.
+    { -- | The URI of the workspace folder.
       _uri  :: Text
     -- | The name of the workspace folder. Defaults to the uri's basename.
     , _name :: Text

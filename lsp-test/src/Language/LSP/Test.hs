@@ -398,7 +398,7 @@ createDoc file languageId contents = do
       regs = concatMap pred $ Map.elems dynCaps
       watchHits :: FileSystemWatcher -> Bool
       watchHits (FileSystemWatcher pattern kind) =
-        -- If WatchKind is exlcuded, defaults to all true as per spec
+        -- If WatchKind is excluded, defaults to all true as per spec
         fileMatches (T.unpack pattern) && createHits (fromMaybe (WatchKind True True True) kind)
 
       fileMatches pattern = Glob.match (Glob.compile pattern) relOrAbs
