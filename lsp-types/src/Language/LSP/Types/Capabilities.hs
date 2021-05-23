@@ -51,7 +51,7 @@ capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) (Jus
           (Just (ExecuteCommandClientCapabilities dynamicReg))
           (since 3 6 True)
           (since 3 6 True)
-    
+
     resourceOperations = List
       [ ResourceOperationCreate
       , ResourceOperationDelete
@@ -126,6 +126,7 @@ capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) (Jus
           (Just publishDiagnosticsCapabilities)
           (since 3 10 foldingRangeCapability)
           (since 3 5 (SelectionRangeClientCapabilities dynamicReg))
+          (since 3 16 (CallHierarchyClientCapabilities dynamicReg))
     sync =
       TextDocumentSyncClientCapabilities
         dynamicReg
@@ -266,5 +267,5 @@ capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) (Jus
     since x y a
       | maj >= x && min >= y = Just a
       | otherwise            = Nothing
-    
+
     window = WindowClientCapabilities (since 3 15 True)

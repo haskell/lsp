@@ -321,10 +321,10 @@ main = hspec $ around withDummyServer $ do
     it "works" $ \(hin, hout) ->
       runSessionWithHandles hin hout (def { ignoreLogNotifications = True }) fullCaps "." $ do
         openDoc "test/data/Format.hs" "haskell"
-        void publishDiagnosticsNotification       
+        void publishDiagnosticsNotification
 
   describe "dynamic capabilities" $ do
-    
+
     it "keeps track" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "." $ do
       loggingNotification -- initialized log message
 
@@ -373,6 +373,16 @@ main = hspec $ around withDummyServer $ do
       count 0 $ loggingNotification
       void $ anyResponse
 
+  describe "call hierarchy" $ do
+    let workPos = Position 1 0
+        notWorkPos = Position 0 0
+        params pos = CallHierarchyPrepareParams (TextDocumentIdentifier (Uri "")) pos Nothing
+    it "works" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "." $ do
+      rsp <- prepareCallHierarchy (params workPos)
+      liftIO $ head rsp ^. range `shouldBe` Range (Position 2 3) (Position 4 5)
+    it "not works" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "." $ do
+      rsp <- prepareCallHierarchy (params notWorkPos)
+      liftIO $ rsp `shouldBe` []
 
 didChangeCaps :: ClientCapabilities
 didChangeCaps = def { _workspace = Just workspaceCaps }

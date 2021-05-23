@@ -163,6 +163,7 @@ inferServerCapabilities clientCaps o h =
     , _foldingRangeProvider             = supportedBool STextDocumentFoldingRange
     , _executeCommandProvider           = executeCommandProvider
     , _selectionRangeProvider           = supportedBool STextDocumentSelectionRange
+    , _callHierarchyProvider            = supportedBool STextDocumentPrepareCallHierarchy
     , _workspaceSymbolProvider          = supported SWorkspaceSymbol
     , _workspace                        = Just workspace
     -- TODO: Add something for experimental

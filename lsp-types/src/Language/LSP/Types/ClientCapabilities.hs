@@ -32,6 +32,7 @@ import Language.LSP.Types.Utils
 import Language.LSP.Types.WatchedFiles
 import Language.LSP.Types.WorkspaceEdit
 import Language.LSP.Types.WorkspaceSymbol
+import Language.LSP.Types.CallHierarchy
 
 
 data WorkspaceClientCapabilities =
@@ -101,7 +102,7 @@ data TextDocumentClientCapabilities =
     , _onTypeFormatting :: Maybe DocumentOnTypeFormattingClientCapabilities
 
       -- | Capabilities specific to the `textDocument/declaration` request.
-      -- 
+      --
       -- Since LSP 3.14.0
     , _declaration :: Maybe DeclarationClientCapabilities
 
@@ -142,6 +143,10 @@ data TextDocumentClientCapabilities =
       -- | Capabilities specific to the `textDocument/selectionRange` request.
       -- Since LSP 3.15.0
     , _selectionRange :: Maybe SelectionRangeClientCapabilities
+
+      -- | Call hierarchy specific to the `textDocument/callHierarchy` request.
+      -- Since LSP 3.16.0
+    , _callHierarchy :: Maybe CallHierarchyClientCapabilities
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''TextDocumentClientCapabilities
@@ -149,7 +154,7 @@ deriveJSON lspOptions ''TextDocumentClientCapabilities
 instance Default TextDocumentClientCapabilities where
   def = TextDocumentClientCapabilities def def def def def def def def
                                        def def def def def def def def
-                                       def def def def def def
+                                       def def def def def def def
 
 -- ---------------------------------------------------------------------
 

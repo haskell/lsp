@@ -535,35 +535,36 @@ registerCapability method regOpts f = do
 
     -- | Checks if client capabilities declares that the method supports dynamic registration
     dynamicSupported clientCaps = case method of
-      SWorkspaceDidChangeConfiguration -> capDyn $ clientCaps ^? J.workspace . _Just . J.didChangeConfiguration . _Just
-      SWorkspaceDidChangeWatchedFiles  -> capDyn $ clientCaps ^? J.workspace . _Just . J.didChangeWatchedFiles . _Just
-      SWorkspaceSymbol                 -> capDyn $ clientCaps ^? J.workspace . _Just . J.symbol . _Just
-      SWorkspaceExecuteCommand         -> capDyn $ clientCaps ^? J.workspace . _Just . J.executeCommand . _Just
-      STextDocumentDidOpen             -> capDyn $ clientCaps ^? J.textDocument . _Just . J.synchronization . _Just
-      STextDocumentDidChange           -> capDyn $ clientCaps ^? J.textDocument . _Just . J.synchronization . _Just
-      STextDocumentDidClose            -> capDyn $ clientCaps ^? J.textDocument . _Just . J.synchronization . _Just
-      STextDocumentCompletion          -> capDyn $ clientCaps ^? J.textDocument . _Just . J.completion . _Just
-      STextDocumentHover               -> capDyn $ clientCaps ^? J.textDocument . _Just . J.hover . _Just
-      STextDocumentSignatureHelp       -> capDyn $ clientCaps ^? J.textDocument . _Just . J.signatureHelp . _Just
-      STextDocumentDeclaration         -> capDyn $ clientCaps ^? J.textDocument . _Just . J.declaration . _Just
-      STextDocumentDefinition          -> capDyn $ clientCaps ^? J.textDocument . _Just . J.definition . _Just
-      STextDocumentTypeDefinition      -> capDyn $ clientCaps ^? J.textDocument . _Just . J.typeDefinition . _Just
-      STextDocumentImplementation      -> capDyn $ clientCaps ^? J.textDocument . _Just . J.implementation . _Just
-      STextDocumentReferences          -> capDyn $ clientCaps ^? J.textDocument . _Just . J.references . _Just
-      STextDocumentDocumentHighlight   -> capDyn $ clientCaps ^? J.textDocument . _Just . J.documentHighlight . _Just
-      STextDocumentDocumentSymbol      -> capDyn $ clientCaps ^? J.textDocument . _Just . J.documentSymbol . _Just
-      STextDocumentCodeAction          -> capDyn $ clientCaps ^? J.textDocument . _Just . J.codeAction . _Just
-      STextDocumentCodeLens            -> capDyn $ clientCaps ^? J.textDocument . _Just . J.codeLens . _Just
-      STextDocumentDocumentLink        -> capDyn $ clientCaps ^? J.textDocument . _Just . J.documentLink . _Just
-      STextDocumentDocumentColor       -> capDyn $ clientCaps ^? J.textDocument . _Just . J.colorProvider . _Just
-      STextDocumentColorPresentation   -> capDyn $ clientCaps ^? J.textDocument . _Just . J.colorProvider . _Just
-      STextDocumentFormatting          -> capDyn $ clientCaps ^? J.textDocument . _Just . J.formatting . _Just
-      STextDocumentRangeFormatting     -> capDyn $ clientCaps ^? J.textDocument . _Just . J.rangeFormatting . _Just
-      STextDocumentOnTypeFormatting    -> capDyn $ clientCaps ^? J.textDocument . _Just . J.onTypeFormatting . _Just
-      STextDocumentRename              -> capDyn $ clientCaps ^? J.textDocument . _Just . J.rename . _Just
-      STextDocumentFoldingRange        -> capDyn $ clientCaps ^? J.textDocument . _Just . J.foldingRange . _Just
-      STextDocumentSelectionRange      -> capDyn $ clientCaps ^? J.textDocument . _Just . J.selectionRange . _Just
-      _                                -> False
+      SWorkspaceDidChangeConfiguration  -> capDyn $ clientCaps ^? J.workspace . _Just . J.didChangeConfiguration . _Just
+      SWorkspaceDidChangeWatchedFiles   -> capDyn $ clientCaps ^? J.workspace . _Just . J.didChangeWatchedFiles . _Just
+      SWorkspaceSymbol                  -> capDyn $ clientCaps ^? J.workspace . _Just . J.symbol . _Just
+      SWorkspaceExecuteCommand          -> capDyn $ clientCaps ^? J.workspace . _Just . J.executeCommand . _Just
+      STextDocumentDidOpen              -> capDyn $ clientCaps ^? J.textDocument . _Just . J.synchronization . _Just
+      STextDocumentDidChange            -> capDyn $ clientCaps ^? J.textDocument . _Just . J.synchronization . _Just
+      STextDocumentDidClose             -> capDyn $ clientCaps ^? J.textDocument . _Just . J.synchronization . _Just
+      STextDocumentCompletion           -> capDyn $ clientCaps ^? J.textDocument . _Just . J.completion . _Just
+      STextDocumentHover                -> capDyn $ clientCaps ^? J.textDocument . _Just . J.hover . _Just
+      STextDocumentSignatureHelp        -> capDyn $ clientCaps ^? J.textDocument . _Just . J.signatureHelp . _Just
+      STextDocumentDeclaration          -> capDyn $ clientCaps ^? J.textDocument . _Just . J.declaration . _Just
+      STextDocumentDefinition           -> capDyn $ clientCaps ^? J.textDocument . _Just . J.definition . _Just
+      STextDocumentTypeDefinition       -> capDyn $ clientCaps ^? J.textDocument . _Just . J.typeDefinition . _Just
+      STextDocumentImplementation       -> capDyn $ clientCaps ^? J.textDocument . _Just . J.implementation . _Just
+      STextDocumentReferences           -> capDyn $ clientCaps ^? J.textDocument . _Just . J.references . _Just
+      STextDocumentDocumentHighlight    -> capDyn $ clientCaps ^? J.textDocument . _Just . J.documentHighlight . _Just
+      STextDocumentDocumentSymbol       -> capDyn $ clientCaps ^? J.textDocument . _Just . J.documentSymbol . _Just
+      STextDocumentCodeAction           -> capDyn $ clientCaps ^? J.textDocument . _Just . J.codeAction . _Just
+      STextDocumentCodeLens             -> capDyn $ clientCaps ^? J.textDocument . _Just . J.codeLens . _Just
+      STextDocumentDocumentLink         -> capDyn $ clientCaps ^? J.textDocument . _Just . J.documentLink . _Just
+      STextDocumentDocumentColor        -> capDyn $ clientCaps ^? J.textDocument . _Just . J.colorProvider . _Just
+      STextDocumentColorPresentation    -> capDyn $ clientCaps ^? J.textDocument . _Just . J.colorProvider . _Just
+      STextDocumentFormatting           -> capDyn $ clientCaps ^? J.textDocument . _Just . J.formatting . _Just
+      STextDocumentRangeFormatting      -> capDyn $ clientCaps ^? J.textDocument . _Just . J.rangeFormatting . _Just
+      STextDocumentOnTypeFormatting     -> capDyn $ clientCaps ^? J.textDocument . _Just . J.onTypeFormatting . _Just
+      STextDocumentRename               -> capDyn $ clientCaps ^? J.textDocument . _Just . J.rename . _Just
+      STextDocumentFoldingRange         -> capDyn $ clientCaps ^? J.textDocument . _Just . J.foldingRange . _Just
+      STextDocumentSelectionRange       -> capDyn $ clientCaps ^? J.textDocument . _Just . J.selectionRange . _Just
+      STextDocumentPrepareCallHierarchy -> capDyn $ clientCaps ^? J.textDocument . _Just . J.callHierarchy . _Just
+      _                                 -> False
 
 -- | Sends a @client/unregisterCapability@ request and removes the handler
 -- for that associated registration.

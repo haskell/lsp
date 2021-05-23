@@ -29,6 +29,7 @@ import           Data.Function (on)
 import           Data.Kind
 import           Data.Void (Void)
 import           GHC.Generics
+import           Language.LSP.Types.CallHierarchy
 import           Language.LSP.Types.CodeAction
 import           Language.LSP.Types.CodeLens
 import           Language.LSP.Types.Command
@@ -96,6 +97,7 @@ type family RegistrationOptions (m :: Method FromClient t) :: Type where
   RegistrationOptions TextDocumentRename                 = RenameRegistrationOptions
   RegistrationOptions TextDocumentFoldingRange           = FoldingRangeRegistrationOptions
   RegistrationOptions TextDocumentSelectionRange         = SelectionRangeRegistrationOptions
+  RegistrationOptions TextDocumentPrepareCallHierarchy   = CallHierarchyRegistrartionOptions
   RegistrationOptions m                                  = Void
 
 data Registration (m :: Method FromClient t) =

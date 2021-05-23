@@ -1,5 +1,6 @@
 module Language.LSP.Types
-  ( module Language.LSP.Types.Cancellation
+  ( module Language.LSP.Types.CallHierarchy
+  , module Language.LSP.Types.Cancellation
   , module Language.LSP.Types.CodeAction
   , module Language.LSP.Types.CodeLens
   , module Language.LSP.Types.Command
@@ -43,6 +44,7 @@ module Language.LSP.Types
   )
 where
 
+import           Language.LSP.Types.CallHierarchy
 import           Language.LSP.Types.Cancellation
 import           Language.LSP.Types.CodeAction
 import           Language.LSP.Types.CodeLens
