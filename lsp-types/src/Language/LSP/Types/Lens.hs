@@ -359,7 +359,7 @@ makeFieldsNoPrefix ''StaticRegistrationOptions
 -- Call hierarchy
 makeFieldsNoPrefix ''CallHierarchyClientCapabilities
 makeFieldsNoPrefix ''CallHierarchyOptions
-makeFieldsNoPrefix ''CallHierarchyRegistrartionOptions
+makeFieldsNoPrefix ''CallHierarchyRegistrationOptions
 makeFieldsNoPrefix ''CallHierarchyPrepareParams
 makeFieldsNoPrefix ''CallHierarchyIncomingCallsParams
 makeFieldsNoPrefix ''CallHierarchyIncomingCall

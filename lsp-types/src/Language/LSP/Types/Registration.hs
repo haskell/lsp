@@ -97,7 +97,7 @@ type family RegistrationOptions (m :: Method FromClient t) :: Type where
   RegistrationOptions TextDocumentRename                 = RenameRegistrationOptions
   RegistrationOptions TextDocumentFoldingRange           = FoldingRangeRegistrationOptions
   RegistrationOptions TextDocumentSelectionRange         = SelectionRangeRegistrationOptions
-  RegistrationOptions TextDocumentPrepareCallHierarchy   = CallHierarchyRegistrartionOptions
+  RegistrationOptions TextDocumentPrepareCallHierarchy   = CallHierarchyRegistrationOptions
   RegistrationOptions m                                  = Void
 
 data Registration (m :: Method FromClient t) =

@@ -27,13 +27,13 @@ deriveJSON lspOptions ''CallHierarchyClientCapabilities
 makeExtendingDatatype "CallHierarchyOptions" [''WorkDoneProgressOptions] []
 deriveJSON lspOptions ''CallHierarchyOptions
 
-makeExtendingDatatype "CallHierarchyRegistrartionOptions"
+makeExtendingDatatype "CallHierarchyRegistrationOptions"
   [ ''TextDocumentRegistrationOptions
   , ''CallHierarchyOptions
   , ''StaticRegistrationOptions
   ]
   []
-deriveJSON lspOptions ''CallHierarchyRegistrartionOptions
+deriveJSON lspOptions ''CallHierarchyRegistrationOptions
 
 makeExtendingDatatype "CallHierarchyPrepareParams"
   [''TextDocumentPositionParams, ''WorkDoneProgressParams] []

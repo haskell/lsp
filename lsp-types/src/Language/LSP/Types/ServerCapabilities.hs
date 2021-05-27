@@ -119,7 +119,7 @@ data ServerCapabilities =
       -- | The server provides selection range support. Since LSP 3.15
     , _selectionRangeProvider           :: Maybe (Bool |? SelectionRangeOptions |? SelectionRangeRegistrationOptions)
       -- | The server provides call hierarchy support.
-    , _callHierarchyProvider            :: Maybe (Bool |? CallHierarchyOptions |? CallHierarchyRegistrartionOptions)
+    , _callHierarchyProvider            :: Maybe (Bool |? CallHierarchyOptions |? CallHierarchyRegistrationOptions)
       -- | The server provides workspace symbol support.
     , _workspaceSymbolProvider          :: Maybe Bool
       -- | Workspace specific server capabilities
