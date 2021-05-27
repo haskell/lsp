@@ -6,6 +6,7 @@ module Language.LSP.Types.ClientCapabilities where
 import           Data.Aeson.TH
 import qualified Data.Aeson as A
 import Data.Default
+import Language.LSP.Types.CallHierarchy
 import Language.LSP.Types.CodeAction
 import Language.LSP.Types.CodeLens
 import Language.LSP.Types.Command
@@ -32,7 +33,6 @@ import Language.LSP.Types.Utils
 import Language.LSP.Types.WatchedFiles
 import Language.LSP.Types.WorkspaceEdit
 import Language.LSP.Types.WorkspaceSymbol
-import Language.LSP.Types.CallHierarchy
 
 
 data WorkspaceClientCapabilities =

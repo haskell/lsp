@@ -1,5 +1,5 @@
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 {- | Since LSP 3.16.0 -}
 module Language.LSP.Types.CallHierarchy where
@@ -8,13 +8,13 @@ import Data.Aeson.TH
 import Data.Aeson.Types ( Value )
 import Data.Text ( Text )
 
-import Language.LSP.Types.Progress
-import Language.LSP.Types.TextDocument
-import Language.LSP.Types.StaticRegistrationOptions
-import Language.LSP.Types.DocumentSymbol
-import Language.LSP.Types.Uri
-import Language.LSP.Types.Location
 import Language.LSP.Types.Common
+import Language.LSP.Types.DocumentSymbol
+import Language.LSP.Types.Location
+import Language.LSP.Types.Progress
+import Language.LSP.Types.StaticRegistrationOptions
+import Language.LSP.Types.TextDocument
+import Language.LSP.Types.Uri
 import Language.LSP.Types.Utils
 
 
