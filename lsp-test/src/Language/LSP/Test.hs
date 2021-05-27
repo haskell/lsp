@@ -760,7 +760,7 @@ incomingCalls = resolveRequestWithListResp SCallHierarchyIncomingCalls
 outgoingCalls :: CallHierarchyOutgoingCallsParams -> Session [CallHierarchyOutgoingCall]
 outgoingCalls = resolveRequestWithListResp SCallHierarchyOutgoingCalls
 
--- | Send a request and receive a 
+-- | Send a request and receive a response with list.
 resolveRequestWithListResp :: (ResponseResult m ~ Maybe (List a))
                => SClientMethod m -> MessageParams m -> Session [a]
 resolveRequestWithListResp method params = do
