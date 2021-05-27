@@ -377,12 +377,23 @@ main = hspec $ around withDummyServer $ do
     let workPos = Position 1 0
         notWorkPos = Position 0 0
         params pos = CallHierarchyPrepareParams (TextDocumentIdentifier (Uri "")) pos Nothing
-    it "works" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "." $ do
+        item = CallHierarchyItem "foo" SkFunction Nothing Nothing (Uri "")
+                                 (Range (Position 1 2) (Position 3 4))
+                                 (Range (Position 1 2) (Position 3 4))
+                                 Nothing
+    it "prepare works" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "." $ do
       rsp <- prepareCallHierarchy (params workPos)
       liftIO $ head rsp ^. range `shouldBe` Range (Position 2 3) (Position 4 5)
-    it "not works" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "." $ do
+    it "prepare not works" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "." $ do
       rsp <- prepareCallHierarchy (params notWorkPos)
       liftIO $ rsp `shouldBe` []
+    it "incoming calls" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "." $ do
+      [CallHierarchyIncomingCall _ (List fromRanges)] <- incomingCalls (CallHierarchyIncomingCallsParams Nothing Nothing item)
+      liftIO $ head fromRanges `shouldBe` Range (Position 2 3) (Position 4 5)
+    it "outgoing calls" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "." $ do
+      [CallHierarchyOutgoingCall _ (List fromRanges)] <- outgoingCalls (CallHierarchyOutgoingCallsParams Nothing Nothing item)
+      liftIO $ head fromRanges `shouldBe` Range (Position 4 5) (Position 2 3)
+
 
 didChangeCaps :: ClientCapabilities
 didChangeCaps = def { _workspace = Just workspaceCaps }

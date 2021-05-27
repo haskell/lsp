@@ -202,4 +202,14 @@ handlers =
         if x == 0 && y == 0
           then resp $ Right Nothing
           else resp $ Right $ Just $ List [item]
+     , requestHandler SCallHierarchyIncomingCalls $ \req resp -> do
+        let RequestMessage _ _ _ params = req
+            CallHierarchyIncomingCallsParams _ _ item = params
+        resp $ Right $ Just $
+          List [CallHierarchyIncomingCall item (List [Range (Position 2 3) (Position 4 5)])]
+     , requestHandler SCallHierarchyOutgoingCalls $ \req resp -> do
+        let RequestMessage _ _ _ params = req
+            CallHierarchyOutgoingCallsParams _ _ item = params
+        resp $ Right $ Just $
+          List [CallHierarchyOutgoingCall item (List [Range (Position 4 5) (Position 2 3)])]
     ]

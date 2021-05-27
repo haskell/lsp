@@ -95,6 +95,8 @@ module Language.LSP.Test
   -- ** Capabilities
   , getRegisteredCapabilities
   , prepareCallHierarchy
+  , incomingCalls
+  , outgoingCalls
   ) where
 
 import Control.Applicative.Combinators
@@ -750,8 +752,19 @@ getRegisteredCapabilities = Map.elems . curDynCaps <$> get
 
 -- | Pass a param and return the response from `prepareCallHierarchy`
 prepareCallHierarchy :: CallHierarchyPrepareParams -> Session [CallHierarchyItem]
-prepareCallHierarchy params = do
-  rsp <- request STextDocumentPrepareCallHierarchy params
+prepareCallHierarchy = resolveRequestWithListResp STextDocumentPrepareCallHierarchy
+
+incomingCalls :: CallHierarchyIncomingCallsParams -> Session [CallHierarchyIncomingCall]
+incomingCalls = resolveRequestWithListResp SCallHierarchyIncomingCalls
+
+outgoingCalls :: CallHierarchyOutgoingCallsParams -> Session [CallHierarchyOutgoingCall]
+outgoingCalls = resolveRequestWithListResp SCallHierarchyOutgoingCalls
+
+-- | Send a request and receive a 
+resolveRequestWithListResp :: (ResponseResult m ~ Maybe (List a))
+               => SClientMethod m -> MessageParams m -> Session [a]
+resolveRequestWithListResp method params = do
+  rsp <- request method params
   case getResponseResult rsp of
     Nothing -> pure []
-    Just (List x)  -> pure x
+    Just (List x) -> pure x
