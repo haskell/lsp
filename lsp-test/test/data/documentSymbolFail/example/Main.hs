@@ -68,6 +68,7 @@ main = do
         (Just (LSP.CodeLensClientCapabilities (Just False)))
         (Just (LSP.DocumentLinkClientCapabilities (Just False)))
         (Just (LSP.RenameClientCapabilities (Just False)))
+        (Just (LSP.CallHierarchyClientCapabilities (Just False)))
 
       initializeParams :: LSP.InitializeParams
       initializeParams = LSP.InitializeParams (Just pid) Nothing Nothing Nothing caps Nothing

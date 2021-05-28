@@ -144,7 +144,7 @@ data TextDocumentClientCapabilities =
       -- Since LSP 3.15.0
     , _selectionRange :: Maybe SelectionRangeClientCapabilities
 
-      -- | Call hierarchy specific to the `textDocument/callHierarchy` request.
+      -- | Call hierarchy specific to the `textDocument/prepareCallHierarchy` request.
       -- Since LSP 3.16.0
     , _callHierarchy :: Maybe CallHierarchyClientCapabilities
     } deriving (Show, Read, Eq)
