@@ -6,6 +6,7 @@ module Language.LSP.Types.ClientCapabilities where
 import           Data.Aeson.TH
 import qualified Data.Aeson as A
 import Data.Default
+import Language.LSP.Types.CallHierarchy
 import Language.LSP.Types.CodeAction
 import Language.LSP.Types.CodeLens
 import Language.LSP.Types.Command
@@ -101,7 +102,7 @@ data TextDocumentClientCapabilities =
     , _onTypeFormatting :: Maybe DocumentOnTypeFormattingClientCapabilities
 
       -- | Capabilities specific to the `textDocument/declaration` request.
-      -- 
+      --
       -- Since LSP 3.14.0
     , _declaration :: Maybe DeclarationClientCapabilities
 
@@ -142,6 +143,10 @@ data TextDocumentClientCapabilities =
       -- | Capabilities specific to the `textDocument/selectionRange` request.
       -- Since LSP 3.15.0
     , _selectionRange :: Maybe SelectionRangeClientCapabilities
+
+      -- | Call hierarchy specific to the `textDocument/prepareCallHierarchy` request.
+      -- Since LSP 3.16.0
+    , _callHierarchy :: Maybe CallHierarchyClientCapabilities
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''TextDocumentClientCapabilities
@@ -149,7 +154,7 @@ deriveJSON lspOptions ''TextDocumentClientCapabilities
 instance Default TextDocumentClientCapabilities where
   def = TextDocumentClientCapabilities def def def def def def def def
                                        def def def def def def def def
-                                       def def def def def def
+                                       def def def def def def def
 
 -- ---------------------------------------------------------------------
 

@@ -75,6 +75,10 @@ data Method (f :: From) (t :: MethodType) where
   -- FoldingRange
   TextDocumentFoldingRange           :: Method FromClient Request
   TextDocumentSelectionRange         :: Method FromClient Request
+  -- Call hierarchy
+  TextDocumentPrepareCallHierarchy   :: Method FromClient Request
+  CallHierarchyIncomingCalls         :: Method FromClient Request
+  CallHierarchyOutgoingCalls         :: Method FromClient Request
 
 -- ServerMethods
   -- Window
@@ -145,6 +149,9 @@ data SMethod (m :: Method f t) where
   STextDocumentPrepareRename          :: SMethod TextDocumentPrepareRename
   STextDocumentFoldingRange           :: SMethod TextDocumentFoldingRange
   STextDocumentSelectionRange         :: SMethod TextDocumentSelectionRange
+  STextDocumentPrepareCallHierarchy   :: SMethod TextDocumentPrepareCallHierarchy
+  SCallHierarchyIncomingCalls         :: SMethod CallHierarchyIncomingCalls
+  SCallHierarchyOutgoingCalls         :: SMethod CallHierarchyOutgoingCalls
 
   SWindowShowMessage                  :: SMethod WindowShowMessage
   SWindowShowMessageRequest           :: SMethod WindowShowMessageRequest
@@ -268,6 +275,9 @@ instance FromJSON SomeClientMethod where
   parseJSON (A.String "textDocument/prepareRename")          = pure $ SomeClientMethod STextDocumentPrepareRename
   parseJSON (A.String "textDocument/foldingRange")           = pure $ SomeClientMethod STextDocumentFoldingRange
   parseJSON (A.String "textDocument/selectionRange")         = pure $ SomeClientMethod STextDocumentFoldingRange
+  parseJSON (A.String "textDocument/prepareCallHierarchy")   = pure $ SomeClientMethod STextDocumentPrepareCallHierarchy
+  parseJSON (A.String "callHierarchy/incomingCalls")         = pure $ SomeClientMethod SCallHierarchyIncomingCalls
+  parseJSON (A.String "callHierarchy/outgoingCalls")         = pure $ SomeClientMethod SCallHierarchyOutgoingCalls
   parseJSON (A.String "window/workDoneProgress/cancel")      = pure $ SomeClientMethod SWindowWorkDoneProgressCancel
 -- Cancelling
   parseJSON (A.String "$/cancelRequest")                     = pure $ SomeClientMethod SCancelRequest
@@ -359,6 +369,9 @@ instance A.ToJSON (SMethod m) where
   toJSON STextDocumentPrepareRename          = A.String "textDocument/prepareRename"
   toJSON STextDocumentFoldingRange           = A.String "textDocument/foldingRange"
   toJSON STextDocumentSelectionRange         = A.String "textDocument/selectionRange"
+  toJSON STextDocumentPrepareCallHierarchy   = A.String "textDocument/prepareCallHierarchy"
+  toJSON SCallHierarchyIncomingCalls         = A.String "callHierarchy/incomingCalls"
+  toJSON SCallHierarchyOutgoingCalls         = A.String "callHierarchy/outgoingCalls"
   toJSON STextDocumentDocumentLink           = A.String "textDocument/documentLink"
   toJSON SDocumentLinkResolve                = A.String "documentLink/resolve"
   toJSON SWindowWorkDoneProgressCancel       = A.String "window/workDoneProgress/cancel"

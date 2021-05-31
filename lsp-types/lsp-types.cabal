@@ -22,7 +22,8 @@ library
                      , Language.LSP.Types.Lens
                      , Language.LSP.VFS
                      , Data.IxMap
-  other-modules:       Language.LSP.Types.Cancellation
+  other-modules:       Language.LSP.Types.CallHierarchy
+                     , Language.LSP.Types.Cancellation
                      , Language.LSP.Types.ClientCapabilities
                      , Language.LSP.Types.CodeAction
                      , Language.LSP.Types.CodeLens

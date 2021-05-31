@@ -250,6 +250,9 @@ splitClientMethod STextDocumentRename = IsClientReq
 splitClientMethod STextDocumentPrepareRename = IsClientReq
 splitClientMethod STextDocumentFoldingRange = IsClientReq
 splitClientMethod STextDocumentSelectionRange = IsClientReq
+splitClientMethod STextDocumentPrepareCallHierarchy = IsClientReq
+splitClientMethod SCallHierarchyIncomingCalls = IsClientReq
+splitClientMethod SCallHierarchyOutgoingCalls = IsClientReq
 splitClientMethod SCancelRequest = IsClientNot
 splitClientMethod SCustomMethod{} = IsClientEither
 

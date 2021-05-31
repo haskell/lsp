@@ -12,6 +12,7 @@
 
 module Language.LSP.Types.Lens where
 
+import           Language.LSP.Types.CallHierarchy
 import           Language.LSP.Types.Cancellation
 import           Language.LSP.Types.ClientCapabilities
 import           Language.LSP.Types.CodeAction
@@ -354,3 +355,14 @@ makeFieldsNoPrefix ''SignatureHelp
 
 -- Static registration
 makeFieldsNoPrefix ''StaticRegistrationOptions
+
+-- Call hierarchy
+makeFieldsNoPrefix ''CallHierarchyClientCapabilities
+makeFieldsNoPrefix ''CallHierarchyOptions
+makeFieldsNoPrefix ''CallHierarchyRegistrationOptions
+makeFieldsNoPrefix ''CallHierarchyPrepareParams
+makeFieldsNoPrefix ''CallHierarchyIncomingCallsParams
+makeFieldsNoPrefix ''CallHierarchyIncomingCall
+makeFieldsNoPrefix ''CallHierarchyOutgoingCallsParams
+makeFieldsNoPrefix ''CallHierarchyOutgoingCall
+makeFieldsNoPrefix ''CallHierarchyItem

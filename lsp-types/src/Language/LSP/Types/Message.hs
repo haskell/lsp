@@ -17,6 +17,7 @@
 
 module Language.LSP.Types.Message where
 
+import           Language.LSP.Types.CallHierarchy
 import           Language.LSP.Types.Cancellation
 import           Language.LSP.Types.CodeAction
 import           Language.LSP.Types.CodeLens
@@ -120,6 +121,10 @@ type family MessageParams (m :: Method f t) :: Type where
   MessageParams TextDocumentFoldingRange           = FoldingRangeParams
   -- Selection Range
   MessageParams TextDocumentSelectionRange         = SelectionRangeParams
+  -- Call hierarchy
+  MessageParams TextDocumentPrepareCallHierarchy   = CallHierarchyPrepareParams
+  MessageParams CallHierarchyIncomingCalls         = CallHierarchyIncomingCallsParams
+  MessageParams CallHierarchyOutgoingCalls         = CallHierarchyOutgoingCallsParams
 -- Server
     -- Window
   MessageParams WindowShowMessage                  = ShowMessageParams
@@ -193,6 +198,10 @@ type family ResponseResult (m :: Method f Request) :: Type where
   -- FoldingRange
   ResponseResult TextDocumentFoldingRange      = List FoldingRange
   ResponseResult TextDocumentSelectionRange    = List SelectionRange
+  -- Call hierarchy
+  ResponseResult TextDocumentPrepareCallHierarchy = Maybe (List CallHierarchyItem)
+  ResponseResult CallHierarchyIncomingCalls    = Maybe (List CallHierarchyIncomingCall)
+  ResponseResult CallHierarchyOutgoingCalls    = Maybe (List CallHierarchyOutgoingCall)
   -- Custom can be either a notification or a message
 -- Server
   -- Window

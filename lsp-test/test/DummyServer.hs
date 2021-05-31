@@ -16,12 +16,12 @@ import System.Directory
 import System.FilePath
 import System.Process
 import Language.LSP.Types
-  
+
 withDummyServer :: ((Handle, Handle) -> IO ()) -> IO ()
 withDummyServer f = do
   (hinRead, hinWrite) <- createPipe
   (houtRead, houtWrite) <- createPipe
-  
+
   handlerEnv <- HandlerEnv <$> newEmptyMVar <*> newEmptyMVar
   let definition = ServerDefinition
         { doInitialize = \env _req -> pure $ Right env
@@ -185,4 +185,31 @@ handlers =
                 Nothing
                 Nothing
         resp $ Right $ InR res
+     , requestHandler STextDocumentPrepareCallHierarchy $ \req resp -> do
+        let RequestMessage _ _ _ params = req
+            CallHierarchyPrepareParams _ pos _ = params
+            Position x y = pos
+            item =
+              CallHierarchyItem
+                "foo"
+                SkMethod
+                Nothing
+                Nothing
+                (Uri "")
+                (Range (Position 2 3) (Position 4 5))
+                (Range (Position 2 3) (Position 4 5))
+                Nothing
+        if x == 0 && y == 0
+          then resp $ Right Nothing
+          else resp $ Right $ Just $ List [item]
+     , requestHandler SCallHierarchyIncomingCalls $ \req resp -> do
+        let RequestMessage _ _ _ params = req
+            CallHierarchyIncomingCallsParams _ _ item = params
+        resp $ Right $ Just $
+          List [CallHierarchyIncomingCall item (List [Range (Position 2 3) (Position 4 5)])]
+     , requestHandler SCallHierarchyOutgoingCalls $ \req resp -> do
+        let RequestMessage _ _ _ params = req
+            CallHierarchyOutgoingCallsParams _ _ item = params
+        resp $ Right $ Just $
+          List [CallHierarchyOutgoingCall item (List [Range (Position 4 5) (Position 2 3)])]
     ]

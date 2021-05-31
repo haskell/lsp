@@ -7,6 +7,7 @@ module Language.LSP.Types.ServerCapabilities where
 import Data.Aeson
 import Data.Aeson.TH
 import Data.Text (Text)
+import Language.LSP.Types.CallHierarchy
 import Language.LSP.Types.CodeAction
 import Language.LSP.Types.CodeLens
 import Language.LSP.Types.Command
@@ -72,7 +73,7 @@ data ServerCapabilities =
       -- | The server provides signature help support.
     , _signatureHelpProvider            :: Maybe SignatureHelpOptions
       -- | The server provides go to declaration support.
-      -- 
+      --
       -- Since LSP 3.14.0
     , _declarationProvider              :: Maybe (Bool |? DeclarationOptions |? DeclarationRegistrationOptions)
       -- | The server provides goto definition support.
@@ -117,6 +118,8 @@ data ServerCapabilities =
     , _executeCommandProvider           :: Maybe ExecuteCommandOptions
       -- | The server provides selection range support. Since LSP 3.15
     , _selectionRangeProvider           :: Maybe (Bool |? SelectionRangeOptions |? SelectionRangeRegistrationOptions)
+      -- | The server provides call hierarchy support.
+    , _callHierarchyProvider            :: Maybe (Bool |? CallHierarchyOptions |? CallHierarchyRegistrationOptions)
       -- | The server provides workspace symbol support.
     , _workspaceSymbolProvider          :: Maybe Bool
       -- | Workspace specific server capabilities

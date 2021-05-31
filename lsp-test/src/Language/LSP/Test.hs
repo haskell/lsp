@@ -94,6 +94,9 @@ module Language.LSP.Test
   , getCodeLenses
   -- ** Capabilities
   , getRegisteredCapabilities
+  , prepareCallHierarchy
+  , incomingCalls
+  , outgoingCalls
   ) where
 
 import Control.Applicative.Combinators
@@ -163,7 +166,7 @@ runSessionWithConfig config' serverExe caps rootDir session = do
 --
 -- > (hinRead, hinWrite) <- createPipe
 -- > (houtRead, houtWrite) <- createPipe
--- > 
+-- >
 -- > forkIO $ void $ runServerWithHandles hinRead houtWrite serverDefinition
 -- > runSessionWithHandles hinWrite houtRead defaultConfig fullCaps "." $ do
 -- >   -- ...
@@ -656,7 +659,7 @@ getDefinitions = getDeclarationyRequest STextDocumentDefinition DefinitionParams
 getTypeDefinitions :: TextDocumentIdentifier -- ^ The document the term is in.
                    -> Position -- ^ The position the term is at.
                    -> Session ([Location] |? [LocationLink])
-getTypeDefinitions = getDeclarationyRequest STextDocumentTypeDefinition TypeDefinitionParams 
+getTypeDefinitions = getDeclarationyRequest STextDocumentTypeDefinition TypeDefinitionParams
 
 -- | Returns the type definition(s) for the term at the specified position.
 getImplementations :: TextDocumentIdentifier -- ^ The document the term is in.
@@ -746,3 +749,22 @@ getCodeLenses tId = do
 -- @since 0.11.0.0
 getRegisteredCapabilities :: Session [SomeRegistration]
 getRegisteredCapabilities = Map.elems . curDynCaps <$> get
+
+-- | Pass a param and return the response from `prepareCallHierarchy`
+prepareCallHierarchy :: CallHierarchyPrepareParams -> Session [CallHierarchyItem]
+prepareCallHierarchy = resolveRequestWithListResp STextDocumentPrepareCallHierarchy
+
+incomingCalls :: CallHierarchyIncomingCallsParams -> Session [CallHierarchyIncomingCall]
+incomingCalls = resolveRequestWithListResp SCallHierarchyIncomingCalls
+
+outgoingCalls :: CallHierarchyOutgoingCallsParams -> Session [CallHierarchyOutgoingCall]
+outgoingCalls = resolveRequestWithListResp SCallHierarchyOutgoingCalls
+
+-- | Send a request and receive a response with list.
+resolveRequestWithListResp :: (ResponseResult m ~ Maybe (List a))
+               => SClientMethod m -> MessageParams m -> Session [a]
+resolveRequestWithListResp method params = do
+  rsp <- request method params
+  case getResponseResult rsp of
+    Nothing -> pure []
+    Just (List x) -> pure x
