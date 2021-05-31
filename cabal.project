@@ -10,3 +10,8 @@ tests: True
 benchmarks: True
 test-show-details: direct
 haddock-quickjump: True
+
+constraints: some == 1.0.1,
+             dependent-sum == 0.7.1.0
+
+max-backjumps: 10000
