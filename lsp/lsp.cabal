@@ -7,8 +7,8 @@ description:         An implementation of the types, and basic message server to
                      allow language implementors to support the Language Server
                      Protocol for their specific language.
                      .
-                     An example of this is for Haskell via the Haskell IDE
-                     Engine, at https://github.com/haskell/haskell-ide-engine
+                     An example of this is for Haskell via the Haskell Language
+                     Server, at https://github.com/haskell/haskell-language-server
 
 homepage:            https://github.com/haskell/lsp
 license:             MIT
