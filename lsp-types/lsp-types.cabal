@@ -69,7 +69,7 @@ library
                      , Language.LSP.Types.WorkspaceSymbol
  -- other-extensions:
   ghc-options:         -Wall
-  build-depends:       base >= 4.11 && < 4.15
+  build-depends:       base >= 4.11 && < 4.16
                      , aeson >=1.2.2.0
                      , binary
                      , bytestring

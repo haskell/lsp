@@ -9,7 +9,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ghc: ['8.10.4', '8.8.3', '8.6.5', '8.4.4']
+        ghc: ['9.0.1', '8.10.4', '8.8.3', '8.6.5', '8.4.4']
         os: [ubuntu-latest, macOS-latest, windows-latest]
         exclude:
           - os: windows-latest
@@ -20,7 +20,7 @@ jobs:
     - uses: haskell/actions/setup@v1
       with:
         ghc-version: ${{ matrix.ghc }}
-        cabal-version: '3.2'
+        cabal-version: '3.4'
 
     - name: Cache
       uses: actions/cache@v1
@@ -34,6 +34,8 @@ jobs:
           ${{ runner.os }}-build-
           ${{ runner.os }}-
 
+    - name: Cabal update
+      run: cabal update
     - name: Build
       run: cabal build all
     - name: Test

@@ -84,6 +84,7 @@ data SaveOptions =
   { -- | The client is supposed to include the content on save.
     _includeText :: Maybe Bool
   } deriving (Show, Read, Eq)
+deriveJSON lspOptions ''SaveOptions
 
 -- -------------------------------------
 
@@ -107,7 +108,7 @@ instance FromJSON TextDocumentSyncKind where
   parseJSON (Number 1) = pure TdSyncFull
   parseJSON (Number 2) = pure TdSyncIncremental
   parseJSON _          = fail "TextDocumentSyncKind"
-  
+
 data TextDocumentSyncOptions =
   TextDocumentSyncOptions
   { -- | Open and close notifications are sent to the server. If omitted open
@@ -234,7 +235,6 @@ deriveJSON lspOptions ''WillSaveTextDocumentParams
 
 -- -------------------------------------
 
-deriveJSON lspOptions ''SaveOptions
 
 makeExtendingDatatype "TextDocumentSaveRegistrationOptions"
   [''TextDocumentRegistrationOptions]
