@@ -33,7 +33,6 @@ import Control.Concurrent.STM
 import Control.Monad.Trans.Except
 import Control.Monad.Reader
 import Data.IxMap
-import System.Directory
 import System.Log.Logger
 import qualified Data.Dependent.Map as DMap
 import Data.Maybe

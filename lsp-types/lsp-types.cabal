@@ -90,7 +90,6 @@ library
                      , scientific
                      , some
                      , dependent-sum-template
-                     , dependent-sum >= 0.6.2.2
                      , text
                      , template-haskell
                      , temporary

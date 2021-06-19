@@ -37,10 +37,8 @@ library
                      , attoparsec
                      , bytestring
                      , containers
-                     , directory
                      , data-default
                      , exceptions
-                     , filepath
                      , hslogger
                      , hashable
                      , lsp-types == 1.2.*
@@ -124,12 +122,8 @@ test-suite unit-test
   build-depends:       base
                      , QuickCheck
                      , aeson
-                     , bytestring
                      , containers
-                     , data-default
-                     , directory
                      , filepath
-                     , hashable
                      , lsp
                      , hspec
                      -- , hspec-jenkins
@@ -138,7 +132,6 @@ test-suite unit-test
                      , quickcheck-instances
                      , rope-utf16-splay >= 0.2
                      , sorted-list == 0.2.1.*
-                     , stm
                      , text
                      , unordered-containers
                      -- For GHCI tests
