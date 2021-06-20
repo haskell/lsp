@@ -199,7 +199,7 @@ runSessionWithHandles' serverProc serverIn serverOut config' caps rootDir sessio
                                           (Just lspTestClientInfo)
                                           (Just $ T.pack absRootDir)
                                           (Just $ filePathToUri absRootDir)
-                                          Nothing
+                                          (lspConfig config')
                                           caps
                                           (Just TraceOff)
                                           (List <$> initialWorkspaceFolders config)
