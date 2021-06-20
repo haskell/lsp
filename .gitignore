@@ -18,3 +18,5 @@ stack*.yaml.lock
 .hspec-failures
 hie
 .hie
+hie.yaml
+.envrc
