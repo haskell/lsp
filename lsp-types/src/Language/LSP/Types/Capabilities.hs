@@ -51,6 +51,7 @@ capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) (Jus
           (Just (ExecuteCommandClientCapabilities dynamicReg))
           (since 3 6 True)
           (since 3 6 True)
+          (since 3 16 (SemanticTokensWorkspaceClientCapabilities $ Just True))
 
     resourceOperations = List
       [ ResourceOperationCreate
@@ -103,6 +104,20 @@ capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) (Jus
              , SkTypeParameter
              ]
 
+    -- Only one token format for now, just list it here
+    tfs = List [ TokenFormatRelative ]
+
+    semanticTokensCapabilities = SemanticTokensClientCapabilities
+      (Just True)
+      (SemanticTokensRequestsClientCapabilities
+       (Just $ SemanticTokensRangeBool True)
+       (Just (SemanticTokensFullDelta (SemanticTokensDeltaClientCapabilities $ Just True))))
+      (List knownSemanticTokenTypes)
+      (List knownSemanticTokenModifiers)
+      tfs
+      (Just True)
+      (Just True)
+
     td = TextDocumentClientCapabilities
           (Just sync)
           (Just completionCapability)
@@ -127,6 +142,8 @@ capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) (Jus
           (since 3 10 foldingRangeCapability)
           (since 3 5 (SelectionRangeClientCapabilities dynamicReg))
           (since 3 16 (CallHierarchyClientCapabilities dynamicReg))
+          (since 3 16 semanticTokensCapabilities)
+
     sync =
       TextDocumentSyncClientCapabilities
         dynamicReg

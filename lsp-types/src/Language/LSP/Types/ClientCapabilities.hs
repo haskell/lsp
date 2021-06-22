@@ -26,6 +26,7 @@ import Language.LSP.Types.Implementation
 import Language.LSP.Types.References
 import Language.LSP.Types.Rename
 import Language.LSP.Types.SelectionRange
+import Language.LSP.Types.SemanticTokens
 import Language.LSP.Types.SignatureHelp
 import Language.LSP.Types.TextDocument
 import Language.LSP.Types.TypeDefinition
@@ -61,12 +62,18 @@ data WorkspaceClientCapabilities =
 
       -- | The client supports `workspace/configuration` requests.
     , _configuration :: Maybe Bool
+
+      -- | Capabilities specific to the semantic token requests scoped to the
+      -- workspace.
+      --
+      -- @since 3.16.0
+    , _semanticTokens :: Maybe SemanticTokensWorkspaceClientCapabilities
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''WorkspaceClientCapabilities
 
 instance Default WorkspaceClientCapabilities where
-  def = WorkspaceClientCapabilities def def def def def def def def
+  def = WorkspaceClientCapabilities def def def def def def def def def
 
 -- -------------------------------------
 
@@ -147,6 +154,11 @@ data TextDocumentClientCapabilities =
       -- | Call hierarchy specific to the `textDocument/prepareCallHierarchy` request.
       -- Since LSP 3.16.0
     , _callHierarchy :: Maybe CallHierarchyClientCapabilities
+
+    -- | Capabilities specific to the various semantic token requests.
+    --
+    -- @since 3.16.0
+    , _semanticTokens :: Maybe SemanticTokensClientCapabilities
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''TextDocumentClientCapabilities
@@ -154,7 +166,7 @@ deriveJSON lspOptions ''TextDocumentClientCapabilities
 instance Default TextDocumentClientCapabilities where
   def = TextDocumentClientCapabilities def def def def def def def def
                                        def def def def def def def def
-                                       def def def def def def def
+                                       def def def def def def def def
 
 -- ---------------------------------------------------------------------
 

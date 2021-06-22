@@ -79,6 +79,12 @@ data Method (f :: From) (t :: MethodType) where
   TextDocumentPrepareCallHierarchy   :: Method FromClient Request
   CallHierarchyIncomingCalls         :: Method FromClient Request
   CallHierarchyOutgoingCalls         :: Method FromClient Request
+  -- SemanticTokens
+  TextDocumentSemanticTokens         :: Method FromClient Request
+  TextDocumentSemanticTokensFull     :: Method FromClient Request
+  TextDocumentSemanticTokensFullDelta :: Method FromClient Request
+  TextDocumentSemanticTokensRange    :: Method FromClient Request
+  WorkspaceSemanticTokensRefresh     :: Method FromClient Request
 
 -- ServerMethods
   -- Window
@@ -152,6 +158,12 @@ data SMethod (m :: Method f t) where
   STextDocumentPrepareCallHierarchy   :: SMethod TextDocumentPrepareCallHierarchy
   SCallHierarchyIncomingCalls         :: SMethod CallHierarchyIncomingCalls
   SCallHierarchyOutgoingCalls         :: SMethod CallHierarchyOutgoingCalls
+
+  STextDocumentSemanticTokens         :: SMethod TextDocumentSemanticTokens
+  STextDocumentSemanticTokensFull     :: SMethod TextDocumentSemanticTokensFull
+  STextDocumentSemanticTokensFullDelta :: SMethod TextDocumentSemanticTokensFullDelta
+  STextDocumentSemanticTokensRange    :: SMethod TextDocumentSemanticTokensRange
+  SWorkspaceSemanticTokensRefresh     :: SMethod WorkspaceSemanticTokensRefresh
 
   SWindowShowMessage                  :: SMethod WindowShowMessage
   SWindowShowMessageRequest           :: SMethod WindowShowMessageRequest
@@ -243,6 +255,7 @@ instance FromJSON SomeClientMethod where
   parseJSON (A.String "workspace/didChangeWatchedFiles")     = pure $ SomeClientMethod SWorkspaceDidChangeWatchedFiles
   parseJSON (A.String "workspace/symbol")                    = pure $ SomeClientMethod SWorkspaceSymbol
   parseJSON (A.String "workspace/executeCommand")            = pure $ SomeClientMethod SWorkspaceExecuteCommand
+  parseJSON (A.String "workspace/semanticTokens/refresh")    = pure $ SomeClientMethod SWorkspaceSemanticTokensRefresh
  -- Document
   parseJSON (A.String "textDocument/didOpen")                = pure $ SomeClientMethod STextDocumentDidOpen
   parseJSON (A.String "textDocument/didChange")              = pure $ SomeClientMethod STextDocumentDidChange
@@ -278,6 +291,10 @@ instance FromJSON SomeClientMethod where
   parseJSON (A.String "textDocument/prepareCallHierarchy")   = pure $ SomeClientMethod STextDocumentPrepareCallHierarchy
   parseJSON (A.String "callHierarchy/incomingCalls")         = pure $ SomeClientMethod SCallHierarchyIncomingCalls
   parseJSON (A.String "callHierarchy/outgoingCalls")         = pure $ SomeClientMethod SCallHierarchyOutgoingCalls
+  parseJSON (A.String "textDocument/semanticTokens")         = pure $ SomeClientMethod STextDocumentSemanticTokens
+  parseJSON (A.String "textDocument/semanticTokens/full")    = pure $ SomeClientMethod STextDocumentSemanticTokensFull
+  parseJSON (A.String "textDocument/semanticTokens/full/delta") = pure $ SomeClientMethod STextDocumentSemanticTokensFullDelta
+  parseJSON (A.String "textDocument/semanticTokens/range")    = pure $ SomeClientMethod STextDocumentSemanticTokensRange
   parseJSON (A.String "window/workDoneProgress/cancel")      = pure $ SomeClientMethod SWindowWorkDoneProgressCancel
 -- Cancelling
   parseJSON (A.String "$/cancelRequest")                     = pure $ SomeClientMethod SCancelRequest
@@ -338,6 +355,7 @@ instance A.ToJSON (SMethod m) where
   toJSON SWorkspaceDidChangeWatchedFiles     = A.String "workspace/didChangeWatchedFiles"
   toJSON SWorkspaceSymbol                    = A.String "workspace/symbol"
   toJSON SWorkspaceExecuteCommand            = A.String "workspace/executeCommand"
+  toJSON SWorkspaceSemanticTokensRefresh     = A.String "workspace/semanticTokens/refresh"
   -- Document
   toJSON STextDocumentDidOpen                = A.String "textDocument/didOpen"
   toJSON STextDocumentDidChange              = A.String "textDocument/didChange"
@@ -371,6 +389,10 @@ instance A.ToJSON (SMethod m) where
   toJSON STextDocumentPrepareCallHierarchy   = A.String "textDocument/prepareCallHierarchy"
   toJSON SCallHierarchyIncomingCalls         = A.String "callHierarchy/incomingCalls"
   toJSON SCallHierarchyOutgoingCalls         = A.String "callHierarchy/outgoingCalls"
+  toJSON STextDocumentSemanticTokens         = A.String "textDocument/semanticTokens"
+  toJSON STextDocumentSemanticTokensFull     = A.String "textDocument/semanticTokens/full"
+  toJSON STextDocumentSemanticTokensFullDelta = A.String "textDocument/semanticTokens/full/delta"
+  toJSON STextDocumentSemanticTokensRange    = A.String "textDocument/semanticTokens/range"
   toJSON STextDocumentDocumentLink           = A.String "textDocument/documentLink"
   toJSON SDocumentLinkResolve                = A.String "documentLink/resolve"
   toJSON SWindowWorkDoneProgressCancel       = A.String "window/workDoneProgress/cancel"

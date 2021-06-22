@@ -51,6 +51,7 @@ import           Language.LSP.Types.WorkspaceEdit
 import           Language.LSP.Types.WorkspaceFolders
 import           Language.LSP.Types.WorkspaceSymbol
 import           Language.LSP.Types.Message
+import           Language.LSP.Types.SemanticTokens
 import           Control.Lens.TH
 
 -- TODO: This is out of date and very unmantainable, use TH to call all these!!
@@ -366,3 +367,15 @@ makeFieldsNoPrefix ''CallHierarchyIncomingCall
 makeFieldsNoPrefix ''CallHierarchyOutgoingCallsParams
 makeFieldsNoPrefix ''CallHierarchyOutgoingCall
 makeFieldsNoPrefix ''CallHierarchyItem
+
+-- Semantic tokens
+makeFieldsNoPrefix ''SemanticTokensLegend
+makeFieldsNoPrefix ''SemanticTokensDeltaClientCapabilities
+makeFieldsNoPrefix ''SemanticTokensRequestsClientCapabilities
+makeFieldsNoPrefix ''SemanticTokensClientCapabilities
+makeFieldsNoPrefix ''SemanticTokens
+makeFieldsNoPrefix ''SemanticTokensPartialResult
+makeFieldsNoPrefix ''SemanticTokensEdit
+makeFieldsNoPrefix ''SemanticTokensDelta
+makeFieldsNoPrefix ''SemanticTokensDeltaPartialResult
+makeFieldsNoPrefix ''SemanticTokensWorkspaceClientCapabilities

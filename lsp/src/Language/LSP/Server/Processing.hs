@@ -33,13 +33,13 @@ import Control.Concurrent.STM
 import Control.Monad.Trans.Except
 import Control.Monad.Reader
 import Data.IxMap
-import System.Directory
 import System.Log.Logger
 import qualified Data.Dependent.Map as DMap
 import Data.Maybe
 import Data.Dependent.Map (DMap)
 import qualified Data.Map.Strict as Map
 import System.Exit
+import Data.Default (def)
 
 processMessage :: BSL.ByteString -> LspM config ()
 processMessage jsonStr = do
@@ -164,6 +164,7 @@ inferServerCapabilities clientCaps o h =
     , _executeCommandProvider           = executeCommandProvider
     , _selectionRangeProvider           = supportedBool STextDocumentSelectionRange
     , _callHierarchyProvider            = supportedBool STextDocumentPrepareCallHierarchy
+    , _semanticTokensProvider           = semanticTokensProvider
     , _workspaceSymbolProvider          = supported SWorkspaceSymbol
     , _workspace                        = Just workspace
     -- TODO: Add something for experimental
@@ -246,6 +247,16 @@ inferServerCapabilities clientCaps o h =
           InR . RenameOptions Nothing . Just $ True
       | supported_b STextDocumentRename = Just (InL True)
       | otherwise = Just (InL False)
+
+    -- Always provide the default legend
+    -- TODO: allow user-provided legend via 'Options', or at least user-provided types
+    semanticTokensProvider = Just $ InL $ SemanticTokensOptions Nothing def semanticTokenRangeProvider semanticTokenFullProvider
+    semanticTokenRangeProvider
+      | supported_b STextDocumentSemanticTokensRange = Just $ SemanticTokensRangeBool True
+      | otherwise = Nothing 
+    semanticTokenFullProvider
+      | supported_b STextDocumentSemanticTokensFull = Just $ SemanticTokensFullDelta $ SemanticTokensDeltaClientCapabilities $ supported STextDocumentSemanticTokensFullDelta
+      | otherwise = Nothing
 
     sync = case textDocumentSync o of
             Just x -> Just (InL x)

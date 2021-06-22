@@ -50,6 +50,7 @@ import           Language.LSP.Types.References
 import           Language.LSP.Types.Rename
 import           Language.LSP.Types.SignatureHelp
 import           Language.LSP.Types.SelectionRange
+import           Language.LSP.Types.SemanticTokens
 import           Language.LSP.Types.TextDocument
 import           Language.LSP.Types.TypeDefinition
 import           Language.LSP.Types.Utils
@@ -98,6 +99,7 @@ type family RegistrationOptions (m :: Method FromClient t) :: Type where
   RegistrationOptions TextDocumentFoldingRange           = FoldingRangeRegistrationOptions
   RegistrationOptions TextDocumentSelectionRange         = SelectionRangeRegistrationOptions
   RegistrationOptions TextDocumentPrepareCallHierarchy   = CallHierarchyRegistrationOptions
+  RegistrationOptions TextDocumentSemanticTokens         = SemanticTokensRegistrationOptions
   RegistrationOptions m                                  = Void
 
 data Registration (m :: Method FromClient t) =

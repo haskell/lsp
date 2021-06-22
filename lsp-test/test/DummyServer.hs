@@ -16,6 +16,7 @@ import System.Directory
 import System.FilePath
 import System.Process
 import Language.LSP.Types
+import Data.Default
 
 withDummyServer :: ((Handle, Handle) -> IO ()) -> IO ()
 withDummyServer f = do
@@ -212,4 +213,9 @@ handlers =
             CallHierarchyOutgoingCallsParams _ _ item = params
         resp $ Right $ Just $
           List [CallHierarchyOutgoingCall item (List [Range (Position 4 5) (Position 2 3)])]
+     , requestHandler STextDocumentSemanticTokensFull $ \_req resp -> do
+        let tokens = makeSemanticTokens def [SemanticTokenAbsolute 0 1 2 SttType []]
+        case tokens of
+          Left t -> resp $ Left $ ResponseError InternalError t Nothing
+          Right tokens -> resp $ Right $ Just tokens
     ]
