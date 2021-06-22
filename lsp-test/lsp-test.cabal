@@ -1,3 +1,4 @@
+cabal-version:       2.4
 name:                lsp-test
 version:             0.14.0.0
 synopsis:            Functional test framework for LSP servers.
@@ -10,7 +11,7 @@ description:
   <https://github.com/haskell/haskell-language-server haskell-language-server> and
   <https://github.com/digital-asset/ghcide ghcide>.
 homepage:            https://github.com/haskell/lsp/blob/master/lsp-test/README.md
-license:             BSD3
+license:             BSD-3-Clause
 license-file:        LICENSE
 author:              Luke Lau
 maintainer:          luke_lau@icloud.com
@@ -18,9 +19,9 @@ bug-reports:         https://github.com/haskell/lsp/issues
 copyright:           2021 Luke Lau
 category:            Testing
 build-type:          Simple
-cabal-version:       2.0
 extra-source-files:  README.md
                    , ChangeLog.md
+                   , test/data/**/*.hs
 tested-with:         GHC == 8.4.4, GHC == 8.6.5, GHC == 8.8.3, GHC == 8.10.1, GHC == 8.10.2
 
 source-repository head
