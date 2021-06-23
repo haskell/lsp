@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -23,17 +24,20 @@ import           Control.DeepSeq
 import qualified Data.Aeson                                 as A
 import           Data.Binary                                (Binary, Get, put, get)
 import           Data.Hashable
+import qualified Data.HashMap.Strict as HM
+import           Data.IORef                                (atomicModifyIORef', newIORef)
 import           Data.List                                  (stripPrefix)
-import           Data.MemoTrie                              (memo)
 import           Data.String                                (IsString, fromString)
 import           Data.Text                                  (Text)
 import qualified Data.Text                                  as T
+import           Data.Tuple                                (swap)
 import           GHC.Generics
 import           Network.URI hiding (authority)
 import qualified System.FilePath                            as FP
 import qualified System.FilePath.Posix                      as FPP
 import qualified System.FilePath.Windows                    as FPW
 import qualified System.Info
+import           System.IO.Unsafe                          (unsafePerformIO)
 
 newtype Uri = Uri { getUri :: Text }
   deriving (Eq,Ord,Read,Show,Generic,A.FromJSON,A.ToJSON,Hashable,A.ToJSONKey,A.FromJSONKey)
@@ -166,7 +170,7 @@ instance Binary NormalizedFilePath where
   get = do
     v <- Data.Binary.get :: Get FilePath
     let nuri = internalNormalizedFilePathToUri v
-    return (NormalizedFilePath nuri v)
+    return (intern $ NormalizedFilePath nuri v)
 
 -- | Internal helper that takes a file path that is assumed to
 -- already be normalized to a URI. It is up to the caller
@@ -189,13 +193,10 @@ instance IsString NormalizedFilePath where
     fromString = toNormalizedFilePath
 
 toNormalizedFilePath :: FilePath -> NormalizedFilePath
-toNormalizedFilePath fp = NormalizedFilePath nuri nfp
+toNormalizedFilePath fp = intern $ NormalizedFilePath nuri nfp
   where
-      nfp = internFilePath $ FP.normalise fp
+      nfp = FP.normalise fp
       nuri = internalNormalizedFilePathToUri nfp
-
-internFilePath :: FilePath -> FilePath
-internFilePath = force . memo FP.joinPath . FP.splitPath
 
 fromNormalizedFilePath :: NormalizedFilePath -> FilePath
 fromNormalizedFilePath (NormalizedFilePath _ fp) = fp
@@ -204,5 +205,20 @@ normalizedFilePathToUri :: NormalizedFilePath -> NormalizedUri
 normalizedFilePathToUri (NormalizedFilePath uri _) = uri
 
 uriToNormalizedFilePath :: NormalizedUri -> Maybe NormalizedFilePath
-uriToNormalizedFilePath nuri = fmap (NormalizedFilePath nuri . internFilePath) mbFilePath
+uriToNormalizedFilePath nuri = fmap (intern . NormalizedFilePath nuri) mbFilePath
   where mbFilePath = platformAwareUriToFilePath System.Info.os (fromNormalizedUri nuri)
+
+---------------------------------------------------------------------------
+-- Unsafe hashcons of NFP
+internIO :: (Eq a, Hashable a) => IO (a -> IO a)
+internIO = do
+    tableRef <- newIORef mempty
+    let f x = atomicModifyIORef' tableRef $ swap . flip HM.alterF x (\case
+         Just res -> (res, Just res)
+         Nothing  -> (x, Just x)
+         )
+    return f
+
+{-# NOINLINE intern #-}
+intern :: NormalizedFilePath -> NormalizedFilePath
+intern = let f = unsafePerformIO internIO in \x -> unsafePerformIO (f x)
