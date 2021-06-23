@@ -33,6 +33,7 @@ import qualified System.FilePath                            as FP
 import qualified System.FilePath.Posix                      as FPP
 import qualified System.FilePath.Windows                    as FPW
 import qualified System.Info
+import Data.MemoTrie (memo)
 
 newtype Uri = Uri { getUri :: Text }
   deriving (Eq,Ord,Read,Show,Generic,A.FromJSON,A.ToJSON,Hashable,A.ToJSONKey,A.FromJSONKey)
@@ -190,8 +191,11 @@ instance IsString NormalizedFilePath where
 toNormalizedFilePath :: FilePath -> NormalizedFilePath
 toNormalizedFilePath fp = NormalizedFilePath nuri nfp
   where
-      nfp = FP.normalise fp
+      nfp = internFilePath $ FP.normalise fp
       nuri = internalNormalizedFilePathToUri nfp
+
+internFilePath :: FilePath -> FilePath
+internFilePath = memo FP.joinPath . FP.splitPath
 
 fromNormalizedFilePath :: NormalizedFilePath -> FilePath
 fromNormalizedFilePath (NormalizedFilePath _ fp) = fp
@@ -200,5 +204,5 @@ normalizedFilePathToUri :: NormalizedFilePath -> NormalizedUri
 normalizedFilePathToUri (NormalizedFilePath uri _) = uri
 
 uriToNormalizedFilePath :: NormalizedUri -> Maybe NormalizedFilePath
-uriToNormalizedFilePath nuri = fmap (NormalizedFilePath nuri) mbFilePath
+uriToNormalizedFilePath nuri = fmap (NormalizedFilePath nuri . internFilePath) mbFilePath
   where mbFilePath = platformAwareUriToFilePath System.Info.os (fromNormalizedUri nuri)
