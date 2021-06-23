@@ -195,7 +195,7 @@ toNormalizedFilePath fp = NormalizedFilePath nuri nfp
       nuri = internalNormalizedFilePathToUri nfp
 
 internFilePath :: FilePath -> FilePath
-internFilePath = memo FP.joinPath . FP.splitPath
+internFilePath = force . memo FP.joinPath . FP.splitPath
 
 fromNormalizedFilePath :: NormalizedFilePath -> FilePath
 fromNormalizedFilePath (NormalizedFilePath _ fp) = fp
