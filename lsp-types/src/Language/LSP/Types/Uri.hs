@@ -24,6 +24,7 @@ import qualified Data.Aeson                                 as A
 import           Data.Binary                                (Binary, Get, put, get)
 import           Data.Hashable
 import           Data.List                                  (stripPrefix)
+import           Data.MemoTrie                              (memo)
 import           Data.String                                (IsString, fromString)
 import           Data.Text                                  (Text)
 import qualified Data.Text                                  as T
@@ -33,7 +34,6 @@ import qualified System.FilePath                            as FP
 import qualified System.FilePath.Posix                      as FPP
 import qualified System.FilePath.Windows                    as FPW
 import qualified System.Info
-import Data.MemoTrie (memo)
 
 newtype Uri = Uri { getUri :: Text }
   deriving (Eq,Ord,Read,Show,Generic,A.FromJSON,A.ToJSON,Hashable,A.ToJSONKey,A.FromJSONKey)
