@@ -373,6 +373,9 @@ makeFieldsNoPrefix ''SemanticTokensLegend
 makeFieldsNoPrefix ''SemanticTokensDeltaClientCapabilities
 makeFieldsNoPrefix ''SemanticTokensRequestsClientCapabilities
 makeFieldsNoPrefix ''SemanticTokensClientCapabilities
+makeFieldsNoPrefix ''SemanticTokensParams
+makeFieldsNoPrefix ''SemanticTokensDeltaParams
+makeFieldsNoPrefix ''SemanticTokensRangeParams
 makeFieldsNoPrefix ''SemanticTokens
 makeFieldsNoPrefix ''SemanticTokensPartialResult
 makeFieldsNoPrefix ''SemanticTokensEdit
