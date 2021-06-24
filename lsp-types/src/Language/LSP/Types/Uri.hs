@@ -170,7 +170,11 @@ instance Binary NormalizedFilePath where
   get = do
     v <- Data.Binary.get :: Get FilePath
     let nuri = internalNormalizedFilePathToUri v
-    return (intern $ NormalizedFilePath nuri v)
+    return (normalizedFilePath nuri v)
+
+-- | A smart constructor that performs UTF-8 encoding and hash consing
+normalizedFilePath :: NormalizedUri -> FilePath -> NormalizedFilePath
+normalizedFilePath nuri nfp = intern $ NormalizedFilePath nuri nfp
 
 -- | Internal helper that takes a file path that is assumed to
 -- already be normalized to a URI. It is up to the caller
@@ -193,7 +197,7 @@ instance IsString NormalizedFilePath where
     fromString = toNormalizedFilePath
 
 toNormalizedFilePath :: FilePath -> NormalizedFilePath
-toNormalizedFilePath fp = intern $ NormalizedFilePath nuri nfp
+toNormalizedFilePath fp = normalizedFilePath nuri nfp
   where
       nfp = FP.normalise fp
       nuri = internalNormalizedFilePathToUri nfp
@@ -205,7 +209,7 @@ normalizedFilePathToUri :: NormalizedFilePath -> NormalizedUri
 normalizedFilePathToUri (NormalizedFilePath uri _) = uri
 
 uriToNormalizedFilePath :: NormalizedUri -> Maybe NormalizedFilePath
-uriToNormalizedFilePath nuri = fmap (intern . NormalizedFilePath nuri) mbFilePath
+uriToNormalizedFilePath nuri = fmap (normalizedFilePath nuri) mbFilePath
   where mbFilePath = platformAwareUriToFilePath System.Info.os (fromNormalizedUri nuri)
 
 ---------------------------------------------------------------------------
