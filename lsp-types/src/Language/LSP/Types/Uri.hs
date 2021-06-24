@@ -9,7 +9,7 @@ module Language.LSP.Types.Uri
   , NormalizedUri(..)
   , toNormalizedUri
   , fromNormalizedUri
-  , NormalizedFilePath(..)
+  , NormalizedFilePath
   , toNormalizedFilePath
   , fromNormalizedFilePath
   , normalizedFilePathToUri
