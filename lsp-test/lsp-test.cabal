@@ -1,6 +1,6 @@
 cabal-version:       2.4
 name:                lsp-test
-version:             0.14.0.0
+version:             0.14.0.1
 synopsis:            Functional test framework for LSP servers.
 description:
   A test framework for writing tests against
@@ -36,7 +36,7 @@ library
                      , parser-combinators:Control.Applicative.Combinators
   default-language:    Haskell2010
   build-depends:       base >= 4.10 && < 5
-                     , lsp-types == 1.2.*
+                     , lsp-types == 1.3.*
                      , aeson
                      , time
                      , aeson-pretty
