@@ -38,7 +38,7 @@ instance FromJSON (SMethod $method) where
 makeInst :: Name -> Con -> Q [Dec]
 makeInst wrap (GadtC [sConstructor] args t) = do
   ns <- replicateM (length args) (newName "x")
-  let wrappedPat = pure $ ConP   wrap [ConP sConstructor  (map VarP ns)]
+  let wrappedPat = conP wrap [conP sConstructor (map varP ns)]
       unwrappedE = pure $ foldl' AppE (ConE sConstructor) (map VarE ns)
   [d| instance FromJSON $(pure t) where
         parseJSON = parseJSON >=> \case
