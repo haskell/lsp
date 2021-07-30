@@ -1,5 +1,15 @@
 # Revision history for lsp-types
 
+## 1.2.0.1
+
+* Add compatibility with GHC 9.2 (#345) (@fendor)
+* Fix missing lenses (@michaelpj)
+* Semantic tokens support (@michaelpj)
+* Fix GHC 9 build (@anka-213)
+* Add call hierarchy support (@July541)
+* Do not crash on workspace/didChangeConfiguration (#321) (@strager)
+* Improve error messages on JSON decode failures (#320) (@strager)
+
 ## 1.2.0.0
 
 * Prevent crashing when optional fields are missing (@anka-213)

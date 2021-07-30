@@ -1,5 +1,14 @@
 # Revision history for lsp-test
 
+## 0.14.0.1 -- 2021-07-30
+
+* Catch IO exception when sending messages to server (#317) (@berberman)
+* Improve error messages on JSON decode failures (#320) (@strager)
+* Add tests for satisfyMaybe (#325) (@strager)
+* Add call hierarchy support (@July541)
+* pass the lspConfig at initialization time as well (@pepeiborra)
+* Semantic tokens support (@michaelpj)
+
 ## 0.13.0.0 -- 2021-03-26
 
 * Update for lsp-types-1.2 (@wz1000)

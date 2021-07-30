@@ -1,5 +1,14 @@
 # Revision history for lsp
 
+## 1.2.0.1
+
+* Add exception instances to LspT (#315) (@pepeiborra)
+* Add call hierarchy support (@July541)
+* Fix build on GHC 9 (@anka-213)
+* pass the lspConfig at initialization time as well (@pepeiborra)
+* Semantic token (@michaelpj)
+* Do not crash on workspace/didChangeConfiguration (#321) (@strager)
+
 ## 1.2.0.0
 
 * Parse config from initializeOptions and pass in the old value of config to onConfigurationChange (#285) (wz1000)
