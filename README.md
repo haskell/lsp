@@ -23,6 +23,7 @@ typescript definitions laid out in the specification
 ## Language servers built on lsp
 - [haskell-language-server](https://github.com/haskell/haskell-language-server)
 - [dhall-lsp-server](https://github.com/dhall-lang/dhall-haskell/tree/master/dhall-lsp-server#readme)
+- [swarm](https://github.com/byorgey/swarm/blob/main/src/Swarm/Language/LSP.hs)
 
 ## Example language servers
 There are two example language servers in the `lsp/example/` folder. `Simple.hs` provides a minimal example:
