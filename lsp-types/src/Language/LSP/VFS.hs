@@ -41,7 +41,7 @@ module Language.LSP.VFS
   , changeChars
   ) where
 
-import           Control.Lens hiding ( parts )
+import           Control.Lens hiding ( (<.>), parts )
 import           Control.Monad
 import           Data.Char (isUpper, isAlphaNum)
 import           Data.Text ( Text )
@@ -247,7 +247,7 @@ virtualFileName prefix uri (VirtualFile _ file_ver _) =
       padLeft n num =
         let numString = show num
         in replicate (n - length numString) '0' ++ numString
-  in prefix </> basename ++ "-" ++ padLeft 5 file_ver ++ "-" ++ show (hash uri_raw) ++ ".hs"
+  in prefix </> basename ++ "-" ++ padLeft 5 file_ver ++ "-" ++ show (hash uri_raw) <.> takeExtensions basename
 
 -- | Write a virtual file to a temporary file if it exists in the VFS.
 persistFileVFS :: VFS -> J.NormalizedUri -> Maybe (FilePath, IO ())
