@@ -100,3 +100,12 @@ instance Monoid MarkupContent where
 
 -- ---------------------------------------------------------------------
 
+-- | Client capabilities specific to the used markdown parser.
+-- @since 3.16.0
+data MarkdownClientCapabilities =
+  MarkdownClientCapabilities
+    { _parser :: Text
+    , _version :: Maybe Text
+    } deriving (Show, Read, Eq)
+
+deriveJSON lspOptions ''MarkdownClientCapabilities
