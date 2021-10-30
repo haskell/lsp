@@ -136,6 +136,7 @@ type family MessageParams (m :: Method f t) :: Type where
   -- Window
   MessageParams WindowShowMessage                  = ShowMessageParams
   MessageParams WindowShowMessageRequest           = ShowMessageRequestParams
+  MessageParams WindowShowDocument                 = ShowDocumentParams
   MessageParams WindowLogMessage                   = LogMessageParams
   -- Progress
   MessageParams WindowWorkDoneProgressCreate       = WorkDoneProgressCreateParams
@@ -219,6 +220,7 @@ type family ResponseResult (m :: Method f Request) :: Type where
 -- Server
   -- Window
   ResponseResult WindowShowMessageRequest      = Maybe MessageActionItem
+  ResponseResult WindowShowDocument            = ShowDocumentResult
   ResponseResult WindowWorkDoneProgressCreate  = Empty
   -- Capability
   ResponseResult ClientRegisterCapability      = Empty

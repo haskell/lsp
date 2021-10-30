@@ -342,6 +342,8 @@ makeFieldsNoPrefix ''TypeDefinitionClientCapabilities
 makeFieldsNoPrefix ''ShowMessageParams
 makeFieldsNoPrefix ''MessageActionItem
 makeFieldsNoPrefix ''ShowMessageRequestParams
+makeFieldsNoPrefix ''ShowDocumentParams
+makeFieldsNoPrefix ''ShowDocumentResult
 makeFieldsNoPrefix ''LogMessageParams
 makeFieldsNoPrefix ''ProgressParams
 makeFieldsNoPrefix ''WorkDoneProgressBeginParams
