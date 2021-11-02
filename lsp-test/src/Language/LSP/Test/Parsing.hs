@@ -198,6 +198,7 @@ loggingNotification = named "Logging notification" $ satisfy shouldSkip
     shouldSkip (FromServerMess SWindowLogMessage _) = True
     shouldSkip (FromServerMess SWindowShowMessage _) = True
     shouldSkip (FromServerMess SWindowShowMessageRequest _) = True
+    shouldSkip (FromServerMess SWindowShowDocument _) = True
     shouldSkip _ = False
 
 -- | Matches a 'Language.LSP.Types.TextDocumentPublishDiagnostics'

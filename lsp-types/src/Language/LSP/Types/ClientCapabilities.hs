@@ -6,6 +6,8 @@ module Language.LSP.Types.ClientCapabilities where
 import           Data.Aeson.TH
 import qualified Data.Aeson as A
 import Data.Default
+import Data.Text (Text)
+
 import Language.LSP.Types.CallHierarchy
 import Language.LSP.Types.CodeAction
 import Language.LSP.Types.CodeLens
@@ -34,6 +36,8 @@ import Language.LSP.Types.Utils
 import Language.LSP.Types.WatchedFiles
 import Language.LSP.Types.WorkspaceEdit
 import Language.LSP.Types.WorkspaceSymbol
+import Language.LSP.Types.MarkupContent (MarkdownClientCapabilities)
+import Language.LSP.Types.Common (List)
 
 
 data WorkspaceClientCapabilities =
@@ -170,30 +174,122 @@ instance Default TextDocumentClientCapabilities where
 
 -- ---------------------------------------------------------------------
 
+-- | Capabilities specific to the `MessageActionItem` type.
+data MessageActionItemClientCapabilities =
+  MessageActionItemClientCapabilities
+    {
+      -- | Whether the client supports additional attributes which
+      -- are preserved and sent back to the server in the
+      -- request's response.
+      _additionalPropertiesSupport :: Maybe Bool
+    } deriving (Show, Read, Eq)
+
+deriveJSON lspOptions ''MessageActionItemClientCapabilities
+
+-- | Show message request client capabilities
+data ShowMessageRequestClientCapabilities =
+  ShowMessageRequestClientCapabilities
+    { -- | Capabilities specific to the `MessageActionItem` type.
+      _messageActionItem :: Maybe MessageActionItemClientCapabilities
+    } deriving (Show, Read, Eq)
+
+deriveJSON lspOptions ''ShowMessageRequestClientCapabilities
+
+-- | Client capabilities for the show document request.
+--
+-- @since 3.16.0
+data ShowDocumentClientCapabilities =
+  ShowDocumentClientCapabilities
+    { -- | The client has support for the show document request
+      _support :: Bool
+    } deriving (Show, Read, Eq)
+
+deriveJSON lspOptions ''ShowDocumentClientCapabilities
+
 -- | Window specific client capabilities.
 data WindowClientCapabilities =
   WindowClientCapabilities
     { -- | Whether client supports handling progress notifications.
+      --
+      -- @since 3.15.0
       _workDoneProgress :: Maybe Bool
+      -- | Capabilities specific to the showMessage request
+      --
+      -- @since 3.16.0
+    , _showMessage :: Maybe ShowMessageRequestClientCapabilities
+      -- | Capabilities specific to the showDocument request
+      --
+      -- @since 3.16.0
+    , _showDocument :: Maybe ShowDocumentClientCapabilities
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''WindowClientCapabilities
 
 instance Default WindowClientCapabilities where
-  def = WindowClientCapabilities def
+  def = WindowClientCapabilities def def def
+
+-- ---------------------------------------------------------------------
+
+-- | Client capability that signals how the client
+-- handles stale requests (e.g. a request
+-- for which the client will not process the response
+-- anymore since the information is outdated).
+-- @since 3.17.0
+data StaleRequestClientCapabilities =
+  StaleRequestClientCapabilities
+    { _cancel :: Bool
+    , _retryOnContentModified :: List Text
+    } deriving (Show, Read, Eq)
+
+deriveJSON lspOptions ''StaleRequestClientCapabilities
+
+-- | Client capabilities specific to the used markdown parser.
+-- @since 3.16.0
+data RegularExpressionsClientCapabilities =
+  RegularExpressionsClientCapabilities
+    { _engine :: Text
+    , _version :: Maybe Text
+    } deriving (Show, Read, Eq)
+
+deriveJSON lspOptions ''RegularExpressionsClientCapabilities
+
+-- | General client capabilities.
+-- @since 3.16.0
+data GeneralClientCapabilities =
+  GeneralClientCapabilities
+    {
+      _staleRequestSupport :: Maybe StaleRequestClientCapabilities
+      -- | Client capabilities specific to regular expressions.
+      -- @since 3.16.0
+    , _regularExpressions :: Maybe RegularExpressionsClientCapabilities
+      -- | Client capabilities specific to the client's markdown parser.
+      -- @since 3.16.0
+    , _markdown :: Maybe MarkdownClientCapabilities
+    } deriving (Show, Read, Eq)
+
+deriveJSON lspOptions ''GeneralClientCapabilities
+
+instance Default GeneralClientCapabilities where
+  def = GeneralClientCapabilities def def def
+
+-- ---------------------------------------------------------------------
 
 data ClientCapabilities =
   ClientCapabilities
-    { _workspace    :: Maybe WorkspaceClientCapabilities
+    { -- | Workspace specific client capabilities
+      _workspace    :: Maybe WorkspaceClientCapabilities
+      -- | Text document specific client capabilities
     , _textDocument :: Maybe TextDocumentClientCapabilities
-    -- | Capabilities specific to `window/progress` requests. Experimental.
-    --
-    -- @since 0.10.0.0
+      -- | Window specific client capabilities.
     , _window :: Maybe WindowClientCapabilities
+      -- | General client capabilities.
+      -- @since 3.16.0
+    , _general :: Maybe GeneralClientCapabilities
+      -- | Experimental client capabilities.
     , _experimental :: Maybe A.Object
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''ClientCapabilities
 
 instance Default ClientCapabilities where
-  def = ClientCapabilities def def def def
+  def = ClientCapabilities def def def def def

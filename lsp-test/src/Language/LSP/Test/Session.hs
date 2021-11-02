@@ -231,6 +231,7 @@ runSessionMonad context state (Session session) = runReaderT (runStateT conduit 
 
     isLogNotification (ServerMessage (FromServerMess SWindowShowMessage _)) = True
     isLogNotification (ServerMessage (FromServerMess SWindowLogMessage _)) = True
+    isLogNotification (ServerMessage (FromServerMess SWindowShowDocument _)) = True
     isLogNotification _ = False
 
     watchdog :: ConduitM SessionMessage FromServerMessage (StateT SessionState (ReaderT SessionContext IO)) ()

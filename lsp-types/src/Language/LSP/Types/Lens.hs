@@ -57,6 +57,12 @@ import           Control.Lens.TH
 -- TODO: This is out of date and very unmantainable, use TH to call all these!!
 
 -- client capabilities
+makeFieldsNoPrefix ''MessageActionItemClientCapabilities
+makeFieldsNoPrefix ''ShowMessageRequestClientCapabilities
+makeFieldsNoPrefix ''ShowDocumentClientCapabilities
+makeFieldsNoPrefix ''StaleRequestClientCapabilities
+makeFieldsNoPrefix ''RegularExpressionsClientCapabilities
+makeFieldsNoPrefix ''GeneralClientCapabilities
 makeFieldsNoPrefix ''WorkspaceClientCapabilities
 makeFieldsNoPrefix ''WindowClientCapabilities
 makeFieldsNoPrefix ''ClientCapabilities
@@ -115,6 +121,7 @@ makeFieldsNoPrefix ''LocationLink
 
 -- Markup
 makeFieldsNoPrefix ''MarkupContent
+makeFieldsNoPrefix ''MarkdownClientCapabilities
 
 -- Completion
 makeFieldsNoPrefix ''CompletionDoc
@@ -335,6 +342,8 @@ makeFieldsNoPrefix ''TypeDefinitionClientCapabilities
 makeFieldsNoPrefix ''ShowMessageParams
 makeFieldsNoPrefix ''MessageActionItem
 makeFieldsNoPrefix ''ShowMessageRequestParams
+makeFieldsNoPrefix ''ShowDocumentParams
+makeFieldsNoPrefix ''ShowDocumentResult
 makeFieldsNoPrefix ''LogMessageParams
 makeFieldsNoPrefix ''ProgressParams
 makeFieldsNoPrefix ''WorkDoneProgressBeginParams

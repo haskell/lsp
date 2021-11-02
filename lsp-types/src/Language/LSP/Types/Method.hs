@@ -90,6 +90,7 @@ data Method (f :: From) (t :: MethodType) where
   -- Window
   WindowShowMessage                  :: Method FromServer Notification
   WindowShowMessageRequest           :: Method FromServer Request
+  WindowShowDocument                 :: Method FromServer Request
   WindowLogMessage                   :: Method FromServer Notification
   WindowWorkDoneProgressCancel       :: Method FromClient Notification
   WindowWorkDoneProgressCreate       :: Method FromServer Request
@@ -167,6 +168,7 @@ data SMethod (m :: Method f t) where
 
   SWindowShowMessage                  :: SMethod WindowShowMessage
   SWindowShowMessageRequest           :: SMethod WindowShowMessageRequest
+  SWindowShowDocument                 :: SMethod WindowShowDocument
   SWindowLogMessage                   :: SMethod WindowLogMessage
   SWindowWorkDoneProgressCreate       :: SMethod WindowWorkDoneProgressCreate
   SWindowWorkDoneProgressCancel       :: SMethod WindowWorkDoneProgressCancel
@@ -307,6 +309,7 @@ instance A.FromJSON SomeServerMethod where
   -- Window
   parseJSON (A.String "window/showMessage")                  = pure $ SomeServerMethod SWindowShowMessage
   parseJSON (A.String "window/showMessageRequest")           = pure $ SomeServerMethod SWindowShowMessageRequest
+  parseJSON (A.String "window/showDocument")                 = pure $ SomeServerMethod SWindowShowDocument
   parseJSON (A.String "window/logMessage")                   = pure $ SomeServerMethod SWindowLogMessage
   parseJSON (A.String "window/workDoneProgress/create")      = pure $ SomeServerMethod SWindowWorkDoneProgressCreate
   parseJSON (A.String "$/progress")                          = pure $ SomeServerMethod SProgress
@@ -400,6 +403,7 @@ instance A.ToJSON (SMethod m) where
   -- Window
   toJSON SWindowShowMessage                  = A.String "window/showMessage"
   toJSON SWindowShowMessageRequest           = A.String "window/showMessageRequest"
+  toJSON SWindowShowDocument                 = A.String "window/showDocument"
   toJSON SWindowLogMessage                   = A.String "window/logMessage"
   toJSON SWindowWorkDoneProgressCreate       = A.String "window/workDoneProgress/create"
   toJSON SProgress                           = A.String "$/progress"
