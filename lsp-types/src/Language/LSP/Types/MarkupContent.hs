@@ -12,6 +12,7 @@ module Language.LSP.Types.MarkupContent where
 import           Data.Aeson
 import           Data.Aeson.TH
 import           Data.Text                                      (Text)
+import qualified Data.Text as T
 import           Language.LSP.Types.Utils
 
 -- |  Describes the content type that a client supports in various
@@ -81,10 +82,18 @@ sectionSeparator = "* * *\n"
 
 -- ---------------------------------------------------------------------
 
+-- | Given some plaintext, convert it into some equivalent markdown text.
+-- This is not *quite* the identity function.
+plainTextToMarkdown :: Text -> Text
+-- Line breaks in markdown paragraphs are ignored unless the line ends with two spaces.
+-- In order to respect the line breaks in the original plaintext, we stick two spaces on the end of every line.
+plainTextToMarkdown = T.unlines . fmap (<> "  ") . T.lines
+
 instance Semigroup MarkupContent where
   MarkupContent MkPlainText s1 <> MarkupContent MkPlainText s2 = MarkupContent MkPlainText (s1 `mappend` s2)
-  MarkupContent MkMarkdown  s1 <> MarkupContent _           s2 = MarkupContent MkMarkdown  (s1 `mappend` s2)
-  MarkupContent _           s1 <> MarkupContent MkMarkdown  s2 = MarkupContent MkMarkdown  (s1 `mappend` s2)
+  MarkupContent MkMarkdown s1 <> MarkupContent MkMarkdown s2 = MarkupContent MkMarkdown  (s1 `mappend` s2)
+  MarkupContent MkPlainText s1 <> MarkupContent MkMarkdown s2 = MarkupContent MkMarkdown  (plainTextToMarkdown s1 `mappend` s2)
+  MarkupContent MkMarkdown s1 <> MarkupContent MkPlainText s2 = MarkupContent MkMarkdown  (s1 `mappend` plainTextToMarkdown s2)
 
 instance Monoid MarkupContent where
   mempty = MarkupContent MkPlainText ""
