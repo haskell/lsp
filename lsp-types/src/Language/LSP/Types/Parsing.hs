@@ -267,6 +267,7 @@ splitClientMethod SCustomMethod{} = IsClientEither
 splitServerMethod :: SServerMethod m -> ServerNotOrReq m
 splitServerMethod SWindowShowMessage = IsServerNot
 splitServerMethod SWindowShowMessageRequest = IsServerReq
+splitServerMethod SWindowShowDocument = IsServerReq
 splitServerMethod SWindowLogMessage = IsServerNot
 splitServerMethod SWindowWorkDoneProgressCreate = IsServerReq
 splitServerMethod SProgress = IsServerNot

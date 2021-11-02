@@ -6,7 +6,9 @@ module Language.LSP.Types.CodeAction where
 import           Data.Aeson.TH
 import           Data.Aeson.Types
 import           Data.Default
+import           Data.String
 import           Data.Text                      ( Text )
+import qualified Data.Text as T
 import           Language.LSP.Types.Command
 import           Language.LSP.Types.Diagnostic
 import           Language.LSP.Types.Common
@@ -62,29 +64,57 @@ data CodeActionKind
   | CodeActionUnknown Text
   deriving (Read, Show, Eq)
 
+fromHierarchicalString :: Text -> CodeActionKind
+fromHierarchicalString t = case t of
+  ""                       -> CodeActionEmpty
+  "quickfix"               -> CodeActionQuickFix
+  "refactor"               -> CodeActionRefactor
+  "refactor.extract"       -> CodeActionRefactorExtract
+  "refactor.inline"        -> CodeActionRefactorInline
+  "refactor.rewrite"       -> CodeActionRefactorRewrite
+  "source"                 -> CodeActionSource
+  "source.organizeImports" -> CodeActionSourceOrganizeImports
+  s                        -> CodeActionUnknown s
+
+toHierarchicalString :: CodeActionKind -> Text
+toHierarchicalString k = case k of
+  CodeActionEmpty                 -> ""
+  CodeActionQuickFix              -> "quickfix"
+  CodeActionRefactor              -> "refactor"
+  CodeActionRefactorExtract       -> "refactor.extract"
+  CodeActionRefactorInline        -> "refactor.inline"
+  CodeActionRefactorRewrite       -> "refactor.rewrite"
+  CodeActionSource                -> "source"
+  CodeActionSourceOrganizeImports -> "source.organizeImports"
+  (CodeActionUnknown s)           -> s
+
+instance IsString CodeActionKind where
+  fromString = fromHierarchicalString . T.pack
+
 instance ToJSON CodeActionKind where
-  toJSON CodeActionEmpty                      = String ""
-  toJSON CodeActionQuickFix                   = String "quickfix"
-  toJSON CodeActionRefactor                   = String "refactor"
-  toJSON CodeActionRefactorExtract            = String "refactor.extract"
-  toJSON CodeActionRefactorInline             = String "refactor.inline"
-  toJSON CodeActionRefactorRewrite            = String "refactor.rewrite"
-  toJSON CodeActionSource                     = String "source"
-  toJSON CodeActionSourceOrganizeImports      = String "source.organizeImports"
-  toJSON (CodeActionUnknown s)                = String s
+  toJSON = String . toHierarchicalString
 
 instance FromJSON CodeActionKind where
-  parseJSON (String "")                       = pure CodeActionEmpty
-  parseJSON (String "quickfix")               = pure CodeActionQuickFix
-  parseJSON (String "refactor")               = pure CodeActionRefactor
-  parseJSON (String "refactor.extract")       = pure CodeActionRefactorExtract
-  parseJSON (String "refactor.inline")        = pure CodeActionRefactorInline
-  parseJSON (String "refactor.rewrite")       = pure CodeActionRefactorRewrite
-  parseJSON (String "source")                 = pure CodeActionSource
-  parseJSON (String "source.organizeImports") = pure CodeActionSourceOrganizeImports
-  parseJSON (String s)                        = pure (CodeActionUnknown s)
-  parseJSON _                                 = fail "CodeActionKind"
-  
+  parseJSON (String s) = pure $ fromHierarchicalString s
+  parseJSON _          = fail "CodeActionKind"
+
+-- | Does the first 'CodeActionKind' subsume the other one, hierarchically. Reflexive.
+codeActionKindSubsumes :: CodeActionKind -> CodeActionKind -> Bool
+-- Simple but ugly implementation: prefix on the string representation
+codeActionKindSubsumes parent child = toHierarchicalString parent `T.isPrefixOf` toHierarchicalString child
+
+-- | The 'CodeActionKind's listed in the LSP spec specifically.
+specCodeActionKinds :: [CodeActionKind]
+specCodeActionKinds = [
+  CodeActionQuickFix
+  , CodeActionRefactor
+  , CodeActionRefactorExtract
+  , CodeActionRefactorInline
+  , CodeActionRefactorRewrite
+  , CodeActionSource
+  , CodeActionSourceOrganizeImports
+  ]
+
 -- -------------------------------------
 
 data CodeActionKindClientCapabilities =
@@ -99,15 +129,7 @@ data CodeActionKindClientCapabilities =
 deriveJSON lspOptions ''CodeActionKindClientCapabilities
 
 instance Default CodeActionKindClientCapabilities where
-  def = CodeActionKindClientCapabilities (List allKinds)
-    where allKinds = [ CodeActionQuickFix
-                     , CodeActionRefactor
-                     , CodeActionRefactorExtract
-                     , CodeActionRefactorInline
-                     , CodeActionRefactorRewrite
-                     , CodeActionSource
-                     , CodeActionSourceOrganizeImports
-                     ]
+  def = CodeActionKindClientCapabilities (List specCodeActionKinds)
 
 data CodeActionLiteralSupport =
   CodeActionLiteralSupport

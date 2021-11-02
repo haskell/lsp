@@ -473,7 +473,7 @@ getWorkspaceFolders :: MonadLsp config m => m (Maybe [WorkspaceFolder])
 getWorkspaceFolders = do
   clientCaps <- getClientCapabilities
   let clientSupportsWfs = fromMaybe False $ do
-        let (J.ClientCapabilities mw _ _ _) = clientCaps
+        let (J.ClientCapabilities mw _ _ _ _) = clientCaps
         (J.WorkspaceClientCapabilities _ _ _ _ _ _ mwf _ _) <- mw
         mwf
   if clientSupportsWfs
@@ -654,8 +654,8 @@ withProgressBase indefinite title cancellable f = do
               WorkDoneProgressReportParams Nothing msg percentage
 
 clientSupportsProgress :: J.ClientCapabilities -> Bool
-clientSupportsProgress (J.ClientCapabilities _ _ wc _) = fromMaybe False $ do
-  (J.WindowClientCapabilities mProgress) <- wc
+clientSupportsProgress (J.ClientCapabilities _ _ wc _ _) = fromMaybe False $ do
+  (J.WindowClientCapabilities mProgress _ _) <- wc
   mProgress
 
 {-# INLINE clientSupportsProgress #-}

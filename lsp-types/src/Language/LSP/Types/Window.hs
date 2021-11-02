@@ -8,6 +8,8 @@ import qualified Data.Aeson                                 as A
 import           Data.Aeson.TH
 import           Data.Text                                  (Text)
 import           Language.LSP.Types.Utils
+import Language.LSP.Types.Uri
+import Language.LSP.Types.Location
 
 -- ---------------------------------------------------------------------
 
@@ -59,6 +61,47 @@ data ShowMessageRequestParams =
     } deriving (Show,Read,Eq)
 
 deriveJSON lspOptions ''ShowMessageRequestParams
+
+-- ---------------------------------------------------------------------
+
+-- | Params to show a document.
+--
+-- @since 3.16.0
+data ShowDocumentParams =
+  ShowDocumentParams {
+    -- | The document uri to show.
+    _uri :: Uri
+
+    -- | Indicates to show the resource in an external program.
+    -- To show for example `https://code.visualstudio.com/`
+    -- in the default WEB browser set `external` to `true`.
+  , _external :: Maybe Bool
+
+    -- | An optional property to indicate whether the editor
+    -- showing the document should take focus or not.
+    -- Clients might ignore this property if an external
+    -- program is started.
+  , _takeFocus :: Maybe Bool
+
+    -- | An optional selection range if the document is a text
+    -- document. Clients might ignore the property if an
+    -- external program is started or the file is not a text
+    -- file.
+  , _selection :: Maybe Range
+  } deriving (Show, Read, Eq)
+
+deriveJSON lspOptions ''ShowDocumentParams
+
+-- | The result of an show document request.
+--
+--  @since 3.16.0
+data ShowDocumentResult =
+  ShowDocumentResult {
+    -- | A boolean indicating if the show was successful.
+    _success :: Bool
+  } deriving (Show, Read, Eq)
+
+deriveJSON lspOptions ''ShowDocumentResult
 
 -- ---------------------------------------------------------------------
 

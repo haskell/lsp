@@ -35,7 +35,7 @@ data LSPVersion = LSPVersion Int Int -- ^ Construct a major.minor version
 -- * 3.4 extended completion item and symbol item kinds
 -- * 3.0 dynamic registration
 capsForVersion :: LSPVersion -> ClientCapabilities
-capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) (Just window) Nothing
+capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) (Just window) (since 3 16 general) Nothing
   where
     w = WorkspaceClientCapabilities
           (Just True)
@@ -223,14 +223,7 @@ capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) (Jus
           (since 3 16 (CodeActionResolveClientCapabilities (List [])))
           (since 3 16 True)
     caKs = CodeActionKindClientCapabilities
-              (List [ CodeActionQuickFix
-                    , CodeActionRefactor
-                    , CodeActionRefactorExtract
-                    , CodeActionRefactorInline
-                    , CodeActionRefactorRewrite
-                    , CodeActionSource
-                    , CodeActionSourceOrganizeImports
-                    ])
+              (List specCodeActionKinds)
 
     signatureHelpCapability =
       SignatureHelpClientCapabilities
@@ -285,4 +278,13 @@ capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) (Jus
       | maj >= x && min >= y = Just a
       | otherwise            = Nothing
 
-    window = WindowClientCapabilities (since 3 15 True)
+    window =
+      WindowClientCapabilities
+        (since 3 15 True)
+        (since 3 16 $ ShowMessageRequestClientCapabilities Nothing)
+        (since 3 16 $ ShowDocumentClientCapabilities True)
+
+    general = GeneralClientCapabilities
+      (since 3 16 $ StaleRequestClientCapabilities True (List []))
+      (since 3 16 $ RegularExpressionsClientCapabilities "" Nothing)
+      (since 3 16 $ MarkdownClientCapabilities "" Nothing)
