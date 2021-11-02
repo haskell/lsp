@@ -30,7 +30,6 @@ import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.STM
 import qualified Data.Aeson                            as J
-import qualified Data.HashMap.Strict                   as H
 import qualified Data.Text                             as T
 import           GHC.Generics (Generic)
 import           Language.LSP.Server
@@ -263,8 +262,8 @@ handle = mconcat
               cmd = "lsp-hello-command"
               -- need 'file' and 'start_pos'
               args = J.List
-                      [ J.Object $ H.fromList [("file",     J.Object $ H.fromList [("textDocument",J.toJSON doc)])]
-                      , J.Object $ H.fromList [("start_pos",J.Object $ H.fromList [("position",    J.toJSON start)])]
+                      [ J.object [("file",     J.object [("textDocument",J.toJSON doc)])]
+                      , J.object [("start_pos",J.object [("position",    J.toJSON start)])]
                       ]
               cmdparams = Just args
           makeCommand (J.Diagnostic _r _s _c _source _m _t _l) = []

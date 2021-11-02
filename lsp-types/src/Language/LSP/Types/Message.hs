@@ -55,12 +55,12 @@ import           Language.LSP.Types.WatchedFiles
 import           Language.LSP.Types.WorkspaceEdit
 import           Language.LSP.Types.WorkspaceFolders
 import           Language.LSP.Types.WorkspaceSymbol
-import qualified Data.HashMap.Strict as HM
 
 import Data.Kind
 import Data.Aeson
 import Data.Aeson.TH
 import Data.Text (Text)
+import Data.String
 import GHC.Generics
 
 -- ---------------------------------------------------------------------
@@ -274,8 +274,8 @@ deriving instance Show (MessageParams m) => Show (RequestMessage m)
 -- | Replace a missing field in an object with a null field, to simplify parsing
 -- This is a hack to allow other types than Maybe to work like Maybe in allowing the field to be missing.
 -- See also this issue: https://github.com/haskell/aeson/issues/646
-addNullField :: Text -> Value -> Value
-addNullField s (Object o) = Object $ HM.insertWith (\_new old -> old) s Null o
+addNullField :: String -> Value -> Value
+addNullField s (Object o) = Object $ o <> fromString s .= Null
 addNullField _ v = v
 
 instance (FromJSON (MessageParams m), FromJSON (SMethod m)) => FromJSON (RequestMessage m) where

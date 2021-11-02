@@ -9,7 +9,6 @@ module Language.LSP.Types.Common where
 import Control.Applicative
 import Control.DeepSeq
 import Data.Aeson
-import qualified Data.HashMap.Strict as HashMap
 import GHC.Generics
 
 -- | A terser, isomorphic data type for 'Either', that does not get tagged when
@@ -55,5 +54,5 @@ instance ToJSON Empty where
   toJSON Empty = Null
 instance FromJSON Empty where
   parseJSON Null = pure Empty
-  parseJSON (Object o) | HashMap.null o = pure Empty
+  parseJSON (Object o) | o == mempty = pure Empty
   parseJSON _ = fail "expected 'null' or '{}'"
