@@ -223,14 +223,7 @@ capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) (Jus
           (since 3 16 (CodeActionResolveClientCapabilities (List [])))
           (since 3 16 True)
     caKs = CodeActionKindClientCapabilities
-              (List [ CodeActionQuickFix
-                    , CodeActionRefactor
-                    , CodeActionRefactorExtract
-                    , CodeActionRefactorInline
-                    , CodeActionRefactorRewrite
-                    , CodeActionSource
-                    , CodeActionSourceOrganizeImports
-                    ])
+              (List specCodeActionKinds)
 
     signatureHelpCapability =
       SignatureHelpClientCapabilities
