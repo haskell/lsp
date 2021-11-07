@@ -279,15 +279,6 @@ closeVFS vfs (J.NotificationMessage _ _ params) =
   in (updateVFS (Map.delete (J.toNormalizedUri uri)) vfs,["Closed: " ++ show uri])
 
 -- ---------------------------------------------------------------------
-{-
-
-data TextDocumentContentChangeEvent =
-  TextDocumentContentChangeEvent
-    { _range       :: Maybe Range
-    , _rangeLength :: Maybe Int
-    , _text        :: String
-    } deriving (Read,Show,Eq)
--}
 
 -- | Apply the list of changes.
 -- Changes should be applied in the order that they are
