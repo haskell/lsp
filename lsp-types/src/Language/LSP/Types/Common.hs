@@ -4,11 +4,19 @@
 {-# LANGUAGE TypeOperators              #-}
 
 -- | Common types that aren't in the specification
-module Language.LSP.Types.Common where
+module Language.LSP.Types.Common (
+    type (|?) (..)
+  , toEither
+  , List (..)
+  , Empty (..)
+  , Int32
+  , Word32 ) where
 
 import Control.Applicative
 import Control.DeepSeq
 import Data.Aeson
+import Data.Int (Int32)
+import Data.Word (Word32)
 import GHC.Generics
 
 -- | A terser, isomorphic data type for 'Either', that does not get tagged when

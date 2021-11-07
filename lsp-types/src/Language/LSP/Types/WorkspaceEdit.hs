@@ -359,6 +359,11 @@ data ApplyWorkspaceEditResponseBody =
       -- logging or to provide a suitable error for a request that
       -- triggered the edit.
     , _failureReason :: Maybe Text
+      -- | Depending on the client's failure handling strategy `failedChange`
+      -- might contain the index of the change that failed. This property is
+      -- only available if the client signals a `failureHandling` strategy
+      -- in its client capabilities.
+    , _failedChange :: Maybe Word32
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''ApplyWorkspaceEditResponseBody
@@ -380,16 +385,17 @@ applyTextEdit (TextEdit (Range sp ep) newText) oldText =
       -- past the end. Fortunately, T.splitAt is fine with this, and just gives us the whole
       -- string and an empty string, which is what we want.
       let index = sc + startLineIndex sl t
-        in T.splitAt index t
+        in T.splitAt (fromIntegral index) t
 
     -- The index of the first character of line 'line'
+    startLineIndex :: Word32 -> Text -> Word32
     startLineIndex 0 _ = 0
     startLineIndex line t' =
       case T.findIndex (== '\n') t' of
-        Just i -> i + 1 + startLineIndex (line - 1) (T.drop (i + 1) t')
+        Just i -> fromIntegral i + 1 + startLineIndex (line - 1) (T.drop (i + 1) t')
         -- i != 0, and there are no newlines, so this is a line beyond the end of the text.
         -- In this case give the "start index" as the end, so we will at least append the text.
-        Nothing -> T.length t'
+        Nothing -> fromIntegral $ T.length t'
 
 -- | 'editTextEdit' @outer@ @inner@ applies @inner@ to the text inside @outer@.
 editTextEdit :: TextEdit -> TextEdit -> TextEdit

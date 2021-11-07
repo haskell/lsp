@@ -30,6 +30,7 @@ import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.STM
 import qualified Data.Aeson                            as J
+import           Data.Int (Int32)
 import qualified Data.Text                             as T
 import           GHC.Generics (Generic)
 import           Language.LSP.Server
@@ -118,7 +119,7 @@ newtype ReactorInput
 
 -- | Analyze the file and send any diagnostics to the client in a
 -- "textDocument/publishDiagnostics" notification
-sendDiagnostics :: J.NormalizedUri -> Maybe Int -> LspM Config ()
+sendDiagnostics :: J.NormalizedUri -> Maybe Int32 -> LspM Config ()
 sendDiagnostics fileUri version = do
   let
     diags = [J.Diagnostic
@@ -226,7 +227,7 @@ handle = mconcat
           newName = params ^. J.newName
       vdoc <- getVersionedTextDoc (params ^. J.textDocument)
       -- Replace some text at the position with what the user entered
-      let edit = J.InL $ J.TextEdit (J.mkRange l c l (c + T.length newName)) newName
+      let edit = J.InL $ J.TextEdit (J.mkRange l c l (c + fromIntegral (T.length newName))) newName
           tde = J.TextDocumentEdit vdoc (J.List [edit])
           -- "documentChanges" field is preferred over "changes"
           rsp = J.WorkspaceEdit Nothing (Just (J.List [J.InL tde])) Nothing
@@ -279,7 +280,7 @@ handle = mconcat
       responder (Right (J.Object mempty)) -- respond to the request
 
       void $ withProgress "Executing some long running command" Cancellable $ \update ->
-        forM [(0 :: Double)..10] $ \i -> do
+        forM [(0 :: J.Word32)..10] $ \i -> do
           update (ProgressAmount (Just (i * 10)) (Just "Doing stuff"))
           liftIO $ threadDelay (1 * 1000000)
   ]

@@ -169,7 +169,7 @@ bumpTimeoutId prev = do
 
 data SessionState = SessionState
   {
-    curReqId :: !Int
+    curReqId :: !Int32
   , vfs :: !VFS
   , curDiagnostics :: !(Map.Map NormalizedUri [Diagnostic])
   , overridingTimeout :: !Bool
@@ -308,7 +308,7 @@ updateStateC = awaitForever $ \msg -> do
     respond (FromServerMess SWindowWorkDoneProgressCreate req) =
       sendMessage $ ResponseMessage "2.0" (Just $ req ^. LSP.id) (Right Empty)
     respond (FromServerMess SWorkspaceApplyEdit r) = do
-      sendMessage $ ResponseMessage "2.0" (Just $ r ^. LSP.id) (Right $ ApplyWorkspaceEditResponseBody True Nothing)
+      sendMessage $ ResponseMessage "2.0" (Just $ r ^. LSP.id) (Right $ ApplyWorkspaceEditResponseBody True Nothing Nothing)
     respond _ = pure ()
 
 

@@ -41,7 +41,7 @@ data ClientInfo =
 deriveJSON lspOptions ''ClientInfo
 
 makeExtendingDatatype "InitializeParams" [''WorkDoneProgressParams]
-  [ ("_processId",             [t| Maybe Int|])
+  [ ("_processId",             [t| Maybe Int32|])
   , ("_clientInfo",            [t| Maybe ClientInfo |])
   , ("_rootPath",              [t| Maybe Text |])
   , ("_rootUri",               [t| Maybe Uri  |])
