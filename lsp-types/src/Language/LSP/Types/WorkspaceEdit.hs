@@ -359,6 +359,11 @@ data ApplyWorkspaceEditResponseBody =
       -- logging or to provide a suitable error for a request that
       -- triggered the edit.
     , _failureReason :: Maybe Text
+      -- | Depending on the client's failure handling strategy `failedChange`
+      -- might contain the index of the change that failed. This property is
+      -- only available if the client signals a `failureHandling` strategy
+      -- in its client capabilities.
+    , _failedChange :: Maybe Word32
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''ApplyWorkspaceEditResponseBody
