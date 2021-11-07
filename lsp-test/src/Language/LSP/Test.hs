@@ -198,7 +198,9 @@ runSessionWithHandles' serverProc serverIn serverOut config' caps rootDir sessio
   config <- envOverrideConfig config'
 
   let initializeParams = InitializeParams Nothing
-                                          (Just pid)
+                                          -- Narowing to Int32 here, but it's unlikely that a pid will
+                                          -- be outside the range
+                                          (Just $ fromIntegral pid)
                                           (Just lspTestClientInfo)
                                           (Just $ T.pack absRootDir)
                                           (Just $ filePathToUri absRootDir)

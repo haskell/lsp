@@ -82,7 +82,7 @@ data Diagnostic =
   Diagnostic
     { _range              :: Range
     , _severity           :: Maybe DiagnosticSeverity
-    , _code               :: Maybe (Int |? Text)
+    , _code               :: Maybe (Int32 |? Text)
     , _source             :: Maybe DiagnosticSource
     , _message            :: Text
     , _tags               :: Maybe (List DiagnosticTag)
@@ -131,7 +131,7 @@ data PublishDiagnosticsParams =
       -- published for.
       -- 
       -- Since LSP 3.15.0
-    , _version     :: Maybe Int
+    , _version     :: Maybe Word32
       -- | An array of diagnostic information items.
     , _diagnostics :: List Diagnostic
     } deriving (Read,Show,Eq)

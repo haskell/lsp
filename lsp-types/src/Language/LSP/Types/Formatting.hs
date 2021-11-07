@@ -4,6 +4,7 @@ module Language.LSP.Types.Formatting where
 
 import Data.Aeson.TH
 import Data.Text (Text)
+import Language.LSP.Types.Common
 import Language.LSP.Types.Location
 import Language.LSP.Types.Progress
 import Language.LSP.Types.TextDocument
@@ -29,7 +30,7 @@ deriveJSON lspOptions ''DocumentFormattingRegistrationOptions
 -- | Value-object describing what options formatting should use.
 data FormattingOptions = FormattingOptions
   { -- | Size of a tab in spaces.
-    _tabSize :: Int,
+    _tabSize :: Word32,
     -- | Prefer spaces over tabs
     _insertSpaces :: Bool,
     -- | Trim trailing whitespace on a line.

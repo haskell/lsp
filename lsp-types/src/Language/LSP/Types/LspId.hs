@@ -8,11 +8,13 @@ module Language.LSP.Types.LspId where
 
 import qualified Data.Aeson                                 as A
 import           Data.Text                                  (Text)
+import           Data.Int (Int32)
 import           Data.IxMap
-import Language.LSP.Types.Method
+
+import           Language.LSP.Types.Method
 
 -- | Id used for a request, Can be either a String or an Int
-data LspId (m :: Method f Request) = IdInt !Int | IdString !Text
+data LspId (m :: Method f Request) = IdInt !Int32 | IdString !Text
   deriving (Show,Read,Eq,Ord)
 
 instance A.ToJSON (LspId m) where

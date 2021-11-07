@@ -46,6 +46,7 @@ import           Control.Monad
 import           Data.Char (isUpper, isAlphaNum)
 import           Data.Text ( Text )
 import qualified Data.Text as T
+import           Data.Int (Int32)
 import           Data.List
 import           Data.Ord
 import qualified Data.HashMap.Strict as HashMap
@@ -69,7 +70,7 @@ import           System.Log.Logger
 
 data VirtualFile =
   VirtualFile {
-      _lsp_version :: !Int  -- ^ The LSP version of the document
+      _lsp_version :: !Int32  -- ^ The LSP version of the document
     , _file_version :: !Int -- ^ This number is only incremented whilst the file
                            -- remains in the map.
     , _text    :: !Rope  -- ^ The full contents of the document
@@ -87,7 +88,7 @@ data VFS = VFS { vfsMap :: !(Map.Map J.NormalizedUri VirtualFile)
 virtualFileText :: VirtualFile -> Text
 virtualFileText vf = Rope.toText (_text  vf)
 
-virtualFileVersion :: VirtualFile -> Int
+virtualFileVersion :: VirtualFile -> Int32
 virtualFileVersion vf = _lsp_version vf
 
 ---
@@ -300,14 +301,14 @@ applyChange :: Rope -> J.TextDocumentContentChangeEvent -> Rope
 applyChange _ (J.TextDocumentContentChangeEvent Nothing Nothing str)
   = Rope.fromText str
 applyChange str (J.TextDocumentContentChangeEvent (Just (J.Range (J.Position sl sc) _to)) (Just len) txt)
-  = changeChars str start len txt
+  = changeChars str start (fromIntegral len) txt
   where
-    start = Rope.rowColumnCodeUnits (Rope.RowColumn sl sc) str
+    start = Rope.rowColumnCodeUnits (Rope.RowColumn (fromIntegral sl) (fromIntegral sc)) str
 applyChange str (J.TextDocumentContentChangeEvent (Just (J.Range (J.Position sl sc) (J.Position el ec))) Nothing txt)
   = changeChars str start len txt
   where
-    start = Rope.rowColumnCodeUnits (Rope.RowColumn sl sc) str
-    end = Rope.rowColumnCodeUnits (Rope.RowColumn el ec) str
+    start = Rope.rowColumnCodeUnits (Rope.RowColumn (fromIntegral sl) (fromIntegral sc)) str
+    end = Rope.rowColumnCodeUnits (Rope.RowColumn (fromIntegral el) (fromIntegral ec)) str
     len = end - start
 applyChange str (J.TextDocumentContentChangeEvent Nothing (Just _) _txt)
   = str
@@ -350,8 +351,8 @@ getCompletionPrefix pos@(J.Position l c) (VirtualFile _ _ ropetext) =
             lastMaybe xs = Just $ last xs
 
         curLine <- headMaybe $ T.lines $ Rope.toText
-                             $ fst $ Rope.splitAtLine 1 $ snd $ Rope.splitAtLine l ropetext
-        let beforePos = T.take c curLine
+                             $ fst $ Rope.splitAtLine 1 $ snd $ Rope.splitAtLine (fromIntegral l) ropetext
+        let beforePos = T.take (fromIntegral c) curLine
         curWord <-
             if | T.null beforePos -> Just ""
                | T.last beforePos == ' ' -> Just "" -- don't count abc as the curword in 'abc '
@@ -372,7 +373,7 @@ getCompletionPrefix pos@(J.Position l c) (VirtualFile _ _ ropetext) =
 rangeLinesFromVfs :: VirtualFile -> J.Range -> T.Text
 rangeLinesFromVfs (VirtualFile _ _ ropetext) (J.Range (J.Position lf _cf) (J.Position lt _ct)) = r
   where
-    (_ ,s1) = Rope.splitAtLine lf ropetext
-    (s2, _) = Rope.splitAtLine (lt - lf) s1
+    (_ ,s1) = Rope.splitAtLine (fromIntegral lf) ropetext
+    (s2, _) = Rope.splitAtLine (fromIntegral (lt - lf)) s1
     r = Rope.toText s2
 -- ---------------------------------------------------------------------

@@ -11,13 +11,14 @@ import qualified Data.Aeson as A
 import           Data.Aeson.TH
 import           Data.Maybe (catMaybes)
 import           Data.Text (Text)
+import           Language.LSP.Types.Common
 import           Language.LSP.Types.Utils
 
 -- | A token used to report progress back or return partial results for a
 -- specific request.
 -- @since 0.17.0.0
 data ProgressToken
-    = ProgressNumericToken Int
+    = ProgressNumericToken Int32
     | ProgressTextToken Text
     deriving (Show, Read, Eq, Ord)
 
@@ -58,7 +59,7 @@ data WorkDoneProgressBeginParams =
   --
   -- The value should be steadily rising. Clients are free to ignore values
   -- that are not following this rule.
-  , _percentage :: Maybe Double
+  , _percentage :: Maybe Word32
   } deriving (Show, Read, Eq)
 
 instance A.ToJSON WorkDoneProgressBeginParams where
@@ -103,7 +104,7 @@ data WorkDoneProgressReportParams =
   -- If infinite progress was indicated in the start notification client
   -- are allowed to ignore the value. In addition the value should be steadily
   -- rising. Clients are free to ignore values that are not following this rule.
-  , _percentage :: Maybe Double
+  , _percentage :: Maybe Word32
   } deriving (Show, Read, Eq)
 
 instance A.ToJSON WorkDoneProgressReportParams where

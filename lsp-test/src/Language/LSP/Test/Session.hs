@@ -169,7 +169,7 @@ bumpTimeoutId prev = do
 
 data SessionState = SessionState
   {
-    curReqId :: !Int
+    curReqId :: !Int32
   , vfs :: !VFS
   , curDiagnostics :: !(Map.Map NormalizedUri [Diagnostic])
   , overridingTimeout :: !Bool

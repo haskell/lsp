@@ -27,7 +27,7 @@ spec = describe "VSP functions" vspSpec
 -- ---------------------------------------------------------------------
 
 
-mkRange :: Int -> Int -> Int -> Int -> Maybe J.Range
+mkRange :: J.Word32 -> J.Word32 -> J.Word32 -> J.Word32 -> Maybe J.Range
 mkRange ls cs le ce = Just $ J.Range (J.Position ls cs) (J.Position le ce)
 
 vfsFromText :: T.Text -> VirtualFile

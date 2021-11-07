@@ -45,10 +45,10 @@ deriveJSON lspOptions ''DocumentColorParams
 -- | Represents a color in RGBA space.
 data Color =
   Color
-    { _red   :: Int -- ^ The red component of this color in the range [0-1].
-    , _green :: Int -- ^ The green component of this color in the range [0-1].
-    , _blue  :: Int -- ^ The blue component of this color in the range [0-1].
-    , _alpha :: Int -- ^ The alpha component of this color in the range [0-1].
+    { _red   :: Float -- ^ The red component of this color in the range [0-1].
+    , _green :: Float -- ^ The green component of this color in the range [0-1].
+    , _blue  :: Float -- ^ The blue component of this color in the range [0-1].
+    , _alpha :: Float -- ^ The alpha component of this color in the range [0-1].
     } deriving (Read, Show, Eq)
 deriveJSON lspOptions ''Color
 

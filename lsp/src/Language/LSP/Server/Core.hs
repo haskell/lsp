@@ -184,7 +184,7 @@ data LanguageContextState config =
   , resPendingResponses    :: !(TVar ResponseMap)
   , resRegistrationsNot    :: !(TVar (RegistrationMap Notification))
   , resRegistrationsReq    :: !(TVar (RegistrationMap Request))
-  , resLspId               :: !(TVar Int)
+  , resLspId               :: !(TVar Int32)
   }
 
 type ResponseMap = IxMap LspId (Product SMethod ServerResponseCallback)
@@ -195,7 +195,7 @@ data RegistrationToken (m :: Method FromClient t) = RegistrationToken (SMethod m
 newtype RegistrationId (m :: Method FromClient t) = RegistrationId Text
   deriving Eq
 
-data ProgressData = ProgressData { progressNextId :: !(TVar Int)
+data ProgressData = ProgressData { progressNextId :: !(TVar Int32)
                                  , progressCancel :: !(TVar (Map.Map ProgressToken (IO ()))) }
 
 data VFSData =
@@ -267,7 +267,7 @@ defaultOptions = def
 -- an optional message to go with it during a 'withProgress'
 --
 -- @since 0.10.0.0
-data ProgressAmount = ProgressAmount (Maybe Double) (Maybe Text)
+data ProgressAmount = ProgressAmount (Maybe Word32) (Maybe Text)
 
 -- | Thrown if the user cancels a 'Cancellable' 'withProgress'/'withIndefiniteProgress'/ session
 --
@@ -442,7 +442,7 @@ sendErrorLog msg =
 
 -- ---------------------------------------------------------------------
 
-freshLspId :: MonadLsp config m => m Int
+freshLspId :: MonadLsp config m => m Int32
 freshLspId = do
   stateState resLspId $ \cur ->
     let !next = cur+1 in (cur, next)

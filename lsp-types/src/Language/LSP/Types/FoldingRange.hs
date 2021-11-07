@@ -6,6 +6,7 @@ module Language.LSP.Types.FoldingRange where
 import qualified Data.Aeson                    as A
 import           Data.Aeson.TH
 import           Data.Text                    (Text)
+import           Language.LSP.Types.Common
 import           Language.LSP.Types.Progress
 import           Language.LSP.Types.StaticRegistrationOptions
 import           Language.LSP.Types.TextDocument
@@ -23,7 +24,7 @@ data FoldingRangeClientCapabilities =
       _dynamicRegistration :: Maybe Bool
       -- | The maximum number of folding ranges that the client prefers to receive
       -- per document. The value serves as a hint, servers are free to follow the limit.
-    , _rangeLimit          :: Maybe Int
+    , _rangeLimit          :: Maybe Word32
       -- | If set, the client signals that it only supports folding complete lines. If set,
       -- client will ignore specified `startCharacter` and `endCharacter` properties in a
       -- FoldingRange.
@@ -79,15 +80,15 @@ instance A.FromJSON FoldingRangeKind where
 data FoldingRange =
   FoldingRange
   { -- | The zero-based line number from where the folded range starts.
-    _startLine      :: Int
+    _startLine      :: Word32
     -- | The zero-based character offset from where the folded range
     -- starts. If not defined, defaults to the length of the start line.
-  , _startCharacter :: Maybe Int
+  , _startCharacter :: Maybe Word32
     -- | The zero-based line number where the folded range ends.
-  , _endLine        :: Int
+  , _endLine        :: Word32
     -- | The zero-based character offset before the folded range ends.
     -- If not defined, defaults to the length of the end line.
-  , _endCharacter   :: Maybe Int
+  , _endCharacter   :: Maybe Word32
     -- | Describes the kind of the folding range such as 'comment' or
     -- 'region'. The kind is used to categorize folding ranges and used
     -- by commands like 'Fold all comments'. See 'FoldingRangeKind' for

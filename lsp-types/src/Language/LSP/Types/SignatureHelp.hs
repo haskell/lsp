@@ -85,7 +85,7 @@ deriveJSON lspOptionsUntagged ''SignatureHelpDoc
 
 -- -------------------------------------
 
-data ParameterLabel = ParameterLabelString Text | ParameterLabelOffset Int Int
+data ParameterLabel = ParameterLabelString Text | ParameterLabelOffset Word32 Word32
   deriving (Read,Show,Eq)
 
 instance ToJSON ParameterLabel where
@@ -127,7 +127,7 @@ data SignatureInformation =
     { _label           :: Text -- ^ The label of the signature.
     , _documentation   :: Maybe SignatureHelpDoc -- ^ The human-readable doc-comment of this signature.
     , _parameters      :: Maybe (List ParameterInformation) -- ^ The parameters of this signature.
-    , _activeParameter :: Maybe Int -- ^ The index of the active parameter.
+    , _activeParameter :: Maybe Word32 -- ^ The index of the active parameter.
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''SignatureInformation
@@ -141,8 +141,8 @@ active and only one active parameter.
 data SignatureHelp =
   SignatureHelp
     { _signatures      :: List SignatureInformation -- ^ One or more signatures.
-    , _activeSignature :: Maybe Int -- ^ The active signature.
-    , _activeParameter :: Maybe Int -- ^ The active parameter of the active signature.
+    , _activeSignature :: Maybe Word32 -- ^ The active signature.
+    , _activeParameter :: Maybe Word32 -- ^ The active parameter of the active signature.
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''SignatureHelp
