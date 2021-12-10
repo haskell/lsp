@@ -649,7 +649,6 @@ withProgressBase indefinite title cancellable f = do
 
   return res
   where updater progId (ProgressAmount percentage msg) = do
-          liftIO $ putStrLn "asdf"
           sendNotification SProgress $ fmap Report $ ProgressParams progId $
               WorkDoneProgressReportParams Nothing msg percentage
 
