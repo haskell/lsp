@@ -17,3 +17,5 @@ allow-newer:
   cryptohash-md5:base,
   hslogger:base,
   entropy:Cabal,
+  constraints-extras:base,
+  constraints-extras:template-haskell
