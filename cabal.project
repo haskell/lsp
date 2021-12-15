@@ -10,10 +10,3 @@ tests: True
 benchmarks: True
 test-show-details: direct
 haddock-quickjump: True
-
-allow-newer:
-  lens:template-haskell,
-  cryptohash-sha1:base,
-  cryptohash-md5:base,
-  hslogger:base,
-  entropy:Cabal,
