@@ -17,17 +17,3 @@ allow-newer:
   cryptohash-md5:base,
   hslogger:base,
   entropy:Cabal,
-
--- Required for ghc-9.0.1 support
-source-repository-package
-  type: git
-  location: https://github.com/anka-213/th-extras
-  tag: 57a97b4df128eb7b360e8ab9c5759392de8d1659
--- https://github.com/mokus0/th-extras/pull/8
-
-source-repository-package
-  type: git
-  location: https://github.com/anka-213/dependent-sum
-  tag: 8cf4c7fbc3bfa2be475a17bb7c94a1e1e9a830b5
-  subdir: dependent-sum-template
--- https://github.com/obsidiansystems/dependent-sum/pull/57
