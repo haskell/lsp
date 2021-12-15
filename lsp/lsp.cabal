@@ -31,7 +31,7 @@ library
                      , Language.LSP.Server.Control
                      , Language.LSP.Server.Processing
   ghc-options:         -Wall
-  build-depends:       base >= 4.11 && < 4.16
+  build-depends:       base >= 4.11 && < 5
                      , async
                      , aeson >=1.0.0.0
                      , attoparsec
@@ -67,7 +67,7 @@ executable lsp-demo-reactor-server
   default-language:    Haskell2010
   ghc-options:         -Wall -Wno-unticked-promoted-constructors
 
-  build-depends:       base >= 4.11 && < 4.16
+  build-depends:       base 
                      , aeson
                      , bytestring
                      , containers
@@ -91,7 +91,7 @@ executable lsp-demo-simple-server
   hs-source-dirs:      example
   default-language:    Haskell2010
   ghc-options:         -Wall -Wno-unticked-promoted-constructors
-  build-depends:       base >= 4.11 && < 5
+  build-depends:       base 
                     -- the package library. Comment this out if you want repl changes to propagate
                      , lsp
                      , text
