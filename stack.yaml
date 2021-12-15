@@ -1,0 +1,11 @@
+resolver: lts-18.18 # GHC 8.10.7
+
+packages:
+- ./lsp
+- ./lsp-types
+- ./lsp-test
+
+flags: {}
+extra-package-dbs: []
+nix:
+  packages: [icu]
