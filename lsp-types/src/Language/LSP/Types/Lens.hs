@@ -9,6 +9,7 @@
 {-# LANGUAGE FlexibleContexts       #-}
 {-# LANGUAGE DataKinds              #-}
 {-# LANGUAGE TypeInType             #-}
+{-# LANGUAGE ExplicitNamespaces #-}
 
 module Language.LSP.Types.Lens where
 
@@ -19,6 +20,7 @@ import           Language.LSP.Types.CodeAction
 import           Language.LSP.Types.CodeLens
 import           Language.LSP.Types.DocumentColor
 import           Language.LSP.Types.Command
+import           Language.LSP.Types.Common (type (|?))
 import           Language.LSP.Types.Completion
 import           Language.LSP.Types.Configuration
 import           Language.LSP.Types.Declaration
@@ -391,3 +393,6 @@ makeFieldsNoPrefix ''SemanticTokensEdit
 makeFieldsNoPrefix ''SemanticTokensDelta
 makeFieldsNoPrefix ''SemanticTokensDeltaPartialResult
 makeFieldsNoPrefix ''SemanticTokensWorkspaceClientCapabilities
+
+-- Unions
+makePrisms ''(|?)
