@@ -425,7 +425,7 @@ updateState (FromServerMess SWorkspaceApplyEdit r) = do
           vers <- textDocumentVersions uri
           pure $ map (\(v, e) -> TextDocumentEdit v (List [InL e])) $ zip vers edits
 
-        getChangeParams uri (List edits) = do 
+        getChangeParams uri (List edits) = do
           map <$> pure getParamsFromTextDocumentEdit <*> textDocumentEdits uri (reverse edits)
 
         mergeParams :: [DidChangeTextDocumentParams] -> DidChangeTextDocumentParams

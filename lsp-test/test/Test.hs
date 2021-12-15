@@ -2,6 +2,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DeriveAnyClass #-}
 
@@ -132,7 +133,37 @@ main = hspec $ around withDummyServer $ do
             in runSessionWithHandles hin hout def fullCaps "." sesh
               `shouldThrow` selector
 
-  describe "text document VFS" $
+  describe "text document VFS" $ do
+    it "sends back didChange notifications (documentChanges)" $ \(hin, hout) ->
+      runSessionWithHandles hin hout def fullCaps "." $ do
+        doc <- openDoc "test/data/refactor/Main.hs" "haskell"
+        VersionedTextDocumentIdentifier _ beforeVersion <- getVersionedDoc doc
+
+        let args = toJSON (VersionedTextDocumentIdentifier (doc ^. uri) beforeVersion)
+            reqParams = ExecuteCommandParams Nothing "doAVersionedEdit" (Just (List [args]))
+
+        request_ SWorkspaceExecuteCommand reqParams
+
+        editReq <- message SWorkspaceApplyEdit
+        liftIO $ do
+          let Just (List [InL(TextDocumentEdit vdoc (List [InL edit_]))]) =
+                editReq ^. params . edit . documentChanges
+          vdoc `shouldBe` VersionedTextDocumentIdentifier  (doc ^. uri) beforeVersion
+          edit_ `shouldBe` TextEdit (Range (Position 0 0) (Position 0 5)) "howdy"
+
+        change <- customNotification "custom/textDocument/didChange"
+        let NotMess (NotificationMessage _ _ (c::Value)) = change
+            Success (DidChangeTextDocumentParams reportedVDoc _edit) = fromJSON c
+            VersionedTextDocumentIdentifier _ reportedVersion = reportedVDoc
+
+        contents <- documentContents doc
+
+        liftIO $ contents `shouldBe` "howdy:: IO Int\nmain = return (42)\n"
+        VersionedTextDocumentIdentifier _ afterVersion <- getVersionedDoc doc
+        liftIO $ afterVersion `shouldNotBe` beforeVersion
+
+        liftIO $ reportedVersion `shouldNotBe` beforeVersion
+
     it "sends back didChange notifications" $ \(hin, hout) ->
       runSessionWithHandles hin hout def fullCaps "." $ do
         doc <- openDoc "test/data/refactor/Main.hs" "haskell"
