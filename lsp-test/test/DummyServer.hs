@@ -139,9 +139,12 @@ handlers =
                 do
                   Just token <- runInIO $ asks absRegToken >>= tryReadMVar
                   runInIO $ unregisterCapability token
-      , notificationHandler STextDocumentDidChange $ \noti -> do
-          let NotificationMessage _ _ params = noti
-          void $ sendNotification (SCustomMethod "custom/textDocument/didChange") (toJSON params)
+
+      -- this handler is used by the
+      -- "text document VFS / sends back didChange notifications (documentChanges)" test
+    , notificationHandler STextDocumentDidChange $ \noti -> do
+        let NotificationMessage _ _ params = noti
+        void $ sendNotification (SCustomMethod "custom/textDocument/didChange") (toJSON params)
 
      , requestHandler SWorkspaceExecuteCommand $ \req resp -> do
        case req of
