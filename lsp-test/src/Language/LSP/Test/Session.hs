@@ -379,12 +379,11 @@ updateState (FromServerMess SWorkspaceApplyEdit r) = do
   -- Update VFS to new document versions
   let sortedVersions = map (sortBy (compare `on` (^. textDocument . version))) groupedParams
       latestVersions = map ((^. textDocument) . last) sortedVersions
-      bumpedVersions = map (version . _Just +~ 1) latestVersions
 
-  forM_ bumpedVersions $ \(VersionedTextDocumentIdentifier uri v) ->
+  forM_ latestVersions $ \(VersionedTextDocumentIdentifier uri v) ->
     modify $ \s ->
       let oldVFS = vfs s
-          update (VirtualFile oldV file_ver t) = VirtualFile (fromMaybe oldV v) (file_ver + 1) t
+          update (VirtualFile oldV file_ver t) = VirtualFile (fromMaybe oldV v) (file_ver +1) t
           newVFS = updateVFS (Map.adjust update (toNormalizedUri uri)) oldVFS
       in s { vfs = newVFS }
 
