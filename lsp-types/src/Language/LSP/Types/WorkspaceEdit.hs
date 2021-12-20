@@ -363,7 +363,7 @@ data ApplyWorkspaceEditResponseBody =
       -- might contain the index of the change that failed. This property is
       -- only available if the client signals a `failureHandling` strategy
       -- in its client capabilities.
-    , _failedChange :: Maybe Word32
+    , _failedChange :: Maybe UInt
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''ApplyWorkspaceEditResponseBody
@@ -388,7 +388,7 @@ applyTextEdit (TextEdit (Range sp ep) newText) oldText =
         in T.splitAt (fromIntegral index) t
 
     -- The index of the first character of line 'line'
-    startLineIndex :: Word32 -> Text -> Word32
+    startLineIndex :: UInt -> Text -> UInt
     startLineIndex 0 _ = 0
     startLineIndex line t' =
       case T.findIndex (== '\n') t' of

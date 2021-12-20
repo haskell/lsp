@@ -169,7 +169,7 @@ data TextDocumentContentChangeEvent =
       _range       :: Maybe Range
       -- | The optional length of the range that got replaced.
       -- Deprecated, use _range instead
-    , _rangeLength :: Maybe Word32
+    , _rangeLength :: Maybe UInt
       -- | The new text for the provided range, if provided.
       -- Otherwise the new text of the whole document.
     , _text        :: Text

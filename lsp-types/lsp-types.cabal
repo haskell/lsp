@@ -86,6 +86,7 @@ library
                      , lens >= 4.15.2
                      , mtl
                      , network-uri
+                     , mod
                      , rope-utf16-splay >= 0.3.1.0
                      , scientific
                      , some

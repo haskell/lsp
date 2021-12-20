@@ -9,7 +9,7 @@ import           Control.DeepSeq
 import qualified Data.Aeson                                 as A
 import           Data.Aeson.TH
 import           Data.Text
-import           GHC.Generics
+import           GHC.Generics hiding (UInt)
 import           Language.LSP.Types.Common
 import           Language.LSP.Types.Location
 import           Language.LSP.Types.Uri
@@ -131,7 +131,7 @@ data PublishDiagnosticsParams =
       -- published for.
       -- 
       -- Since LSP 3.15.0
-    , _version     :: Maybe Word32
+    , _version     :: Maybe UInt
       -- | An array of diagnostic information items.
     , _diagnostics :: List Diagnostic
     } deriving (Read,Show,Eq)

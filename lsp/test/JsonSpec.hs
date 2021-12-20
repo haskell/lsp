@@ -99,6 +99,9 @@ instance Arbitrary HoverContents where
                     , HoverContents <$> arbitrary
                     ]
 
+instance Arbitrary UInt where
+  arbitrary = fromInteger <$> arbitrary
+
 instance Arbitrary Uri where
   arbitrary = Uri <$> arbitrary
 

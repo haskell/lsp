@@ -30,7 +30,7 @@ deriveJSON lspOptions ''DocumentFormattingRegistrationOptions
 -- | Value-object describing what options formatting should use.
 data FormattingOptions = FormattingOptions
   { -- | Size of a tab in spaces.
-    _tabSize :: Word32,
+    _tabSize :: UInt,
     -- | Prefer spaces over tabs
     _insertSpaces :: Bool,
     -- | Trim trailing whitespace on a line.

@@ -1,6 +1,9 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE DataKinds                  #-}
+{-# LANGUAGE DeriveAnyClass             #-}
 {-# LANGUAGE DeriveTraversable          #-}
 {-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE TypeOperators              #-}
 
 -- | Common types that aren't in the specification
@@ -10,14 +13,44 @@ module Language.LSP.Types.Common (
   , List (..)
   , Empty (..)
   , Int32
-  , Word32 ) where
+  , UInt ) where
 
 import Control.Applicative
 import Control.DeepSeq
 import Data.Aeson
 import Data.Int (Int32)
-import Data.Word (Word32)
-import GHC.Generics
+import Data.Mod.Word
+import Text.Read (Read(readPrec))
+import GHC.Generics hiding (UInt)
+import GHC.TypeNats hiding (Mod)
+import Data.Bifunctor (bimap)
+
+-- | The "uinteger" type in the LSP spec.
+--
+-- Unusually, this is a **31**-bit unsigned integer, not a 32-bit one.
+newtype UInt = UInt (Mod (2^31))
+  deriving newtype (Num, Bounded, Enum, Eq, Ord)
+  deriving stock (Generic)
+  deriving anyclass (NFData)
+
+instance Show UInt where
+  show (UInt u) = show $ unMod u
+
+instance Read UInt where
+  readPrec = fromInteger <$> readPrec
+
+instance Real UInt where
+  toRational (UInt u) = toRational $ unMod u
+
+instance Integral UInt where
+  quotRem (UInt x) (UInt y) = bimap fromIntegral fromIntegral $ quotRem (unMod x) (unMod y)
+  toInteger (UInt u) = toInteger $ unMod u
+
+instance ToJSON UInt where
+  toJSON u = toJSON (toInteger u)
+
+instance FromJSON UInt where
+  parseJSON v = fromInteger <$> parseJSON v
 
 -- | A terser, isomorphic data type for 'Either', that does not get tagged when
 -- converting to and from JSON.
@@ -46,7 +79,8 @@ instance (NFData a, NFData b) => NFData (a |? b)
 -- In particular this is necessary to change the 'FromJSON' instance to be compatible
 -- with Elisp (where empty lists show up as 'null')
 newtype List a = List [a]
-                deriving (Show,Read,Eq,Ord,Semigroup,Monoid,Functor,Foldable,Traversable,Generic)
+    deriving stock (Traversable,Generic)
+    deriving newtype (Show,Read,Eq,Ord,Semigroup,Monoid,Functor,Foldable)
 
 instance NFData a => NFData (List a)
 

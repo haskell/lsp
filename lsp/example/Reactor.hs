@@ -280,7 +280,7 @@ handle = mconcat
       responder (Right (J.Object mempty)) -- respond to the request
 
       void $ withProgress "Executing some long running command" Cancellable $ \update ->
-        forM [(0 :: J.Word32)..10] $ \i -> do
+        forM [(0 :: J.UInt)..10] $ \i -> do
           update (ProgressAmount (Just (i * 10)) (Just "Doing stuff"))
           liftIO $ threadDelay (1 * 1000000)
   ]
