@@ -82,7 +82,7 @@ decodeFromServerMsg reqMap bytes = unP $ parse p obj
               Just m -> Just $ (m, Pair m (Const newMap))
         unP (Success (FromServerMess m msg)) = (reqMap, FromServerMess m msg)
         unP (Success (FromServerRsp (Pair m (Const newMap)) msg)) = (newMap, FromServerRsp m msg)
-        unP (Error e) = error e
+        unP (Error e) = error $ "Error decoding " <> show obj <> " :" <> e
         {-
         WorkspaceWorkspaceFolders      -> error "ReqWorkspaceFolders not supported yet"
         WorkspaceConfiguration         -> error "ReqWorkspaceConfiguration not supported yet"

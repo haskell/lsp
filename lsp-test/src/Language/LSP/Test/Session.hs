@@ -354,7 +354,10 @@ updateState (FromServerMess SWorkspaceApplyEdit r) = do
   allChangeParams <- case r ^. params . edit . documentChanges of
     Just (List cs) -> do
       mapM_ (checkIfNeedsOpened . documentChangeUri) cs
-      return $ mapMaybe getParamsFromDocumentChange cs
+      -- replace the user provided version numbers with the VFS ones + 1
+      -- (technically we should check that the user versions match the VFS ones)
+      cs' <- traverseOf (traverse . _InL . textDocument) bumpNewestVersion cs
+      return $ mapMaybe getParamsFromDocumentChange cs'
     -- Then fall back to the changes field
     Nothing -> case r ^. params . edit . changes of
       Just cs -> do
@@ -376,12 +379,11 @@ updateState (FromServerMess SWorkspaceApplyEdit r) = do
   -- Update VFS to new document versions
   let sortedVersions = map (sortBy (compare `on` (^. textDocument . version))) groupedParams
       latestVersions = map ((^. textDocument) . last) sortedVersions
-      bumpedVersions = map (version . _Just +~ 1) latestVersions
 
-  forM_ bumpedVersions $ \(VersionedTextDocumentIdentifier uri v) ->
+  forM_ latestVersions $ \(VersionedTextDocumentIdentifier uri v) ->
     modify $ \s ->
       let oldVFS = vfs s
-          update (VirtualFile oldV file_ver t) = VirtualFile (fromMaybe oldV v) (file_ver + 1) t
+          update (VirtualFile oldV file_ver t) = VirtualFile (fromMaybe oldV v) (file_ver +1) t
           newVFS = updateVFS (Map.adjust update (toNormalizedUri uri)) oldVFS
       in s { vfs = newVFS }
 
@@ -401,7 +403,7 @@ updateState (FromServerMess SWorkspaceApplyEdit r) = do
               return $ s { vfs = newVFS }
 
         getParamsFromTextDocumentEdit :: TextDocumentEdit -> DidChangeTextDocumentParams
-        getParamsFromTextDocumentEdit (TextDocumentEdit docId (List edits)) =
+        getParamsFromTextDocumentEdit (TextDocumentEdit docId (List edits)) = do
           DidChangeTextDocumentParams docId (List $ map editToChangeEvent edits)
 
         editToChangeEvent :: TextEdit |? AnnotatedTextEdit -> TextDocumentContentChangeEvent
@@ -412,6 +414,8 @@ updateState (FromServerMess SWorkspaceApplyEdit r) = do
         getParamsFromDocumentChange (InL textDocumentEdit) = Just $ getParamsFromTextDocumentEdit textDocumentEdit
         getParamsFromDocumentChange _ = Nothing
 
+        bumpNewestVersion (VersionedTextDocumentIdentifier uri _) =
+          head <$> textDocumentVersions uri
 
         -- For a uri returns an infinite list of versions [n,n+1,n+2,...]
         -- where n is the current version
@@ -425,7 +429,7 @@ updateState (FromServerMess SWorkspaceApplyEdit r) = do
           vers <- textDocumentVersions uri
           pure $ map (\(v, e) -> TextDocumentEdit v (List [InL e])) $ zip vers edits
 
-        getChangeParams uri (List edits) = do 
+        getChangeParams uri (List edits) = do
           map <$> pure getParamsFromTextDocumentEdit <*> textDocumentEdits uri (reverse edits)
 
         mergeParams :: [DidChangeTextDocumentParams] -> DidChangeTextDocumentParams

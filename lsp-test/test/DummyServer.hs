@@ -139,15 +139,36 @@ handlers =
                 do
                   Just token <- runInIO $ asks absRegToken >>= tryReadMVar
                   runInIO $ unregisterCapability token
+
+      -- this handler is used by the
+      -- "text document VFS / sends back didChange notifications (documentChanges)" test
+    , notificationHandler STextDocumentDidChange $ \noti -> do
+        let NotificationMessage _ _ params = noti
+        void $ sendNotification (SCustomMethod "custom/textDocument/didChange") (toJSON params)
+
      , requestHandler SWorkspaceExecuteCommand $ \req resp -> do
-        let RequestMessage _ _ _ (ExecuteCommandParams Nothing "doAnEdit" (Just (List [val]))) = req
+       case req of
+        RequestMessage _ _ _ (ExecuteCommandParams Nothing "doAnEdit" (Just (List [val]))) -> do
+          let
             Success docUri = fromJSON val
             edit = List [TextEdit (mkRange 0 0 0 5) "howdy"]
             params =
               ApplyWorkspaceEditParams (Just "Howdy edit") $
                 WorkspaceEdit (Just (HM.singleton docUri edit)) Nothing Nothing
-        resp $ Right Null
-        void $ sendRequest SWorkspaceApplyEdit params (const (pure ()))
+          resp $ Right Null
+          void $ sendRequest SWorkspaceApplyEdit params (const (pure ()))
+        RequestMessage _ _ _ (ExecuteCommandParams Nothing "doAVersionedEdit" (Just (List [val]))) -> do
+          let
+            Success versionedDocUri = fromJSON val
+            edit = List [InL (TextEdit (mkRange 0 0 0 5) "howdy")]
+            documentEdit = TextDocumentEdit versionedDocUri edit
+            params =
+              ApplyWorkspaceEditParams (Just "Howdy edit") $
+                WorkspaceEdit Nothing (Just (List [InL documentEdit])) Nothing
+          resp $ Right Null
+          void $ sendRequest SWorkspaceApplyEdit params (const (pure ()))
+        RequestMessage _ _ _ (ExecuteCommandParams _ name _) ->
+          error $ "unsupported command: " <> show name
      , requestHandler STextDocumentCodeAction $ \req resp -> do
         let RequestMessage _ _ _ params = req
             CodeActionParams _ _ _ _ cactx = params
