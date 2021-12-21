@@ -14,11 +14,11 @@ import           Language.LSP.Types.Utils
 data Position =
   Position
     { -- | Line position in a document (zero-based).
-      _line      :: Word32
+      _line      :: UInt
       -- | Character offset on a line in a document (zero-based). Assuming that
       -- the line is represented as a string, the @character@ value represents the
       -- gap between the @character@ and @character + 1@.
-    , _character :: Word32
+    , _character :: UInt
     } deriving (Show, Read, Eq, Ord, Generic)
 
 instance NFData Position
@@ -73,5 +73,5 @@ deriveJSON lspOptions ''LocationLink
 
 -- | A helper function for creating ranges.
 -- prop> mkRange l c l' c' = Range (Position l c) (Position l' c')
-mkRange :: Word32 -> Word32 -> Word32 -> Word32 -> Range
+mkRange :: UInt -> UInt -> UInt -> UInt -> Range
 mkRange l c l' c' = Range (Position l c) (Position l' c')

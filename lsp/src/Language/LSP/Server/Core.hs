@@ -267,7 +267,7 @@ defaultOptions = def
 -- an optional message to go with it during a 'withProgress'
 --
 -- @since 0.10.0.0
-data ProgressAmount = ProgressAmount (Maybe Word32) (Maybe Text)
+data ProgressAmount = ProgressAmount (Maybe UInt) (Maybe Text)
 
 -- | Thrown if the user cancels a 'Cancellable' 'withProgress'/'withIndefiniteProgress'/ session
 --

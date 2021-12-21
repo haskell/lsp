@@ -59,7 +59,7 @@ data WorkDoneProgressBeginParams =
   --
   -- The value should be steadily rising. Clients are free to ignore values
   -- that are not following this rule.
-  , _percentage :: Maybe Word32
+  , _percentage :: Maybe UInt
   } deriving (Show, Read, Eq)
 
 instance A.ToJSON WorkDoneProgressBeginParams where
@@ -104,7 +104,7 @@ data WorkDoneProgressReportParams =
   -- If infinite progress was indicated in the start notification client
   -- are allowed to ignore the value. In addition the value should be steadily
   -- rising. Clients are free to ignore values that are not following this rule.
-  , _percentage :: Maybe Word32
+  , _percentage :: Maybe UInt
   } deriving (Show, Read, Eq)
 
 instance A.ToJSON WorkDoneProgressReportParams where

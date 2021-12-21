@@ -21,7 +21,7 @@ spec = do
         , SemanticTokenAbsolute 6 2 7 SttClass []
         ]
 
-      bigNumber :: Word32
+      bigNumber :: UInt
       bigNumber = 100000
       bigTokens =
         unfoldr (\i -> if i == bigNumber then Nothing else Just (SemanticTokenAbsolute i 1 1 SttType [StmUnknown "private", StmStatic], i+1)) 0
@@ -31,12 +31,12 @@ spec = do
 
       -- One more order of magnitude makes diffing more-or-less hang - possibly we need a better diffing algorithm, since this is only ~= 200 tokens at 5 ints per token
       -- (I checked and it is the diffing that's slow, not turning it into edits)
-      smallerBigNumber :: Word32
+      smallerBigNumber :: UInt
       smallerBigNumber = 1000
-      bigInts :: [Word32]
+      bigInts :: [UInt]
       bigInts =
         unfoldr (\i -> if i == smallerBigNumber then Nothing else Just (1, i+1)) 0
-      bigInts2 :: [Word32]
+      bigInts2 :: [UInt]
       bigInts2 =
         unfoldr (\i -> if i == smallerBigNumber then Nothing else Just (if even i then 2 else 1, i+1)) 0
 
@@ -71,4 +71,4 @@ spec = do
       computeEdits @Int [1,2,3,4,5] [1,6,3,7,7,5] `shouldBe` [Edit 1 1 [6], Edit 3 1 [7,7]]
     it "handles big tokens" $
       -- It's a little hard to specify a useful predicate here, the main point is that it should not take too long
-      computeEdits @Word32 bigInts bigInts2 `shouldSatisfy` (not . null)
+      computeEdits @UInt bigInts bigInts2 `shouldSatisfy` (not . null)

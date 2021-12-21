@@ -292,12 +292,12 @@ data SemanticTokens = SemanticTokens {
   _resultId :: Maybe Text,
 
   -- | The actual tokens.
-  _xdata    :: List Word32
+  _xdata    :: List UInt
 } deriving (Show, Read, Eq)
 deriveJSON lspOptions ''SemanticTokens
 
 data SemanticTokensPartialResult = SemanticTokensPartialResult {
-  _xdata :: List Word32
+  _xdata :: List UInt
 }
 deriveJSON lspOptions ''SemanticTokensPartialResult
 
@@ -311,11 +311,11 @@ deriveJSON lspOptions ''SemanticTokensDeltaParams
 
 data SemanticTokensEdit = SemanticTokensEdit {
   -- | The start offset of the edit.
-  _start       :: Word32,
+  _start       :: UInt,
   -- | The count of elements to remove.
-  _deleteCount :: Word32,
+  _deleteCount :: UInt,
   -- | The elements to insert.
-  _xdata       :: Maybe (List Word32)
+  _xdata       :: Maybe (List UInt)
 } deriving (Show, Read, Eq)
 deriveJSON lspOptions ''SemanticTokensEdit
 
@@ -359,9 +359,9 @@ deriveJSON lspOptions ''SemanticTokensWorkspaceClientCapabilities
 -- | A single 'semantic token' as described in the LSP specification, using absolute positions.
 -- This is the kind of token that is usually easiest for editors to produce.
 data SemanticTokenAbsolute = SemanticTokenAbsolute {
-  line           :: Word32,
-  startChar      :: Word32,
-  length         :: Word32,
+  line           :: UInt,
+  startChar      :: UInt,
+  length         :: UInt,
   tokenType      :: SemanticTokenTypes,
   tokenModifiers :: [SemanticTokenModifiers]
 } deriving (Show, Read, Eq, Ord)
@@ -370,9 +370,9 @@ data SemanticTokenAbsolute = SemanticTokenAbsolute {
 
 -- | A single 'semantic token' as described in the LSP specification, using relative positions.
 data SemanticTokenRelative = SemanticTokenRelative {
-  deltaLine      :: Word32,
-  deltaStartChar :: Word32,
-  length         :: Word32,
+  deltaLine      :: UInt,
+  deltaStartChar :: UInt,
+  length         :: UInt,
   tokenType      :: SemanticTokenTypes,
   tokenModifiers :: [SemanticTokenModifiers]
 } deriving (Show, Read, Eq, Ord)
@@ -385,7 +385,7 @@ relativizeTokens :: [SemanticTokenAbsolute] -> [SemanticTokenRelative]
 relativizeTokens xs = DList.toList $ go 0 0 xs mempty
   where
     -- Pass an accumulator to make this tail-recursive
-    go :: Word32 -> Word32 -> [SemanticTokenAbsolute] -> DList.DList SemanticTokenRelative -> DList.DList SemanticTokenRelative
+    go :: UInt -> UInt -> [SemanticTokenAbsolute] -> DList.DList SemanticTokenRelative -> DList.DList SemanticTokenRelative
     go _ _ [] acc = acc
     go lastLine lastChar (SemanticTokenAbsolute l c len ty mods:ts) acc =
       let
@@ -400,7 +400,7 @@ absolutizeTokens :: [SemanticTokenRelative] -> [SemanticTokenAbsolute]
 absolutizeTokens xs = DList.toList $ go 0 0 xs mempty
   where
     -- Pass an accumulator to make this tail-recursive
-    go :: Word32 -> Word32 -> [SemanticTokenRelative] -> DList.DList SemanticTokenAbsolute -> DList.DList SemanticTokenAbsolute
+    go :: UInt -> UInt -> [SemanticTokenRelative] -> DList.DList SemanticTokenAbsolute -> DList.DList SemanticTokenAbsolute
     go _ _ [] acc = acc
     go lastLine lastChar (SemanticTokenRelative dl dc len ty mods:ts) acc =
       let
@@ -410,18 +410,18 @@ absolutizeTokens xs = DList.toList $ go 0 0 xs mempty
       in go l c ts (DList.snoc acc (SemanticTokenAbsolute l c len ty mods))
 
 -- | Encode a series of relatively-positioned semantic tokens into an integer array following the given legend.
-encodeTokens :: SemanticTokensLegend -> [SemanticTokenRelative] -> Either Text [Word32]
+encodeTokens :: SemanticTokensLegend -> [SemanticTokenRelative] -> Either Text [UInt]
 encodeTokens SemanticTokensLegend{_tokenTypes=List tts,_tokenModifiers=List tms} sts =
   DList.toList . DList.concat <$> traverse encodeToken sts
   where
     -- Note that there's no "fast" version of these (e.g. backed by an IntMap or similar)
     -- in general, due to the possibility  of unknown token types which are only identified by strings.
-    tyMap :: Map.Map SemanticTokenTypes Word32
+    tyMap :: Map.Map SemanticTokenTypes UInt
     tyMap = Map.fromList $ zip tts [0..]
     modMap :: Map.Map SemanticTokenModifiers Int
     modMap = Map.fromList $ zip tms [0..]
 
-    lookupTy :: SemanticTokenTypes -> Either Text Word32
+    lookupTy :: SemanticTokenTypes -> Either Text UInt
     lookupTy ty = case Map.lookup ty tyMap of
         Just tycode -> pure tycode
         Nothing -> throwError $ "Semantic token type " <> fromString (show ty) <> " did not appear in the legend"
@@ -431,17 +431,17 @@ encodeTokens SemanticTokensLegend{_tokenTypes=List tts,_tokenModifiers=List tms}
         Nothing -> throwError $ "Semantic token modifier " <> fromString (show modifier) <> " did not appear in the legend"
 
     -- Use a DList here for better efficiency when concatenating all these together
-    encodeToken :: SemanticTokenRelative -> Either Text (DList.DList Word32)
+    encodeToken :: SemanticTokenRelative -> Either Text (DList.DList UInt)
     encodeToken (SemanticTokenRelative dl dc len ty mods) = do
       tycode <- lookupTy ty
       modcodes <- traverse lookupMod mods
-      let combinedModcode :: Word32 = foldl' Bits.setBit Bits.zeroBits modcodes
+      let combinedModcode :: Int = foldl' Bits.setBit Bits.zeroBits modcodes
 
-      pure [dl, dc, len, tycode, combinedModcode ]
+      pure [dl, dc, len, tycode, fromIntegral combinedModcode ]
 
 -- This is basically 'SemanticTokensEdit', but slightly easier to work with.
 -- | An edit to a buffer of items. 
-data Edit a = Edit { editStart :: Word32, editDeleteCount :: Word32, editInsertions :: [a] }
+data Edit a = Edit { editStart :: UInt, editDeleteCount :: UInt, editInsertions :: [a] }
   deriving (Read, Show, Eq, Ord)
 
 -- | Compute a list of edits that will turn the first list into the second list.
@@ -455,7 +455,7 @@ computeEdits l r = DList.toList $ go 0 Nothing (Diff.getGroupedDiff l r) mempty
     dump the 'Edit' into the accumulator.
     We need the index, because 'Edit's need to say where they start.
     -}
-    go :: Word32 -> Maybe (Edit a) -> [Diff.Diff [a]] -> DList.DList (Edit a) -> DList.DList (Edit a)
+    go :: UInt -> Maybe (Edit a) -> [Diff.Diff [a]] -> DList.DList (Edit a) -> DList.DList (Edit a)
     -- No more diffs: append the current edit if there is one and return
     go _ e [] acc = acc <> DList.fromList (maybeToList e)
 

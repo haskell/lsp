@@ -26,10 +26,6 @@ spec = describe "VSP functions" vspSpec
 
 -- ---------------------------------------------------------------------
 
-
-mkRange :: J.Word32 -> J.Word32 -> J.Word32 -> J.Word32 -> Maybe J.Range
-mkRange ls cs le ce = Just $ J.Range (J.Position ls cs) (J.Position le ce)
-
 vfsFromText :: T.Text -> VirtualFile
 vfsFromText text = VirtualFile 0 0 (Rope.fromText text)
 
@@ -41,17 +37,17 @@ vspSpec = do
     it "handles vscode style undos" $ do
       let orig = "abc"
           changes =
-            [ J.TextDocumentContentChangeEvent (mkRange 0 2 0 3) Nothing ""
-            , J.TextDocumentContentChangeEvent (mkRange 0 1 0 2) Nothing ""
-            , J.TextDocumentContentChangeEvent (mkRange 0 0 0 1) Nothing ""
+            [ J.TextDocumentContentChangeEvent (Just $ J.mkRange 0 2 0 3) Nothing ""
+            , J.TextDocumentContentChangeEvent (Just $ J.mkRange 0 1 0 2) Nothing ""
+            , J.TextDocumentContentChangeEvent (Just $ J.mkRange 0 0 0 1) Nothing ""
             ]
       applyChanges orig changes `shouldBe` ""
     it "handles vscode style redos" $ do
       let orig = ""
           changes =
-            [ J.TextDocumentContentChangeEvent (mkRange 0 1 0 1) Nothing "a"
-            , J.TextDocumentContentChangeEvent (mkRange 0 2 0 2) Nothing "b"
-            , J.TextDocumentContentChangeEvent (mkRange 0 3 0 3) Nothing "c"
+            [ J.TextDocumentContentChangeEvent (Just $ J.mkRange 0 1 0 1) Nothing "a"
+            , J.TextDocumentContentChangeEvent (Just $ J.mkRange 0 2 0 2) Nothing "b"
+            , J.TextDocumentContentChangeEvent (Just $ J.mkRange 0 3 0 3) Nothing "c"
             ]
       applyChanges orig changes `shouldBe` "abc"
 
@@ -68,7 +64,7 @@ vspSpec = do
           , "foo :: Int"
           ]
         new = applyChange (fromString orig)
-                $ J.TextDocumentContentChangeEvent (mkRange 2 1 2 5) (Just 4) ""
+                $ J.TextDocumentContentChangeEvent (Just $ J.mkRange 2 1 2 5) (Just 4) ""
       lines (Rope.toString new) `shouldBe`
           [ "abcdg"
           , "module Foo where"
@@ -85,7 +81,7 @@ vspSpec = do
           , "foo :: Int"
           ]
         new = applyChange (fromString orig)
-                $ J.TextDocumentContentChangeEvent (mkRange 2 1 2 5) Nothing ""
+                $ J.TextDocumentContentChangeEvent (Just $ J.mkRange 2 1 2 5) Nothing ""
       lines (Rope.toString new) `shouldBe`
           [ "abcdg"
           , "module Foo where"
@@ -105,7 +101,7 @@ vspSpec = do
           , "foo :: Int"
           ]
         new = applyChange (fromString orig)
-                $ J.TextDocumentContentChangeEvent (mkRange 2 0 3 0) (Just 8) ""
+                $ J.TextDocumentContentChangeEvent (Just $ J.mkRange 2 0 3 0) (Just 8) ""
       lines (Rope.toString new) `shouldBe`
           [ "abcdg"
           , "module Foo where"
@@ -122,7 +118,7 @@ vspSpec = do
           , "foo :: Int"
           ]
         new = applyChange (fromString orig)
-                $ J.TextDocumentContentChangeEvent (mkRange 2 0 3 0) Nothing ""
+                $ J.TextDocumentContentChangeEvent (Just $ J.mkRange 2 0 3 0) Nothing ""
       lines (Rope.toString new) `shouldBe`
           [ "abcdg"
           , "module Foo where"
@@ -140,7 +136,7 @@ vspSpec = do
           , "foo = bb"
           ]
         new = applyChange (fromString orig)
-                $ J.TextDocumentContentChangeEvent (mkRange 1 0 3 0) (Just 19) ""
+                $ J.TextDocumentContentChangeEvent (Just $ J.mkRange 1 0 3 0) (Just 19) ""
       lines (Rope.toString new) `shouldBe`
           [ "module Foo where"
           , "foo = bb"
@@ -156,7 +152,7 @@ vspSpec = do
           , "foo = bb"
           ]
         new = applyChange (fromString orig)
-                $ J.TextDocumentContentChangeEvent (mkRange 1 0 3 0) Nothing ""
+                $ J.TextDocumentContentChangeEvent (Just $ J.mkRange 1 0 3 0) Nothing ""
       lines (Rope.toString new) `shouldBe`
           [ "module Foo where"
           , "foo = bb"
@@ -173,7 +169,7 @@ vspSpec = do
           , "foo :: Int"
           ]
         new = applyChange (fromString orig)
-                $ J.TextDocumentContentChangeEvent (mkRange 1 16 1 16) (Just 0) "\n-- fooo"
+                $ J.TextDocumentContentChangeEvent (Just $ J.mkRange 1 16 1 16) (Just 0) "\n-- fooo"
       lines (Rope.toString new) `shouldBe`
           [ "abcdg"
           , "module Foo where"
@@ -191,7 +187,7 @@ vspSpec = do
           , "foo = bb"
           ]
         new = applyChange (fromString orig)
-                $ J.TextDocumentContentChangeEvent (mkRange 1 8 1 8) Nothing "\n-- fooo\nfoo :: Int"
+                $ J.TextDocumentContentChangeEvent (Just $ J.mkRange 1 8 1 8) Nothing "\n-- fooo\nfoo :: Int"
       lines (Rope.toString new) `shouldBe`
           [ "module Foo where"
           , "foo = bb"
@@ -218,7 +214,7 @@ vspSpec = do
           ]
         -- new = changeChars (fromString orig) (J.Position 7 0) (J.Position 7 8) "baz ="
         new = applyChange (fromString orig)
-                $ J.TextDocumentContentChangeEvent (mkRange 7 0 7 8) (Just 8) "baz ="
+                $ J.TextDocumentContentChangeEvent (Just $ J.mkRange 7 0 7 8) (Just 8) "baz ="
       lines (Rope.toString new) `shouldBe`
           [ "module Foo where"
           , "-- fooo"
@@ -246,7 +242,7 @@ vspSpec = do
           ]
         -- new = changeChars (fromString orig) (J.Position 7 0) (J.Position 7 8) "baz ="
         new = applyChange (fromString orig)
-                $ J.TextDocumentContentChangeEvent (mkRange 7 0 7 8) Nothing "baz ="
+                $ J.TextDocumentContentChangeEvent (Just $ J.mkRange 7 0 7 8) Nothing "baz ="
       lines (Rope.toString new) `shouldBe`
           [ "module Foo where"
           , "-- fooo"
@@ -265,7 +261,7 @@ vspSpec = do
           , "a𐐀b"
           ]
         new = applyChange (fromString orig)
-                $ J.TextDocumentContentChangeEvent (mkRange 1 0 1 3) (Just 3) "𐐀𐐀"
+                $ J.TextDocumentContentChangeEvent (Just $ J.mkRange 1 0 1 3) (Just 3) "𐐀𐐀"
       lines (Rope.toString new) `shouldBe`
           [ "a𐐀b"
           , "𐐀𐐀b"

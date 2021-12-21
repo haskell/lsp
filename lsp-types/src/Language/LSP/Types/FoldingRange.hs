@@ -24,7 +24,7 @@ data FoldingRangeClientCapabilities =
       _dynamicRegistration :: Maybe Bool
       -- | The maximum number of folding ranges that the client prefers to receive
       -- per document. The value serves as a hint, servers are free to follow the limit.
-    , _rangeLimit          :: Maybe Word32
+    , _rangeLimit          :: Maybe UInt
       -- | If set, the client signals that it only supports folding complete lines. If set,
       -- client will ignore specified `startCharacter` and `endCharacter` properties in a
       -- FoldingRange.
@@ -80,15 +80,15 @@ instance A.FromJSON FoldingRangeKind where
 data FoldingRange =
   FoldingRange
   { -- | The zero-based line number from where the folded range starts.
-    _startLine      :: Word32
+    _startLine      :: UInt
     -- | The zero-based character offset from where the folded range
     -- starts. If not defined, defaults to the length of the start line.
-  , _startCharacter :: Maybe Word32
+  , _startCharacter :: Maybe UInt
     -- | The zero-based line number where the folded range ends.
-  , _endLine        :: Word32
+  , _endLine        :: UInt
     -- | The zero-based character offset before the folded range ends.
     -- If not defined, defaults to the length of the end line.
-  , _endCharacter   :: Maybe Word32
+  , _endCharacter   :: Maybe UInt
     -- | Describes the kind of the folding range such as 'comment' or
     -- 'region'. The kind is used to categorize folding ranges and used
     -- by commands like 'Fold all comments'. See 'FoldingRangeKind' for
