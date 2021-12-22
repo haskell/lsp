@@ -2,6 +2,7 @@
 {-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE GADTs                      #-}
+{-# LANGUAGE MagicHash                  #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE TypeInType                 #-}
 {-# LANGUAGE FlexibleInstances          #-}
@@ -16,7 +17,10 @@ import           Data.Text                                  (Text)
 import           Language.LSP.Types.Utils
 import           Data.Function (on)
 import Control.Applicative
-import Data.GADT.Compare.TH
+import Data.GADT.Compare
+import Data.Type.Equality
+import GHC.Exts (Int(..), dataToTag#)
+import Unsafe.Coerce
 
 -- ---------------------------------------------------------------------
 
@@ -184,8 +188,21 @@ data SMethod (m :: Method f t) where
   SCancelRequest                      :: SMethod CancelRequest
   SCustomMethod                       :: Text -> SMethod CustomMethod
 
-deriveGEq ''SMethod
-deriveGCompare ''SMethod
+instance GEq SMethod where
+  geq x y = case gcompare x y of
+    GLT -> Nothing
+    GEQ -> Just Refl
+    GGT -> Nothing
+
+instance GCompare SMethod where
+  gcompare (SCustomMethod x) (SCustomMethod y) = case x `compare` y of
+    LT -> GLT
+    EQ -> GEQ
+    GT -> GGT
+  gcompare x y = case I# (dataToTag# x) `compare` I# (dataToTag# y) of
+    LT -> GLT
+    EQ -> unsafeCoerce GEQ
+    GT -> GGT
 
 deriving instance Eq   (SMethod m)
 deriving instance Ord  (SMethod m)
