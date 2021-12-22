@@ -22,6 +22,8 @@ import qualified Data.Text.Lazy.Encoding as TL
 import Language.LSP.Types
 import Language.LSP.Types.Capabilities
 import qualified Language.LSP.Types.Lens as LSP
+import           Language.LSP.Types.SMethodMap (SMethodMap)
+import qualified Language.LSP.Types.SMethodMap as SMethodMap
 import Language.LSP.Server.Core
 import Language.LSP.VFS
 import Data.Functor.Product
@@ -34,9 +36,7 @@ import Control.Monad.Trans.Except
 import Control.Monad.Reader
 import Data.IxMap
 import System.Log.Logger
-import qualified Data.Dependent.Map as DMap
 import Data.Maybe
-import Data.Dependent.Map (DMap)
 import qualified Data.Map.Strict as Map
 import System.Exit
 import Data.Default (def)
@@ -185,8 +185,8 @@ inferServerCapabilities clientCaps o h =
 
     supported_b :: forall m. SClientMethod m -> Bool
     supported_b m = case splitClientMethod m of
-      IsClientNot -> DMap.member m $ notHandlers h
-      IsClientReq -> DMap.member m $ reqHandlers h
+      IsClientNot -> SMethodMap.member m $ notHandlers h
+      IsClientReq -> SMethodMap.member m $ reqHandlers h
       IsClientEither -> error "capabilities depend on custom method"
 
     singleton :: a -> [a]
@@ -335,8 +335,8 @@ handle' mAction m msg = do
   where
     -- | Checks to see if there's a dynamic handler, and uses it in favour of the
     -- static handler, if it exists.
-    pickHandler :: RegistrationMap t -> DMap SMethod (ClientMessageHandler IO t) -> Maybe (Handler IO m)
-    pickHandler dynHandlerMap staticHandler = case (DMap.lookup m dynHandlerMap, DMap.lookup m staticHandler) of
+    pickHandler :: RegistrationMap t -> SMethodMap (ClientMessageHandler IO t) -> Maybe (Handler IO m)
+    pickHandler dynHandlerMap staticHandler = case (SMethodMap.lookup m dynHandlerMap, SMethodMap.lookup m staticHandler) of
       (Just (Pair _ (ClientMessageHandler h)), _) -> Just h
       (Nothing, Just (ClientMessageHandler h)) -> Just h
       (Nothing, Nothing) -> Nothing

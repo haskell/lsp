@@ -42,8 +42,6 @@ import qualified Data.Aeson as J
 import           Data.Default
 import           Data.Functor.Product
 import           Data.IxMap
-import qualified Data.Dependent.Map as DMap
-import           Data.Dependent.Map (DMap)
 import qualified Data.HashMap.Strict as HM
 import           Data.Kind
 import qualified Data.List as L
@@ -56,6 +54,8 @@ import           Data.Text ( Text )
 import qualified Data.UUID as UUID
 import qualified Language.LSP.Types.Capabilities    as J
 import Language.LSP.Types as J
+import           Language.LSP.Types.SMethodMap (SMethodMap)
+import qualified Language.LSP.Types.SMethodMap as SMethodMap
 import qualified Language.LSP.Types.Lens as J
 import           Language.LSP.VFS
 import           Language.LSP.Diagnostics
@@ -131,8 +131,8 @@ data LanguageContextEnv config =
 -- @
 data Handlers m
   = Handlers
-  { reqHandlers :: !(DMap SMethod (ClientMessageHandler m Request))
-  , notHandlers :: !(DMap SMethod (ClientMessageHandler m Notification))
+  { reqHandlers :: !(SMethodMap (ClientMessageHandler m Request))
+  , notHandlers :: !(SMethodMap (ClientMessageHandler m Notification))
   }
 instance Semigroup (Handlers config) where
   Handlers r1 n1 <> Handlers r2 n2 = Handlers (r1 <> r2) (n1 <> n2)
@@ -140,10 +140,10 @@ instance Monoid (Handlers config) where
   mempty = Handlers mempty mempty
 
 notificationHandler :: forall (m :: Method FromClient Notification) f. SMethod m -> Handler f m -> Handlers f
-notificationHandler m h = Handlers mempty (DMap.singleton m (ClientMessageHandler h))
+notificationHandler m h = Handlers mempty (SMethodMap.singleton m (ClientMessageHandler h))
 
 requestHandler :: forall (m :: Method FromClient Request) f. SMethod m -> Handler f m -> Handlers f
-requestHandler m h = Handlers (DMap.singleton m (ClientMessageHandler h)) mempty
+requestHandler m h = Handlers (SMethodMap.singleton m (ClientMessageHandler h)) mempty
 
 -- | Wrapper to restrict 'Handler's to 'FromClient' 'Method's
 newtype ClientMessageHandler f (t :: MethodType) (m :: Method FromClient t) = ClientMessageHandler (Handler f m)
@@ -170,8 +170,8 @@ mapHandlers
   -> Handlers m -> Handlers n
 mapHandlers mapReq mapNot (Handlers reqs nots) = Handlers reqs' nots'
   where
-    reqs' = DMap.map (\(ClientMessageHandler i) -> ClientMessageHandler $ mapReq i) reqs
-    nots' = DMap.map (\(ClientMessageHandler i) -> ClientMessageHandler $ mapNot i) nots
+    reqs' = SMethodMap.map (\(ClientMessageHandler i) -> ClientMessageHandler $ mapReq i) reqs
+    nots' = SMethodMap.map (\(ClientMessageHandler i) -> ClientMessageHandler $ mapNot i) nots
 
 -- | state used by the LSP dispatcher to manage the message loop
 data LanguageContextState config =
@@ -189,7 +189,7 @@ data LanguageContextState config =
 
 type ResponseMap = IxMap LspId (Product SMethod ServerResponseCallback)
 
-type RegistrationMap (t :: MethodType) = DMap SMethod (Product RegistrationId (ClientMessageHandler IO t))
+type RegistrationMap (t :: MethodType) = SMethodMap (Product RegistrationId (ClientMessageHandler IO t))
 
 data RegistrationToken (m :: Method FromClient t) = RegistrationToken (SMethod m) (RegistrationId m)
 newtype RegistrationId (m :: Method FromClient t) = RegistrationId Text
@@ -496,8 +496,8 @@ registerCapability method regOpts f = do
   clientCaps <- resClientCapabilities <$> getLspEnv
   handlers <- resHandlers <$> getLspEnv
   let alreadyStaticallyRegistered = case splitClientMethod method of
-        IsClientNot -> DMap.member method $ notHandlers handlers
-        IsClientReq -> DMap.member method $ reqHandlers handlers
+        IsClientNot -> SMethodMap.member method $ notHandlers handlers
+        IsClientReq -> SMethodMap.member method $ reqHandlers handlers
         IsClientEither -> error "Cannot register capability for custom methods"
   go clientCaps alreadyStaticallyRegistered
   where
@@ -515,10 +515,10 @@ registerCapability method regOpts f = do
           ~() <- case splitClientMethod method of
             IsClientNot -> modifyState resRegistrationsNot $ \oldRegs ->
               let pair = Pair regId (ClientMessageHandler (unliftIO rio . f))
-                in DMap.insert method pair oldRegs
+                in SMethodMap.insert method pair oldRegs
             IsClientReq -> modifyState resRegistrationsReq $ \oldRegs ->
               let pair = Pair regId (ClientMessageHandler (\msg k -> unliftIO rio $ f msg (liftIO . k)))
-                in DMap.insert method pair oldRegs
+                in SMethodMap.insert method pair oldRegs
             IsClientEither -> error "Cannot register capability for custom methods"
 
           -- TODO: handle the scenario where this returns an error
@@ -572,8 +572,8 @@ registerCapability method regOpts f = do
 unregisterCapability :: MonadLsp config f => RegistrationToken m -> f ()
 unregisterCapability (RegistrationToken m (RegistrationId uuid)) = do
   ~() <- case splitClientMethod m of
-    IsClientReq -> modifyState resRegistrationsReq $ DMap.delete m
-    IsClientNot -> modifyState resRegistrationsNot $ DMap.delete m
+    IsClientReq -> modifyState resRegistrationsReq $ SMethodMap.delete m
+    IsClientNot -> modifyState resRegistrationsNot $ SMethodMap.delete m
     IsClientEither -> error "Cannot unregister capability for custom methods"
 
   let unregistration = J.Unregistration uuid (J.SomeClientMethod m)
