@@ -20,6 +20,7 @@ library
   exposed-modules:     Language.LSP.Types
                      , Language.LSP.Types.Capabilities
                      , Language.LSP.Types.Lens
+                     , Language.LSP.Types.SMethodMap
                      , Language.LSP.VFS
                      , Data.IxMap
   other-modules:       Language.LSP.Types.CallHierarchy
@@ -90,7 +91,6 @@ library
                      , rope-utf16-splay >= 0.3.1.0
                      , scientific
                      , some
-                     , dependent-sum >= 0.7.1.0
                      , text
                      , template-haskell
                      , temporary
