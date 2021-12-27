@@ -1,6 +1,6 @@
 cabal-version:       2.4
 name:                lsp-test
-version:             0.14.0.1
+version:             0.14.0.2
 synopsis:            Functional test framework for LSP servers.
 description:
   A test framework for writing tests against
@@ -81,7 +81,7 @@ test-suite tests
   build-depends:       base >= 4.10 && < 5
                      , hspec
                      , lens
-                     , lsp == 1.2.*
+                     , lsp == 1.4.*
                      , lsp-test
                      , data-default
                      , aeson
