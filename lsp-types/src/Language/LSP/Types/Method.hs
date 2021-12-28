@@ -188,24 +188,38 @@ data SMethod (m :: Method f t) where
   SCancelRequest                      :: SMethod CancelRequest
   SCustomMethod                       :: Text -> SMethod CustomMethod
 
+-- This instance is written manually rather than derived to avoid a dependency
+-- on 'dependent-sum-template'.
 instance GEq SMethod where
   geq x y = case gcompare x y of
     GLT -> Nothing
     GEQ -> Just Refl
     GGT -> Nothing
 
+-- This instance is written manually rather than derived to avoid a dependency
+-- on 'dependent-sum-template'.
 instance GCompare SMethod where
   gcompare (SCustomMethod x) (SCustomMethod y) = case x `compare` y of
     LT -> GLT
     EQ -> GEQ
     GT -> GGT
+  -- This is much more compact than matching on every pair of constructors, which
+  -- is what we would need to do for GHC to 'see' that this is correct. Nonetheless
+  -- it is safe: since there is only one constructor of 'SMethod' for each 'Method',
+  -- the argument types can only be equal if the constructor tag is equal.
   gcompare x y = case I# (dataToTag# x) `compare` I# (dataToTag# y) of
     LT -> GLT
     EQ -> unsafeCoerce GEQ
     GT -> GGT
 
-deriving instance Eq   (SMethod m)
-deriving instance Ord  (SMethod m)
+instance Eq (SMethod m) where
+  -- This defers to 'GEq', ensuring that this version is compatible.
+  (==) = defaultEq
+
+instance Ord (SMethod m) where
+  -- This defers to 'GCompare', ensuring that this version is compatible.
+  compare = defaultCompare
+
 deriving instance Show (SMethod m)
 
 -- Some useful type synonyms
