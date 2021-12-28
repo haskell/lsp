@@ -102,12 +102,10 @@ test-suite func-test
   build-depends:       base 
                      , lsp-test
                      , lsp
-                     , data-default
                      , process
                      , lens
                      , unliftio
                      , hspec
-                     , async
   default-language:    Haskell2010
 
 test-suite example
