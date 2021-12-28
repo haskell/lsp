@@ -1,5 +1,10 @@
 # Revision history for lsp
 
+## 1.4.0.0
+
+* Fix extraneous `asdf` in `withProgress` output (#372) (@heitor-lassarote)
+* Use appropriate number types (#366) (@michaelpj)
+
 ## 1.2.0.1
 
 * Add exception instances to LspT (#315) (@pepeiborra)

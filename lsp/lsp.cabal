@@ -1,6 +1,6 @@
 cabal-version:       2.2
 name:                lsp
-version:             1.2.0.1
+version:             1.4.0.0
 synopsis:            Haskell library for the Microsoft Language Server Protocol
 
 description:         An implementation of the types, and basic message server to
@@ -68,18 +68,10 @@ executable lsp-demo-reactor-server
 
   build-depends:       base 
                      , aeson
-                     , bytestring
-                     , containers
-                     , directory
-                     , filepath
                      , hslogger
                      , lens >= 4.15.2
-                     , mtl
                      , stm
                      , text
-                     , transformers
-                     , unordered-containers
-                     , unliftio
                      -- the package library. Comment this out if you want repl changes to propagate
                      , lsp
   if !flag(demo)
