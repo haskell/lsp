@@ -1,5 +1,23 @@
 # Revision history for lsp-types
 
+## 1.4.0.0
+
+* Aeson 2 compatibility (#360) (@michaelpj)
+* Reduced dependency footprint (#383, #384) (@Bodigrim)
+* Use appropriate number types (#366) (@michaelpj)
+* Fix for #374 (#376) (@pepeiborra)
+* Fix virtual file name adding .hs extension (#364) (@heitor-lassarote, @jneira)
+* Fix the Semigroup instance for MarkupContent (#361) (@michaelpj)
+* Various improvements to spec conformance (@michaelpj)
+
+## 1.3.0.1
+
+* Rollback NFP interning (#344) (@pepeiborra)
+
+## 1.3.0.0
+
+* Intern NormalizedFilePaths (#340) (@pepeiborra)
+
 ## 1.2.0.1
 
 * Add compatibility with GHC 9.2 (#345) (@fendor)
