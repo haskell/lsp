@@ -320,7 +320,7 @@ instance FromJSON SomeClientMethod where
   parseJSON (A.String "textDocument/rename")                 = pure $ SomeClientMethod STextDocumentRename
   parseJSON (A.String "textDocument/prepareRename")          = pure $ SomeClientMethod STextDocumentPrepareRename
   parseJSON (A.String "textDocument/foldingRange")           = pure $ SomeClientMethod STextDocumentFoldingRange
-  parseJSON (A.String "textDocument/selectionRange")         = pure $ SomeClientMethod STextDocumentFoldingRange
+  parseJSON (A.String "textDocument/selectionRange")         = pure $ SomeClientMethod STextDocumentSelectionRange
   parseJSON (A.String "textDocument/prepareCallHierarchy")   = pure $ SomeClientMethod STextDocumentPrepareCallHierarchy
   parseJSON (A.String "callHierarchy/incomingCalls")         = pure $ SomeClientMethod SCallHierarchyIncomingCalls
   parseJSON (A.String "callHierarchy/outgoingCalls")         = pure $ SomeClientMethod SCallHierarchyOutgoingCalls
