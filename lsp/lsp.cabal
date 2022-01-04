@@ -112,7 +112,8 @@ test-suite unit-test
                        WorkspaceEditSpec
   build-depends:       base
                      , QuickCheck
-                     , aeson
+                     -- for instance Arbitrary Value
+                     , aeson >= 2.0.3.0
                      , containers
                      , filepath
                      , lsp
