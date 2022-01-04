@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP                  #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE TypeInType           #-}
@@ -159,6 +160,7 @@ smallList = resize 3 . listOf
 instance (Arbitrary a) => Arbitrary (List a) where
   arbitrary = List <$> arbitrary
 
+#if !MIN_VERSION_aeson(2,0,3)
 instance Arbitrary J.Value where
   arbitrary = oneof
     [ J.String <$> arbitrary
@@ -166,6 +168,7 @@ instance Arbitrary J.Value where
     , J.Bool <$> arbitrary
     , pure J.Null
     ]
+#endif
 
 -- ---------------------------------------------------------------------
 
