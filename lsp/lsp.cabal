@@ -122,9 +122,9 @@ test-suite unit-test
                      , lens >= 4.15.2
                      , network-uri
                      , quickcheck-instances
-                     , rope-utf16-splay >= 0.2
                      , sorted-list == 0.2.1.*
                      , text
+                     , text-rope
                      , unordered-containers
                      -- For GHCI tests
                      -- , async
