@@ -1,4 +1,8 @@
 # Revision history for lsp-types
+ 
+## 1.4.0.1
+
+* Fix result type of selection range requests.
 
 ## 1.4.0.0
 
