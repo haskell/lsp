@@ -52,8 +52,8 @@ import           Data.Ord
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map.Strict as Map
 import           Data.Maybe
-import           Data.Rope.UTF16 ( Rope )
-import qualified Data.Rope.UTF16 as Rope
+import           Data.Text.Utf16.Rope ( Rope )
+import qualified Data.Text.Utf16.Rope as Rope
 import qualified Language.LSP.Types           as J
 import qualified Language.LSP.Types.Lens      as J
 import           System.FilePath
@@ -136,7 +136,7 @@ applyCreateFile (J.CreateFile uri options _ann) =
   updateVFS $ Map.insertWith 
                 (\ new old -> if shouldOverwrite then new else old)
                 (J.toNormalizedUri uri)
-                (VirtualFile 0 0 (Rope.fromText ""))
+                (VirtualFile 0 0 mempty)
   where 
     shouldOverwrite :: Bool 
     shouldOverwrite = case options of 
@@ -260,7 +260,7 @@ persistFileVFS vfs uri =
           action = do
             exists <- doesFileExist tfn
             unless exists $ do
-               let contents = Rope.toString (_text vf)
+               let contents = T.unpack (Rope.toText (_text vf))
                    writeRaw h = do
                     -- We honour original file line endings
                     hSetNewlineMode h noNewlineTranslation
@@ -291,26 +291,18 @@ applyChanges = foldl' applyChange
 applyChange :: Rope -> J.TextDocumentContentChangeEvent -> Rope
 applyChange _ (J.TextDocumentContentChangeEvent Nothing Nothing str)
   = Rope.fromText str
-applyChange str (J.TextDocumentContentChangeEvent (Just (J.Range (J.Position sl sc) _to)) (Just len) txt)
-  = changeChars str start (fromIntegral len) txt
-  where
-    start = Rope.rowColumnCodeUnits (Rope.RowColumn (fromIntegral sl) (fromIntegral sc)) str
-applyChange str (J.TextDocumentContentChangeEvent (Just (J.Range (J.Position sl sc) (J.Position el ec))) Nothing txt)
-  = changeChars str start len txt
-  where
-    start = Rope.rowColumnCodeUnits (Rope.RowColumn (fromIntegral sl) (fromIntegral sc)) str
-    end = Rope.rowColumnCodeUnits (Rope.RowColumn (fromIntegral el) (fromIntegral ec)) str
-    len = end - start
+applyChange str (J.TextDocumentContentChangeEvent (Just (J.Range (J.Position sl sc) (J.Position fl fc))) _ txt)
+  = changeChars str (Rope.Position (fromIntegral sl) (fromIntegral sc)) (Rope.Position (fromIntegral fl) (fromIntegral fc)) txt
 applyChange str (J.TextDocumentContentChangeEvent Nothing (Just _) _txt)
   = str
 
 -- ---------------------------------------------------------------------
 
-changeChars :: Rope -> Int -> Int -> Text -> Rope
-changeChars str start len new = mconcat [before, Rope.fromText new, after']
+changeChars :: Rope -> Rope.Position -> Rope.Position -> Text -> Rope
+changeChars str start finish new = mconcat [before', Rope.fromText new, after]
   where
-    (before, after) = Rope.splitAt start str
-    after' = Rope.drop len after
+    (before, after) = fromJust $ Rope.splitAtPosition finish str
+    (before', _) = fromJust $ Rope.splitAtPosition start before
 
 -- ---------------------------------------------------------------------
 
@@ -336,14 +328,11 @@ data PosPrefixInfo = PosPrefixInfo
 getCompletionPrefix :: (Monad m) => J.Position -> VirtualFile -> m (Maybe PosPrefixInfo)
 getCompletionPrefix pos@(J.Position l c) (VirtualFile _ _ ropetext) =
       return $ Just $ fromMaybe (PosPrefixInfo "" "" "" pos) $ do -- Maybe monad
-        let headMaybe [] = Nothing
-            headMaybe (x:_) = Just x
-            lastMaybe [] = Nothing
+        let lastMaybe [] = Nothing
             lastMaybe xs = Just $ last xs
 
-        curLine <- headMaybe $ T.lines $ Rope.toText
-                             $ fst $ Rope.splitAtLine 1 $ snd $ Rope.splitAtLine (fromIntegral l) ropetext
-        let beforePos = T.take (fromIntegral c) curLine
+        let curRope = fst $ Rope.splitAtLine 1 $ snd $ Rope.splitAtLine (fromIntegral l) ropetext
+        beforePos <- Rope.toText . fst <$> Rope.splitAt (fromIntegral c) curRope
         curWord <-
             if | T.null beforePos -> Just ""
                | T.last beforePos == ' ' -> Just "" -- don't count abc as the curword in 'abc '
@@ -357,6 +346,8 @@ getCompletionPrefix pos@(J.Position l c) (VirtualFile _ _ ropetext) =
             let modParts = dropWhile (not . isUpper . T.head)
                                 $ reverse $ filter (not .T.null) xs
                 modName = T.intercalate "." modParts
+            -- curRope is already a single line, but it may include an enclosing '\n'
+            let curLine = T.dropWhileEnd (== '\n') $ Rope.toText curRope
             return $ PosPrefixInfo curLine modName x pos
 
 -- ---------------------------------------------------------------------

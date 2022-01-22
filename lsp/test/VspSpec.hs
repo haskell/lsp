@@ -1,9 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 module VspSpec where
 
-
 import           Data.String
-import qualified Data.Rope.UTF16 as Rope
+import qualified Data.Text.Utf16.Rope as Rope
 import           Language.LSP.VFS
 import qualified Language.LSP.Types as J
 import qualified Data.Text as T
@@ -65,7 +64,7 @@ vspSpec = do
           ]
         new = applyChange (fromString orig)
                 $ J.TextDocumentContentChangeEvent (Just $ J.mkRange 2 1 2 5) (Just 4) ""
-      lines (Rope.toString new) `shouldBe`
+      Rope.lines new `shouldBe`
           [ "abcdg"
           , "module Foo where"
           , "-oo"
@@ -82,7 +81,7 @@ vspSpec = do
           ]
         new = applyChange (fromString orig)
                 $ J.TextDocumentContentChangeEvent (Just $ J.mkRange 2 1 2 5) Nothing ""
-      lines (Rope.toString new) `shouldBe`
+      Rope.lines new `shouldBe`
           [ "abcdg"
           , "module Foo where"
           , "-oo"
@@ -102,7 +101,7 @@ vspSpec = do
           ]
         new = applyChange (fromString orig)
                 $ J.TextDocumentContentChangeEvent (Just $ J.mkRange 2 0 3 0) (Just 8) ""
-      lines (Rope.toString new) `shouldBe`
+      Rope.lines new `shouldBe`
           [ "abcdg"
           , "module Foo where"
           , "foo :: Int"
@@ -119,7 +118,7 @@ vspSpec = do
           ]
         new = applyChange (fromString orig)
                 $ J.TextDocumentContentChangeEvent (Just $ J.mkRange 2 0 3 0) Nothing ""
-      lines (Rope.toString new) `shouldBe`
+      Rope.lines new `shouldBe`
           [ "abcdg"
           , "module Foo where"
           , "foo :: Int"
@@ -137,7 +136,7 @@ vspSpec = do
           ]
         new = applyChange (fromString orig)
                 $ J.TextDocumentContentChangeEvent (Just $ J.mkRange 1 0 3 0) (Just 19) ""
-      lines (Rope.toString new) `shouldBe`
+      Rope.lines new `shouldBe`
           [ "module Foo where"
           , "foo = bb"
           ]
@@ -153,7 +152,7 @@ vspSpec = do
           ]
         new = applyChange (fromString orig)
                 $ J.TextDocumentContentChangeEvent (Just $ J.mkRange 1 0 3 0) Nothing ""
-      lines (Rope.toString new) `shouldBe`
+      Rope.lines new `shouldBe`
           [ "module Foo where"
           , "foo = bb"
           ]
@@ -170,7 +169,7 @@ vspSpec = do
           ]
         new = applyChange (fromString orig)
                 $ J.TextDocumentContentChangeEvent (Just $ J.mkRange 1 16 1 16) (Just 0) "\n-- fooo"
-      lines (Rope.toString new) `shouldBe`
+      Rope.lines new `shouldBe`
           [ "abcdg"
           , "module Foo where"
           , "-- fooo"
@@ -188,7 +187,7 @@ vspSpec = do
           ]
         new = applyChange (fromString orig)
                 $ J.TextDocumentContentChangeEvent (Just $ J.mkRange 1 8 1 8) Nothing "\n-- fooo\nfoo :: Int"
-      lines (Rope.toString new) `shouldBe`
+      Rope.lines new `shouldBe`
           [ "module Foo where"
           , "foo = bb"
           , "-- fooo"
@@ -215,7 +214,7 @@ vspSpec = do
         -- new = changeChars (fromString orig) (J.Position 7 0) (J.Position 7 8) "baz ="
         new = applyChange (fromString orig)
                 $ J.TextDocumentContentChangeEvent (Just $ J.mkRange 7 0 7 8) (Just 8) "baz ="
-      lines (Rope.toString new) `shouldBe`
+      Rope.lines new `shouldBe`
           [ "module Foo where"
           , "-- fooo"
           , "foo :: Int"
@@ -243,7 +242,7 @@ vspSpec = do
         -- new = changeChars (fromString orig) (J.Position 7 0) (J.Position 7 8) "baz ="
         new = applyChange (fromString orig)
                 $ J.TextDocumentContentChangeEvent (Just $ J.mkRange 7 0 7 8) Nothing "baz ="
-      lines (Rope.toString new) `shouldBe`
+      Rope.lines new `shouldBe`
           [ "module Foo where"
           , "-- fooo"
           , "foo :: Int"
@@ -262,7 +261,7 @@ vspSpec = do
           ]
         new = applyChange (fromString orig)
                 $ J.TextDocumentContentChangeEvent (Just $ J.mkRange 1 0 1 3) (Just 3) "𐐀𐐀"
-      lines (Rope.toString new) `shouldBe`
+      Rope.lines new `shouldBe`
           [ "a𐐀b"
           , "𐐀𐐀b"
           ]
@@ -285,13 +284,13 @@ vspSpec = do
           ]
         (left,right) = Rope.splitAtLine 4 (fromString orig)
 
-      lines (Rope.toString left) `shouldBe`
+      Rope.lines left `shouldBe`
           [ "module Foo where"
           , "-- fooo"
           , "foo :: Int"
           , "foo = bb"
           ]
-      lines (Rope.toString right) `shouldBe`
+      Rope.lines right `shouldBe`
           [ ""
           , "bb = 5"
           , ""

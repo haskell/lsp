@@ -88,10 +88,10 @@ library
                      , mtl
                      , network-uri
                      , mod
-                     , rope-utf16-splay >= 0.3.1.0
                      , scientific
                      , some
                      , text
+                     , text-rope
                      , template-haskell
                      , temporary
                      , unordered-containers
