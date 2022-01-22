@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE LambdaCase #-}
 
 module Language.LSP.Server.Control
   (
@@ -9,12 +9,16 @@ module Language.LSP.Server.Control
     runServer
   , runServerWith
   , runServerWithHandles
+  , LspServerLog (..)
   ) where
 
+import qualified Colog.Core as L
+import           Colog.Core (LogAction (..), WithSeverity (..), Severity (..), (<&))
 import           Control.Concurrent
 import           Control.Concurrent.STM.TChan
 import           Control.Monad
 import           Control.Monad.STM
+import           Control.Monad.IO.Class
 import qualified Data.Aeson as J
 import qualified Data.Attoparsec.ByteString as Attoparsec
 import Data.Attoparsec.ByteString.Char8
@@ -27,33 +31,66 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import           Data.List
 import           Language.LSP.Server.Core
-import           Language.LSP.Server.Processing
+import qualified Language.LSP.Server.Processing as Processing
 import           Language.LSP.Types
 import           Language.LSP.VFS
+import Language.LSP.Logging (defaultClientLogger)
 import           System.IO
-import           System.Log.Logger
 
+data LspServerLog =
+  LspProcessingLog Processing.LspProcessingLog
+  | DecodeInitializeError String
+  | HeaderParseFail [String] String
+  | EOF
+  | Starting
+  | ParsedMsg T.Text
+  | SendMsg TL.Text
+
+instance Show LspServerLog where
+  show (LspProcessingLog l) = show l
+  show (DecodeInitializeError err) = "Got error while decoding initialize:\n" <> err
+  show (HeaderParseFail ctxs err) = "Failed to parse message header:\n" <> intercalate " > " ctxs <> ": " <> err
+  show EOF = "Got EOF"
+  show Starting = "Starting server"
+  show (ParsedMsg msg) = "---> " <> T.unpack msg
+  show (SendMsg msg) = "<--2-- " <> TL.unpack msg
 
 -- ---------------------------------------------------------------------
 
--- | Convenience function for 'runServerWithHandles stdin stdout'.
-runServer :: ServerDefinition config
-                -- ^ function to be called once initialize has
-                -- been received from the client. Further message
-                -- processing will start only after this returns.
-    -> IO Int
-runServer = runServerWithHandles stdin stdout
+-- | Convenience function for 'runServerWithHandles' which:
+--     (1) reads from stdin;
+--     (2) writes to stdout; and
+--     (3) logs to stderr and to the client, with some basic filtering.
+runServer :: forall config . ServerDefinition config -> IO Int
+runServer =
+  runServerWithHandles
+  ioLogger
+  lspLogger
+  stdin
+  stdout
+  where
+    showMsg l = "[" ++ show (L.getSeverity l) ++ "] " ++ show (L.getMsg l)
+    ioLogger :: LogAction IO (WithSeverity LspServerLog)
+    ioLogger = L.cmap showMsg L.logStringStderr
+    lspLogger :: LogAction (LspM config) (WithSeverity LspServerLog)
+    lspLogger =
+      let clientLogger = L.cmap (fmap (T.pack . show)) defaultClientLogger
+      in clientLogger <> L.hoistLogAction liftIO ioLogger
 
--- | Starts a language server over the specified handles. 
+-- | Starts a language server over the specified handles.
 -- This function will return once the @exit@ notification is received.
 runServerWithHandles ::
-       Handle
+    LogAction IO (WithSeverity LspServerLog)
+    -- ^ The logger to use outside the main body of the server where we can't assume the ability to send messages.
+    -> LogAction (LspM config) (WithSeverity LspServerLog)
+    -- ^ The logger to use once the server has started and can successfully send messages.
+    -> Handle
     -- ^ Handle to read client input from.
     -> Handle
     -- ^ Handle to write output to.
     -> ServerDefinition config
     -> IO Int         -- exit code
-runServerWithHandles hin hout serverDefinition = do
+runServerWithHandles ioLogger logger hin hout serverDefinition = do
 
   hSetBuffering hin NoBuffering
   hSetEncoding  hin utf8
@@ -68,80 +105,70 @@ runServerWithHandles hin hout serverDefinition = do
       BSL.hPut hout out
       hFlush hout
 
-  runServerWith clientIn clientOut serverDefinition
+  runServerWith ioLogger logger clientIn clientOut serverDefinition
 
 -- | Starts listening and sending requests and responses
 -- using the specified I/O.
 runServerWith ::
-       IO BS.ByteString
+    LogAction IO (WithSeverity LspServerLog)
+    -- ^ The logger to use outside the main body of the server where we can't assume the ability to send messages.
+    -> LogAction (LspM config) (WithSeverity LspServerLog)
+    -- ^ The logger to use once the server has started and can successfully send messages.
+    -> IO BS.ByteString
     -- ^ Client input.
     -> (BSL.ByteString -> IO ())
     -- ^ Function to provide output to.
     -> ServerDefinition config
     -> IO Int         -- exit code
-runServerWith clientIn clientOut serverDefinition = do
+runServerWith ioLogger logger clientIn clientOut serverDefinition = do
 
-  infoM "lsp.runWith" "\n\n\n\n\nlsp:Starting up server ..."
+  ioLogger <& Starting `WithSeverity` Info
 
   cout <- atomically newTChan :: IO (TChan J.Value)
-  _rhpid <- forkIO $ sendServer cout clientOut
+  _rhpid <- forkIO $ sendServer ioLogger cout clientOut
 
   let sendMsg msg = atomically $ writeTChan cout $ J.toJSON msg
 
   initVFS $ \vfs -> do
-    ioLoop clientIn serverDefinition vfs sendMsg
+    ioLoop ioLogger logger clientIn serverDefinition vfs sendMsg
 
   return 1
 
 -- ---------------------------------------------------------------------
 
 ioLoop ::
-     IO BS.ByteString
+  forall config
+  .  LogAction IO (WithSeverity LspServerLog)
+  -> LogAction (LspM config) (WithSeverity LspServerLog)
+  -> IO BS.ByteString
   -> ServerDefinition config
   -> VFS
   -> (FromServerMessage -> IO ())
   -> IO ()
-ioLoop clientIn serverDefinition vfs sendMsg = do
-  minitialize <- parseOne (parse parser "")
+ioLoop ioLogger logger clientIn serverDefinition vfs sendMsg = do
+  minitialize <- parseOne ioLogger clientIn (parse parser "")
   case minitialize of
     Nothing -> pure ()
     Just (msg,remainder) -> do
       case J.eitherDecode $ BSL.fromStrict msg of
-        Left err ->
-          errorM "lsp.ioLoop" $
-            "Got error while decoding initialize:\n" <> err <> "\n exiting 1 ...\n"
+        Left err -> ioLogger <& DecodeInitializeError err `WithSeverity` Error
         Right initialize -> do
-          mInitResp <- initializeRequestHandler serverDefinition vfs sendMsg initialize
+          mInitResp <- Processing.initializeRequestHandler serverDefinition vfs sendMsg initialize
           case mInitResp of
             Nothing -> pure ()
-            Just env -> loop env (parse parser remainder)
+            Just env -> runLspT env $ loop (parse parser remainder)
   where
 
-    parseOne :: Result BS.ByteString -> IO (Maybe (BS.ByteString,BS.ByteString))
-    parseOne (Fail _ ctxs err) = do
-      errorM "lsp.parseOne" $
-        "Failed to parse message header:\n" <> intercalate " > " ctxs <> ": " <>
-        err <> "\n exiting 1 ...\n"
-      pure Nothing
-    parseOne (Partial c) = do
-      bs <- clientIn
-      if BS.null bs
-        then do
-          errorM "lsp.parseON" "lsp:Got EOF, exiting 1 ...\n"
-          pure Nothing
-        else parseOne (c bs)
-    parseOne (Done remainder msg) = do
-      debugM "lsp.parseOne" $ "---> " <> T.unpack (T.decodeUtf8 msg)
-      pure $ Just (msg,remainder)
-
-    loop env = go
+    loop :: Result BS.ByteString -> LspM config ()
+    loop = go
       where
+        pLogger =  L.cmap (fmap LspProcessingLog) logger
         go r = do
-          res <- parseOne r
+          res <- parseOne logger clientIn r
           case res of
             Nothing -> pure ()
             Just (msg,remainder) -> do
-              runLspT env $ processMessage $ BSL.fromStrict msg
+              Processing.processMessage pLogger $ BSL.fromStrict msg
               go (parse parser remainder)
 
     parser = do
@@ -150,11 +177,33 @@ ioLoop clientIn serverDefinition vfs sendMsg = do
       _ <- string _TWO_CRLF
       Attoparsec.take len
 
+parseOne ::
+  MonadIO m
+  => LogAction m (WithSeverity LspServerLog)
+  -> IO BS.ByteString
+  -> Result BS.ByteString
+  -> m (Maybe (BS.ByteString,BS.ByteString))
+parseOne logger clientIn = go
+  where
+    go (Fail _ ctxs err) = do
+      logger <& HeaderParseFail ctxs err `WithSeverity` Error
+      pure Nothing
+    go (Partial c) = do
+      bs <- liftIO clientIn
+      if BS.null bs
+        then do
+          logger <& EOF `WithSeverity` Error
+          pure Nothing
+        else go (c bs)
+    go (Done remainder msg) = do
+      logger <& ParsedMsg (T.decodeUtf8 msg) `WithSeverity` Debug
+      pure $ Just (msg,remainder)
+
 -- ---------------------------------------------------------------------
 
 -- | Simple server to make sure all output is serialised
-sendServer :: TChan J.Value -> (BSL.ByteString -> IO ()) -> IO ()
-sendServer msgChan clientOut = do
+sendServer :: LogAction IO (WithSeverity LspServerLog) -> TChan J.Value -> (BSL.ByteString -> IO ()) -> IO ()
+sendServer logger msgChan clientOut = do
   forever $ do
     msg <- atomically $ readTChan msgChan
 
@@ -168,7 +217,7 @@ sendServer msgChan clientOut = do
                 , str ]
 
     clientOut out
-    debugM "lsp.sendServer" $ "<--2--" <> TL.unpack (TL.decodeUtf8 str)
+    logger <& SendMsg (TL.decodeUtf8 str) `WithSeverity` Debug
 
 -- |
 --

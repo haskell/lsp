@@ -2,25 +2,16 @@
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE BangPatterns         #-}
-{-# LANGUAGE LambdaCase           #-}
 {-# LANGUAGE GADTs                #-}
-{-# LANGUAGE MultiWayIf           #-}
 {-# LANGUAGE BinaryLiterals       #-}
 {-# LANGUAGE OverloadedStrings    #-}
 {-# LANGUAGE RankNTypes           #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
-{-# LANGUAGE TypeFamilies         #-}
 {-# LANGUAGE FlexibleContexts     #-}
-{-# LANGUAGE ViewPatterns         #-}
 {-# LANGUAGE TypeInType           #-}
-{-# LANGUAGE TypeApplications     #-}
-{-# LANGUAGE RecordWildCards      #-}
-{-# LANGUAGE NamedFieldPuns       #-}
 {-# LANGUAGE FlexibleInstances    #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE RecursiveDo #-}
 {-# LANGUAGE RoleAnnotations #-}
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 {-# OPTIONS_GHC -fprint-explicit-kinds #-}
@@ -28,6 +19,7 @@
 
 module Language.LSP.Server.Core where
 
+import           Colog.Core (LogAction (..), WithSeverity (..))
 import           Control.Concurrent.Async
 import           Control.Concurrent.STM
 import qualified Control.Exception as E
@@ -37,7 +29,7 @@ import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Reader
 import           Control.Monad.Trans.Class
 import           Control.Monad.IO.Unlift
-import           Control.Lens ( (^.), (^?), _Just )
+import           Control.Lens ( (^.), (^?), _Just, at)
 import qualified Data.Aeson as J
 import           Data.Default
 import           Data.Functor.Product
@@ -59,12 +51,6 @@ import qualified Language.LSP.Types.SMethodMap as SMethodMap
 import qualified Language.LSP.Types.Lens as J
 import           Language.LSP.VFS
 import           Language.LSP.Diagnostics
-import           System.IO
-import qualified System.Log.Formatter as L
-import qualified System.Log.Handler as LH
-import qualified System.Log.Handler.Simple as LHS
-import           System.Log.Logger
-import qualified System.Log.Logger as L
 import           System.Random hiding (next)
 import           Control.Monad.Trans.Identity
 import           Control.Monad.Catch (MonadMask, MonadCatch, MonadThrow)
@@ -107,7 +93,7 @@ instance MonadLsp c m => MonadLsp c (IdentityT m) where
 data LanguageContextEnv config =
   LanguageContextEnv
   { resHandlers            :: !(Handlers IO)
-  , resParseConfig         :: !(config -> J.Value -> (Either T.Text config))
+  , resParseConfig         :: !(config -> J.Value -> Either T.Text config)
   , resSendMessage         :: !(FromServerMessage -> IO ())
   -- We keep the state in a TVar to be thread safe
   , resState               :: !(LanguageContextState config)
@@ -359,7 +345,7 @@ sendRequest m params resHandler = do
   reqId <- IdInt <$> freshLspId
   rio <- askRunInIO
   success <- addResponseHandler reqId (Pair m (ServerResponseCallback (rio . resHandler)))
-  unless success $ error "haskell-lsp: could not send FromServer request as id is reused"
+  unless success $ error "LSP: could not send FromServer request as id is reused"
 
   let msg = RequestMessage "2.0" reqId m params
   ~() <- case splitServerMethod m of
@@ -371,7 +357,9 @@ sendRequest m params resHandler = do
 
 -- | Return the 'VirtualFile' associated with a given 'NormalizedUri', if there is one.
 getVirtualFile :: MonadLsp config m => NormalizedUri -> m (Maybe VirtualFile)
-getVirtualFile uri = Map.lookup uri . vfsMap . vfsData <$> getsState resVFS
+getVirtualFile uri = do
+  dat <- vfsData <$> getsState resVFS
+  pure $ dat ^. vfsMap . at uri
 
 {-# INLINE getVirtualFile #-}
 
@@ -382,10 +370,10 @@ getVirtualFiles = vfsData <$> getsState resVFS
 
 -- | Dump the current text for a given VFS file to a temporary file,
 -- and return the path to the file.
-persistVirtualFile :: MonadLsp config m => NormalizedUri -> m (Maybe FilePath)
-persistVirtualFile uri = do
+persistVirtualFile :: MonadLsp config m => LogAction m (WithSeverity VfsLog) -> NormalizedUri -> m (Maybe FilePath)
+persistVirtualFile logger uri = do
   join $ stateState resVFS $ \vfs ->
-    case persistFileVFS (vfsData vfs) uri of
+    case persistFileVFS logger (vfsData vfs) uri of
       Nothing -> (return Nothing, vfs)
       Just (fn, write) ->
         let !revMap = case uriToFilePath (fromNormalizedUri uri) of
@@ -395,7 +383,7 @@ persistVirtualFile uri = do
               Nothing -> reverseMap vfs
             !vfs' = vfs {reverseMap = revMap}
             act = do
-              liftIO write
+              write
               pure (Just fn)
         in (act, vfs')
 
@@ -430,15 +418,6 @@ sendToClient msg = do
   liftIO $ f msg
 
 {-# INLINE sendToClient #-}
-
--- ---------------------------------------------------------------------
-
-sendErrorLog :: MonadLsp config m => Text -> m ()
-sendErrorLog msg =
-  sendToClient $ fromServerNot $
-    NotificationMessage "2.0" SWindowLogMessage (LogMessageParams MtError msg)
-
-{-# INLINE sendErrorLog #-}
 
 -- ---------------------------------------------------------------------
 
@@ -717,45 +696,6 @@ flushDiagnosticsBySource maxDiagnosticCount msource = join $ stateState resDiagn
           Just params -> do
             sendToClient $ J.fromServerNot $ J.NotificationMessage "2.0" J.STextDocumentPublishDiagnostics params
       in (act,newDiags)
-
--- =====================================================================
---
---  utility
-
-
---
---  Logger
---
-setupLogger :: Maybe FilePath -> [String] -> Priority -> IO ()
-setupLogger mLogFile extraLogNames level = do
-
-  logStream <- case mLogFile of
-    Just logFile -> openFile logFile AppendMode `E.catch` handleIOException logFile
-    Nothing      -> return stderr
-  hSetEncoding logStream utf8
-
-  logH <- LHS.streamHandler logStream level
-
-  let logHandle  = logH {LHS.closeFunc = hClose}
-      logFormatter  = L.tfLogFormatter logDateFormat logFormat
-      logHandler = LH.setFormatter logHandle logFormatter
-
-  L.updateGlobalLogger L.rootLoggerName $ L.setHandlers ([] :: [LHS.GenericHandler Handle])
-  L.updateGlobalLogger "haskell-lsp" $ L.setHandlers [logHandler]
-  L.updateGlobalLogger "haskell-lsp" $ L.setLevel level
-
-  -- Also route the additional log names to the same log
-  forM_ extraLogNames $ \logName -> do
-    L.updateGlobalLogger logName $ L.setHandlers [logHandler]
-    L.updateGlobalLogger logName $ L.setLevel level
-  where
-    logFormat = "$time [$tid] $prio $loggername:\t$msg"
-    logDateFormat = "%Y-%m-%d %H:%M:%S%Q"
-
-handleIOException :: FilePath -> E.IOException ->  IO Handle
-handleIOException logFile _ = do
-  hPutStr stderr $ "Couldn't open log file " ++ logFile ++ "; falling back to stderr logging"
-  return stderr
 
 -- ---------------------------------------------------------------------
 

@@ -1,5 +1,4 @@
 {-# LANGUAGE CPP               #-}
-{-# LANGUAGE BangPatterns      #-}
 {-# LANGUAGE GADTs             #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -48,10 +47,10 @@ import Control.Monad.Fail
 #endif
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import qualified Control.Monad.Trans.Reader as Reader (ask)
-import Control.Monad.Trans.State (StateT, runStateT)
+import Control.Monad.Trans.State (StateT, runStateT, execState)
 import qualified Control.Monad.Trans.State as State
 import qualified Data.ByteString.Lazy.Char8 as B
-import Data.Aeson
+import Data.Aeson hiding (Error)
 import Data.Aeson.Encode.Pretty
 import Data.Conduit as Conduit
 import Data.Conduit.Parser as Parser
@@ -80,8 +79,9 @@ import System.Process (ProcessHandle())
 #ifndef mingw32_HOST_OS
 import System.Process (waitForProcess)
 #endif
-import System.Timeout
+import System.Timeout ( timeout )
 import Data.IORef
+import Colog.Core (LogAction (..), WithSeverity (..), Severity (..))
 
 -- | A session representing one instance of launching and connecting to a server.
 --
@@ -367,7 +367,7 @@ updateState (FromServerMess SWorkspaceApplyEdit r) = do
         error "WorkspaceEdit contains neither documentChanges nor changes!"
 
   modifyM $ \s -> do
-    newVFS <- liftIO $ changeFromServerVFS (vfs s) r
+    let newVFS = flip execState (vfs s) $ changeFromServerVFS logger r
     return $ s { vfs = newVFS }
 
   let groupedParams = groupBy (\a b -> a ^. textDocument == b ^. textDocument) allChangeParams
@@ -384,14 +384,16 @@ updateState (FromServerMess SWorkspaceApplyEdit r) = do
     modify $ \s ->
       let oldVFS = vfs s
           update (VirtualFile oldV file_ver t) = VirtualFile (fromMaybe oldV v) (file_ver +1) t
-          newVFS = updateVFS (Map.adjust update (toNormalizedUri uri)) oldVFS
+          newVFS = oldVFS & vfsMap . ix (toNormalizedUri uri) %~ update
       in s { vfs = newVFS }
 
-  where checkIfNeedsOpened uri = do
+  where
+        logger = LogAction $ \(WithSeverity msg sev) -> case sev of { Error -> error $ show msg; _ -> pure () }
+        checkIfNeedsOpened uri = do
           oldVFS <- vfs <$> get
 
           -- if its not open, open it
-          unless (toNormalizedUri uri `Map.member` vfsMap oldVFS) $ do
+          unless (has (vfsMap . ix (toNormalizedUri uri)) oldVFS) $ do
             let fp = fromJust $ uriToFilePath uri
             contents <- liftIO $ T.readFile fp
             let item = TextDocumentItem (filePathToUri fp) "" 0 contents
@@ -399,7 +401,7 @@ updateState (FromServerMess SWorkspaceApplyEdit r) = do
             sendMessage msg
 
             modifyM $ \s -> do
-              let (newVFS,_) = openVFS (vfs s) msg
+              let newVFS = flip execState (vfs s) $ openVFS logger msg
               return $ s { vfs = newVFS }
 
         getParamsFromTextDocumentEdit :: TextDocumentEdit -> DidChangeTextDocumentParams
@@ -420,9 +422,8 @@ updateState (FromServerMess SWorkspaceApplyEdit r) = do
         -- For a uri returns an infinite list of versions [n,n+1,n+2,...]
         -- where n is the current version
         textDocumentVersions uri = do
-          m <- vfsMap . vfs <$> get
-          let curVer = fromMaybe 0 $
-                _lsp_version <$> m Map.!? (toNormalizedUri uri)
+          vfs <- vfs <$> get
+          let curVer = fromMaybe 0 $ vfs ^? vfsMap . ix (toNormalizedUri uri) . lsp_version
           pure $ map (VersionedTextDocumentIdentifier uri . Just) [curVer + 1..]
 
         textDocumentEdits uri edits = do

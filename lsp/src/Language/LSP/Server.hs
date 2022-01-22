@@ -55,7 +55,6 @@ module Language.LSP.Server
   , unregisterCapability
   , RegistrationToken
 
-  , setupLogger
   , reverseSortEdit
   ) where
 

@@ -8,6 +8,7 @@ import qualified Language.LSP.Types as J
 import qualified Data.Text as T
 
 import           Test.Hspec
+import Data.Functor.Identity
 
 -- ---------------------------------------------------------------------
 
@@ -40,7 +41,7 @@ vspSpec = do
             , J.TextDocumentContentChangeEvent (Just $ J.mkRange 0 1 0 2) Nothing ""
             , J.TextDocumentContentChangeEvent (Just $ J.mkRange 0 0 0 1) Nothing ""
             ]
-      applyChanges orig changes `shouldBe` ""
+      applyChanges mempty orig changes `shouldBe` Identity ""
     it "handles vscode style redos" $ do
       let orig = ""
           changes =
@@ -48,7 +49,7 @@ vspSpec = do
             , J.TextDocumentContentChangeEvent (Just $ J.mkRange 0 2 0 2) Nothing "b"
             , J.TextDocumentContentChangeEvent (Just $ J.mkRange 0 3 0 3) Nothing "c"
             ]
-      applyChanges orig changes `shouldBe` "abc"
+      applyChanges mempty orig changes `shouldBe` Identity "abc"
 
     -- ---------------------------------
 
@@ -62,9 +63,9 @@ vspSpec = do
           , "-- fooo"
           , "foo :: Int"
           ]
-        new = applyChange (fromString orig)
+        new = applyChange mempty (fromString orig)
                 $ J.TextDocumentContentChangeEvent (Just $ J.mkRange 2 1 2 5) (Just 4) ""
-      Rope.lines new `shouldBe`
+      Rope.lines <$> new `shouldBe` Identity
           [ "abcdg"
           , "module Foo where"
           , "-oo"
@@ -79,9 +80,9 @@ vspSpec = do
           , "-- fooo"
           , "foo :: Int"
           ]
-        new = applyChange (fromString orig)
+        new = applyChange mempty (fromString orig)
                 $ J.TextDocumentContentChangeEvent (Just $ J.mkRange 2 1 2 5) Nothing ""
-      Rope.lines new `shouldBe`
+      Rope.lines <$> new `shouldBe` Identity
           [ "abcdg"
           , "module Foo where"
           , "-oo"
@@ -99,9 +100,9 @@ vspSpec = do
           , "-- fooo"
           , "foo :: Int"
           ]
-        new = applyChange (fromString orig)
+        new = applyChange mempty (fromString orig)
                 $ J.TextDocumentContentChangeEvent (Just $ J.mkRange 2 0 3 0) (Just 8) ""
-      Rope.lines new `shouldBe`
+      Rope.lines <$> new `shouldBe` Identity
           [ "abcdg"
           , "module Foo where"
           , "foo :: Int"
@@ -116,9 +117,9 @@ vspSpec = do
           , "-- fooo"
           , "foo :: Int"
           ]
-        new = applyChange (fromString orig)
+        new = applyChange mempty (fromString orig)
                 $ J.TextDocumentContentChangeEvent (Just $ J.mkRange 2 0 3 0) Nothing ""
-      Rope.lines new `shouldBe`
+      Rope.lines <$> new `shouldBe` Identity
           [ "abcdg"
           , "module Foo where"
           , "foo :: Int"
@@ -134,9 +135,9 @@ vspSpec = do
           , "foo :: Int"
           , "foo = bb"
           ]
-        new = applyChange (fromString orig)
+        new = applyChange mempty (fromString orig)
                 $ J.TextDocumentContentChangeEvent (Just $ J.mkRange 1 0 3 0) (Just 19) ""
-      Rope.lines new `shouldBe`
+      Rope.lines <$> new `shouldBe` Identity
           [ "module Foo where"
           , "foo = bb"
           ]
@@ -150,9 +151,9 @@ vspSpec = do
           , "foo :: Int"
           , "foo = bb"
           ]
-        new = applyChange (fromString orig)
+        new = applyChange mempty (fromString orig)
                 $ J.TextDocumentContentChangeEvent (Just $ J.mkRange 1 0 3 0) Nothing ""
-      Rope.lines new `shouldBe`
+      Rope.lines <$> new `shouldBe` Identity
           [ "module Foo where"
           , "foo = bb"
           ]
@@ -167,9 +168,9 @@ vspSpec = do
           , "module Foo where"
           , "foo :: Int"
           ]
-        new = applyChange (fromString orig)
+        new = applyChange mempty (fromString orig)
                 $ J.TextDocumentContentChangeEvent (Just $ J.mkRange 1 16 1 16) (Just 0) "\n-- fooo"
-      Rope.lines new `shouldBe`
+      Rope.lines <$> new `shouldBe` Identity
           [ "abcdg"
           , "module Foo where"
           , "-- fooo"
@@ -185,9 +186,9 @@ vspSpec = do
           [ "module Foo where"
           , "foo = bb"
           ]
-        new = applyChange (fromString orig)
+        new = applyChange mempty (fromString orig)
                 $ J.TextDocumentContentChangeEvent (Just $ J.mkRange 1 8 1 8) Nothing "\n-- fooo\nfoo :: Int"
-      Rope.lines new `shouldBe`
+      Rope.lines <$> new `shouldBe` Identity
           [ "module Foo where"
           , "foo = bb"
           , "-- fooo"
@@ -212,9 +213,9 @@ vspSpec = do
           , "  putStrLn \"hello world\""
           ]
         -- new = changeChars (fromString orig) (J.Position 7 0) (J.Position 7 8) "baz ="
-        new = applyChange (fromString orig)
+        new = applyChange mempty (fromString orig)
                 $ J.TextDocumentContentChangeEvent (Just $ J.mkRange 7 0 7 8) (Just 8) "baz ="
-      Rope.lines new `shouldBe`
+      Rope.lines <$> new `shouldBe` Identity
           [ "module Foo where"
           , "-- fooo"
           , "foo :: Int"
@@ -240,9 +241,9 @@ vspSpec = do
           , "  putStrLn \"hello world\""
           ]
         -- new = changeChars (fromString orig) (J.Position 7 0) (J.Position 7 8) "baz ="
-        new = applyChange (fromString orig)
+        new = applyChange mempty (fromString orig)
                 $ J.TextDocumentContentChangeEvent (Just $ J.mkRange 7 0 7 8) Nothing "baz ="
-      Rope.lines new `shouldBe`
+      Rope.lines <$> new `shouldBe` Identity
           [ "module Foo where"
           , "-- fooo"
           , "foo :: Int"
@@ -259,9 +260,9 @@ vspSpec = do
           [ "a𐐀b"
           , "a𐐀b"
           ]
-        new = applyChange (fromString orig)
+        new = applyChange mempty (fromString orig)
                 $ J.TextDocumentContentChangeEvent (Just $ J.mkRange 1 0 1 3) (Just 3) "𐐀𐐀"
-      Rope.lines new `shouldBe`
+      Rope.lines <$> new `shouldBe` Identity
           [ "a𐐀b"
           , "𐐀𐐀b"
           ]

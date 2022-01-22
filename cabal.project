@@ -10,3 +10,11 @@ tests: True
 benchmarks: True
 test-show-details: direct
 haddock-quickjump: True
+
+-- For 9.2 support. Fixed, just needs a Hackage release
+allow-newer: co-log-core:base
+
+source-repository-package
+  type: git
+  location: https://github.com/co-log/co-log-core
+  tag: 77a01a4344b7a048e41b3da9371f41f948053891

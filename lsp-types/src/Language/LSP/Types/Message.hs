@@ -372,7 +372,7 @@ deriving instance Read (ResponseResult m) => Read (ResponseMessage m)
 deriving instance Show (ResponseResult m) => Show (ResponseMessage m)
 
 instance (ToJSON (ResponseResult m)) => ToJSON (ResponseMessage m) where
-  toJSON (ResponseMessage { _jsonrpc = jsonrpc, _id = lspid, _result = result })
+  toJSON ResponseMessage { _jsonrpc = jsonrpc, _id = lspid, _result = result }
     = object
       [ "jsonrpc" .= jsonrpc
       , "id" .= lspid
@@ -389,11 +389,11 @@ instance FromJSON (ResponseResult a) => FromJSON (ResponseMessage a) where
     _result  <- o .:! "result"
     _error   <- o .:? "error"
     result   <- case (_error, _result) of
-      ((Just err), Nothing   ) -> pure $ Left err
-      (Nothing   , (Just res)) -> pure $ Right res
-      ((Just _err), (Just _res)) -> fail $ "both error and result cannot be present: " ++ show o
+      (Just err, Nothing) -> pure $ Left err
+      (Nothing, Just res) -> pure $ Right res
+      (Just _err, Just _res) -> fail $ "both error and result cannot be present: " ++ show o
       (Nothing, Nothing) -> fail "both error and result cannot be Nothing"
-    return $ ResponseMessage _jsonrpc _id $ result
+    return $ ResponseMessage _jsonrpc _id result
 
 -- ---------------------------------------------------------------------
 -- Helper Type Families
