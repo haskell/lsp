@@ -44,6 +44,7 @@ library
                      , ansi-terminal
                      , async
                      , bytestring
+                     , co-log-core
                      , conduit
                      , conduit-parse == 0.2.*
                      , containers >= 0.5.9
@@ -104,6 +105,7 @@ test-suite func-test
                      , lsp-test
                      , lsp
                      , process
+                     , co-log-core
                      , lens
                      , unliftio
                      , hspec

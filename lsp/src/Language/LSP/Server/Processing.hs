@@ -7,17 +7,25 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE StandaloneDeriving #-}
+
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
+-- So we can keep using the old prettyprinter modules (which have a better
+-- compatibility range) for now.
+{-# OPTIONS_GHC -Wno-deprecations #-}
+
 module Language.LSP.Server.Processing where
 
+import           Colog.Core (LogAction (..), WithSeverity (..), Severity (..), (<&))
+
 import Control.Lens hiding (List, Empty)
-import Data.Aeson hiding (Options)
-import Data.Aeson.Types hiding (Options)
+import Data.Aeson hiding (Options, Error)
+import Data.Aeson.Types hiding (Options, Error)
 import qualified Data.ByteString.Lazy as BSL
 import Data.List
 import Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.Text as T
-import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Encoding as TL
 import Language.LSP.Types
 import Language.LSP.Types.Capabilities
@@ -25,7 +33,8 @@ import qualified Language.LSP.Types.Lens as LSP
 import           Language.LSP.Types.SMethodMap (SMethodMap)
 import qualified Language.LSP.Types.SMethodMap as SMethodMap
 import Language.LSP.Server.Core
-import Language.LSP.VFS
+
+import Language.LSP.VFS as VFS
 import Data.Functor.Product
 import qualified Control.Exception as E
 import Data.Monoid hiding (Product)
@@ -35,14 +44,47 @@ import Control.Concurrent.STM
 import Control.Monad.Trans.Except
 import Control.Monad.Reader
 import Data.IxMap
-import System.Log.Logger
 import Data.Maybe
 import qualified Data.Map.Strict as Map
+import Data.Text.Prettyprint.Doc
 import System.Exit
 import Data.Default (def)
+import Control.Monad.State
+import Control.Monad.Writer.Strict hiding (Product)
+import Data.Foldable (traverse_)
 
-processMessage :: BSL.ByteString -> LspM config ()
-processMessage jsonStr = do
+data LspProcessingLog =
+  VfsLog VfsLog
+  | MessageProcessingError BSL.ByteString String
+  | forall m . MissingHandler Bool (SClientMethod m)
+  | ConfigurationParseError Value T.Text
+  | ProgressCancel ProgressToken
+  | Exiting
+
+deriving instance Show LspProcessingLog
+
+instance Pretty LspProcessingLog where
+  pretty (VfsLog l) = pretty l
+  pretty (MessageProcessingError bs err) =
+    vsep [
+      "LSP: incoming message parse error:"
+      , pretty err
+      , "when processing"
+      , pretty (TL.decodeUtf8 bs)
+      ]
+  pretty (MissingHandler _ m) = "LSP: no handler for:" <+> viaShow m
+  pretty (ConfigurationParseError settings err) =
+    vsep [
+      "LSP: configuration parse error:"
+      , pretty err
+      , "when parsing"
+      , viaShow settings
+      ]
+  pretty (ProgressCancel tid) = "LSP: cancelling action for token:" <+> viaShow tid
+  pretty Exiting = "LSP: Got exit, exiting"
+
+processMessage :: (m ~ LspM config) => LogAction m (WithSeverity LspProcessingLog) -> BSL.ByteString -> m ()
+processMessage logger jsonStr = do
   pendingResponsesVar <- LspT $ asks $ resPendingResponses . resState
   join $ liftIO $ atomically $ fmap handleErrors $ runExceptT $ do
       val <- except $ eitherDecode jsonStr
@@ -50,7 +92,7 @@ processMessage jsonStr = do
       msg <- except $ parseEither (parser pending) val
       lift $ case msg of
         FromClientMess m mess ->
-          pure $ handle m mess
+          pure $ handle logger m mess
         FromClientRsp (Pair (ServerResponseCallback f) (Const !newMap)) res -> do
           writeTVar pendingResponsesVar newMap
           pure $ liftIO $ f (res ^. LSP.result)
@@ -60,13 +102,7 @@ processMessage jsonStr = do
       let (mhandler, newMap) = pickFromIxMap i rm
         in (\(Pair m handler) -> (m,Pair handler (Const newMap))) <$> mhandler
 
-    handleErrors = either (sendErrorLog . errMsg) id
-
-    errMsg err = TL.toStrict $ TL.unwords
-      [ "lsp:incoming message parse error."
-      , TL.decodeUtf8 jsonStr
-      , TL.pack err
-      ] <> "\n"
+    handleErrors = either (\e -> logger <& MessageProcessingError jsonStr e `WithSeverity` Error) id
 
 -- | Call this to initialize the session
 initializeRequestHandler
@@ -253,7 +289,7 @@ inferServerCapabilities clientCaps o h =
     semanticTokensProvider = Just $ InL $ SemanticTokensOptions Nothing def semanticTokenRangeProvider semanticTokenFullProvider
     semanticTokenRangeProvider
       | supported_b STextDocumentSemanticTokensRange = Just $ SemanticTokensRangeBool True
-      | otherwise = Nothing 
+      | otherwise = Nothing
     semanticTokenFullProvider
       | supported_b STextDocumentSemanticTokensFull = Just $ SemanticTokensFullDelta $ SemanticTokensDeltaClientCapabilities $ supported STextDocumentSemanticTokensFullDelta
       | otherwise = Nothing
@@ -269,26 +305,28 @@ inferServerCapabilities clientCaps o h =
 
 -- | Invokes the registered dynamic or static handlers for the given message and
 -- method, as well as doing some bookkeeping.
-handle :: SClientMethod m -> ClientMessage m -> LspM config ()
-handle m msg =
+handle :: (m ~ LspM config) => LogAction m (WithSeverity LspProcessingLog) -> SClientMethod meth -> ClientMessage meth -> m ()
+handle logger m msg =
   case m of
-    SWorkspaceDidChangeWorkspaceFolders -> handle' (Just updateWorkspaceFolders) m msg
-    SWorkspaceDidChangeConfiguration    -> handle' (Just handleConfigChange) m msg
-    STextDocumentDidOpen                -> handle' (Just $ vfsFunc openVFS) m msg
-    STextDocumentDidChange              -> handle' (Just $ vfsFunc changeFromClientVFS) m msg
-    STextDocumentDidClose               -> handle' (Just $ vfsFunc closeVFS) m msg
-    SWindowWorkDoneProgressCancel       -> handle' (Just progressCancelHandler) m msg
-    _ -> handle' Nothing m msg
+    SWorkspaceDidChangeWorkspaceFolders -> handle' logger (Just updateWorkspaceFolders) m msg
+    SWorkspaceDidChangeConfiguration    -> handle' logger (Just $ handleConfigChange logger) m msg
+    STextDocumentDidOpen                -> handle' logger (Just $ vfsFunc logger openVFS) m msg
+    STextDocumentDidChange              -> handle' logger (Just $ vfsFunc logger changeFromClientVFS) m msg
+    STextDocumentDidClose               -> handle' logger (Just $ vfsFunc logger closeVFS) m msg
+    SWindowWorkDoneProgressCancel       -> handle' logger (Just $ progressCancelHandler logger) m msg
+    _ -> handle' logger Nothing m msg
 
 
-handle' :: forall t (m :: Method FromClient t) config.
-           Maybe (ClientMessage m -> LspM config ())
+handle' :: forall m t (meth :: Method FromClient t) config
+        . (m ~ LspM config)
+        => LogAction m (WithSeverity LspProcessingLog)
+        -> Maybe (ClientMessage meth -> m ())
            -- ^ An action to be run before invoking the handler, used for
            -- bookkeeping stuff like the vfs etc.
-        -> SClientMethod m
-        -> ClientMessage m
-        -> LspM config ()
-handle' mAction m msg = do
+        -> SClientMethod meth
+        -> ClientMessage meth
+        -> m ()
+handle' logger mAction m msg = do
   maybe (return ()) (\f -> f msg) mAction
 
   dynReqHandlers <- getsState resRegistrationsReq
@@ -307,7 +345,7 @@ handle' mAction m msg = do
     IsClientNot -> case pickHandler dynNotHandlers notHandlers of
       Just h -> liftIO $ h msg
       Nothing
-        | SExit <- m -> liftIO $ exitNotificationHandler msg
+        | SExit <- m -> exitNotificationHandler logger msg
         | otherwise -> do
             reportMissingHandler
 
@@ -335,7 +373,7 @@ handle' mAction m msg = do
   where
     -- | Checks to see if there's a dynamic handler, and uses it in favour of the
     -- static handler, if it exists.
-    pickHandler :: RegistrationMap t -> SMethodMap (ClientMessageHandler IO t) -> Maybe (Handler IO m)
+    pickHandler :: RegistrationMap t -> SMethodMap (ClientMessageHandler IO t) -> Maybe (Handler IO meth)
     pickHandler dynHandlerMap staticHandler = case (SMethodMap.lookup m dynHandlerMap, SMethodMap.lookup m staticHandler) of
       (Just (Pair _ (ClientMessageHandler h)), _) -> Just h
       (Nothing, Just (ClientMessageHandler h)) -> Just h
@@ -344,51 +382,65 @@ handle' mAction m msg = do
     -- '$/' notifications should/could be ignored by server.
     -- Don't log errors in that case.
     -- See https://microsoft.github.io/language-server-protocol/specifications/specification-current/#-notifications-and-requests.
-    reportMissingHandler :: LspM config ()
-    reportMissingHandler
-      | isOptionalNotification m = return ()
-      | otherwise = do
-          let errorMsg = T.pack $ unwords ["lsp:no handler for: ", show m]
-          sendErrorLog errorMsg
+    reportMissingHandler :: m ()
+    reportMissingHandler =
+      let optional = isOptionalNotification m
+      in logger <& MissingHandler optional m `WithSeverity` if optional then Warning else Error
     isOptionalNotification (SCustomMethod method)
       | "$/" `T.isPrefixOf` method = True
     isOptionalNotification _  = False
 
-progressCancelHandler :: Message WindowWorkDoneProgressCancel -> LspM config ()
-progressCancelHandler (NotificationMessage _ _ (WorkDoneProgressCancelParams tid)) = do
-  mact <- Map.lookup tid <$> getsState (progressCancel . resProgressData)
-  case mact of
+progressCancelHandler :: (m ~ LspM config) => LogAction m (WithSeverity LspProcessingLog) -> Message WindowWorkDoneProgressCancel -> m ()
+progressCancelHandler logger (NotificationMessage _ _ (WorkDoneProgressCancelParams tid)) = do
+  pdata <- getsState (progressCancel . resProgressData)
+  case Map.lookup tid pdata of
     Nothing -> return ()
-    Just cancelAction -> liftIO $ cancelAction
+    Just cancelAction -> do
+      logger <& ProgressCancel tid `WithSeverity` Debug
+      liftIO cancelAction
 
-exitNotificationHandler :: Handler IO Exit
-exitNotificationHandler =  \_ -> do
-  noticeM "lsp.exitNotificationHandler" "Got exit, exiting"
-  exitSuccess
+exitNotificationHandler :: (MonadIO m) => LogAction m (WithSeverity LspProcessingLog) -> Handler m Exit
+exitNotificationHandler logger _ = do
+  logger <& Exiting `WithSeverity` Info
+  liftIO exitSuccess
 
 -- | Default Shutdown handler
 shutdownRequestHandler :: Handler IO Shutdown
-shutdownRequestHandler = \_req k -> do
+shutdownRequestHandler _req k = do
   k $ Right Empty
 
-handleConfigChange :: Message WorkspaceDidChangeConfiguration -> LspM config ()
-handleConfigChange req = do
+handleConfigChange :: (m ~ LspM config) => LogAction m (WithSeverity LspProcessingLog) -> Message WorkspaceDidChangeConfiguration -> m ()
+handleConfigChange logger req = do
   parseConfig <- LspT $ asks resParseConfig
-  res <- stateState resConfig $ \oldConfig -> case parseConfig oldConfig (req ^. LSP.params . LSP.settings) of
+  let settings = req ^. LSP.params . LSP.settings
+  res <- stateState resConfig $ \oldConfig -> case parseConfig oldConfig settings of
     Left err -> (Left err, oldConfig)
     Right !newConfig -> (Right (), newConfig)
   case res of
     Left err -> do
-      let msg = T.pack $ unwords
-            ["lsp:configuration parse error.", show req, show err]
-      sendErrorLog msg
+      logger <& ConfigurationParseError settings err `WithSeverity` Error
     Right () -> pure ()
 
-vfsFunc :: (VFS -> b -> (VFS, [String])) -> b -> LspM config ()
-vfsFunc modifyVfs req = do
-  join $ stateState resVFS $ \(VFSData vfs rm) ->
-    let (!vfs', ls) = modifyVfs vfs req
-    in (liftIO $ mapM_ (debugM "lsp.vfsFunc") ls,VFSData vfs' rm)
+vfsFunc :: forall m n a config
+        . (m ~ LspM config, n ~ WriterT [WithSeverity VfsLog] (State VFS))
+        => LogAction m (WithSeverity LspProcessingLog)
+        -> (LogAction n (WithSeverity VfsLog) -> a -> n ())
+        -> a
+        -> m ()
+vfsFunc logger modifyVfs req = do
+  -- This is an intricate dance. We want to run the VFS functions essentially in STM, that's
+  -- what 'stateState' does. But we also want them to log. We accomplish this by exfiltrating
+  -- the logs through the return value of 'stateState' and then re-logging them.
+  -- We therefore have to use the stupid approach of accumulating the logs in Writer inside
+  -- the VFS functions. They don't log much so for now we just use [Log], but we could use
+  -- DList here if we're worried about performance.
+  logs <- stateState resVFS $ \(VFSData vfs rm) ->
+    let (ls, vfs') = flip runState vfs $ execWriterT $ modifyVfs innerLogger req
+    in (ls, VFSData vfs' rm)
+  traverse_ (\l -> logger <& fmap VfsLog l) logs
+    where
+      innerLogger :: LogAction n (WithSeverity VfsLog)
+      innerLogger = LogAction $ \m -> tell [m]
 
 -- | Updates the list of workspace folders
 updateWorkspaceFolders :: Message WorkspaceDidChangeWorkspaceFolders -> LspM config ()
@@ -399,4 +451,3 @@ updateWorkspaceFolders (NotificationMessage _ _ params) = do
   modifyState resWorkspaceFolders newWfs
 
 -- ---------------------------------------------------------------------
-

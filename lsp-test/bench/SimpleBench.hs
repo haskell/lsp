@@ -44,7 +44,7 @@ main = do
 
   n <- read . head <$> getArgs
 
-  forkIO $ void $ runServerWithHandles hinRead houtWrite server
+  forkIO $ void $ runServerWithHandles mempty mempty hinRead houtWrite server
   liftIO $ putStrLn $ "Starting " <> show n <> " rounds"
 
   i <- newIORef 0

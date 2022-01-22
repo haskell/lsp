@@ -8,6 +8,10 @@
 {-# LANGUAGE TypeInType            #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 
+-- So we can keep using the old prettyprinter modules (which have a better
+-- compatibility range) for now.
+{-# OPTIONS_GHC -Wno-deprecations #-}
+
 {- |
 This is an example language server built with haskell-lsp using a 'Reactor'
 design. With a 'Reactor' all requests are handled on a /single thread/.
@@ -23,6 +27,9 @@ To try out this server, install it with
 and plug it into your client of choice.
 -}
 module Main (main) where
+
+import           Colog.Core (LogAction (..), WithSeverity (..), Severity (..), (<&))
+import qualified Colog.Core as L
 import           Control.Concurrent.STM.TChan
 import qualified Control.Exception                     as E
 import           Control.Lens hiding (Iso)
@@ -32,14 +39,16 @@ import           Control.Monad.STM
 import qualified Data.Aeson                            as J
 import           Data.Int (Int32)
 import qualified Data.Text                             as T
+import           Data.Text.Prettyprint.Doc
 import           GHC.Generics (Generic)
 import           Language.LSP.Server
+import           System.IO
 import           Language.LSP.Diagnostics
+import           Language.LSP.Logging (defaultClientLogger)
 import qualified Language.LSP.Types            as J
 import qualified Language.LSP.Types.Lens       as J
 import           Language.LSP.VFS
 import           System.Exit
-import           System.Log.Logger
 import           Control.Concurrent
 
 
@@ -67,27 +76,44 @@ run = flip E.catches handlers $ do
   rin  <- atomically newTChan :: IO (TChan ReactorInput)
 
   let
+    -- Three loggers:
+    -- 1. To stderr
+    -- 2. To the client (filtered by severity)
+    -- 3. To both
+    stderrLogger :: LogAction IO (WithSeverity T.Text)
+    stderrLogger = L.cmap show L.logStringStderr
+    clientLogger :: LogAction (LspM Config) (WithSeverity T.Text)
+    clientLogger = defaultClientLogger
+    dualLogger :: LogAction (LspM Config) (WithSeverity T.Text)
+    dualLogger = clientLogger <> L.hoistLogAction liftIO stderrLogger
+
     serverDefinition = ServerDefinition
       { defaultConfig = Config {fooTheBar = False, wibbleFactor = 0 }
       , onConfigurationChange = \_old v -> do
           case J.fromJSON v of
             J.Error e -> Left (T.pack e)
             J.Success cfg -> Right cfg
-      , doInitialize = \env _ -> forkIO (reactor rin) >> pure (Right env)
-      , staticHandlers = lspHandlers rin
+      , doInitialize = \env _ -> forkIO (reactor stderrLogger rin) >> pure (Right env)
+      -- Handlers log to both the client and stderr
+      , staticHandlers = lspHandlers dualLogger rin
       , interpretHandler = \env -> Iso (runLspT env) liftIO
       , options = lspOptions
       }
 
-  flip E.finally finalProc $ do
-    setupLogger Nothing ["reactor"] DEBUG
-    runServer serverDefinition
+  let
+    logToText = T.pack . show . pretty
+  runServerWithHandles
+      -- Log to both the client and stderr when we can, stderr beforehand
+    (L.cmap (fmap logToText) stderrLogger)
+    (L.cmap (fmap logToText) dualLogger)
+    stdin
+    stdout
+    serverDefinition
 
   where
     handlers = [ E.Handler ioExcept
                , E.Handler someExcept
                ]
-    finalProc = removeAllHandlers
     ioExcept   (e :: E.IOException)       = print e >> return 1
     someExcept (e :: E.SomeException)     = print e >> return 1
 
@@ -138,17 +164,17 @@ sendDiagnostics fileUri version = do
 -- | The single point that all events flow through, allowing management of state
 -- to stitch replies and requests together from the two asynchronous sides: lsp
 -- server and backend compiler
-reactor :: TChan ReactorInput -> IO ()
-reactor inp = do
-  debugM "reactor" "Started the reactor"
+reactor :: L.LogAction IO (WithSeverity T.Text) -> TChan ReactorInput -> IO ()
+reactor logger inp = do
+  logger <& "Started the reactor" `WithSeverity` Info
   forever $ do
     ReactorAction act <- atomically $ readTChan inp
     act
 
 -- | Check if we have a handler, and if we create a haskell-lsp handler to pass it as
 -- input into the reactor
-lspHandlers :: TChan ReactorInput -> Handlers (LspM Config)
-lspHandlers rin = mapHandlers goReq goNot handle
+lspHandlers :: (m ~ LspM Config) => L.LogAction m (WithSeverity T.Text) -> TChan ReactorInput -> Handlers m
+lspHandlers logger rin = mapHandlers goReq goNot (handle logger)
   where
     goReq :: forall (a :: J.Method J.FromClient J.Request). Handler (LspM Config) a -> Handler (LspM Config) a
     goReq f = \msg k -> do
@@ -161,10 +187,10 @@ lspHandlers rin = mapHandlers goReq goNot handle
       liftIO $ atomically $ writeTChan rin $ ReactorAction (runLspT env $ f msg)
 
 -- | Where the actual logic resides for handling requests and notifications.
-handle :: Handlers (LspM Config)
-handle = mconcat
+handle :: (m ~ LspM Config) => L.LogAction m (WithSeverity T.Text) -> Handlers m
+handle logger = mconcat
   [ notificationHandler J.SInitialized $ \_msg -> do
-      liftIO $ debugM "reactor.handle" "Processing the Initialized notification"
+      logger <& "Processing the Initialized notification" `WithSeverity` Info
       
       -- We're initialized! Lets send a showMessageRequest now
       let params = J.ShowMessageRequestParams
@@ -174,7 +200,7 @@ handle = mconcat
 
       void $ sendRequest J.SWindowShowMessageRequest params $ \res ->
         case res of
-          Left e -> liftIO $ errorM "reactor.handle" $ "Got an error: " ++ show e
+          Left e -> logger <& ("Got an error: " <> T.pack (show e)) `WithSeverity` Error
           Right _ -> do
             sendNotification J.SWindowShowMessage (J.ShowMessageParams J.MtInfo "Excellent choice")
 
@@ -184,7 +210,7 @@ handle = mconcat
             let regOpts = J.CodeLensRegistrationOptions Nothing Nothing (Just False)
             
             void $ registerCapability J.STextDocumentCodeLens regOpts $ \_req responder -> do
-              liftIO $ debugM "reactor.handle" "Processing a textDocument/codeLens request"
+              logger <& "Processing a textDocument/codeLens request" `WithSeverity` Info
               let cmd = J.Command "Say hello" "lsp-hello-command" Nothing
                   rsp = J.List [J.CodeLens (J.mkRange 0 0 0 100) (Just cmd) Nothing]
               responder (Right rsp)
@@ -192,12 +218,12 @@ handle = mconcat
   , notificationHandler J.STextDocumentDidOpen $ \msg -> do
     let doc  = msg ^. J.params . J.textDocument . J.uri
         fileName =  J.uriToFilePath doc
-    liftIO $ debugM "reactor.handle" $ "Processing DidOpenTextDocument for: " ++ show fileName
+    logger <& ("Processing DidOpenTextDocument for: " <> T.pack (show fileName)) `WithSeverity` Info
     sendDiagnostics (J.toNormalizedUri doc) (Just 0)
 
   , notificationHandler J.SWorkspaceDidChangeConfiguration $ \msg -> do
       cfg <- getConfig
-      liftIO $ debugM "configuration changed: " (show (msg,cfg))
+      logger L.<& ("Configuration changed: " <> T.pack (show (msg,cfg))) `WithSeverity` Info
       sendNotification J.SWindowShowMessage $
         J.ShowMessageParams J.MtInfo $ "Wibble factor set to " <> T.pack (show (wibbleFactor cfg))
 
@@ -206,22 +232,22 @@ handle = mconcat
                     . J.textDocument
                     . J.uri
                     . to J.toNormalizedUri
-    liftIO $ debugM "reactor.handle" $ "Processing DidChangeTextDocument for: " ++ show doc
+    logger <& ("Processing DidChangeTextDocument for: " <> T.pack (show doc)) `WithSeverity` Info
     mdoc <- getVirtualFile doc
     case mdoc of
       Just (VirtualFile _version str _) -> do
-        liftIO $ debugM "reactor.handle" $ "Found the virtual file: " ++ show str
+        logger <& ("Found the virtual file: " <> T.pack (show str)) `WithSeverity` Info
       Nothing -> do
-        liftIO $ debugM "reactor.handle" $ "Didn't find anything in the VFS for: " ++ show doc
+        logger <& ("Didn't find anything in the VFS for: " <> T.pack (show doc)) `WithSeverity` Info
 
   , notificationHandler J.STextDocumentDidSave $ \msg -> do
       let doc = msg ^. J.params . J.textDocument . J.uri
           fileName = J.uriToFilePath doc
-      liftIO $ debugM "reactor.handle" $ "Processing DidSaveTextDocument  for: " ++ show fileName
+      logger <& ("Processing DidSaveTextDocument  for: " <> T.pack (show fileName)) `WithSeverity` Info
       sendDiagnostics (J.toNormalizedUri doc) Nothing
 
   , requestHandler J.STextDocumentRename $ \req responder -> do
-      liftIO $ debugM "reactor.handle" "Processing a textDocument/rename request"
+      logger <& "Processing a textDocument/rename request" `WithSeverity` Info
       let params = req ^. J.params
           J.Position l c = params ^. J.position
           newName = params ^. J.newName
@@ -234,7 +260,7 @@ handle = mconcat
       responder (Right rsp)
 
   , requestHandler J.STextDocumentHover $ \req responder -> do
-      liftIO $ debugM "reactor.handle" "Processing a textDocument/hover request"
+      logger <& "Processing a textDocument/hover request" `WithSeverity` Info
       let J.HoverParams _doc pos _workDone = req ^. J.params
           J.Position _l _c' = pos
           rsp = J.Hover ms (Just range)
@@ -243,7 +269,7 @@ handle = mconcat
       responder (Right $ Just rsp)
 
   , requestHandler J.STextDocumentDocumentSymbol $ \req responder -> do
-      liftIO $ debugM "reactor.handle" "Processing a textDocument/documentSymbol request"
+      logger <& "Processing a textDocument/documentSymbol request" `WithSeverity` Info
       let J.DocumentSymbolParams _ _ doc = req ^. J.params
           loc = J.Location (doc ^. J.uri) (J.Range (J.Position 0 0) (J.Position 0 0))
           sym = J.SymbolInformation "lsp-hello" J.SkFunction Nothing Nothing loc Nothing
@@ -251,7 +277,7 @@ handle = mconcat
       responder (Right rsp)
 
   , requestHandler J.STextDocumentCodeAction $ \req responder -> do
-      liftIO $ debugM "reactor.handle" $ "Processing a textDocument/codeAction request"
+      logger <& "Processing a textDocument/codeAction request" `WithSeverity` Info
       let params = req ^. J.params
           doc = params ^. J.textDocument
           (J.List diags) = params ^. J.context . J.diagnostics
@@ -272,11 +298,11 @@ handle = mconcat
       responder (Right rsp)
 
   , requestHandler J.SWorkspaceExecuteCommand $ \req responder -> do
-      liftIO $ debugM "reactor.handle" "Processing a workspace/executeCommand request"
+      logger <& "Processing a workspace/executeCommand request" `WithSeverity` Info
       let params = req ^. J.params
           margs = params ^. J.arguments
 
-      liftIO $ debugM "reactor.handle" $ "The arguments are: " ++ show margs
+      logger <& ("The arguments are: " <> T.pack (show margs)) `WithSeverity` Debug
       responder (Right (J.Object mempty)) -- respond to the request
 
       void $ withProgress "Executing some long running command" Cancellable $ \update ->

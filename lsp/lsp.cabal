@@ -26,6 +26,7 @@ library
                      , Language.LSP.Types.Lens
   exposed-modules:     Language.LSP.Server
                      , Language.LSP.Diagnostics
+                     , Language.LSP.Logging
                      , Language.LSP.VFS
   other-modules:       Language.LSP.Server.Core
                      , Language.LSP.Server.Control
@@ -37,16 +38,17 @@ library
                      , attoparsec
                      , bytestring
                      , containers
+                     , co-log-core >= 0.3.1.0
                      , data-default
                      , directory
                      , exceptions
                      , filepath
-                     , hslogger
                      , hashable
                      , lsp-types == 1.5.*
                      , lens >= 4.15.2
                      , mtl
                      , network-uri
+                     , prettyprinter
                      , sorted-list == 0.2.1.*
                      , stm == 2.5.*
                      , scientific
@@ -72,9 +74,10 @@ executable lsp-demo-reactor-server
 
   build-depends:       base 
                      , aeson
-                     , hslogger
+                     , co-log-core
                      , lens >= 4.15.2
                      , stm
+                     , prettyprinter
                      , text
                      -- the package library. Comment this out if you want repl changes to propagate
                      , lsp
@@ -133,7 +136,6 @@ test-suite unit-test
                      -- For GHCI tests
                      -- , async
                      -- , haskell-lsp-types
-                     -- , hslogger
                      -- , temporary
                      -- , time
                      -- , unordered-containers

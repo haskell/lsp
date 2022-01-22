@@ -1,7 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeInType #-}
@@ -119,7 +118,7 @@ import Data.List
 import Data.Maybe
 import Language.LSP.Types
 import Language.LSP.Types.Lens hiding
-  (id, capabilities, message, executeCommand, applyEdit, rename)
+  (id, capabilities, message, executeCommand, applyEdit, rename, to)
 import qualified Language.LSP.Types.Lens as LSP
 import qualified Language.LSP.Types.Capabilities as C
 import Language.LSP.VFS
@@ -135,6 +134,7 @@ import System.Directory
 import System.FilePath
 import System.Process (ProcessHandle)
 import qualified System.FilePath.Glob as Glob
+import Control.Monad.State (execState)
 
 -- | Starts a new session.
 --
@@ -280,7 +280,7 @@ envOverrideConfig cfg = do
 documentContents :: TextDocumentIdentifier -> Session T.Text
 documentContents doc = do
   vfs <- vfs <$> get
-  let file = vfsMap vfs Map.! toNormalizedUri (doc ^. uri)
+  let Just file = vfs ^. vfsMap . at (toNormalizedUri (doc ^. uri))
   return (virtualFileText file)
 
 -- | Parses an ApplyEditRequest, checks that it is for the passed document
@@ -348,7 +348,7 @@ sendNotification :: SClientMethod (m :: Method FromClient Notification) -- ^ The
 sendNotification STextDocumentDidOpen params = do
   let n = NotificationMessage "2.0" STextDocumentDidOpen params
   oldVFS <- vfs <$> get
-  let (newVFS,_) = openVFS oldVFS n
+  let newVFS = flip execState oldVFS $ openVFS mempty n
   modify (\s -> s { vfs = newVFS })
   sendMessage n
 
@@ -356,16 +356,16 @@ sendNotification STextDocumentDidOpen params = do
 sendNotification STextDocumentDidClose params = do
   let n = NotificationMessage "2.0" STextDocumentDidClose params
   oldVFS <- vfs <$> get
-  let (newVFS,_) = closeVFS oldVFS n
+  let newVFS = flip execState oldVFS $ closeVFS mempty n
   modify (\s -> s { vfs = newVFS })
   sendMessage n
 
 sendNotification STextDocumentDidChange params = do
-    let n = NotificationMessage "2.0" STextDocumentDidChange params
-    oldVFS <- vfs <$> get
-    let (newVFS,_) = changeFromClientVFS oldVFS n
-    modify (\s -> s { vfs = newVFS })
-    sendMessage n
+  let n = NotificationMessage "2.0" STextDocumentDidChange params
+  oldVFS <- vfs <$> get
+  let newVFS = flip execState oldVFS $ changeFromClientVFS mempty n
+  modify (\s -> s { vfs = newVFS })
+  sendMessage n
 
 sendNotification method params =
   case splitClientMethod method of
@@ -594,11 +594,8 @@ executeCodeAction action = do
 -- | Adds the current version to the document, as tracked by the session.
 getVersionedDoc :: TextDocumentIdentifier -> Session VersionedTextDocumentIdentifier
 getVersionedDoc (TextDocumentIdentifier uri) = do
-  fs <- vfsMap . vfs <$> get
-  let ver =
-        case fs Map.!? toNormalizedUri uri of
-          Just vf -> Just (virtualFileVersion vf)
-          _ -> Nothing
+  vfs <- vfs <$> get
+  let ver = vfs ^? vfsMap . ix (toNormalizedUri uri) . to virtualFileVersion
   return (VersionedTextDocumentIdentifier uri ver)
 
 -- | Applys an edit to the document and returns the updated document version.
