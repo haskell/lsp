@@ -19,7 +19,7 @@ jobs:
         ghc-version: ${{ matrix.ghc }}
         cabal-version: '3.6'
 
-    - name: Cache
+    - name: Cabal cache
       uses: actions/cache@v1
       env:
         cache-name: cache-cabal
@@ -28,8 +28,16 @@ jobs:
         key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/*.cabal') }}-${{ hashFiles('**/cabal.project') }}
         restore-keys: |
           ${{ runner.os }}-build-${{ env.cache-name }}-
-          ${{ runner.os }}-build-
-          ${{ runner.os }}-
+
+    - name: Stack cache
+      uses: actions/cache@v1
+      env:
+        cache-name: cache-stack
+      with:
+        path: ~/.stack
+        key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/*.cabal') }}-${{ hashFiles('**/stack.yaml') }}
+        restore-keys: |
+          ${{ runner.os }}-build-${{ env.cache-name }}-
 
     - name: Cabal update
       run: cabal update
@@ -38,6 +46,6 @@ jobs:
     - name: Test
       run: cabal test all
     # stack build uses stack.yaml which actually uses ghc-8.10.7
-    - if: matrix.ghc == '8.10.7'
+    - if: matrix.ghc == '8.10.7' && runner.os == 'Linux'
       name: Build using stack
       run: stack build
