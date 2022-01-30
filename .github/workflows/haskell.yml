@@ -33,7 +33,11 @@ jobs:
 
     - name: Cabal update
       run: cabal update
-    - name: Build
+    - name: Build using cabal
       run: cabal build all
     - name: Test
       run: cabal test all
+    # stack build uses stack.yaml which actually uses ghc-8.10.7
+    - if: matrix.ghc == '8.10.7'
+      name: Build using stack
+      run: stack build
