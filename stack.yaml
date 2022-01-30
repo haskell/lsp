@@ -9,3 +9,5 @@ flags: {}
 extra-package-dbs: []
 nix:
   packages: [icu]
+extra-deps:
+- text-rope-0.1
