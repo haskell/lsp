@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE LambdaCase #-}
 
 import Language.LSP.Server
 import Language.LSP.Types
@@ -10,8 +11,7 @@ handlers = mconcat
   [ notificationHandler SInitialized $ \_not -> do
       let params = ShowMessageRequestParams MtInfo "Turn on code lenses?"
             (Just [MessageActionItem "Turn on", MessageActionItem "Don't"])
-      _ <- sendRequest SWindowShowMessageRequest params $ \res ->
-        case res of
+      _ <- sendRequest SWindowShowMessageRequest params $ \case
           Right (Just (MessageActionItem "Turn on")) -> do
             let regOpts = CodeLensRegistrationOptions Nothing Nothing (Just False)
               
