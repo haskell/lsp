@@ -3,6 +3,7 @@
 ## 1.5.0.0
 
 * VFS module moved to `lsp` from `lsp-types`.
+* Logging reworked to use `co-log-core` instead of `hslogger`.
 
 ## 1.4.0.0
 
