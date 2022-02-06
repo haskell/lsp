@@ -13,6 +13,10 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE FlexibleInstances #-}
 
+-- So we can keep using the old prettyprinter modules (which have a better
+-- compatibility range) for now.
+{-# OPTIONS_GHC -Wno-deprecations #-}
+
 {-|
 Handles the "Language.LSP.Types.TextDocumentDidChange" \/
 "Language.LSP.Types.TextDocumentDidOpen" \/
@@ -67,6 +71,7 @@ import qualified Data.Map.Strict as Map
 import           Data.Maybe
 import           Data.Text.Utf16.Rope ( Rope )
 import qualified Data.Text.Utf16.Rope as Rope
+import           Data.Text.Prettyprint.Doc
 import qualified Language.LSP.Types           as J
 import qualified Language.LSP.Types.Lens      as J
 import           System.FilePath
@@ -101,16 +106,18 @@ data VfsLog =
   | PersistingFile J.NormalizedUri FilePath
   | CantRecursiveDelete J.NormalizedUri
   | DeleteNonExistent J.NormalizedUri
-  deriving (Eq, Ord)
+  deriving (Show)
 
-instance Show VfsLog where
-  show (SplitInsideCodePoint pos r) = "VFS: asked to make change inside code point. Position " ++ show pos ++ " in " ++ show r
-  show (URINotFound uri) = "VFS: don't know about URI " ++ show uri
-  show (Opening uri) = "VFS: opening " ++ show uri
-  show (Closing uri) = "VFS: closing " ++ show uri
-  show (PersistingFile uri fp) = "VFS: Writing virtual file for " ++ show uri ++ " to " ++ show fp
-  show (CantRecursiveDelete uri) = "VFS: can't recursively delete " ++ show uri ++ " because we don't track directory status"
-  show (DeleteNonExistent uri) = "VFS: asked to delete non-existent file " ++ show uri
+instance Pretty VfsLog where
+  pretty (SplitInsideCodePoint pos r) =
+    "VFS: asked to make change inside code point. Position" <+> viaShow pos <+> "in" <+> viaShow r
+  pretty (URINotFound uri) = "VFS: don't know about URI" <+> viaShow uri
+  pretty (Opening uri) = "VFS: opening" <+> viaShow uri
+  pretty (Closing uri) = "VFS: closing" <+> viaShow uri
+  pretty (PersistingFile uri fp) = "VFS: Writing virtual file for" <+> viaShow uri <+> "to" <+> viaShow fp
+  pretty (CantRecursiveDelete uri) =
+    "VFS: can't recursively delete" <+> viaShow uri <+> "because we don't track directory status"
+  pretty (DeleteNonExistent uri) = "VFS: asked to delete non-existent file" <+> viaShow uri
 
 makeFieldsNoPrefix ''VirtualFile
 makeFieldsNoPrefix ''VFS

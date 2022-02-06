@@ -3,6 +3,10 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE LambdaCase #-}
 
+-- So we can keep using the old prettyprinter modules (which have a better
+-- compatibility range) for now.
+{-# OPTIONS_GHC -Wno-deprecations #-}
+
 module Language.LSP.Server.Control
   (
   -- * Running
@@ -29,6 +33,7 @@ import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Encoding as TL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
+import           Data.Text.Prettyprint.Doc
 import           Data.List
 import           Language.LSP.Server.Core
 import qualified Language.LSP.Server.Processing as Processing
@@ -45,15 +50,24 @@ data LspServerLog =
   | Starting
   | ParsedMsg T.Text
   | SendMsg TL.Text
+  deriving (Show)
 
-instance Show LspServerLog where
-  show (LspProcessingLog l) = show l
-  show (DecodeInitializeError err) = "Got error while decoding initialize:\n" <> err
-  show (HeaderParseFail ctxs err) = "Failed to parse message header:\n" <> intercalate " > " ctxs <> ": " <> err
-  show EOF = "Got EOF"
-  show Starting = "Starting server"
-  show (ParsedMsg msg) = "---> " <> T.unpack msg
-  show (SendMsg msg) = "<--2-- " <> TL.unpack msg
+instance Pretty LspServerLog where
+  pretty (LspProcessingLog l) = pretty l
+  pretty (DecodeInitializeError err) =
+    vsep [
+      "Got error while decoding initialize:"
+      , pretty err
+      ]
+  pretty (HeaderParseFail ctxs err) =
+    vsep [
+      "Failed to parse message header:"
+      , pretty (intercalate " > " ctxs) <> ": " <+> pretty err
+      ]
+  pretty EOF = "Got EOF"
+  pretty Starting = "Starting server"
+  pretty (ParsedMsg msg) = "---> " <> pretty msg
+  pretty (SendMsg msg) = "<--2-- " <> pretty msg
 
 -- ---------------------------------------------------------------------
 
@@ -69,12 +83,12 @@ runServer =
   stdin
   stdout
   where
-    showMsg l = "[" ++ show (L.getSeverity l) ++ "] " ++ show (L.getMsg l)
+    prettyMsg l = "[" <> viaShow (L.getSeverity l) <> "] " <> pretty (L.getMsg l)
     ioLogger :: LogAction IO (WithSeverity LspServerLog)
-    ioLogger = L.cmap showMsg L.logStringStderr
+    ioLogger = L.cmap (show . prettyMsg) L.logStringStderr
     lspLogger :: LogAction (LspM config) (WithSeverity LspServerLog)
     lspLogger =
-      let clientLogger = L.cmap (fmap (T.pack . show)) defaultClientLogger
+      let clientLogger = L.cmap (fmap (T.pack . show . pretty)) defaultClientLogger
       in clientLogger <> L.hoistLogAction liftIO ioLogger
 
 -- | Starts a language server over the specified handles.

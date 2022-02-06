@@ -8,6 +8,10 @@
 {-# LANGUAGE TypeInType            #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 
+-- So we can keep using the old prettyprinter modules (which have a better
+-- compatibility range) for now.
+{-# OPTIONS_GHC -Wno-deprecations #-}
+
 {- |
 This is an example language server built with haskell-lsp using a 'Reactor'
 design. With a 'Reactor' all requests are handled on a /single thread/.
@@ -35,6 +39,7 @@ import           Control.Monad.STM
 import qualified Data.Aeson                            as J
 import           Data.Int (Int32)
 import qualified Data.Text                             as T
+import           Data.Text.Prettyprint.Doc
 import           GHC.Generics (Generic)
 import           Language.LSP.Server
 import           System.IO
@@ -96,7 +101,7 @@ run = flip E.catches handlers $ do
       }
 
   let
-    logToText = T.pack . show
+    logToText = T.pack . show . pretty
   runServerWithHandles
       -- Log to both the client and stderr when we can, stderr beforehand
     (L.cmap (fmap logToText) stderrLogger)

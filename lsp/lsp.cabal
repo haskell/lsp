@@ -48,6 +48,7 @@ library
                      , lens >= 4.15.2
                      , mtl
                      , network-uri
+                     , prettyprinter
                      , sorted-list == 0.2.1.*
                      , stm == 2.5.*
                      , scientific
@@ -76,6 +77,7 @@ executable lsp-demo-reactor-server
                      , co-log-core
                      , lens >= 4.15.2
                      , stm
+                     , prettyprinter
                      , text
                      -- the package library. Comment this out if you want repl changes to propagate
                      , lsp

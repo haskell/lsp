@@ -7,8 +7,14 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE BangPatterns #-}
-{-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE StandaloneDeriving #-}
+
+{-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
+-- So we can keep using the old prettyprinter modules (which have a better
+-- compatibility range) for now.
+{-# OPTIONS_GHC -Wno-deprecations #-}
+
 module Language.LSP.Server.Processing where
 
 import           Colog.Core (LogAction (..), WithSeverity (..), Severity (..), (<&))
@@ -20,7 +26,6 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.List
 import Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.Text as T
-import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Encoding as TL
 import Language.LSP.Types
 import Language.LSP.Types.Capabilities
@@ -41,6 +46,7 @@ import Control.Monad.Reader
 import Data.IxMap
 import Data.Maybe
 import qualified Data.Map.Strict as Map
+import Data.Text.Prettyprint.Doc
 import System.Exit
 import Data.Default (def)
 import Control.Monad.State
@@ -55,13 +61,27 @@ data LspProcessingLog =
   | ProgressCancel ProgressToken
   | Exiting
 
-instance Show LspProcessingLog where
-  show (VfsLog l) = show l
-  show (MessageProcessingError bs l) = "LSP: incoming message parse error: " ++ l ++ " from " ++ TL.unpack (TL.decodeUtf8 bs)
-  show (MissingHandler _ m) = "LSP: no handler for: " ++ show m
-  show (ConfigurationParseError settings err) = "LSP: configuration parse error: " ++ show err ++ ", when parsing " ++ show settings
-  show (ProgressCancel tid) = "LSP: cancelling action for token: " ++ show tid
-  show Exiting = "LSP: Got exit, exiting"
+deriving instance Show LspProcessingLog
+
+instance Pretty LspProcessingLog where
+  pretty (VfsLog l) = pretty l
+  pretty (MessageProcessingError bs err) =
+    vsep [
+      "LSP: incoming message parse error:"
+      , pretty err
+      , "when processing"
+      , pretty (TL.decodeUtf8 bs)
+      ]
+  pretty (MissingHandler _ m) = "LSP: no handler for:" <+> viaShow m
+  pretty (ConfigurationParseError settings err) =
+    vsep [
+      "LSP: configuration parse error:"
+      , pretty err
+      , "when parsing"
+      , viaShow settings
+      ]
+  pretty (ProgressCancel tid) = "LSP: cancelling action for token:" <+> viaShow tid
+  pretty Exiting = "LSP: Got exit, exiting"
 
 processMessage :: (m ~ LspM config) => LogAction m (WithSeverity LspProcessingLog) -> BSL.ByteString -> m ()
 processMessage logger jsonStr = do
