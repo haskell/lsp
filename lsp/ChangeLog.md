@@ -1,5 +1,9 @@
 # Revision history for lsp
 
+## 1.5.0.0
+
+* VFS module moved to `lsp` from `lsp-types`.
+
 ## 1.4.0.0
 
 * Fix extraneous `asdf` in `withProgress` output (#372) (@heitor-lassarote)

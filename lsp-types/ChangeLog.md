@@ -1,5 +1,9 @@
 # Revision history for lsp-types
  
+## 1.5.0.0
+
+* VFS module moved from `lsp-types` to `lsp`, as it relates to the actual implementation of a LSP server.
+
 ## 1.4.0.1
 
 * Fix result type of selection range requests.
