@@ -1,6 +1,6 @@
 cabal-version:       2.2
 name:                lsp
-version:             1.4.0.0
+version:             1.5.0.0
 synopsis:            Haskell library for the Microsoft Language Server Protocol
 
 description:         An implementation of the types, and basic message server to
@@ -24,9 +24,9 @@ library
   reexported-modules:  Language.LSP.Types
                      , Language.LSP.Types.Capabilities
                      , Language.LSP.Types.Lens
-                     , Language.LSP.VFS
   exposed-modules:     Language.LSP.Server
                      , Language.LSP.Diagnostics
+                     , Language.LSP.VFS
   other-modules:       Language.LSP.Server.Core
                      , Language.LSP.Server.Control
                      , Language.LSP.Server.Processing
@@ -38,17 +38,21 @@ library
                      , bytestring
                      , containers
                      , data-default
+                     , directory
                      , exceptions
+                     , filepath
                      , hslogger
                      , hashable
-                     , lsp-types == 1.4.*
+                     , lsp-types == 1.5.*
                      , lens >= 4.15.2
                      , mtl
                      , network-uri
                      , sorted-list == 0.2.1.*
                      , stm == 2.5.*
                      , scientific
+                     , temporary
                      , text
+                     , text-rope
                      , transformers >= 0.5.6 && < 0.6
                      , time
                      , unordered-containers
