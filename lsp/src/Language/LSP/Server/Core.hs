@@ -380,6 +380,13 @@ getVirtualFiles = vfsData <$> getsState resVFS
 
 {-# INLINE getVirtualFiles #-}
 
+-- | Take an atomic snapshot of the current state of the virtual file system.
+snapshotVirtualFiles :: LanguageContextEnv c -> STM VFS
+snapshotVirtualFiles env = vfsData <$> readTVar (resVFS $ resState env)
+
+{-# INLINE snapshotVirtualFiles #-}
+
+
 -- | Dump the current text for a given VFS file to a temporary file,
 -- and return the path to the file.
 persistVirtualFile :: MonadLsp config m => NormalizedUri -> m (Maybe FilePath)

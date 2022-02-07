@@ -38,6 +38,7 @@ module Language.LSP.Server
   , persistVirtualFile
   , getVersionedTextDoc
   , reverseFileMap
+  , snapshotVirtualFiles
 
   -- * Diagnostics
   , publishDiagnostics
