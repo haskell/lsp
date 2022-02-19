@@ -44,6 +44,11 @@ module Language.LSP.VFS
   , persistFileVFS
   , closeVFS
 
+  -- * Positions and transformations
+  , CodePointPosition (..)
+  , codePointPositionToPosition
+  , positionToCodePointPosition
+
   -- * manipulating the file contents
   , rangeLinesFromVfs
   , PosPrefixInfo(..)
@@ -69,6 +74,7 @@ import           Data.Ord
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map.Strict as Map
 import           Data.Maybe
+import qualified Data.Text.Rope as URope
 import           Data.Text.Utf16.Rope ( Rope )
 import qualified Data.Text.Utf16.Rope as Rope
 import           Data.Text.Prettyprint.Doc
@@ -343,6 +349,49 @@ changeChars logger str start finish new = do
    Just (before, after) ->  case Rope.splitAtPosition start before of
      Nothing -> logger <& SplitInsideCodePoint start before `WithSeverity` Warning >> pure str
      Just (before', _) -> pure $ mconcat [before', Rope.fromText new, after]
+
+-- ---------------------------------------------------------------------
+
+-- | A position, like a 'J.Position', but where the offsets in the line are measured in Unicode code points
+-- instead of UTF-16 code units.
+data CodePointPosition =
+  CodePointPosition
+    { -- | Line position in a document (zero-based).
+      _line      :: J.UInt
+      -- | Character offset on a line in a document in *code points* (zero-based).
+    , _character :: J.UInt
+    } deriving (Show, Read, Eq, Ord)
+
+-- | Given a virtual file, translate a 'CodePointPosition' in that file into a 'J.Position' in that file.
+--
+-- We need the file itself because this requires translating between code points and code units.
+codePointPositionToPosition :: VirtualFile -> CodePointPosition -> J.Position
+codePointPositionToPosition vFile (CodePointPosition cpl cpc) =
+  let utf16Text = _file_text vFile
+      -- Transcode to a code-point based rope
+      utfText = URope.fromText $ Rope.toText utf16Text
+      -- Split at the given position
+      (utfPrefix, _) = URope.splitAtPosition (URope.Position (fromIntegral cpl) (fromIntegral cpc)) utfText
+      -- Transcode the prefix to a code-unit based rope
+      utf16Prefix = Rope.fromText $ URope.toText utfPrefix
+      -- Get the length of the transcoded prefix
+      (Rope.Position cul cuc) = Rope.lengthAsPosition utf16Prefix
+  in J.Position (fromIntegral cul) (fromIntegral cuc)
+
+-- | Given a virtual file, translate a 'J.Position' in that file into a 'CodePointPosition' in that file.
+-- May fail if the requested position lies inside a code point.
+--
+-- We need the file itself because this requires translating between code unit and code points.
+positionToCodePointPosition :: VirtualFile -> J.Position -> Maybe CodePointPosition
+positionToCodePointPosition vFile (J.Position cul cuc) = do
+  let utf16Text = _file_text vFile
+  -- Split at the given location
+  (utf16Prefix, _) <- Rope.splitAtPosition (Rope.Position (fromIntegral cul) (fromIntegral cuc)) utf16Text
+  -- Transcode the preix to a code-point based rope
+  let utfPrefix = URope.fromText $ Rope.toText utf16Prefix
+      -- Get the length of the transcoded prefix
+      (URope.Position cpl cpc) = URope.lengthAsPosition utfPrefix
+  pure $ CodePointPosition (fromIntegral cpl) (fromIntegral cpc)
 
 -- ---------------------------------------------------------------------
 
