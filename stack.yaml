@@ -11,3 +11,4 @@ nix:
   packages: [icu]
 extra-deps:
 - text-rope-0.1
+- co-log-core-0.3.1.0
