@@ -35,7 +35,7 @@ withDummyServer f = do
         }
 
   bracket
-    (forkIO $ void $ runServerWithHandles hinRead houtWrite definition)
+    (forkIO $ void $ runServerWithHandles mempty mempty hinRead houtWrite definition)
     killThread
     (const $ f (hinWrite, houtRead))
 

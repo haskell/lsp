@@ -18,9 +18,11 @@ import UnliftIO
 import UnliftIO.Concurrent
 import Control.Exception
 import System.Exit
+import qualified Colog.Core as L
 
 main :: IO ()
 main = hspec $ do
+  let logger = L.cmap show L.logStringStderr
   describe "progress reporting" $
     it "sends end notification if thread is killed" $ do
       (hinRead, hinWrite) <- createPipe
@@ -48,7 +50,7 @@ main = hspec $ do
                 takeMVar killVar
                 killThread tid
       
-      forkIO $ void $ runServerWithHandles hinRead houtWrite definition
+      forkIO $ void $ runServerWithHandles logger (L.hoistLogAction liftIO logger) hinRead houtWrite definition
       
       Test.runSessionWithHandles hinWrite houtRead Test.defaultConfig Test.fullCaps "." $ do
         -- First make sure that we get a $/progress begin notification
@@ -107,8 +109,7 @@ main = hspec $ do
                   _ -> error "Shouldn't be here"
             ]
                 
-      
-      server <- async $ void $ runServerWithHandles hinRead houtWrite definition
+      server <- async $ void $ runServerWithHandles logger (L.hoistLogAction liftIO logger) hinRead houtWrite definition
       
       let config = Test.defaultConfig
             { Test.initialWorkspaceFolders = Just [wf0]
