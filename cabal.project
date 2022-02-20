@@ -10,3 +10,8 @@ tests: True
 benchmarks: True
 test-show-details: direct
 haddock-quickjump: True
+
+source-repository-package
+  type: git
+  location: https://github.com/Bodigrim/text-rope
+  tag: 0394a40476db8083a0b5fcdba2ce97b409727912
