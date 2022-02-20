@@ -378,48 +378,52 @@ line. Which is okay-ish, so long as we don't have very long lines.
 
 -- | Extracts a specific line from a 'Rope.Rope'.
 -- Logarithmic in the number of lines.
-extractLine :: Rope.Rope -> Word -> Rope.Rope
-extractLine rope l =
+extractLine :: Rope.Rope -> Word -> Maybe Rope.Rope
+extractLine rope l = do
+  -- Check for the line being out of bounds
+  let lastLine = Rope.posLine $ Rope.lengthAsPosition rope
+  guard $ l <= lastLine
+
   let (_, suffix) = Rope.splitAtLine l rope
       (prefix, _) = Rope.splitAtLine 1 suffix
-  in prefix
+  pure $ prefix
 
 -- | Given a virtual file, translate a 'CodePointPosition' in that file into a 'J.Position' in that file.
 --
--- If the position is out of bounds (i.e. beyond the last line or the last character in a line), then the
--- greatest valid position less than that will be returned.
+-- Will return 'Nothing' if the requested position is out of bounds of the document.
 --
 -- We need the file itself because this requires translating between code points and code units.
-codePointPositionToPosition :: VirtualFile -> CodePointPosition -> J.Position
-codePointPositionToPosition vFile (CodePointPosition l cpc) =
+codePointPositionToPosition :: VirtualFile -> CodePointPosition -> Maybe J.Position
+codePointPositionToPosition vFile (CodePointPosition l cpc) = do
   -- See Note [Converting between code points and code units]
   let text = _file_text vFile
-      utf16Line = extractLine text (fromIntegral l)
+  utf16Line <- extractLine text (fromIntegral l)
 
-      -- Convert the line a rope using *code points*
-      utfLine = URope.fromText $ Rope.toText utf16Line
+  -- Convert the line a rope using *code points*
+  let utfLine = URope.fromText $ Rope.toText utf16Line
+  -- Check for the position being out of bounds
+  guard $ (fromIntegral cpc) <= URope.length utfLine
       -- Split at the given position in *code points*
-      (utfLinePrefix, _) = URope.splitAt (fromIntegral cpc) utfLine
+  let (utfLinePrefix, _) = URope.splitAt (fromIntegral cpc) utfLine
       -- Convert the prefix to a rope using *code units*
       utf16LinePrefix = Rope.fromText $ URope.toText utfLinePrefix
       -- Get the length of the prefix in *code units*
       cuc = Rope.length utf16LinePrefix
-  in J.Position l (fromIntegral cuc)
+  pure $ J.Position l (fromIntegral cuc)
 
 -- | Given a virtual file, translate a 'J.Position' in that file into a 'CodePointPosition' in that file.
 --
--- May fail if the requested position lies inside a code point.
---
--- If the position is out of bounds (i.e. beyond the last line or the last character in a line), then the
--- greatest valid position less than that will be returned.
+-- Will return 'Nothing' if the requested position lies inside a code point, or if it is out of bounds of the document.
 --
 -- We need the file itself because this requires translating between code unit and code points.
 positionToCodePointPosition :: VirtualFile -> J.Position -> Maybe CodePointPosition
 positionToCodePointPosition vFile (J.Position l cuc) = do
   -- See Note [Converting between code points and code units]
   let text = _file_text vFile
-      utf16Line = extractLine text (fromIntegral l)
+  utf16Line <- extractLine text (fromIntegral l)
 
+  -- Check for the position being out of bounds
+  guard $ (fromIntegral cuc) <= Rope.length utf16Line
   -- Split at the given position in *code units*
   (utf16LinePrefix, _) <- Rope.splitAt (fromIntegral cuc) utf16Line
   -- Convert the prefixto a rope using *code points*
