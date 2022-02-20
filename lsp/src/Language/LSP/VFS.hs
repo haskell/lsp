@@ -388,27 +388,49 @@ extractLine rope l = do
       (prefix, _) = Rope.splitAtLine 1 suffix
   pure $ prefix
 
+-- | Translate a code-point offset into a code-unit offset.
+-- Linear in the length of the rope.
+codePointOffsetToCodeUnitOffset :: URope.Rope -> Word -> Maybe Word
+codePointOffsetToCodeUnitOffset rope offset = do
+  -- Check for the position being out of bounds
+  guard $ offset <= URope.length rope
+  -- Split at the given position in *code points*
+  let (prefix, _) = URope.splitAt offset rope
+      -- Convert the prefix to a rope using *code units*
+      utf16Prefix = Rope.fromText $ URope.toText prefix
+      -- Get the length of the prefix in *code units*
+  pure $ Rope.length utf16Prefix
+
+-- | Translate a code-unit offset into a code-point offset.
+-- Linear in the length of the rope.
+codeUnitOffsetToCodePointOffset :: Rope.Rope -> Word -> Maybe Word
+codeUnitOffsetToCodePointOffset rope offset = do
+  -- Check for the position being out of bounds
+  guard $ offset <= Rope.length rope
+  -- Split at the given position in *code units*
+  (prefix, _) <- Rope.splitAt offset rope
+  -- Convert the prefixto a rope using *code points*
+  let utfPrefix = URope.fromText $ Rope.toText prefix
+      -- Get the length of the prefix in *code points*
+  pure $ URope.length utfPrefix
+
 -- | Given a virtual file, translate a 'CodePointPosition' in that file into a 'J.Position' in that file.
 --
 -- Will return 'Nothing' if the requested position is out of bounds of the document.
 --
 -- We need the file itself because this requires translating between code points and code units.
+--
+-- Logarithmic in the number of lines in the document, and linear in the length of the line containing
+-- the position.
 codePointPositionToPosition :: VirtualFile -> CodePointPosition -> Maybe J.Position
 codePointPositionToPosition vFile (CodePointPosition l cpc) = do
   -- See Note [Converting between code points and code units]
   let text = _file_text vFile
   utf16Line <- extractLine text (fromIntegral l)
-
   -- Convert the line a rope using *code points*
   let utfLine = URope.fromText $ Rope.toText utf16Line
-  -- Check for the position being out of bounds
-  guard $ (fromIntegral cpc) <= URope.length utfLine
-      -- Split at the given position in *code points*
-  let (utfLinePrefix, _) = URope.splitAt (fromIntegral cpc) utfLine
-      -- Convert the prefix to a rope using *code units*
-      utf16LinePrefix = Rope.fromText $ URope.toText utfLinePrefix
-      -- Get the length of the prefix in *code units*
-      cuc = Rope.length utf16LinePrefix
+
+  cuc <- codePointOffsetToCodeUnitOffset utfLine (fromIntegral cpc)
   pure $ J.Position l (fromIntegral cuc)
 
 -- | Given a virtual file, translate a 'J.Position' in that file into a 'CodePointPosition' in that file.
@@ -416,20 +438,16 @@ codePointPositionToPosition vFile (CodePointPosition l cpc) = do
 -- Will return 'Nothing' if the requested position lies inside a code point, or if it is out of bounds of the document.
 --
 -- We need the file itself because this requires translating between code unit and code points.
+--
+-- Logarithmic in the number of lines in the document, and linear in the length of the line containing
+-- the position.
 positionToCodePointPosition :: VirtualFile -> J.Position -> Maybe CodePointPosition
 positionToCodePointPosition vFile (J.Position l cuc) = do
   -- See Note [Converting between code points and code units]
   let text = _file_text vFile
   utf16Line <- extractLine text (fromIntegral l)
 
-  -- Check for the position being out of bounds
-  guard $ (fromIntegral cuc) <= Rope.length utf16Line
-  -- Split at the given position in *code units*
-  (utf16LinePrefix, _) <- Rope.splitAt (fromIntegral cuc) utf16Line
-  -- Convert the prefixto a rope using *code points*
-  let utfLinePrefix = URope.fromText $ Rope.toText utf16LinePrefix
-      -- Get the length of the prefix in *code points*
-      cpc = URope.length utfLinePrefix
+  cpc <- codeUnitOffsetToCodePointOffset utf16Line (fromIntegral cuc)
   pure $ CodePointPosition l (fromIntegral cpc)
 
 -- ---------------------------------------------------------------------
