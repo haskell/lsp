@@ -307,10 +307,16 @@ vspSpec = do
           ]
         vfile = VirtualFile 0 0 (fromString orig)
 
-      positionToCodePointPosition vfile (J.Position 1 0)`shouldBe` Just (CodePointPosition 1 0)
-      positionToCodePointPosition vfile (J.Position 1 1)`shouldBe` Just (CodePointPosition 1 1)
-      positionToCodePointPosition vfile (J.Position 1 2)`shouldBe` Nothing
-      positionToCodePointPosition vfile (J.Position 1 3)`shouldBe` Just (CodePointPosition 1 2)
+      positionToCodePointPosition vfile (J.Position 1 0) `shouldBe` Just (CodePointPosition 1 0)
+      positionToCodePointPosition vfile (J.Position 1 1) `shouldBe` Just (CodePointPosition 1 1)
+      positionToCodePointPosition vfile (J.Position 1 2) `shouldBe` Nothing
+      positionToCodePointPosition vfile (J.Position 1 3) `shouldBe` Just (CodePointPosition 1 2)
+      positionToCodePointPosition vfile (J.Position 1 4) `shouldBe` Just (CodePointPosition 1 3)
+      positionToCodePointPosition vfile (J.Position 1 5) `shouldBe` Just (CodePointPosition 1 4)
+      -- Greater column than max column
+      positionToCodePointPosition vfile (J.Position 1 6) `shouldBe` Just (CodePointPosition 1 4)
+      -- Greater line than max line
+      positionToCodePointPosition vfile (J.Position 2 2) `shouldBe` Just (CodePointPosition 2 0)
 
     it "converts code points to code units" $ do
       let
@@ -320,9 +326,15 @@ vspSpec = do
           ]
         vfile = VirtualFile 0 0 (fromString orig)
 
-      codePointPositionToPosition vfile (CodePointPosition 1 0)`shouldBe` J.Position 1 0
-      codePointPositionToPosition vfile (CodePointPosition 1 1)`shouldBe` J.Position 1 1
-      codePointPositionToPosition vfile (CodePointPosition 1 2)`shouldBe` J.Position 1 3
+      codePointPositionToPosition vfile (CodePointPosition 1 0) `shouldBe` J.Position 1 0
+      codePointPositionToPosition vfile (CodePointPosition 1 1) `shouldBe` J.Position 1 1
+      codePointPositionToPosition vfile (CodePointPosition 1 2) `shouldBe` J.Position 1 3
+      codePointPositionToPosition vfile (CodePointPosition 1 3) `shouldBe` J.Position 1 4
+      codePointPositionToPosition vfile (CodePointPosition 1 4) `shouldBe` J.Position 1 5
+      -- Greater column than max column
+      codePointPositionToPosition vfile (CodePointPosition 1 5) `shouldBe` J.Position 1 5
+      -- Greater line than max line
+      codePointPositionToPosition vfile (CodePointPosition 2 2) `shouldBe` J.Position 2 0
 
     -- ---------------------------------
 

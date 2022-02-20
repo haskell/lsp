@@ -74,10 +74,9 @@ import           Data.Ord
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map.Strict as Map
 import           Data.Maybe
-import qualified Data.Text.Lines as ULines
+import qualified Data.Text.Rope as URope
 import           Data.Text.Utf16.Rope ( Rope )
 import qualified Data.Text.Utf16.Rope as Rope
-import qualified Data.Text.Utf16.Lines as Lines
 import           Data.Text.Prettyprint.Doc
 import qualified Language.LSP.Types           as J
 import qualified Language.LSP.Types.Lens      as J
@@ -363,32 +362,71 @@ data CodePointPosition =
     , _character :: J.UInt
     } deriving (Show, Read, Eq, Ord)
 
+{- Note [Converting between code points and code units]
+This is inherently a somewhat expensive operation, but we take some care to minimize the cost.
+In particular, we use the good asymptotics of 'Rope' to our advantage:
+- We extract the single line that we are interested in in time logarithmic in the number of lines.
+- We then split the line at the given position, and check how long the prefix is, which takes
+linear time in the length of the (single) line.
+
+We also may need to convert the line back and forth between ropes with different indexing. Again
+this is linear time in the length of the line.
+
+So the overall process is logarithmic in the number of lines, and linear in the length of the specific
+line. Which is okay-ish, so long as we don't have very long lines.
+-}
+
+-- | Extracts a specific line from a 'Rope.Rope'.
+-- Logarithmic in the number of lines.
+extractLine :: Rope.Rope -> Word -> Rope.Rope
+extractLine rope l =
+  let (_, suffix) = Rope.splitAtLine l rope
+      (prefix, _) = Rope.splitAtLine 1 suffix
+  in prefix
+
 -- | Given a virtual file, translate a 'CodePointPosition' in that file into a 'J.Position' in that file.
+--
+-- If the position is out of bounds (i.e. beyond the last line or the last character in a line), then the
+-- greatest valid position less than that will be returned.
 --
 -- We need the file itself because this requires translating between code points and code units.
 codePointPositionToPosition :: VirtualFile -> CodePointPosition -> J.Position
-codePointPositionToPosition vFile (CodePointPosition cpl cpc) =
+codePointPositionToPosition vFile (CodePointPosition l cpc) =
+  -- See Note [Converting between code points and code units]
   let text = _file_text vFile
-      lines = Rope.toTextLines text
+      utf16Line = extractLine text (fromIntegral l)
+
+      -- Convert the line a rope using *code points*
+      utfLine = URope.fromText $ Rope.toText utf16Line
       -- Split at the given position in *code points*
-      (prefix, _) = ULines.splitAtPosition (ULines.Position (fromIntegral cpl) (fromIntegral cpc)) lines
+      (utfLinePrefix, _) = URope.splitAt (fromIntegral cpc) utfLine
+      -- Convert the prefix to a rope using *code units*
+      utf16LinePrefix = Rope.fromText $ URope.toText utfLinePrefix
       -- Get the length of the prefix in *code units*
-      (Lines.Position cul cuc) = Lines.lengthAsPosition prefix
-  in J.Position (fromIntegral cul) (fromIntegral cuc)
+      cuc = Rope.length utf16LinePrefix
+  in J.Position l (fromIntegral cuc)
 
 -- | Given a virtual file, translate a 'J.Position' in that file into a 'CodePointPosition' in that file.
+--
 -- May fail if the requested position lies inside a code point.
+--
+-- If the position is out of bounds (i.e. beyond the last line or the last character in a line), then the
+-- greatest valid position less than that will be returned.
 --
 -- We need the file itself because this requires translating between code unit and code points.
 positionToCodePointPosition :: VirtualFile -> J.Position -> Maybe CodePointPosition
-positionToCodePointPosition vFile (J.Position cul cuc) = do
+positionToCodePointPosition vFile (J.Position l cuc) = do
+  -- See Note [Converting between code points and code units]
   let text = _file_text vFile
-      lines = Rope.toTextLines text
-  -- Split at the given location in *code units*
-  (prefix, _) <- Lines.splitAtPosition (Lines.Position (fromIntegral cul) (fromIntegral cuc)) lines
-  -- Get the length of the prefix in *code points*
-  let (ULines.Position cpl cpc) = ULines.lengthAsPosition prefix
-  pure $ CodePointPosition (fromIntegral cpl) (fromIntegral cpc)
+      utf16Line = extractLine text (fromIntegral l)
+
+  -- Split at the given position in *code units*
+  (utf16LinePrefix, _) <- Rope.splitAt (fromIntegral cuc) utf16Line
+  -- Convert the prefixto a rope using *code points*
+  let utfLinePrefix = URope.fromText $ Rope.toText utf16LinePrefix
+      -- Get the length of the prefix in *code points*
+      cpc = URope.length utfLinePrefix
+  pure $ CodePointPosition l (fromIntegral cpc)
 
 -- ---------------------------------------------------------------------
 
