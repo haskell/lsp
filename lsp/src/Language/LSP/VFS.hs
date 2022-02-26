@@ -44,6 +44,18 @@ module Language.LSP.VFS
   , persistFileVFS
   , closeVFS
 
+  -- * Positions and transformations
+  , CodePointPosition (..)
+  , line
+  , character
+  , codePointPositionToPosition
+  , positionToCodePointPosition
+  , CodePointRange (..)
+  , start
+  , end
+  , codePointRangeToRange
+  , rangeToCodePointRange
+
   -- * manipulating the file contents
   , rangeLinesFromVfs
   , PosPrefixInfo(..)
@@ -69,9 +81,10 @@ import           Data.Ord
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map.Strict as Map
 import           Data.Maybe
+import qualified Data.Text.Rope as URope
 import           Data.Text.Utf16.Rope ( Rope )
 import qualified Data.Text.Utf16.Rope as Rope
-import           Data.Text.Prettyprint.Doc
+import           Data.Text.Prettyprint.Doc hiding (line)
 import qualified Language.LSP.Types           as J
 import qualified Language.LSP.Types.Lens      as J
 import           System.FilePath
@@ -343,6 +356,133 @@ changeChars logger str start finish new = do
    Just (before, after) ->  case Rope.splitAtPosition start before of
      Nothing -> logger <& SplitInsideCodePoint start before `WithSeverity` Warning >> pure str
      Just (before', _) -> pure $ mconcat [before', Rope.fromText new, after]
+
+-- ---------------------------------------------------------------------
+
+-- | A position, like a 'J.Position', but where the offsets in the line are measured in
+-- Unicode code points instead of UTF-16 code units.
+data CodePointPosition =
+  CodePointPosition
+    { -- | Line position in a document (zero-based).
+      _line      :: J.UInt
+      -- | Character offset on a line in a document in *code points* (zero-based).
+    , _character :: J.UInt
+    } deriving (Show, Read, Eq, Ord)
+
+-- | A range, like a 'J.Range', but where the offsets in the line are measured in
+-- Unicode code points instead of UTF-16 code units.
+data CodePointRange =
+  CodePointRange
+    { _start :: CodePointPosition -- ^ The range's start position.
+    , _end   :: CodePointPosition -- ^ The range's end position.
+    } deriving (Show, Read, Eq, Ord)
+
+makeFieldsNoPrefix ''CodePointPosition
+makeFieldsNoPrefix ''CodePointRange
+
+{- Note [Converting between code points and code units]
+This is inherently a somewhat expensive operation, but we take some care to minimize the cost.
+In particular, we use the good asymptotics of 'Rope' to our advantage:
+- We extract the single line that we are interested in in time logarithmic in the number of lines.
+- We then split the line at the given position, and check how long the prefix is, which takes
+linear time in the length of the (single) line.
+
+We also may need to convert the line back and forth between ropes with different indexing. Again
+this is linear time in the length of the line.
+
+So the overall process is logarithmic in the number of lines, and linear in the length of the specific
+line. Which is okay-ish, so long as we don't have very long lines.
+-}
+
+-- | Extracts a specific line from a 'Rope.Rope'.
+-- Logarithmic in the number of lines.
+extractLine :: Rope.Rope -> Word -> Maybe Rope.Rope
+extractLine rope l = do
+  -- Check for the line being out of bounds
+  let lastLine = Rope.posLine $ Rope.lengthAsPosition rope
+  guard $ l <= lastLine
+
+  let (_, suffix) = Rope.splitAtLine l rope
+      (prefix, _) = Rope.splitAtLine 1 suffix
+  pure prefix
+
+-- | Translate a code-point offset into a code-unit offset.
+-- Linear in the length of the rope.
+codePointOffsetToCodeUnitOffset :: URope.Rope -> Word -> Maybe Word
+codePointOffsetToCodeUnitOffset rope offset = do
+  -- Check for the position being out of bounds
+  guard $ offset <= URope.length rope
+  -- Split at the given position in *code points*
+  let (prefix, _) = URope.splitAt offset rope
+      -- Convert the prefix to a rope using *code units*
+      utf16Prefix = Rope.fromText $ URope.toText prefix
+      -- Get the length of the prefix in *code units*
+  pure $ Rope.length utf16Prefix
+
+-- | Translate a UTF-16 code-unit offset into a code-point offset.
+-- Linear in the length of the rope.
+codeUnitOffsetToCodePointOffset :: Rope.Rope -> Word -> Maybe Word
+codeUnitOffsetToCodePointOffset rope offset = do
+  -- Check for the position being out of bounds
+  guard $ offset <= Rope.length rope
+  -- Split at the given position in *code units*
+  (prefix, _) <- Rope.splitAt offset rope
+  -- Convert the prefixto a rope using *code points*
+  let utfPrefix = URope.fromText $ Rope.toText prefix
+      -- Get the length of the prefix in *code points*
+  pure $ URope.length utfPrefix
+
+-- | Given a virtual file, translate a 'CodePointPosition' in that file into a 'J.Position' in that file.
+--
+-- Will return 'Nothing' if the requested position is out of bounds of the document.
+--
+-- Logarithmic in the number of lines in the document, and linear in the length of the line containing
+-- the position.
+codePointPositionToPosition :: VirtualFile -> CodePointPosition -> Maybe J.Position
+codePointPositionToPosition vFile (CodePointPosition l cpc) = do
+  -- See Note [Converting between code points and code units]
+  let text = _file_text vFile
+  utf16Line <- extractLine text (fromIntegral l)
+  -- Convert the line a rope using *code points*
+  let utfLine = URope.fromText $ Rope.toText utf16Line
+
+  cuc <- codePointOffsetToCodeUnitOffset utfLine (fromIntegral cpc)
+  pure $ J.Position l (fromIntegral cuc)
+
+-- | Given a virtual file, translate a 'CodePointRange' in that file into a 'J.Range' in that file.
+--
+-- Will return 'Nothing' if any of the positions are out of bounds of the document.
+--
+-- Logarithmic in the number of lines in the document, and linear in the length of the lines containing
+-- the positions.
+codePointRangeToRange :: VirtualFile -> CodePointRange -> Maybe J.Range
+codePointRangeToRange vFile (CodePointRange b e) =
+  J.Range <$> codePointPositionToPosition vFile b <*> codePointPositionToPosition vFile e
+
+-- | Given a virtual file, translate a 'J.Position' in that file into a 'CodePointPosition' in that file.
+--
+-- Will return 'Nothing' if the requested position lies inside a code point, or if it is out of bounds of the document.
+--
+-- Logarithmic in the number of lines in the document, and linear in the length of the line containing
+-- the position.
+positionToCodePointPosition :: VirtualFile -> J.Position -> Maybe CodePointPosition
+positionToCodePointPosition vFile (J.Position l cuc) = do
+  -- See Note [Converting between code points and code units]
+  let text = _file_text vFile
+  utf16Line <- extractLine text (fromIntegral l)
+
+  cpc <- codeUnitOffsetToCodePointOffset utf16Line (fromIntegral cuc)
+  pure $ CodePointPosition l (fromIntegral cpc)
+
+-- | Given a virtual file, translate a 'J.Range' in that file into a 'CodePointRange' in that file.
+--
+-- Will return 'Nothing' if any of the positions are out of bounds of the document.
+--
+-- Logarithmic in the number of lines in the document, and linear in the length of the lines containing
+-- the positions.
+rangeToCodePointRange :: VirtualFile -> J.Range -> Maybe CodePointRange
+rangeToCodePointRange vFile (J.Range b e) =
+  CodePointRange <$> positionToCodePointPosition vFile b <*> positionToCodePointPosition vFile e
 
 -- ---------------------------------------------------------------------
 
