@@ -46,9 +46,13 @@ module Language.LSP.VFS
 
   -- * Positions and transformations
   , CodePointPosition (..)
+  , line
+  , character
   , codePointPositionToPosition
   , positionToCodePointPosition
   , CodePointRange (..)
+  , start
+  , end
   , codePointRangeToRange
   , rangeToCodePointRange
 
@@ -80,7 +84,7 @@ import           Data.Maybe
 import qualified Data.Text.Rope as URope
 import           Data.Text.Utf16.Rope ( Rope )
 import qualified Data.Text.Utf16.Rope as Rope
-import           Data.Text.Prettyprint.Doc
+import           Data.Text.Prettyprint.Doc hiding (line)
 import qualified Language.LSP.Types           as J
 import qualified Language.LSP.Types.Lens      as J
 import           System.FilePath
@@ -372,6 +376,9 @@ data CodePointRange =
     { _start :: CodePointPosition -- ^ The range's start position.
     , _end   :: CodePointPosition -- ^ The range's end position.
     } deriving (Show, Read, Eq, Ord)
+
+makeFieldsNoPrefix ''CodePointPosition
+makeFieldsNoPrefix ''CodePointRange
 
 {- Note [Converting between code points and code units]
 This is inherently a somewhat expensive operation, but we take some care to minimize the cost.

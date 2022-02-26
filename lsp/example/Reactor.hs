@@ -282,7 +282,7 @@ handle logger = mconcat
           doc = params ^. J.textDocument
           (J.List diags) = params ^. J.context . J.diagnostics
           -- makeCommand only generates commands for diagnostics whose source is us
-          makeCommand (J.Diagnostic (J.Range start _) _s _c (Just "lsp-hello") _m _t _l) = [J.Command title cmd cmdparams]
+          makeCommand (J.Diagnostic (J.Range s _) _s _c (Just "lsp-hello") _m _t _l) = [J.Command title cmd cmdparams]
             where
               title = "Apply LSP hello command:" <> head (T.lines _m)
               -- NOTE: the cmd needs to be registered via the InitializeResponse message. See lspOptions above
@@ -290,7 +290,7 @@ handle logger = mconcat
               -- need 'file' and 'start_pos'
               args = J.List
                       [ J.object [("file",     J.object [("textDocument",J.toJSON doc)])]
-                      , J.object [("start_pos",J.object [("position",    J.toJSON start)])]
+                      , J.object [("start_pos",J.object [("position",    J.toJSON s)])]
                       ]
               cmdparams = Just args
           makeCommand (J.Diagnostic _r _s _c _source _m _t _l) = []
