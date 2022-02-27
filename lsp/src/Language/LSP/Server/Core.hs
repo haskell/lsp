@@ -20,6 +20,7 @@
 module Language.LSP.Server.Core where
 
 import           Colog.Core (LogAction (..), WithSeverity (..))
+import           Control.Applicative (liftA2)
 import           Control.Concurrent.Async
 import           Control.Concurrent.STM
 import qualified Control.Exception as E
@@ -63,6 +64,12 @@ import           Control.Monad.Catch (MonadMask, MonadCatch, MonadThrow)
 
 newtype LspT config m a = LspT { unLspT :: ReaderT (LanguageContextEnv config) m a }
   deriving (Functor, Applicative, Monad, MonadCatch, MonadIO, MonadMask, MonadThrow, MonadTrans, MonadUnliftIO, MonadFix)
+
+instance Semigroup a => Semigroup (LspT config m a) where
+    (<>) = liftA2 (<>)
+
+instance Monoid a => Monoid (LspT config m a) where
+    mempty = pure mempty
 
 -- for deriving the instance of MonadUnliftIO
 type role LspT representational representational nominal
