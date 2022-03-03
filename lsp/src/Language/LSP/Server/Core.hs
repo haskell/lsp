@@ -1,5 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
+{-# LANGUAGE DerivingVia          #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE BangPatterns         #-}
 {-# LANGUAGE GADTs                #-}
