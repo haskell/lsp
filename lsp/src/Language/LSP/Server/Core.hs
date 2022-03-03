@@ -1,5 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
+{-# LANGUAGE DerivingVia          #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE BangPatterns         #-}
 {-# LANGUAGE GADTs                #-}
@@ -40,6 +41,7 @@ import qualified Data.List as L
 import           Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.Map.Strict as Map
 import           Data.Maybe
+import           Data.Monoid (Ap(..))
 import           Data.Ord (Down (Down))
 import qualified Data.Text as T
 import           Data.Text ( Text )
@@ -63,6 +65,7 @@ import           Control.Monad.Catch (MonadMask, MonadCatch, MonadThrow)
 
 newtype LspT config m a = LspT { unLspT :: ReaderT (LanguageContextEnv config) m a }
   deriving (Functor, Applicative, Monad, MonadCatch, MonadIO, MonadMask, MonadThrow, MonadTrans, MonadUnliftIO, MonadFix)
+  deriving (Semigroup, Monoid) via (Ap (LspT config m) a)
 
 -- for deriving the instance of MonadUnliftIO
 type role LspT representational representational nominal
