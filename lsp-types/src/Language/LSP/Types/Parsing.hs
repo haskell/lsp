@@ -29,7 +29,7 @@ import Data.Type.Equality
 import Data.Function (on)
 
 -- ---------------------------------------------------------------------
--- Working with arbritary messages
+-- Working with arbitrary messages
 -- ---------------------------------------------------------------------
 
 data FromServerMessage' a where
