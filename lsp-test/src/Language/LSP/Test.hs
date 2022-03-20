@@ -151,7 +151,7 @@ runSession :: String -- ^ The command to run the server.
            -> IO a
 runSession = runSessionWithConfig def
 
--- | Starts a new sesion with a custom configuration.
+-- | Starts a new session with a custom configuration.
 runSessionWithConfig :: SessionConfig -- ^ Configuration options for the session.
                      -> String -- ^ The command to run the server.
                      -> C.ClientCapabilities -- ^ The capabilities that the client should declare.
@@ -703,7 +703,7 @@ getHover doc pos =
   let params = HoverParams doc pos Nothing
   in getResponseResult <$> request STextDocumentHover params
 
--- | Returns the highlighted occurences of the term at the specified position
+-- | Returns the highlighted occurrences of the term at the specified position
 getHighlights :: TextDocumentIdentifier -> Position -> Session (List DocumentHighlight)
 getHighlights doc pos =
   let params = DocumentHighlightParams doc pos Nothing Nothing

@@ -28,7 +28,7 @@ import Language.LSP.Types.Method (Method(..), SMethod(..))
 
 -- This type exists to avoid a dependency on 'dependent-map'. It is less
 -- safe (since we use 'unsafeCoerce') but much simpler and hence easier to include.
--- | A specialized altenative to a full dependent map for use with 'SMethod'.
+-- | A specialized alternative to a full dependent map for use with 'SMethod'.
 data SMethodMap (v :: Method f t -> Type) =
   -- This works by using an 'IntMap' indexed by constructor tag for the majority
   -- of 'SMethod's, which have no parameters, and hence can only appear once as keys

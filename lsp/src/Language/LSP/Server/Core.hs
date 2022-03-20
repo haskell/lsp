@@ -252,7 +252,7 @@ instance Default Options where
 defaultOptions :: Options
 defaultOptions = def
 
--- | A package indicating the perecentage of progress complete and a
+-- | A package indicating the percentage of progress complete and a
 -- an optional message to go with it during a 'withProgress'
 --
 -- @since 0.10.0.0
@@ -319,7 +319,7 @@ data ServerDefinition config = forall m a.
 newtype ServerResponseCallback (m :: Method FromServer Request)
   = ServerResponseCallback (Either ResponseError (ResponseResult m) -> IO ())
 
--- | Return value signals if response handler was inserted succesfully
+-- | Return value signals if response handler was inserted successfully
 -- Might fail if the id was already in the map
 addResponseHandler :: MonadLsp config f => LspId m -> (Product SMethod ServerResponseCallback) m -> f Bool
 addResponseHandler lid h = do

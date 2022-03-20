@@ -56,7 +56,7 @@ import           Language.LSP.Types.Message
 import           Language.LSP.Types.SemanticTokens
 import           Control.Lens.TH
 
--- TODO: This is out of date and very unmantainable, use TH to call all these!!
+-- TODO: This is out of date and very unmaintainable, use TH to call all these!!
 
 -- client capabilities
 makeFieldsNoPrefix ''MessageActionItemClientCapabilities
