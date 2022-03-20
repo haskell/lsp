@@ -29,7 +29,8 @@ import           Data.Maybe                                   (fromMaybe,
 import           Data.String
 
 data SemanticTokenTypes =
-  SttType
+  SttNamespace
+  | SttType
   | SttClass
   | SttEnum
   | SttInterface
@@ -54,6 +55,7 @@ data SemanticTokenTypes =
   deriving (Show, Read, Eq, Ord)
 
 instance A.ToJSON SemanticTokenTypes where
+  toJSON SttNamespace     = A.String "namespace"
   toJSON SttType          = A.String "type"
   toJSON SttClass         = A.String "class"
   toJSON SttEnum          = A.String "enum"
@@ -78,6 +80,7 @@ instance A.ToJSON SemanticTokenTypes where
   toJSON (SttUnknown t)   = A.String t
 
 instance A.FromJSON SemanticTokenTypes where
+  parseJSON (A.String "namespace")     = pure SttNamespace
   parseJSON (A.String "type")          = pure SttType
   parseJSON (A.String "class")         = pure SttClass
   parseJSON (A.String "enum")          = pure SttEnum
@@ -105,7 +108,8 @@ instance A.FromJSON SemanticTokenTypes where
 -- | The set of semantic token types which are "known" (i.e. listed in the LSP spec).
 knownSemanticTokenTypes :: [SemanticTokenTypes]
 knownSemanticTokenTypes = [
-  SttType
+  SttNamespace
+  , SttType
   , SttClass
   , SttEnum
   , SttInterface

@@ -429,7 +429,7 @@ main = hspec $ around withDummyServer $ do
     it "full works" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "." $ do
       let doc = TextDocumentIdentifier (Uri "")
       Just toks <- getSemanticTokens doc
-      liftIO $ toks ^. xdata `shouldBe` List [0,1,2,0,0]
+      liftIO $ toks ^. xdata `shouldBe` List [0,1,2,1,0]
 
 didChangeCaps :: ClientCapabilities
 didChangeCaps = def { _workspace = Just workspaceCaps }
