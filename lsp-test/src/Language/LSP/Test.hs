@@ -198,7 +198,7 @@ runSessionWithHandles' serverProc serverIn serverOut config' caps rootDir sessio
   config <- envOverrideConfig config'
 
   let initializeParams = InitializeParams Nothing
-                                          -- Narowing to Int32 here, but it's unlikely that a pid will
+                                          -- Narowing to Int32 here, but it's unlikely that a PID will
                                           -- be outside the range
                                           (Just $ fromIntegral pid)
                                           (Just lspTestClientInfo)
@@ -241,7 +241,7 @@ runSessionWithHandles' serverProc serverIn serverOut config' caps rootDir sessio
   exitServer :: Session ()
   exitServer = request_ SShutdown Empty >> sendNotification SExit Empty
 
-  -- | Listens to the server output until the shutdown ack,
+  -- | Listens to the server output until the shutdown hack,
   -- makes sure it matches the record and signals any semaphores
   listenServer :: Handle -> SessionContext -> IO ()
   listenServer serverOut context = do
