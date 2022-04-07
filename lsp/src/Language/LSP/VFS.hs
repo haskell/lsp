@@ -427,7 +427,7 @@ codeUnitOffsetToCodePointOffset rope offset = do
   guard $ offset <= Rope.length rope
   -- Split at the given position in *code units*
   (prefix, _) <- Rope.splitAt offset rope
-  -- Convert the prefixto a rope using *code points*
+  -- Convert the prefix to a rope using *code points*
   let utfPrefix = URope.fromText $ Rope.toText prefix
       -- Get the length of the prefix in *code points*
   pure $ URope.length utfPrefix
