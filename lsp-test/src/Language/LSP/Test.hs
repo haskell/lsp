@@ -241,7 +241,7 @@ runSessionWithHandles' serverProc serverIn serverOut config' caps rootDir sessio
   exitServer :: Session ()
   exitServer = request_ SShutdown Empty >> sendNotification SExit Empty
 
-  -- | Listens to the server output until the shutdown hack,
+  -- | Listens to the server output until the shutdown ACK,
   -- makes sure it matches the record and signals any semaphores
   listenServer :: Handle -> SessionContext -> IO ()
   listenServer serverOut context = do
