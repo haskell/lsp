@@ -4,6 +4,7 @@ module Language.LSP.Types.Location where
 
 import           Control.DeepSeq
 import           Data.Aeson.TH
+import           Data.Hashable
 import           GHC.Generics hiding (UInt)
 import           Language.LSP.Types.Common
 import           Language.LSP.Types.Uri
@@ -26,6 +27,8 @@ data Position =
 instance NFData Position
 deriveJSON lspOptions ''Position
 
+instance Hashable Position
+
 -- ---------------------------------------------------------------------
 
 data Range =
@@ -37,6 +40,8 @@ data Range =
 instance NFData Range
 deriveJSON lspOptions ''Range
 
+instance Hashable Range
+
 -- ---------------------------------------------------------------------
 
 data Location =
@@ -47,6 +52,8 @@ data Location =
 
 instance NFData Location
 deriveJSON lspOptions ''Location
+
+instance Hashable Location
 
 -- ---------------------------------------------------------------------
 

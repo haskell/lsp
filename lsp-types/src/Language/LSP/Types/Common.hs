@@ -18,6 +18,7 @@ module Language.LSP.Types.Common (
 import Control.Applicative
 import Control.DeepSeq
 import Data.Aeson
+import Data.Hashable
 import Data.Int (Int32)
 import Data.Mod.Word
 import Text.Read (Read(readPrec))
@@ -32,6 +33,8 @@ newtype UInt = UInt (Mod (2^31))
   deriving newtype (Num, Bounded, Enum, Eq, Ord)
   deriving stock (Generic)
   deriving anyclass (NFData)
+
+instance Hashable UInt where hashWithSalt s (UInt n) = hashWithSalt s (unMod n)
 
 instance Show UInt where
   show (UInt u) = show $ unMod u
