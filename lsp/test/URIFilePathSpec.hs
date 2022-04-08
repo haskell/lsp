@@ -164,7 +164,7 @@ uriFilePathSpec = do
     let theUri = filePathToUri testFilePath
     theUri `shouldBe` testUri
 
-  it "removes unnecesary current directory paths" $ do
+  it "removes unnecessary current directory paths" $ do
     let theUri = filePathToUri withCurrentDirFilePath
     theUri `shouldBe` testUri
 

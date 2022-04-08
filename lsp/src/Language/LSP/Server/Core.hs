@@ -221,7 +221,7 @@ data Options =
     -- |  The characters that trigger completion automatically.
     , completionTriggerCharacters      :: Maybe [Char]
     -- | The list of all possible characters that commit a completion. This field can be used
-    -- if clients don't support individual commmit characters per completion item. See
+    -- if clients don't support individual commit characters per completion item. See
     -- `_commitCharactersSupport`.
     , completionAllCommitCharacters    :: Maybe [Char]
     -- | The characters that trigger signature help automatically.
@@ -289,12 +289,12 @@ data ServerDefinition config = forall m a.
       -- ^ Called *after* receiving the @initialize@ request and *before*
       -- returning the response. This callback will be invoked to offer the
       -- language server implementation the chance to create any processes or
-      -- start new threads that may be necesary for the server lifecycle. It can
+      -- start new threads that may be necessary for the server lifecycle. It can
       -- also return an error in the initialization if necessary.
     , staticHandlers :: Handlers m
       -- ^ Handlers for any methods you want to statically support.
       -- The handlers here cannot be unregistered during the server's lifetime
-      -- and will be regsitered statically in the initialize request.
+      -- and will be registered statically in the initialize request.
     , interpretHandler :: a -> (m <~> IO)
       -- ^ How to run the handlers in your own monad of choice, @m@.
       -- It is passed the result of 'doInitialize', so typically you will want
@@ -610,7 +610,7 @@ withProgressBase indefinite title cancellable f = do
   _ <- sendRequest SWindowWorkDoneProgressCreate
         (WorkDoneProgressCreateParams progId) $ \res -> do
           case res of
-            -- An error ocurred when the client was setting it up
+            -- An error occurred when the client was setting it up
             -- No need to do anything then, as per the spec
             Left _err -> pure ()
             Right Empty -> pure ()
