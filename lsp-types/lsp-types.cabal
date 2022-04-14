@@ -18,24 +18,14 @@ extra-source-files:  ChangeLog.md, README.md
 
 library
   exposed-modules:     Language.LSP.Types
+                     , Language.LSP.Types.CallHierarchy
                      , Language.LSP.Types.Capabilities
-                     , Language.LSP.Types.Lens
-                     , Language.LSP.Types.SMethodMap
-                     , Data.IxMap
-  other-modules:       Language.LSP.Types.CallHierarchy
-                     , Language.LSP.Types.Cancellation
-                     , Language.LSP.Types.ClientCapabilities
                      , Language.LSP.Types.CodeAction
                      , Language.LSP.Types.CodeLens
-                     , Language.LSP.Types.Command
-                     , Language.LSP.Types.Common
                      , Language.LSP.Types.Completion
-                     , Language.LSP.Types.Configuration
                      , Language.LSP.Types.Declaration
                      , Language.LSP.Types.Definition
-                     , Language.LSP.Types.Diagnostic
                      , Language.LSP.Types.DocumentColor
-                     , Language.LSP.Types.DocumentFilter
                      , Language.LSP.Types.DocumentHighlight
                      , Language.LSP.Types.DocumentLink
                      , Language.LSP.Types.DocumentSymbol
@@ -43,6 +33,22 @@ library
                      , Language.LSP.Types.Formatting
                      , Language.LSP.Types.Hover
                      , Language.LSP.Types.Implementation
+                     , Language.LSP.Types.Lens
+                     , Language.LSP.Types.References
+                     , Language.LSP.Types.Rename
+                     , Language.LSP.Types.SelectionRange
+                     , Language.LSP.Types.SemanticTokens
+                     , Language.LSP.Types.SignatureHelp
+                     , Language.LSP.Types.SMethodMap
+                     , Language.LSP.Types.TypeDefinition
+                     , Data.IxMap
+  other-modules:       Language.LSP.Types.Cancellation
+                     , Language.LSP.Types.ClientCapabilities
+                     , Language.LSP.Types.Command
+                     , Language.LSP.Types.Common
+                     , Language.LSP.Types.Configuration
+                     , Language.LSP.Types.Diagnostic
+                     , Language.LSP.Types.DocumentFilter
                      , Language.LSP.Types.Initialize
                      , Language.LSP.Types.Location
                      , Language.LSP.Types.LspId
@@ -52,15 +58,9 @@ library
                      , Language.LSP.Types.Parsing
                      , Language.LSP.Types.Progress
                      , Language.LSP.Types.Registration
-                     , Language.LSP.Types.References
-                     , Language.LSP.Types.Rename
-                     , Language.LSP.Types.SelectionRange
                      , Language.LSP.Types.ServerCapabilities
-                     , Language.LSP.Types.SemanticTokens
-                     , Language.LSP.Types.SignatureHelp
                      , Language.LSP.Types.StaticRegistrationOptions
                      , Language.LSP.Types.TextDocument
-                     , Language.LSP.Types.TypeDefinition
                      , Language.LSP.Types.Uri
                      , Language.LSP.Types.Utils
                      , Language.LSP.Types.Window

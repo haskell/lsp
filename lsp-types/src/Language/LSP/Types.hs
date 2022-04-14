@@ -1,24 +1,10 @@
 module Language.LSP.Types
-  ( module Language.LSP.Types.CallHierarchy
-  , module Language.LSP.Types.Cancellation
-  , module Language.LSP.Types.CodeAction
-  , module Language.LSP.Types.CodeLens
+  ( module Language.LSP.Types.Cancellation
   , module Language.LSP.Types.Command
   , module Language.LSP.Types.Common
-  , module Language.LSP.Types.Completion
   , module Language.LSP.Types.Configuration
-  , module Language.LSP.Types.Declaration
-  , module Language.LSP.Types.Definition
   , module Language.LSP.Types.Diagnostic
-  , module Language.LSP.Types.DocumentColor
   , module Language.LSP.Types.DocumentFilter
-  , module Language.LSP.Types.DocumentHighlight
-  , module Language.LSP.Types.DocumentLink
-  , module Language.LSP.Types.DocumentSymbol
-  , module Language.LSP.Types.FoldingRange
-  , module Language.LSP.Types.Formatting
-  , module Language.LSP.Types.Hover
-  , module Language.LSP.Types.Implementation
   , module Language.LSP.Types.Initialize
   , module Language.LSP.Types.Location
   , module Language.LSP.Types.LspId
@@ -27,21 +13,36 @@ module Language.LSP.Types
   , module Language.LSP.Types.Message
   , module Language.LSP.Types.Parsing
   , module Language.LSP.Types.Progress
-  , module Language.LSP.Types.References
   , module Language.LSP.Types.Registration
-  , module Language.LSP.Types.Rename
-  , module Language.LSP.Types.SignatureHelp
   , module Language.LSP.Types.StaticRegistrationOptions
-  , module Language.LSP.Types.SelectionRange
-  , module Language.LSP.Types.SemanticTokens
   , module Language.LSP.Types.TextDocument
-  , module Language.LSP.Types.TypeDefinition
   , module Language.LSP.Types.Uri
   , module Language.LSP.Types.WatchedFiles
   , module Language.LSP.Types.Window
   , module Language.LSP.Types.WorkspaceEdit
   , module Language.LSP.Types.WorkspaceFolders
   , module Language.LSP.Types.WorkspaceSymbol
+   -- * Language Features
+  , module Language.LSP.Types.CallHierarchy
+  , module Language.LSP.Types.CodeAction
+  , module Language.LSP.Types.CodeLens
+  , module Language.LSP.Types.Completion
+  , module Language.LSP.Types.Declaration
+  , module Language.LSP.Types.Definition
+  , module Language.LSP.Types.DocumentColor
+  , module Language.LSP.Types.DocumentHighlight
+  , module Language.LSP.Types.DocumentLink
+  , module Language.LSP.Types.DocumentSymbol
+  , module Language.LSP.Types.FoldingRange
+  , module Language.LSP.Types.Formatting
+  , module Language.LSP.Types.Hover
+  , module Language.LSP.Types.Implementation
+  , module Language.LSP.Types.References
+  , module Language.LSP.Types.Rename
+  , module Language.LSP.Types.SelectionRange
+  , module Language.LSP.Types.SemanticTokens
+  , module Language.LSP.Types.SignatureHelp
+  , module Language.LSP.Types.TypeDefinition
   )
 where
 
