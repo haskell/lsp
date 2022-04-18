@@ -48,6 +48,7 @@ library
     Language.LSP.Server.Control
     Language.LSP.Server.Core
     Language.LSP.Server.Processing
+    Language.LSP.Server.IO
 
   ghc-options:        -Wall
   build-depends:
