@@ -26,6 +26,7 @@ module Language.LSP.Server
 
   , getClientCapabilities
   , getConfig
+  , setConfig
   , getRootPath
   , getWorkspaceFolders
 
