@@ -31,6 +31,10 @@ instance IxOrd LspId where
   type Base LspId = SomeLspId
   toBase = SomeLspId
 
+instance Hashable (LspId m) where
+  hashWithSalt n (IdInt i) = hashWithSalt n i
+  hashWithSalt n (IdString t) = hashWithSalt n t
+
 data SomeLspId where
   SomeLspId :: !(LspId m) -> SomeLspId
 
@@ -48,4 +52,4 @@ instance Ord SomeLspId where
       go (IdString _) (IdInt    _) = GT
 
 instance Hashable SomeLspId where
-  hashWithSalt n (SomeLspId a) = hashWithSalt n (toBase a)
+  hashWithSalt n (SomeLspId lspId) = hashWithSalt n lspId
