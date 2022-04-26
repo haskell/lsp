@@ -11,6 +11,9 @@ module Language.LSP.Types.Common (
     type (|?) (..)
   , toEither
   , List (..)
+  , MaybeN (..)
+  , unMaybeN
+  , maybeN
   , Empty (..)
   , Int32
   , UInt ) where
@@ -18,13 +21,13 @@ module Language.LSP.Types.Common (
 import Control.Applicative
 import Control.DeepSeq
 import Data.Aeson
+import Data.Bifunctor (bimap)
 import Data.Hashable
 import Data.Int (Int32)
 import Data.Mod.Word
-import Text.Read (Read(readPrec))
 import GHC.Generics hiding (UInt)
 import GHC.TypeNats hiding (Mod)
-import Data.Bifunctor (bimap)
+import Text.Read (Read(readPrec))
 
 -- | The "uinteger" type in the LSP spec.
 --
@@ -101,3 +104,24 @@ instance FromJSON Empty where
   parseJSON Null = pure Empty
   parseJSON (Object o) | o == mempty = pure Empty
   parseJSON _ = fail "expected 'null' or '{}'"
+
+-- A Maybe type which encodes to JSON "null" in the case of Nothing.
+-- Used to conform to the LSP spec in cases where a field is specified to be
+-- of type "a | null" instead of "a?". (In the latter case we just use ordinary
+-- Maybe in combination with aeson's 'omitNothingFields' option.)
+data MaybeN a = JustN a | NothingN
+  deriving (Show, Read, Eq, Ord, Functor)
+instance ToJSON a => ToJSON (MaybeN a) where
+  toJSON NothingN = Null
+  toJSON (JustN x) = toJSON x
+instance FromJSON a => FromJSON (MaybeN a) where
+  parseJSON Null = pure NothingN
+  parseJSON x = JustN <$> parseJSON x
+
+unMaybeN :: MaybeN a -> Maybe a
+unMaybeN (JustN a) = Just a
+unMaybeN NothingN = Nothing
+
+maybeN :: Maybe a -> MaybeN a
+maybeN (Just a) = JustN a
+maybeN Nothing = NothingN
