@@ -200,14 +200,14 @@ runSessionWithHandles' serverProc serverIn serverOut config' caps rootDir sessio
   let initializeParams = InitializeParams Nothing
                                           -- Narrowing to Int32 here, but it's unlikely that a PID will
                                           -- be outside the range
-                                          (Just $ fromIntegral pid)
+                                          (JustN $ fromIntegral pid)
                                           (Just lspTestClientInfo)
-                                          (Just $ T.pack absRootDir)
-                                          (Just $ filePathToUri absRootDir)
+                                          (JustN $ T.pack absRootDir)
+                                          (JustN $ filePathToUri absRootDir)
                                           (lspConfig config')
                                           caps
                                           (Just TraceOff)
-                                          (List <$> initialWorkspaceFolders config)
+                                          (maybeN (List <$> initialWorkspaceFolders config))
   runSession' serverIn serverOut serverProc listenServer config caps rootDir exitServer $ do
     -- Wrap the session around initialize and shutdown calls
     initReqId <- sendRequest SInitialize initializeParams

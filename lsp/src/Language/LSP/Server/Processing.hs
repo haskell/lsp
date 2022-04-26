@@ -120,12 +120,12 @@ initializeRequestHandler ServerDefinition{..} vfs sendFunc req = do
   flip E.catch (initializeErrorHandler $ sendResp . makeResponseError (req ^. LSP.id)) $ handleErr <=< runExceptT $ mdo
 
     let params = req ^. LSP.params
-        rootDir = getFirst $ foldMap First [ params ^. LSP.rootUri  >>= uriToFilePath
-                                           , params ^. LSP.rootPath <&> T.unpack ]
+        rootDir = getFirst $ foldMap First [ unMaybeN (params ^. LSP.rootUri) >>= uriToFilePath
+                                           , unMaybeN (params ^. LSP.rootPath) <&> T.unpack ]
 
     let initialWfs = case params ^. LSP.workspaceFolders of
-          Just (List xs) -> xs
-          Nothing -> []
+          JustN (List xs) -> xs
+          NothingN -> []
 
         initialConfig = case onConfigurationChange defaultConfig <$> (req ^. LSP.params . LSP.initializationOptions) of
           Just (Right newConfig) -> newConfig

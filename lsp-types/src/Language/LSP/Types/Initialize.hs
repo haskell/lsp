@@ -41,14 +41,14 @@ data ClientInfo =
 deriveJSON lspOptions ''ClientInfo
 
 makeExtendingDatatype "InitializeParams" [''WorkDoneProgressParams]
-  [ ("_processId",             [t| Maybe Int32|])
+  [ ("_processId",             [t| MaybeN Int32|])
   , ("_clientInfo",            [t| Maybe ClientInfo |])
-  , ("_rootPath",              [t| Maybe Text |])
-  , ("_rootUri",               [t| Maybe Uri  |])
+  , ("_rootPath",              [t| MaybeN Text |])
+  , ("_rootUri",               [t| MaybeN Uri |])
   , ("_initializationOptions", [t| Maybe Value |])
   , ("_capabilities",          [t| ClientCapabilities |])
   , ("_trace",                 [t| Maybe Trace |])
-  , ("_workspaceFolders",      [t| Maybe (List WorkspaceFolder) |])
+  , ("_workspaceFolders",      [t| MaybeN (List WorkspaceFolder) |])
   ]
 
 deriveJSON lspOptions ''InitializeParams
@@ -93,4 +93,3 @@ instance FromJSON InitializedParams where
 
 instance ToJSON InitializedParams where
   toJSON InitializedParams = Object mempty
-

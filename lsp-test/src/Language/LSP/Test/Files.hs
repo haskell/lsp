@@ -40,7 +40,7 @@ swapFiles relCurBaseDir msgs = do
 rootDir :: [Event] -> FilePath
 rootDir (ClientEv _ (FromClientMess SInitialize req):_) =
   fromMaybe (error "Couldn't find root dir") $ do
-    rootUri <- req ^. params .rootUri
+    rootUri <- unMaybeN (req ^. params . rootUri)
     uriToFilePath rootUri
 rootDir _ = error "Couldn't find initialize request in session"
 
@@ -99,7 +99,7 @@ mapUris f event =
     transformInit x =
       let newRootUri = fmap f (x ^. rootUri)
           newRootPath = do
-            fp <- T.unpack <$> x ^. rootPath
+            fp <- T.unpack <$> unMaybeN (x ^. rootPath)
             let uri = filePathToUri fp
             T.pack <$> uriToFilePath (f uri)
-        in (rootUri .~ newRootUri) $ (rootPath .~ newRootPath) x
+        in (rootUri .~ newRootUri) $ (rootPath .~ maybeN newRootPath) x
