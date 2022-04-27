@@ -31,6 +31,7 @@ import Language.LSP.Types.SignatureHelp
 import Language.LSP.Types.TextDocument
 import Language.LSP.Types.TypeDefinition
 import Language.LSP.Types.Utils
+import Language.LSP.Types.WorkspaceSymbol
 
 -- ---------------------------------------------------------------------
 
@@ -126,7 +127,7 @@ data ServerCapabilities =
       -- @since 3.16.0
     , _semanticTokensProvider           :: Maybe (SemanticTokensOptions |? SemanticTokensRegistrationOptions)
       -- | The server provides workspace symbol support.
-    , _workspaceSymbolProvider          :: Maybe Bool
+    , _workspaceSymbolProvider          :: Maybe (Bool |? WorkspaceSymbolOptions)
       -- | Workspace specific server capabilities
     , _workspace                        :: Maybe WorkspaceServerCapabilities
       -- | Experimental server capabilities.
