@@ -360,6 +360,7 @@ makeFieldsNoPrefix ''PartialResultParams
 -- Signature Help
 makeFieldsNoPrefix ''SignatureHelpSignatureInformation
 makeFieldsNoPrefix ''SignatureHelpParameterInformation
+makeFieldsNoPrefix ''SignatureHelpParams
 makeFieldsNoPrefix ''SignatureHelpClientCapabilities
 makeFieldsNoPrefix ''SignatureHelpOptions
 makeFieldsNoPrefix ''SignatureHelpRegistrationOptions
