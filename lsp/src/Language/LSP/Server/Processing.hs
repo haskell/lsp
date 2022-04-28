@@ -201,7 +201,7 @@ inferServerCapabilities clientCaps o h =
     , _selectionRangeProvider           = supportedBool STextDocumentSelectionRange
     , _callHierarchyProvider            = supportedBool STextDocumentPrepareCallHierarchy
     , _semanticTokensProvider           = semanticTokensProvider
-    , _workspaceSymbolProvider          = supported SWorkspaceSymbol
+    , _workspaceSymbolProvider          = supportedBool SWorkspaceSymbol
     , _workspace                        = Just workspace
     -- TODO: Add something for experimental
     , _experimental                     = Nothing :: Maybe Value
