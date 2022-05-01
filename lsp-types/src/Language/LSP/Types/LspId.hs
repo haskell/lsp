@@ -1,18 +1,16 @@
-{-# LANGUAGE DataKinds                  #-}
-{-# LANGUAGE StandaloneDeriving         #-}
-{-# LANGUAGE GADTs                      #-}
-{-# LANGUAGE TypeFamilies               #-}
-{-# LANGUAGE TypeInType                 #-}
-{-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
+{-# LANGUAGE GADTs              #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeFamilies       #-}
+{-# LANGUAGE TypeInType         #-}
 module Language.LSP.Types.LspId where
 
-import qualified Data.Aeson                                 as A
+import qualified Data.Aeson                            as A
 import           Data.Hashable
-import           Data.Int (Int32)
 import           Data.IxMap
-import           Data.Text                                  (Text)
+import           Data.Text                             (Text)
 
-import           Language.LSP.Types.Method
+import           Language.LSP.Types.Common
+import           Language.LSP.Types.Internal.Generated
 
 -- | Id used for a request, Can be either a String or an Int
 data LspId (m :: Method f Request) = IdInt !Int32 | IdString !Text
@@ -32,7 +30,7 @@ instance IxOrd LspId where
   toBase = SomeLspId
 
 instance Hashable (LspId m) where
-  hashWithSalt n (IdInt i) = hashWithSalt n i
+  hashWithSalt n (IdInt i)    = hashWithSalt n i
   hashWithSalt n (IdString t) = hashWithSalt n t
 
 data SomeLspId where
@@ -40,9 +38,9 @@ data SomeLspId where
 
 deriving instance Show SomeLspId
 instance Eq SomeLspId where
-  SomeLspId (IdInt a) == SomeLspId (IdInt b) = a == b
+  SomeLspId (IdInt a) == SomeLspId (IdInt b)       = a == b
   SomeLspId (IdString a) == SomeLspId (IdString b) = a == b
-  _ == _ = False
+  _ == _                                           = False
 instance Ord SomeLspId where
   compare (SomeLspId x) (SomeLspId y) = go x y
     where

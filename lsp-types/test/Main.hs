@@ -1,7 +1,7 @@
 module Main where
 
-import Test.Hspec.Runner
 import qualified Spec
+import           Test.Hspec.Runner
 
 main :: IO ()
 main = hspec Spec.spec

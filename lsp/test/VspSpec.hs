@@ -1,6 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedLabels #-}
 module VspSpec where
 
+import           Data.Row
 import           Data.String
 import qualified Data.Text.Utf16.Rope as Rope
 import           Language.LSP.VFS
@@ -31,23 +33,27 @@ vfsFromText text = VirtualFile 0 0 (Rope.fromText text)
 
 -- ---------------------------------------------------------------------
 
+mkChangeEvent :: J.Range -> T.Text -> J.TextDocumentContentChangeEvent
+mkChangeEvent r t = J.TextDocumentContentChangeEvent $ J.InL $ #range .== r .+ #rangeLength .== Nothing .+ #text .== t
+
 vspSpec :: Spec
 vspSpec = do
   describe "applys changes in order" $ do
     it "handles vscode style undos" $ do
       let orig = "abc"
           changes =
-            [ J.TextDocumentContentChangeEvent (Just $ J.mkRange 0 2 0 3) Nothing ""
-            , J.TextDocumentContentChangeEvent (Just $ J.mkRange 0 1 0 2) Nothing ""
-            , J.TextDocumentContentChangeEvent (Just $ J.mkRange 0 0 0 1) Nothing ""
+            [ mkChangeEvent (J.mkRange 0 2 0 3) ""
+            , mkChangeEvent (J.mkRange 0 1 0 2) ""
+            , mkChangeEvent (J.mkRange 0 0 0 1) ""
             ]
       applyChanges mempty orig changes `shouldBe` Identity ""
     it "handles vscode style redos" $ do
       let orig = ""
           changes =
-            [ J.TextDocumentContentChangeEvent (Just $ J.mkRange 0 1 0 1) Nothing "a"
-            , J.TextDocumentContentChangeEvent (Just $ J.mkRange 0 2 0 2) Nothing "b"
-            , J.TextDocumentContentChangeEvent (Just $ J.mkRange 0 3 0 3) Nothing "c"
+            [
+              mkChangeEvent (J.mkRange 0 1 0 1) "a"
+            , mkChangeEvent (J.mkRange 0 2 0 2) "b"
+            , mkChangeEvent (J.mkRange 0 3 0 3) "c"
             ]
       applyChanges mempty orig changes `shouldBe` Identity "abc"
 
@@ -63,25 +69,7 @@ vspSpec = do
           , "-- fooo"
           , "foo :: Int"
           ]
-        new = applyChange mempty (fromString orig)
-                $ J.TextDocumentContentChangeEvent (Just $ J.mkRange 2 1 2 5) (Just 4) ""
-      Rope.lines <$> new `shouldBe` Identity
-          [ "abcdg"
-          , "module Foo where"
-          , "-oo"
-          , "foo :: Int"
-          ]
-
-    it "deletes characters within a line (no len)" $ do
-      let
-        orig = unlines
-          [ "abcdg"
-          , "module Foo where"
-          , "-- fooo"
-          , "foo :: Int"
-          ]
-        new = applyChange mempty (fromString orig)
-                $ J.TextDocumentContentChangeEvent (Just $ J.mkRange 2 1 2 5) Nothing ""
+        new = applyChange mempty (fromString orig) $ mkChangeEvent (J.mkRange 2 1 2 5) ""
       Rope.lines <$> new `shouldBe` Identity
           [ "abcdg"
           , "module Foo where"
@@ -100,30 +88,13 @@ vspSpec = do
           , "-- fooo"
           , "foo :: Int"
           ]
-        new = applyChange mempty (fromString orig)
-                $ J.TextDocumentContentChangeEvent (Just $ J.mkRange 2 0 3 0) (Just 8) ""
+        new = applyChange mempty (fromString orig) $ mkChangeEvent (J.mkRange 2 0 3 0) ""
       Rope.lines <$> new `shouldBe` Identity
           [ "abcdg"
           , "module Foo where"
           , "foo :: Int"
           ]
 
-    it "deletes one line(no len)" $ do
-      -- based on vscode log
-      let
-        orig = unlines
-          [ "abcdg"
-          , "module Foo where"
-          , "-- fooo"
-          , "foo :: Int"
-          ]
-        new = applyChange mempty (fromString orig)
-                $ J.TextDocumentContentChangeEvent (Just $ J.mkRange 2 0 3 0) Nothing ""
-      Rope.lines <$> new `shouldBe` Identity
-          [ "abcdg"
-          , "module Foo where"
-          , "foo :: Int"
-          ]
     -- ---------------------------------
 
     it "deletes two lines" $ do
@@ -135,28 +106,12 @@ vspSpec = do
           , "foo :: Int"
           , "foo = bb"
           ]
-        new = applyChange mempty (fromString orig)
-                $ J.TextDocumentContentChangeEvent (Just $ J.mkRange 1 0 3 0) (Just 19) ""
+        new = applyChange mempty (fromString orig) $ mkChangeEvent (J.mkRange 1 0 3 0) ""
       Rope.lines <$> new `shouldBe` Identity
           [ "module Foo where"
           , "foo = bb"
           ]
 
-    it "deletes two lines(no len)" $ do
-      -- based on vscode log
-      let
-        orig = unlines
-          [ "module Foo where"
-          , "-- fooo"
-          , "foo :: Int"
-          , "foo = bb"
-          ]
-        new = applyChange mempty (fromString orig)
-                $ J.TextDocumentContentChangeEvent (Just $ J.mkRange 1 0 3 0) Nothing ""
-      Rope.lines <$> new `shouldBe` Identity
-          [ "module Foo where"
-          , "foo = bb"
-          ]
     -- ---------------------------------
 
   describe "adds characters" $ do
@@ -168,8 +123,7 @@ vspSpec = do
           , "module Foo where"
           , "foo :: Int"
           ]
-        new = applyChange mempty (fromString orig)
-                $ J.TextDocumentContentChangeEvent (Just $ J.mkRange 1 16 1 16) (Just 0) "\n-- fooo"
+        new = applyChange mempty (fromString orig) $ mkChangeEvent (J.mkRange 1 16 1 16) "\n-- fooo"
       Rope.lines <$> new `shouldBe` Identity
           [ "abcdg"
           , "module Foo where"
@@ -186,8 +140,7 @@ vspSpec = do
           [ "module Foo where"
           , "foo = bb"
           ]
-        new = applyChange mempty (fromString orig)
-                $ J.TextDocumentContentChangeEvent (Just $ J.mkRange 1 8 1 8) Nothing "\n-- fooo\nfoo :: Int"
+        new = applyChange mempty (fromString orig) $ mkChangeEvent (J.mkRange 1 8 1 8) "\n-- fooo\nfoo :: Int"
       Rope.lines <$> new `shouldBe` Identity
           [ "module Foo where"
           , "foo = bb"
@@ -213,36 +166,7 @@ vspSpec = do
           , "  putStrLn \"hello world\""
           ]
         -- new = changeChars (fromString orig) (J.Position 7 0) (J.Position 7 8) "baz ="
-        new = applyChange mempty (fromString orig)
-                $ J.TextDocumentContentChangeEvent (Just $ J.mkRange 7 0 7 8) (Just 8) "baz ="
-      Rope.lines <$> new `shouldBe` Identity
-          [ "module Foo where"
-          , "-- fooo"
-          , "foo :: Int"
-          , "foo = bb"
-          , ""
-          , "bb = 5"
-          , ""
-          , "baz ="
-          , "  putStrLn \"hello world\""
-          ]
-    it "removes end of a line(no len)" $ do
-      -- based on vscode log
-      let
-        orig = unlines
-          [ "module Foo where"
-          , "-- fooo"
-          , "foo :: Int"
-          , "foo = bb"
-          , ""
-          , "bb = 5"
-          , ""
-          , "baz = do"
-          , "  putStrLn \"hello world\""
-          ]
-        -- new = changeChars (fromString orig) (J.Position 7 0) (J.Position 7 8) "baz ="
-        new = applyChange mempty (fromString orig)
-                $ J.TextDocumentContentChangeEvent (Just $ J.mkRange 7 0 7 8) Nothing "baz ="
+        new = applyChange mempty (fromString orig) $ mkChangeEvent (J.mkRange 7 0 7 8) "baz ="
       Rope.lines <$> new `shouldBe` Identity
           [ "module Foo where"
           , "-- fooo"
@@ -260,8 +184,7 @@ vspSpec = do
           [ "a𐐀b"
           , "a𐐀b"
           ]
-        new = applyChange mempty (fromString orig)
-                $ J.TextDocumentContentChangeEvent (Just $ J.mkRange 1 0 1 3) (Just 3) "𐐀𐐀"
+        new = applyChange mempty (fromString orig) $ mkChangeEvent (J.mkRange 1 0 1 3) "𐐀𐐀"
       Rope.lines <$> new `shouldBe` Identity
           [ "a𐐀b"
           , "𐐀𐐀b"

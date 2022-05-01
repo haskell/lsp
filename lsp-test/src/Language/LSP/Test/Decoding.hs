@@ -17,8 +17,7 @@ import qualified Data.ByteString.Lazy.Char8    as B
 import           Data.Maybe
 import           System.IO
 import           System.IO.Error
-import           Language.LSP.Types
-import           Language.LSP.Types.Lens
+import           Language.LSP.Types hiding (error)
 import           Language.LSP.Test.Exceptions
 
 import Data.IxMap
@@ -51,7 +50,7 @@ getHeaders h = do
           | isEOFError e = throw UnexpectedServerTermination
           | otherwise = throw e
 
-type RequestMap = IxMap LspId (SMethod :: Method FromClient Request -> Type )
+type RequestMap = IxMap LspId (SMethod :: Method ClientToServer Request -> Type )
 
 newRequestMap :: RequestMap
 newRequestMap = emptyIxMap

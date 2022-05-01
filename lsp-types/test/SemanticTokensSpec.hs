@@ -1,33 +1,37 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeApplications  #-}
 module SemanticTokensSpec where
 
-import Test.Hspec
-import Language.LSP.Types
-import Data.List (unfoldr)
-import Data.Either (isRight)
+import           Data.Either        (isRight)
+import           Data.List          (unfoldr)
+import           Language.LSP.Types hiding (context)
+import           Test.Hspec
 
 spec :: Spec
 spec = do
-  let exampleLegend = SemanticTokensLegend (List [SttProperty, SttType, SttClass]) (List [StmUnknown "private", StmStatic])
+  let
+      allMods = [SemanticTokenModifiers_Abstract, SemanticTokenModifiers_Static]
+      exampleLegend = SemanticTokensLegend
+        (fmap semanticTokenTypesToValue [SemanticTokenTypes_Property, SemanticTokenTypes_Type, SemanticTokenTypes_Class])
+        (fmap semanticTokenModifiersToValue allMods)
       exampleTokens1 = [
-        SemanticTokenAbsolute 2 5 3 SttProperty [StmUnknown "private", StmStatic]
-        , SemanticTokenAbsolute 2 10 4 SttType []
-        , SemanticTokenAbsolute 5 2 7 SttClass []
+        SemanticTokenAbsolute 2 5 3 SemanticTokenTypes_Property allMods
+        , SemanticTokenAbsolute 2 10 4 SemanticTokenTypes_Type []
+        , SemanticTokenAbsolute 5 2 7 SemanticTokenTypes_Class []
         ]
       exampleTokens2 = [
-        SemanticTokenAbsolute 3 5 3 SttProperty [StmUnknown "private", StmStatic]
-        , SemanticTokenAbsolute 3 10 4 SttType []
-        , SemanticTokenAbsolute 6 2 7 SttClass []
+        SemanticTokenAbsolute 3 5 3 SemanticTokenTypes_Property allMods
+        , SemanticTokenAbsolute 3 10 4 SemanticTokenTypes_Type []
+        , SemanticTokenAbsolute 6 2 7 SemanticTokenTypes_Class []
         ]
 
       bigNumber :: UInt
       bigNumber = 100000
       bigTokens =
-        unfoldr (\i -> if i == bigNumber then Nothing else Just (SemanticTokenAbsolute i 1 1 SttType [StmUnknown "private", StmStatic], i+1)) 0
+        unfoldr (\i -> if i == bigNumber then Nothing else Just (SemanticTokenAbsolute i 1 1 SemanticTokenTypes_Type allMods, i+1)) 0
       -- Relativized version of bigTokens
       bigTokensRel =
-        unfoldr (\i -> if i == bigNumber then Nothing else Just (SemanticTokenRelative (if i == 0 then 0 else 1) 1 1 SttType [StmUnknown "private", StmStatic], i+1)) 0
+        unfoldr (\i -> if i == bigNumber then Nothing else Just (SemanticTokenRelative (if i == 0 then 0 else 1) 1 1 SemanticTokenTypes_Type allMods, i+1)) 0
 
       -- One more order of magnitude makes diffing more-or-less hang - possibly we need a better diffing algorithm, since this is only ~= 200 tokens at 5 ints per token
       -- (I checked and it is the diffing that's slow, not turning it into edits)

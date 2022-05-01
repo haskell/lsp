@@ -58,8 +58,8 @@ library
                      , mtl < 2.4
                      , parser-combinators >= 1.2
                      , process >= 1.6
+                     , row-types
                      , text
-                     , transformers
                      , unordered-containers
                      , some
   if os(windows)
@@ -83,6 +83,7 @@ test-suite tests
   ghc-options:         -W
   build-depends:       base >= 4.10 && < 5
                      , hspec
+                     , containers
                      , lens
                      , lsp == 1.6.*
                      , lsp-test

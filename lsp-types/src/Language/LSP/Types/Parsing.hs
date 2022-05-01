@@ -1,40 +1,44 @@
-{-# LANGUAGE GADTs                      #-}
-{-# LANGUAGE TypeOperators              #-}
-{-# LANGUAGE UndecidableInstances       #-}
-{-# LANGUAGE TypeFamilies               #-}
-{-# LANGUAGE RankNTypes                 #-}
-{-# LANGUAGE FlexibleContexts           #-}
-{-# LANGUAGE DuplicateRecordFields      #-}
-{-# LANGUAGE ConstraintKinds            #-}
-{-# LANGUAGE TypeInType                 #-}
-{-# LANGUAGE StandaloneDeriving         #-}
-{-# LANGUAGE DeriveGeneric              #-}
-{-# LANGUAGE OverloadedStrings          #-}
-{-# LANGUAGE FlexibleInstances          #-}
-{-# LANGUAGE TupleSections              #-}
-{-# LANGUAGE TypeApplications           #-}
-{-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ConstraintKinds       #-}
+{-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE GADTs                 #-}
+{-# LANGUAGE LambdaCase            #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE RankNTypes            #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE StandaloneDeriving    #-}
+{-# LANGUAGE TupleSections         #-}
+{-# LANGUAGE TypeApplications      #-}
+{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE TypeInType            #-}
+{-# LANGUAGE TypeOperators         #-}
+{-# LANGUAGE UndecidableInstances  #-}
 
 module Language.LSP.Types.Parsing where
 
+import           Language.LSP.Types.Common
+import           Language.LSP.Types.Internal.Generated
 import           Language.LSP.Types.LspId
-import           Language.LSP.Types.Method
 import           Language.LSP.Types.Message
+import           Language.LSP.Types.Method
 
-import Data.Aeson
-import Data.Aeson.Types
-import Data.GADT.Compare
-import Data.Type.Equality
-import Data.Function (on)
+import           Data.Aeson
+import           Data.Aeson.Types
+import           Data.Function                         (on)
+import           Data.GADT.Compare
+import           Data.Proxy
+import           Data.Type.Equality
+import           GHC.TypeLits                          (sameSymbol)
 
 -- ---------------------------------------------------------------------
 -- Working with arbitrary messages
 -- ---------------------------------------------------------------------
 
 data FromServerMessage' a where
-  FromServerMess :: forall t (m :: Method FromServer t) a. SMethod m -> Message m -> FromServerMessage' a
-  FromServerRsp  :: forall (m :: Method FromClient Request) a. a m -> ResponseMessage m -> FromServerMessage' a
+  FromServerMess :: forall t (m :: Method ServerToClient t) a. SMethod m -> TMessage m -> FromServerMessage' a
+  FromServerRsp  :: forall (m :: Method ClientToServer Request) a. a m -> TResponseMessage m -> FromServerMessage' a
 
 type FromServerMessage = FromServerMessage' SMethod
 
@@ -45,33 +49,33 @@ instance Show FromServerMessage where
 
 instance ToJSON FromServerMessage where
   toJSON (FromServerMess m p) = serverMethodJSON m (toJSON p)
-  toJSON (FromServerRsp m p) = clientResponseJSON m (toJSON p)
+  toJSON (FromServerRsp m p)  = clientResponseJSON m (toJSON p)
 
-fromServerNot :: forall (m :: Method FromServer Notification).
-  Message m ~ NotificationMessage m => NotificationMessage m -> FromServerMessage
-fromServerNot m@NotificationMessage{_method=meth} = FromServerMess meth m
+fromServerNot :: forall (m :: Method ServerToClient Notification).
+  TMessage m ~ TNotificationMessage m => TNotificationMessage m -> FromServerMessage
+fromServerNot m@TNotificationMessage{_method=meth} = FromServerMess meth m
 
-fromServerReq :: forall (m :: Method FromServer Request).
-  Message m ~ RequestMessage m => RequestMessage m -> FromServerMessage
-fromServerReq m@RequestMessage{_method=meth} = FromServerMess meth m
+fromServerReq :: forall (m :: Method ServerToClient Request).
+  TMessage m ~ TRequestMessage m => TRequestMessage m -> FromServerMessage
+fromServerReq m@TRequestMessage{_method=meth} = FromServerMess meth m
 
 data FromClientMessage' a where
-  FromClientMess :: forall t (m :: Method FromClient t) a. SMethod m -> Message m -> FromClientMessage' a
-  FromClientRsp  :: forall (m :: Method FromServer Request) a. a m -> ResponseMessage m -> FromClientMessage' a
+  FromClientMess :: forall t (m :: Method ClientToServer t) a . SMethod m -> TMessage m -> FromClientMessage' a
+  FromClientRsp  :: forall (m :: Method ServerToClient Request) a . a m -> TResponseMessage m -> FromClientMessage' a
 
 type FromClientMessage = FromClientMessage' SMethod
 
 instance ToJSON FromClientMessage where
   toJSON (FromClientMess m p) = clientMethodJSON m (toJSON p)
-  toJSON (FromClientRsp m p) = serverResponseJSON m (toJSON p)
+  toJSON (FromClientRsp m p)  = serverResponseJSON m (toJSON p)
 
-fromClientNot :: forall (m :: Method FromClient Notification).
-  Message m ~ NotificationMessage m => NotificationMessage m -> FromClientMessage
-fromClientNot m@NotificationMessage{_method=meth} = FromClientMess meth m
+fromClientNot :: forall (m :: Method ClientToServer Notification).
+  TMessage m ~ TNotificationMessage m => TNotificationMessage m -> FromClientMessage
+fromClientNot m@TNotificationMessage{_method=meth} = FromClientMess meth m
 
-fromClientReq :: forall (m :: Method FromClient Request).
-  Message m ~ RequestMessage m => RequestMessage m -> FromClientMessage
-fromClientReq m@RequestMessage{_method=meth} = FromClientMess meth m
+fromClientReq :: forall (m :: Method ClientToServer Request).
+  TMessage m ~ TRequestMessage m => TRequestMessage m -> FromClientMessage
+fromClientReq m@TRequestMessage{_method=meth} = FromClientMess meth m
 
 -- ---------------------------------------------------------------------
 -- Parsing
@@ -88,7 +92,7 @@ Notification | jsonrpc |    | method | params?
 -}
 
 {-# INLINE parseServerMessage #-}
-parseServerMessage :: LookupFunc FromClient a -> Value -> Parser (FromServerMessage' a)
+parseServerMessage :: LookupFunc ClientToServer a -> Value -> Parser (FromServerMessage' a)
 parseServerMessage lookupId v@(Object o) = do
   methMaybe <- o .:! "method"
   idMaybe <- o .:! "id"
@@ -98,14 +102,14 @@ parseServerMessage lookupId v@(Object o) = do
       case splitServerMethod m of
         IsServerNot -> FromServerMess m <$> parseJSON v
         IsServerReq -> FromServerMess m <$> parseJSON v
-        IsServerEither | SCustomMethod cm <- m -> do
+        IsServerEither | SMethod_CustomMethod (p :: Proxy s') <- m -> do
           case idMaybe of
             -- Request
             Just _ ->
-              let m' = (SCustomMethod cm :: SMethod (CustomMethod :: Method FromServer Request))
+              let m' = (SMethod_CustomMethod p :: SMethod (Method_CustomMethod s' :: Method ServerToClient Request))
               in FromServerMess m' <$> parseJSON v
             Nothing ->
-              let m' = (SCustomMethod cm :: SMethod (CustomMethod :: Method FromServer Notification))
+              let m' = (SMethod_CustomMethod p :: SMethod (Method_CustomMethod s' :: Method ServerToClient Notification))
               in FromServerMess m' <$> parseJSON v
     Nothing -> do
       case idMaybe of
@@ -117,7 +121,7 @@ parseServerMessage lookupId v@(Object o) = do
 parseServerMessage _ v = fail $ unwords ["parseServerMessage expected object, got:",show v]
 
 {-# INLINE parseClientMessage #-}
-parseClientMessage :: LookupFunc FromServer a -> Value -> Parser (FromClientMessage' a)
+parseClientMessage :: LookupFunc ServerToClient a -> Value -> Parser (FromClientMessage' a)
 parseClientMessage lookupId v@(Object o) = do
   methMaybe <- o .:! "method"
   idMaybe <- o .:! "id"
@@ -127,14 +131,14 @@ parseClientMessage lookupId v@(Object o) = do
       case splitClientMethod m of
         IsClientNot -> FromClientMess m <$> parseJSON v
         IsClientReq -> FromClientMess m <$> parseJSON v
-        IsClientEither | SCustomMethod cm <- m -> do
+        IsClientEither | SMethod_CustomMethod (p :: Proxy s') <- m -> do
           case idMaybe of
             -- Request
             Just _ ->
-              let m' = (SCustomMethod cm :: SMethod (CustomMethod :: Method FromClient Request))
+              let m' = (SMethod_CustomMethod p :: SMethod (Method_CustomMethod s' :: Method ClientToServer Request))
               in FromClientMess m' <$> parseJSON v
             Nothing ->
-              let m' = (SCustomMethod cm :: SMethod (CustomMethod :: Method FromClient Notification))
+              let m' = (SMethod_CustomMethod p :: SMethod (Method_CustomMethod s' :: Method ClientToServer Notification))
               in FromClientMess m' <$> parseJSON v
     Nothing -> do
       case idMaybe of
@@ -150,147 +154,171 @@ parseClientMessage _ v = fail $ unwords ["parseClientMessage expected object, go
 -- ---------------------------------------------------------------------
 
 {-# INLINE clientResponseJSON #-}
-clientResponseJSON :: SClientMethod m -> (HasJSON (ResponseMessage m) => x) -> x
+clientResponseJSON :: SClientMethod m -> (HasJSON (TResponseMessage m) => x) -> x
 clientResponseJSON m x = case splitClientMethod m of
-  IsClientReq -> x
+  IsClientReq    -> x
   IsClientEither -> x
 
 {-# INLINE serverResponseJSON #-}
-serverResponseJSON :: SServerMethod m -> (HasJSON (ResponseMessage m) => x) -> x
+serverResponseJSON :: SServerMethod m -> (HasJSON (TResponseMessage m) => x) -> x
 serverResponseJSON m x = case splitServerMethod m of
-  IsServerReq -> x
+  IsServerReq    -> x
   IsServerEither -> x
 
 {-# INLINE clientMethodJSON#-}
-clientMethodJSON :: SClientMethod m -> (ToJSON (ClientMessage m) => x) -> x
+clientMethodJSON :: SClientMethod m -> (ToJSON (TClientMessage m) => x) -> x
 clientMethodJSON m x =
   case splitClientMethod m of
-    IsClientNot -> x
-    IsClientReq -> x
+    IsClientNot    -> x
+    IsClientReq    -> x
     IsClientEither -> x
 
 {-# INLINE serverMethodJSON #-}
-serverMethodJSON :: SServerMethod m -> (ToJSON (ServerMessage m) => x) -> x
+serverMethodJSON :: SServerMethod m -> (ToJSON (TServerMessage m) => x) -> x
 serverMethodJSON m x =
   case splitServerMethod m of
-    IsServerNot -> x
-    IsServerReq -> x
+    IsServerNot    -> x
+    IsServerReq    -> x
     IsServerEither -> x
 
 type HasJSON a = (ToJSON a,FromJSON a,Eq a)
 
 -- Reify universal properties about Client/Server Messages
 
-data ClientNotOrReq (m :: Method FromClient t) where
+data ClientNotOrReq (m :: Method ClientToServer t) where
   IsClientNot
-    :: ( HasJSON (ClientMessage m)
-       , Message m ~ NotificationMessage m)
-    => ClientNotOrReq (m :: Method FromClient Notification)
+    :: ( HasJSON (TClientMessage m)
+       , TMessage m ~ TNotificationMessage m)
+    => ClientNotOrReq (m :: Method ClientToServer Notification)
   IsClientReq
-    :: forall (m :: Method FromClient Request).
-    ( HasJSON (ClientMessage m)
-    , HasJSON (ResponseMessage m)
-    , Message m ~ RequestMessage m)
+    :: forall (m :: Method ClientToServer Request).
+    ( HasJSON (TClientMessage m)
+    , HasJSON (TResponseMessage m)
+    , TMessage m ~ TRequestMessage m)
     => ClientNotOrReq m
   IsClientEither
-    :: ClientNotOrReq CustomMethod
+    :: ClientNotOrReq (Method_CustomMethod s)
 
-data ServerNotOrReq (m :: Method FromServer t) where
+data ServerNotOrReq (m :: Method ServerToClient t) where
   IsServerNot
-    :: ( HasJSON (ServerMessage m)
-       , Message m ~ NotificationMessage m)
-    => ServerNotOrReq (m :: Method FromServer Notification)
+    :: ( HasJSON (TServerMessage m)
+       , TMessage m ~ TNotificationMessage m)
+    => ServerNotOrReq (m :: Method ServerToClient Notification)
   IsServerReq
-    :: forall (m :: Method FromServer Request).
-    ( HasJSON (ServerMessage m)
-    , HasJSON (ResponseMessage m)
-    , Message m ~ RequestMessage m)
+    :: forall (m :: Method ServerToClient Request).
+    ( HasJSON (TServerMessage m)
+    , HasJSON (TResponseMessage m)
+    , TMessage m ~ TRequestMessage m)
     => ServerNotOrReq m
   IsServerEither
-    :: ServerNotOrReq CustomMethod
+    :: ServerNotOrReq (Method_CustomMethod s)
 
 {-# INLINE splitClientMethod #-}
 splitClientMethod :: SClientMethod m -> ClientNotOrReq m
-splitClientMethod SInitialize = IsClientReq
-splitClientMethod SInitialized = IsClientNot
-splitClientMethod SShutdown = IsClientReq
-splitClientMethod SExit = IsClientNot
-splitClientMethod SWorkspaceDidChangeWorkspaceFolders = IsClientNot
-splitClientMethod SWorkspaceDidChangeConfiguration = IsClientNot
-splitClientMethod SWorkspaceDidChangeWatchedFiles = IsClientNot
-splitClientMethod SWorkspaceSymbol = IsClientReq
-splitClientMethod SWorkspaceExecuteCommand = IsClientReq
-splitClientMethod SWindowWorkDoneProgressCancel = IsClientNot
-splitClientMethod STextDocumentDidOpen = IsClientNot
-splitClientMethod STextDocumentDidChange = IsClientNot
-splitClientMethod STextDocumentWillSave = IsClientNot
-splitClientMethod STextDocumentWillSaveWaitUntil = IsClientReq
-splitClientMethod STextDocumentDidSave = IsClientNot
-splitClientMethod STextDocumentDidClose = IsClientNot
-splitClientMethod STextDocumentCompletion = IsClientReq
-splitClientMethod SCompletionItemResolve = IsClientReq
-splitClientMethod STextDocumentHover = IsClientReq
-splitClientMethod STextDocumentSignatureHelp = IsClientReq
-splitClientMethod STextDocumentDeclaration = IsClientReq
-splitClientMethod STextDocumentDefinition = IsClientReq
-splitClientMethod STextDocumentTypeDefinition = IsClientReq
-splitClientMethod STextDocumentImplementation = IsClientReq
-splitClientMethod STextDocumentReferences = IsClientReq
-splitClientMethod STextDocumentDocumentHighlight = IsClientReq
-splitClientMethod STextDocumentDocumentSymbol = IsClientReq
-splitClientMethod STextDocumentCodeAction = IsClientReq
-splitClientMethod STextDocumentCodeLens = IsClientReq
-splitClientMethod SCodeLensResolve = IsClientReq
-splitClientMethod STextDocumentDocumentLink = IsClientReq
-splitClientMethod SDocumentLinkResolve = IsClientReq
-splitClientMethod STextDocumentDocumentColor = IsClientReq
-splitClientMethod STextDocumentColorPresentation = IsClientReq
-splitClientMethod STextDocumentFormatting = IsClientReq
-splitClientMethod STextDocumentRangeFormatting = IsClientReq
-splitClientMethod STextDocumentOnTypeFormatting = IsClientReq
-splitClientMethod STextDocumentRename = IsClientReq
-splitClientMethod STextDocumentPrepareRename = IsClientReq
-splitClientMethod STextDocumentFoldingRange = IsClientReq
-splitClientMethod STextDocumentSelectionRange = IsClientReq
-splitClientMethod STextDocumentPrepareCallHierarchy = IsClientReq
-splitClientMethod SCallHierarchyIncomingCalls = IsClientReq
-splitClientMethod SCallHierarchyOutgoingCalls = IsClientReq
-splitClientMethod STextDocumentSemanticTokens = IsClientReq
-splitClientMethod STextDocumentSemanticTokensFull = IsClientReq
-splitClientMethod STextDocumentSemanticTokensFullDelta = IsClientReq
-splitClientMethod STextDocumentSemanticTokensRange = IsClientReq
-splitClientMethod SCancelRequest = IsClientNot
-splitClientMethod SCustomMethod{} = IsClientEither
+splitClientMethod = \case
+  SMethod_Initialize                          -> IsClientReq
+  SMethod_Initialized                         -> IsClientNot
+  SMethod_Shutdown                            -> IsClientReq
+  SMethod_Exit                                -> IsClientNot
+  SMethod_WorkspaceDidChangeWorkspaceFolders  -> IsClientNot
+  SMethod_WorkspaceDidChangeConfiguration     -> IsClientNot
+  SMethod_WorkspaceDidChangeWatchedFiles      -> IsClientNot
+  SMethod_WorkspaceSymbol                     -> IsClientReq
+  SMethod_WorkspaceExecuteCommand             -> IsClientReq
+  SMethod_WindowWorkDoneProgressCancel        -> IsClientNot
+  SMethod_TextDocumentDidOpen                 -> IsClientNot
+  SMethod_TextDocumentDidChange               -> IsClientNot
+  SMethod_TextDocumentWillSave                -> IsClientNot
+  SMethod_TextDocumentWillSaveWaitUntil       -> IsClientReq
+  SMethod_TextDocumentDidSave                 -> IsClientNot
+  SMethod_TextDocumentDidClose                -> IsClientNot
+  SMethod_TextDocumentCompletion              -> IsClientReq
+  SMethod_TextDocumentHover                   -> IsClientReq
+  SMethod_TextDocumentSignatureHelp           -> IsClientReq
+  SMethod_TextDocumentDeclaration             -> IsClientReq
+  SMethod_TextDocumentDefinition              -> IsClientReq
+  SMethod_TextDocumentTypeDefinition          -> IsClientReq
+  SMethod_TextDocumentImplementation          -> IsClientReq
+  SMethod_TextDocumentReferences              -> IsClientReq
+  SMethod_TextDocumentDocumentHighlight       -> IsClientReq
+  SMethod_TextDocumentDocumentSymbol          -> IsClientReq
+  SMethod_TextDocumentCodeAction              -> IsClientReq
+  SMethod_TextDocumentCodeLens                -> IsClientReq
+  SMethod_TextDocumentDocumentLink            -> IsClientReq
+  SMethod_TextDocumentDocumentColor           -> IsClientReq
+  SMethod_TextDocumentColorPresentation       -> IsClientReq
+  SMethod_TextDocumentFormatting              -> IsClientReq
+  SMethod_TextDocumentRangeFormatting         -> IsClientReq
+  SMethod_TextDocumentOnTypeFormatting        -> IsClientReq
+  SMethod_TextDocumentRename                  -> IsClientReq
+  SMethod_TextDocumentPrepareRename           -> IsClientReq
+  SMethod_TextDocumentFoldingRange            -> IsClientReq
+  SMethod_TextDocumentSelectionRange          -> IsClientReq
+  SMethod_TextDocumentPrepareCallHierarchy    -> IsClientReq
+  SMethod_TextDocumentLinkedEditingRange      -> IsClientReq
+  SMethod_CallHierarchyIncomingCalls          -> IsClientReq
+  SMethod_CallHierarchyOutgoingCalls          -> IsClientReq
+  SMethod_TextDocumentSemanticTokensFull      -> IsClientReq
+  SMethod_TextDocumentSemanticTokensFullDelta -> IsClientReq
+  SMethod_TextDocumentSemanticTokensRange     -> IsClientReq
+  SMethod_WorkspaceSemanticTokensRefresh      -> IsClientReq
+  SMethod_WorkspaceWillCreateFiles            -> IsClientReq
+  SMethod_WorkspaceWillDeleteFiles            -> IsClientReq
+  SMethod_WorkspaceWillRenameFiles            -> IsClientReq
+  SMethod_WorkspaceDidCreateFiles             -> IsClientNot
+  SMethod_WorkspaceDidDeleteFiles             -> IsClientNot
+  SMethod_WorkspaceDidRenameFiles             -> IsClientNot
+  SMethod_TextDocumentMoniker                 -> IsClientReq
+  SMethod_TextDocumentPrepareTypeHierarchy    -> IsClientReq
+  SMethod_TypeHierarchySubtypes               -> IsClientReq
+  SMethod_TypeHierarchySupertypes             -> IsClientReq
+  SMethod_WorkspaceInlineValueRefresh         -> IsClientReq
+  SMethod_TextDocumentInlineValue             -> IsClientReq
+  SMethod_WorkspaceInlayHintRefresh           -> IsClientReq
+  SMethod_TextDocumentInlayHint               -> IsClientReq
+  SMethod_TextDocumentDiagnostic              -> IsClientReq
+  SMethod_WorkspaceDiagnostic                 -> IsClientReq
+  SMethod_WorkspaceDiagnosticRefresh          -> IsClientReq
+  SMethod_CodeLensResolve                     -> IsClientReq
+  SMethod_InlayHintResolve                    -> IsClientReq
+  SMethod_CodeActionResolve                   -> IsClientReq
+  SMethod_DocumentLinkResolve                 -> IsClientReq
+  SMethod_CompletionItemResolve               -> IsClientReq
+  SMethod_WorkspaceSymbolResolve              -> IsClientReq
+  SMethod_NotebookDocumentDidChange           -> IsClientNot
+  SMethod_NotebookDocumentDidClose            -> IsClientNot
+  SMethod_NotebookDocumentDidOpen             -> IsClientNot
+  SMethod_NotebookDocumentDidSave             -> IsClientNot
+  SMethod_SetTrace                            -> IsClientNot
+  SMethod_Progress                            -> IsClientNot
+  SMethod_CancelRequest                       -> IsClientNot
+  (SMethod_CustomMethod _)                    -> IsClientEither
 
 {-# INLINE splitServerMethod #-}
 splitServerMethod :: SServerMethod m -> ServerNotOrReq m
--- Window
-splitServerMethod SWindowShowMessage = IsServerNot
-splitServerMethod SWindowShowMessageRequest = IsServerReq
-splitServerMethod SWindowShowDocument = IsServerReq
-splitServerMethod SWindowLogMessage = IsServerNot
-splitServerMethod SWindowWorkDoneProgressCreate = IsServerReq
-splitServerMethod SProgress = IsServerNot
-splitServerMethod STelemetryEvent = IsServerNot
--- Client
-splitServerMethod SClientRegisterCapability = IsServerReq
-splitServerMethod SClientUnregisterCapability = IsServerReq
--- Workspace
-splitServerMethod SWorkspaceWorkspaceFolders = IsServerReq
-splitServerMethod SWorkspaceConfiguration = IsServerReq
-splitServerMethod SWorkspaceApplyEdit = IsServerReq
-splitServerMethod SWorkspaceSemanticTokensRefresh = IsServerReq
--- Document
-splitServerMethod STextDocumentPublishDiagnostics = IsServerNot
--- Cancelling
-splitServerMethod SCancelRequest = IsServerNot
--- Custom
-splitServerMethod SCustomMethod{} = IsServerEither
+splitServerMethod = \case
+  SMethod_WindowShowMessage              -> IsServerNot
+  SMethod_WindowShowMessageRequest       -> IsServerReq
+  SMethod_WindowShowDocument             -> IsServerReq
+  SMethod_WindowLogMessage               -> IsServerNot
+  SMethod_WindowWorkDoneProgressCreate   -> IsServerReq
+  SMethod_Progress                       -> IsServerNot
+  SMethod_TelemetryEvent                 -> IsServerNot
+  SMethod_ClientRegisterCapability       -> IsServerReq
+  SMethod_ClientUnregisterCapability     -> IsServerReq
+  SMethod_WorkspaceWorkspaceFolders      -> IsServerReq
+  SMethod_WorkspaceConfiguration         -> IsServerReq
+  SMethod_WorkspaceApplyEdit             -> IsServerReq
+  SMethod_TextDocumentPublishDiagnostics -> IsServerNot
+  SMethod_LogTrace                       -> IsServerNot
+  SMethod_CancelRequest                  -> IsServerNot
+  SMethod_WorkspaceCodeLensRefresh       -> IsServerReq
+  (SMethod_CustomMethod _)               -> IsServerEither
 
 -- | Given a witness that two custom methods are of the same type, produce a witness that the methods are the same
 data CustomEq m1 m2 where
   CustomEq
-    :: (m1 ~ (CustomMethod :: Method f t1), m2 ~ (CustomMethod :: Method f t2))
+    :: (m1 ~ (Method_CustomMethod s :: Method f t1), m2 ~ (Method_CustomMethod s :: Method f t2))
     => { runCustomEq :: (t1 ~ t2 => m1 :~~: m2) }
     -> CustomEq m1 m2
 
@@ -316,10 +344,11 @@ mEqServer m1 m2 = go (splitServerMethod m1) (splitServerMethod m2)
       Refl <- geq m1 m2
       pure $ Right HRefl
     go IsServerEither IsServerEither
-      | SCustomMethod c1 <- m1
-      , SCustomMethod c2 <- m2
-      , c1 == c2
-      = Just $ Left $ CustomEq HRefl
+      | SMethod_CustomMethod p1 <- m1
+      , SMethod_CustomMethod p2 <- m2
+      = case sameSymbol p1 p2 of
+          Just Refl -> Just $ Left $ CustomEq HRefl
+          _         -> Nothing
     go _ _ = Nothing
 
 -- | Heterogeneous equality on singleton client methods
@@ -333,8 +362,9 @@ mEqClient m1 m2 = go (splitClientMethod m1) (splitClientMethod m2)
       Refl <- geq m1 m2
       pure $ Right HRefl
     go IsClientEither IsClientEither
-      | SCustomMethod c1 <- m1
-      , SCustomMethod c2 <- m2
-      , c1 == c2
-      = Just $ Left $ CustomEq HRefl
+      | SMethod_CustomMethod p1 <- m1
+      , SMethod_CustomMethod p2 <- m2
+      = case sameSymbol p1 p2 of
+          Just Refl -> Just $ Left $ CustomEq HRefl
+          _         -> Nothing
     go _ _ = Nothing

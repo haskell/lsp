@@ -14,17 +14,19 @@ module Language.LSP.Types.SMethodMap
   , map
   ) where
 
-import Prelude hiding (lookup, map)
-import Data.IntMap (IntMap)
-import qualified Data.IntMap.Strict as IntMap
-import Data.Kind (Type)
-import Data.Map (Map)
-import qualified Data.Map.Strict as Map
-import Data.Text (Text)
-import GHC.Exts (Int(..), dataToTag#, Any)
-import Unsafe.Coerce (unsafeCoerce)
+import           Data.IntMap                           (IntMap)
+import qualified Data.IntMap.Strict                    as IntMap
+import           Data.Kind                             (Type)
+import           Data.Map                              (Map)
+import qualified Data.Map.Strict                       as Map
+import           GHC.Exts                              (Any, Int (..),
+                                                        dataToTag#)
+import           Prelude                               hiding (lookup, map)
+import           Unsafe.Coerce                         (unsafeCoerce)
 
-import Language.LSP.Types.Method (Method(..), SMethod(..))
+import           GHC.TypeLits                          (symbolVal)
+import           Language.LSP.Types.Internal.Generated (Method (..),
+                                                        SMethod (..))
 
 -- This type exists to avoid a dependency on 'dependent-map'. It is less
 -- safe (since we use 'unsafeCoerce') but much simpler and hence easier to include.
@@ -35,30 +37,30 @@ data SMethodMap (v :: Method f t -> Type) =
   -- in the map. We do not attempt to be truly dependent here, and instead exploit
   -- 'usafeCoerce' to go to and from 'v Any'.
   -- The sole exception is 'SCustomMethod', for which we keep a separate map from
-  -- its 'Text' parameter (and where we can get the type indices right).
-  SMethodMap !(IntMap (v Any)) !(Map Text (v 'CustomMethod))
+  -- its 'Text' parameter
+  SMethodMap !(IntMap (v Any)) !(Map String (v Any))
 
 toIx :: SMethod a -> Int
 toIx k = I# (dataToTag# k)
 
 singleton :: SMethod a -> v a -> SMethodMap v
-singleton (SCustomMethod t) v = SMethodMap mempty (Map.singleton t v)
+singleton (SMethod_CustomMethod t) v = SMethodMap mempty (Map.singleton (symbolVal t) (unsafeCoerce v))
 singleton k v = SMethodMap (IntMap.singleton (toIx k) (unsafeCoerce v)) mempty
 
 insert :: SMethod a -> v a -> SMethodMap v -> SMethodMap v
-insert (SCustomMethod t) v (SMethodMap xs ys) = SMethodMap xs (Map.insert t v ys)
+insert (SMethod_CustomMethod t) v (SMethodMap xs ys) = SMethodMap xs (Map.insert (symbolVal t) (unsafeCoerce v) ys)
 insert k v (SMethodMap xs ys) = SMethodMap (IntMap.insert (toIx k) (unsafeCoerce v) xs) ys
 
 delete :: SMethod a -> SMethodMap v -> SMethodMap v
-delete (SCustomMethod t) (SMethodMap xs ys) = SMethodMap xs (Map.delete t ys)
+delete (SMethod_CustomMethod t) (SMethodMap xs ys) = SMethodMap xs (Map.delete (symbolVal t) ys)
 delete k (SMethodMap xs ys) = SMethodMap (IntMap.delete (toIx k) xs) ys
 
 member :: SMethod a -> SMethodMap v -> Bool
-member (SCustomMethod t) (SMethodMap _ ys) = Map.member t ys
-member k (SMethodMap xs _) = IntMap.member (toIx k) xs
+member (SMethod_CustomMethod t) (SMethodMap _ ys) = Map.member (symbolVal t) ys
+member k (SMethodMap xs _)                        = IntMap.member (toIx k) xs
 
 lookup :: SMethod a -> SMethodMap v -> Maybe (v a)
-lookup (SCustomMethod t) (SMethodMap _ ys) = Map.lookup t ys
+lookup (SMethod_CustomMethod t) (SMethodMap _ ys) = unsafeCoerce (Map.lookup (symbolVal t) ys)
 lookup k (SMethodMap xs _) = unsafeCoerce (IntMap.lookup (toIx k) xs)
 
 map :: (forall a. u a -> v a) -> SMethodMap u -> SMethodMap v

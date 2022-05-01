@@ -1,123 +1,56 @@
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilyDependencies #-}
+{-# LANGUAGE DeriveAnyClass            #-}
+{-# LANGUAGE DeriveGeneric             #-}
+{-# LANGUAGE DuplicateRecordFields     #-}
 {-# LANGUAGE ExistentialQuantification #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE TypeInType #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE FlexibleContexts          #-}
+{-# LANGUAGE FlexibleInstances         #-}
+{-# LANGUAGE FunctionalDependencies    #-}
+{-# LANGUAGE MultiParamTypeClasses     #-}
+{-# LANGUAGE OverloadedStrings         #-}
+{-# LANGUAGE RankNTypes                #-}
+{-# LANGUAGE ScopedTypeVariables       #-}
+{-# LANGUAGE StandaloneDeriving        #-}
+{-# LANGUAGE TemplateHaskell           #-}
+{-# LANGUAGE TypeApplications          #-}
+{-# LANGUAGE TypeFamilies              #-}
+{-# LANGUAGE TypeInType                #-}
+{-# LANGUAGE TypeOperators             #-}
+{-# LANGUAGE UndecidableInstances      #-}
 
-{-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
-{-# OPTIONS_GHC -Werror=incomplete-patterns #-}
+{-# OPTIONS_GHC -ddump-splices -ddump-to-file -dsuppress-uniques -dsuppress-coercions -dsuppress-type-applications -dsuppress-unfoldings -dsuppress-idinfo -dppr-cols=200 -dumpdir /tmp/dumps #-}
 
 module Language.LSP.Types.Registration where
 
-import           Data.Aeson
-import           Data.Aeson.TH
-import           Data.Text (Text)
-import           Data.Function (on)
-import           Data.Kind
-import           Data.Void (Void)
-import           GHC.Generics
-import           Language.LSP.Types.CallHierarchy
-import           Language.LSP.Types.CodeAction
-import           Language.LSP.Types.CodeLens
-import           Language.LSP.Types.Command
 import           Language.LSP.Types.Common
-import           Language.LSP.Types.Completion
-import           Language.LSP.Types.Declaration
-import           Language.LSP.Types.Definition
-import           Language.LSP.Types.DocumentColor
-import           Language.LSP.Types.DocumentHighlight
-import           Language.LSP.Types.DocumentLink
-import           Language.LSP.Types.DocumentSymbol
-import           Language.LSP.Types.FoldingRange
-import           Language.LSP.Types.Formatting
-import           Language.LSP.Types.Hover
-import           Language.LSP.Types.Implementation
+import           Language.LSP.Types.Internal.Generated
+import           Language.LSP.Types.Internal.Lenses
 import           Language.LSP.Types.Method
-import           Language.LSP.Types.References
-import           Language.LSP.Types.Rename
-import           Language.LSP.Types.SignatureHelp
-import           Language.LSP.Types.SelectionRange
-import           Language.LSP.Types.SemanticTokens
-import           Language.LSP.Types.TextDocument
-import           Language.LSP.Types.TypeDefinition
 import           Language.LSP.Types.Utils
-import           Language.LSP.Types.WatchedFiles
-import           Language.LSP.Types.WorkspaceSymbol
 
+import           Control.Lens.TH
+import           Data.Aeson
+import           Data.Text                             (Text)
+import qualified Data.Text                             as T
+import           GHC.Generics
 
--- ---------------------------------------------------------------------
-
--- | Matches up the registration options for a specific method
-type family RegistrationOptions (m :: Method FromClient t) :: Type where
-  -- Workspace
-  RegistrationOptions WorkspaceDidChangeWorkspaceFolders = Empty
-  RegistrationOptions WorkspaceDidChangeConfiguration    = Empty
-  RegistrationOptions WorkspaceDidChangeWatchedFiles     = DidChangeWatchedFilesRegistrationOptions
-  RegistrationOptions WorkspaceSymbol                    = WorkspaceSymbolRegistrationOptions
-  RegistrationOptions WorkspaceExecuteCommand            = ExecuteCommandRegistrationOptions
-
-  -- Text synchronisation
-  RegistrationOptions TextDocumentDidOpen                = TextDocumentRegistrationOptions
-  RegistrationOptions TextDocumentDidChange              = TextDocumentChangeRegistrationOptions
-  RegistrationOptions TextDocumentWillSave               = TextDocumentRegistrationOptions
-  RegistrationOptions TextDocumentWillSaveWaitUntil      = TextDocumentRegistrationOptions
-  RegistrationOptions TextDocumentDidSave                = TextDocumentSaveRegistrationOptions
-  RegistrationOptions TextDocumentDidClose               = TextDocumentRegistrationOptions
-
-  -- Language features
-  RegistrationOptions TextDocumentCompletion             = CompletionRegistrationOptions
-  RegistrationOptions TextDocumentHover                  = HoverRegistrationOptions
-  RegistrationOptions TextDocumentSignatureHelp          = SignatureHelpRegistrationOptions
-  RegistrationOptions TextDocumentDeclaration            = DeclarationRegistrationOptions
-  RegistrationOptions TextDocumentDefinition             = DefinitionRegistrationOptions
-  RegistrationOptions TextDocumentTypeDefinition         = TypeDefinitionRegistrationOptions
-  RegistrationOptions TextDocumentImplementation         = ImplementationRegistrationOptions
-  RegistrationOptions TextDocumentReferences             = ReferenceRegistrationOptions
-  RegistrationOptions TextDocumentDocumentHighlight      = DocumentHighlightRegistrationOptions
-  RegistrationOptions TextDocumentDocumentSymbol         = DocumentSymbolRegistrationOptions
-  RegistrationOptions TextDocumentCodeAction             = CodeActionRegistrationOptions
-  RegistrationOptions TextDocumentCodeLens               = CodeLensRegistrationOptions
-  RegistrationOptions TextDocumentDocumentLink           = DocumentLinkRegistrationOptions
-  RegistrationOptions TextDocumentDocumentColor          = DocumentColorRegistrationOptions
-  RegistrationOptions TextDocumentFormatting             = DocumentFormattingRegistrationOptions
-  RegistrationOptions TextDocumentRangeFormatting        = DocumentRangeFormattingRegistrationOptions
-  RegistrationOptions TextDocumentOnTypeFormatting       = DocumentOnTypeFormattingRegistrationOptions
-  RegistrationOptions TextDocumentRename                 = RenameRegistrationOptions
-  RegistrationOptions TextDocumentFoldingRange           = FoldingRangeRegistrationOptions
-  RegistrationOptions TextDocumentSelectionRange         = SelectionRangeRegistrationOptions
-  RegistrationOptions TextDocumentPrepareCallHierarchy   = CallHierarchyRegistrationOptions
-  RegistrationOptions TextDocumentSemanticTokens         = SemanticTokensRegistrationOptions
-  RegistrationOptions m                                  = Void
-
-data Registration (m :: Method FromClient t) =
-  Registration
+-- | Typed registration type, with correct options.
+data TRegistration (m :: Method ClientToServer t) =
+  TRegistration
     { -- | The id used to register the request. The id can be used to deregister
       -- the request again.
-      _id :: Text
+      _id              :: Text
       -- | The method / capability to register for.
-    , _method :: SClientMethod m
+    , _method          :: SClientMethod m
       -- | Options necessary for the registration.
       -- Make this strict to aid the pattern matching exhaustiveness checker
     , _registerOptions :: !(Maybe (RegistrationOptions m))
     }
   deriving Generic
 
-deriving instance Eq (RegistrationOptions m) => Eq (Registration m)
-deriving instance Show (RegistrationOptions m) => Show (Registration m)
+deriving instance Eq (RegistrationOptions m) => Eq (TRegistration m)
+deriving instance Show (RegistrationOptions m) => Show (TRegistration m)
 
+-- TODO: can we do this generically somehow?
 -- This generates the function
 -- regHelper :: SMethod m
 --           -> (( Show (RegistrationOptions m)
@@ -127,10 +60,10 @@ deriving instance Show (RegistrationOptions m) => Show (Registration m)
 --           -> x
 makeRegHelper ''RegistrationOptions
 
-instance ToJSON (Registration m) where
-  toJSON x@(Registration _ m _) = regHelper m (genericToJSON lspOptions x)
+instance ToJSON (TRegistration m) where
+  toJSON x@(TRegistration _ m _) = regHelper m (genericToJSON lspOptions x)
 
-data SomeRegistration = forall t (m :: Method FromClient t). SomeRegistration (Registration m)
+data SomeRegistration = forall t (m :: Method ClientToServer t). SomeRegistration (TRegistration m)
 
 instance ToJSON SomeRegistration where
   toJSON (SomeRegistration r) = toJSON r
@@ -138,42 +71,60 @@ instance ToJSON SomeRegistration where
 instance FromJSON SomeRegistration where
   parseJSON = withObject "Registration" $ \o -> do
     SomeClientMethod m <- o .: "method"
-    r <- Registration <$> o .: "id" <*> pure m <*> regHelper m (o .: "registerOptions")
+    r <- TRegistration <$> o .: "id" <*> pure m <*> regHelper m (o .: "registerOptions")
     pure (SomeRegistration r)
 
-instance Eq SomeRegistration where
-  (==) = (==) `on` toJSON
-
 instance Show SomeRegistration where
-  show (SomeRegistration r@(Registration _ m _)) = regHelper m (show r)
+  show (SomeRegistration r@(TRegistration _ m _)) = regHelper m (show r)
 
-data RegistrationParams =
-  RegistrationParams { _registrations :: List SomeRegistration }
-  deriving (Show, Eq)
+toUntypedRegistration :: TRegistration m -> Registration
+toUntypedRegistration (TRegistration i meth opts) = Registration i (T.pack $ someMethodToMethodString $ SomeMethod meth) (Just $ regHelper meth (toJSON opts))
 
-deriveJSON lspOptions ''RegistrationParams
-
+toSomeRegistration :: Registration -> Maybe SomeRegistration
+toSomeRegistration r =
+  let v = toJSON r
+  in case fromJSON v of
+    Success r' -> Just r'
+    _          -> Nothing
 
 -- ---------------------------------------------------------------------
 
--- | General parameters to unregister a capability.
-data Unregistration =
-  Unregistration
+-- | Typed unregistration type.
+data TUnregistration (m :: Method ClientToServer t) =
+  TUnregistration
     { -- | The id used to unregister the request or notification. Usually an id
       -- provided during the register request.
       _id     :: Text
       -- | The method / capability to unregister for.
-    , _method :: SomeClientMethod
-    } deriving (Show, Eq)
+    , _method :: SMethod m
+    } deriving Generic
 
-deriveJSON lspOptions ''Unregistration
+deriving instance Eq (TUnregistration m)
+deriving instance Show (TUnregistration m)
 
-data UnregistrationParams =
-  UnregistrationParams
-    { -- | This should correctly be named @unregistrations@. However changing this
-      -- is a breaking change and needs to wait until we deliver a 4.x version
-      -- of the specification.
-      _unregisterations :: List Unregistration
-    } deriving (Show, Eq)
+instance ToJSON (TUnregistration m) where
+  toJSON x@(TUnregistration _ m) = regHelper m (genericToJSON lspOptions x)
 
-deriveJSON lspOptions ''UnregistrationParams
+data SomeUnregistration = forall t (m :: Method ClientToServer t). SomeUnregistration (TUnregistration m)
+
+instance ToJSON SomeUnregistration where
+  toJSON (SomeUnregistration r) = toJSON r
+
+instance FromJSON SomeUnregistration where
+  parseJSON = withObject "Unregistration" $ \o -> do
+    SomeClientMethod m <- o .: "method"
+    r <- TUnregistration <$> o .: "id" <*> pure m
+    pure (SomeUnregistration r)
+
+toUntypedUnregistration :: TUnregistration m -> Unregistration
+toUntypedUnregistration (TUnregistration i meth) = Unregistration i (T.pack $ someMethodToMethodString $ SomeMethod meth)
+
+toSomeUnregistration :: Unregistration -> Maybe SomeUnregistration
+toSomeUnregistration r =
+  let v = toJSON r
+  in case fromJSON v of
+    Success r' -> Just r'
+    _          -> Nothing
+
+makeFieldsNoPrefix ''TRegistration
+makeFieldsNoPrefix ''TUnregistration

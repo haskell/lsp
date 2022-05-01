@@ -23,7 +23,6 @@ extra-source-files:  ChangeLog.md, README.md
 library
   reexported-modules:  Language.LSP.Types
                      , Language.LSP.Types.Capabilities
-                     , Language.LSP.Types.Lens
   exposed-modules:     Language.LSP.Server
                      , Language.LSP.Diagnostics
                      , Language.LSP.Logging
@@ -48,6 +47,7 @@ library
                      , lens >= 4.15.2
                      , mtl < 2.4
                      , prettyprinter
+                     , row-types
                      , sorted-list == 0.2.1.*
                      , stm == 2.5.*
                      , temporary
@@ -109,6 +109,7 @@ test-suite lsp-test
                      , containers
                      , lsp
                      , hspec
+                     , row-types
                      , sorted-list == 0.2.1.*
                      , text
                      , text-rope

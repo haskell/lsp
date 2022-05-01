@@ -16,7 +16,7 @@ data SessionException = Timeout (Maybe FromServerMessage)
                       | ReplayOutOfOrder FromServerMessage [FromServerMessage]
                       | UnexpectedDiagnostics
                       | IncorrectApplyEditRequest String
-                      | UnexpectedResponseError SomeLspId  ResponseError
+                      | UnexpectedResponseError SomeLspId ResponseError
                       | UnexpectedServerTermination
                       | IllegalInitSequenceMessage FromServerMessage
                       | MessageSendError Value IOError

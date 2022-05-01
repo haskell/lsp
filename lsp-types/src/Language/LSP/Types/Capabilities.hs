@@ -1,19 +1,24 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE OverloadedLabels      #-}
+{-# LANGUAGE OverloadedStrings     #-}
 module Language.LSP.Types.Capabilities
   (
-    module Language.LSP.Types.ClientCapabilities
-  , module Language.LSP.Types.ServerCapabilities
-  , module Language.LSP.Types.WorkspaceEdit
-  , fullCaps
+    fullCaps
   , LSPVersion(..)
   , capsForVersion
   ) where
 
-import Prelude hiding (min)
-import Language.LSP.Types.ClientCapabilities
-import Language.LSP.Types.ServerCapabilities
-import Language.LSP.Types.WorkspaceEdit
-import Language.LSP.Types
+import           Data.Row
+import           Language.LSP.Types.Common
+import           Language.LSP.Types.CodeAction
+import           Language.LSP.Types.SemanticTokens
+import           Language.LSP.Types.Internal.Generated
+import           Prelude                               hiding (min)
+
+{-
+TODO: this is out-of-date/needs an audit
+TODO: can we generate this? process the 'since' annotations in the metamodel?
+-}
 
 -- | Capabilities for full conformance to the current (v3.15) LSP specification.
 fullCaps :: ClientCapabilities
@@ -35,241 +40,249 @@ data LSPVersion = LSPVersion Int Int -- ^ Construct a major.minor version
 -- * 3.4 extended completion item and symbol item kinds
 -- * 3.0 dynamic registration
 capsForVersion :: LSPVersion -> ClientCapabilities
-capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) (Just window) (since 3 16 general) Nothing
+capsForVersion (LSPVersion maj min) = caps
   where
-    w = WorkspaceClientCapabilities
-          (Just True)
-          (Just (WorkspaceEditClientCapabilities
+    caps = ClientCapabilities {
+      _workspace=Just w
+      , _textDocument=Just td
+      , _window=Just window
+      , _general=since 3 16 general
+      , _experimental=Nothing
+      -- TODO
+      , _notebookDocument=Nothing
+      }
+    w = WorkspaceClientCapabilities {
+      _applyEdit = Just True
+      , _workspaceEdit = Just (WorkspaceEditClientCapabilities
                   (Just True)
                   (since 3 13 resourceOperations)
                   Nothing
                   (since 3 16 True)
-                  (since 3 16 (WorkspaceEditChangeAnnotationClientCapabilities (Just True)))))
-          (Just (DidChangeConfigurationClientCapabilities dynamicReg))
-          (Just (DidChangeWatchedFilesClientCapabilities dynamicReg))
-          (Just symbolCapabilities)
-          (Just (ExecuteCommandClientCapabilities dynamicReg))
-          (since 3 6 True)
-          (since 3 6 True)
-          (since 3 16 (SemanticTokensWorkspaceClientCapabilities $ Just True))
+                  (since 3 16 (#groupsOnLabel .== Just True)))
+      , _didChangeConfiguration = Just (DidChangeConfigurationClientCapabilities dynamicReg)
+      , _didChangeWatchedFiles = Just (DidChangeWatchedFilesClientCapabilities dynamicReg (Just True))
+      , _symbol = Just symbolCapabilities
+      , _executeCommand = Just (ExecuteCommandClientCapabilities dynamicReg)
+      , _workspaceFolders = since 3 6 True
+      , _configuration = since 3 6 True
+      , _semanticTokens = since 3 16 (SemanticTokensWorkspaceClientCapabilities $ Just True)
+      -- TODO
+      , _codeLens = Nothing
+      , _fileOperations = Nothing
+      , _inlineValue = Nothing
+      , _inlayHint = Nothing
+      , _diagnostics = Nothing
+      }
 
-    resourceOperations = List
-      [ ResourceOperationCreate
-      , ResourceOperationDelete
-      , ResourceOperationRename
+    resourceOperations =
+      [ ResourceOperationKind_Create
+      , ResourceOperationKind_Delete
+      , ResourceOperationKind_Rename
       ]
 
     symbolCapabilities = WorkspaceSymbolClientCapabilities
       dynamicReg
-      (since 3 4 symbolKindCapabilities)
-      (since 3 16 symbolTagCapabilities)
-
-    symbolKindCapabilities =
-      WorkspaceSymbolKindClientCapabilities (Just sKs)
-
-    symbolTagCapabilities =
-      WorkspaceSymbolTagClientCapabilities (Just (List [StDeprecated]))
+      (since 3 4 (#valueSet .== Just sKs))
+      (since 3 16 (#valueSet .== [SymbolTag_Deprecated]))
+      (since 3 17 (#properties .== []))
 
     sKs
-      | maj >= 3 && min >= 4 = List (oldSKs ++ newSKs)
-      | otherwise            = List oldSKs
+      | maj >= 3 && min >= 4 = oldSKs ++ newSKs
+      | otherwise            = oldSKs
 
-    oldSKs =   [ SkFile
-               , SkModule
-               , SkNamespace
-               , SkPackage
-               , SkClass
-               , SkMethod
-               , SkProperty
-               , SkField
-               , SkConstructor
-               , SkEnum
-               , SkInterface
-               , SkFunction
-               , SkVariable
-               , SkConstant
-               , SkString
-               , SkNumber
-               , SkBoolean
-               , SkArray
+    oldSKs =   [ SymbolKind_File
+               , SymbolKind_Module
+               , SymbolKind_Namespace
+               , SymbolKind_Package
+               , SymbolKind_Class
+               , SymbolKind_Method
+               , SymbolKind_Property
+               , SymbolKind_Field
+               , SymbolKind_Constructor
+               , SymbolKind_Enum
+               , SymbolKind_Interface
+               , SymbolKind_Function
+               , SymbolKind_Variable
+               , SymbolKind_Constant
+               , SymbolKind_String
+               , SymbolKind_Number
+               , SymbolKind_Boolean
+               , SymbolKind_Array
                ]
 
-    newSKs = [ SkObject
-             , SkKey
-             , SkNull
-             , SkEnumMember
-             , SkStruct
-             , SkEvent
-             , SkOperator
-             , SkTypeParameter
+    newSKs = [ SymbolKind_Object
+             , SymbolKind_Key
+             , SymbolKind_Null
+             , SymbolKind_EnumMember
+             , SymbolKind_Struct
+             , SymbolKind_Event
+             , SymbolKind_Operator
+             , SymbolKind_TypeParameter
              ]
 
     -- Only one token format for now, just list it here
-    tfs = List [ TokenFormatRelative ]
+    tfs = [ TokenFormat_Relative ]
 
-    semanticTokensCapabilities = SemanticTokensClientCapabilities
-      (Just True)
-      (SemanticTokensRequestsClientCapabilities
-       (Just $ SemanticTokensRangeBool True)
-       (Just (SemanticTokensFullDelta (SemanticTokensDeltaClientCapabilities $ Just True))))
-      (List knownSemanticTokenTypes)
-      (List knownSemanticTokenModifiers)
-      tfs
-      (Just True)
-      (Just True)
+    semanticTokensCapabilities = SemanticTokensClientCapabilities {
+        _dynamicRegistration=Just True
+        , _requests= #range .== Just (InL True) .+ #full .== Just (InR (#delta .== Just True))
+        , _tokenTypes=fmap semanticTokenTypesToValue knownSemanticTokenTypes
+        , _tokenModifiers=fmap semanticTokenModifiersToValue knownSemanticTokenModifiers
+        , _formats=tfs
+        , _overlappingTokenSupport=Just True
+        , _multilineTokenSupport=Just True
+        , _serverCancelSupport=Just True
+        , _augmentsSyntaxTokens=Just True
+      }
 
-    td = TextDocumentClientCapabilities
-          (Just sync)
-          (Just completionCapability)
-          (Just hoverCapability)
-          (Just signatureHelpCapability)
-          (Just (ReferencesClientCapabilities dynamicReg))
-          (Just (DocumentHighlightClientCapabilities dynamicReg))
-          (Just documentSymbolCapability)
-          (Just (DocumentFormattingClientCapabilities dynamicReg))
-          (Just (DocumentRangeFormattingClientCapabilities dynamicReg))
-          (Just (DocumentOnTypeFormattingClientCapabilities dynamicReg))
-          (since 3 14 (DeclarationClientCapabilities dynamicReg (Just True)))
-          (Just (DefinitionClientCapabilities dynamicReg (since 3 14 True)))
-          (since 3 6 (TypeDefinitionClientCapabilities dynamicReg (since 3 14 True)))
-          (since 3 6 (ImplementationClientCapabilities dynamicReg (since 3 14 True)))
-          (Just codeActionCapability)
-          (Just (CodeLensClientCapabilities dynamicReg))
-          (Just (DocumentLinkClientCapabilities dynamicReg (since 3 15 True)))
-          (since 3 6 (DocumentColorClientCapabilities dynamicReg))
-          (Just (RenameClientCapabilities dynamicReg (since 3 12 True) (since 3 16 PsIdentifier) (since 3 16 True)))
-          (Just publishDiagnosticsCapabilities)
-          (since 3 10 foldingRangeCapability)
-          (since 3 5 (SelectionRangeClientCapabilities dynamicReg))
-          (since 3 16 (CallHierarchyClientCapabilities dynamicReg))
-          (since 3 16 semanticTokensCapabilities)
+    td = TextDocumentClientCapabilities {
+          _synchronization=Just sync
+          , _completion=Just completionCapability
+          , _hover=Just hoverCapability
+          , _signatureHelp=Just signatureHelpCapability
+          , _references=Just (ReferenceClientCapabilities dynamicReg)
+          , _documentHighlight=Just (DocumentHighlightClientCapabilities dynamicReg)
+          , _documentSymbol=Just documentSymbolCapability
+          , _formatting=Just (DocumentFormattingClientCapabilities dynamicReg)
+          , _rangeFormatting=Just (DocumentRangeFormattingClientCapabilities dynamicReg)
+          , _onTypeFormatting=Just (DocumentOnTypeFormattingClientCapabilities dynamicReg)
+          , _declaration=since 3 14 (DeclarationClientCapabilities dynamicReg (Just True))
+          , _definition=Just (DefinitionClientCapabilities dynamicReg (since 3 14 True))
+          , _typeDefinition=since 3 6 (TypeDefinitionClientCapabilities dynamicReg (since 3 14 True))
+          , _implementation=since 3 6 (ImplementationClientCapabilities dynamicReg (since 3 14 True))
+          , _codeAction=Just codeActionCapability
+          , _codeLens=Just (CodeLensClientCapabilities dynamicReg)
+          , _documentLink=Just (DocumentLinkClientCapabilities dynamicReg (since 3 15 True))
+          , _colorProvider=since 3 6 (DocumentColorClientCapabilities dynamicReg)
+          , _rename=Just (RenameClientCapabilities dynamicReg (since 3 12 True) (since 3 16 PrepareSupportDefaultBehavior_Identifier) (since 3 16 True))
+          , _publishDiagnostics=Just publishDiagnosticsCapabilities
+          , _foldingRange=since 3 10 foldingRangeCapability
+          , _selectionRange=since 3 5 (SelectionRangeClientCapabilities dynamicReg)
+          , _callHierarchy=since 3 16 (CallHierarchyClientCapabilities dynamicReg)
+          , _semanticTokens=since 3 16 semanticTokensCapabilities
+          -- TODO
+          , _linkedEditingRange=Nothing
+          , _moniker=Nothing
+          , _typeHierarchy=Nothing
+          , _inlineValue=Nothing
+          , _inlayHint=Nothing
+          , _diagnostic=Nothing
+        }
 
     sync =
-      TextDocumentSyncClientCapabilities
-        dynamicReg
-        (Just True)
-        (Just True)
-        (Just True)
+      TextDocumentSyncClientCapabilities {
+        _dynamicRegistration=dynamicReg
+        , _willSave=Just True
+        , _willSaveWaitUntil=Just True
+        , _didSave=Just True
+        }
 
     completionCapability =
-      CompletionClientCapabilities
-        dynamicReg
-        (Just completionItemCapabilities)
-        (since 3 4 completionItemKindCapabilities)
-        (since 3 3 True)
+      CompletionClientCapabilities{
+        _dynamicRegistration=dynamicReg
+        , _completionItem=Just completionItemCapabilities
+        , _completionItemKind=since 3 4 (#valueSet .== Just ciKs)
+        , _insertTextMode=since 3 17 InsertTextMode_AsIs
+        , _contextSupport=since 3 3 True
+        , _completionList=since 3 17 (#itemDefaults .== Just [])
+        }
 
-    completionItemCapabilities = CompletionItemClientCapabilities
-      (Just True)
-      (Just True)
-      (since 3 3 (List [MkPlainText, MkMarkdown]))
-      (Just True)
-      (since 3 9 True)
-      (since 3 15 completionItemTagsCapabilities)
-      (since 3 16 True)
-      (since 3 16 (CompletionItemResolveClientCapabilities (List ["documentation", "details"])))
-      (since 3 16 (CompletionItemInsertTextModeClientCapabilities (List [])))
-
-    completionItemKindCapabilities =
-      CompletionItemKindClientCapabilities (Just ciKs)
-
-    completionItemTagsCapabilities =
-      CompletionItemTagsClientCapabilities (List [ CitDeprecated ])
+    completionItemCapabilities =
+      #snippetSupport .== Just True
+      .+ #commitCharactersSupport .== Just True
+      .+ #documentationFormat .== since 3 3 allMarkups
+      .+ #deprecatedSupport .== Just True
+      .+ #preselectSupport .== since 3 9 True
+      .+ #tagSupport .== since 3 15 (#valueSet .== [])
+      .+ #insertReplaceSupport .== since 3 16 True
+      .+ #resolveSupport .== since 3 16 (#properties .== ["documentation", "details"])
+      .+ #insertTextModeSupport .== since 3 16 (#valueSet .== [])
+      .+ #labelDetailsSupport .== since 3 17 True
 
     ciKs
-      | maj >= 3 && min >= 4 = List (oldCiKs ++ newCiKs)
-      | otherwise            = List oldCiKs
+      | maj >= 3 && min >= 4 = oldCiKs ++ newCiKs
+      | otherwise            = oldCiKs
 
-    oldCiKs =   [ CiText
-                , CiMethod
-                , CiFunction
-                , CiConstructor
-                , CiField
-                , CiVariable
-                , CiClass
-                , CiInterface
-                , CiModule
-                , CiProperty
-                , CiUnit
-                , CiValue
-                , CiEnum
-                , CiKeyword
-                , CiSnippet
-                , CiColor
-                , CiFile
-                , CiReference
+    oldCiKs =   [ CompletionItemKind_Text
+                , CompletionItemKind_Method
+                , CompletionItemKind_Function
+                , CompletionItemKind_Constructor
+                , CompletionItemKind_Field
+                , CompletionItemKind_Variable
+                , CompletionItemKind_Class
+                , CompletionItemKind_Interface
+                , CompletionItemKind_Module
+                , CompletionItemKind_Property
+                , CompletionItemKind_Unit
+                , CompletionItemKind_Value
+                , CompletionItemKind_Enum
+                , CompletionItemKind_Keyword
+                , CompletionItemKind_Snippet
+                , CompletionItemKind_Color
+                , CompletionItemKind_File
+                , CompletionItemKind_Reference
                 ]
 
-    newCiKs =   [ CiFolder
-                , CiEnumMember
-                , CiConstant
-                , CiStruct
-                , CiEvent
-                , CiOperator
-                , CiTypeParameter
+    newCiKs =   [ CompletionItemKind_Folder
+                , CompletionItemKind_EnumMember
+                , CompletionItemKind_Constant
+                , CompletionItemKind_Struct
+                , CompletionItemKind_Event
+                , CompletionItemKind_Operator
+                , CompletionItemKind_TypeParameter
                 ]
 
     hoverCapability =
-      HoverClientCapabilities
-        dynamicReg
-        (since 3 3 (List [MkPlainText, MkMarkdown]))
+      HoverClientCapabilities {
+        _dynamicRegistration=dynamicReg
+        , _contentFormat=since 3 3 allMarkups
+      }
 
     codeActionCapability
-      = CodeActionClientCapabilities
-          dynamicReg
-          (since 3 8 (CodeActionLiteralSupport caKs))
-          (since 3 15 True)
-          (since 3 16 True)
-          (since 3 16 True)
-          (since 3 16 (CodeActionResolveClientCapabilities (List [])))
-          (since 3 16 True)
-    caKs = CodeActionKindClientCapabilities
-              (List specCodeActionKinds)
+      = CodeActionClientCapabilities {
+          _dynamicRegistration=dynamicReg
+          , _codeActionLiteralSupport=since 3 8 (#codeActionKind .== (#valueSet .== specCodeActionKinds))
+          , _isPreferredSupport=since 3 15 True
+          , _disabledSupport=since 3 16 True
+          , _dataSupport=since 3 16 True
+          , _resolveSupport=since 3 16 (#properties .== [])
+          , _honorsChangeAnnotations=since 3 16 True
+        }
 
     signatureHelpCapability =
-      SignatureHelpClientCapabilities
-        dynamicReg
-        (Just signatureInformationCapability)
-        Nothing
-
-    signatureInformationCapability =
-      SignatureHelpSignatureInformation
-        (Just (List [MkPlainText, MkMarkdown]))
-        (Just signatureParameterCapability)
-        (since 3 16 True)
-
-    signatureParameterCapability =
-      SignatureHelpParameterInformation (since 3 14 True)
+      SignatureHelpClientCapabilities {
+        _dynamicRegistration=dynamicReg
+        , _signatureInformation=Just (#documentationFormat .== Just allMarkups .+ #parameterInformation .== Just (#labelOffsetSupport .== Just True) .+ #activeParameterSupport .== Just True)
+        , _contextSupport=since 3 16 True
+      }
 
     documentSymbolCapability =
-      DocumentSymbolClientCapabilities
-        dynamicReg
-        (since 3 4 documentSymbolKind)
-        (since 3 10 True)
-        (since 3 16 documentSymbolTag)
-        (since 3 16 True)
-
-    documentSymbolKind =
-      DocumentSymbolKindClientCapabilities
-        (Just sKs) -- same as workspace symbol kinds
-
-    documentSymbolTag =
-      DocumentSymbolTagClientCapabilities (Just (List [StDeprecated]))
+      DocumentSymbolClientCapabilities {
+        _dynamicRegistration=dynamicReg
+        -- same as workspace symbol kinds
+        , _symbolKind=Just (#valueSet .== Just sKs)
+        , _hierarchicalDocumentSymbolSupport=since 3 10 True
+        , _tagSupport=since 3 16 (#valueSet .== [SymbolTag_Deprecated])
+        , _labelSupport=since 3 16 True
+      }
 
     foldingRangeCapability =
-      FoldingRangeClientCapabilities
-        dynamicReg
-        Nothing
-        (Just False)
+      FoldingRangeClientCapabilities {
+        _dynamicRegistration=dynamicReg
+        , _rangeLimit=Nothing
+        , _lineFoldingOnly=Nothing
+        , _foldingRangeKind=since 3 17 (#valueSet .== Just [])
+        , _foldingRange=since 3 16 (#collapsedText .== Just True)
+      }
 
     publishDiagnosticsCapabilities =
-      PublishDiagnosticsClientCapabilities
-        (since 3 7 True)
-        (since 3 15 publishDiagnosticsTagsCapabilities)
-        (since 3 15 True)
-
-    publishDiagnosticsTagsCapabilities =
-      PublishDiagnosticsTagsClientCapabilities
-        (List [ DtUnnecessary, DtDeprecated ])
+      PublishDiagnosticsClientCapabilities {
+        _relatedInformation=since 3 7 True
+        , _tagSupport=since 3 15 (#valueSet .== [ DiagnosticTag_Unnecessary, DiagnosticTag_Deprecated ])
+        , _versionSupport=since 3 15 True
+        , _codeDescriptionSupport=since 3 16 True
+        , _dataSupport=since 3 16 True
+      }
 
     dynamicReg
       | maj >= 3  = Just True
@@ -279,12 +292,18 @@ capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) (Jus
       | otherwise            = Nothing
 
     window =
-      WindowClientCapabilities
-        (since 3 15 True)
-        (since 3 16 $ ShowMessageRequestClientCapabilities Nothing)
-        (since 3 16 $ ShowDocumentClientCapabilities True)
+      WindowClientCapabilities {
+        _workDoneProgress=since 3 15 True
+        , _showMessage=since 3 16 $ ShowMessageRequestClientCapabilities Nothing
+        , _showDocument=since 3 16 $ ShowDocumentClientCapabilities True
+      }
 
-    general = GeneralClientCapabilities
-      (since 3 16 $ StaleRequestClientCapabilities True (List []))
-      (since 3 16 $ RegularExpressionsClientCapabilities "" Nothing)
-      (since 3 16 $ MarkdownClientCapabilities "" Nothing)
+    general = GeneralClientCapabilities {
+      _staleRequestSupport=since 3 16 (#cancel .== True .+ #retryOnContentModified .== [])
+      , _regularExpressions=since 3 16 $ RegularExpressionsClientCapabilities "" Nothing
+      , _markdown=since 3 16 $ MarkdownClientCapabilities "" Nothing (Just [])
+      -- TODO
+      , _positionEncodings=Nothing
+      }
+
+    allMarkups = [MarkupKind_PlainText, MarkupKind_Markdown]

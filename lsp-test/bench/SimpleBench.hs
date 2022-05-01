@@ -1,10 +1,12 @@
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE GADTs, OverloadedStrings #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 module Main where
 
 import Language.LSP.Server
 import qualified Language.LSP.Test as Test
-import Language.LSP.Types
+import Language.LSP.Types hiding (options)
 import Control.Monad.IO.Class
 import Control.Monad
 import System.Process
@@ -15,16 +17,16 @@ import Data.IORef
 
 handlers :: Handlers (LspM ())
 handlers = mconcat
-  [ requestHandler STextDocumentHover $ \req responder -> do
-      let RequestMessage _ _ _ (HoverParams _doc pos _workDone) = req
+  [ requestHandler SMethod_TextDocumentHover $ \req responder -> do
+      let TRequestMessage _ _ _ (HoverParams _doc pos _workDone) = req
           Position _l _c' = pos
           rsp = Hover ms (Just range)
-          ms = HoverContents $ markedUpContent "lsp-demo-simple-server" "Hello world"
+          ms = InL $ markedUpContent "lsp-demo-simple-server" "Hello world"
           range = Range pos pos
-      responder (Right $ Just rsp)
-  , requestHandler STextDocumentDefinition $ \req responder -> do
-      let RequestMessage _ _ _ (DefinitionParams (TextDocumentIdentifier doc) pos _ _) = req
-      responder (Right $ InL $ Location doc $ Range pos pos)
+      responder (Right $ InL rsp)
+  , requestHandler SMethod_TextDocumentDefinition $ \req responder -> do
+      let TRequestMessage _ _ _ (DefinitionParams (TextDocumentIdentifier doc) pos _ _) = req
+      responder (Right $ InL $ Definition $ InL $ Location doc $ Range pos pos)
   ]
 
 server :: ServerDefinition ()
@@ -54,9 +56,9 @@ main = do
     replicateM_ n $ do
       n <- liftIO $ readIORef i
       liftIO $ when (n `mod` 1000 == 0) $ putStrLn $ show n
-      ResponseMessage{_result=Right (Just _)} <- Test.request STextDocumentHover $
+      TResponseMessage{_result=Right (InL _)} <- Test.request SMethod_TextDocumentHover $
                                                               HoverParams (TextDocumentIdentifier $ Uri "test") (Position 1 100) Nothing
-      ResponseMessage{_result=Right (InL _)} <- Test.request STextDocumentDefinition $
+      TResponseMessage{_result=Right (InL _)} <- Test.request SMethod_TextDocumentDefinition $
                                                               DefinitionParams (TextDocumentIdentifier $ Uri "test") (Position 1000 100) Nothing Nothing
 
       liftIO $ modifyIORef' i (+1)

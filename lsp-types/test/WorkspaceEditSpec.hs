@@ -1,8 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 module WorkspaceEditSpec where
 
-import Test.Hspec
-import Language.LSP.Types
+import           Language.LSP.Types
+import           Test.Hspec
 
 spec :: Spec
 spec = do

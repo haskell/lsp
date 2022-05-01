@@ -7,7 +7,7 @@ import qualified Data.HashMap.Strict                   as HM
 import qualified Data.SortedList                       as SL
 import           Data.Text                             (Text)
 import           Language.LSP.Diagnostics
-import qualified Language.LSP.Types            as J
+import qualified Language.LSP.Types            as LSP
 
 import           Test.Hspec
 
@@ -29,20 +29,20 @@ spec = describe "Diagnostics functions" diagnosticsSpec
 
 -- ---------------------------------------------------------------------
 
-mkDiagnostic :: Maybe J.DiagnosticSource -> Text -> J.Diagnostic
+mkDiagnostic :: Maybe Text -> Text -> LSP.Diagnostic
 mkDiagnostic ms str =
   let
-    rng = J.Range (J.Position 0 1) (J.Position 3 0)
-    loc = J.Location (J.Uri "file") rng
+    rng = LSP.Range (LSP.Position 0 1) (LSP.Position 3 0)
+    loc = LSP.Location (LSP.Uri "file") rng
   in
-    J.Diagnostic rng Nothing Nothing ms str Nothing (Just (J.List [J.DiagnosticRelatedInformation loc str]))
+    LSP.Diagnostic rng Nothing Nothing Nothing ms str Nothing (Just [LSP.DiagnosticRelatedInformation loc str]) Nothing
 
-mkDiagnostic2 :: Maybe J.DiagnosticSource -> Text -> J.Diagnostic
+mkDiagnostic2 :: Maybe Text -> Text -> LSP.Diagnostic
 mkDiagnostic2 ms str =
   let
-    rng = J.Range (J.Position 4 1) (J.Position 5 0)
-    loc = J.Location (J.Uri "file") rng
-  in J.Diagnostic rng Nothing Nothing ms str Nothing (Just (J.List [J.DiagnosticRelatedInformation loc str]))
+    rng = LSP.Range (LSP.Position 4 1) (LSP.Position 5 0)
+    loc = LSP.Location (LSP.Uri "file") rng
+  in LSP.Diagnostic rng Nothing Nothing Nothing ms str Nothing (Just [LSP.DiagnosticRelatedInformation loc str]) Nothing
 
 -- ---------------------------------------------------------------------
 
@@ -55,7 +55,7 @@ diagnosticsSpec = do
           [ mkDiagnostic (Just "hlint") "a"
           , mkDiagnostic (Just "hlint") "b"
           ]
-        uri = J.toNormalizedUri $ J.Uri "uri"
+        uri = LSP.toNormalizedUri $ LSP.Uri "uri"
       (updateDiagnostics HM.empty uri Nothing (partitionBySource diags)) `shouldBe`
         HM.fromList
           [ (uri,StoreItem Nothing $ Map.fromList [(Just "hlint", SL.toSortedList diags) ] )
@@ -69,7 +69,7 @@ diagnosticsSpec = do
           [ mkDiagnostic (Just "hlint") "a"
           , mkDiagnostic (Just "ghcmod") "b"
           ]
-        uri = J.toNormalizedUri $ J.Uri "uri"
+        uri = LSP.toNormalizedUri $ LSP.Uri "uri"
       (updateDiagnostics HM.empty uri Nothing (partitionBySource diags)) `shouldBe`
         HM.fromList
           [ (uri,StoreItem Nothing $ Map.fromList
@@ -86,7 +86,7 @@ diagnosticsSpec = do
           [ mkDiagnostic (Just "hlint") "a"
           , mkDiagnostic (Just "ghcmod") "b"
           ]
-        uri = J.toNormalizedUri $ J.Uri "uri"
+        uri = LSP.toNormalizedUri $ LSP.Uri "uri"
       (updateDiagnostics HM.empty uri (Just 1) (partitionBySource diags)) `shouldBe`
         HM.fromList
           [ (uri,StoreItem (Just 1) $ Map.fromList
@@ -107,7 +107,7 @@ diagnosticsSpec = do
         diags2 =
           [ mkDiagnostic (Just "hlint") "a2"
           ]
-        uri = J.toNormalizedUri $ J.Uri "uri"
+        uri = LSP.toNormalizedUri $ LSP.Uri "uri"
       let origStore = updateDiagnostics HM.empty uri Nothing (partitionBySource diags1)
       (updateDiagnostics origStore uri Nothing (partitionBySource diags2)) `shouldBe`
         HM.fromList
@@ -125,7 +125,7 @@ diagnosticsSpec = do
         diags2 =
           [ mkDiagnostic (Just "hlint") "a2"
           ]
-        uri = J.toNormalizedUri $ J.Uri "uri"
+        uri = LSP.toNormalizedUri $ LSP.Uri "uri"
       let origStore = updateDiagnostics HM.empty uri Nothing (partitionBySource diags1)
       (updateDiagnostics origStore uri Nothing (partitionBySource diags2)) `shouldBe`
         HM.fromList
@@ -143,7 +143,7 @@ diagnosticsSpec = do
           [ mkDiagnostic (Just "hlint") "a1"
           , mkDiagnostic (Just "ghcmod") "b1"
           ]
-        uri = J.toNormalizedUri $ J.Uri "uri"
+        uri = LSP.toNormalizedUri $ LSP.Uri "uri"
       let origStore = updateDiagnostics HM.empty uri Nothing (partitionBySource diags1)
       (updateDiagnostics origStore uri Nothing (Map.fromList [(Just "ghcmod",SL.toSortedList [])])) `shouldBe`
         HM.fromList
@@ -166,7 +166,7 @@ diagnosticsSpec = do
         diags2 =
           [ mkDiagnostic (Just "hlint") "a2"
           ]
-        uri = J.toNormalizedUri $ J.Uri "uri"
+        uri = LSP.toNormalizedUri $ LSP.Uri "uri"
       let origStore = updateDiagnostics HM.empty uri (Just 1) (partitionBySource diags1)
       (updateDiagnostics origStore uri (Just 2) (partitionBySource diags2)) `shouldBe`
         HM.fromList
@@ -184,7 +184,7 @@ diagnosticsSpec = do
         diags2 =
           [ mkDiagnostic (Just "hlint") "a2"
           ]
-        uri = J.toNormalizedUri $ J.Uri "uri"
+        uri = LSP.toNormalizedUri $ LSP.Uri "uri"
       let origStore = updateDiagnostics HM.empty uri (Just 1) (partitionBySource diags1)
       (updateDiagnostics origStore uri (Just 2) (partitionBySource diags2)) `shouldBe`
         HM.fromList
@@ -203,10 +203,10 @@ diagnosticsSpec = do
           [ mkDiagnostic (Just "hlint") "a"
           , mkDiagnostic (Just "ghcmod") "b"
           ]
-        uri = J.toNormalizedUri $ J.Uri "uri"
+        uri = LSP.toNormalizedUri $ LSP.Uri "uri"
       let ds = updateDiagnostics HM.empty uri (Just 1) (partitionBySource diags)
       getDiagnosticParamsFor 10 ds uri `shouldBe`
-        Just (J.PublishDiagnosticsParams (J.fromNormalizedUri uri) (Just 1) (J.List $ reverse diags))
+        Just (LSP.PublishDiagnosticsParams (LSP.fromNormalizedUri uri) (Just 1) (reverse diags))
 
     -- ---------------------------------
 
@@ -220,20 +220,20 @@ diagnosticsSpec = do
           , mkDiagnostic  (Just "hlint") "c"
           , mkDiagnostic  (Just "ghcmod") "d"
           ]
-        uri = J.toNormalizedUri $ J.Uri "uri"
+        uri = LSP.toNormalizedUri $ LSP.Uri "uri"
       let ds = updateDiagnostics HM.empty uri (Just 1) (partitionBySource diags)
       getDiagnosticParamsFor 2 ds uri `shouldBe`
-        Just (J.PublishDiagnosticsParams (J.fromNormalizedUri uri) (Just 1)
-              (J.List [
-                    mkDiagnostic  (Just "ghcmod") "d"
-                  , mkDiagnostic  (Just "hlint") "c"
-                  ]))
+        Just (LSP.PublishDiagnosticsParams (LSP.fromNormalizedUri uri) (Just 1)
+              [
+                mkDiagnostic  (Just "ghcmod") "d"
+              , mkDiagnostic  (Just "hlint") "c"
+              ])
 
       getDiagnosticParamsFor 1 ds uri `shouldBe`
-        Just (J.PublishDiagnosticsParams (J.fromNormalizedUri uri) (Just 1)
-              (J.List [
-                    mkDiagnostic  (Just "ghcmod") "d"
-                  ]))
+        Just (LSP.PublishDiagnosticsParams (LSP.fromNormalizedUri uri) (Just 1)
+              [
+                mkDiagnostic  (Just "ghcmod") "d"
+              ])
 
     -- ---------------------------------
 
@@ -247,23 +247,23 @@ diagnosticsSpec = do
           , mkDiagnostic  (Just "hlint") "c"
           , mkDiagnostic  (Just "ghcmod") "d"
           ]
-        uri = J.toNormalizedUri $ J.Uri "uri"
+        uri = LSP.toNormalizedUri $ LSP.Uri "uri"
       let ds = updateDiagnostics HM.empty uri (Just 1) (partitionBySource diags)
       getDiagnosticParamsFor 100 ds uri `shouldBe`
-        Just (J.PublishDiagnosticsParams (J.fromNormalizedUri uri) (Just 1)
-              (J.List [
-                    mkDiagnostic  (Just "ghcmod") "d"
-                  , mkDiagnostic  (Just "hlint") "c"
-                  , mkDiagnostic2 (Just "ghcmod") "b"
-                  , mkDiagnostic2 (Just "hlint") "a"
-                  ]))
+        Just (LSP.PublishDiagnosticsParams (LSP.fromNormalizedUri uri) (Just 1)
+              [
+                mkDiagnostic  (Just "ghcmod") "d"
+              , mkDiagnostic  (Just "hlint") "c"
+              , mkDiagnostic2 (Just "ghcmod") "b"
+              , mkDiagnostic2 (Just "hlint") "a"
+              ])
 
       let ds' = flushBySource ds (Just "hlint")
       getDiagnosticParamsFor 100 ds' uri `shouldBe`
-        Just (J.PublishDiagnosticsParams (J.fromNormalizedUri uri) (Just 1)
-              (J.List [
-                     mkDiagnostic  (Just "ghcmod") "d"
-                  ,  mkDiagnostic2 (Just "ghcmod") "b"
-                  ]))
+        Just (LSP.PublishDiagnosticsParams (LSP.fromNormalizedUri uri) (Just 1)
+              [
+                mkDiagnostic  (Just "ghcmod") "d"
+              , mkDiagnostic2 (Just "ghcmod") "b"
+              ])
 
     -- ---------------------------------

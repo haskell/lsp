@@ -41,16 +41,17 @@ import qualified Data.List as L
 import           Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.Map.Strict as Map
 import           Data.Maybe
+import           Data.Row
 import           Data.Monoid (Ap(..))
 import           Data.Ord (Down (Down))
 import qualified Data.Text as T
 import           Data.Text ( Text )
 import qualified Data.UUID as UUID
 import qualified Language.LSP.Types.Capabilities    as J
-import Language.LSP.Types as J
+import Language.LSP.Types hiding (error)
+import qualified Language.LSP.Types as J
 import           Language.LSP.Types.SMethodMap (SMethodMap)
 import qualified Language.LSP.Types.SMethodMap as SMethodMap
-import qualified Language.LSP.Types.Lens as J
 import           Language.LSP.VFS
 import           Language.LSP.Diagnostics
 import           System.Random hiding (next)
@@ -128,20 +129,20 @@ instance Semigroup (Handlers config) where
 instance Monoid (Handlers config) where
   mempty = Handlers mempty mempty
 
-notificationHandler :: forall (m :: Method FromClient Notification) f. SMethod m -> Handler f m -> Handlers f
+notificationHandler :: forall (m :: Method ClientToServer Notification) f. SMethod m -> Handler f m -> Handlers f
 notificationHandler m h = Handlers mempty (SMethodMap.singleton m (ClientMessageHandler h))
 
-requestHandler :: forall (m :: Method FromClient Request) f. SMethod m -> Handler f m -> Handlers f
+requestHandler :: forall (m :: Method ClientToServer Request) f. SMethod m -> Handler f m -> Handlers f
 requestHandler m h = Handlers (SMethodMap.singleton m (ClientMessageHandler h)) mempty
 
--- | Wrapper to restrict 'Handler's to 'FromClient' 'Method's
-newtype ClientMessageHandler f (t :: MethodType) (m :: Method FromClient t) = ClientMessageHandler (Handler f m)
+-- | Wrapper to restrict 'Handler's to  ClientToServer' 'Method's
+newtype ClientMessageHandler f (t :: MessageKind) (m :: Method ClientToServer t) = ClientMessageHandler (Handler f m)
 
 -- | The type of a handler that handles requests and notifications coming in
 -- from the server or client
 type family Handler (f :: Type -> Type) (m :: Method from t) = (result :: Type) | result -> f t m where
-  Handler f (m :: Method _from Request)      = RequestMessage m -> (Either ResponseError (ResponseResult m) -> f ()) -> f ()
-  Handler f (m :: Method _from Notification) = NotificationMessage m -> f ()
+  Handler f (m :: Method _from Request)      = TRequestMessage m -> (Either (TResponseError m) (MessageResult m) -> f ()) -> f ()
+  Handler f (m :: Method _from Notification) = TNotificationMessage m -> f ()
 
 -- | How to convert two isomorphic data structures between each other.
 data m <~> n
@@ -154,8 +155,8 @@ transmuteHandlers :: (m <~> n) -> Handlers m -> Handlers n
 transmuteHandlers nat = mapHandlers (\i m k -> forward nat (i m (backward nat . k))) (\i m -> forward nat (i m))
 
 mapHandlers
-  :: (forall (a :: Method FromClient Request). Handler m a -> Handler n a)
-  -> (forall (a :: Method FromClient Notification). Handler m a -> Handler n a)
+  :: (forall (a :: Method ClientToServer Request). Handler m a -> Handler n a)
+  -> (forall (a :: Method ClientToServer Notification). Handler m a -> Handler n a)
   -> Handlers m -> Handlers n
 mapHandlers mapReq mapNot (Handlers reqs nots) = Handlers reqs' nots'
   where
@@ -178,10 +179,10 @@ data LanguageContextState config =
 
 type ResponseMap = IxMap LspId (Product SMethod ServerResponseCallback)
 
-type RegistrationMap (t :: MethodType) = SMethodMap (Product RegistrationId (ClientMessageHandler IO t))
+type RegistrationMap (t :: MessageKind) = SMethodMap (Product RegistrationId (ClientMessageHandler IO t))
 
-data RegistrationToken (m :: Method FromClient t) = RegistrationToken (SMethod m) (RegistrationId m)
-newtype RegistrationId (m :: Method FromClient t) = RegistrationId Text
+data RegistrationToken (m :: Method ClientToServer t) = RegistrationToken (SMethod m) (RegistrationId m)
+newtype RegistrationId (m :: Method ClientToServer t) = RegistrationId Text
   deriving Eq
 
 data ProgressData = ProgressData { progressNextId :: !(TVar Int32)
@@ -217,32 +218,32 @@ getsState f = do
 -- If you set handlers for some requests, you may need to set some of these options.
 data Options =
   Options
-    { textDocumentSync                 :: Maybe J.TextDocumentSyncOptions
+    { optTextDocumentSync                 :: Maybe J.TextDocumentSyncOptions
     -- |  The characters that trigger completion automatically.
-    , completionTriggerCharacters      :: Maybe [Char]
+    , optCompletionTriggerCharacters      :: Maybe [Char]
     -- | The list of all possible characters that commit a completion. This field can be used
     -- if clients don't support individual commit characters per completion item. See
     -- `_commitCharactersSupport`.
-    , completionAllCommitCharacters    :: Maybe [Char]
+    , optCompletionAllCommitCharacters    :: Maybe [Char]
     -- | The characters that trigger signature help automatically.
-    , signatureHelpTriggerCharacters   :: Maybe [Char]
+    , optSignatureHelpTriggerCharacters   :: Maybe [Char]
     -- | List of characters that re-trigger signature help.
     -- These trigger characters are only active when signature help is already showing. All trigger characters
     -- are also counted as re-trigger characters.
-    , signatureHelpRetriggerCharacters :: Maybe [Char]
+    , optSignatureHelpRetriggerCharacters :: Maybe [Char]
     -- | CodeActionKinds that this server may return.
     -- The list of kinds may be generic, such as `CodeActionKind.Refactor`, or the server
     -- may list out every specific kind they provide.
-    , codeActionKinds                  :: Maybe [CodeActionKind]
+    , optCodeActionKinds                  :: Maybe [CodeActionKind]
     -- | The list of characters that triggers on type formatting.
     -- If you set `documentOnTypeFormattingHandler`, you **must** set this.
     -- The first character is mandatory, so a 'NonEmpty' should be passed.
-    , documentOnTypeFormattingTriggerCharacters :: Maybe (NonEmpty Char)
+    , optDocumentOnTypeFormattingTriggerCharacters :: Maybe (NonEmpty Char)
     -- | The commands to be executed on the server.
     -- If you set `executeCommandHandler`, you **must** set this.
-    , executeCommandCommands           :: Maybe [Text]
+    , optExecuteCommandCommands           :: Maybe [Text]
     -- | Information about the server that can be advertised to the client.
-    , serverInfo                       :: Maybe J.ServerInfo
+    , optServerInfo                       :: Maybe (Rec ("name" .== Text .+ "version" .== Maybe Text))
     }
 
 instance Default Options where
@@ -285,7 +286,7 @@ data ServerDefinition config = forall m a.
       -- indicating what went wrong. The parsed configuration object will be
       -- stored internally and can be accessed via 'config'.
       -- It is also called on the `initializationOptions` field of the InitializeParams
-    , doInitialize :: LanguageContextEnv config -> Message Initialize -> IO (Either ResponseError a)
+    , doInitialize :: LanguageContextEnv config -> TMessage Method_Initialize -> IO (Either (TResponseError Method_Initialize) a)
       -- ^ Called *after* receiving the @initialize@ request and *before*
       -- returning the response. This callback will be invoked to offer the
       -- language server implementation the chance to create any processes or
@@ -316,8 +317,8 @@ data ServerDefinition config = forall m a.
 
 -- | A function that a 'Handler' is passed that can be used to respond to a
 -- request with either an error, or the response params.
-newtype ServerResponseCallback (m :: Method FromServer Request)
-  = ServerResponseCallback (Either ResponseError (ResponseResult m) -> IO ())
+newtype ServerResponseCallback (m :: Method ServerToClient Request)
+  = ServerResponseCallback (Either (TResponseError m) (MessageResult m) -> IO ())
 
 -- | Return value signals if response handler was inserted successfully
 -- Might fail if the id was already in the map
@@ -329,20 +330,20 @@ addResponseHandler lid h = do
       Nothing -> (False, pending)
 
 sendNotification
-  :: forall (m :: Method FromServer Notification) f config. MonadLsp config f
+  :: forall (m :: Method ServerToClient Notification) f config. MonadLsp config f
   => SServerMethod m
   -> MessageParams m
   -> f ()
 sendNotification m params =
-  let msg = NotificationMessage "2.0" m params
+  let msg = TNotificationMessage "2.0" m params
   in case splitServerMethod m of
         IsServerNot -> sendToClient $ fromServerNot msg
         IsServerEither -> sendToClient $ FromServerMess m $ NotMess msg
 
-sendRequest :: forall (m :: Method FromServer Request) f config. MonadLsp config f
+sendRequest :: forall (m :: Method ServerToClient Request) f config. MonadLsp config f
             => SServerMethod m
             -> MessageParams m
-            -> (Either ResponseError (ResponseResult m) -> f ())
+            -> (Either (TResponseError m) (MessageResult m) -> f ())
             -> f (LspId m)
 sendRequest m params resHandler = do
   reqId <- IdInt <$> freshLspId
@@ -350,7 +351,7 @@ sendRequest m params resHandler = do
   success <- addResponseHandler reqId (Pair m (ServerResponseCallback (rio . resHandler)))
   unless success $ error "LSP: could not send FromServer request as id is reused"
 
-  let msg = RequestMessage "2.0" reqId m params
+  let msg = TRequestMessage "2.0" reqId m params
   ~() <- case splitServerMethod m of
     IsServerReq -> sendToClient $ fromServerReq msg
     IsServerEither -> sendToClient $ FromServerMess m $ ReqMess msg
@@ -403,8 +404,8 @@ getVersionedTextDoc doc = do
   let uri = doc ^. J.uri
   mvf <- getVirtualFile (toNormalizedUri uri)
   let ver = case mvf of
-        Just (VirtualFile lspver _ _) -> Just lspver
-        Nothing -> Nothing
+        Just (VirtualFile lspver _ _) -> lspver
+        Nothing -> 0
   return (VersionedTextDocumentIdentifier uri ver)
 
 {-# INLINE getVersionedTextDoc #-}
@@ -467,10 +468,7 @@ getRootPath = resRootPath <$> getLspEnv
 getWorkspaceFolders :: MonadLsp config m => m (Maybe [WorkspaceFolder])
 getWorkspaceFolders = do
   clientCaps <- getClientCapabilities
-  let clientSupportsWfs = fromMaybe False $ do
-        let (J.ClientCapabilities mw _ _ _ _) = clientCaps
-        (J.WorkspaceClientCapabilities _ _ _ _ _ _ mwf _ _) <- mw
-        mwf
+  let clientSupportsWfs = fromMaybe False $ clientCaps ^? workspace . _Just . workspaceFolders . _Just
   if clientSupportsWfs
     then Just <$> getsState resWorkspaceFolders
     else pure Nothing
@@ -481,7 +479,7 @@ getWorkspaceFolders = do
 -- a 'Method' with a 'Handler'. Returns 'Nothing' if the client does not
 -- support dynamic registration for the specified method, otherwise a
 -- 'RegistrationToken' which can be used to unregister it later.
-registerCapability :: forall f t (m :: Method FromClient t) config.
+registerCapability :: forall f t (m :: Method ClientToServer t) config.
                       MonadLsp config f
                    => SClientMethod m
                    -> RegistrationOptions m
@@ -503,8 +501,8 @@ registerCapability method regOpts f = do
       -- First, check to see if the client supports dynamic registration on this method
       | dynamicSupported clientCaps = do
           uuid <- liftIO $ UUID.toText <$> getStdRandom random
-          let registration = J.Registration uuid method (Just regOpts)
-              params = J.RegistrationParams (J.List [J.SomeRegistration registration])
+          let registration = J.TRegistration uuid method (Just regOpts)
+              params = J.RegistrationParams [toUntypedRegistration registration]
               regId = RegistrationId uuid
           rio <- askUnliftIO
           ~() <- case splitClientMethod method of
@@ -517,7 +515,7 @@ registerCapability method regOpts f = do
             IsClientEither -> error "Cannot register capability for custom methods"
 
           -- TODO: handle the scenario where this returns an error
-          _ <- sendRequest SClientRegisterCapability params $ \_res -> pure ()
+          _ <- sendRequest SMethod_ClientRegisterCapability params $ \_res -> pure ()
 
           pure (Just (RegistrationToken method regId))
       | otherwise        = pure Nothing
@@ -530,37 +528,37 @@ registerCapability method regOpts f = do
 
     -- | Checks if client capabilities declares that the method supports dynamic registration
     dynamicSupported clientCaps = case method of
-      SWorkspaceDidChangeConfiguration  -> capDyn $ clientCaps ^? J.workspace . _Just . J.didChangeConfiguration . _Just
-      SWorkspaceDidChangeWatchedFiles   -> capDyn $ clientCaps ^? J.workspace . _Just . J.didChangeWatchedFiles . _Just
-      SWorkspaceSymbol                  -> capDyn $ clientCaps ^? J.workspace . _Just . J.symbol . _Just
-      SWorkspaceExecuteCommand          -> capDyn $ clientCaps ^? J.workspace . _Just . J.executeCommand . _Just
-      STextDocumentDidOpen              -> capDyn $ clientCaps ^? J.textDocument . _Just . J.synchronization . _Just
-      STextDocumentDidChange            -> capDyn $ clientCaps ^? J.textDocument . _Just . J.synchronization . _Just
-      STextDocumentDidClose             -> capDyn $ clientCaps ^? J.textDocument . _Just . J.synchronization . _Just
-      STextDocumentCompletion           -> capDyn $ clientCaps ^? J.textDocument . _Just . J.completion . _Just
-      STextDocumentHover                -> capDyn $ clientCaps ^? J.textDocument . _Just . J.hover . _Just
-      STextDocumentSignatureHelp        -> capDyn $ clientCaps ^? J.textDocument . _Just . J.signatureHelp . _Just
-      STextDocumentDeclaration          -> capDyn $ clientCaps ^? J.textDocument . _Just . J.declaration . _Just
-      STextDocumentDefinition           -> capDyn $ clientCaps ^? J.textDocument . _Just . J.definition . _Just
-      STextDocumentTypeDefinition       -> capDyn $ clientCaps ^? J.textDocument . _Just . J.typeDefinition . _Just
-      STextDocumentImplementation       -> capDyn $ clientCaps ^? J.textDocument . _Just . J.implementation . _Just
-      STextDocumentReferences           -> capDyn $ clientCaps ^? J.textDocument . _Just . J.references . _Just
-      STextDocumentDocumentHighlight    -> capDyn $ clientCaps ^? J.textDocument . _Just . J.documentHighlight . _Just
-      STextDocumentDocumentSymbol       -> capDyn $ clientCaps ^? J.textDocument . _Just . J.documentSymbol . _Just
-      STextDocumentCodeAction           -> capDyn $ clientCaps ^? J.textDocument . _Just . J.codeAction . _Just
-      STextDocumentCodeLens             -> capDyn $ clientCaps ^? J.textDocument . _Just . J.codeLens . _Just
-      STextDocumentDocumentLink         -> capDyn $ clientCaps ^? J.textDocument . _Just . J.documentLink . _Just
-      STextDocumentDocumentColor        -> capDyn $ clientCaps ^? J.textDocument . _Just . J.colorProvider . _Just
-      STextDocumentColorPresentation    -> capDyn $ clientCaps ^? J.textDocument . _Just . J.colorProvider . _Just
-      STextDocumentFormatting           -> capDyn $ clientCaps ^? J.textDocument . _Just . J.formatting . _Just
-      STextDocumentRangeFormatting      -> capDyn $ clientCaps ^? J.textDocument . _Just . J.rangeFormatting . _Just
-      STextDocumentOnTypeFormatting     -> capDyn $ clientCaps ^? J.textDocument . _Just . J.onTypeFormatting . _Just
-      STextDocumentRename               -> capDyn $ clientCaps ^? J.textDocument . _Just . J.rename . _Just
-      STextDocumentFoldingRange         -> capDyn $ clientCaps ^? J.textDocument . _Just . J.foldingRange . _Just
-      STextDocumentSelectionRange       -> capDyn $ clientCaps ^? J.textDocument . _Just . J.selectionRange . _Just
-      STextDocumentPrepareCallHierarchy -> capDyn $ clientCaps ^? J.textDocument . _Just . J.callHierarchy . _Just
-      STextDocumentSemanticTokens       -> capDyn $ clientCaps ^? J.textDocument . _Just . J.semanticTokens . _Just
-      _                                 -> False
+      SMethod_WorkspaceDidChangeConfiguration  -> capDyn $ clientCaps ^? J.workspace . _Just . J.didChangeConfiguration . _Just
+      SMethod_WorkspaceDidChangeWatchedFiles   -> capDyn $ clientCaps ^? J.workspace . _Just . J.didChangeWatchedFiles . _Just
+      SMethod_WorkspaceSymbol                  -> capDyn $ clientCaps ^? J.workspace . _Just . J.symbol . _Just
+      SMethod_WorkspaceExecuteCommand          -> capDyn $ clientCaps ^? J.workspace . _Just . J.executeCommand . _Just
+      SMethod_TextDocumentDidOpen              -> capDyn $ clientCaps ^? J.textDocument . _Just . J.synchronization . _Just
+      SMethod_TextDocumentDidChange            -> capDyn $ clientCaps ^? J.textDocument . _Just . J.synchronization . _Just
+      SMethod_TextDocumentDidClose             -> capDyn $ clientCaps ^? J.textDocument . _Just . J.synchronization . _Just
+      SMethod_TextDocumentCompletion           -> capDyn $ clientCaps ^? J.textDocument . _Just . J.completion . _Just
+      SMethod_TextDocumentHover                -> capDyn $ clientCaps ^? J.textDocument . _Just . J.hover . _Just
+      SMethod_TextDocumentSignatureHelp        -> capDyn $ clientCaps ^? J.textDocument . _Just . J.signatureHelp . _Just
+      SMethod_TextDocumentDeclaration          -> capDyn $ clientCaps ^? J.textDocument . _Just . J.declaration . _Just
+      SMethod_TextDocumentDefinition           -> capDyn $ clientCaps ^? J.textDocument . _Just . J.definition . _Just
+      SMethod_TextDocumentTypeDefinition       -> capDyn $ clientCaps ^? J.textDocument . _Just . J.typeDefinition . _Just
+      SMethod_TextDocumentImplementation       -> capDyn $ clientCaps ^? J.textDocument . _Just . J.implementation . _Just
+      SMethod_TextDocumentReferences           -> capDyn $ clientCaps ^? J.textDocument . _Just . J.references . _Just
+      SMethod_TextDocumentDocumentHighlight    -> capDyn $ clientCaps ^? J.textDocument . _Just . J.documentHighlight . _Just
+      SMethod_TextDocumentDocumentSymbol       -> capDyn $ clientCaps ^? J.textDocument . _Just . J.documentSymbol . _Just
+      SMethod_TextDocumentCodeAction           -> capDyn $ clientCaps ^? J.textDocument . _Just . J.codeAction . _Just
+      SMethod_TextDocumentCodeLens             -> capDyn $ clientCaps ^? J.textDocument . _Just . J.codeLens . _Just
+      SMethod_TextDocumentDocumentLink         -> capDyn $ clientCaps ^? J.textDocument . _Just . J.documentLink . _Just
+      SMethod_TextDocumentDocumentColor        -> capDyn $ clientCaps ^? J.textDocument . _Just . J.colorProvider . _Just
+      SMethod_TextDocumentColorPresentation    -> capDyn $ clientCaps ^? J.textDocument . _Just . J.colorProvider . _Just
+      SMethod_TextDocumentFormatting           -> capDyn $ clientCaps ^? J.textDocument . _Just . J.formatting . _Just
+      SMethod_TextDocumentRangeFormatting      -> capDyn $ clientCaps ^? J.textDocument . _Just . J.rangeFormatting . _Just
+      SMethod_TextDocumentOnTypeFormatting     -> capDyn $ clientCaps ^? J.textDocument . _Just . J.onTypeFormatting . _Just
+      SMethod_TextDocumentRename               -> capDyn $ clientCaps ^? J.textDocument . _Just . J.rename . _Just
+      SMethod_TextDocumentFoldingRange         -> capDyn $ clientCaps ^? J.textDocument . _Just . J.foldingRange . _Just
+      SMethod_TextDocumentSelectionRange       -> capDyn $ clientCaps ^? J.textDocument . _Just . J.selectionRange . _Just
+      SMethod_TextDocumentPrepareCallHierarchy -> capDyn $ clientCaps ^? J.textDocument . _Just . J.callHierarchy . _Just
+      --SMethod_TextDocumentSemanticTokens       -> capDyn $ clientCaps ^? J.textDocument . _Just . J.semanticTokens . _Just
+      _                                        -> False
 
 -- | Sends a @client/unregisterCapability@ request and removes the handler
 -- for that associated registration.
@@ -571,9 +569,9 @@ unregisterCapability (RegistrationToken m (RegistrationId uuid)) = do
     IsClientNot -> modifyState resRegistrationsNot $ SMethodMap.delete m
     IsClientEither -> error "Cannot unregister capability for custom methods"
 
-  let unregistration = J.Unregistration uuid (J.SomeClientMethod m)
-      params = J.UnregistrationParams (J.List [unregistration])
-  void $ sendRequest SClientUnregisterCapability params $ \_res -> pure ()
+  let unregistration = J.TUnregistration uuid m
+      params = J.UnregistrationParams [toUntypedUnregistration unregistration]
+  void $ sendRequest SMethod_ClientUnregisterCapability params $ \_res -> pure ()
 
 --------------------------------------------------------------------------------
 -- PROGRESS
@@ -594,7 +592,7 @@ getNewProgressId :: MonadLsp config m => m ProgressToken
 getNewProgressId = do
   stateState (progressNextId . resProgressData) $ \cur ->
     let !next = cur+1
-    in (ProgressNumericToken cur, next)
+    in (J.ProgressToken $ J.InL cur, next)
 
 {-# INLINE getNewProgressId #-}
 
@@ -613,25 +611,25 @@ withProgressBase indefinite title cancellable f = do
   -- Create progress token
   -- FIXME  : This needs to wait until the request returns before
   -- continuing!!!
-  _ <- sendRequest SWindowWorkDoneProgressCreate
+  _ <- sendRequest SMethod_WindowWorkDoneProgressCreate
         (WorkDoneProgressCreateParams progId) $ \res -> do
           case res of
             -- An error occurred when the client was setting it up
             -- No need to do anything then, as per the spec
             Left _err -> pure ()
-            Right Empty -> pure ()
+            Right _ -> pure ()
 
   -- Send the begin and done notifications via 'bracket_' so that they are always fired
   res <- withRunInIO $ \runInBase ->
     E.bracket_
       -- Send begin notification
-      (runInBase $ sendNotification SProgress $
-        fmap Begin $ ProgressParams progId $
-          WorkDoneProgressBeginParams title (Just cancellable') Nothing initialPercentage)
+      (runInBase $ sendNotification SMethod_Progress $
+        ProgressParams progId $ J.toJSON $
+          WorkDoneProgressBegin J.AString title (Just cancellable') Nothing initialPercentage)
 
       -- Send end notification
-      (runInBase $ sendNotification SProgress $
-        End <$> ProgressParams progId (WorkDoneProgressEndParams Nothing)) $ do
+      (runInBase $ sendNotification SMethod_Progress $
+        ProgressParams progId $ J.toJSON $ (WorkDoneProgressEnd J.AString Nothing)) $ do
 
       -- Run f asynchronously
       aid <- async $ runInBase $ f (updater progId)
@@ -644,13 +642,11 @@ withProgressBase indefinite title cancellable f = do
 
   return res
   where updater progId (ProgressAmount percentage msg) = do
-          sendNotification SProgress $ fmap Report $ ProgressParams progId $
-              WorkDoneProgressReportParams Nothing msg percentage
+          sendNotification SMethod_Progress $ ProgressParams progId $ J.toJSON $
+              WorkDoneProgressReport J.AString Nothing msg percentage
 
 clientSupportsProgress :: J.ClientCapabilities -> Bool
-clientSupportsProgress (J.ClientCapabilities _ _ wc _ _) = fromMaybe False $ do
-  (J.WindowClientCapabilities mProgress _ _) <- wc
-  mProgress
+clientSupportsProgress caps = fromMaybe False $ caps ^? window . _Just . workDoneProgress . _Just
 
 {-# INLINE clientSupportsProgress #-}
 
@@ -686,14 +682,14 @@ withIndefiniteProgress title cancellable f = do
 -- | Aggregate all diagnostics pertaining to a particular version of a document,
 -- by source, and sends a @textDocument/publishDiagnostics@ notification with
 -- the total (limited by the first parameter) whenever it is updated.
-publishDiagnostics :: MonadLsp config m => Int -> NormalizedUri -> TextDocumentVersion -> DiagnosticsBySource -> m ()
+publishDiagnostics :: MonadLsp config m => Int -> NormalizedUri -> Maybe J.Int32 -> DiagnosticsBySource -> m ()
 publishDiagnostics maxDiagnosticCount uri version diags = join $ stateState resDiagnostics $ \oldDiags->
   let !newDiags = updateDiagnostics oldDiags uri version diags
       mdp = getDiagnosticParamsFor maxDiagnosticCount newDiags uri
       act = case mdp of
         Nothing -> return ()
         Just params ->
-          sendToClient $ J.fromServerNot $ J.NotificationMessage "2.0" J.STextDocumentPublishDiagnostics params
+          sendToClient $ J.fromServerNot $ J.TNotificationMessage "2.0" J.SMethod_TextDocumentPublishDiagnostics params
       in (act,newDiags)
 
 -- ---------------------------------------------------------------------
@@ -701,7 +697,7 @@ publishDiagnostics maxDiagnosticCount uri version diags = join $ stateState resD
 -- | Remove all diagnostics from a particular source, and send the updates to
 -- the client.
 flushDiagnosticsBySource :: MonadLsp config m => Int -- ^ Max number of diagnostics to send
-                         -> Maybe DiagnosticSource -> m ()
+                         -> Maybe Text -> m ()
 flushDiagnosticsBySource maxDiagnosticCount msource = join $ stateState resDiagnostics $ \oldDiags ->
   let !newDiags = flushBySource oldDiags msource
       -- Send the updated diagnostics to the client
@@ -710,7 +706,7 @@ flushDiagnosticsBySource maxDiagnosticCount msource = join $ stateState resDiagn
         case mdp of
           Nothing -> return ()
           Just params -> do
-            sendToClient $ J.fromServerNot $ J.NotificationMessage "2.0" J.STextDocumentPublishDiagnostics params
+            sendToClient $ J.fromServerNot $ J.TNotificationMessage "2.0" J.SMethod_TextDocumentPublishDiagnostics params
       in (act,newDiags)
 
 -- ---------------------------------------------------------------------
@@ -720,17 +716,17 @@ flushDiagnosticsBySource maxDiagnosticCount msource = join $ stateState resDiagn
 reverseSortEdit :: J.WorkspaceEdit -> J.WorkspaceEdit
 reverseSortEdit (J.WorkspaceEdit cs dcs anns) = J.WorkspaceEdit cs' dcs' anns
   where
-    cs' :: Maybe J.WorkspaceEditMap
+    cs' :: Maybe (Map.Map Uri [TextEdit])
     cs' = (fmap . fmap ) sortTextEdits cs
 
-    dcs' :: Maybe (J.List J.DocumentChange)
+    dcs' :: Maybe [J.DocumentChange]
     dcs' = (fmap . fmap) sortOnlyTextDocumentEdits dcs
 
-    sortTextEdits :: J.List J.TextEdit -> J.List J.TextEdit
-    sortTextEdits (J.List edits) = J.List (L.sortOn (Down . (^. J.range)) edits)
+    sortTextEdits :: [J.TextEdit] -> [J.TextEdit]
+    sortTextEdits edits = L.sortOn (Down . (^. J.range)) edits
 
     sortOnlyTextDocumentEdits :: J.DocumentChange -> J.DocumentChange
-    sortOnlyTextDocumentEdits (J.InL (J.TextDocumentEdit td (J.List edits))) = J.InL $ J.TextDocumentEdit td (J.List edits')
+    sortOnlyTextDocumentEdits (J.InL (J.TextDocumentEdit td edits)) = J.InL $ J.TextDocumentEdit td edits'
       where
         edits' = L.sortOn (Down . editRange) edits
     sortOnlyTextDocumentEdits (J.InR others) = J.InR others

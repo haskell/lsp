@@ -23,6 +23,7 @@ module Language.LSP.Diagnostics
 import qualified Data.SortedList as SL
 import qualified Data.Map.Strict as Map
 import qualified Data.HashMap.Strict as HM
+import Data.Text (Text)
 import qualified Language.LSP.Types      as J
 
 -- ---------------------------------------------------------------------
@@ -33,9 +34,9 @@ import qualified Language.LSP.Types      as J
 {-
 We need a three level store
 
-  Uri : Maybe TextDocumentVersion : Maybe DiagnosticSource : [Diagnostics]
+  Uri : Maybe Int32 : Maybe DiagnosticSource : [Diagnostics]
 
-For a given Uri, as soon as we see a new (Maybe TextDocumentVersion) we flush
+For a given Uri, as soon as we see a new (Maybe Int32) we flush
 all prior entries for the Uri.
 
 -}
@@ -43,10 +44,10 @@ all prior entries for the Uri.
 type DiagnosticStore = HM.HashMap J.NormalizedUri StoreItem
 
 data StoreItem
-  = StoreItem J.TextDocumentVersion DiagnosticsBySource
+  = StoreItem (Maybe J.Int32) DiagnosticsBySource
   deriving (Show,Eq)
 
-type DiagnosticsBySource = Map.Map (Maybe J.DiagnosticSource) (SL.SortedList J.Diagnostic)
+type DiagnosticsBySource = Map.Map (Maybe Text) (SL.SortedList J.Diagnostic)
 
 -- ---------------------------------------------------------------------
 
@@ -55,7 +56,7 @@ partitionBySource diags = Map.fromListWith mappend $ map (\d -> (J._source d, (S
 
 -- ---------------------------------------------------------------------
 
-flushBySource :: DiagnosticStore -> Maybe J.DiagnosticSource -> DiagnosticStore
+flushBySource :: DiagnosticStore -> Maybe Text -> DiagnosticStore
 flushBySource store Nothing       = store
 flushBySource store (Just source) = HM.map remove store
   where
@@ -64,7 +65,7 @@ flushBySource store (Just source) = HM.map remove store
 -- ---------------------------------------------------------------------
 
 updateDiagnostics :: DiagnosticStore
-                  -> J.NormalizedUri -> J.TextDocumentVersion -> DiagnosticsBySource
+                  -> J.NormalizedUri -> Maybe J.Int32 -> DiagnosticsBySource
                   -> DiagnosticStore
 updateDiagnostics store uri mv newDiagsBySource = r
   where
@@ -92,6 +93,6 @@ getDiagnosticParamsFor maxDiagnostics ds uri =
   case HM.lookup uri ds of
     Nothing -> Nothing
     Just (StoreItem mv diags) ->
-      Just $ J.PublishDiagnosticsParams (J.fromNormalizedUri uri) (fmap fromIntegral mv) (J.List (take maxDiagnostics $ SL.fromSortedList $ mconcat $ Map.elems diags))
+      Just $ J.PublishDiagnosticsParams (J.fromNormalizedUri uri) (fmap fromIntegral mv) (take maxDiagnostics $ SL.fromSortedList $ mconcat $ Map.elems diags)
 
 -- ---------------------------------------------------------------------

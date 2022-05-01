@@ -4,8 +4,7 @@ module Main where
 
 import Language.LSP.Server
 import qualified Language.LSP.Test as Test
-import Language.LSP.Types
-import Language.LSP.Types.Lens hiding (options)
+import Language.LSP.Types hiding (options, error)
 import Control.Monad.IO.Class
 import System.IO
 import Control.Monad
@@ -41,7 +40,7 @@ main = hspec $ do
 
           handlers :: MVar () -> Handlers (LspM ())
           handlers killVar =
-            notificationHandler SInitialized $ \noti -> do
+            notificationHandler SMethod_Initialized $ \noti -> do
               tid <- withRunInIO $ \runInIO ->
                 forkIO $ runInIO $
                   withProgress "Doing something" NotCancellable $ \updater ->
@@ -55,20 +54,16 @@ main = hspec $ do
       Test.runSessionWithHandles hinWrite houtRead Test.defaultConfig Test.fullCaps "." $ do
         -- First make sure that we get a $/progress begin notification
         skipManyTill Test.anyMessage $ do
-          x <- Test.message SProgress
-          let isBegin (Begin _) = True
-              isBegin _ = False
-          guard $ isBegin $ x ^. params . value
+          x <- Test.message SMethod_Progress
+          guard $ has (params . value . _workDoneProgressBegin) x
           
         -- Then kill the thread
         liftIO $ putMVar killVar ()
         
         -- Then make sure we still get a $/progress end notification
         skipManyTill Test.anyMessage $ do
-          x <- Test.message SProgress
-          let isEnd (End _) = True
-              isEnd _ = False
-          guard $ isEnd $ x ^. params . value
+          x <- Test.message SMethod_Progress
+          guard $ has (params . value . _workDoneProgressEnd) x
 
   describe "workspace folders" $
     it "keeps track of open workspace folders" $ do
@@ -77,9 +72,9 @@ main = hspec $ do
       
       countVar <- newMVar 0
 
-      let wf0 = WorkspaceFolder "one" "Starter workspace"
-          wf1 = WorkspaceFolder "/foo/bar" "My workspace"
-          wf2 = WorkspaceFolder "/foo/baz" "My other workspace"
+      let wf0 = WorkspaceFolder (filePathToUri "one") "Starter workspace"
+          wf1 = WorkspaceFolder (filePathToUri "/foo/bar") "My workspace"
+          wf2 = WorkspaceFolder (filePathToUri "/foo/baz") "My other workspace"
           
           definition = ServerDefinition
             { onConfigurationChange = const $ const $ Right ()
@@ -92,10 +87,10 @@ main = hspec $ do
 
           handlers :: Handlers (LspM ())
           handlers = mconcat
-            [ notificationHandler SInitialized $ \noti -> do
+            [ notificationHandler SMethod_Initialized $ \noti -> do
                 wfs <- fromJust <$> getWorkspaceFolders
                 liftIO $ wfs `shouldContain` [wf0]
-            , notificationHandler SWorkspaceDidChangeWorkspaceFolders $ \noti -> do
+            , notificationHandler SMethod_WorkspaceDidChangeWorkspaceFolders $ \noti -> do
                 i <- liftIO $ modifyMVar countVar (\i -> pure (i + 1, i))
                 wfs <- fromJust <$> getWorkspaceFolders
                 liftIO $ case i of
@@ -116,11 +111,9 @@ main = hspec $ do
             }
             
           changeFolders add rmv =
-            let addedFolders = List add
-                removedFolders = List rmv
-                ev = WorkspaceFoldersChangeEvent addedFolders removedFolders
+            let ev = WorkspaceFoldersChangeEvent add rmv
                 ps = DidChangeWorkspaceFoldersParams ev
-            in Test.sendNotification SWorkspaceDidChangeWorkspaceFolders ps
+            in Test.sendNotification SMethod_WorkspaceDidChangeWorkspaceFolders ps
 
       Test.runSessionWithHandles hinWrite houtRead config Test.fullCaps "." $ do
         changeFolders [wf1] []

@@ -11,7 +11,7 @@ main = runSession "lsp-demo-reactor-server" fullCaps "test/data/" $ do
   skipManyTill loggingNotification (count 1 publishDiagnosticsNotification)
 
   -- Send requests and notifications and receive responses
-  rsp <- request STextDocumentDocumentSymbol $
+  rsp <- request SMethod_TextDocumentDocumentSymbol $
           DocumentSymbolParams Nothing Nothing doc
   liftIO $ print rsp
 
