@@ -14,5 +14,5 @@ test-suite func-test
                      , lens
                      , unliftio
                      , hspec
-                     , async
+                     , async >= 2.0
   default-language:    Haskell2010

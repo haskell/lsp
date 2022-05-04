@@ -42,7 +42,7 @@ library
                      , time
                      , aeson-pretty
                      , ansi-terminal
-                     , async
+                     , async >= 2.0
                      , bytestring
                      , co-log-core
                      , conduit
