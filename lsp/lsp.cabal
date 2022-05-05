@@ -33,7 +33,7 @@ library
                      , Language.LSP.Server.Processing
   ghc-options:         -Wall
   build-depends:       base >= 4.11 && < 5
-                     , async
+                     , async >= 2.0
                      , aeson >=1.0.0.0
                      , attoparsec
                      , bytestring
