@@ -264,7 +264,7 @@ handle logger = mconcat
       let J.HoverParams _doc pos _workDone = req ^. J.params
           J.Position _l _c' = pos
           rsp = J.Hover ms (Just range)
-          ms = J.HoverContents $ J.markedUpContent "lsp-hello" "Your type info here!"
+          ms = J.InR $ J.InR $ J.markedUpContent "lsp-hello" "Your type info here!"
           range = J.Range pos pos
       responder (Right $ Just rsp)
 

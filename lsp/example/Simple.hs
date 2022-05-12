@@ -29,7 +29,7 @@ handlers = mconcat
       let RequestMessage _ _ _ (HoverParams _doc pos _workDone) = req
           Position _l _c' = pos
           rsp = Hover ms (Just range)
-          ms = HoverContents $ markedUpContent "lsp-demo-simple-server" "Hello world"
+          ms = InR $ InR $ markedUpContent "lsp-demo-simple-server" "Hello world"
           range = Range pos pos
       responder (Right $ Just rsp)
   ]
