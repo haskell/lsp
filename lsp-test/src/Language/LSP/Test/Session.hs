@@ -45,6 +45,7 @@ import Control.Monad.Except
 #if __GLASGOW_HASKELL__ == 806
 import Control.Monad.Fail
 #endif
+import Control.Monad.Trans.Class
 import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import qualified Control.Monad.Trans.Reader as Reader (ask)
 import Control.Monad.Trans.State (StateT, runStateT, execState)
