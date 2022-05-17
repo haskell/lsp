@@ -33,13 +33,13 @@ import qualified Language.LSP.Types.Lens as LSP
 import           Language.LSP.Types.SMethodMap (SMethodMap)
 import qualified Language.LSP.Types.SMethodMap as SMethodMap
 import Language.LSP.Server.Core
-
 import Language.LSP.VFS as VFS
-import Data.Functor.Product
+import qualified Data.Functor.Product as P
 import qualified Control.Exception as E
-import Data.Monoid hiding (Product)
+import Data.Monoid 
+import Control.Monad
 import Control.Monad.IO.Class
-import Control.Monad.Except
+import Control.Monad.Except ()
 import Control.Concurrent.STM
 import Control.Monad.Trans.Except
 import Control.Monad.Reader
@@ -50,7 +50,7 @@ import Data.Text.Prettyprint.Doc
 import System.Exit
 import Data.Default (def)
 import Control.Monad.State
-import Control.Monad.Writer.Strict hiding (Product)
+import Control.Monad.Writer.Strict 
 import Data.Foldable (traverse_)
 
 data LspProcessingLog =
@@ -93,14 +93,14 @@ processMessage logger jsonStr = do
       lift $ case msg of
         FromClientMess m mess ->
           pure $ handle logger m mess
-        FromClientRsp (Pair (ServerResponseCallback f) (Const !newMap)) res -> do
+        FromClientRsp (P.Pair (ServerResponseCallback f) (Const !newMap)) res -> do
           writeTVar pendingResponsesVar newMap
           pure $ liftIO $ f (res ^. LSP.result)
   where
-    parser :: ResponseMap -> Value -> Parser (FromClientMessage' (Product ServerResponseCallback (Const ResponseMap)))
+    parser :: ResponseMap -> Value -> Parser (FromClientMessage' (P.Product ServerResponseCallback (Const ResponseMap)))
     parser rm = parseClientMessage $ \i ->
       let (mhandler, newMap) = pickFromIxMap i rm
-        in (\(Pair m handler) -> (m,Pair handler (Const newMap))) <$> mhandler
+        in (\(P.Pair m handler) -> (m,P.Pair handler (Const newMap))) <$> mhandler
 
     handleErrors = either (\e -> logger <& MessageProcessingError jsonStr e `WithSeverity` Error) id
 
@@ -375,7 +375,7 @@ handle' logger mAction m msg = do
     -- static handler, if it exists.
     pickHandler :: RegistrationMap t -> SMethodMap (ClientMessageHandler IO t) -> Maybe (Handler IO meth)
     pickHandler dynHandlerMap staticHandler = case (SMethodMap.lookup m dynHandlerMap, SMethodMap.lookup m staticHandler) of
-      (Just (Pair _ (ClientMessageHandler h)), _) -> Just h
+      (Just (P.Pair _ (ClientMessageHandler h)), _) -> Just h
       (Nothing, Just (ClientMessageHandler h)) -> Just h
       (Nothing, Nothing) -> Nothing
 
