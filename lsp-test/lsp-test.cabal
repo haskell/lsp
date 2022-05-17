@@ -54,7 +54,7 @@ library
                      , filepath
                      , Glob >= 0.9 && < 0.11
                      , lens
-                     , mtl
+                     , mtl < 2.4
                      , parser-combinators >= 1.2
                      , process >= 1.6
                      , text
@@ -93,7 +93,7 @@ test-suite tests
                      , filepath
                      , unliftio
                      , process
-                     , mtl
+                     , mtl < 2.4
                      , aeson
   default-language:    Haskell2010
 

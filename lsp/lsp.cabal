@@ -46,7 +46,7 @@ library
                      , hashable
                      , lsp-types == 1.5.*
                      , lens >= 4.15.2
-                     , mtl
+                     , mtl < 2.4
                      , network-uri
                      , prettyprinter
                      , sorted-list == 0.2.1.*
@@ -55,7 +55,7 @@ library
                      , temporary
                      , text
                      , text-rope
-                     , transformers >= 0.5.6 && < 0.6
+                     , transformers >= 0.5.6 && < 0.7
                      , time
                      , unordered-containers
                      , unliftio-core >= 0.2.0.0
