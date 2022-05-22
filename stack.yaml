@@ -10,5 +10,5 @@ extra-package-dbs: []
 nix:
   packages: [icu]
 extra-deps:
-- text-rope-0.1
+- text-rope-0.2
 - co-log-core-0.3.1.0
