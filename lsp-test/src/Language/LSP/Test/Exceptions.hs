@@ -48,7 +48,7 @@ instance Show SessionException where
   show UnexpectedDiagnostics = "Unexpectedly received diagnostics from the server."
   show (IncorrectApplyEditRequest msgStr) = "ApplyEditRequest didn't contain document, instead received:\n"
                                           ++ msgStr
-  show (UnexpectedResponseError lid e) = "Received an exepected error in a response for id " ++ show lid ++ ":\n"
+  show (UnexpectedResponseError lid e) = "Received an expected error in a response for id " ++ show lid ++ ":\n"
                                           ++ show e
   show UnexpectedServerTermination = "Language server unexpectedly terminated"
   show (IllegalInitSequenceMessage msg) =
