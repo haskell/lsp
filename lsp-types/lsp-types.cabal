@@ -76,13 +76,13 @@ library
                      , containers
                      , data-default
                      , deepseq
-                     , Diff
+                     , Diff >= 0.2
                      , dlist
                      , filepath
                      , hashable
                      , lens >= 4.15.2
                      , mtl < 2.4
-                     , network-uri
+                     , network-uri >= 2.6
                      , mod
                      , scientific
                      , some
