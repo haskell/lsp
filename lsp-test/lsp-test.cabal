@@ -49,7 +49,7 @@ library
                      , conduit-parse == 0.2.*
                      , containers >= 0.5.9
                      , data-default
-                     , Diff
+                     , Diff >= 0.3
                      , directory
                      , filepath
                      , Glob >= 0.9 && < 0.11
