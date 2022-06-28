@@ -47,16 +47,13 @@ library
                      , lsp-types == 1.5.*
                      , lens >= 4.15.2
                      , mtl < 2.4
-                     , network-uri
                      , prettyprinter
                      , sorted-list == 0.2.1.*
                      , stm == 2.5.*
-                     , scientific
                      , temporary
                      , text
                      , text-rope
                      , transformers >= 0.5.6 && < 0.7
-                     , time
                      , unordered-containers
                      , unliftio-core >= 0.2.0.0
                      -- used for generating random uuids for dynamic registration
@@ -101,44 +98,21 @@ flag demo
   default:     False
 
 
-test-suite unit-test
+test-suite lsp-test
   type:                exitcode-stdio-1.0
-  -- hs-source-dirs:      test src
   hs-source-dirs:      test
   main-is:             Main.hs
   other-modules:       Spec
-                       CapabilitiesSpec
-                       JsonSpec
                        DiagnosticsSpec
-                       MethodSpec
-                       ServerCapabilitiesSpec
-                       SemanticTokensSpec
-                       TypesSpec
-                       URIFilePathSpec
                        VspSpec
-                       WorkspaceEditSpec
   build-depends:       base
-                     , QuickCheck
-                     -- for instance Arbitrary Value
-                     , aeson >= 2.0.3.0
                      , containers
-                     , filepath
                      , lsp
                      , hspec
-                     -- , hspec-jenkins
-                     , lens >= 4.15.2
-                     , network-uri
-                     , quickcheck-instances
                      , sorted-list == 0.2.1.*
                      , text
                      , text-rope
                      , unordered-containers
-                     -- For GHCI tests
-                     -- , async
-                     -- , haskell-lsp-types
-                     -- , temporary
-                     -- , time
-                     -- , unordered-containers
   build-tool-depends:  hspec-discover:hspec-discover
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N -Wall
   default-language:    Haskell2010
