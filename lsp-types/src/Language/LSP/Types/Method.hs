@@ -87,7 +87,6 @@ data Method (f :: From) (t :: MethodType) where
   TextDocumentSemanticTokensFull     :: Method FromClient Request
   TextDocumentSemanticTokensFullDelta :: Method FromClient Request
   TextDocumentSemanticTokensRange    :: Method FromClient Request
-  WorkspaceSemanticTokensRefresh     :: Method FromClient Request
 
 -- ServerMethods
   -- Window
@@ -108,6 +107,7 @@ data Method (f :: From) (t :: MethodType) where
   WorkspaceWorkspaceFolders          :: Method FromServer Request
   WorkspaceConfiguration             :: Method FromServer Request
   WorkspaceApplyEdit                 :: Method FromServer Request
+  WorkspaceSemanticTokensRefresh     :: Method FromServer Request
   -- Document
   TextDocumentPublishDiagnostics     :: Method FromServer Notification
 
@@ -287,7 +287,6 @@ instance FromJSON SomeClientMethod where
   parseJSON (A.String "workspace/didChangeWatchedFiles")     = pure $ SomeClientMethod SWorkspaceDidChangeWatchedFiles
   parseJSON (A.String "workspace/symbol")                    = pure $ SomeClientMethod SWorkspaceSymbol
   parseJSON (A.String "workspace/executeCommand")            = pure $ SomeClientMethod SWorkspaceExecuteCommand
-  parseJSON (A.String "workspace/semanticTokens/refresh")    = pure $ SomeClientMethod SWorkspaceSemanticTokensRefresh
  -- Document
   parseJSON (A.String "textDocument/didOpen")                = pure $ SomeClientMethod STextDocumentDidOpen
   parseJSON (A.String "textDocument/didChange")              = pure $ SomeClientMethod STextDocumentDidChange
@@ -351,6 +350,7 @@ instance A.FromJSON SomeServerMethod where
   parseJSON (A.String "workspace/workspaceFolders")          = pure $ SomeServerMethod SWorkspaceWorkspaceFolders
   parseJSON (A.String "workspace/configuration")             = pure $ SomeServerMethod SWorkspaceConfiguration
   parseJSON (A.String "workspace/applyEdit")                 = pure $ SomeServerMethod SWorkspaceApplyEdit
+  parseJSON (A.String "workspace/semanticTokens/refresh")    = pure $ SomeServerMethod SWorkspaceSemanticTokensRefresh
   -- Document
   parseJSON (A.String "textDocument/publishDiagnostics")     = pure $ SomeServerMethod STextDocumentPublishDiagnostics
 
@@ -388,7 +388,6 @@ instance A.ToJSON (SMethod m) where
   toJSON SWorkspaceDidChangeWatchedFiles     = A.String "workspace/didChangeWatchedFiles"
   toJSON SWorkspaceSymbol                    = A.String "workspace/symbol"
   toJSON SWorkspaceExecuteCommand            = A.String "workspace/executeCommand"
-  toJSON SWorkspaceSemanticTokensRefresh     = A.String "workspace/semanticTokens/refresh"
   -- Document
   toJSON STextDocumentDidOpen                = A.String "textDocument/didOpen"
   toJSON STextDocumentDidChange              = A.String "textDocument/didChange"
@@ -445,6 +444,7 @@ instance A.ToJSON (SMethod m) where
   toJSON SWorkspaceWorkspaceFolders          = A.String "workspace/workspaceFolders"
   toJSON SWorkspaceConfiguration             = A.String "workspace/configuration"
   toJSON SWorkspaceApplyEdit                 = A.String "workspace/applyEdit"
+  toJSON SWorkspaceSemanticTokensRefresh     = A.String "workspace/semanticTokens/refresh"
   -- Document
   toJSON STextDocumentPublishDiagnostics     = A.String "textDocument/publishDiagnostics"
   -- Cancelling
