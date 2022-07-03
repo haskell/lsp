@@ -259,12 +259,12 @@ splitClientMethod STextDocumentSemanticTokens = IsClientReq
 splitClientMethod STextDocumentSemanticTokensFull = IsClientReq
 splitClientMethod STextDocumentSemanticTokensFullDelta = IsClientReq
 splitClientMethod STextDocumentSemanticTokensRange = IsClientReq
-splitClientMethod SWorkspaceSemanticTokensRefresh  = IsClientReq
 splitClientMethod SCancelRequest = IsClientNot
 splitClientMethod SCustomMethod{} = IsClientEither
 
 {-# INLINE splitServerMethod #-}
 splitServerMethod :: SServerMethod m -> ServerNotOrReq m
+-- Window
 splitServerMethod SWindowShowMessage = IsServerNot
 splitServerMethod SWindowShowMessageRequest = IsServerReq
 splitServerMethod SWindowShowDocument = IsServerReq
@@ -272,13 +272,19 @@ splitServerMethod SWindowLogMessage = IsServerNot
 splitServerMethod SWindowWorkDoneProgressCreate = IsServerReq
 splitServerMethod SProgress = IsServerNot
 splitServerMethod STelemetryEvent = IsServerNot
+-- Client
 splitServerMethod SClientRegisterCapability = IsServerReq
 splitServerMethod SClientUnregisterCapability = IsServerReq
+-- Workspace
 splitServerMethod SWorkspaceWorkspaceFolders = IsServerReq
 splitServerMethod SWorkspaceConfiguration = IsServerReq
 splitServerMethod SWorkspaceApplyEdit = IsServerReq
+splitServerMethod SWorkspaceSemanticTokensRefresh = IsServerReq
+-- Document
 splitServerMethod STextDocumentPublishDiagnostics = IsServerNot
+-- Cancelling
 splitServerMethod SCancelRequest = IsServerNot
+-- Custom
 splitServerMethod SCustomMethod{} = IsServerEither
 
 -- | Given a witness that two custom methods are of the same type, produce a witness that the methods are the same
