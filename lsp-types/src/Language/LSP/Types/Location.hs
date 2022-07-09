@@ -34,7 +34,7 @@ instance Hashable Position
 data Range =
   Range
     { _start :: Position -- ^ The range's start position. (inclusive)
-    , _end   :: Position -- ^ The range's end position. (exclusive)
+    , _end   :: Position -- ^ The range's end position. (exclusive, see: https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#range )
     } deriving (Show, Read, Eq, Ord, Generic)
 
 instance NFData Range
@@ -85,8 +85,10 @@ deriveJSON lspOptions ''LocationLink
 mkRange :: UInt -> UInt -> UInt -> UInt -> Range
 mkRange l c l' c' = Range (Position l c) (Position l' c')
 
-subRange :: Range -> Range -> Bool
-subRange smallRange range = _start smallRange >= _start range && _end smallRange <= _end range
+-- | 'isSubrangeOf' returns true if for every 'Position' in the first 'Range', it's also in the second 'Range'.
+isSubrangeOf :: Range -> Range -> Bool
+isSubrangeOf smallRange range = _start smallRange >= _start range && _end smallRange <= _end range
 
+-- | 'positionInRange' returns true if the given 'Position' is in the 'Range'.
 positionInRange :: Position -> Range -> Bool
-positionInRange p (Range sp ep) = sp <= p && p < ep
+positionInRange p (Range sp ep) = sp <= p && p < ep -- Range's end position is exclusive.

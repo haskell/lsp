@@ -10,13 +10,13 @@ main = hspec spec
 
 spec :: Spec
 spec = do
-  describe "subRange" $ do
+  describe "isSubrangeOf" $ do
     it "is true if the first range is totally inside the second range" $
-      subRange (mkRange 1 2 1 5) (mkRange 1 1 1 6) `shouldBe` True
+      isSubrangeOf (mkRange 1 2 1 5) (mkRange 1 1 1 6) `shouldBe` True
     it "is true if two ranges equal" $
-      subRange (mkRange 1 2 1 5) (mkRange 1 2 1 5) `shouldBe` True
+      isSubrangeOf (mkRange 1 2 1 5) (mkRange 1 2 1 5) `shouldBe` True
     it "is false if the first range is outside of the second" $
-      subRange (mkRange 1 1 1 5) (mkRange 1 2 1 5) `shouldBe` False
+      isSubrangeOf (mkRange 1 1 1 5) (mkRange 1 2 1 5) `shouldBe` False
 
   describe "positionInRange" $ do
     it "is false if position is after the end of a single line range" $
