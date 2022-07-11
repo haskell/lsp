@@ -1,11 +1,11 @@
-{-# LANGUAGE TemplateHaskell            #-}
-{-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE DeriveGeneric   #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Language.LSP.Types.Location where
 
 import           Control.DeepSeq
 import           Data.Aeson.TH
 import           Data.Hashable
-import           GHC.Generics hiding (UInt)
+import           GHC.Generics              hiding (UInt)
 import           Language.LSP.Types.Common
 import           Language.LSP.Types.Uri
 import           Language.LSP.Types.Utils
@@ -33,8 +33,8 @@ instance Hashable Position
 
 data Range =
   Range
-    { _start :: Position -- ^ The range's start position.
-    , _end   :: Position -- ^ The range's end position.
+    { _start :: Position -- ^ The range's start position. (inclusive)
+    , _end   :: Position -- ^ The range's end position. (exclusive, see: https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#range )
     } deriving (Show, Read, Eq, Ord, Generic)
 
 instance NFData Range
@@ -65,12 +65,12 @@ data LocationLink =
     -- range at the mouse position.
     _originSelectionRange :: Maybe Range
     -- | The target resource identifier of this link.
-  , _targetUri :: Uri
+  , _targetUri            :: Uri
     -- | The full target range of this link. If the target for example is a
     -- symbol then target range is the range enclosing this symbol not including
     -- leading/trailing whitespace but everything else like comments. This
     -- information is typically used to highlight the range in the editor.
-  , _targetRange :: Range
+  , _targetRange          :: Range
     -- | The range that should be selected and revealed when this link is being
     -- followed, e.g the name of a function. Must be contained by the the
     -- 'targetRange'. See also @DocumentSymbol._range@
@@ -84,3 +84,11 @@ deriveJSON lspOptions ''LocationLink
 -- prop> mkRange l c l' c' = Range (Position l c) (Position l' c')
 mkRange :: UInt -> UInt -> UInt -> UInt -> Range
 mkRange l c l' c' = Range (Position l c) (Position l' c')
+
+-- | 'isSubrangeOf' returns true if for every 'Position' in the first 'Range', it's also in the second 'Range'.
+isSubrangeOf :: Range -> Range -> Bool
+isSubrangeOf smallRange range = _start smallRange >= _start range && _end smallRange <= _end range
+
+-- | 'positionInRange' returns true if the given 'Position' is in the 'Range'.
+positionInRange :: Position -> Range -> Bool
+positionInRange p (Range sp ep) = sp <= p && p < ep -- Range's end position is exclusive.
