@@ -78,7 +78,7 @@ library
                      , deepseq
                      , Diff >= 0.2
                      , dlist
-                     , filepath
+                     , filepath-compat
                      , hashable
                      , lens >= 4.15.2
                      , mtl < 2.4
