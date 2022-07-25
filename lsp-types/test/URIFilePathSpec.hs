@@ -1,17 +1,17 @@
 {-# LANGUAGE OverloadedStrings #-}
 module URIFilePathSpec where
 
-import Control.Monad                          (when)
-import Data.List
-import Data.Text                              (Text, pack)
-import Language.LSP.Types
+import           Control.Monad           (when)
+import           Data.List
+import           Data.Text               (Text, pack)
+import           Language.LSP.Types
 
-import Network.URI
-import Test.Hspec
-import Test.QuickCheck
+import           Network.URI
+import           System.FilePath         (normalise)
 import qualified System.FilePath.Windows as FPW
-import System.FilePath                        (normalise)
 import qualified System.Info
+import           Test.Hspec
+import           Test.QuickCheck
 -- ---------------------------------------------------------------------
 
 isWindows :: Bool
@@ -224,7 +224,7 @@ uriNormalizeSpec = do
     let nuri = toNormalizedUri (filePathToUri fp)
     case uriToFilePath (fromNormalizedUri nuri) of
       Just nfp -> nfp `shouldBe` (normalise fp)
-      Nothing -> return () -- Some unicode paths creates invalid uris, ignoring for now
+      Nothing  -> return () -- Some unicode paths creates invalid uris, ignoring for now
 
 genFilePath :: Gen FilePath
 genFilePath | isWindows = genWindowsFilePath
@@ -252,27 +252,27 @@ normalizedFilePathSpec :: Spec
 normalizedFilePathSpec = do
   it "makes file path normalized" $ property $ forAll genFilePath $ \fp -> do
     let nfp = toNormalizedFilePath fp
-    fromNormalizedFilePath nfp `shouldBe` (normalise fp)
+    (nfp >>= fromNormalizedFilePath) `shouldBe` Just (normalise fp)
 
   it "converts to a normalized uri and back" $ property $ forAll genFilePath $ \fp -> do
-    let nuri = normalizedFilePathToUri (toNormalizedFilePath fp)
-    case uriToNormalizedFilePath nuri of
-      Just nfp -> fromNormalizedFilePath nfp `shouldBe` (normalise fp)
-      Nothing -> return () -- Some unicode paths creates invalid uris, ignoring for now
+    let nuri = normalizedFilePathToUri <$> toNormalizedFilePath fp
+    case uriToNormalizedFilePath =<< nuri of
+      Just nfp -> fromNormalizedFilePath nfp `shouldBe` Just (normalise fp)
+      Nothing  -> return () -- Some unicode paths creates invalid uris, ignoring for now
 
   it "converts a file path with reserved uri chars to a normalized URI and back" $ do
     let start = if isWindows then "C:\\" else "/"
     let fp = start ++ "path;part#fragmen?param=val"
-    let nuri = normalizedFilePathToUri (toNormalizedFilePath fp)
-    fmap fromNormalizedFilePath (uriToNormalizedFilePath nuri) `shouldBe` Just fp
+    let nuri = normalizedFilePathToUri <$> toNormalizedFilePath fp
+    (fromNormalizedFilePath =<< (uriToNormalizedFilePath =<< nuri)) `shouldBe` Just fp
 
   it "converts a file path with substrings that looks like uri escaped chars and back" $ do
     let start = if isWindows then "C:\\" else "/"
     let fp = start ++ "ca%C3%B1a"
-    let nuri = normalizedFilePathToUri (toNormalizedFilePath fp)
-    fmap fromNormalizedFilePath (uriToNormalizedFilePath nuri) `shouldBe` Just fp
+    let nuri = normalizedFilePathToUri <$> toNormalizedFilePath fp
+    (fromNormalizedFilePath =<< (uriToNormalizedFilePath =<< nuri)) `shouldBe` Just fp
 
   it "creates the same NormalizedUri than the older implementation" $ property $ forAll genFilePath $ \fp -> do
-    let nuri = normalizedFilePathToUri (toNormalizedFilePath fp)
+    let nuri = normalizedFilePathToUri <$> toNormalizedFilePath fp
     let oldNuri = toNormalizedUri (filePathToUri fp)
-    nuri `shouldBe` oldNuri
+    nuri `shouldBe` Just oldNuri

@@ -16,6 +16,11 @@ category:            Development
 build-type:          Simple
 extra-source-files:  ChangeLog.md, README.md
 
+flag filepath-compat
+  description: use "filepath-compat" library
+  manual: False
+  default: False
+
 library
   exposed-modules:     Language.LSP.Types
                      , Language.LSP.Types.Capabilities
@@ -78,7 +83,6 @@ library
                      , deepseq
                      , Diff >= 0.2
                      , dlist
-                     , filepath-compat
                      , hashable
                      , lens >= 4.15.2
                      , mtl < 2.4
@@ -89,6 +93,13 @@ library
                      , text
                      , template-haskell
                      , unordered-containers
+                     , exceptions
+                     , safe
+                     , bytestring
+  if flag(filepath-compat)
+    build-depends: filepath-compat
+  else
+    build-depends: filepath ^>= 1.4.100.0
   hs-source-dirs:      src
   default-language:    Haskell2010
   default-extensions: StrictData
@@ -106,6 +117,7 @@ test-suite lsp-types-test
                        TypesSpec
                        URIFilePathSpec
                        WorkspaceEditSpec
+                       LocationSpec
   build-depends:       base
                      , QuickCheck
                      -- for instance Arbitrary Value
