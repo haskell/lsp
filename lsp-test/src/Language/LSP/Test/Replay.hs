@@ -44,7 +44,7 @@ replaySession serverExe sessionDir = do
   -- decode session
   let unswappedEvents = map (fromJust . decode) entries
 
-  withServer serverExe False $ \serverIn serverOut serverProc -> do
+  withServer serverExe False id $ \serverIn serverOut serverProc -> do
 
     pid <- getProcessID serverProc
     events <- swapCommands pid <$> swapFiles sessionDir unswappedEvents

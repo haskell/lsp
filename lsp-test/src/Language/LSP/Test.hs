@@ -25,6 +25,7 @@ module Language.LSP.Test
     Session
   , runSession
   , runSessionWithConfig
+  , runSessionWithConfig'
   , runSessionWithHandles
   , runSessionWithHandles'
   -- ** Config
@@ -133,7 +134,7 @@ import System.Environment
 import System.IO
 import System.Directory
 import System.FilePath
-import System.Process (ProcessHandle)
+import System.Process (ProcessHandle, CreateProcess)
 import qualified System.FilePath.Glob as Glob
 import Control.Monad.State (execState)
 
@@ -159,9 +160,19 @@ runSessionWithConfig :: SessionConfig -- ^ Configuration options for the session
                      -> FilePath -- ^ The filepath to the root directory for the session.
                      -> Session a -- ^ The session to run.
                      -> IO a
-runSessionWithConfig config' serverExe caps rootDir session = do
+runSessionWithConfig = runSessionWithConfig' id
+
+-- | Starts a new session with a custom configuration.
+runSessionWithConfig' :: (CreateProcess -> CreateProcess)
+                      -> SessionConfig -- ^ Configuration options for the session.
+                      -> String -- ^ The command to run the server.
+                      -> C.ClientCapabilities -- ^ The capabilities that the client should declare.
+                      -> FilePath -- ^ The filepath to the root directory for the session.
+                      -> Session a -- ^ The session to run.
+                      -> IO a
+runSessionWithConfig' modifyCreateProcess config' serverExe caps rootDir session = do
   config <- envOverrideConfig config'
-  withServer serverExe (logStdErr config) $ \serverIn serverOut serverProc ->
+  withServer serverExe (logStdErr config) modifyCreateProcess $ \serverIn serverOut serverProc ->
     runSessionWithHandles' (Just serverProc) serverIn serverOut config caps rootDir session
 
 -- | Starts a new session, using the specified handles to communicate with the
