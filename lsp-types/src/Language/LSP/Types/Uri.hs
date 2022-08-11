@@ -1,7 +1,6 @@
 {-# LANGUAGE CPP                        #-}
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE InstanceSigs               #-}
 {-# LANGUAGE RecordWildCards            #-}
 {-# LANGUAGE TypeSynonymInstances       #-}
 
@@ -17,8 +16,6 @@ module Language.LSP.Types.Uri
   , fromNormalizedFilePath
   , normalizedFilePathToUri
   , uriToNormalizedFilePath
-  , osPathToNormalizedFilePath
-  , osPathFromNormalizedFilePath
   -- Private functions
   , platformAwareUriToFilePath
   , platformAwareFilePathToUri
@@ -35,6 +32,7 @@ import           Data.List                      (stripPrefix)
 import           Data.Maybe                     (fromJust)
 import           Data.Text                      (Text)
 import qualified Data.Text                      as T
+import qualified Data.Text.Encoding             as T
 import           GHC.Generics
 import           Network.URI                    hiding (authority)
 import           Safe                           (tailMay)
@@ -42,8 +40,10 @@ import qualified System.FilePath                as FP
 import qualified System.FilePath.Posix          as FPP
 import qualified System.FilePath.Windows        as FPW
 import qualified System.Info
+
+#ifdef OS_PATH
 import qualified System.OsPath                  as OsPath
-import           System.OsPath                  (OsPath)
+
 #if defined(mingw32_HOST_OS) || defined(__MINGW32__)
 import           System.OsString.Internal.Types (OsString (..),
                                                  WindowsString (..))
@@ -51,6 +51,12 @@ import           System.OsString.Internal.Types (OsString (..),
 import           System.OsString.Internal.Types (OsString (..),
                                                  PosixString (..))
 #endif
+
+#else
+import qualified Data.ByteString.Short          as BS
+import qualified System.FilePath                as OsPath
+#endif
+
 
 newtype Uri = Uri { getUri :: Text }
   deriving (Eq,Ord,Read,Show,Generic,A.FromJSON,A.ToJSON,Hashable,A.ToJSONKey,A.FromJSONKey)
@@ -169,40 +175,67 @@ platformAdjustToUriPath systemOS srcPath
           FPP.addTrailingPathSeparator (init drv)
       | otherwise = drv
 
+#ifdef OS_PATH
+type OsPath = OsPath.OsPath
+#else
+type OsPath = FilePath
+#endif
+
 -- | Newtype wrapper around FilePath that always has normalized slashes.
 -- The NormalizedUri and hash of the FilePath are cached to avoided
 -- repeated normalisation when we need to compute them (which is a lot).
 --
 -- This is one of the most performance critical parts of ghcide, do not
 -- modify it without profiling.
-data NormalizedFilePath = NormalizedFilePath NormalizedUri !OsPath
+data NormalizedFilePath = NormalizedFilePath !NormalizedUri !ShortByteString
     deriving (Generic, Eq, Ord)
 
 instance NFData NormalizedFilePath
 
 instance Binary NormalizedFilePath where
-  put (NormalizedFilePath _ fp) = put (unwrapOsPath fp)
+  put (NormalizedFilePath _ fp) = put fp
   get = do
     v <- Data.Binary.get :: Get ShortByteString
-    let v' = makeOsPath v
-        nuri = internalNormalizedFilePathToUri v'
-    return (NormalizedFilePath (fromJust nuri) v')
+    let nuri = internalNormalizedFilePathToUri (wrapOsPath v)
+    return (NormalizedFilePath (fromJust nuri) v)
 
 -- Remove the CPP hack when OsPath gets 'Binary' instance.
 -- See: https://gitlab.haskell.org/haskell/filepath/-/issues/122
 
 unwrapOsPath :: OsPath -> ShortByteString
+#ifdef OS_PATH
 #if defined(mingw32_HOST_OS) || defined(__MINGW32__)
 unwrapOsPath = getWindowsString . getOsString
 #else
 unwrapOsPath = getPosixString . getOsString
 #endif
-
-makeOsPath :: ShortByteString -> OsPath
-#if defined(mingw32_HOST_OS) || defined(__MINGW32__)
-makeOsPath = OsString . WindowsString
 #else
-makeOsPath = OsString . PosixString
+unwrapOsPath = BS.toShort . T.encodeUtf8 . T.pack
+#endif
+
+wrapOsPath :: ShortByteString -> OsPath
+#ifdef OS_PATH
+#if defined(mingw32_HOST_OS) || defined(__MINGW32__)
+wrapOsPath = OsString . WindowsString
+#else
+wrapOsPath = OsString . PosixString
+#endif
+#else
+wrapOsPath = T.unpack . T.decodeUtf8 . BS.fromShort
+#endif
+
+decodeUtf :: MonadThrow m => OsPath -> m FilePath
+#ifdef OS_PATH
+decodeUtf = OsPath.decodeUtf
+#else
+decodeUtf = pure
+#endif
+
+encodeUtf :: MonadThrow m => FilePath -> m OsPath
+#ifdef OS_PATH
+encodeUtf = OsPath.encodeUtf
+#else
+encodeUtf = pure
 #endif
 
 -- | Internal helper that takes a file path that is assumed to
@@ -211,7 +244,7 @@ makeOsPath = OsString . PosixString
 internalNormalizedFilePathToUri :: MonadThrow m => OsPath -> m NormalizedUri
 internalNormalizedFilePathToUri fp = nuri
   where
-    uriPath = platformAdjustToUriPath System.Info.os <$> OsPath.decodeUtf fp
+    uriPath = platformAdjustToUriPath System.Info.os <$> decodeUtf fp
     nuriStr = fmap (T.pack . \p -> fileScheme <> "//" <> p) uriPath
     nuri = fmap (\nuriStr' -> NormalizedUri (hash nuriStr') nuriStr') nuriStr
 
@@ -222,24 +255,18 @@ instance Hashable NormalizedFilePath where
   hash (NormalizedFilePath uri _) = hash uri
   hashWithSalt salt (NormalizedFilePath uri _) = hashWithSalt salt uri
 
-toNormalizedFilePath :: MonadThrow m => FilePath -> m NormalizedFilePath
-toNormalizedFilePath fp = OsPath.encodeUtf fp >>= osPathToNormalizedFilePath
-
-fromNormalizedFilePath :: MonadThrow m => NormalizedFilePath -> m FilePath
-fromNormalizedFilePath = OsPath.decodeUtf . osPathFromNormalizedFilePath
-
-osPathToNormalizedFilePath :: MonadThrow m => OsPath -> m NormalizedFilePath
-osPathToNormalizedFilePath fp = flip NormalizedFilePath nfp <$> nuri
+toNormalizedFilePath :: MonadThrow m => OsPath -> m NormalizedFilePath
+toNormalizedFilePath fp = flip NormalizedFilePath (unwrapOsPath nfp) <$> nuri
   where
     nfp = OsPath.normalise fp
     nuri = internalNormalizedFilePathToUri nfp
 
-osPathFromNormalizedFilePath :: NormalizedFilePath -> OsPath
-osPathFromNormalizedFilePath (NormalizedFilePath _ osPath) = osPath
+fromNormalizedFilePath :: NormalizedFilePath -> OsPath
+fromNormalizedFilePath (NormalizedFilePath _ fp) = wrapOsPath fp
 
 normalizedFilePathToUri :: NormalizedFilePath -> NormalizedUri
 normalizedFilePathToUri (NormalizedFilePath uri _) = uri
 
 uriToNormalizedFilePath :: NormalizedUri -> Maybe NormalizedFilePath
-uriToNormalizedFilePath nuri = fmap (NormalizedFilePath nuri) (mbFilePath >>= OsPath.encodeUtf)
+uriToNormalizedFilePath nuri = fmap (NormalizedFilePath nuri . unwrapOsPath) (mbFilePath >>= encodeUtf)
   where mbFilePath = platformAwareUriToFilePath System.Info.os (fromNormalizedUri nuri)
