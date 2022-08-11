@@ -4,6 +4,10 @@
 {-# LANGUAGE RecordWildCards            #-}
 {-# LANGUAGE TypeSynonymInstances       #-}
 
+#if MIN_VERSION_filepath(1,4,100)
+#define OS_PATH 1
+#endif
+
 module Language.LSP.Types.Uri
   ( Uri(..)
   , uriToFilePath
@@ -16,6 +20,8 @@ module Language.LSP.Types.Uri
   , fromNormalizedFilePath
   , normalizedFilePathToUri
   , uriToNormalizedFilePath
+  , filePathToNormalizedFilePath
+  , normalizedFilePathToFilePath
   -- Private functions
   , platformAwareUriToFilePath
   , platformAwareFilePathToUri
@@ -32,7 +38,6 @@ import           Data.List                      (stripPrefix)
 import           Data.Maybe                     (fromJust)
 import           Data.Text                      (Text)
 import qualified Data.Text                      as T
-import qualified Data.Text.Encoding             as T
 import           GHC.Generics
 import           Network.URI                    hiding (authority)
 import           Safe                           (tailMay)
@@ -40,6 +45,10 @@ import qualified System.FilePath                as FP
 import qualified System.FilePath.Posix          as FPP
 import qualified System.FilePath.Windows        as FPW
 import qualified System.Info
+
+#ifndef OS_PATH
+import qualified Data.Text.Encoding             as T
+#endif
 
 #ifdef OS_PATH
 import qualified System.OsPath                  as OsPath
@@ -187,7 +196,7 @@ type OsPath = FilePath
 --
 -- This is one of the most performance critical parts of ghcide, do not
 -- modify it without profiling.
-data NormalizedFilePath = NormalizedFilePath !NormalizedUri !ShortByteString
+data NormalizedFilePath = NormalizedFilePath !NormalizedUri {-# UNPACK #-} !ShortByteString
     deriving (Generic, Eq, Ord)
 
 instance NFData NormalizedFilePath
@@ -254,6 +263,12 @@ instance Show NormalizedFilePath where
 instance Hashable NormalizedFilePath where
   hash (NormalizedFilePath uri _) = hash uri
   hashWithSalt salt (NormalizedFilePath uri _) = hashWithSalt salt uri
+
+filePathToNormalizedFilePath :: MonadThrow m => FilePath -> m NormalizedFilePath
+filePathToNormalizedFilePath fp = encodeUtf fp >>= toNormalizedFilePath
+
+normalizedFilePathToFilePath :: MonadThrow m => NormalizedFilePath -> m FilePath
+normalizedFilePathToFilePath nfp = decodeUtf $ fromNormalizedFilePath nfp
 
 toNormalizedFilePath :: MonadThrow m => OsPath -> m NormalizedFilePath
 toNormalizedFilePath fp = flip NormalizedFilePath (unwrapOsPath nfp) <$> nuri
