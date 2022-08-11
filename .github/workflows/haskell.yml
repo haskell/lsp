@@ -43,6 +43,7 @@ jobs:
     - name: Cabal update
       run: cabal update
     - name: Cabal configure
+      shell: bash
       run: |
         if [ ${{ matrix.ospath }} = "true" ]; then
           cabal configure --constraint="filepath ^>= 1.4.100.0"
