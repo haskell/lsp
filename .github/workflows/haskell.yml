@@ -9,9 +9,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ghc: ['9.2.1', '9.0.1', '8.10.7', '8.8.4', '8.6.5']
+        ghc: ['9.2.4', '9.0.2', '8.10.7', '8.8.4', '8.6.5']
         os: [ubuntu-latest, macOS-latest, windows-latest]
         ospath: [true, false]
+        exclude:
+        # newer 'entropy' doesn't work with old 'unix', and it doesn't have a correct version bound.
+          - ospath: true
+            ghc: 8.6.5
 
     steps:
     - uses: actions/checkout@v2
