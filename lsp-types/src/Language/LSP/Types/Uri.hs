@@ -208,9 +208,6 @@ instance Binary NormalizedFilePath where
     let nuri = internalNormalizedFilePathToUri (wrapOsPath v)
     return (NormalizedFilePath (fromJust nuri) v)
 
--- Remove the CPP hack when OsPath gets 'Binary' instance.
--- See: https://gitlab.haskell.org/haskell/filepath/-/issues/122
-
 unwrapOsPath :: OsPath -> ShortByteString
 #ifdef OS_PATH
 #if defined(mingw32_HOST_OS) || defined(__MINGW32__)
