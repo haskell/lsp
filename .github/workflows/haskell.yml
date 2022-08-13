@@ -13,9 +13,13 @@ jobs:
         os: [ubuntu-latest, macOS-latest, windows-latest]
         ospath: [true, false]
         exclude:
-        # newer 'entropy' doesn't work with old 'unix', and it doesn't have a correct version bound.
+          # newer 'entropy' doesn't work with old 'unix', and it doesn't have a correct version bound.
           - ospath: true
             ghc: 8.6.5
+          # "cabal build" always timeout
+          - ospath: true
+            ghc: 8.8.4
+            os: windows-latest
 
     steps:
     - uses: actions/checkout@v2
