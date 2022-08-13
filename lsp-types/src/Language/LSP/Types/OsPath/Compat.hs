@@ -5,7 +5,7 @@
 #endif
 
 module Language.LSP.Types.OsPath.Compat
-  ( OsPath
+  ( OsPathCompat
 #ifdef OS_PATH
   , module System.OsPath
 #else
@@ -18,8 +18,7 @@ module Language.LSP.Types.OsPath.Compat
   ) where
 
 #ifdef OS_PATH
-import qualified System.OsPath                  as OsPath
-import           System.OsPath                  hiding (OsPath)
+import           System.OsPath
 
 #if defined(mingw32_HOST_OS) || defined(__MINGW32__)
 import           System.OsString.Internal.Types (OsString (..),
@@ -31,17 +30,22 @@ import           System.OsString.Internal.Types (OsString (..),
 
 #else
 import qualified Data.ByteString.Short          as BS
+import qualified Data.Text                      as T
 import qualified Data.Text.Encoding             as T
-import qualified System.FilePath                as OsPath
-import           System.FilePath                hiding (FilePath)
+import           System.FilePath
 #endif
 
 import           Control.Monad.Catch            (MonadThrow)
 import           Data.ByteString.Short          (ShortByteString)
 
-type OsPath = OsPath.OsPath
+type OsPathCompat =
+#ifdef OS_PATH
+  OsPath
+#else
+  FilePath
+#endif
 
-toShortByteString :: OsPath -> ShortByteString
+toShortByteString :: OsPathCompat -> ShortByteString
 #ifdef OS_PATH
 #if defined(mingw32_HOST_OS) || defined(__MINGW32__)
 toShortByteString = getWindowsString . getOsString
@@ -52,7 +56,7 @@ toShortByteString = getPosixString . getOsString
 toShortByteString = BS.toShort . T.encodeUtf8 . T.pack
 #endif
 
-fromShortByteString :: ShortByteString -> OsPath
+fromShortByteString :: ShortByteString -> OsPathCompat
 #ifdef OS_PATH
 #if defined(mingw32_HOST_OS) || defined(__MINGW32__)
 fromShortByteString = OsString . WindowsString
@@ -63,14 +67,14 @@ fromShortByteString = OsString . PosixString
 fromShortByteString = T.unpack . T.decodeUtf8 . BS.fromShort
 #endif
 
-toFilePath :: MonadThrow m => OsPath -> m FilePath
+toFilePath :: MonadThrow m => OsPathCompat -> m FilePath
 #ifdef OS_PATH
 toFilePath = decodeUtf
 #else
 toFilePath = pure
 #endif
 
-fromFilePath :: MonadThrow m => FilePath -> m OsPath
+fromFilePath :: MonadThrow m => FilePath -> m OsPathCompat
 #ifdef OS_PATH
 fromFilePath = encodeUtf
 #else

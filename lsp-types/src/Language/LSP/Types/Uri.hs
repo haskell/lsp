@@ -24,24 +24,24 @@ module Language.LSP.Types.Uri
   where
 
 import           Control.DeepSeq
-import           Control.Monad.Catch            (MonadThrow)
-import qualified Data.Aeson                     as A
-import           Data.Binary                    (Binary, Get, get, put)
-import           Data.ByteString.Short          (ShortByteString)
+import           Control.Monad.Catch              (MonadThrow)
+import qualified Data.Aeson                       as A
+import           Data.Binary                      (Binary, Get, get, put)
+import           Data.ByteString.Short            (ShortByteString)
 import           Data.Hashable
-import           Data.List                      (stripPrefix)
-import           Data.Maybe                     (fromJust)
-import           Data.Text                      (Text)
-import qualified Data.Text                      as T
+import           Data.List                        (stripPrefix)
+import           Data.Maybe                       (fromJust)
+import           Data.Text                        (Text)
+import qualified Data.Text                        as T
 import           GHC.Generics
-import           Network.URI                    hiding (authority)
-import           Safe                           (tailMay)
-import qualified System.FilePath                as FP
-import qualified System.FilePath.Posix          as FPP
-import qualified System.FilePath.Windows        as FPW
-import qualified System.Info
+import           Language.LSP.Types.OsPath.Compat (OsPathCompat)
 import qualified Language.LSP.Types.OsPath.Compat as OsPath
-import Language.LSP.Types.OsPath.Compat (OsPath)
+import           Network.URI                      hiding (authority)
+import           Safe                             (tailMay)
+import qualified System.FilePath                  as FP
+import qualified System.FilePath.Posix            as FPP
+import qualified System.FilePath.Windows          as FPW
+import qualified System.Info
 
 
 newtype Uri = Uri { getUri :: Text }
@@ -182,7 +182,7 @@ instance Binary NormalizedFilePath where
 -- | Internal helper that takes a file path that is assumed to
 -- already be normalized to a URI. It is up to the caller
 -- to ensure normalization.
-internalNormalizedFilePathToUri :: MonadThrow m => OsPath -> m NormalizedUri
+internalNormalizedFilePathToUri :: MonadThrow m => OsPathCompat -> m NormalizedUri
 internalNormalizedFilePathToUri fp = nuri
   where
     uriPath = platformAdjustToUriPath System.Info.os <$> OsPath.toFilePath fp
@@ -202,13 +202,13 @@ filePathToNormalizedFilePath fp = OsPath.fromFilePath fp >>= toNormalizedFilePat
 normalizedFilePathToFilePath :: MonadThrow m => NormalizedFilePath -> m FilePath
 normalizedFilePathToFilePath nfp = OsPath.toFilePath $ fromNormalizedFilePath nfp
 
-toNormalizedFilePath :: MonadThrow m => OsPath -> m NormalizedFilePath
+toNormalizedFilePath :: MonadThrow m => OsPathCompat -> m NormalizedFilePath
 toNormalizedFilePath fp = flip NormalizedFilePath (OsPath.toShortByteString nfp) <$> nuri
   where
     nfp = OsPath.normalise fp
     nuri = internalNormalizedFilePathToUri nfp
 
-fromNormalizedFilePath :: NormalizedFilePath -> OsPath
+fromNormalizedFilePath :: NormalizedFilePath -> OsPathCompat
 fromNormalizedFilePath (NormalizedFilePath _ fp) = OsPath.fromShortByteString fp
 
 normalizedFilePathToUri :: NormalizedFilePath -> NormalizedUri
