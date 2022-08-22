@@ -26,6 +26,7 @@ module Language.LSP.Test
   , runSession
   , runSessionWithConfig
   , runSessionWithHandles
+  , runSessionWithHandles'
   -- ** Config
   , SessionConfig(..)
   , defaultConfig
