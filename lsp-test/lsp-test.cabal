@@ -51,6 +51,7 @@ library
                      , data-default
                      , Diff >= 0.3
                      , directory
+                     , exceptions
                      , filepath
                      , Glob >= 0.9 && < 0.11
                      , lens
@@ -101,7 +102,7 @@ test-suite func-test
   main-is:             FuncTest.hs
   hs-source-dirs:      func-test
   type:                exitcode-stdio-1.0
-  build-depends:       base 
+  build-depends:       base
                      , lsp-test
                      , lsp
                      , process
