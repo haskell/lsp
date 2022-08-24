@@ -10,6 +10,3 @@ tests: True
 benchmarks: True
 test-show-details: direct
 haddock-quickjump: True
-
--- https://github.com/TomMD/entropy/issues/75
-constraints: entropy < 0.4.1.9
