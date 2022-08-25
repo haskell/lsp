@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE RecordWildCards            #-}
 {-# LANGUAGE TypeSynonymInstances       #-}
 
@@ -10,6 +11,7 @@ module Language.LSP.Types.Uri
   , NormalizedUri(..)
   , toNormalizedUri
   , fromNormalizedUri
+  , emptyNormalizedUri
   , NormalizedFilePath
   , toNormalizedFilePath
   , fromNormalizedFilePath
@@ -17,6 +19,7 @@ module Language.LSP.Types.Uri
   , uriToNormalizedFilePath
   , filePathToNormalizedFilePath
   , normalizedFilePathToFilePath
+  , emptyNormalizedFilePath
   -- Private functions
   , platformAwareUriToFilePath
   , platformAwareFilePathToUri
@@ -161,6 +164,11 @@ platformAdjustToUriPath systemOS srcPath
           FPP.addTrailingPathSeparator (init drv)
       | otherwise = drv
 
+emptyNormalizedUri :: NormalizedUri
+emptyNormalizedUri =
+    let s = "file://"
+    in NormalizedUri (hash s) s
+
 -- | Newtype wrapper around FilePath that always has normalized slashes.
 -- The NormalizedUri and hash of the FilePath are cached to avoided
 -- repeated normalisation when we need to compute them (which is a lot).
@@ -217,3 +225,6 @@ normalizedFilePathToUri (NormalizedFilePath uri _) = uri
 uriToNormalizedFilePath :: NormalizedUri -> Maybe NormalizedFilePath
 uriToNormalizedFilePath nuri = fmap (NormalizedFilePath nuri . OsPath.toShortByteString) (mbFilePath >>= OsPath.fromFilePath)
   where mbFilePath = platformAwareUriToFilePath System.Info.os (fromNormalizedUri nuri)
+
+emptyNormalizedFilePath :: NormalizedFilePath
+emptyNormalizedFilePath = NormalizedFilePath emptyNormalizedUri ""
