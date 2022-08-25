@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE RankNTypes                 #-}
 {-# LANGUAGE RecordWildCards            #-}
 {-# LANGUAGE TypeSynonymInstances       #-}
 
@@ -14,10 +15,12 @@ module Language.LSP.Types.Uri
   , emptyNormalizedUri
   , NormalizedFilePath
   , toNormalizedFilePath
+  , unsafeToNormalizedFilePath
   , fromNormalizedFilePath
   , normalizedFilePathToUri
   , uriToNormalizedFilePath
   , filePathToNormalizedFilePath
+  , unsafeFilePathToNormalizedFilePath
   , normalizedFilePathToFilePath
   , emptyNormalizedFilePath
   -- Private functions
@@ -37,6 +40,7 @@ import           Data.Maybe                       (fromJust)
 import           Data.Text                        (Text)
 import qualified Data.Text                        as T
 import           GHC.Generics
+import           GHC.Stack                        (HasCallStack)
 import           Language.LSP.Types.OsPath.Compat (OsPathCompat)
 import qualified Language.LSP.Types.OsPath.Compat as OsPath
 import           Network.URI                      hiding (authority)
@@ -207,6 +211,10 @@ instance Hashable NormalizedFilePath where
 filePathToNormalizedFilePath :: MonadThrow m => FilePath -> m NormalizedFilePath
 filePathToNormalizedFilePath fp = OsPath.fromFilePath fp >>= toNormalizedFilePath
 
+{-# DEPRECATED unsafeFilePathToNormalizedFilePath "use toNormalizedFilePath instead" #-}
+unsafeFilePathToNormalizedFilePath :: String -> NormalizedFilePath
+unsafeFilePathToNormalizedFilePath str = unwrapMonadThrow (filePathToNormalizedFilePath str)
+
 normalizedFilePathToFilePath :: MonadThrow m => NormalizedFilePath -> m FilePath
 normalizedFilePathToFilePath nfp = OsPath.toFilePath $ fromNormalizedFilePath nfp
 
@@ -215,6 +223,16 @@ toNormalizedFilePath fp = flip NormalizedFilePath (OsPath.toShortByteString nfp)
   where
     nfp = OsPath.normalise fp
     nuri = internalNormalizedFilePathToUri nfp
+
+{-# DEPRECATED unsafeToNormalizedFilePath "use toNormalizedFilePath instead" #-}
+unsafeToNormalizedFilePath :: HasCallStack => OsPathCompat -> NormalizedFilePath
+unsafeToNormalizedFilePath fp = unwrapMonadThrow (toNormalizedFilePath fp)
+
+unwrapMonadThrow :: HasCallStack => (forall m. MonadThrow m => m a) -> a
+unwrapMonadThrow action =
+  case action of
+    Right v        -> v
+    Left exception -> error $ show exception
 
 fromNormalizedFilePath :: NormalizedFilePath -> OsPathCompat
 fromNormalizedFilePath (NormalizedFilePath _ fp) = OsPath.fromShortByteString fp

@@ -1,4 +1,5 @@
-{-# LANGUAGE CPP #-}
+{-# LANGUAGE CPP                 #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 #if MIN_VERSION_filepath(1,4,100)
 #define OS_PATH 1
@@ -35,8 +36,11 @@ import qualified Data.Text.Encoding             as T
 import           System.FilePath
 #endif
 
-import           Control.Monad.Catch            (MonadThrow)
+import           Control.Exception              (try)
+import           Control.Monad.Catch            (MonadThrow, SomeException,
+                                                 throwM)
 import           Data.ByteString.Short          (ShortByteString)
+import           System.IO.Unsafe               (unsafePerformIO)
 
 type OsPathCompat =
 #ifdef OS_PATH
@@ -69,14 +73,24 @@ fromShortByteString = T.unpack . T.decodeUtf8 . BS.fromShort
 
 toFilePath :: MonadThrow m => OsPathCompat -> m FilePath
 #ifdef OS_PATH
-toFilePath = decodeUtf
+toFilePath = unsafePerformIO' . decodeFS
 #else
 toFilePath = pure
 #endif
 
 fromFilePath :: MonadThrow m => FilePath -> m OsPathCompat
 #ifdef OS_PATH
-fromFilePath = encodeUtf
+fromFilePath = unsafePerformIO' . encodeUtf
 #else
 fromFilePath = pure
+#endif
+
+#ifdef OS_PATH
+unsafePerformIO' :: MonadThrow m => IO a -> m a
+unsafePerformIO' action =
+  case fp of
+    Left (e :: SomeException) -> throwM e
+    Right fp'                 -> pure fp'
+  where
+    fp = unsafePerformIO . try $ action
 #endif
