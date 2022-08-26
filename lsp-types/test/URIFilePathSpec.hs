@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 module URIFilePathSpec where
 
@@ -7,13 +7,13 @@ import           Data.List
 import           Data.Text               (Text, pack)
 import           Language.LSP.Types
 
+import           Data.Tuple.Curry        (uncurryN)
 import           Network.URI
 import           System.FilePath         (normalise)
 import qualified System.FilePath.Windows as FPW
 import qualified System.Info
 import           Test.Hspec
 import           Test.QuickCheck
-import Data.Tuple.Curry (uncurryN)
 -- ---------------------------------------------------------------------
 
 isWindows :: Bool
