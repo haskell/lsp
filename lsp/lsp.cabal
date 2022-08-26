@@ -44,7 +44,7 @@ library
                      , exceptions
                      , filepath
                      , hashable
-                     , lsp-types == 1.5.*
+                     , lsp-types == 1.6.*
                      , lens >= 4.15.2
                      , mtl < 2.4
                      , prettyprinter
