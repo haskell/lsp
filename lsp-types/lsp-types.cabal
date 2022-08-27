@@ -69,7 +69,6 @@ library
                      , Language.LSP.Types.WorkspaceFolders
                      , Language.LSP.Types.WorkspaceSymbol
                      , Language.LSP.Types.Uri.OsPath
-                     , Language.LSP.Types.OsPath.Compat
  -- other-extensions:
   ghc-options:         -Wall
   build-depends:       base >= 4.11 && < 5
