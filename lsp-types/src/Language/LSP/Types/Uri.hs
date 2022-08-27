@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE InstanceSigs               #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE RankNTypes                 #-}
 {-# LANGUAGE RecordWildCards            #-}
@@ -12,16 +13,11 @@ module Language.LSP.Types.Uri
   , NormalizedUri(..)
   , toNormalizedUri
   , fromNormalizedUri
-  , emptyNormalizedUri
   , NormalizedFilePath
   , toNormalizedFilePath
-  , unsafeToNormalizedFilePath
   , fromNormalizedFilePath
   , normalizedFilePathToUri
   , uriToNormalizedFilePath
-  , filePathToNormalizedFilePath
-  , unsafeFilePathToNormalizedFilePath
-  , normalizedFilePathToFilePath
   , emptyNormalizedFilePath
   -- Private functions
   , platformAwareUriToFilePath
@@ -30,24 +26,24 @@ module Language.LSP.Types.Uri
   where
 
 import           Control.DeepSeq
-import           Control.Monad.Catch              (MonadThrow)
-import qualified Data.Aeson                       as A
-import           Data.Binary                      (Binary, Get, get, put)
-import           Data.ByteString.Short            (ShortByteString)
+import qualified Data.Aeson               as A
+import           Data.Binary              (Binary, Get, get, put)
+import           Data.ByteString.Short    (ShortByteString)
+import qualified Data.ByteString.Short    as BS
 import           Data.Hashable
-import           Data.List                        (stripPrefix)
-import           Data.Maybe                       (fromJust)
-import           Data.Text                        (Text)
-import qualified Data.Text                        as T
+import           Data.List                (stripPrefix)
+import           Data.String              (IsString (fromString))
+import           Data.Text                (Text)
+import qualified Data.Text                as T
+import qualified Data.Text.Encoding       as T
+import           Data.Text.Encoding.Error (UnicodeException)
 import           GHC.Generics
-import           GHC.Stack                        (HasCallStack)
-import           Language.LSP.Types.OsPath.Compat (OsPathCompat)
-import qualified Language.LSP.Types.OsPath.Compat as OsPath
-import           Network.URI                      hiding (authority)
-import           Safe                             (tailMay)
-import qualified System.FilePath                  as FP
-import qualified System.FilePath.Posix            as FPP
-import qualified System.FilePath.Windows          as FPW
+import           GHC.Stack                (HasCallStack)
+import           Network.URI              hiding (authority)
+import           Safe                     (tailMay)
+import qualified System.FilePath          as FP
+import qualified System.FilePath.Posix    as FPP
+import qualified System.FilePath.Windows  as FPW
 import qualified System.Info
 
 
@@ -168,13 +164,9 @@ platformAdjustToUriPath systemOS srcPath
           FPP.addTrailingPathSeparator (init drv)
       | otherwise = drv
 
-emptyNormalizedUri :: NormalizedUri
-emptyNormalizedUri =
-    let s = "file://"
-    in NormalizedUri (hash s) s
-
--- | Newtype wrapper around FilePath that always has normalized slashes.
--- The NormalizedUri and hash of the FilePath are cached to avoided
+-- | A file path that is already normalized. It is stored in a 'ShortByteString' with UTF-8 encoding.
+--
+-- The NormalizedUri is cached to avoided
 -- repeated normalisation when we need to compute them (which is a lot).
 --
 -- This is one of the most performance critical parts of ghcide, do not
@@ -188,18 +180,26 @@ instance Binary NormalizedFilePath where
   put (NormalizedFilePath _ fp) = put fp
   get = do
     v <- Data.Binary.get :: Get ShortByteString
-    let nuri = internalNormalizedFilePathToUri (OsPath.fromShortByteString v)
-    return (NormalizedFilePath (fromJust nuri) v)
+    case decodeFilePath v of
+      Left e -> fail (show e)
+      Right v' ->
+        return (NormalizedFilePath (internalNormalizedFilePathToUri v') v)
+
+encodeFilePath :: String -> ShortByteString
+encodeFilePath = BS.toShort . T.encodeUtf8 . T.pack
+
+decodeFilePath :: ShortByteString -> Either UnicodeException String
+decodeFilePath = fmap T.unpack . T.decodeUtf8' . BS.fromShort
 
 -- | Internal helper that takes a file path that is assumed to
 -- already be normalized to a URI. It is up to the caller
 -- to ensure normalization.
-internalNormalizedFilePathToUri :: MonadThrow m => OsPathCompat -> m NormalizedUri
+internalNormalizedFilePathToUri :: FilePath -> NormalizedUri
 internalNormalizedFilePathToUri fp = nuri
   where
-    uriPath = platformAdjustToUriPath System.Info.os <$> OsPath.toFilePath fp
-    nuriStr = fmap (T.pack . \p -> fileScheme <> "//" <> p) uriPath
-    nuri = fmap (\nuriStr' -> NormalizedUri (hash nuriStr') nuriStr') nuriStr
+    uriPath = platformAdjustToUriPath System.Info.os fp
+    nuriStr = T.pack $ fileScheme <> "//" <> uriPath
+    nuri = NormalizedUri (hash nuriStr) nuriStr
 
 instance Show NormalizedFilePath where
   show (NormalizedFilePath _ fp) = "NormalizedFilePath " ++ show fp
@@ -208,41 +208,37 @@ instance Hashable NormalizedFilePath where
   hash (NormalizedFilePath uri _) = hash uri
   hashWithSalt salt (NormalizedFilePath uri _) = hashWithSalt salt uri
 
-filePathToNormalizedFilePath :: MonadThrow m => FilePath -> m NormalizedFilePath
-filePathToNormalizedFilePath fp = OsPath.fromFilePath fp >>= toNormalizedFilePath
+instance IsString NormalizedFilePath where
+    fromString :: String -> NormalizedFilePath
+    fromString = toNormalizedFilePath
 
-{-# DEPRECATED unsafeFilePathToNormalizedFilePath "use toNormalizedFilePath instead" #-}
-unsafeFilePathToNormalizedFilePath :: String -> NormalizedFilePath
-unsafeFilePathToNormalizedFilePath str = unwrapMonadThrow (filePathToNormalizedFilePath str)
-
-normalizedFilePathToFilePath :: MonadThrow m => NormalizedFilePath -> m FilePath
-normalizedFilePathToFilePath nfp = OsPath.toFilePath $ fromNormalizedFilePath nfp
-
-toNormalizedFilePath :: MonadThrow m => OsPathCompat -> m NormalizedFilePath
-toNormalizedFilePath fp = flip NormalizedFilePath (OsPath.toShortByteString nfp) <$> nuri
+toNormalizedFilePath :: FilePath -> NormalizedFilePath
+toNormalizedFilePath fp = NormalizedFilePath nuri . encodeFilePath $ nfp
   where
-    nfp = OsPath.normalise fp
+    nfp = FP.normalise fp
     nuri = internalNormalizedFilePathToUri nfp
 
-{-# DEPRECATED unsafeToNormalizedFilePath "use toNormalizedFilePath instead" #-}
-unsafeToNormalizedFilePath :: HasCallStack => OsPathCompat -> NormalizedFilePath
-unsafeToNormalizedFilePath fp = unwrapMonadThrow (toNormalizedFilePath fp)
-
-unwrapMonadThrow :: HasCallStack => (forall m. MonadThrow m => m a) -> a
-unwrapMonadThrow action =
-  case action of
-    Right v        -> v
-    Left exception -> error $ show exception
-
-fromNormalizedFilePath :: NormalizedFilePath -> OsPathCompat
-fromNormalizedFilePath (NormalizedFilePath _ fp) = OsPath.fromShortByteString fp
+-- | Extract 'FilePath' from 'NormalizedFilePath'.
+-- The function is total if 'NormalizedFilePath' is valid. The 'HasCallStack' constraint is added
+-- for debugging purpose, in case an invalid
+fromNormalizedFilePath :: HasCallStack => NormalizedFilePath -> FilePath
+fromNormalizedFilePath (NormalizedFilePath _ fp) =
+  case decodeFilePath fp of
+    Left e  -> error $ show e
+    Right x -> x
 
 normalizedFilePathToUri :: NormalizedFilePath -> NormalizedUri
 normalizedFilePathToUri (NormalizedFilePath uri _) = uri
 
 uriToNormalizedFilePath :: NormalizedUri -> Maybe NormalizedFilePath
-uriToNormalizedFilePath nuri = fmap (NormalizedFilePath nuri . OsPath.toShortByteString) (mbFilePath >>= OsPath.fromFilePath)
+uriToNormalizedFilePath nuri = fmap (NormalizedFilePath nuri . encodeFilePath) mbFilePath
   where mbFilePath = platformAwareUriToFilePath System.Info.os (fromNormalizedUri nuri)
+
+emptyNormalizedUri :: NormalizedUri
+emptyNormalizedUri =
+    let s = "file://"
+    in NormalizedUri (hash s) s
 
 emptyNormalizedFilePath :: NormalizedFilePath
 emptyNormalizedFilePath = NormalizedFilePath emptyNormalizedUri ""
+

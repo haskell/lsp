@@ -14,6 +14,7 @@ module Language.LSP.Types.OsPath.Compat
 #endif
   , toShortByteString
   , fromShortByteString
+  , filePathToShortByteString
   , toFilePath
   , fromFilePath
   ) where
@@ -30,9 +31,6 @@ import           System.OsString.Internal.Types (OsString (..),
 #endif
 
 #else
-import qualified Data.ByteString.Short          as BS
-import qualified Data.Text                      as T
-import qualified Data.Text.Encoding             as T
 import           System.FilePath
 #endif
 
@@ -41,6 +39,9 @@ import           Control.Monad.Catch            (MonadThrow, SomeException,
                                                  throwM)
 import           Data.ByteString.Short          (ShortByteString)
 import           System.IO.Unsafe               (unsafePerformIO)
+import qualified Data.ByteString.Short          as BS
+import qualified Data.Text                      as T
+import qualified Data.Text.Encoding             as T
 
 type OsPathCompat =
 #ifdef OS_PATH
@@ -57,8 +58,11 @@ toShortByteString = getWindowsString . getOsString
 toShortByteString = getPosixString . getOsString
 #endif
 #else
-toShortByteString = BS.toShort . T.encodeUtf8 . T.pack
+toShortByteString = filePathToShortByteString
 #endif
+
+filePathToShortByteString :: String -> ShortByteString
+filePathToShortByteString = BS.toShort . T.encodeUtf8 . T.pack
 
 fromShortByteString :: ShortByteString -> OsPathCompat
 #ifdef OS_PATH
@@ -80,7 +84,7 @@ toFilePath = pure
 
 fromFilePath :: MonadThrow m => FilePath -> m OsPathCompat
 #ifdef OS_PATH
-fromFilePath = unsafePerformIO' . encodeUtf
+fromFilePath = unsafePerformIO' . encodeFS
 #else
 fromFilePath = pure
 #endif

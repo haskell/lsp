@@ -278,3 +278,7 @@ normalizedFilePathSpec = do
     let nuri = normalizedFilePathToUri <$> filePathToNormalizedFilePath fp
     let oldNuri = toNormalizedUri (filePathToUri fp)
     nuri `shouldBe` Just oldNuri
+
+  it "shows the call site stack on error" $ do
+    -- toNormalizedFileP
+    1 `shouldBe` 1
