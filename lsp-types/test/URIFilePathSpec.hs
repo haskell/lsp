@@ -265,7 +265,7 @@ genValidUnicodeChar = arbitraryUnicodeChar `suchThat` isCharacter
   where isCharacter x = x /= '\65534' && x /= '\65535'
 
 normalizedFilePathSpec :: Spec
-normalizedFilePathSpec = do
+normalizedFilePathSpec = beforeAll (setFileSystemEncoding utf8) $ do
   it "makes file path normalized" $ property $ forAll genFilePath $ \fp -> do
     let nfp = toNormalizedFilePath fp
     fromNormalizedFilePath nfp `shouldBe` (normalise fp)
@@ -297,14 +297,15 @@ normalizedFilePathSpec = do
   it "converts to NormalizedFilePath and back sucessfully" $ property $ forAll genFilePath $ \fp -> do
     let osPath = fromJust (OsPath.encodeUtf fp)
     osPath' <- osPathToNormalizedFilePath osPath >>= normalizedFilePathToOsPath
-    osPath' `shouldBe` osPath
+    osPath' `shouldBe` OsPath.normalise osPath
 
-  it "can not convert OsPath in non-standard encoding to NormalizedFilePath" $ do
-    -- \184921 is an example that the raw bytes of UTF16 is not valid UTF8.
-    -- Case like this is not very common. I found it with the help of QuickCheck.
-    setFileSystemEncoding utf8
-    case OsPath.encodeWith utf16be utf16be "\184921" of
-      Left err -> throwIO err
-      Right osPath  -> do
-        osPathToNormalizedFilePath osPath `shouldThrow` \(_ :: IOException) -> True
+  it "can not convert OsPath in non-standard encoding to NormalizedFilePath" $
+    -- Windows always use UTF16LE, the following test case doesn't apply
+    when (not isWindows) $
+      -- \184921 is an example that the raw bytes of UTF16 is not valid UTF8.
+      -- Case like this is not very common. I found it with the help of QuickCheck.
+      case OsPath.encodeWith utf16be utf16be "\184921" of
+        Left err -> throwIO err
+        Right osPath  -> do
+          osPathToNormalizedFilePath osPath `shouldThrow` \(_ :: IOException) -> True
 #endif
