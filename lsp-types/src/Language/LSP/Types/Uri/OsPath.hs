@@ -16,15 +16,21 @@ module Language.LSP.Types.Uri.OsPath
 #ifdef OS_PATH
 
 import           Control.DeepSeq        (NFData, force)
+import           Control.Exception      hiding (try)
 import           Control.Monad.Catch
-import           GHC.IO                 (evaluate)
 import           Language.LSP.Types.Uri
 import           System.IO.Unsafe       (unsafePerformIO)
 import           System.OsPath
 
+{-|
+Constructs 'NormalizedFilePath' from 'OsPath'. Throws 'IOException' if the conversion fails.
+-}
 osPathToNormalizedFilePath :: MonadThrow m => OsPath -> m NormalizedFilePath
 osPathToNormalizedFilePath = fmap toNormalizedFilePath . unsafePerformIO' . decodeFS
 
+{-|
+Extracts 'OsPath' from 'NormalizedFilePath'. Throws 'IOException' if the conversion fails.
+-}
 normalizedFilePathToOsPath :: MonadThrow m => NormalizedFilePath -> m OsPath
 normalizedFilePathToOsPath = unsafePerformIO' . encodeFS . fromNormalizedFilePath
 

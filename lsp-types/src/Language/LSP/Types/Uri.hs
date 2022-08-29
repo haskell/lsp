@@ -164,9 +164,9 @@ platformAdjustToUriPath systemOS srcPath
           FPP.addTrailingPathSeparator (init drv)
       | otherwise = drv
 
--- | A file path that is already normalized. It is stored in a 'ShortByteString' with UTF-8 encoding.
+-- | A file path that is already normalized. It is stored as an UTF-8 encoded 'ShortByteString'
 --
--- The NormalizedUri is cached to avoided
+-- The 'NormalizedUri' is cached to avoided
 -- repeated normalisation when we need to compute them (which is a lot).
 --
 -- This is one of the most performance critical parts of ghcide, do not
@@ -218,9 +218,8 @@ toNormalizedFilePath fp = NormalizedFilePath nuri . encodeFilePath $ nfp
     nfp = FP.normalise fp
     nuri = internalNormalizedFilePathToUri nfp
 
--- | Extract 'FilePath' from 'NormalizedFilePath'.
--- The function is total if 'NormalizedFilePath' is valid. The 'HasCallStack' constraint is added
--- for debugging purpose, in case an invalid
+-- | Extracts 'FilePath' from 'NormalizedFilePath'.
+-- The function is total. The 'HasCallStack' constraint is added for debugging purpose only.
 fromNormalizedFilePath :: HasCallStack => NormalizedFilePath -> FilePath
 fromNormalizedFilePath (NormalizedFilePath _ fp) =
   case decodeFilePath fp of
@@ -239,6 +238,7 @@ emptyNormalizedUri =
     let s = "file://"
     in NormalizedUri (hash s) s
 
+-- | 'NormalizedFilePath' that contains an empty file path
 emptyNormalizedFilePath :: NormalizedFilePath
 emptyNormalizedFilePath = NormalizedFilePath emptyNormalizedUri ""
 
