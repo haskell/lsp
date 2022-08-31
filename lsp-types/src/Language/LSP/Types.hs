@@ -37,6 +37,7 @@ module Language.LSP.Types
   , module Language.LSP.Types.TextDocument
   , module Language.LSP.Types.TypeDefinition
   , module Language.LSP.Types.Uri
+  , module Language.LSP.Types.Uri.OsPath
   , module Language.LSP.Types.WatchedFiles
   , module Language.LSP.Types.Window
   , module Language.LSP.Types.WorkspaceEdit
@@ -69,8 +70,8 @@ import           Language.LSP.Types.Initialize
 import           Language.LSP.Types.Location
 import           Language.LSP.Types.LspId
 import           Language.LSP.Types.MarkupContent
-import           Language.LSP.Types.Method
 import           Language.LSP.Types.Message
+import           Language.LSP.Types.Method
 import           Language.LSP.Types.Parsing
 import           Language.LSP.Types.Progress
 import           Language.LSP.Types.References
@@ -83,6 +84,7 @@ import           Language.LSP.Types.StaticRegistrationOptions
 import           Language.LSP.Types.TextDocument
 import           Language.LSP.Types.TypeDefinition
 import           Language.LSP.Types.Uri
+import           Language.LSP.Types.Uri.OsPath
 import           Language.LSP.Types.WatchedFiles
 import           Language.LSP.Types.Window
 import           Language.LSP.Types.WorkspaceEdit

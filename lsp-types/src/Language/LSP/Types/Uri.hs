@@ -1,7 +1,11 @@
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE InstanceSigs               #-}
+{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE RankNTypes                 #-}
+{-# LANGUAGE RecordWildCards            #-}
+{-# LANGUAGE TypeSynonymInstances       #-}
+
 module Language.LSP.Types.Uri
   ( Uri(..)
   , uriToFilePath
@@ -10,11 +14,11 @@ module Language.LSP.Types.Uri
   , toNormalizedUri
   , fromNormalizedUri
   , NormalizedFilePath
-  , normalizedFilePath
   , toNormalizedFilePath
   , fromNormalizedFilePath
   , normalizedFilePathToUri
   , uriToNormalizedFilePath
+  , emptyNormalizedFilePath
   -- Private functions
   , platformAwareUriToFilePath
   , platformAwareFilePathToUri
@@ -22,19 +26,26 @@ module Language.LSP.Types.Uri
   where
 
 import           Control.DeepSeq
-import qualified Data.Aeson                                 as A
-import           Data.Binary                                (Binary, Get, put, get)
+import qualified Data.Aeson               as A
+import           Data.Binary              (Binary, Get, get, put)
+import           Data.ByteString.Short    (ShortByteString)
+import qualified Data.ByteString.Short    as BS
 import           Data.Hashable
-import           Data.List                                  (stripPrefix)
-import           Data.String                                (IsString, fromString)
-import           Data.Text                                  (Text)
-import qualified Data.Text                                  as T
+import           Data.List                (stripPrefix)
+import           Data.String              (IsString (fromString))
+import           Data.Text                (Text)
+import qualified Data.Text                as T
+import qualified Data.Text.Encoding       as T
+import           Data.Text.Encoding.Error (UnicodeException)
 import           GHC.Generics
-import           Network.URI hiding (authority)
-import qualified System.FilePath                            as FP
-import qualified System.FilePath.Posix                      as FPP
-import qualified System.FilePath.Windows                    as FPW
+import           GHC.Stack                (HasCallStack)
+import           Network.URI              hiding (authority)
+import           Safe                     (tailMay)
+import qualified System.FilePath          as FP
+import qualified System.FilePath.Posix    as FPP
+import qualified System.FilePath.Windows  as FPW
 import qualified System.Info
+
 
 newtype Uri = Uri { getUri :: Text }
   deriving (Eq,Ord,Read,Show,Generic,A.FromJSON,A.ToJSON,Hashable,A.ToJSONKey,A.FromJSONKey)
@@ -67,7 +78,7 @@ isUnescapedInUriPath systemOS c
 normalizeUriEscaping :: String -> String
 normalizeUriEscaping uri =
   case stripPrefix (fileScheme ++ "//") uri of
-    Just p -> fileScheme ++ "//" ++ (escapeURIPath $ unEscapeString p)
+    Just p  -> fileScheme ++ "//" ++ escapeURIPath (unEscapeString p)
     Nothing -> escapeURIString isUnescapedInURI $ unEscapeString uri
   where escapeURIPath = escapeURIString (isUnescapedInUriPath System.Info.os)
 
@@ -107,17 +118,19 @@ platformAdjustFromUriPath :: SystemOS
                           -> String -- ^ path
                           -> FilePath
 platformAdjustFromUriPath systemOS authority srcPath =
-  (maybe id (++) authority) $
-  if systemOS /= windowsOS || null srcPath then srcPath
-    else let
-      firstSegment:rest = (FPP.splitDirectories . tail) srcPath  -- Drop leading '/' for absolute Windows paths
-      drive = if FPW.isDrive firstSegment
-              then FPW.addTrailingPathSeparator firstSegment
-              else firstSegment
-      in FPW.joinDrive drive $ FPW.joinPath rest
+  maybe id (++) authority $
+  if systemOS /= windowsOS
+  then srcPath
+  else case FPP.splitDirectories <$> tailMay srcPath of
+      Just (firstSegment:rest) -> -- Drop leading '/' for absolute Windows paths
+        let drive = if FPW.isDrive firstSegment
+                    then FPW.addTrailingPathSeparator firstSegment
+                    else firstSegment
+         in FPW.joinDrive drive $ FPW.joinPath rest
+      _ -> srcPath
 
 filePathToUri :: FilePath -> Uri
-filePathToUri = (platformAwareFilePathToUri System.Info.os) . FP.normalise
+filePathToUri = platformAwareFilePathToUri System.Info.os . FP.normalise
 
 {-# WARNING platformAwareFilePathToUri "This function is considered private. Use normalizedUriToFilePath instead." #-}
 platformAwareFilePathToUri :: SystemOS -> FilePath -> Uri
@@ -151,13 +164,14 @@ platformAdjustToUriPath systemOS srcPath
           FPP.addTrailingPathSeparator (init drv)
       | otherwise = drv
 
--- | Newtype wrapper around FilePath that always has normalized slashes.
--- The NormalizedUri and hash of the FilePath are cached to avoided
+-- | A file path that is already normalized. It is stored as an UTF-8 encoded 'ShortByteString'
+--
+-- The 'NormalizedUri' is cached to avoided
 -- repeated normalisation when we need to compute them (which is a lot).
 --
 -- This is one of the most performance critical parts of ghcide, do not
 -- modify it without profiling.
-data NormalizedFilePath = NormalizedFilePath NormalizedUri !FilePath
+data NormalizedFilePath = NormalizedFilePath !NormalizedUri {-# UNPACK #-} !ShortByteString
     deriving (Generic, Eq, Ord)
 
 instance NFData NormalizedFilePath
@@ -165,13 +179,17 @@ instance NFData NormalizedFilePath
 instance Binary NormalizedFilePath where
   put (NormalizedFilePath _ fp) = put fp
   get = do
-    v <- Data.Binary.get :: Get FilePath
-    let nuri = internalNormalizedFilePathToUri v
-    return (normalizedFilePath nuri v)
+    v <- Data.Binary.get :: Get ShortByteString
+    case decodeFilePath v of
+      Left e -> fail (show e)
+      Right v' ->
+        return (NormalizedFilePath (internalNormalizedFilePathToUri v') v)
 
--- | A smart constructor that performs UTF-8 encoding and hash consing
-normalizedFilePath :: NormalizedUri -> FilePath -> NormalizedFilePath
-normalizedFilePath nuri nfp = NormalizedFilePath nuri nfp
+encodeFilePath :: String -> ShortByteString
+encodeFilePath = BS.toShort . T.encodeUtf8 . T.pack
+
+decodeFilePath :: ShortByteString -> Either UnicodeException String
+decodeFilePath = fmap T.unpack . T.decodeUtf8' . BS.fromShort
 
 -- | Internal helper that takes a file path that is assumed to
 -- already be normalized to a URI. It is up to the caller
@@ -191,20 +209,36 @@ instance Hashable NormalizedFilePath where
   hashWithSalt salt (NormalizedFilePath uri _) = hashWithSalt salt uri
 
 instance IsString NormalizedFilePath where
+    fromString :: String -> NormalizedFilePath
     fromString = toNormalizedFilePath
 
 toNormalizedFilePath :: FilePath -> NormalizedFilePath
-toNormalizedFilePath fp = normalizedFilePath nuri nfp
+toNormalizedFilePath fp = NormalizedFilePath nuri . encodeFilePath $ nfp
   where
-      nfp = FP.normalise fp
-      nuri = internalNormalizedFilePathToUri nfp
+    nfp = FP.normalise fp
+    nuri = internalNormalizedFilePathToUri nfp
 
-fromNormalizedFilePath :: NormalizedFilePath -> FilePath
-fromNormalizedFilePath (NormalizedFilePath _ fp) = fp
+-- | Extracts 'FilePath' from 'NormalizedFilePath'.
+-- The function is total. The 'HasCallStack' constraint is added for debugging purpose only.
+fromNormalizedFilePath :: HasCallStack => NormalizedFilePath -> FilePath
+fromNormalizedFilePath (NormalizedFilePath _ fp) =
+  case decodeFilePath fp of
+    Left e  -> error $ show e
+    Right x -> x
 
 normalizedFilePathToUri :: NormalizedFilePath -> NormalizedUri
 normalizedFilePathToUri (NormalizedFilePath uri _) = uri
 
 uriToNormalizedFilePath :: NormalizedUri -> Maybe NormalizedFilePath
-uriToNormalizedFilePath nuri = fmap (normalizedFilePath nuri) mbFilePath
+uriToNormalizedFilePath nuri = fmap (NormalizedFilePath nuri . encodeFilePath) mbFilePath
   where mbFilePath = platformAwareUriToFilePath System.Info.os (fromNormalizedUri nuri)
+
+emptyNormalizedUri :: NormalizedUri
+emptyNormalizedUri =
+    let s = "file://"
+    in NormalizedUri (hash s) s
+
+-- | 'NormalizedFilePath' that contains an empty file path
+emptyNormalizedFilePath :: NormalizedFilePath
+emptyNormalizedFilePath = NormalizedFilePath emptyNormalizedUri ""
+

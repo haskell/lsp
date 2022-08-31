@@ -9,8 +9,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ghc: ['9.2.1', '9.0.1', '8.10.7', '8.8.4', '8.6.5']
+        ghc: ['9.2.4', '9.0.2', '8.10.7', '8.8.4', '8.6.5']
         os: [ubuntu-latest, macOS-latest, windows-latest]
+        ospath: [true, false]
+        exclude:
+          # newer 'entropy' doesn't work with old 'unix', and it doesn't have a correct version bound.
+          - ospath: true
+            ghc: 8.6.5
+          # "cabal build" always timeout
+          - ospath: true
+            ghc: 8.8.4
+            os: windows-latest
 
     steps:
     - uses: actions/checkout@v2
@@ -41,6 +50,12 @@ jobs:
 
     - name: Cabal update
       run: cabal update
+    - name: Cabal configure
+      shell: bash
+      run: |
+        if [ ${{ matrix.ospath }} = "true" ]; then
+          cabal configure --constraint="filepath ^>= 1.4.100.0"
+        fi
     - name: Build using cabal
       run: cabal build all
     - name: Test

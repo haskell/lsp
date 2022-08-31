@@ -1,17 +1,33 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE CPP                 #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+
+#if MIN_VERSION_filepath(1,4,100)
+#define OS_PATH
+#endif
+
 module URIFilePathSpec where
 
-import Control.Monad                          (when)
-import Data.List
-import Data.Text                              (Text, pack)
-import Language.LSP.Types
+#ifdef OS_PATH
+import qualified System.OsPath           as OsPath
+#endif
 
-import Network.URI
-import Test.Hspec
-import Test.QuickCheck
+import           Control.Monad           (when)
+import           Data.List
+import           Data.Text               (Text, pack)
+import           Language.LSP.Types
+
+import           Control.Exception       (IOException, throwIO)
+import           Data.Maybe              (fromJust)
+import           GHC.IO.Encoding         (setFileSystemEncoding)
+import           Network.URI
+import           System.FilePath         (normalise)
 import qualified System.FilePath.Windows as FPW
-import System.FilePath                        (normalise)
 import qualified System.Info
+import           System.IO
+import           Test.Hspec
+import           Test.QuickCheck
+
 -- ---------------------------------------------------------------------
 
 isWindows :: Bool
@@ -224,7 +240,7 @@ uriNormalizeSpec = do
     let nuri = toNormalizedUri (filePathToUri fp)
     case uriToFilePath (fromNormalizedUri nuri) of
       Just nfp -> nfp `shouldBe` (normalise fp)
-      Nothing -> return () -- Some unicode paths creates invalid uris, ignoring for now
+      Nothing  -> return () -- Some unicode paths creates invalid uris, ignoring for now
 
 genFilePath :: Gen FilePath
 genFilePath | isWindows = genWindowsFilePath
@@ -249,7 +265,7 @@ genValidUnicodeChar = arbitraryUnicodeChar `suchThat` isCharacter
   where isCharacter x = x /= '\65534' && x /= '\65535'
 
 normalizedFilePathSpec :: Spec
-normalizedFilePathSpec = do
+normalizedFilePathSpec = beforeAll (setFileSystemEncoding utf8) $ do
   it "makes file path normalized" $ property $ forAll genFilePath $ \fp -> do
     let nfp = toNormalizedFilePath fp
     fromNormalizedFilePath nfp `shouldBe` (normalise fp)
@@ -258,7 +274,7 @@ normalizedFilePathSpec = do
     let nuri = normalizedFilePathToUri (toNormalizedFilePath fp)
     case uriToNormalizedFilePath nuri of
       Just nfp -> fromNormalizedFilePath nfp `shouldBe` (normalise fp)
-      Nothing -> return () -- Some unicode paths creates invalid uris, ignoring for now
+      Nothing  -> return () -- Some unicode paths creates invalid uris, ignoring for now
 
   it "converts a file path with reserved uri chars to a normalized URI and back" $ do
     let start = if isWindows then "C:\\" else "/"
@@ -276,3 +292,20 @@ normalizedFilePathSpec = do
     let nuri = normalizedFilePathToUri (toNormalizedFilePath fp)
     let oldNuri = toNormalizedUri (filePathToUri fp)
     nuri `shouldBe` oldNuri
+
+#ifdef OS_PATH
+  it "converts to NormalizedFilePath and back sucessfully" $ property $ forAll genFilePath $ \fp -> do
+    let osPath = fromJust (OsPath.encodeUtf fp)
+    osPath' <- osPathToNormalizedFilePath osPath >>= normalizedFilePathToOsPath
+    osPath' `shouldBe` OsPath.normalise osPath
+
+  it "can not convert OsPath in non-standard encoding to NormalizedFilePath" $
+    -- Windows always use UTF16LE, the following test case doesn't apply
+    when (not isWindows) $
+      -- \184921 is an example that the raw bytes of UTF16 is not valid UTF8.
+      -- Case like this is not very common. I found it with the help of QuickCheck.
+      case OsPath.encodeWith utf16be utf16be "\184921" of
+        Left err -> throwIO err
+        Right osPath  -> do
+          osPathToNormalizedFilePath osPath `shouldThrow` \(_ :: IOException) -> True
+#endif
