@@ -16,6 +16,11 @@ category:            Development
 build-type:          Simple
 extra-source-files:  ChangeLog.md, README.md
 
+flag force-ospath
+  default: False
+  manual: False
+  description: Force a version bound on filepath library, to enable 'OsPath'.
+
 library
   exposed-modules:     Language.LSP.Types
                      , Language.LSP.Types.Capabilities
@@ -79,7 +84,6 @@ library
                      , deepseq
                      , Diff >= 0.2
                      , dlist
-                     , filepath
                      , hashable
                      , lens >= 4.15.2
                      , mtl < 2.4
@@ -93,6 +97,11 @@ library
                      , exceptions
                      , safe
                      , bytestring
+                     , utf8-string
+  if flag(force-ospath)
+    build-depends: filepath ^>= 1.4.100.0
+  else
+    build-depends: filepath
   hs-source-dirs:      src
   default-language:    Haskell2010
   default-extensions: StrictData

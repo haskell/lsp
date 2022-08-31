@@ -25,6 +25,7 @@ module Language.LSP.Types.Uri
   )
   where
 
+import qualified Codec.Binary.UTF8.String as UTF8
 import           Control.DeepSeq
 import qualified Data.Aeson               as A
 import           Data.Binary              (Binary, Get, get, put)
@@ -35,10 +36,7 @@ import           Data.List                (stripPrefix)
 import           Data.String              (IsString (fromString))
 import           Data.Text                (Text)
 import qualified Data.Text                as T
-import qualified Data.Text.Encoding       as T
-import           Data.Text.Encoding.Error (UnicodeException)
 import           GHC.Generics
-import           GHC.Stack                (HasCallStack)
 import           Network.URI              hiding (authority)
 import           Safe                     (tailMay)
 import qualified System.FilePath          as FP
@@ -180,16 +178,16 @@ instance Binary NormalizedFilePath where
   put (NormalizedFilePath _ fp) = put fp
   get = do
     v <- Data.Binary.get :: Get ShortByteString
-    case decodeFilePath v of
-      Left e -> fail (show e)
-      Right v' ->
-        return (NormalizedFilePath (internalNormalizedFilePathToUri v') v)
+    let v' = decodeFilePath v
+    return (NormalizedFilePath (internalNormalizedFilePathToUri v') v)
 
-encodeFilePath :: String -> ShortByteString
-encodeFilePath = BS.toShort . T.encodeUtf8 . T.pack
+-- | Convert 'FilePath' to a UTF-8 encoded 'ShortByteString'
+encodeFilePath :: FilePath -> ShortByteString
+encodeFilePath = BS.pack . UTF8.encode
 
-decodeFilePath :: ShortByteString -> Either UnicodeException String
-decodeFilePath = fmap T.unpack . T.decodeUtf8' . BS.fromShort
+-- | Assume the given 'ShortByteString' is UTF-8 encoded, decode it into a 'FilePath'
+decodeFilePath :: ShortByteString -> FilePath
+decodeFilePath = UTF8.decode . BS.unpack
 
 -- | Internal helper that takes a file path that is assumed to
 -- already be normalized to a URI. It is up to the caller
@@ -219,12 +217,8 @@ toNormalizedFilePath fp = NormalizedFilePath nuri . encodeFilePath $ nfp
     nuri = internalNormalizedFilePathToUri nfp
 
 -- | Extracts 'FilePath' from 'NormalizedFilePath'.
--- The function is total. The 'HasCallStack' constraint is added for debugging purpose only.
-fromNormalizedFilePath :: HasCallStack => NormalizedFilePath -> FilePath
-fromNormalizedFilePath (NormalizedFilePath _ fp) =
-  case decodeFilePath fp of
-    Left e  -> error $ show e
-    Right x -> x
+fromNormalizedFilePath :: NormalizedFilePath -> FilePath
+fromNormalizedFilePath (NormalizedFilePath _ fp) = decodeFilePath fp
 
 normalizedFilePathToUri :: NormalizedFilePath -> NormalizedUri
 normalizedFilePathToUri (NormalizedFilePath uri _) = uri

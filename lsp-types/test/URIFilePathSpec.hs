@@ -307,5 +307,5 @@ normalizedFilePathSpec = beforeAll (setFileSystemEncoding utf8) $ do
       case OsPath.encodeWith utf16be utf16be "\184921" of
         Left err -> throwIO err
         Right osPath  -> do
-          osPathToNormalizedFilePath osPath `shouldThrow` \(_ :: IOException) -> True
+          osPathToNormalizedFilePath osPath `shouldThrow` \(_ :: EncodingException) -> True
 #endif

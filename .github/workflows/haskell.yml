@@ -54,7 +54,7 @@ jobs:
       shell: bash
       run: |
         if [ ${{ matrix.ospath }} = "true" ]; then
-          cabal configure --constraint="filepath ^>= 1.4.100.0"
+          cabal configure --flags="force-ospath"
         fi
     - name: Build using cabal
       run: cabal build all
