@@ -25,7 +25,7 @@ module Language.LSP.Test
     Session
   , runSession
   , runSessionWithConfig
-  , runSessionWithConfig'
+  , runSessionWithConfigCustomProcess
   , runSessionWithHandles
   , runSessionWithHandles'
   -- ** Config
@@ -160,17 +160,17 @@ runSessionWithConfig :: SessionConfig -- ^ Configuration options for the session
                      -> FilePath -- ^ The filepath to the root directory for the session.
                      -> Session a -- ^ The session to run.
                      -> IO a
-runSessionWithConfig = runSessionWithConfig' id
+runSessionWithConfig = runSessionWithConfigCustomProcess id
 
 -- | Starts a new session with a custom configuration.
-runSessionWithConfig' :: (CreateProcess -> CreateProcess)
-                      -> SessionConfig -- ^ Configuration options for the session.
-                      -> String -- ^ The command to run the server.
-                      -> C.ClientCapabilities -- ^ The capabilities that the client should declare.
-                      -> FilePath -- ^ The filepath to the root directory for the session.
-                      -> Session a -- ^ The session to run.
-                      -> IO a
-runSessionWithConfig' modifyCreateProcess config' serverExe caps rootDir session = do
+runSessionWithConfigCustomProcess :: (CreateProcess -> CreateProcess) -- ^ Tweak the 'CreateProcess' used to start server.
+                                  -> SessionConfig -- ^ Configuration options for the session.
+                                  -> String -- ^ The command to run the server.
+                                  -> C.ClientCapabilities -- ^ The capabilities that the client should declare.
+                                  -> FilePath -- ^ The filepath to the root directory for the session.
+                                  -> Session a -- ^ The session to run.
+                                  -> IO a
+runSessionWithConfigCustomProcess modifyCreateProcess config' serverExe caps rootDir session = do
   config <- envOverrideConfig config'
   withServer serverExe (logStdErr config) modifyCreateProcess $ \serverIn serverOut serverProc ->
     runSessionWithHandles' (Just serverProc) serverIn serverOut config caps rootDir session
