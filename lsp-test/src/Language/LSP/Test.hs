@@ -781,7 +781,7 @@ getSemanticTokens :: TextDocumentIdentifier -> Session (Maybe SemanticTokens)
 getSemanticTokens doc = do
   let params = SemanticTokensParams Nothing Nothing doc
   rsp <- request STextDocumentSemanticTokensFull params
-  pure $ getResponseResult rsp 
+  pure $ getResponseResult rsp
 
 -- | Returns a list of capabilities that the server has requested to /dynamically/
 -- register during the 'Session'.
