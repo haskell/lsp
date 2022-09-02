@@ -162,8 +162,8 @@ runSessionWithConfig :: SessionConfig -- ^ Configuration options for the session
                      -> IO a
 runSessionWithConfig = runSessionWithConfigCustomProcess id
 
--- | Starts a new session with a custom configuration.
-runSessionWithConfigCustomProcess :: (CreateProcess -> CreateProcess) -- ^ Tweak the 'CreateProcess' used to start server.
+-- | Starts a new session with a custom configuration and server 'CreateProcess'.
+runSessionWithConfigCustomProcess :: (CreateProcess -> CreateProcess) -- ^ Tweak the 'CreateProcess' used to start the server.
                                   -> SessionConfig -- ^ Configuration options for the session.
                                   -> String -- ^ The command to run the server.
                                   -> C.ClientCapabilities -- ^ The capabilities that the client should declare.
