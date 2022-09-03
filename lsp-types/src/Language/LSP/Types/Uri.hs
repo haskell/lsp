@@ -162,13 +162,29 @@ platformAdjustToUriPath systemOS srcPath
           FPP.addTrailingPathSeparator (init drv)
       | otherwise = drv
 
--- | A file path that is already normalized. It is stored as an UTF-8 encoded 'ShortByteString'
---
--- The 'NormalizedUri' is cached to avoided
--- repeated normalisation when we need to compute them (which is a lot).
---
--- This is one of the most performance critical parts of ghcide, do not
--- modify it without profiling.
+{-| A file path that is already normalized. It is stored as an UTF-8 encoded 'ShortByteString'
+
+The 'NormalizedUri' is cached to avoided
+repeated normalisation when we need to compute them (which is a lot).
+
+This is one of the most performance critical parts of HLS, do not
+modify it without profiling.
+
+== Adoption Plan of OsPath
+
+Currently we store a UTF-8 encoded 'ShortByteString'. We may change it to OsPath in the future if
+the following steps are executed.
+
+1. Use 'osPathToNormalizedFilePath' and 'normalizedFilePathToOsPath' instead of 'fromNormalizedFilePath'
+  and 'toNormalizedFilePath' in the client codebase. For HLS, we could wait until GHC 9.6 becomes the oldest
+  GHC we support, then change 'FilePath' to OsPath everywhere in the codebase.
+2. Deprecate and remove 'fromNormalizedFilePath' and 'toNormalizedFilePath'.
+3. Change 'ShortByteString' to OsPath and benchmark to see if the performance improves. Don't forget to check Windows,
+  as OsPath on Windows uses UTF-16, which may consume more memory.
+
+See [#453](https://github.com/haskell/lsp/pull/453) and [#446](https://github.com/haskell/lsp/pull/446)
+for more discussions on this topic.
+-}
 data NormalizedFilePath = NormalizedFilePath !NormalizedUri {-# UNPACK #-} !ShortByteString
     deriving (Generic, Eq, Ord)
 
