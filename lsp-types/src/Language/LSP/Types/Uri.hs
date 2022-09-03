@@ -185,7 +185,7 @@ the following steps are executed.
 See [#453](https://github.com/haskell/lsp/pull/453) and [#446](https://github.com/haskell/lsp/pull/446)
 for more discussions on this topic.
 -}
-data NormalizedFilePath = NormalizedFilePath !NormalizedUri {-# UNPACK #-} !ShortByteString
+data NormalizedFilePath = NormalizedFilePath !NormalizedUri {-# UNPACK #-} !Text
     deriving (Generic, Eq, Ord)
 
 instance NFData NormalizedFilePath
@@ -193,17 +193,17 @@ instance NFData NormalizedFilePath
 instance Binary NormalizedFilePath where
   put (NormalizedFilePath _ fp) = put fp
   get = do
-    v <- Data.Binary.get :: Get ShortByteString
+    v <- Data.Binary.get :: Get Text
     let v' = decodeFilePath v
     return (NormalizedFilePath (internalNormalizedFilePathToUri v') v)
 
 -- | Convert 'FilePath' to a UTF-8 encoded 'ShortByteString'
-encodeFilePath :: FilePath -> ShortByteString
-encodeFilePath = BS.pack . UTF8.encode
+encodeFilePath :: FilePath -> Text
+encodeFilePath = T.pack
 
 -- | Assume the given 'ShortByteString' is UTF-8 encoded, decode it into a 'FilePath'
-decodeFilePath :: ShortByteString -> FilePath
-decodeFilePath = UTF8.decode . BS.unpack
+decodeFilePath :: Text -> FilePath
+decodeFilePath = T.unpack
 
 -- | Internal helper that takes a file path that is assumed to
 -- already be normalized to a URI. It is up to the caller
