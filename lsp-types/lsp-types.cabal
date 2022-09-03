@@ -96,8 +96,6 @@ library
                      , unordered-containers
                      , exceptions
                      , safe
-                     , bytestring
-                     , utf8-string
   if flag(force-ospath)
     build-depends: filepath ^>= 1.4.100.0
   else

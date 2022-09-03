@@ -28,11 +28,10 @@ import           System.OsPath.Encoding (EncodingException)
 {-|
 Constructs 'NormalizedFilePath' from 'OsPath'. Throws 'EncodingException' if the conversion fails.
 
-We always store UTF-8 encoded file path in 'NormalizedFilePath'. This function first converts 'OsPath'
-to 'FilePath' using current system encoding (see 'decodeFS'), then converts 'FilePath' to an UTF-8
-encoded 'ShortByteString'. Due to the encoding conversion, this function can fail. But DO NOTE THAT
-encoding mismatch doesn't always mean an exception will be thrown. [Possibly your encoding simply won't
-throw exception on failure](https://hackage.haskell.org/package/base-4.17.0.0/docs/src/GHC.IO.Encoding.html#initFileSystemEncoding).
+We store a 'Text' in 'NormalizedFilePath', which is UTF-16 or UTF-8 depending on the verion of text library.
+'OsPath' may have a different encoding than 'Text', so this function may fail.
+But DO NOTE THAT encoding mismatch doesn't always mean an exception will be thrown.
+[Possibly your encoding simply won't throw exception on failure](https://hackage.haskell.org/package/base-4.17.0.0/docs/src/GHC.IO.Encoding.html#initFileSystemEncoding).
 Possibly the conversion function can't find any invalid byte sequence, giving a sucessful but wrong result.
 -}
 osPathToNormalizedFilePath :: MonadThrow m => OsPath -> m NormalizedFilePath
