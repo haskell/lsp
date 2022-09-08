@@ -111,7 +111,7 @@ data Registration (m :: Method FromClient t) =
     , _method :: SClientMethod m
       -- | Options necessary for the registration.
       -- Make this strict to aid the pattern matching exhaustiveness checker
-    , _registerOptions :: !(RegistrationOptions m)
+    , _registerOptions :: !(Maybe (RegistrationOptions m))
     }
   deriving Generic
 

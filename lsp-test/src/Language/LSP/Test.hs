@@ -430,7 +430,7 @@ createDoc file languageId contents = do
       createHits (WatchKind create _ _) = create
 
       regHits :: Registration WorkspaceDidChangeWatchedFiles -> Bool
-      regHits reg = foldl' (\acc w -> acc || watchHits w) False (reg ^. registerOptions . watchers)
+      regHits reg = foldl' (\acc w -> acc || watchHits w) False (reg ^. registerOptions . _Just . watchers)
 
       clientCapsSupports =
           caps ^? workspace . _Just . didChangeWatchedFiles . _Just . dynamicRegistration . _Just
