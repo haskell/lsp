@@ -60,6 +60,7 @@ import Data.Kind
 import Data.Aeson
 import Data.Aeson.TH
 import Data.Text (Text)
+import Data.Scientific
 import Data.String
 import GHC.Generics
 
@@ -318,6 +319,9 @@ data ErrorCode = ParseError
                | UnknownErrorCode
                | RequestCancelled
                | ContentModified
+               | ServerCancelled
+               | RequestFailed
+               | ErrorCodeCustom Int32
                -- ^ Note: server error codes are reserved from -32099 to -32000
                deriving (Read,Show,Eq)
 
@@ -333,6 +337,9 @@ instance ToJSON ErrorCode where
   toJSON UnknownErrorCode     = Number (-32001)
   toJSON RequestCancelled     = Number (-32800)
   toJSON ContentModified      = Number (-32801)
+  toJSON ServerCancelled      = Number (-32802)
+  toJSON RequestFailed        = Number (-32803)
+  toJSON (ErrorCodeCustom n)  = Number (fromIntegral n)
 
 instance FromJSON ErrorCode where
   parseJSON (Number (-32700)) = pure ParseError
@@ -346,7 +353,12 @@ instance FromJSON ErrorCode where
   parseJSON (Number (-32001)) = pure UnknownErrorCode
   parseJSON (Number (-32800)) = pure RequestCancelled
   parseJSON (Number (-32801)) = pure ContentModified
-  parseJSON _                 = fail "ErrorCode"
+  parseJSON (Number (-32802)) = pure ServerCancelled
+  parseJSON (Number (-32803)) = pure RequestFailed
+  parseJSON (Number n       ) = case toBoundedInteger n of
+    Just i -> pure (ErrorCodeCustom i)
+    Nothing -> fail "Couldn't convert ErrorCode to bounded integer."
+  parseJSON _                 = fail "Couldn't parse ErrorCode"
 
 -- -------------------------------------
 
