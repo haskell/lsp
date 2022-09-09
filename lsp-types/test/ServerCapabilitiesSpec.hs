@@ -34,7 +34,7 @@ spec = describe "server capabilities" $ do
           Just registrationParams = decode input :: Maybe RegistrationParams
         in registrationParams ^. registrations `shouldBe`
              List [SomeRegistration $ Registration "4a56f5ca-7188-4f4c-a366-652d6f9d63aa"
-                                      SWorkspaceDidChangeConfiguration Empty]
+                                      SWorkspaceDidChangeConfiguration (Just Empty)]
   where
     documentFilters = List [DocumentFilter (Just "haskell") Nothing Nothing]
     documentFiltersJson = "[{\"language\": \"haskell\"}]"
