@@ -1,5 +1,10 @@
 # Revision history for lsp
 
+## 1.6.0.0
+
+* Pinned to lsp-types 1.6
+* Tests moved to `lsp-types`
+
 ## 1.5.0.0
 
 * VFS module moved to `lsp` from `lsp-types`.

@@ -1,5 +1,11 @@
 # Revision history for lsp-test
 
+## 0.14.1.0
+
+* Compatibility with new `lsp-types` major version.
+* Export `runSessionWithConfigCustomProcess` to allow modifying the CreateProcess used to start a server
+* Add `MonadThrow` instance for `Session`
+
 ## 0.14.0.3
 
 * Compatibility with new `lsp-types` major version.

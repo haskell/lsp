@@ -1,6 +1,6 @@
 cabal-version:       2.2
 name:                lsp-types
-version:             1.5.1.0
+version:             1.6.0.0
 synopsis:            Haskell library for the Microsoft Language Server Protocol, data types
 
 description:         An implementation of the types to allow language implementors to
