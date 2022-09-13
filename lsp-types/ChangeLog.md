@@ -1,4 +1,12 @@
 # Revision history for lsp-types
+
+## 1.6.0.0
+
+* Add `isSubRangeOf` and `positionInRange` helper functions
+* Add `ServerCancelled`, `RequestFailed` and `ErrorCodeCustom` server error types
+* Fix "workspace/semanticTokens/refresh" to be a server method instead of a client method
+* Use a packed representation for `NormalizedFilePath`
+* Add converions from `OsPath` to `NormalizedFilePath` in `Language.LSP.Types.Uri.OsPath` when using new enough `filepath`
  
 ## 1.5.0.0
 
