@@ -503,7 +503,7 @@ registerCapability method regOpts f = do
       -- First, check to see if the client supports dynamic registration on this method
       | dynamicSupported clientCaps = do
           uuid <- liftIO $ UUID.toText <$> getStdRandom random
-          let registration = J.Registration uuid method regOpts
+          let registration = J.Registration uuid method (Just regOpts)
               params = J.RegistrationParams (J.List [J.SomeRegistration registration])
               regId = RegistrationId uuid
           rio <- askUnliftIO

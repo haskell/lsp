@@ -370,8 +370,8 @@ main = hspec $ around withDummyServer $ do
       liftIO $ do
         case regMethod `mEqClient` SWorkspaceDidChangeWatchedFiles of
           Just (Right HRefl) ->
-            regOpts `shouldBe` (DidChangeWatchedFilesRegistrationOptions $ List
-                                [ FileSystemWatcher "*.watch" (Just (WatchKind True True True)) ])
+            regOpts `shouldBe` (Just (DidChangeWatchedFilesRegistrationOptions $ List
+                                      [ FileSystemWatcher "*.watch" (Just (WatchKind True True True)) ]))
           _ -> expectationFailure "Registration wasn't on workspace/didChangeWatchedFiles"
 
       -- now unregister it by sending a specific createDoc
