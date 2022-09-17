@@ -56,7 +56,7 @@ data CallHierarchyItem =
     -- prepare and incoming calls or outgoing calls requests.
     , _xdata :: Maybe Value
     }
-    deriving (Show, Read, Eq)
+    deriving (Show, Read, Eq, Ord)
 deriveJSON lspOptions ''CallHierarchyItem
 
 -- -------------------------------------
@@ -76,7 +76,7 @@ data CallHierarchyIncomingCall =
     -- denoted by @_from@.
     , _fromRanges :: List Range
     }
-    deriving (Show, Read, Eq)
+    deriving (Show, Read, Eq, Ord)
 deriveJSON lspOptions ''CallHierarchyIncomingCall
 
 -- -------------------------------------
@@ -96,5 +96,5 @@ data CallHierarchyOutgoingCall =
     -- the caller, e.g the item passed to `callHierarchy/outgoingCalls` request.
     , _fromRanges :: List Range
     }
-    deriving (Show, Read, Eq)
+    deriving (Show, Read, Eq, Ord)
 deriveJSON lspOptions ''CallHierarchyOutgoingCall
