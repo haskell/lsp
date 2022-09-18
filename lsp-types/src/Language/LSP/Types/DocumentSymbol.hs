@@ -65,7 +65,7 @@ data SymbolKind
     | SkOperator
     | SkTypeParameter
     | SkUnknown Scientific
-    deriving (Read,Show,Eq)
+    deriving (Read,Show,Eq, Ord)
 
 instance ToJSON SymbolKind where
   toJSON SkFile          = Number 1
@@ -134,7 +134,7 @@ Symbol tags are extra annotations that tweak the rendering of a symbol.
 data SymbolTag =
   StDeprecated -- ^ Render a symbol as obsolete, usually using a strike-out.
   | StUnknown Scientific
-  deriving (Read, Show, Eq)
+  deriving (Read, Show, Eq, Ord)
 
 instance ToJSON SymbolTag where
   toJSON StDeprecated          = Number 1
