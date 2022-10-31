@@ -187,30 +187,20 @@ ioLoop ioLogger logger clientIn serverDefinition vfs sendMsg = do
               go (parse parser remainder)
 
     parser = do
-      _ <- string "Content-"
-      len <- lengthFirst <|> typeFirst
+      try contentType <|> (return ())
+      len <- contentLength
+      try contentType <|> (return ())
+      _ <- string _ONE_CRLF
       Attoparsec.take len
 
-    lengthFirst = do
-      len <- headLength
-      _ <- string _ONE_CRLF
-       <|> (headType >> string _ONE_CRLF)
-      return len
-
-    typeFirst = do
-      _ <- headType
-      _ <- string "Content-"
-      len <- headLength
-      _ <- string _ONE_CRLF
-      return len
-
-    headLength = do
-      _ <- string "Length: "
+    contentLength = do
+      _ <- string "Content-Length: "
       len <- decimal
       _ <- string _ONE_CRLF
       return len
 
-    headType = do
+    contentType = do 
+      _ <- string "Content-Type: "
       skipWhile (/='\r')
       _ <- string _ONE_CRLF
       return ()
