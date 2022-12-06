@@ -138,7 +138,7 @@ instance ToJSON SomeRegistration where
 instance FromJSON SomeRegistration where
   parseJSON = withObject "Registration" $ \o -> do
     SomeClientMethod m <- o .: "method"
-    r <- Registration <$> o .: "id" <*> pure m <*> regHelper m (o .: "registerOptions")
+    r <- Registration <$> o .: "id" <*> pure m <*> regHelper m (o .:? "registerOptions")
     pure (SomeRegistration r)
 
 instance Eq SomeRegistration where
