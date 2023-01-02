@@ -45,7 +45,7 @@ import           Data.Monoid (Ap(..))
 import           Data.Ord (Down (Down))
 import qualified Data.Text as T
 import           Data.Text ( Text )
-import qualified Data.UUID as UUID
+import qualified Data.UUID.Types as UUID
 import qualified Language.LSP.Types.Capabilities    as J
 import Language.LSP.Types as J
 import           Language.LSP.Types.SMethodMap (SMethodMap)
