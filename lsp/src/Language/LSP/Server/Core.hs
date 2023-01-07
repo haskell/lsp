@@ -114,8 +114,8 @@ data LanguageContextEnv config =
 --
 -- @
 -- mconcat [
---   notificationHandler SInitialized $ \notif -> pure ()
--- , requestHandler STextDocumentHover $ \req responder -> pure ()
+--   notificationHandler SInitialized $ \\notif -> pure ()
+-- , requestHandler STextDocumentHover $ \\req responder -> pure ()
 -- ]
 -- @
 data Handlers m
