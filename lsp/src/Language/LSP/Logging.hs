@@ -3,27 +3,28 @@ module Language.LSP.Logging (logToShowMessage, logToLogMessage, defaultClientLog
 
 import Colog.Core
 import Language.LSP.Server.Core
-import Language.LSP.Types
+import Language.LSP.Protocol.Types
+import Language.LSP.Protocol.Message
 import Data.Text (Text)
 
 logSeverityToMessageType :: Severity -> MessageType
 logSeverityToMessageType sev = case sev of
-  Error -> MtError
-  Warning -> MtWarning
-  Info -> MtInfo
-  Debug -> MtLog
+  Error -> MessageType_Error
+  Warning -> MessageType_Warning
+  Info -> MessageType_Info
+  Debug -> MessageType_Log
 
 -- | Logs messages to the client via @window/logMessage@.
 logToLogMessage :: (MonadLsp c m) => LogAction m (WithSeverity Text)
 logToLogMessage = LogAction $ \(WithSeverity msg sev) -> do
   sendToClient $ fromServerNot $
-    NotificationMessage "2.0" SWindowLogMessage (LogMessageParams (logSeverityToMessageType sev) msg)
+    TNotificationMessage "2.0" SMethod_WindowLogMessage (LogMessageParams (logSeverityToMessageType sev) msg)
 
 -- | Logs messages to the client via @window/showMessage@.
 logToShowMessage :: (MonadLsp c m) => LogAction m (WithSeverity Text)
 logToShowMessage = LogAction $ \(WithSeverity msg sev) -> do
   sendToClient $ fromServerNot $
-    NotificationMessage "2.0" SWindowShowMessage (ShowMessageParams (logSeverityToMessageType sev) msg)
+    TNotificationMessage "2.0" SMethod_WindowShowMessage (ShowMessageParams (logSeverityToMessageType sev) msg)
 
 -- | A 'sensible' log action for logging messages to the client:
 --

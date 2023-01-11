@@ -1,13 +1,18 @@
-{-# LANGUAGE CPP, OverloadedStrings #-}
+{-# LANGUAGE CPP #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE DataKinds #-}
 -- For some reason ghc warns about not using
 -- Control.Monad.IO.Class but it's needed for
 -- MonadIO
 {-# OPTIONS_GHC -Wunused-imports #-}
 module Language.LSP.Test.Compat where
 
+import Data.Row
 import Data.Maybe
+import qualified Data.Text as T
 import System.IO
-import Language.LSP.Types
 
 #if MIN_VERSION_process(1,6,3)
 -- We have to hide cleanupProcess for process-1.6.3.0
@@ -115,6 +120,5 @@ withCreateProcess c action =
 
 #endif
 
-
-lspTestClientInfo :: ClientInfo
-lspTestClientInfo = ClientInfo "lsp-test" (Just CURRENT_PACKAGE_VERSION)
+lspTestClientInfo :: Rec ("name" .== T.Text .+ "version" .== Maybe T.Text)
+lspTestClientInfo = #name .== "lsp-test" .+ #version .== (Just CURRENT_PACKAGE_VERSION)

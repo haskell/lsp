@@ -9,8 +9,11 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE OverloadedLabels #-}
 
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
+-- there's just so much!
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
 -- So we can keep using the old prettyprinter modules (which have a better
 -- compatibility range) for now.
 {-# OPTIONS_GHC -Wno-deprecations #-}
@@ -19,19 +22,20 @@ module Language.LSP.Server.Processing where
 
 import           Colog.Core (LogAction (..), WithSeverity (..), Severity (..), (<&))
 
-import Control.Lens hiding (List, Empty)
+import Control.Lens hiding (Empty)
 import Data.Aeson hiding (Options, Error)
 import Data.Aeson.Types hiding (Options, Error)
 import qualified Data.ByteString.Lazy as BSL
 import Data.List
 import Data.List.NonEmpty (NonEmpty(..))
+import           Data.Row
 import qualified Data.Text as T
 import qualified Data.Text.Lazy.Encoding as TL
-import Language.LSP.Types
-import Language.LSP.Types.Capabilities
-import qualified Language.LSP.Types.Lens as LSP
-import           Language.LSP.Types.SMethodMap (SMethodMap)
-import qualified Language.LSP.Types.SMethodMap as SMethodMap
+import qualified Language.LSP.Protocol.Types as LSP
+import Language.LSP.Protocol.Types hiding (id)
+import Language.LSP.Protocol.Message hiding (error)
+import           Language.LSP.Protocol.Utils.SMethodMap (SMethodMap)
+import qualified Language.LSP.Protocol.Utils.SMethodMap as SMethodMap
 import Language.LSP.Server.Core
 import Language.LSP.VFS as VFS
 import qualified Data.Functor.Product as P
@@ -48,7 +52,7 @@ import Data.Maybe
 import qualified Data.Map.Strict as Map
 import Data.Text.Prettyprint.Doc
 import System.Exit
-import Data.Default (def)
+import GHC.TypeLits (symbolVal)
 import Control.Monad.State
 import Control.Monad.Writer.Strict 
 import Data.Foldable (traverse_)
@@ -95,7 +99,7 @@ processMessage logger jsonStr = do
           pure $ handle logger m mess
         FromClientRsp (P.Pair (ServerResponseCallback f) (Const !newMap)) res -> do
           writeTVar pendingResponsesVar newMap
-          pure $ liftIO $ f (res ^. LSP.result)
+          pure $ liftIO $ f (res ^. result)
   where
     parser :: ResponseMap -> Value -> Parser (FromClientMessage' (P.Product ServerResponseCallback (Const ResponseMap)))
     parser rm = parseClientMessage $ \i ->
@@ -109,25 +113,25 @@ initializeRequestHandler
   :: ServerDefinition config
   -> VFS
   -> (FromServerMessage -> IO ())
-  -> Message Initialize
+  -> TMessage Method_Initialize
   -> IO (Maybe (LanguageContextEnv config))
 initializeRequestHandler ServerDefinition{..} vfs sendFunc req = do
-  let sendResp = sendFunc . FromServerRsp SInitialize
+  let sendResp = sendFunc . FromServerRsp SMethod_Initialize
       handleErr (Left err) = do
         sendResp $ makeResponseError (req ^. LSP.id) err
         pure Nothing
       handleErr (Right a) = pure $ Just a
   flip E.catch (initializeErrorHandler $ sendResp . makeResponseError (req ^. LSP.id)) $ handleErr <=< runExceptT $ mdo
 
-    let params = req ^. LSP.params
-        rootDir = getFirst $ foldMap First [ params ^. LSP.rootUri  >>= uriToFilePath
-                                           , params ^. LSP.rootPath <&> T.unpack ]
+    let p = req ^. params
+        rootDir = getFirst $ foldMap First [ p ^? rootUri . _L >>= uriToFilePath
+                                           , p ^? rootPath . _Just . _L <&> T.unpack ]
 
-    let initialWfs = case params ^. LSP.workspaceFolders of
-          Just (List xs) -> xs
-          Nothing -> []
+    let initialWfs = case p ^. workspaceFolders of
+          Just (InL xs) -> xs
+          _ -> []
 
-        initialConfig = case onConfigurationChange defaultConfig <$> (req ^. LSP.params . LSP.initializationOptions) of
+        initialConfig = case onConfigurationChange defaultConfig <$> (p ^. initializationOptions) of
           Just (Right newConfig) -> newConfig
           _ -> defaultConfig
 
@@ -147,21 +151,21 @@ initializeRequestHandler ServerDefinition{..} vfs sendFunc req = do
       pure LanguageContextState{..}
 
     -- Call the 'duringInitialization' callback to let the server kick stuff up
-    let env = LanguageContextEnv handlers onConfigurationChange sendFunc stateVars (params ^. LSP.capabilities) rootDir
+    let env = LanguageContextEnv handlers onConfigurationChange sendFunc stateVars (p ^. capabilities) rootDir
         handlers = transmuteHandlers interpreter staticHandlers
         interpreter = interpretHandler initializationResult
     initializationResult <- ExceptT $ doInitialize env req
 
-    let serverCaps = inferServerCapabilities (params ^. LSP.capabilities) options handlers
-    liftIO $ sendResp $ makeResponseMessage (req ^. LSP.id) (InitializeResult serverCaps (serverInfo options))
+    let serverCaps = inferServerCapabilities (p ^. capabilities) options handlers
+    liftIO $ sendResp $ makeResponseMessage (req ^. LSP.id) (InitializeResult serverCaps (optServerInfo options))
     pure env
   where
-    makeResponseMessage rid result = ResponseMessage "2.0" (Just rid) (Right result)
-    makeResponseError origId err = ResponseMessage "2.0" (Just origId) (Left err)
+    makeResponseMessage rid result = TResponseMessage "2.0" (Just rid) (Right result)
+    makeResponseError origId err = TResponseMessage "2.0" (Just origId) (Left err)
 
-    initializeErrorHandler :: (ResponseError -> IO ()) -> E.SomeException -> IO (Maybe a)
+    initializeErrorHandler :: (TResponseError Method_Initialize -> IO ()) -> E.SomeException -> IO (Maybe a)
     initializeErrorHandler sendResp e = do
-        sendResp $ ResponseError InternalError msg Nothing
+        sendResp $ TResponseError ErrorCodes_InternalError msg Nothing
         pure Nothing
       where
         msg = T.pack $ unwords ["Error on initialize:", show e]
@@ -174,37 +178,46 @@ inferServerCapabilities :: ClientCapabilities -> Options -> Handlers m -> Server
 inferServerCapabilities clientCaps o h =
   ServerCapabilities
     { _textDocumentSync                 = sync
-    , _hoverProvider                    = supportedBool STextDocumentHover
+    , _hoverProvider                    = supportedBool SMethod_TextDocumentHover
     , _completionProvider               = completionProvider
-    , _declarationProvider              = supportedBool STextDocumentDeclaration
+    , _declarationProvider              = supportedBool SMethod_TextDocumentDeclaration
     , _signatureHelpProvider            = signatureHelpProvider
-    , _definitionProvider               = supportedBool STextDocumentDefinition
-    , _typeDefinitionProvider           = supportedBool STextDocumentTypeDefinition
-    , _implementationProvider           = supportedBool STextDocumentImplementation
-    , _referencesProvider               = supportedBool STextDocumentReferences
-    , _documentHighlightProvider        = supportedBool STextDocumentDocumentHighlight
-    , _documentSymbolProvider           = supportedBool STextDocumentDocumentSymbol
+    , _definitionProvider               = supportedBool SMethod_TextDocumentDefinition
+    , _typeDefinitionProvider           = supportedBool SMethod_TextDocumentTypeDefinition
+    , _implementationProvider           = supportedBool SMethod_TextDocumentImplementation
+    , _referencesProvider               = supportedBool SMethod_TextDocumentReferences
+    , _documentHighlightProvider        = supportedBool SMethod_TextDocumentDocumentHighlight
+    , _documentSymbolProvider           = supportedBool SMethod_TextDocumentDocumentSymbol
     , _codeActionProvider               = codeActionProvider
-    , _codeLensProvider                 = supported' STextDocumentCodeLens $ CodeLensOptions
+    , _codeLensProvider                 = supported' SMethod_TextDocumentCodeLens $ CodeLensOptions
                                               (Just False)
-                                              (supported SCodeLensResolve)
-    , _documentFormattingProvider       = supportedBool STextDocumentFormatting
-    , _documentRangeFormattingProvider  = supportedBool STextDocumentRangeFormatting
+                                              (supported SMethod_CodeLensResolve)
+    , _documentFormattingProvider       = supportedBool SMethod_TextDocumentFormatting
+    , _documentRangeFormattingProvider  = supportedBool SMethod_TextDocumentRangeFormatting
     , _documentOnTypeFormattingProvider = documentOnTypeFormattingProvider
     , _renameProvider                   = renameProvider
-    , _documentLinkProvider             = supported' STextDocumentDocumentLink $ DocumentLinkOptions
+    , _documentLinkProvider             = supported' SMethod_TextDocumentDocumentLink $ DocumentLinkOptions
                                               (Just False)
-                                              (supported SDocumentLinkResolve)
-    , _colorProvider                    = supportedBool STextDocumentDocumentColor
-    , _foldingRangeProvider             = supportedBool STextDocumentFoldingRange
+                                              (supported SMethod_DocumentLinkResolve)
+    , _colorProvider                    = supportedBool SMethod_TextDocumentDocumentColor
+    , _foldingRangeProvider             = supportedBool SMethod_TextDocumentFoldingRange
     , _executeCommandProvider           = executeCommandProvider
-    , _selectionRangeProvider           = supportedBool STextDocumentSelectionRange
-    , _callHierarchyProvider            = supportedBool STextDocumentPrepareCallHierarchy
+    , _selectionRangeProvider           = supportedBool SMethod_TextDocumentSelectionRange
+    , _callHierarchyProvider            = supportedBool SMethod_TextDocumentPrepareCallHierarchy
     , _semanticTokensProvider           = semanticTokensProvider
-    , _workspaceSymbolProvider          = supportedBool SWorkspaceSymbol
+    , _workspaceSymbolProvider          = supportedBool SMethod_WorkspaceSymbol
     , _workspace                        = Just workspace
     -- TODO: Add something for experimental
     , _experimental                     = Nothing :: Maybe Value
+    -- TODO
+    , _positionEncoding  = Nothing
+    , _notebookDocumentSync  = Nothing
+    , _linkedEditingRangeProvider  = Nothing
+    , _monikerProvider  = Nothing
+    , _typeHierarchyProvider  = Nothing
+    , _inlineValueProvider  = Nothing
+    , _inlayHintProvider  = Nothing
+    , _diagnosticProvider  = Nothing
     }
   where
 
@@ -229,102 +242,104 @@ inferServerCapabilities clientCaps o h =
     singleton x = [x]
 
     completionProvider
-      | supported_b STextDocumentCompletion = Just $
-          CompletionOptions
-            Nothing
-            (map T.singleton <$> completionTriggerCharacters o)
-            (map T.singleton <$> completionAllCommitCharacters o)
-            (supported SCompletionItemResolve)
+      | supported_b SMethod_TextDocumentCompletion = Just $
+          CompletionOptions {
+            _triggerCharacters=map T.singleton <$> optCompletionTriggerCharacters o
+            , _allCommitCharacters=map T.singleton <$> optCompletionAllCommitCharacters o
+            , _resolveProvider=supported SMethod_CompletionItemResolve
+            , _completionItem=Nothing
+            , _workDoneProgress=Nothing
+            }
       | otherwise = Nothing
 
     clientSupportsCodeActionKinds = isJust $
-      clientCaps ^? LSP.textDocument . _Just . LSP.codeAction . _Just . LSP.codeActionLiteralSupport
+      clientCaps ^? textDocument . _Just . codeAction . _Just . codeActionLiteralSupport
 
     codeActionProvider
       | clientSupportsCodeActionKinds
-      , supported_b STextDocumentCodeAction = Just $ case codeActionKinds o of
-          Just ks -> InR $ CodeActionOptions Nothing (Just (List ks)) (supported SCodeLensResolve)
+      , supported_b SMethod_TextDocumentCodeAction = Just $ case optCodeActionKinds o of
+          Just ks -> InR $ CodeActionOptions Nothing (Just ks) (supported SMethod_CodeLensResolve)
           Nothing -> InL True
-      | supported_b STextDocumentCodeAction = Just (InL True)
+      | supported_b SMethod_TextDocumentCodeAction = Just (InL True)
       | otherwise = Just (InL False)
 
     signatureHelpProvider
-      | supported_b STextDocumentSignatureHelp = Just $
+      | supported_b SMethod_TextDocumentSignatureHelp = Just $
           SignatureHelpOptions
             Nothing
-            (List . map T.singleton <$> signatureHelpTriggerCharacters o)
-            (List . map T.singleton <$> signatureHelpRetriggerCharacters o)
+            (map T.singleton <$> optSignatureHelpTriggerCharacters o)
+            (map T.singleton <$> optSignatureHelpRetriggerCharacters o)
       | otherwise = Nothing
 
     documentOnTypeFormattingProvider
-      | supported_b STextDocumentOnTypeFormatting
-      , Just (first :| rest) <- documentOnTypeFormattingTriggerCharacters o = Just $
+      | supported_b SMethod_TextDocumentOnTypeFormatting
+      , Just (first :| rest) <- optDocumentOnTypeFormattingTriggerCharacters o = Just $
           DocumentOnTypeFormattingOptions (T.pack [first]) (Just (map (T.pack . singleton) rest))
-      | supported_b STextDocumentOnTypeFormatting
-      , Nothing <- documentOnTypeFormattingTriggerCharacters o =
+      | supported_b SMethod_TextDocumentOnTypeFormatting
+      , Nothing <- optDocumentOnTypeFormattingTriggerCharacters o =
           error "documentOnTypeFormattingTriggerCharacters needs to be set if a documentOnTypeFormattingHandler is set"
       | otherwise = Nothing
 
     executeCommandProvider
-      | supported_b SWorkspaceExecuteCommand
-      , Just cmds <- executeCommandCommands o = Just (ExecuteCommandOptions Nothing (List cmds))
-      | supported_b SWorkspaceExecuteCommand
-      , Nothing <- executeCommandCommands o =
+      | supported_b SMethod_WorkspaceExecuteCommand
+      , Just cmds <- optExecuteCommandCommands o = Just (ExecuteCommandOptions Nothing cmds)
+      | supported_b SMethod_WorkspaceExecuteCommand
+      , Nothing <- optExecuteCommandCommands o =
           error "executeCommandCommands needs to be set if a executeCommandHandler is set"
       | otherwise = Nothing
 
     clientSupportsPrepareRename = fromMaybe False $
-      clientCaps ^? LSP.textDocument . _Just . LSP.rename . _Just . LSP.prepareSupport . _Just
+      clientCaps ^? textDocument . _Just . rename . _Just . prepareSupport . _Just
 
     renameProvider
       | clientSupportsPrepareRename
-      , supported_b STextDocumentRename
-      , supported_b STextDocumentPrepareRename = Just $
+      , supported_b SMethod_TextDocumentRename
+      , supported_b SMethod_TextDocumentPrepareRename = Just $
           InR . RenameOptions Nothing . Just $ True
-      | supported_b STextDocumentRename = Just (InL True)
+      | supported_b SMethod_TextDocumentRename = Just (InL True)
       | otherwise = Just (InL False)
 
     -- Always provide the default legend
     -- TODO: allow user-provided legend via 'Options', or at least user-provided types
-    semanticTokensProvider = Just $ InL $ SemanticTokensOptions Nothing def semanticTokenRangeProvider semanticTokenFullProvider
+    semanticTokensProvider = Just $ InL $ SemanticTokensOptions Nothing defaultSemanticTokensLegend semanticTokenRangeProvider semanticTokenFullProvider
     semanticTokenRangeProvider
-      | supported_b STextDocumentSemanticTokensRange = Just $ SemanticTokensRangeBool True
+      | supported_b SMethod_TextDocumentSemanticTokensRange = Just $ InL True
       | otherwise = Nothing
     semanticTokenFullProvider
-      | supported_b STextDocumentSemanticTokensFull = Just $ SemanticTokensFullDelta $ SemanticTokensDeltaClientCapabilities $ supported STextDocumentSemanticTokensFullDelta
+      | supported_b SMethod_TextDocumentSemanticTokensFull = Just $ InR $ #delta .== supported SMethod_TextDocumentSemanticTokensFullDelta
       | otherwise = Nothing
 
-    sync = case textDocumentSync o of
+    sync = case optTextDocumentSync o of
             Just x -> Just (InL x)
             Nothing -> Nothing
 
-    workspace = WorkspaceServerCapabilities workspaceFolder
-    workspaceFolder = supported' SWorkspaceDidChangeWorkspaceFolders $
+    workspace = #workspaceFolders .== workspaceFolder .+ #fileOperations .== Nothing
+    workspaceFolder = supported' SMethod_WorkspaceDidChangeWorkspaceFolders $
         -- sign up to receive notifications
         WorkspaceFoldersServerCapabilities (Just True) (Just (InR True))
 
 -- | Invokes the registered dynamic or static handlers for the given message and
 -- method, as well as doing some bookkeeping.
-handle :: (m ~ LspM config) => LogAction m (WithSeverity LspProcessingLog) -> SClientMethod meth -> ClientMessage meth -> m ()
+handle :: (m ~ LspM config) => LogAction m (WithSeverity LspProcessingLog) -> SClientMethod meth -> TClientMessage meth -> m ()
 handle logger m msg =
   case m of
-    SWorkspaceDidChangeWorkspaceFolders -> handle' logger (Just updateWorkspaceFolders) m msg
-    SWorkspaceDidChangeConfiguration    -> handle' logger (Just $ handleConfigChange logger) m msg
-    STextDocumentDidOpen                -> handle' logger (Just $ vfsFunc logger openVFS) m msg
-    STextDocumentDidChange              -> handle' logger (Just $ vfsFunc logger changeFromClientVFS) m msg
-    STextDocumentDidClose               -> handle' logger (Just $ vfsFunc logger closeVFS) m msg
-    SWindowWorkDoneProgressCancel       -> handle' logger (Just $ progressCancelHandler logger) m msg
+    SMethod_WorkspaceDidChangeWorkspaceFolders -> handle' logger (Just updateWorkspaceFolders) m msg
+    SMethod_WorkspaceDidChangeConfiguration    -> handle' logger (Just $ handleConfigChange logger) m msg
+    SMethod_TextDocumentDidOpen                -> handle' logger (Just $ vfsFunc logger openVFS) m msg
+    SMethod_TextDocumentDidChange              -> handle' logger (Just $ vfsFunc logger changeFromClientVFS) m msg
+    SMethod_TextDocumentDidClose               -> handle' logger (Just $ vfsFunc logger closeVFS) m msg
+    SMethod_WindowWorkDoneProgressCancel       -> handle' logger (Just $ progressCancelHandler logger) m msg
     _ -> handle' logger Nothing m msg
 
 
-handle' :: forall m t (meth :: Method FromClient t) config
+handle' :: forall m t (meth :: Method ClientToServer t) config
         . (m ~ LspM config)
         => LogAction m (WithSeverity LspProcessingLog)
-        -> Maybe (ClientMessage meth -> m ())
+        -> Maybe (TClientMessage meth -> m ())
            -- ^ An action to be run before invoking the handler, used for
            -- bookkeeping stuff like the vfs etc.
         -> SClientMethod meth
-        -> ClientMessage meth
+        -> TClientMessage meth
         -> m ()
 handle' logger mAction m msg = do
   maybe (return ()) (\f -> f msg) mAction
@@ -335,29 +350,29 @@ handle' logger mAction m msg = do
   env <- getLspEnv
   let Handlers{reqHandlers, notHandlers} = resHandlers env
 
-  let mkRspCb :: RequestMessage (m1 :: Method FromClient Request) -> Either ResponseError (ResponseResult m1) -> IO ()
+  let mkRspCb :: TRequestMessage (m1 :: Method ClientToServer Request) -> Either (TResponseError m1) (MessageResult m1) -> IO ()
       mkRspCb req (Left  err) = runLspT env $ sendToClient $
-        FromServerRsp (req ^. LSP.method) $ ResponseMessage "2.0" (Just (req ^. LSP.id)) (Left err)
+        FromServerRsp (req ^. method) $ TResponseMessage "2.0" (Just (req ^. LSP.id)) (Left err)
       mkRspCb req (Right rsp) = runLspT env $ sendToClient $
-        FromServerRsp (req ^. LSP.method) $ ResponseMessage "2.0" (Just (req ^. LSP.id)) (Right rsp)
+        FromServerRsp (req ^. method) $ TResponseMessage "2.0" (Just (req ^. LSP.id)) (Right rsp)
 
   case splitClientMethod m of
     IsClientNot -> case pickHandler dynNotHandlers notHandlers of
       Just h -> liftIO $ h msg
       Nothing
-        | SExit <- m -> exitNotificationHandler logger msg
+        | SMethod_Exit <- m -> exitNotificationHandler logger msg
         | otherwise -> do
             reportMissingHandler
 
     IsClientReq -> case pickHandler dynReqHandlers reqHandlers of
       Just h -> liftIO $ h msg (mkRspCb msg)
       Nothing
-        | SShutdown <- m -> liftIO $ shutdownRequestHandler msg (mkRspCb msg)
+        | SMethod_Shutdown <- m -> liftIO $ shutdownRequestHandler msg (mkRspCb msg)
         | otherwise -> do
             let errorMsg = T.pack $ unwords ["lsp:no handler for: ", show m]
-                err = ResponseError MethodNotFound errorMsg Nothing
+                err = TResponseError ErrorCodes_MethodNotFound errorMsg Nothing
             sendToClient $
-              FromServerRsp (msg ^. LSP.method) $ ResponseMessage "2.0" (Just (msg ^. LSP.id)) (Left err)
+              FromServerRsp (msg ^. method) $ TResponseMessage "2.0" (Just (msg ^. LSP.id)) (Left err)
 
     IsClientEither -> case msg of
       NotMess noti -> case pickHandler dynNotHandlers notHandlers of
@@ -367,9 +382,9 @@ handle' logger mAction m msg = do
         Just h -> liftIO $ h req (mkRspCb req)
         Nothing -> do
           let errorMsg = T.pack $ unwords ["lsp:no handler for: ", show m]
-              err = ResponseError MethodNotFound errorMsg Nothing
+              err = TResponseError ErrorCodes_MethodNotFound errorMsg Nothing
           sendToClient $
-            FromServerRsp (req ^. LSP.method) $ ResponseMessage "2.0" (Just (req ^. LSP.id)) (Left err)
+            FromServerRsp (req ^. method) $ TResponseMessage "2.0" (Just (req ^. LSP.id)) (Left err)
   where
     -- | Checks to see if there's a dynamic handler, and uses it in favour of the
     -- static handler, if it exists.
@@ -386,12 +401,12 @@ handle' logger mAction m msg = do
     reportMissingHandler =
       let optional = isOptionalNotification m
       in logger <& MissingHandler optional m `WithSeverity` if optional then Warning else Error
-    isOptionalNotification (SCustomMethod method)
-      | "$/" `T.isPrefixOf` method = True
+    isOptionalNotification (SMethod_CustomMethod p)
+      | "$/" `T.isPrefixOf` T.pack (symbolVal p) = True
     isOptionalNotification _  = False
 
-progressCancelHandler :: (m ~ LspM config) => LogAction m (WithSeverity LspProcessingLog) -> Message WindowWorkDoneProgressCancel -> m ()
-progressCancelHandler logger (NotificationMessage _ _ (WorkDoneProgressCancelParams tid)) = do
+progressCancelHandler :: (m ~ LspM config) => LogAction m (WithSeverity LspProcessingLog) -> TMessage Method_WindowWorkDoneProgressCancel -> m ()
+progressCancelHandler logger (TNotificationMessage _ _ (WorkDoneProgressCancelParams tid)) = do
   pdata <- getsState (progressCancel . resProgressData)
   case Map.lookup tid pdata of
     Nothing -> return ()
@@ -399,26 +414,26 @@ progressCancelHandler logger (NotificationMessage _ _ (WorkDoneProgressCancelPar
       logger <& ProgressCancel tid `WithSeverity` Debug
       liftIO cancelAction
 
-exitNotificationHandler :: (MonadIO m) => LogAction m (WithSeverity LspProcessingLog) -> Handler m Exit
+exitNotificationHandler :: (MonadIO m) => LogAction m (WithSeverity LspProcessingLog) -> Handler m Method_Exit
 exitNotificationHandler logger _ = do
   logger <& Exiting `WithSeverity` Info
   liftIO exitSuccess
 
 -- | Default Shutdown handler
-shutdownRequestHandler :: Handler IO Shutdown
+shutdownRequestHandler :: Handler IO Method_Shutdown
 shutdownRequestHandler _req k = do
-  k $ Right Empty
+  k $ Right LSP.Null
 
-handleConfigChange :: (m ~ LspM config) => LogAction m (WithSeverity LspProcessingLog) -> Message WorkspaceDidChangeConfiguration -> m ()
+handleConfigChange :: (m ~ LspM config) => LogAction m (WithSeverity LspProcessingLog) -> TMessage Method_WorkspaceDidChangeConfiguration -> m ()
 handleConfigChange logger req = do
   parseConfig <- LspT $ asks resParseConfig
-  let settings = req ^. LSP.params . LSP.settings
-  res <- stateState resConfig $ \oldConfig -> case parseConfig oldConfig settings of
+  let s = req ^. params . settings
+  res <- stateState resConfig $ \oldConfig -> case parseConfig oldConfig s of
     Left err -> (Left err, oldConfig)
     Right !newConfig -> (Right (), newConfig)
   case res of
     Left err -> do
-      logger <& ConfigurationParseError settings err `WithSeverity` Error
+      logger <& ConfigurationParseError s err `WithSeverity` Error
     Right () -> pure ()
 
 vfsFunc :: forall m n a config
@@ -443,10 +458,10 @@ vfsFunc logger modifyVfs req = do
       innerLogger = LogAction $ \m -> tell [m]
 
 -- | Updates the list of workspace folders
-updateWorkspaceFolders :: Message WorkspaceDidChangeWorkspaceFolders -> LspM config ()
-updateWorkspaceFolders (NotificationMessage _ _ params) = do
-  let List toRemove = params ^. LSP.event . LSP.removed
-      List toAdd = params ^. LSP.event . LSP.added
+updateWorkspaceFolders :: TMessage Method_WorkspaceDidChangeWorkspaceFolders -> LspM config ()
+updateWorkspaceFolders (TNotificationMessage _ _ params) = do
+  let toRemove = params ^. event . removed
+      toAdd = params ^. event . added
       newWfs oldWfs = foldr delete oldWfs toRemove <> toAdd
   modifyState resWorkspaceFolders newWfs
 

@@ -1,5 +1,9 @@
 # Revision history for lsp-test
 
+## 0.15.0.0
+
+* Support `lsp-types-2.0.0.0` and `lsp-2.0.0.0`.
+
 ## 0.14.1.0
 
 * Compatibility with new `lsp-types` major version.

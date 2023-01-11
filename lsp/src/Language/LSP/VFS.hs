@@ -1,6 +1,7 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -77,16 +78,16 @@ import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import           Data.Int (Int32)
 import           Data.List
+import           Data.Row
 import           Data.Ord
-import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map.Strict as Map
 import           Data.Maybe
 import qualified Data.Text.Rope as URope
 import           Data.Text.Utf16.Rope ( Rope )
 import qualified Data.Text.Utf16.Rope as Rope
 import           Data.Text.Prettyprint.Doc hiding (line)
-import qualified Language.LSP.Types           as J
-import qualified Language.LSP.Types.Lens      as J
+import qualified Language.LSP.Protocol.Types           as J
+import qualified Language.LSP.Protocol.Message           as J
 import           System.FilePath
 import           Data.Hashable
 import           System.Directory
@@ -151,7 +152,7 @@ initVFS k = withSystemTempDirectory "haskell-lsp" $ \temp_dir -> k (VFS mempty t
 -- ---------------------------------------------------------------------
 
 -- | Applies the changes from a 'J.DidOpenTextDocument' to the 'VFS'
-openVFS :: (MonadState VFS m) => LogAction m (WithSeverity VfsLog) -> J.Message 'J.TextDocumentDidOpen -> m ()
+openVFS :: (MonadState VFS m) => LogAction m (WithSeverity VfsLog) -> J.TMessage 'J.Method_TextDocumentDidOpen -> m ()
 openVFS logger msg = do
   let J.TextDocumentItem (J.toNormalizedUri -> uri) _ version text = msg ^. J.params . J.textDocument
       vfile = VirtualFile version 0 (Rope.fromText text)
@@ -161,12 +162,12 @@ openVFS logger msg = do
 -- ---------------------------------------------------------------------
 
 -- | Applies a 'DidChangeTextDocumentNotification' to the 'VFS'
-changeFromClientVFS :: (MonadState VFS m) => LogAction m (WithSeverity VfsLog) -> J.Message 'J.TextDocumentDidChange -> m ()
+changeFromClientVFS :: (MonadState VFS m) => LogAction m (WithSeverity VfsLog) -> J.TMessage 'J.Method_TextDocumentDidChange -> m ()
 changeFromClientVFS logger msg = do
   let
-    J.DidChangeTextDocumentParams vid (J.List changes) = msg ^. J.params
+    J.DidChangeTextDocumentParams vid changes = msg ^. J.params
     -- the client shouldn't be sending over a null version, only the server, but we just use 0 if that happens
-    J.VersionedTextDocumentIdentifier (J.toNormalizedUri -> uri) (fromMaybe 0 -> version) = vid
+    J.VersionedTextDocumentIdentifier (J.toNormalizedUri -> uri) version = vid
   vfs <- get
   case vfs ^. vfsMap . at uri of
     Just (VirtualFile _ file_ver contents) -> do
@@ -177,7 +178,7 @@ changeFromClientVFS logger msg = do
 -- ---------------------------------------------------------------------
 
 applyCreateFile :: (MonadState VFS m) => J.CreateFile -> m ()
-applyCreateFile (J.CreateFile (J.toNormalizedUri -> uri) options _ann) =
+applyCreateFile (J.CreateFile _ann _kind (J.toNormalizedUri -> uri) options) =
   vfsMap %= Map.insertWith
                 (\ new old -> if shouldOverwrite then new else old)
                 uri
@@ -197,7 +198,7 @@ applyCreateFile (J.CreateFile (J.toNormalizedUri -> uri) options _ann) =
         Just (J.CreateFileOptions (Just False)  (Just False)) -> False  -- `overwrite` wins over `ignoreIfExists`
 
 applyRenameFile :: (MonadState VFS m) => J.RenameFile -> m ()
-applyRenameFile (J.RenameFile (J.toNormalizedUri -> oldUri) (J.toNormalizedUri -> newUri) options _ann) = do
+applyRenameFile (J.RenameFile _ann _kind (J.toNormalizedUri -> oldUri) (J.toNormalizedUri -> newUri) options) = do
   vfs <- get
   case vfs ^. vfsMap . at oldUri of
       -- nothing to rename
@@ -225,7 +226,7 @@ applyRenameFile (J.RenameFile (J.toNormalizedUri -> oldUri) (J.toNormalizedUri -
         Just (J.RenameFileOptions (Just False)  (Just False)) -> False  -- `overwrite` wins over `ignoreIfExists`
 
 applyDeleteFile :: (MonadState VFS m) => LogAction m (WithSeverity VfsLog) -> J.DeleteFile -> m ()
-applyDeleteFile logger (J.DeleteFile (J.toNormalizedUri -> uri) options _ann) = do
+applyDeleteFile logger (J.DeleteFile _ann _kind (J.toNormalizedUri -> uri) options) = do
   -- NOTE: we are ignoring the `recursive` option here because we don't know which file is a directory
   when (options ^? _Just . J.recursive . _Just == Just True) $
     logger <& CantRecursiveDelete uri `WithSeverity` Warning
@@ -239,13 +240,15 @@ applyDeleteFile logger (J.DeleteFile (J.toNormalizedUri -> uri) options _ann) = 
     _ -> pure ()
 
 applyTextDocumentEdit :: (MonadState VFS m) => LogAction m (WithSeverity VfsLog) -> J.TextDocumentEdit -> m ()
-applyTextDocumentEdit logger (J.TextDocumentEdit vid (J.List edits)) = do
+applyTextDocumentEdit logger (J.TextDocumentEdit vid edits) = do
   -- all edits are supposed to be applied at once
   -- so apply from bottom up so they don't affect others
   let sortedEdits = sortOn (Down . editRange) edits
       changeEvents = map editToChangeEvent sortedEdits
-      ps = J.DidChangeTextDocumentParams vid (J.List changeEvents)
-      notif = J.NotificationMessage "" J.STextDocumentDidChange ps
+      -- TODO: is this right?
+      vid' = J.VersionedTextDocumentIdentifier (vid ^. J.uri) (case vid ^. J.version of {J.InL v -> v; J.InR _ -> 0})
+      ps = J.DidChangeTextDocumentParams vid' changeEvents
+      notif = J.TNotificationMessage "" J.SMethod_TextDocumentDidChange ps
   changeFromClientVFS logger notif
 
   where
@@ -254,8 +257,8 @@ applyTextDocumentEdit logger (J.TextDocumentEdit vid (J.List edits)) = do
     editRange (J.InL e) = e ^. J.range
 
     editToChangeEvent :: J.TextEdit J.|? J.AnnotatedTextEdit -> J.TextDocumentContentChangeEvent
-    editToChangeEvent (J.InR e) = J.TextDocumentContentChangeEvent (Just $ e ^. J.range) Nothing (e ^. J.newText)
-    editToChangeEvent (J.InL e) = J.TextDocumentContentChangeEvent (Just $ e ^. J.range) Nothing (e ^. J.newText)
+    editToChangeEvent (J.InR e) = J.TextDocumentContentChangeEvent $ J.InL $ #range .== e ^. J.range .+ #rangeLength .== Nothing .+ #text .== e ^. J.newText
+    editToChangeEvent (J.InL e) = J.TextDocumentContentChangeEvent $ J.InL $ #range .== e ^. J.range .+ #rangeLength .== Nothing .+ #text .== e ^. J.newText
 
 applyDocumentChange :: (MonadState VFS m) => LogAction m (WithSeverity VfsLog) -> J.DocumentChange -> m ()
 applyDocumentChange logger (J.InL               change)   = applyTextDocumentEdit logger change
@@ -264,26 +267,28 @@ applyDocumentChange _      (J.InR (J.InR (J.InL change))) = applyRenameFile chan
 applyDocumentChange logger (J.InR (J.InR (J.InR change))) = applyDeleteFile logger change
 
 -- | Applies the changes from a 'ApplyWorkspaceEditRequest' to the 'VFS'
-changeFromServerVFS :: forall m . MonadState VFS m => LogAction m (WithSeverity VfsLog) -> J.Message 'J.WorkspaceApplyEdit -> m ()
+changeFromServerVFS :: forall m . MonadState VFS m => LogAction m (WithSeverity VfsLog) -> J.TMessage 'J.Method_WorkspaceApplyEdit -> m ()
 changeFromServerVFS logger msg = do
   let J.ApplyWorkspaceEditParams _label edit = msg ^. J.params
       J.WorkspaceEdit mChanges mDocChanges _anns = edit
   case mDocChanges of
-    Just (J.List docChanges) -> applyDocumentChanges docChanges
+    Just docChanges -> applyDocumentChanges docChanges
     Nothing -> case mChanges of
-      Just cs -> applyDocumentChanges $ map J.InL $ HashMap.foldlWithKey' changeToTextDocumentEdit [] cs
+      Just cs -> applyDocumentChanges $ map J.InL $ Map.foldlWithKey' changeToTextDocumentEdit [] cs
       Nothing -> pure ()
 
   where
     changeToTextDocumentEdit acc uri edits =
-      acc ++ [J.TextDocumentEdit (J.VersionedTextDocumentIdentifier uri (Just 0)) (fmap J.InL edits)]
+      acc ++ [J.TextDocumentEdit (J.OptionalVersionedTextDocumentIdentifier uri (J.InL 0)) (fmap J.InL edits)]
 
     applyDocumentChanges :: [J.DocumentChange] -> m ()
     applyDocumentChanges = traverse_ (applyDocumentChange logger) . sortOn project
 
     -- for sorting [DocumentChange]
-    project :: J.DocumentChange -> J.TextDocumentVersion -- type TextDocumentVersion = Maybe Int
-    project (J.InL textDocumentEdit) = textDocumentEdit ^. J.textDocument . J.version
+    project :: J.DocumentChange -> Maybe J.Int32
+    project (J.InL textDocumentEdit) = case textDocumentEdit ^. J.textDocument . J.version of
+      J.InL v -> Just v
+      _ -> Nothing
     project _ = Nothing
 
 -- ---------------------------------------------------------------------
@@ -322,7 +327,7 @@ persistFileVFS logger vfs uri =
 
 -- ---------------------------------------------------------------------
 
-closeVFS :: (MonadState VFS m) => LogAction m (WithSeverity VfsLog) -> J.Message 'J.TextDocumentDidClose -> m ()
+closeVFS :: (MonadState VFS m) => LogAction m (WithSeverity VfsLog) -> J.TMessage 'J.Method_TextDocumentDidClose -> m ()
 closeVFS logger msg = do
   let J.DidCloseTextDocumentParams (J.TextDocumentIdentifier (J.toNormalizedUri -> uri)) = msg ^. J.params
   logger <& Closing uri `WithSeverity` Debug
@@ -339,10 +344,10 @@ applyChanges logger = foldM (applyChange logger)
 -- ---------------------------------------------------------------------
 
 applyChange :: (Monad m) => LogAction m (WithSeverity VfsLog) -> Rope -> J.TextDocumentContentChangeEvent -> m Rope
-applyChange _ _ (J.TextDocumentContentChangeEvent Nothing _ str)
-  = pure $ Rope.fromText str
-applyChange logger str (J.TextDocumentContentChangeEvent (Just (J.Range (J.Position sl sc) (J.Position fl fc))) _ txt)
+applyChange logger str (J.TextDocumentContentChangeEvent (J.InL e)) | J.Range (J.Position sl sc) (J.Position fl fc) <- e .! #range, txt <- e .! #text
   = changeChars logger str (Rope.Position (fromIntegral sl) (fromIntegral sc)) (Rope.Position (fromIntegral fl) (fromIntegral fc)) txt
+applyChange _ _ (J.TextDocumentContentChangeEvent (J.InR e))
+  = pure $ Rope.fromText $ e .! #text
 
 -- ---------------------------------------------------------------------
 

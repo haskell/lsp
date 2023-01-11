@@ -1,12 +1,13 @@
-{-# LANGUAGE OverloadedStrings, DataKinds #-}
+{-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE OverloadedStrings #-}
 module MethodSpec where
 
 
 import           Control.Monad
-import qualified Data.Aeson as J
-import qualified Language.LSP.Types            as J
+import qualified Data.Aeson         as J
+import qualified Data.Text          as T
+import qualified Language.LSP.Protocol.Message as J
 import           Test.Hspec
-import qualified Data.Text as T
 
 -- ---------------------------------------------------------------------
 
@@ -31,7 +32,6 @@ clientMethods = [
   ,"workspace/didChangeWatchedFiles"
   ,"workspace/symbol"
   ,"workspace/executeCommand"
-  ,"workspace/semanticTokens/refresh"
  -- Document
   ,"textDocument/didOpen"
   ,"textDocument/didChange"
@@ -61,7 +61,8 @@ clientMethods = [
   ,"callHierarchy/incomingCalls"
   ,"callHierarchy/outgoingCalls"
 
-  ,"textDocument/semanticTokens"
+  -- FIXME: weird method
+  -- ,"textDocument/semanticTokens"
   ,"textDocument/semanticTokens/full"
   ,"textDocument/semanticTokens/full/delta"
   ,"textDocument/semanticTokens/range"
@@ -79,6 +80,7 @@ serverMethods = [
   ,"client/unregisterCapability"
   -- Workspace
   ,"workspace/applyEdit"
+  ,"workspace/semanticTokens/refresh"
   -- Document
   ,"textDocument/publishDiagnostics"
   ]
