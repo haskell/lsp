@@ -251,7 +251,8 @@ data CodeAction =
     --
     -- Since LSP 3.15.0
     _isPreferred :: Maybe Bool,
-    _disabled    :: Maybe Reason, -- ^ Marks that the code action cannot currently be applied.
+    -- | Marks that the code action cannot currently be applied.
+    _disabled    :: Maybe Reason,
     -- | The workspace edit this code action performs.
     _edit :: Maybe WorkspaceEdit,
     -- | A command this code action executes. If a code action
