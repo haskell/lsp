@@ -371,7 +371,6 @@ data ResponseError =
 
 deriveJSON lspOptions ''ResponseError
 
--- | Either result or error must be Just.
 data ResponseMessage (m :: Method f Request) =
   ResponseMessage
     { _jsonrpc :: Text

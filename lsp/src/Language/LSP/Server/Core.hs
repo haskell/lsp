@@ -304,8 +304,8 @@ data ServerDefinition config = forall m a.
       --
       -- @
       --  ServerDefinition { ...
-      --  , doInitialize = \env _req -> pure $ Right env
-      --  , interpretHandler = \env -> Iso
+      --  , doInitialize = \\env _req -> pure $ Right env
+      --  , interpretHandler = \\env -> Iso
       --     (runLspT env) -- how to convert from IO ~> m
       --     liftIO        -- how to convert from m ~> IO
       --  }
