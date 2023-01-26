@@ -59,7 +59,7 @@ data FoldingRangeKind = FoldingRangeComment
                       | FoldingRangeRegion
                         -- ^ Folding range for a region (e.g. #region)
                       | FoldingRangeUnknown Text
-                        -- ^ Folding range that haskell-lsp-types does
+                        -- ^ Folding range that lsp-types does
                         -- not yet support
   deriving (Read, Show, Eq)
 

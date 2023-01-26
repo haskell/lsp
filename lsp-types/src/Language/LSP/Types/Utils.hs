@@ -111,7 +111,7 @@ lspOptions = defaultOptions { omitNothingFields = True, fieldLabelModifier = mod
   where
   modifier :: String -> String
   -- For fields called data and type in the spec, we call them xdata and xtype
-  -- in haskell-lsp-types to avoid it clashing with the Haskell keywords. This
+  -- in lsp-types to avoid it clashing with the Haskell keywords. This
   -- fixes up the json derivation
   modifier "_xdata" = "data"
   modifier "_xtype" = "type"
