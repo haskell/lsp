@@ -243,7 +243,7 @@ data StaleRequestClientCapabilities =
 
 deriveJSON lspOptions ''StaleRequestClientCapabilities
 
--- | Client capabilities specific to the used markdown parser.
+-- | Client capabilities specific to regular expressions.
 -- @since 3.16.0
 data RegularExpressionsClientCapabilities =
   RegularExpressionsClientCapabilities
