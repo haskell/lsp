@@ -232,7 +232,7 @@ data SymbolInformation =
     , _kind          :: SymbolKind -- ^ The kind of this symbol.
     , _tags          :: Maybe (List SymbolTag) -- ^ Tags for this symbol.
     , _deprecated    :: Maybe Bool -- ^ Indicates if this symbol is deprecated. Deprecated, use tags instead.
-    -- | The location of this symbol. The location's range is used by a tool
+    , -- | The location of this symbol. The location's range is used by a tool
     -- to reveal the location in the editor. If the symbol is selected in the
     -- tool the range's start information is used to position the cursor. So
     -- the range usually spans more then the actual symbol's name and does
@@ -241,7 +241,7 @@ data SymbolInformation =
     -- The range doesn't have to denote a node range in the sense of a abstract
     -- syntax tree. It can therefore not be used to re-construct a hierarchy of
     -- the symbols.
-    , _location      :: Location
+      _location      :: Location
     -- | The name of the symbol containing this symbol. This information is for
     -- user interface purposes (e.g. to render a qualifier in the user interface
     -- if necessary). It can't be used to re-infer a hierarchy for the document
