@@ -201,23 +201,24 @@ deriveJSON lspOptions ''DocumentSymbolClientCapabilities
 -- most interesting range, e.g. the range of an identifier.
 data DocumentSymbol =
   DocumentSymbol
-    { _name           :: Text -- ^ The name of this symbol.
-    -- | More detail for this symbol, e.g the signature of a function. If not
-    -- provided the name is used.
-    , _detail         :: Maybe Text
+    {  -- | The name of this symbol.
+      _name           :: Text
+    , -- | More detail for this symbol, e.g the signature of a function. If not
+      -- provided the name is used.
+      _detail         :: Maybe Text
     , _kind           :: SymbolKind -- ^ The kind of this symbol.
     , _tags           :: Maybe (List SymbolTag) -- ^ Tags for this document symbol.
     , _deprecated     :: Maybe Bool -- ^ Indicates if this symbol is deprecated. Deprecated, use tags instead.
-    -- | The range enclosing this symbol not including leading/trailing
-    -- whitespace but everything else like comments. This information is
-    -- typically used to determine if the the clients cursor is inside the symbol
-    -- to reveal in the symbol in the UI.
-    , _range          :: Range
-    -- | The range that should be selected and revealed when this symbol is being
-    -- picked, e.g the name of a function. Must be contained by the the '_range'.
-    , _selectionRange :: Range
-    -- | Children of this symbol, e.g. properties of a class.
-    , _children       :: Maybe (List DocumentSymbol)
+    , -- | The range enclosing this symbol not including leading/trailing
+      -- whitespace but everything else like comments. This information is
+      -- typically used to determine if the the clients cursor is inside the symbol
+      -- to reveal in the symbol in the UI.
+      _range          :: Range
+    , -- | The range that should be selected and revealed when this symbol is being
+      -- picked, e.g the name of a function. Must be contained by the the '_range'.
+      _selectionRange :: Range
+    , -- | Children of this symbol, e.g. properties of a class.
+      _children       :: Maybe (List DocumentSymbol)
     } deriving (Read,Show,Eq)
 
 deriveJSON lspOptions ''DocumentSymbol
@@ -242,11 +243,11 @@ data SymbolInformation =
     -- syntax tree. It can therefore not be used to re-construct a hierarchy of
     -- the symbols.
       _location      :: Location
-    -- | The name of the symbol containing this symbol. This information is for
-    -- user interface purposes (e.g. to render a qualifier in the user interface
-    -- if necessary). It can't be used to re-infer a hierarchy for the document
-    -- symbols.
-    , _containerName :: Maybe Text
+    , -- | The name of the symbol containing this symbol. This information is for
+      -- user interface purposes (e.g. to render a qualifier in the user interface
+      -- if necessary). It can't be used to re-infer a hierarchy for the document
+      -- symbols.
+      _containerName :: Maybe Text
     } deriving (Read,Show,Eq)
 {-# DEPRECATED _deprecated "Use tags instead" #-}
 

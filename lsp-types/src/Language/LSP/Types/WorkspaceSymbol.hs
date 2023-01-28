@@ -59,9 +59,10 @@ instance Default WorkspaceSymbolKindClientCapabilities where
 
 data WorkspaceSymbolClientCapabilities =
   WorkspaceSymbolClientCapabilities
-    { _dynamicRegistration :: Maybe Bool -- ^Symbol request supports dynamic
-                                         -- registration.
-    , _symbolKind :: Maybe WorkspaceSymbolKindClientCapabilities -- ^ Specific capabilities for the `SymbolKind`.
+    { -- | Symbol request supports dynamic registration.
+      _dynamicRegistration :: Maybe Bool
+      -- | Specific capabilities for the `SymbolKind`.
+    , _symbolKind :: Maybe WorkspaceSymbolKindClientCapabilities
       -- | The client supports tags on `SymbolInformation`.
       -- Clients supporting tags have to handle unknown tags gracefully.
       --

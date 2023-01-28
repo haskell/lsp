@@ -12,7 +12,7 @@ data WorkspaceFolder =
   WorkspaceFolder
     { -- | The URI of the workspace folder.
       _uri  :: Text
-    -- | The name of the workspace folder. Defaults to the uri's basename.
+      -- | The name of the workspace folder. Defaults to the uri's basename.
     , _name :: Text
     } deriving (Read, Show, Eq)
 

@@ -311,8 +311,9 @@ deriveJSON lspOptions ''WorkspaceEditChangeAnnotationClientCapabilities
 
 data WorkspaceEditClientCapabilities =
   WorkspaceEditClientCapabilities
-  { _documentChanges :: Maybe Bool -- ^The client supports versioned document
-                                   -- changes in 'WorkspaceEdit's
+  { -- | The client supports versioned document
+    -- changes in 'WorkspaceEdit's
+    _documentChanges :: Maybe Bool
     -- | The resource operations the client supports. Clients should at least
     -- support @create@, @rename@ and @delete@ files and folders.
   , _resourceOperations :: Maybe (List ResourceOperationKind)
