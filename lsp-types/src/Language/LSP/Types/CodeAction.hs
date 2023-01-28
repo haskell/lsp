@@ -149,7 +149,7 @@ data CodeActionClientCapabilities = CodeActionClientCapabilities
   { -- | Whether code action supports dynamic registration.
     _dynamicRegistration :: Maybe Bool,
     -- | The client support code action literals as a valid response
-    -- of the `textDocument/codeAction` request.
+    -- of the @textDocument/codeAction@ request.
     -- Since 3.8.0
     _codeActionLiteralSupport :: Maybe CodeActionLiteralSupport,
     -- | Whether code action supports the `isPreferred` property. Since LSP 3.15.0
@@ -158,14 +158,14 @@ data CodeActionClientCapabilities = CodeActionClientCapabilities
     --
     -- @since 3.16.0
     _disabledSupport :: Maybe Bool,
-    -- | Whether code action supports the `data` property which is
-    -- preserved between a `textDocument/codeAction` and a
-    -- `codeAction/resolve` request.
+    -- | Whether code action supports the @data@ property which is
+    -- preserved between a @textDocument/codeAction@ and a
+    -- @codeAction/resolve@ request.
     --
     -- @since 3.16.0
     _dataSupport :: Maybe Bool,
     -- | Whether the client supports resolving additional code action
-    -- properties via a separate `codeAction/resolve` request.
+    -- properties via a separate @codeAction/resolve@ request.
     --
     -- @since 3.16.0
     _resolveSupport :: Maybe CodeActionResolveClientCapabilities,
@@ -260,7 +260,7 @@ data CodeAction =
     -- executed and then the command.
     _command :: Maybe Command,
     -- | A data entry field that is preserved on a code action between
-    -- a `textDocument/codeAction` and a `codeAction/resolve` request.
+    -- a @textDocument/codeAction@ and a @codeAction/resolve@ request.
     --
     -- @since 3.16.0
     _xdata :: Maybe Value

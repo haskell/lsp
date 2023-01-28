@@ -300,8 +300,8 @@ data CompletionItem =
     , _deprecated          :: Maybe Bool -- ^ Indicates if this item is deprecated.
     , _preselect           :: Maybe Bool
          -- ^ Select this item when showing.
-         -- *Note* that only one completion item can be selected and that the
-         -- tool / client decides which item that is. The rule is that the *first*
+         -- /Note/ that only one completion item can be selected and that the
+         -- tool \/ client decides which item that is. The rule is that the /first/
          -- item of those that match best is selected.
     , _sortText            :: Maybe Text -- ^ A string that should be used when filtering
                                 -- a set of completion items. When `falsy` the
@@ -325,7 +325,7 @@ data CompletionItem =
          -- completion. When an edit is provided the value of `insertText` is
          -- ignored.
          --
-         -- *Note:* The range of the edit must be a single line range and it
+         -- /Note/: The range of the edit must be a single line range and it
          -- must contain the position at which completion has been requested.
     , _additionalTextEdits :: Maybe (List TextEdit)
          -- ^ An optional array of additional text edits that are applied when
@@ -333,12 +333,12 @@ data CompletionItem =
          -- nor with themselves.
     , _commitCharacters    :: Maybe (List Text)
          -- ^ An optional set of characters that when pressed while this completion
-         -- is active will accept it first and then type that character. *Note*
+         -- is active will accept it first and then type that character. /Note/
          -- that all commit characters should have `length=1` and that superfluous
          -- characters will be ignored.
     , _command             :: Maybe Command
-        -- ^ An optional command that is executed *after* inserting this
-        -- completion. *Note* that additional modifications to the current
+        -- ^ An optional command that is executed /after/ inserting this
+        -- completion. /Note/ that additional modifications to the current
         -- document should be described with the additionalTextEdits-property.
     , _xdata               :: Maybe A.Value -- ^ An data entry field that is preserved on a
                               -- completion item between a completion and a

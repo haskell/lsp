@@ -365,7 +365,7 @@ data CodePointPosition =
   CodePointPosition
     { -- | Line position in a document (zero-based).
       _line      :: J.UInt
-      -- | Character offset on a line in a document in *code points* (zero-based).
+      -- | Character offset on a line in a document in \code points\ (zero-based).
     , _character :: J.UInt
     } deriving (Show, Read, Eq, Ord)
 
@@ -412,11 +412,11 @@ codePointOffsetToCodeUnitOffset :: URope.Rope -> Word -> Maybe Word
 codePointOffsetToCodeUnitOffset rope offset = do
   -- Check for the position being out of bounds
   guard $ offset <= URope.length rope
-  -- Split at the given position in *code points*
+  -- Split at the given position in \code points\
   let (prefix, _) = URope.splitAt offset rope
-      -- Convert the prefix to a rope using *code units*
+      -- Convert the prefix to a rope using \code units\
       utf16Prefix = Rope.fromText $ URope.toText prefix
-      -- Get the length of the prefix in *code units*
+      -- Get the length of the prefix in \code units\
   pure $ Rope.length utf16Prefix
 
 -- | Translate a UTF-16 code-unit offset into a code-point offset.
@@ -425,11 +425,11 @@ codeUnitOffsetToCodePointOffset :: Rope.Rope -> Word -> Maybe Word
 codeUnitOffsetToCodePointOffset rope offset = do
   -- Check for the position being out of bounds
   guard $ offset <= Rope.length rope
-  -- Split at the given position in *code units*
+  -- Split at the given position in \code units\
   (prefix, _) <- Rope.splitAt offset rope
-  -- Convert the prefix to a rope using *code points*
+  -- Convert the prefix to a rope using \code points\
   let utfPrefix = URope.fromText $ Rope.toText prefix
-      -- Get the length of the prefix in *code points*
+      -- Get the length of the prefix in \code points\
   pure $ URope.length utfPrefix
 
 -- | Given a virtual file, translate a 'CodePointPosition' in that file into a 'J.Position' in that file.
@@ -443,7 +443,7 @@ codePointPositionToPosition vFile (CodePointPosition l cpc) = do
   -- See Note [Converting between code points and code units]
   let text = _file_text vFile
   utf16Line <- extractLine text (fromIntegral l)
-  -- Convert the line a rope using *code points*
+  -- Convert the line a rope using \code points\
   let utfLine = URope.fromText $ Rope.toText utf16Line
 
   cuc <- codePointOffsetToCodeUnitOffset utfLine (fromIntegral cpc)

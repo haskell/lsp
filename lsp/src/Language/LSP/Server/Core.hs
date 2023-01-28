@@ -235,11 +235,11 @@ data Options =
     -- may list out every specific kind they provide.
     , codeActionKinds                  :: Maybe [CodeActionKind]
     -- | The list of characters that triggers on type formatting.
-    -- If you set `documentOnTypeFormattingHandler`, you **must** set this.
+    -- If you set `documentOnTypeFormattingHandler`, you __must__ set this.
     -- The first character is mandatory, so a 'NonEmpty' should be passed.
     , documentOnTypeFormattingTriggerCharacters :: Maybe (NonEmpty Char)
     -- | The commands to be executed on the server.
-    -- If you set `executeCommandHandler`, you **must** set this.
+    -- If you set `executeCommandHandler`, you __must__ set this.
     , executeCommandCommands           :: Maybe [Text]
     -- | Information about the server that can be advertised to the client.
     , serverInfo                       :: Maybe J.ServerInfo
@@ -286,7 +286,7 @@ data ServerDefinition config = forall m a.
       -- stored internally and can be accessed via 'config'.
       -- It is also called on the `initializationOptions` field of the InitializeParams
     , doInitialize :: LanguageContextEnv config -> Message Initialize -> IO (Either ResponseError a)
-      -- ^ Called *after* receiving the @initialize@ request and *before*
+      -- ^ Called /after/ receiving the @initialize@ request and /before/
       -- returning the response. This callback will be invoked to offer the
       -- language server implementation the chance to create any processes or
       -- start new threads that may be necessary for the server lifecycle. It can

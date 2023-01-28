@@ -13,7 +13,7 @@ import           Language.LSP.Types.Utils
 -- ---------------------------------------------------------------------
 
 -- | A position in a document. Note that the character offsets in a line
--- are given in UTF-16 code units, *not* Unicode code points.
+-- are given in UTF-16 code units, /not/ Unicode code points.
 data Position =
   Position
     { -- | Line position in a document (zero-based).

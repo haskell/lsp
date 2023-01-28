@@ -44,7 +44,7 @@ data WorkspaceFoldersServerCapabilities =
       -- If a strings is provided the string is treated as a ID
       -- under which the notification is registered on the client
       -- side. The ID can be used to unregister for these events
-      -- using the `client/unregisterCapability` request.
+      -- using the @client/unregisterCapability@ request.
     , _changeNotifications :: Maybe (Text |? Bool)
     }
   deriving (Show, Read, Eq)

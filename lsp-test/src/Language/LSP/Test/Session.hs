@@ -161,7 +161,7 @@ instance Monad m => HasReader r (ConduitM a b (StateT s (ReaderT r m))) where
 getCurTimeoutId :: (HasReader SessionContext m, MonadIO m) => m Int
 getCurTimeoutId = asks curTimeoutId >>= liftIO . readIORef
 
--- Pass this the timeoutid you *were* waiting on
+-- Pass this the timeoutid you /were/ waiting on
 bumpTimeoutId :: (HasReader SessionContext m, MonadIO m) => Int -> m ()
 bumpTimeoutId prev = do
   v <- asks curTimeoutId

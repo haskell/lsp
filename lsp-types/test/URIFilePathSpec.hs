@@ -110,7 +110,7 @@ platformAwareUriFilePathSpec = do
   it "converts a Windows file path to a URI and back" $ property $ forAll genWindowsFilePath $ \fp -> do
       let uri = platformAwareFilePathToUri windowsOS fp
       -- We normalise to account for changes in the path separator.
-      -- But driver letters are *not* normalized so we skip them
+      -- But driver letters are /not/ normalized so we skip them
       when (not $ "c:" `isPrefixOf` fp) $
         platformAwareUriToFilePath windowsOS uri `shouldBe` Just (FPW.normalise fp)
 

@@ -49,22 +49,22 @@ data WorkspaceClientCapabilities =
       -- | Capabilities specific to `WorkspaceEdit`s
     , _workspaceEdit :: Maybe WorkspaceEditClientCapabilities
 
-      -- | Capabilities specific to the `workspace/didChangeConfiguration` notification.
+      -- | Capabilities specific to the @workspace/didChangeConfiguration@ notification.
     , _didChangeConfiguration :: Maybe DidChangeConfigurationClientCapabilities
 
-       -- | Capabilities specific to the `workspace/didChangeWatchedFiles` notification.
+       -- | Capabilities specific to the @workspace/didChangeWatchedFiles@ notification.
     , _didChangeWatchedFiles :: Maybe DidChangeWatchedFilesClientCapabilities
 
-      -- | Capabilities specific to the `workspace/symbol` request.
+      -- | Capabilities specific to the @workspace/symbol@ request.
     , _symbol :: Maybe WorkspaceSymbolClientCapabilities
 
-      -- | Capabilities specific to the `workspace/executeCommand` request.
+      -- | Capabilities specific to the @workspace/executeCommand@ request.
     , _executeCommand :: Maybe ExecuteCommandClientCapabilities
 
       -- | The client has support for workspace folders.
     , _workspaceFolders :: Maybe Bool
 
-      -- | The client supports `workspace/configuration` requests.
+      -- | The client supports @workspace/configuration@ requests.
     , _configuration :: Maybe Bool
 
       -- | Capabilities specific to the semantic token requests scoped to the
@@ -85,77 +85,77 @@ data TextDocumentClientCapabilities =
   TextDocumentClientCapabilities
     { _synchronization :: Maybe TextDocumentSyncClientCapabilities
 
-      -- | Capabilities specific to the `textDocument/completion`
+      -- | Capabilities specific to the @textDocument/completion@
     , _completion :: Maybe CompletionClientCapabilities
 
-      -- | Capabilities specific to the `textDocument/hover`
+      -- | Capabilities specific to the @textDocument/hover@
     , _hover :: Maybe HoverClientCapabilities
 
-      -- | Capabilities specific to the `textDocument/signatureHelp`
+      -- | Capabilities specific to the @textDocument/signatureHelp@
     , _signatureHelp :: Maybe SignatureHelpClientCapabilities
 
-      -- | Capabilities specific to the `textDocument/references`
+      -- | Capabilities specific to the @textDocument/references@
     , _references :: Maybe ReferencesClientCapabilities
 
-      -- | Capabilities specific to the `textDocument/documentHighlight`
+      -- | Capabilities specific to the @textDocument/documentHighlight@
     , _documentHighlight :: Maybe DocumentHighlightClientCapabilities
 
-      -- | Capabilities specific to the `textDocument/documentSymbol`
+      -- | Capabilities specific to the @textDocument/documentSymbol@
     , _documentSymbol :: Maybe DocumentSymbolClientCapabilities
 
-      -- | Capabilities specific to the `textDocument/formatting`
+      -- | Capabilities specific to the @textDocument/formatting@
     , _formatting :: Maybe DocumentFormattingClientCapabilities
 
-      -- | Capabilities specific to the `textDocument/rangeFormatting`
+      -- | Capabilities specific to the @textDocument/rangeFormatting@
     , _rangeFormatting :: Maybe DocumentRangeFormattingClientCapabilities
 
-      -- | Capabilities specific to the `textDocument/onTypeFormatting`
+      -- | Capabilities specific to the @textDocument/onTypeFormatting@
     , _onTypeFormatting :: Maybe DocumentOnTypeFormattingClientCapabilities
 
-      -- | Capabilities specific to the `textDocument/declaration` request.
+      -- | Capabilities specific to the @textDocument/declaration@ request.
       --
       -- Since LSP 3.14.0
     , _declaration :: Maybe DeclarationClientCapabilities
 
-      -- | Capabilities specific to the `textDocument/definition`
+      -- | Capabilities specific to the @textDocument/definition@
     , _definition :: Maybe DefinitionClientCapabilities
 
-      -- | Capabilities specific to the `textDocument/typeDefinition`
+      -- | Capabilities specific to the @textDocument/typeDefinition@
     , _typeDefinition :: Maybe TypeDefinitionClientCapabilities
 
-      -- | Capabilities specific to the `textDocument/implementation`
+      -- | Capabilities specific to the @textDocument/implementation@
     , _implementation :: Maybe ImplementationClientCapabilities
 
-      -- | Capabilities specific to the `textDocument/codeAction`
+      -- | Capabilities specific to the @textDocument/codeAction@
     , _codeAction :: Maybe CodeActionClientCapabilities
 
-      -- | Capabilities specific to the `textDocument/codeLens`
+      -- | Capabilities specific to the @textDocument/codeLens@
     , _codeLens :: Maybe CodeLensClientCapabilities
 
-      -- | Capabilities specific to the `textDocument/documentLink`
+      -- | Capabilities specific to the @textDocument/documentLink@
     , _documentLink :: Maybe DocumentLinkClientCapabilities
 
-      -- | Capabilities specific to the `textDocument/documentColor` and the
-      -- `textDocument/colorPresentation` request
+      -- | Capabilities specific to the @textDocument/documentColor@ and the
+      -- @textDocument/colorPresentation@ request
     , _colorProvider :: Maybe DocumentColorClientCapabilities
 
-      -- | Capabilities specific to the `textDocument/rename`
+      -- | Capabilities specific to the @textDocument/rename@
     , _rename :: Maybe RenameClientCapabilities
 
-      -- | Capabilities specific to `textDocument/publishDiagnostics`
+      -- | Capabilities specific to @textDocument/publishDiagnostics@
     , _publishDiagnostics :: Maybe PublishDiagnosticsClientCapabilities
 
-      -- | Capabilities specific to the `textDocument/foldingRange` request.
+      -- | Capabilities specific to the @textDocument/foldingRange@ request.
       -- Since LSP 3.10.
       --
       -- @since 0.7.0.0
     , _foldingRange :: Maybe FoldingRangeClientCapabilities
 
-      -- | Capabilities specific to the `textDocument/selectionRange` request.
+      -- | Capabilities specific to the @textDocument/selectionRange@ request.
       -- Since LSP 3.15.0
     , _selectionRange :: Maybe SelectionRangeClientCapabilities
 
-      -- | Call hierarchy specific to the `textDocument/prepareCallHierarchy` request.
+      -- | Call hierarchy specific to the @textDocument/prepareCallHierarchy@ request.
       -- Since LSP 3.16.0
     , _callHierarchy :: Maybe CallHierarchyClientCapabilities
 

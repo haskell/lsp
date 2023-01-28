@@ -84,7 +84,7 @@ sectionSeparator = "* * *\n"
 -- ---------------------------------------------------------------------
 
 -- | Given some plaintext, convert it into some equivalent markdown text.
--- This is not *quite* the identity function.
+-- This is not /quite/ the identity function.
 plainTextToMarkdown :: Text -> Text
 -- Line breaks in markdown paragraphs are ignored unless the line ends with two spaces.
 -- In order to respect the line breaks in the original plaintext, we stick two spaces on the end of every line.

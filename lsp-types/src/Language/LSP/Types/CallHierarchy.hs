@@ -93,7 +93,7 @@ data CallHierarchyOutgoingCall =
     { -- | The item that is called.
       _to :: CallHierarchyItem
     -- | The range at which this item is called. THis is the range relative to
-    -- the caller, e.g the item passed to `callHierarchy/outgoingCalls` request.
+    -- the caller, e.g the item passed to @callHierarchy/outgoingCalls@ request.
     , _fromRanges :: List Range
     }
     deriving (Show, Read, Eq, Ord)

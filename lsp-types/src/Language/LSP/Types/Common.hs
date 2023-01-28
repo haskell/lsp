@@ -28,7 +28,7 @@ import Data.Bifunctor (bimap)
 
 -- | The "uinteger" type in the LSP spec.
 --
--- Unusually, this is a **31**-bit unsigned integer, not a 32-bit one.
+-- Unusually, this is a __31__-bit unsigned integer, not a 32-bit one.
 newtype UInt = UInt (Mod (2^31))
   deriving newtype (Num, Bounded, Enum, Eq, Ord)
   deriving stock (Generic)
@@ -71,14 +71,14 @@ instance (ToJSON a, ToJSON b) => ToJSON (a |? b) where
   toJSON (InR x) = toJSON x
 
 instance (FromJSON a, FromJSON b) => FromJSON (a |? b) where
-  -- Important: Try to parse the **rightmost** type first, as in the specification
+  -- Important: Try to parse the __rightmost__ type first, as in the specification
   -- the more complex types tend to appear on the right of the |, i.e.
   -- @colorProvider?: boolean | DocumentColorOptions | DocumentColorRegistrationOptions;@
   parseJSON v = InR <$> parseJSON v <|> InL <$> parseJSON v
 
 instance (NFData a, NFData b) => NFData (a |? b)
 
--- | All LSP types representing a list **must** use this type rather than '[]'.
+-- | All LSP types representing a list __must__ use this type rather than @[]@.
 -- In particular this is necessary to change the 'FromJSON' instance to be compatible
 -- with Elisp (where empty lists show up as 'null')
 newtype List a = List [a]
