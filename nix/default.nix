@@ -7,6 +7,7 @@ let
         gitignoreSource;
       ourSources = {
         lsp = gitignoreSource ../lsp;
+        lsp-client = gitignoreSource ../lsp-client;
         lsp-test = gitignoreSource ../lsp-test;
         lsp-types = gitignoreSource ../lsp-types;
       };

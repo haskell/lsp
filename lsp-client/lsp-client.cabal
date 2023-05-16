@@ -1,0 +1,100 @@
+cabal-version:       3.0
+name:                lsp-client
+version:             0.1.0.0
+synopsis:            Haskell library for Language Server Protocol clients
+homepage:            https://github.com/haskell/lsp/blob/master/lsp-client/README.md
+license:             BSD-3-Clause
+license-file:        LICENSE
+author:              ners
+maintainer:          ners@gmx.ch
+bug-reports:         https://github.com/haskell/lsp/issues
+category:            System
+build-type:          Simple
+extra-source-files:  ChangeLog.md, README.md
+
+source-repository head
+  type:     git
+  location: https://github.com/haskell/lsp
+
+common common
+    default-language: GHC2021
+    ghc-options:
+        -Weverything
+        -Wno-unsafe
+        -Wno-missing-safe-haskell-mode
+        -Wno-missing-export-lists
+        -Wno-missing-import-lists
+        -Wno-missing-kind-signatures
+        -Wno-all-missed-specialisations
+    default-extensions:
+        ApplicativeDo
+        DataKinds
+        DefaultSignatures
+        DeriveAnyClass
+        DeriveGeneric
+        DerivingStrategies
+        DerivingVia
+        ExplicitNamespaces
+        NoImplicitPrelude
+        OverloadedLabels
+        OverloadedRecordDot
+        OverloadedStrings
+        RecordWildCards
+        RecursiveDo
+        TypeFamilies
+        ViewPatterns
+    build-depends:
+        aeson >= 2.0 && < 3,
+        base >= 4.16 && < 5,
+        bytestring,
+        lens >= 5.0,
+        lsp-types >= 1.6.0.0,
+        unliftio >= 0.2,
+
+library
+    import:           common
+    hs-source-dirs:   src
+    build-depends:
+        Diff,
+        Glob,
+        aeson-pretty,
+        co-log-core,
+        data-default,
+        dependent-map,
+        directory,
+        filepath,
+        generic-lens,
+        hashable,
+        lsp,
+        mtl,
+        stm,
+        text,
+        text-rope,
+        unordered-containers,
+    if os(windows)
+        build-depends: Win32
+    else
+        build-depends: unix
+    exposed-modules:
+        Language.LSP.Client,
+        Language.LSP.Client.Compat,
+        Language.LSP.Client.Decoding,
+        Language.LSP.Client.Encoding,
+        Language.LSP.Client.Exceptions,
+        Language.LSP.Client.Session,
+
+test-suite spec
+    import:           common
+    ghc-options:      -threaded
+    type:             exitcode-stdio-1.0
+    hs-source-dirs:   test
+    main-is:          Spec.hs
+    build-depends:
+        QuickCheck,
+        extra,
+        hspec,
+        lsp-client,
+        process,
+    other-modules:
+        Language.LSP.ClientSpec
+    build-tool-depends:  hspec-discover:hspec-discover
