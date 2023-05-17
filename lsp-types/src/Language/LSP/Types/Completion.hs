@@ -271,11 +271,14 @@ data CompletionDoc = CompletionDocString Text
 
 deriveJSON lspOptionsUntagged ''CompletionDoc
 
+-- | A special text edit to provide an insert and a replace operation.
+--
+-- @since 3.16.0
 data InsertReplaceEdit =
   InsertReplaceEdit
     { _newText :: Text -- ^ The string to be inserted.
     , _insert  :: Range -- ^ The range if the insert is requested
-    , _repalce :: Range -- ^ The range if the replace is requested.
+    , _replace :: Range -- ^ The range if the replace is requested.
     }
   deriving (Read,Show,Eq)
 deriveJSON lspOptions ''InsertReplaceEdit
