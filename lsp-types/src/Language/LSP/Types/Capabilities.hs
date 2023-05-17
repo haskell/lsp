@@ -168,7 +168,7 @@ capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) (Jus
       (since 3 16 True)
       (since 3 16 (CompletionItemResolveClientCapabilities (List ["documentation", "details"])))
       (since 3 16 (CompletionItemInsertTextModeClientCapabilities (List [])))
-      (Just True)
+      (since 3 17 True)
 
     completionItemKindCapabilities =
       CompletionItemKindClientCapabilities (Just ciKs)
