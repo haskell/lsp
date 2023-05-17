@@ -9,12 +9,12 @@ import           Data.Scientific                ( Scientific )
 import           Data.Text                      ( Text )
 import           Language.LSP.Types.Command
 import           Language.LSP.Types.Common
+import           Language.LSP.Types.Location (Range)
 import           Language.LSP.Types.MarkupContent
 import           Language.LSP.Types.Progress
 import           Language.LSP.Types.TextDocument
 import           Language.LSP.Types.Utils
 import           Language.LSP.Types.WorkspaceEdit
-import           Language.LSP.Types.Location (Range)
 
 data CompletionItemKind = CiText
                         | CiMethod
@@ -117,7 +117,6 @@ data CompletionItemTagsClientCapabilities =
     { -- | The tag supported by the client.
       _valueSet :: List CompletionItemTag
     } deriving (Show, Read, Eq)
-
 deriveJSON lspOptions ''CompletionItemTagsClientCapabilities
 
 data CompletionItemResolveClientCapabilities =
@@ -125,8 +124,18 @@ data CompletionItemResolveClientCapabilities =
     { -- | The properties that a client can resolve lazily.
       _properties :: List Text
     } deriving (Show, Read, Eq)
-
 deriveJSON lspOptions ''CompletionItemResolveClientCapabilities
+
+data ServerCompletionItemCapabilities =
+  ServerCompletionItemCapabilities
+    { -- | The server has support for completion item label
+      -- details (see also `CompletionItemLabelDetails`) when receiving
+      -- a completion item in a resolve call.
+      --
+      -- @since 3.17.0
+      labelDetailsSupport :: Maybe Bool
+    } deriving (Show, Read, Eq)
+deriveJSON lspOptionsUntagged ''ServerCompletionItemCapabilities
 
 {-|
 How whitespace and indentation is handled during completion
@@ -214,6 +223,11 @@ data CompletionItemClientCapabilities =
       --
       -- @since 3.16.0
     , _insertTextModeSupport :: Maybe CompletionItemInsertTextModeClientCapabilities
+      -- | The client has support for completion item label
+      -- details (see also `CompletionItemLabelDetails`).
+      --
+      -- @since 3.17.0
+    , labelDetailsSupport :: Maybe Bool
     } deriving (Show, Read, Eq)
 
 deriveJSON lspOptions ''CompletionItemClientCapabilities
@@ -282,14 +296,22 @@ deriveJSON lspOptions ''InsertReplaceEdit
 
 data CompletionEdit = CompletionEditText TextEdit | CompletionEditInsertReplace InsertReplaceEdit
   deriving (Read,Show,Eq)
-
 deriveJSON lspOptionsUntagged ''CompletionEdit
+
+data CompletionItemLabelDetails =
+  CompletionItemLabelDetails
+    { _detail :: Text
+    , _description :: Maybe Text
+    }
+  deriving (Read, Show, Eq)
+deriveJSON lspOptionsUntagged ''CompletionItemLabelDetails
 
 data CompletionItem =
   CompletionItem
     { _label               :: Text -- ^ The label of this completion item. By default also
-                       -- the text that is inserted when selecting this
-                       -- completion.
+                                   -- the text that is inserted when selecting this
+                                   -- completion.
+    , _labelDetails        :: Maybe CompletionItemLabelDetails -- ^ Additional details for the label
     , _kind                :: Maybe CompletionItemKind
     , _tags                :: Maybe (List CompletionItemTag) -- ^ Tags for this completion item.
     , _detail              :: Maybe Text -- ^ A human-readable string with additional
@@ -387,6 +409,7 @@ makeExtendingDatatype "CompletionOptions" [''WorkDoneProgressOptions]
   [ ("_triggerCharacters", [t| Maybe [Text] |])
   , ("_allCommitCharacters", [t| Maybe [Text] |])
   , ("_resolveProvider", [t| Maybe Bool|])
+  , ("_labelDetailsSupport", [t| Maybe ServerCompletionItemCapabilities |])
   ]
 deriveJSON lspOptions ''CompletionOptions
 
@@ -415,4 +438,3 @@ makeExtendingDatatype "CompletionParams"
   ]
   [ ("_context", [t| Maybe CompletionContext |]) ]
 deriveJSON lspOptions ''CompletionParams
-

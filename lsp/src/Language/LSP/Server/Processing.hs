@@ -36,7 +36,7 @@ import Language.LSP.Server.Core
 import Language.LSP.VFS as VFS
 import qualified Data.Functor.Product as P
 import qualified Control.Exception as E
-import Data.Monoid 
+import Data.Monoid
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Except ()
@@ -50,7 +50,7 @@ import Data.Text.Prettyprint.Doc
 import System.Exit
 import Data.Default (def)
 import Control.Monad.State
-import Control.Monad.Writer.Strict 
+import Control.Monad.Writer.Strict
 import Data.Foldable (traverse_)
 
 data LspProcessingLog =
@@ -235,6 +235,7 @@ inferServerCapabilities clientCaps o h =
             (map T.singleton <$> completionTriggerCharacters o)
             (map T.singleton <$> completionAllCommitCharacters o)
             (supported SCompletionItemResolve)
+            (Just (ServerCompletionItemCapabilities Nothing))
       | otherwise = Nothing
 
     clientSupportsCodeActionKinds = isJust $

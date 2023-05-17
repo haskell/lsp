@@ -9,11 +9,11 @@ module Language.LSP.Types.Capabilities
   , capsForVersion
   ) where
 
-import Prelude hiding (min)
+import Language.LSP.Types
 import Language.LSP.Types.ClientCapabilities
 import Language.LSP.Types.ServerCapabilities
 import Language.LSP.Types.WorkspaceEdit
-import Language.LSP.Types
+import Prelude hiding (min)
 
 -- | Capabilities for full conformance to the current (v3.15) LSP specification.
 fullCaps :: ClientCapabilities
@@ -168,6 +168,7 @@ capsForVersion (LSPVersion maj min) = ClientCapabilities (Just w) (Just td) (Jus
       (since 3 16 True)
       (since 3 16 (CompletionItemResolveClientCapabilities (List ["documentation", "details"])))
       (since 3 16 (CompletionItemInsertTextModeClientCapabilities (List [])))
+      (Just True)
 
     completionItemKindCapabilities =
       CompletionItemKindClientCapabilities (Just ciKs)
