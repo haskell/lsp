@@ -766,7 +766,7 @@ outgoingCalls = resolveRequestWithListResp SMethod_CallHierarchyOutgoingCalls
 
 -- | Send a request and receive a response with list.
 resolveRequestWithListResp :: forall (m :: Method ClientToServer Request) a
-                           . (ToJSON (ErrorData m), MessageResult m ~ [a] |? Null)
+                           . (ToJSON (ErrorData m), MessageResult m ~ ([a] |? Null))
                            => SMethod m
                            -> MessageParams m
                            -> Session [a]
