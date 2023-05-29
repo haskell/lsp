@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.NotebookCellKind where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
@@ -31,6 +32,7 @@ data NotebookCellKind =
   -}
   NotebookCellKind_Code
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
   deriving ( Aeson.ToJSON
   , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum NotebookCellKind Language.LSP.Protocol.Types.Common.UInt)
 

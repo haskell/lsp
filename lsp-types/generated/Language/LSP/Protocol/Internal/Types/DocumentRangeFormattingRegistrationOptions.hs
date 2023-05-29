@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.DocumentRangeFormattingRegistrationOptions where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
@@ -28,6 +29,7 @@ data DocumentRangeFormattingRegistrationOptions = DocumentRangeFormattingRegistr
   _workDoneProgress :: (Maybe Bool)
   }
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
 
 instance Aeson.ToJSON DocumentRangeFormattingRegistrationOptions where
   toJSON (DocumentRangeFormattingRegistrationOptions arg0 arg1) = Aeson.object $ concat $  [["documentSelector" Aeson..= arg0]

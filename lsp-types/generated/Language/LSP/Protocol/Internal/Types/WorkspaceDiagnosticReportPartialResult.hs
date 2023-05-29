@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.WorkspaceDiagnosticReportPartialResult where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
@@ -24,6 +25,7 @@ data WorkspaceDiagnosticReportPartialResult = WorkspaceDiagnosticReportPartialRe
   _items :: [Language.LSP.Protocol.Internal.Types.WorkspaceDocumentDiagnosticReport.WorkspaceDocumentDiagnosticReport]
   }
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
 
 instance Aeson.ToJSON WorkspaceDiagnosticReportPartialResult where
   toJSON (WorkspaceDiagnosticReportPartialResult arg0) = Aeson.object $ concat $  [["items" Aeson..= arg0]]

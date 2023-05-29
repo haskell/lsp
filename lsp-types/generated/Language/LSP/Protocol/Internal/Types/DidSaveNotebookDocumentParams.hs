@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.DidSaveNotebookDocumentParams where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
@@ -25,6 +26,7 @@ data DidSaveNotebookDocumentParams = DidSaveNotebookDocumentParams
   _notebookDocument :: Language.LSP.Protocol.Internal.Types.NotebookDocumentIdentifier.NotebookDocumentIdentifier
   }
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
 
 instance Aeson.ToJSON DidSaveNotebookDocumentParams where
   toJSON (DidSaveNotebookDocumentParams arg0) = Aeson.object $ concat $  [["notebookDocument" Aeson..= arg0]]

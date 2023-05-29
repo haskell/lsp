@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.TextDocumentItem where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
@@ -41,6 +42,7 @@ data TextDocumentItem = TextDocumentItem
   _text :: Data.Text.Text
   }
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
 
 instance Aeson.ToJSON TextDocumentItem where
   toJSON (TextDocumentItem arg0 arg1 arg2 arg3) = Aeson.object $ concat $  [["uri" Aeson..= arg0]

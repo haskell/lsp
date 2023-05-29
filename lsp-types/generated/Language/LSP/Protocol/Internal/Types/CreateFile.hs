@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.CreateFile where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
@@ -43,6 +44,7 @@ data CreateFile = CreateFile
   _options :: (Maybe Language.LSP.Protocol.Internal.Types.CreateFileOptions.CreateFileOptions)
   }
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
 
 instance Aeson.ToJSON CreateFile where
   toJSON (CreateFile arg0 arg1 arg2 arg3) = Aeson.object $ concat $  ["annotationId" Language.LSP.Protocol.Types.Common..=? arg0

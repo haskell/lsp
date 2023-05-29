@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.Moniker where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
@@ -43,6 +44,7 @@ data Moniker = Moniker
   _kind :: (Maybe Language.LSP.Protocol.Internal.Types.MonikerKind.MonikerKind)
   }
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
 
 instance Aeson.ToJSON Moniker where
   toJSON (Moniker arg0 arg1 arg2 arg3) = Aeson.object $ concat $  [["scheme" Aeson..= arg0]

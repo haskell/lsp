@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.DocumentOnTypeFormattingOptions where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
@@ -28,6 +29,7 @@ data DocumentOnTypeFormattingOptions = DocumentOnTypeFormattingOptions
   _moreTriggerCharacter :: (Maybe [Data.Text.Text])
   }
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
 
 instance Aeson.ToJSON DocumentOnTypeFormattingOptions where
   toJSON (DocumentOnTypeFormattingOptions arg0 arg1) = Aeson.object $ concat $  [["firstTriggerCharacter" Aeson..= arg0]

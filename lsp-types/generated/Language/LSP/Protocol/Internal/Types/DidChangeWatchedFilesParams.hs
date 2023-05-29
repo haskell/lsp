@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.DidChangeWatchedFilesParams where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
@@ -23,6 +24,7 @@ data DidChangeWatchedFilesParams = DidChangeWatchedFilesParams
   _changes :: [Language.LSP.Protocol.Internal.Types.FileEvent.FileEvent]
   }
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
 
 instance Aeson.ToJSON DidChangeWatchedFilesParams where
   toJSON (DidChangeWatchedFilesParams arg0) = Aeson.object $ concat $  [["changes" Aeson..= arg0]]

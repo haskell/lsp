@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.MarkupKind where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
@@ -33,6 +34,7 @@ data MarkupKind =
   -}
   MarkupKind_Markdown
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
   deriving ( Aeson.ToJSON
   , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum MarkupKind Data.Text.Text)
 

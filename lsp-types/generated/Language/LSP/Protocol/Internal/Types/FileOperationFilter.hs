@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.FileOperationFilter where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
@@ -32,6 +33,7 @@ data FileOperationFilter = FileOperationFilter
   _pattern :: Language.LSP.Protocol.Internal.Types.FileOperationPattern.FileOperationPattern
   }
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
 
 instance Aeson.ToJSON FileOperationFilter where
   toJSON (FileOperationFilter arg0 arg1) = Aeson.object $ concat $  ["scheme" Language.LSP.Protocol.Types.Common..=? arg0

@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.DidChangeTextDocumentParams where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
@@ -41,6 +42,7 @@ data DidChangeTextDocumentParams = DidChangeTextDocumentParams
   _contentChanges :: [Language.LSP.Protocol.Internal.Types.TextDocumentContentChangeEvent.TextDocumentContentChangeEvent]
   }
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
 
 instance Aeson.ToJSON DidChangeTextDocumentParams where
   toJSON (DidChangeTextDocumentParams arg0 arg1) = Aeson.object $ concat $  [["textDocument" Aeson..= arg0]

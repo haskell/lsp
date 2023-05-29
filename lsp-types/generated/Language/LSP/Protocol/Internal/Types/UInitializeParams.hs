@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.UInitializeParams where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson
 import qualified Data.Aeson as Aeson
@@ -91,6 +92,7 @@ data UInitializeParams = UInitializeParams
   _trace :: (Maybe Language.LSP.Protocol.Internal.Types.TraceValues.TraceValues)
   }
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
 
 instance Aeson.ToJSON UInitializeParams where
   toJSON (UInitializeParams arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8) = Aeson.object $ concat $  ["workDoneToken" Language.LSP.Protocol.Types.Common..=? arg0

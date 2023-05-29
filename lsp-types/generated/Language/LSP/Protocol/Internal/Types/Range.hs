@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.Range where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
@@ -38,6 +39,7 @@ data Range = Range
   _end :: Language.LSP.Protocol.Internal.Types.Position.Position
   }
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
 
 instance Aeson.ToJSON Range where
   toJSON (Range arg0 arg1) = Aeson.object $ concat $  [["start" Aeson..= arg0]

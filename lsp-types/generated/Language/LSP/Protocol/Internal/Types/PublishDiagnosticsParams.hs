@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.PublishDiagnosticsParams where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
@@ -36,6 +37,7 @@ data PublishDiagnosticsParams = PublishDiagnosticsParams
   _diagnostics :: [Language.LSP.Protocol.Internal.Types.Diagnostic.Diagnostic]
   }
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
 
 instance Aeson.ToJSON PublishDiagnosticsParams where
   toJSON (PublishDiagnosticsParams arg0 arg1 arg2) = Aeson.object $ concat $  [["uri" Aeson..= arg0]

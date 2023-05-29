@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.CodeAction where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson
 import qualified Data.Aeson as Aeson
@@ -94,6 +95,7 @@ data CodeAction = CodeAction
   _data_ :: (Maybe Data.Aeson.Value)
   }
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
 
 instance Aeson.ToJSON CodeAction where
   toJSON (CodeAction arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7) = Aeson.object $ concat $  [["title" Aeson..= arg0]

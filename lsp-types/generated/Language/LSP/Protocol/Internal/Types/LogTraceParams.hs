@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.LogTraceParams where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
@@ -25,6 +26,7 @@ data LogTraceParams = LogTraceParams
   _verbose :: (Maybe Data.Text.Text)
   }
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
 
 instance Aeson.ToJSON LogTraceParams where
   toJSON (LogTraceParams arg0 arg1) = Aeson.object $ concat $  [["message" Aeson..= arg0]

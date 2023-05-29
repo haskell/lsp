@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.RenameFileOptions where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
@@ -27,6 +28,7 @@ data RenameFileOptions = RenameFileOptions
   _ignoreIfExists :: (Maybe Bool)
   }
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
 
 instance Aeson.ToJSON RenameFileOptions where
   toJSON (RenameFileOptions arg0 arg1) = Aeson.object $ concat $  ["overwrite" Language.LSP.Protocol.Types.Common..=? arg0

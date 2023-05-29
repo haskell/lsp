@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.LocationLink where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
@@ -46,6 +47,7 @@ data LocationLink = LocationLink
   _targetSelectionRange :: Language.LSP.Protocol.Internal.Types.Range.Range
   }
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
 
 instance Aeson.ToJSON LocationLink where
   toJSON (LocationLink arg0 arg1 arg2 arg3) = Aeson.object $ concat $  ["originSelectionRange" Language.LSP.Protocol.Types.Common..=? arg0

@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.TextDocumentFilter where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row as Row
@@ -32,5 +33,6 @@ Glob patterns can have the following syntax:
 
 -}
 newtype TextDocumentFilter = TextDocumentFilter ((Row.Rec ("language" Row..== Data.Text.Text Row..+ ("scheme" Row..== (Maybe Data.Text.Text) Row..+ ("pattern" Row..== (Maybe Data.Text.Text) Row..+ Row.Empty)))) Language.LSP.Protocol.Types.Common.|? ((Row.Rec ("language" Row..== (Maybe Data.Text.Text) Row..+ ("scheme" Row..== Data.Text.Text Row..+ ("pattern" Row..== (Maybe Data.Text.Text) Row..+ Row.Empty)))) Language.LSP.Protocol.Types.Common.|? (Row.Rec ("language" Row..== (Maybe Data.Text.Text) Row..+ ("scheme" Row..== (Maybe Data.Text.Text) Row..+ ("pattern" Row..== Data.Text.Text Row..+ Row.Empty))))))
-  deriving stock (Show, Eq, Ord, Generic)
   deriving newtype (Aeson.ToJSON, Aeson.FromJSON)
+  deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)

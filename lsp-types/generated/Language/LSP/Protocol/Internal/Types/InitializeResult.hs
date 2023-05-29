@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.InitializeResult where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row as Row
@@ -32,6 +33,7 @@ data InitializeResult = InitializeResult
   _serverInfo :: (Maybe (Row.Rec ("name" Row..== Data.Text.Text Row..+ ("version" Row..== (Maybe Data.Text.Text) Row..+ Row.Empty))))
   }
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
 
 instance Aeson.ToJSON InitializeResult where
   toJSON (InitializeResult arg0 arg1) = Aeson.object $ concat $  [["capabilities" Aeson..= arg0]

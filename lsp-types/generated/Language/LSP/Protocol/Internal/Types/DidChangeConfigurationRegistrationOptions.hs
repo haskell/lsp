@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.DidChangeConfigurationRegistrationOptions where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
@@ -21,6 +22,7 @@ data DidChangeConfigurationRegistrationOptions = DidChangeConfigurationRegistrat
   _section :: (Maybe (Data.Text.Text Language.LSP.Protocol.Types.Common.|? [Data.Text.Text]))
   }
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
 
 instance Aeson.ToJSON DidChangeConfigurationRegistrationOptions where
   toJSON (DidChangeConfigurationRegistrationOptions arg0) = Aeson.object $ concat $  ["section" Language.LSP.Protocol.Types.Common..=? arg0]

@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.InlayHintClientCapabilities where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row as Row
@@ -32,6 +33,7 @@ data InlayHintClientCapabilities = InlayHintClientCapabilities
   _resolveSupport :: (Maybe (Row.Rec ("properties" Row..== [Data.Text.Text] Row..+ Row.Empty)))
   }
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
 
 instance Aeson.ToJSON InlayHintClientCapabilities where
   toJSON (InlayHintClientCapabilities arg0 arg1) = Aeson.object $ concat $  ["dynamicRegistration" Language.LSP.Protocol.Types.Common..=? arg0

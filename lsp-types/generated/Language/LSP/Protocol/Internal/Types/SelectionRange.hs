@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.SelectionRange where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
@@ -29,6 +30,7 @@ data SelectionRange = SelectionRange
   _parent :: (Maybe Language.LSP.Protocol.Internal.Types.SelectionRange.SelectionRange)
   }
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
 
 instance Aeson.ToJSON SelectionRange where
   toJSON (SelectionRange arg0 arg1) = Aeson.object $ concat $  [["range" Aeson..= arg0]

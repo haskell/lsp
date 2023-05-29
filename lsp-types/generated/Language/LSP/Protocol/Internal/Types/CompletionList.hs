@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.CompletionList where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson
 import qualified Data.Aeson as Aeson
@@ -55,6 +56,7 @@ data CompletionList = CompletionList
   _items :: [Language.LSP.Protocol.Internal.Types.CompletionItem.CompletionItem]
   }
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
 
 instance Aeson.ToJSON CompletionList where
   toJSON (CompletionList arg0 arg1 arg2) = Aeson.object $ concat $  [["isIncomplete" Aeson..= arg0]

@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.DocumentOnTypeFormattingParams where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
@@ -46,6 +47,7 @@ data DocumentOnTypeFormattingParams = DocumentOnTypeFormattingParams
   _options :: Language.LSP.Protocol.Internal.Types.FormattingOptions.FormattingOptions
   }
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
 
 instance Aeson.ToJSON DocumentOnTypeFormattingParams where
   toJSON (DocumentOnTypeFormattingParams arg0 arg1 arg2 arg3) = Aeson.object $ concat $  [["textDocument" Aeson..= arg0]

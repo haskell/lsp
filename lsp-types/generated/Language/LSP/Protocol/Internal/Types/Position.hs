@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.Position where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
@@ -62,6 +63,7 @@ data Position = Position
   _character :: Language.LSP.Protocol.Types.Common.UInt
   }
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
 
 instance Aeson.ToJSON Position where
   toJSON (Position arg0 arg1) = Aeson.object $ concat $  [["line" Aeson..= arg0]

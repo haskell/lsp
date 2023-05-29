@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.DiagnosticRelatedInformation where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
@@ -31,6 +32,7 @@ data DiagnosticRelatedInformation = DiagnosticRelatedInformation
   _message :: Data.Text.Text
   }
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
 
 instance Aeson.ToJSON DiagnosticRelatedInformation where
   toJSON (DiagnosticRelatedInformation arg0 arg1) = Aeson.object $ concat $  [["location" Aeson..= arg0]

@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.SemanticTokensClientCapabilities where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row as Row
@@ -88,6 +89,7 @@ data SemanticTokensClientCapabilities = SemanticTokensClientCapabilities
   _augmentsSyntaxTokens :: (Maybe Bool)
   }
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
 
 instance Aeson.ToJSON SemanticTokensClientCapabilities where
   toJSON (SemanticTokensClientCapabilities arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8) = Aeson.object $ concat $  ["dynamicRegistration" Language.LSP.Protocol.Types.Common..=? arg0

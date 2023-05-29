@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.TextDocumentContentChangeEvent where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row as Row
@@ -19,5 +20,6 @@ it is considered to be the full content of the document.
 
 -}
 newtype TextDocumentContentChangeEvent = TextDocumentContentChangeEvent ((Row.Rec ("range" Row..== Language.LSP.Protocol.Internal.Types.Range.Range Row..+ ("rangeLength" Row..== (Maybe Language.LSP.Protocol.Types.Common.UInt) Row..+ ("text" Row..== Data.Text.Text Row..+ Row.Empty)))) Language.LSP.Protocol.Types.Common.|? (Row.Rec ("text" Row..== Data.Text.Text Row..+ Row.Empty)))
-  deriving stock (Show, Eq, Ord, Generic)
   deriving newtype (Aeson.ToJSON, Aeson.FromJSON)
+  deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)

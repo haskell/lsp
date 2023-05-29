@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.FoldingRangeKind where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
@@ -35,6 +36,7 @@ data FoldingRangeKind =
   FoldingRangeKind_Region
   | FoldingRangeKind_Custom Data.Text.Text
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
   deriving ( Aeson.ToJSON
   , Aeson.FromJSON
   , Data.String.IsString ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum FoldingRangeKind Data.Text.Text)

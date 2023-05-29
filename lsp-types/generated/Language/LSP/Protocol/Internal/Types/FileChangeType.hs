@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.FileChangeType where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
@@ -34,6 +35,7 @@ data FileChangeType =
   -}
   FileChangeType_Deleted
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
   deriving ( Aeson.ToJSON
   , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum FileChangeType Language.LSP.Protocol.Types.Common.UInt)
 

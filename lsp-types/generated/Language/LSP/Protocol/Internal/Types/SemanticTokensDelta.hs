@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.SemanticTokensDelta where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
@@ -28,6 +29,7 @@ data SemanticTokensDelta = SemanticTokensDelta
   _edits :: [Language.LSP.Protocol.Internal.Types.SemanticTokensEdit.SemanticTokensEdit]
   }
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
 
 instance Aeson.ToJSON SemanticTokensDelta where
   toJSON (SemanticTokensDelta arg0 arg1) = Aeson.object $ concat $  ["resultId" Language.LSP.Protocol.Types.Common..=? arg0

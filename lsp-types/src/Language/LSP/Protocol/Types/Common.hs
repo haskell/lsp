@@ -68,7 +68,8 @@ instance FromJSON UInt where
 -- This corresponds to @a | b@ types in the LSP specification.
 data a |? b = InL a
             | InR b
-  deriving stock (Read,Show,Eq,Ord,Generic)
+  deriving stock (Read, Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
 infixr |?
 
 -- | Prism for the left-hand side of an '(|?)'.
@@ -97,15 +98,15 @@ instance (FromJSON a, FromJSON b) => FromJSON (a |? b) where
   -- @colorProvider?: boolean | DocumentColorOptions | DocumentColorRegistrationOptions;@
   parseJSON v = InR <$> parseJSON v <|> InL <$> parseJSON v
 
-instance (NFData a, NFData b) => NFData (a |? b)
-
 -- We could use 'Proxy' for this, as aeson also serializes it to/from null,
 -- but this is more explicit.
 -- | A type for that is precisely null and nothing else.
 --
 -- This is useful since the LSP specification often includes types like @a | null@
 -- as distinct from an optional value of type @a@.
-data Null = Null deriving stock (Eq,Ord,Show)
+data Null = Null
+  deriving stock (Eq, Ord, Show, Generic)
+  deriving anyclass (NFData)
 
 instance ToJSON Null where
   toJSON Null = J.Null

@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.PrepareRenameResult where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row as Row
@@ -17,5 +18,6 @@ import qualified Language.LSP.Protocol.Types.Common
 
 -}
 newtype PrepareRenameResult = PrepareRenameResult (Language.LSP.Protocol.Internal.Types.Range.Range Language.LSP.Protocol.Types.Common.|? ((Row.Rec ("range" Row..== Language.LSP.Protocol.Internal.Types.Range.Range Row..+ ("placeholder" Row..== Data.Text.Text Row..+ Row.Empty))) Language.LSP.Protocol.Types.Common.|? (Row.Rec ("defaultBehavior" Row..== Bool Row..+ Row.Empty))))
-  deriving stock (Show, Eq, Ord, Generic)
   deriving newtype (Aeson.ToJSON, Aeson.FromJSON)
+  deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)

@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.DidCloseNotebookDocumentParams where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
@@ -32,6 +33,7 @@ data DidCloseNotebookDocumentParams = DidCloseNotebookDocumentParams
   _cellTextDocuments :: [Language.LSP.Protocol.Internal.Types.TextDocumentIdentifier.TextDocumentIdentifier]
   }
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
 
 instance Aeson.ToJSON DidCloseNotebookDocumentParams where
   toJSON (DidCloseNotebookDocumentParams arg0 arg1) = Aeson.object $ concat $  [["notebookDocument" Aeson..= arg0]

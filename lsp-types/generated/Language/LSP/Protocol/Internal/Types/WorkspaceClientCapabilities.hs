@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.WorkspaceClientCapabilities where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
@@ -121,6 +122,7 @@ data WorkspaceClientCapabilities = WorkspaceClientCapabilities
   _diagnostics :: (Maybe Language.LSP.Protocol.Internal.Types.DiagnosticWorkspaceClientCapabilities.DiagnosticWorkspaceClientCapabilities)
   }
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
 
 instance Aeson.ToJSON WorkspaceClientCapabilities where
   toJSON (WorkspaceClientCapabilities arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8 arg9 arg10 arg11 arg12 arg13) = Aeson.object $ concat $  ["applyEdit" Language.LSP.Protocol.Types.Common..=? arg0

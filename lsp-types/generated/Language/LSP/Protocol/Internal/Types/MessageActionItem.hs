@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.MessageActionItem where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
@@ -22,6 +23,7 @@ data MessageActionItem = MessageActionItem
   _title :: Data.Text.Text
   }
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
 
 instance Aeson.ToJSON MessageActionItem where
   toJSON (MessageActionItem arg0) = Aeson.object $ concat $  [["title" Aeson..= arg0]]

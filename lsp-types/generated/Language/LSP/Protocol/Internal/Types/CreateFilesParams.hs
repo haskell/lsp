@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.CreateFilesParams where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
@@ -26,6 +27,7 @@ data CreateFilesParams = CreateFilesParams
   _files :: [Language.LSP.Protocol.Internal.Types.FileCreate.FileCreate]
   }
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
 
 instance Aeson.ToJSON CreateFilesParams where
   toJSON (CreateFilesParams arg0) = Aeson.object $ concat $  [["files" Aeson..= arg0]]

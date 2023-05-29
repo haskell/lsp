@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.Unregistration where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
@@ -29,6 +30,7 @@ data Unregistration = Unregistration
   _method :: Data.Text.Text
   }
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
 
 instance Aeson.ToJSON Unregistration where
   toJSON (Unregistration arg0 arg1) = Aeson.object $ concat $  [["id" Aeson..= arg0]

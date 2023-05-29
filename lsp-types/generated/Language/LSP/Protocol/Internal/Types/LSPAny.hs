@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.LSPAny where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson
 import qualified Data.Aeson as Aeson
@@ -22,5 +23,6 @@ optional as well.
 
 -}
 newtype LSPAny = LSPAny (Data.Aeson.Object Language.LSP.Protocol.Types.Common.|? (Data.Aeson.Array Language.LSP.Protocol.Types.Common.|? (Data.Text.Text Language.LSP.Protocol.Types.Common.|? (Language.LSP.Protocol.Types.Common.Int32 Language.LSP.Protocol.Types.Common.|? (Language.LSP.Protocol.Types.Common.UInt Language.LSP.Protocol.Types.Common.|? (Float Language.LSP.Protocol.Types.Common.|? (Bool Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Types.Common.Null)))))))
-  deriving stock (Show, Eq, Ord, Generic)
   deriving newtype (Aeson.ToJSON, Aeson.FromJSON)
+  deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)

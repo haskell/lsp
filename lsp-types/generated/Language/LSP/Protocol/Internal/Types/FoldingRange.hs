@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.FoldingRange where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
@@ -58,6 +59,7 @@ data FoldingRange = FoldingRange
   _collapsedText :: (Maybe Data.Text.Text)
   }
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
 
 instance Aeson.ToJSON FoldingRange where
   toJSON (FoldingRange arg0 arg1 arg2 arg3 arg4 arg5) = Aeson.object $ concat $  [["startLine" Aeson..= arg0]

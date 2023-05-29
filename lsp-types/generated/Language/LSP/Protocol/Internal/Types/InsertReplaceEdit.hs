@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.InsertReplaceEdit where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
@@ -36,6 +37,7 @@ data InsertReplaceEdit = InsertReplaceEdit
   _replace :: Language.LSP.Protocol.Internal.Types.Range.Range
   }
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
 
 instance Aeson.ToJSON InsertReplaceEdit where
   toJSON (InsertReplaceEdit arg0 arg1 arg2) = Aeson.object $ concat $  [["newText" Aeson..= arg0]

@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.InlineValueContext where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
@@ -29,6 +30,7 @@ data InlineValueContext = InlineValueContext
   _stoppedLocation :: Language.LSP.Protocol.Internal.Types.Range.Range
   }
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
 
 instance Aeson.ToJSON InlineValueContext where
   toJSON (InlineValueContext arg0 arg1) = Aeson.object $ concat $  [["frameId" Aeson..= arg0]

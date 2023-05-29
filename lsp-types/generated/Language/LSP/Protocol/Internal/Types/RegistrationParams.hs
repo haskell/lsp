@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.RegistrationParams where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
@@ -21,6 +22,7 @@ data RegistrationParams = RegistrationParams
   _registrations :: [Language.LSP.Protocol.Internal.Types.Registration.Registration]
   }
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
 
 instance Aeson.ToJSON RegistrationParams where
   toJSON (RegistrationParams arg0) = Aeson.object $ concat $  [["registrations" Aeson..= arg0]]

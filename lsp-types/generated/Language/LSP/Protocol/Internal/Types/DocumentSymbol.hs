@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.DocumentSymbol where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
@@ -73,6 +74,7 @@ data DocumentSymbol = DocumentSymbol
   _children :: (Maybe [Language.LSP.Protocol.Internal.Types.DocumentSymbol.DocumentSymbol])
   }
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
 
 instance Aeson.ToJSON DocumentSymbol where
   toJSON (DocumentSymbol arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7) = Aeson.object $ concat $  [["name" Aeson..= arg0]

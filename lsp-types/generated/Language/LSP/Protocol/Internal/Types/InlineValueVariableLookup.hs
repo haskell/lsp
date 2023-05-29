@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.InlineValueVariableLookup where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
@@ -39,6 +40,7 @@ data InlineValueVariableLookup = InlineValueVariableLookup
   _caseSensitiveLookup :: Bool
   }
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
 
 instance Aeson.ToJSON InlineValueVariableLookup where
   toJSON (InlineValueVariableLookup arg0 arg1 arg2) = Aeson.object $ concat $  [["range" Aeson..= arg0]

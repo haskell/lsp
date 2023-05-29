@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.InlineValue where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
@@ -24,5 +25,6 @@ The InlineValue types combines all inline value types into one type.
 
 -}
 newtype InlineValue = InlineValue (Language.LSP.Protocol.Internal.Types.InlineValueText.InlineValueText Language.LSP.Protocol.Types.Common.|? (Language.LSP.Protocol.Internal.Types.InlineValueVariableLookup.InlineValueVariableLookup Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.InlineValueEvaluatableExpression.InlineValueEvaluatableExpression))
-  deriving stock (Show, Eq, Ord, Generic)
   deriving newtype (Aeson.ToJSON, Aeson.FromJSON)
+  deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)

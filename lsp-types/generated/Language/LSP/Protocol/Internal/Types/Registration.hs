@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.Registration where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson
 import qualified Data.Aeson as Aeson
@@ -35,6 +36,7 @@ data Registration = Registration
   _registerOptions :: (Maybe Data.Aeson.Value)
   }
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
 
 instance Aeson.ToJSON Registration where
   toJSON (Registration arg0 arg1 arg2) = Aeson.object $ concat $  [["id" Aeson..= arg0]

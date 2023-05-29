@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.DidChangeWorkspaceFoldersParams where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
@@ -23,6 +24,7 @@ data DidChangeWorkspaceFoldersParams = DidChangeWorkspaceFoldersParams
   _event :: Language.LSP.Protocol.Internal.Types.WorkspaceFoldersChangeEvent.WorkspaceFoldersChangeEvent
   }
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
 
 instance Aeson.ToJSON DidChangeWorkspaceFoldersParams where
   toJSON (DidChangeWorkspaceFoldersParams arg0) = Aeson.object $ concat $  [["event" Aeson..= arg0]]

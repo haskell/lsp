@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.LinkedEditingRanges where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
@@ -34,6 +35,7 @@ data LinkedEditingRanges = LinkedEditingRanges
   _wordPattern :: (Maybe Data.Text.Text)
   }
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
 
 instance Aeson.ToJSON LinkedEditingRanges where
   toJSON (LinkedEditingRanges arg0 arg1) = Aeson.object $ concat $  [["ranges" Aeson..= arg0]

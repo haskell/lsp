@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.DocumentFilter where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
@@ -20,5 +21,6 @@ a notebook cell document.
 
 -}
 newtype DocumentFilter = DocumentFilter (Language.LSP.Protocol.Internal.Types.TextDocumentFilter.TextDocumentFilter Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.NotebookCellTextDocumentFilter.NotebookCellTextDocumentFilter)
-  deriving stock (Show, Eq, Ord, Generic)
   deriving newtype (Aeson.ToJSON, Aeson.FromJSON)
+  deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)

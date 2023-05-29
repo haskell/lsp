@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.LSPErrorCodes where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
@@ -56,6 +57,7 @@ data LSPErrorCodes =
   LSPErrorCodes_RequestCancelled
   | LSPErrorCodes_Custom Language.LSP.Protocol.Types.Common.Int32
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
   deriving ( Aeson.ToJSON
   , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum LSPErrorCodes Language.LSP.Protocol.Types.Common.Int32)
 

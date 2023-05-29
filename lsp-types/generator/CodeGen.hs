@@ -57,6 +57,9 @@ pragma kind doc = "{-#" <+> pretty kind <+> doc <+> "#-}"
 toStockDerive :: [T.Text]
 toStockDerive = ["Show", "Eq", "Ord", "Generic"]
 
+toAnyclassDerive :: [T.Text]
+toAnyclassDerive = ["NFData"]
+
 indentSize :: Int
 indentSize = 2
 
@@ -300,7 +303,11 @@ printStruct tn s@Structure{name, documentation, since, proposed, deprecated} = d
   let deprecations = optDeprecated tn deprecated ++ (flip concatMap props $ \Property{name, deprecated} -> optDeprecated (makeFieldName name) deprecated)
 
   ensureImport "GHC.Generics" Unqual
-  let derivDoc = indent indentSize $ "deriving stock" <+> tupled (fmap pretty toStockDerive)
+  ensureImport "Control.DeepSeq" Unqual
+  let derivDoc =
+        let stockDeriv = "deriving stock" <+> tupled (fmap pretty toStockDerive)
+            anyclassDeriv = "deriving anyclass" <+> tupled (fmap pretty toAnyclassDerive)
+        in indent indentSize $ hardvcat [stockDeriv, anyclassDeriv]
   dataDoc <- multilineHaddock . pretty <$> mkDocumentation documentation since proposed
   let dataDecl = "data" <+> pretty tn <+> "=" <+> pretty ctor <+> nest indentSize (encloseSep (line <> "{ ") (line <> "}") ", " args)
       datad = hardvcat (deprecations ++ [dataDoc, dataDecl, derivDoc])
@@ -434,13 +441,15 @@ printEnum tn Enumeration{name, type_, values, supportsCustomValues, documentatio
   let deprecations = optDeprecated tn deprecated ++ (flip concatMap values' $ \EnumerationEntry{name, deprecated} -> optDeprecated (makeConstrName (Just enumName) name) deprecated)
 
   ensureImport "GHC.Generics" Unqual
+  ensureImport "Control.DeepSeq" Unqual
   dataDoc <- multilineHaddock . pretty <$> mkDocumentation documentation since proposed
   let derivDoc =
         let
           toDeriveViaLspEnum = ["Aeson.ToJSON", "Aeson.FromJSON"] ++ if custom && isString then [isStringN] else []
           stockDeriv = "deriving stock" <+> tupled (fmap pretty toStockDerive)
+          anyclassDeriv = "deriving anyclass" <+> tupled (fmap pretty toAnyclassDerive)
           viaDeriv = "deriving" <+> tupled toDeriveViaLspEnum <+> "via" <+> parens (asLspEnumN <+> pretty tn <+> ty)
-        in indent indentSize $ hardvcat [stockDeriv, viaDeriv]
+        in indent indentSize $ hardvcat [stockDeriv, anyclassDeriv, viaDeriv]
   let dataDecl = "data" <+> pretty tn <+> "=" <+> nest indentSize (encloseSep (line <> "  ") mempty "| " cons)
       dataD = hardvcat (deprecations ++ [dataDoc, dataDecl, derivDoc])
 
@@ -507,12 +516,17 @@ printAlias hsName TypeAlias{name, type_, documentation, since, proposed, depreca
   rhs <- convertType type_
 
   ensureImport "GHC.Generics" Unqual
+  ensureImport "Control.DeepSeq" Unqual
   ensureImport "Data.Aeson" (QualAs "Aeson")
   ensureImport "Data.Row.Aeson" (QualAs "Aeson")
   -- In practice, it seems that only base types and aliases to base types get used as map keys, so deriving
   -- To/FromJSONKey for them seems to be enough
-  let aesonDeriving :: [Doc ann] = ["Aeson.ToJSON", "Aeson.FromJSON"] ++ case type_ of { BaseType _ -> ["Aeson.ToJSONKey", "Aeson.FromJSONKey"]; _ -> [] }
-      derivDoc = indent indentSize $ hardvcat ["deriving stock" <+> tupled (fmap pretty toStockDerive), "deriving newtype" <+> tupled aesonDeriving]
+  let derivDoc =
+        let aesonDeriving :: [Doc ann] = ["Aeson.ToJSON", "Aeson.FromJSON"] ++ case type_ of { BaseType _ -> ["Aeson.ToJSONKey", "Aeson.FromJSONKey"]; _ -> [] }
+            newtypeDeriv = "deriving newtype" <+> tupled aesonDeriving
+            stockDeriv = "deriving stock" <+> tupled (fmap pretty toStockDerive)
+            anyclassDeriv = "deriving anyclass" <+> tupled (fmap pretty toAnyclassDerive)
+        in indent indentSize $ hardvcat [newtypeDeriv, stockDeriv, anyclassDeriv]
   dataDoc <- multilineHaddock . pretty <$> mkDocumentation documentation since proposed
   let dataDecl = "newtype" <+> pretty hsName <+> "=" <+> pretty hsName <+> rhs
       datad = hardvcat (optDeprecated hsName deprecated ++ [dataDoc, dataDecl, derivDoc])

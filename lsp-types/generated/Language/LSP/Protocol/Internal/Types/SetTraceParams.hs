@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.SetTraceParams where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
@@ -21,6 +22,7 @@ data SetTraceParams = SetTraceParams
   _value :: Language.LSP.Protocol.Internal.Types.TraceValues.TraceValues
   }
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
 
 instance Aeson.ToJSON SetTraceParams where
   toJSON (SetTraceParams arg0) = Aeson.object $ concat $  [["value" Aeson..= arg0]]

@@ -43,6 +43,7 @@ library
   -- * fancy types for singletons etc.
   default-extensions:
     DataKinds
+    DeriveAnyClass
     DeriveGeneric
     DerivingStrategies
     DerivingVia

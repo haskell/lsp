@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.WorkspaceSymbol where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson
 import qualified Data.Aeson as Aeson
@@ -68,6 +69,7 @@ data WorkspaceSymbol = WorkspaceSymbol
   _data_ :: (Maybe Data.Aeson.Value)
   }
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
 
 instance Aeson.ToJSON WorkspaceSymbol where
   toJSON (WorkspaceSymbol arg0 arg1 arg2 arg3 arg4 arg5) = Aeson.object $ concat $  [["name" Aeson..= arg0]

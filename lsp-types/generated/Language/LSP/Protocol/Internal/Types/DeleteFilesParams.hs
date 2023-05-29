@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.DeleteFilesParams where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
@@ -26,6 +27,7 @@ data DeleteFilesParams = DeleteFilesParams
   _files :: [Language.LSP.Protocol.Internal.Types.FileDelete.FileDelete]
   }
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
 
 instance Aeson.ToJSON DeleteFilesParams where
   toJSON (DeleteFilesParams arg0) = Aeson.object $ concat $  [["files" Aeson..= arg0]]

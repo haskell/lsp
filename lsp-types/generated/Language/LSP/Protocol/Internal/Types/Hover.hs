@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.Hover where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
@@ -31,6 +32,7 @@ data Hover = Hover
   _range :: (Maybe Language.LSP.Protocol.Internal.Types.Range.Range)
   }
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
 
 instance Aeson.ToJSON Hover where
   toJSON (Hover arg0 arg1) = Aeson.object $ concat $  [["contents" Aeson..= arg0]

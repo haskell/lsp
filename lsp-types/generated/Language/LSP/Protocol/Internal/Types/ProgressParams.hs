@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.ProgressParams where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson
 import qualified Data.Aeson as Aeson
@@ -28,6 +29,7 @@ data ProgressParams = ProgressParams
   _value :: Data.Aeson.Value
   }
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
 
 instance Aeson.ToJSON ProgressParams where
   toJSON (ProgressParams arg0 arg1) = Aeson.object $ concat $  [["token" Aeson..= arg0]

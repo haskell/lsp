@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.TextDocumentPositionParams where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
@@ -30,6 +31,7 @@ data TextDocumentPositionParams = TextDocumentPositionParams
   _position :: Language.LSP.Protocol.Internal.Types.Position.Position
   }
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
 
 instance Aeson.ToJSON TextDocumentPositionParams where
   toJSON (TextDocumentPositionParams arg0 arg1) = Aeson.object $ concat $  [["textDocument" Aeson..= arg0]

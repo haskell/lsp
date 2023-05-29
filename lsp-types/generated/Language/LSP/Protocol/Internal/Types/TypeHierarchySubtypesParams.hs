@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.TypeHierarchySubtypesParams where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
@@ -36,6 +37,7 @@ data TypeHierarchySubtypesParams = TypeHierarchySubtypesParams
   _item :: Language.LSP.Protocol.Internal.Types.TypeHierarchyItem.TypeHierarchyItem
   }
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
 
 instance Aeson.ToJSON TypeHierarchySubtypesParams where
   toJSON (TypeHierarchySubtypesParams arg0 arg1 arg2) = Aeson.object $ concat $  ["workDoneToken" Language.LSP.Protocol.Types.Common..=? arg0

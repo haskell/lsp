@@ -5,6 +5,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Types.SemanticTokenTypes where
 
+import Control.DeepSeq
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
@@ -119,6 +120,7 @@ data SemanticTokenTypes =
   SemanticTokenTypes_Decorator
   | SemanticTokenTypes_Custom Data.Text.Text
   deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
   deriving ( Aeson.ToJSON
   , Aeson.FromJSON
   , Data.String.IsString ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum SemanticTokenTypes Data.Text.Text)

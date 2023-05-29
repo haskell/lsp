@@ -3,6 +3,7 @@ module Language.LSP.Protocol.Types.Singletons where
 import           Data.Aeson
 import           Data.Proxy
 import qualified Data.Text    as T
+import           Control.DeepSeq
 import           GHC.TypeLits (KnownNat, KnownSymbol, Nat, Symbol, natVal,
                                symbolVal)
 
@@ -19,6 +20,8 @@ instance Eq (AString s) where
   _ == _ = True
 instance Ord (AString s) where
   compare _ _ = EQ
+instance NFData (AString s) where
+  rnf a = seq a ()
 
 instance ToJSON (AString s) where
   toJSON AString = toJSON (T.pack (symbolVal (Proxy @s)))
@@ -43,6 +46,8 @@ instance Eq (AnInteger n) where
   _ == _ = True
 instance Ord (AnInteger n) where
   compare _ _ = EQ
+instance NFData (AnInteger s) where
+  rnf a = seq a ()
 
 instance ToJSON (AnInteger n) where
   toJSON AnInteger = toJSON (natVal (Proxy @n))
