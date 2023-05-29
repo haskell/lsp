@@ -18,42 +18,34 @@ These events do not come from the file system, they come from user operations
 like renaming a file in the UI.
 
 @since 3.16.0
-
 -}
 data FileOperationClientCapabilities = FileOperationClientCapabilities 
   { {-|
   Whether the client supports dynamic registration for file requests/notifications.
-
   -}
   _dynamicRegistration :: (Maybe Bool)
   , {-|
   The client has support for sending didCreateFiles notifications.
-
   -}
   _didCreate :: (Maybe Bool)
   , {-|
   The client has support for sending willCreateFiles requests.
-
   -}
   _willCreate :: (Maybe Bool)
   , {-|
   The client has support for sending didRenameFiles notifications.
-
   -}
   _didRename :: (Maybe Bool)
   , {-|
   The client has support for sending willRenameFiles requests.
-
   -}
   _willRename :: (Maybe Bool)
   , {-|
   The client has support for sending didDeleteFiles notifications.
-
   -}
   _didDelete :: (Maybe Bool)
   , {-|
   The client has support for sending willDeleteFiles requests.
-
   -}
   _willDelete :: (Maybe Bool)
   }

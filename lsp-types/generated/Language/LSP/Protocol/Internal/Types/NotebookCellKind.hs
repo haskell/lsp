@@ -18,17 +18,14 @@ import qualified Language.LSP.Protocol.Types.LspEnum
 A notebook cell kind.
 
 @since 3.17.0
-
 -}
 data NotebookCellKind = 
     {-|
   A markup-cell is formatted source that is used for display.
-
   -}
   NotebookCellKind_Markup
   | {-|
   A code-cell is source code.
-
   -}
   NotebookCellKind_Code
   deriving stock (Show, Eq, Ord, Generic)

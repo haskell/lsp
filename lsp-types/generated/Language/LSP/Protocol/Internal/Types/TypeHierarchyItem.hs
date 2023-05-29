@@ -19,45 +19,37 @@ import qualified Language.LSP.Protocol.Types.Uri
 
 {-|
 @since 3.17.0
-
 -}
 data TypeHierarchyItem = TypeHierarchyItem 
   { {-|
   The name of this item.
-
   -}
   _name :: Data.Text.Text
   , {-|
   The kind of this item.
-
   -}
   _kind :: Language.LSP.Protocol.Internal.Types.SymbolKind.SymbolKind
   , {-|
   Tags for this item.
-
   -}
   _tags :: (Maybe [Language.LSP.Protocol.Internal.Types.SymbolTag.SymbolTag])
   , {-|
   More detail for this item, e.g. the signature of a function.
-
   -}
   _detail :: (Maybe Data.Text.Text)
   , {-|
   The resource identifier of this item.
-
   -}
   _uri :: Language.LSP.Protocol.Types.Uri.Uri
   , {-|
   The range enclosing this symbol not including leading/trailing whitespace
   but everything else, e.g. comments and code.
-
   -}
   _range :: Language.LSP.Protocol.Internal.Types.Range.Range
   , {-|
   The range that should be selected and revealed when this symbol is being
   picked, e.g. the name of a function. Must be contained by the
   `TypeHierarchyItem.range`.
-
   -}
   _selectionRange :: Language.LSP.Protocol.Internal.Types.Range.Range
   , {-|
@@ -65,7 +57,6 @@ data TypeHierarchyItem = TypeHierarchyItem
   supertypes or subtypes requests. It could also be used to identify the
   type hierarchy in the server, helping improve the performance on
   resolving supertypes and subtypes.
-
   -}
   _data_ :: (Maybe Data.Aeson.Value)
   }

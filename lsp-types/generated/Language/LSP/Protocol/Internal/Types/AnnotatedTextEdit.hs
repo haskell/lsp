@@ -18,24 +18,20 @@ import qualified Language.LSP.Protocol.Types.Common
 A special text edit with an additional change annotation.
 
 @since 3.16.0.
-
 -}
 data AnnotatedTextEdit = AnnotatedTextEdit 
   { {-|
   The range of the text document to be manipulated. To insert
   text into a document create a range where start === end.
-
   -}
   _range :: Language.LSP.Protocol.Internal.Types.Range.Range
   , {-|
   The string to be inserted. For delete operations use an
   empty string.
-
   -}
   _newText :: Data.Text.Text
   , {-|
   The actual identifier of the change annotation
-
   -}
   _annotationId :: Language.LSP.Protocol.Internal.Types.ChangeAnnotationIdentifier.ChangeAnnotationIdentifier
   }

@@ -15,23 +15,19 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 Registration options for a `DocumentOnTypeFormattingRequest`.
-
 -}
 data DocumentOnTypeFormattingRegistrationOptions = DocumentOnTypeFormattingRegistrationOptions 
   { {-|
   A document selector to identify the scope of the registration. If set to null
   the document selector provided on the client side will be used.
-
   -}
   _documentSelector :: (Language.LSP.Protocol.Internal.Types.DocumentSelector.DocumentSelector Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Types.Common.Null)
   , {-|
   A character on which formatting should be triggered, like `{`.
-
   -}
   _firstTriggerCharacter :: Data.Text.Text
   , {-|
   More trigger characters.
-
   -}
   _moreTriggerCharacter :: (Maybe [Data.Text.Text])
   }

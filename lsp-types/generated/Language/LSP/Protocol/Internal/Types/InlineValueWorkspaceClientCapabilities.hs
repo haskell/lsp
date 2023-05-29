@@ -15,7 +15,6 @@ import qualified Language.LSP.Protocol.Types.Common
 Client workspace capabilities specific to inline values.
 
 @since 3.17.0
-
 -}
 data InlineValueWorkspaceClientCapabilities = InlineValueWorkspaceClientCapabilities 
   { {-|
@@ -26,7 +25,6 @@ data InlineValueWorkspaceClientCapabilities = InlineValueWorkspaceClientCapabili
   inline values currently shown. It should be used with absolute care and is
   useful for situation where a server for example detects a project wide
   change that requires such a calculation.
-
   -}
   _refreshSupport :: (Maybe Bool)
   }

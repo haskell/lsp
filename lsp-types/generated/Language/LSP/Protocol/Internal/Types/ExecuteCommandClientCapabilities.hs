@@ -13,12 +13,10 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 The client capabilities of a `ExecuteCommandRequest`.
-
 -}
 data ExecuteCommandClientCapabilities = ExecuteCommandClientCapabilities 
   { {-|
   Execute command supports dynamic registration.
-
   -}
   _dynamicRegistration :: (Maybe Bool)
   }

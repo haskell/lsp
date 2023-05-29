@@ -17,7 +17,6 @@ import qualified Language.LSP.Protocol.Types.Common
 Inlay hint options used during static or dynamic registration.
 
 @since 3.17.0
-
 -}
 data InlayHintRegistrationOptions = InlayHintRegistrationOptions 
   { {-|
@@ -27,19 +26,16 @@ data InlayHintRegistrationOptions = InlayHintRegistrationOptions
   , {-|
   The server provides support to resolve additional
   information for an inlay hint item.
-
   -}
   _resolveProvider :: (Maybe Bool)
   , {-|
   A document selector to identify the scope of the registration. If set to null
   the document selector provided on the client side will be used.
-
   -}
   _documentSelector :: (Language.LSP.Protocol.Internal.Types.DocumentSelector.DocumentSelector Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Types.Common.Null)
   , {-|
   The id used to register the request. The id can be used to deregister
   the request again. See also Registration#id.
-
   -}
   _id :: (Maybe Data.Text.Text)
   }

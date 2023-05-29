@@ -18,12 +18,10 @@ import qualified Language.LSP.Protocol.Types.Common
 data ConfigurationItem = ConfigurationItem 
   { {-|
   The scope to get the configuration section for.
-
   -}
   _scopeUri :: (Maybe Data.Text.Text)
   , {-|
   The configuration section asked for.
-
   -}
   _section :: (Maybe Data.Text.Text)
   }

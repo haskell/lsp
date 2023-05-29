@@ -18,7 +18,6 @@ A notebook cell text document filter denotes a cell text
 document by different properties.
 
 @since 3.17.0
-
 -}
 data NotebookCellTextDocumentFilter = NotebookCellTextDocumentFilter 
   { {-|
@@ -26,7 +25,6 @@ data NotebookCellTextDocumentFilter = NotebookCellTextDocumentFilter
   containing the notebook cell. If a string
   value is provided it matches against the
   notebook type. '*' matches every notebook.
-
   -}
   _notebook :: (Data.Text.Text Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.NotebookDocumentFilter.NotebookDocumentFilter)
   , {-|
@@ -34,7 +32,6 @@ data NotebookCellTextDocumentFilter = NotebookCellTextDocumentFilter
 
   Will be matched against the language id of the
   notebook cell document. '*' matches every language.
-
   -}
   _language :: (Maybe Data.Text.Text)
   }

@@ -19,7 +19,6 @@ How whitespace and indentation is handled during completion
 item insertion.
 
 @since 3.16.0
-
 -}
 data InsertTextMode = 
     {-|
@@ -28,7 +27,6 @@ data InsertTextMode =
   inserted using the indentation defined in the string value.
   The client will not apply any kind of adjustments to the
   string.
-
   -}
   InsertTextMode_AsIs
   | {-|
@@ -39,7 +37,6 @@ data InsertTextMode =
   Consider a line like this: <2tabs><cursor><3tabs>foo. Accepting a
   multi line completion item is indented using 2 tabs and all
   following lines inserted will be indented using 2 tabs as well.
-
   -}
   InsertTextMode_AdjustIndentation
   deriving stock (Show, Eq, Ord, Generic)

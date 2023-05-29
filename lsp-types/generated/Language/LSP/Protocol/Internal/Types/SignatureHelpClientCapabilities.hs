@@ -15,18 +15,15 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 Client Capabilities for a `SignatureHelpRequest`.
-
 -}
 data SignatureHelpClientCapabilities = SignatureHelpClientCapabilities 
   { {-|
   Whether signature help supports dynamic registration.
-
   -}
   _dynamicRegistration :: (Maybe Bool)
   , {-|
   The client supports the following `SignatureInformation`
   specific properties.
-
   -}
   _signatureInformation :: (Maybe (Row.Rec ("documentationFormat" Row..== (Maybe [Language.LSP.Protocol.Internal.Types.MarkupKind.MarkupKind]) Row..+ ("parameterInformation" Row..== (Maybe (Row.Rec ("labelOffsetSupport" Row..== (Maybe Bool) Row..+ Row.Empty))) Row..+ ("activeParameterSupport" Row..== (Maybe Bool) Row..+ Row.Empty)))))
   , {-|
@@ -36,7 +33,6 @@ data SignatureHelpClientCapabilities = SignatureHelpClientCapabilities
   `SignatureHelpOptions`.
 
   @since 3.15.0
-
   -}
   _contextSupport :: (Maybe Bool)
   }

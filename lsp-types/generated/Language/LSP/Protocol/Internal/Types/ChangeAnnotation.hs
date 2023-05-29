@@ -16,25 +16,21 @@ import qualified Language.LSP.Protocol.Types.Common
 Additional information that describes document changes.
 
 @since 3.16.0
-
 -}
 data ChangeAnnotation = ChangeAnnotation 
   { {-|
   A human-readable string describing the actual change. The string
   is rendered prominent in the user interface.
-
   -}
   _label :: Data.Text.Text
   , {-|
   A flag which indicates that user confirmation is needed
   before applying the change.
-
   -}
   _needsConfirmation :: (Maybe Bool)
   , {-|
   A human-readable string which is rendered less prominent in
   the user interface.
-
   -}
   _description :: (Maybe Data.Text.Text)
   }

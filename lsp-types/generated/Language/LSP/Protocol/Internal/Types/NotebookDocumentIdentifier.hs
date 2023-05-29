@@ -16,12 +16,10 @@ import qualified Language.LSP.Protocol.Types.Uri
 A literal to identify a notebook document in the client.
 
 @since 3.17.0
-
 -}
 data NotebookDocumentIdentifier = NotebookDocumentIdentifier 
   { {-|
   The notebook document's uri.
-
   -}
   _uri :: Language.LSP.Protocol.Types.Uri.Uri
   }

@@ -13,7 +13,6 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 @since 3.16.0
-
 -}
 data CodeLensWorkspaceClientCapabilities = CodeLensWorkspaceClientCapabilities 
   { {-|
@@ -24,7 +23,6 @@ data CodeLensWorkspaceClientCapabilities = CodeLensWorkspaceClientCapabilities
   code lenses currently shown. It should be used with absolute care and is
   useful for situation where a server for example detect a project wide
   change that requires such a calculation.
-
   -}
   _refreshSupport :: (Maybe Bool)
   }

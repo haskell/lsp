@@ -18,28 +18,23 @@ import qualified Language.LSP.Protocol.Types.Common
 Moniker definition to match LSIF 0.5 moniker definition.
 
 @since 3.16.0
-
 -}
 data Moniker = Moniker 
   { {-|
   The scheme of the moniker. For example tsc or .Net
-
   -}
   _scheme :: Data.Text.Text
   , {-|
   The identifier of the moniker. The value is opaque in LSIF however
   schema owners are allowed to define the structure if they want.
-
   -}
   _identifier :: Data.Text.Text
   , {-|
   The scope in which the moniker is unique
-
   -}
   _unique :: Language.LSP.Protocol.Internal.Types.UniquenessLevel.UniquenessLevel
   , {-|
   The moniker kind if known.
-
   -}
   _kind :: (Maybe Language.LSP.Protocol.Internal.Types.MonikerKind.MonikerKind)
   }

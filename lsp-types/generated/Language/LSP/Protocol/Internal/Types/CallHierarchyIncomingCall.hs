@@ -17,18 +17,15 @@ import qualified Language.LSP.Protocol.Types.Common
 Represents an incoming call, e.g. a caller of a method or constructor.
 
 @since 3.16.0
-
 -}
 data CallHierarchyIncomingCall = CallHierarchyIncomingCall 
   { {-|
   The item that makes the call.
-
   -}
   _from :: Language.LSP.Protocol.Internal.Types.CallHierarchyItem.CallHierarchyItem
   , {-|
   The ranges at which the calls appear. This is relative to the caller
   denoted by `CallHierarchyIncomingCall.from`.
-
   -}
   _fromRanges :: [Language.LSP.Protocol.Internal.Types.Range.Range]
   }

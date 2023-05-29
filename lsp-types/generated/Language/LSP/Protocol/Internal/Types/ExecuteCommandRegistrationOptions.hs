@@ -14,7 +14,6 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 Registration options for a `ExecuteCommandRequest`.
-
 -}
 data ExecuteCommandRegistrationOptions = ExecuteCommandRegistrationOptions 
   { {-|
@@ -23,7 +22,6 @@ data ExecuteCommandRegistrationOptions = ExecuteCommandRegistrationOptions
   _workDoneProgress :: (Maybe Bool)
   , {-|
   The commands to be executed on the server
-
   -}
   _commands :: [Data.Text.Text]
   }

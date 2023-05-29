@@ -16,7 +16,6 @@ import qualified Language.LSP.Protocol.Types.LspEnum
 
 {-|
 A symbol kind.
-
 -}
 data SymbolKind = 
     {-|

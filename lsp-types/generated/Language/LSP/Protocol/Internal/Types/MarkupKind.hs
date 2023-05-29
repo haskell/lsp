@@ -20,17 +20,14 @@ result literals like `Hover`, `ParameterInfo` or `CompletionItem`.
 
 Please note that `MarkupKinds` must not start with a `$`. This kinds
 are reserved for internal usage.
-
 -}
 data MarkupKind = 
     {-|
   Plain text is supported as a content format
-
   -}
   MarkupKind_PlainText
   | {-|
   Markdown is supported as a content format
-
   -}
   MarkupKind_Markdown
   deriving stock (Show, Eq, Ord, Generic)

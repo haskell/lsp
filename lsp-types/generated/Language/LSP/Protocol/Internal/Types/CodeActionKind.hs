@@ -16,22 +16,18 @@ import qualified Language.LSP.Protocol.Types.LspEnum
 
 {-|
 A set of predefined code action kinds
-
 -}
 data CodeActionKind = 
     {-|
   Empty kind.
-
   -}
   CodeActionKind_Empty
   | {-|
   Base kind for quickfix actions: 'quickfix'
-
   -}
   CodeActionKind_QuickFix
   | {-|
   Base kind for refactoring actions: 'refactor'
-
   -}
   CodeActionKind_Refactor
   | {-|
@@ -44,7 +40,6 @@ data CodeActionKind =
   - Extract variable
   - Extract interface from class
   - ...
-
   -}
   CodeActionKind_RefactorExtract
   | {-|
@@ -56,7 +51,6 @@ data CodeActionKind =
   - Inline variable
   - Inline constant
   - ...
-
   -}
   CodeActionKind_RefactorInline
   | {-|
@@ -70,19 +64,16 @@ data CodeActionKind =
   - Make method static
   - Move method to base class
   - ...
-
   -}
   CodeActionKind_RefactorRewrite
   | {-|
   Base kind for source actions: `source`
 
   Source code actions apply to the entire file.
-
   -}
   CodeActionKind_Source
   | {-|
   Base kind for an organize imports source action: `source.organizeImports`
-
   -}
   CodeActionKind_SourceOrganizeImports
   | {-|
@@ -92,7 +83,6 @@ data CodeActionKind =
   They should not suppress errors or perform unsafe fixes such as generating new types or classes.
 
   @since 3.15.0
-
   -}
   CodeActionKind_SourceFixAll
   | CodeActionKind_Custom Data.Text.Text

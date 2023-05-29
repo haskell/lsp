@@ -15,18 +15,15 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 Describe options to be used when registered for text document change events.
-
 -}
 data TextDocumentChangeRegistrationOptions = TextDocumentChangeRegistrationOptions 
   { {-|
   A document selector to identify the scope of the registration. If set to null
   the document selector provided on the client side will be used.
-
   -}
   _documentSelector :: (Language.LSP.Protocol.Internal.Types.DocumentSelector.DocumentSelector Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Types.Common.Null)
   , {-|
   How documents are synced to the server.
-
   -}
   _syncKind :: Language.LSP.Protocol.Internal.Types.TextDocumentSyncKind.TextDocumentSyncKind
   }

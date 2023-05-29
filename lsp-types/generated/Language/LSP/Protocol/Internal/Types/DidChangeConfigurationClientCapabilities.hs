@@ -17,7 +17,6 @@ import qualified Language.LSP.Protocol.Types.Common
 data DidChangeConfigurationClientCapabilities = DidChangeConfigurationClientCapabilities 
   { {-|
   Did change configuration notification supports dynamic registration.
-
   -}
   _dynamicRegistration :: (Maybe Bool)
   }

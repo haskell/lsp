@@ -17,13 +17,11 @@ import qualified Language.LSP.Protocol.Types.Common
 Diagnostic registration options.
 
 @since 3.17.0
-
 -}
 data DiagnosticRegistrationOptions = DiagnosticRegistrationOptions 
   { {-|
   A document selector to identify the scope of the registration. If set to null
   the document selector provided on the client side will be used.
-
   -}
   _documentSelector :: (Language.LSP.Protocol.Internal.Types.DocumentSelector.DocumentSelector Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Types.Common.Null)
   , {-|
@@ -33,7 +31,6 @@ data DiagnosticRegistrationOptions = DiagnosticRegistrationOptions
   , {-|
   An optional identifier under which the diagnostics are
   managed by the client.
-
   -}
   _identifier :: (Maybe Data.Text.Text)
   , {-|
@@ -41,18 +38,15 @@ data DiagnosticRegistrationOptions = DiagnosticRegistrationOptions
   editing code in one file can result in a different diagnostic
   set in another file. Inter file dependencies are common for
   most programming languages and typically uncommon for linters.
-
   -}
   _interFileDependencies :: Bool
   , {-|
   The server provides support for workspace diagnostics as well.
-
   -}
   _workspaceDiagnostics :: Bool
   , {-|
   The id used to register the request. The id can be used to deregister
   the request again. See also Registration#id.
-
   -}
   _id :: (Maybe Data.Text.Text)
   }

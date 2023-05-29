@@ -15,13 +15,11 @@ import qualified Language.LSP.Protocol.Types.Common
 {-|
 Static registration options to be returned in the initialize
 request.
-
 -}
 data StaticRegistrationOptions = StaticRegistrationOptions 
   { {-|
   The id used to register the request. The id can be used to deregister
   the request again. See also Registration#id.
-
   -}
   _id :: (Maybe Data.Text.Text)
   }

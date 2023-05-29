@@ -17,34 +17,28 @@ import qualified Language.LSP.Protocol.Types.Uri
 
 {-|
 Rename file operation
-
 -}
 data RenameFile = RenameFile 
   { {-|
   An optional annotation identifier describing the operation.
 
   @since 3.16.0
-
   -}
   _annotationId :: (Maybe Language.LSP.Protocol.Internal.Types.ChangeAnnotationIdentifier.ChangeAnnotationIdentifier)
   , {-|
   A rename
-
   -}
   _kind :: (Language.LSP.Protocol.Types.Singletons.AString "rename")
   , {-|
   The old (existing) location.
-
   -}
   _oldUri :: Language.LSP.Protocol.Types.Uri.Uri
   , {-|
   The new location.
-
   -}
   _newUri :: Language.LSP.Protocol.Types.Uri.Uri
   , {-|
   Rename options.
-
   -}
   _options :: (Maybe Language.LSP.Protocol.Internal.Types.RenameFileOptions.RenameFileOptions)
   }

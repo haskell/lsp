@@ -19,7 +19,6 @@ the declaring symbol.
 
 Servers should prefer returning `DeclarationLink` over `Declaration` if supported
 by the client.
-
 -}
 newtype DeclarationLink = DeclarationLink Language.LSP.Protocol.Internal.Types.LocationLink.LocationLink
   deriving newtype (Aeson.ToJSON, Aeson.FromJSON)

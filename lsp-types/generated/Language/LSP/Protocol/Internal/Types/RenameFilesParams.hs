@@ -17,13 +17,11 @@ The parameters sent in notifications/requests for user-initiated renames of
 files.
 
 @since 3.16.0
-
 -}
 data RenameFilesParams = RenameFilesParams 
   { {-|
   An array of all files/folders renamed in this operation. When a folder is renamed, only
   the folder will be included, and not its children.
-
   -}
   _files :: [Language.LSP.Protocol.Internal.Types.FileRename.FileRename]
   }

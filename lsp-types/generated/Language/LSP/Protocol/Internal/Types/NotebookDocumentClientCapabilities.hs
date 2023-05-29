@@ -16,14 +16,12 @@ import qualified Language.LSP.Protocol.Types.Common
 Capabilities specific to the notebook document support.
 
 @since 3.17.0
-
 -}
 data NotebookDocumentClientCapabilities = NotebookDocumentClientCapabilities 
   { {-|
   Capabilities specific to notebook document synchronization
 
   @since 3.17.0
-
   -}
   _synchronization :: Language.LSP.Protocol.Internal.Types.NotebookDocumentSyncClientCapabilities.NotebookDocumentSyncClientCapabilities
   }

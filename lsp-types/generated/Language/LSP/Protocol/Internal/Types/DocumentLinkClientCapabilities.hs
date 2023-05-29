@@ -13,19 +13,16 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 The client capabilities of a `DocumentLinkRequest`.
-
 -}
 data DocumentLinkClientCapabilities = DocumentLinkClientCapabilities 
   { {-|
   Whether document link supports dynamic registration.
-
   -}
   _dynamicRegistration :: (Maybe Bool)
   , {-|
   Whether the client supports the `tooltip` property on `DocumentLink`.
 
   @since 3.15.0
-
   -}
   _tooltipSupport :: (Maybe Bool)
   }

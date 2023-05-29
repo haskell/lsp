@@ -19,13 +19,11 @@ data ExecutionSummary = ExecutionSummary
   A strict monotonically increasing value
   indicating the execution order of a cell
   inside a notebook.
-
   -}
   _executionOrder :: Language.LSP.Protocol.Types.Common.UInt
   , {-|
   Whether the execution was successful or
   not if known by the client.
-
   -}
   _success :: (Maybe Bool)
   }

@@ -27,21 +27,18 @@ data WindowClientCapabilities = WindowClientCapabilities
   capabilities.
 
   @since 3.15.0
-
   -}
   _workDoneProgress :: (Maybe Bool)
   , {-|
   Capabilities specific to the showMessage request.
 
   @since 3.16.0
-
   -}
   _showMessage :: (Maybe Language.LSP.Protocol.Internal.Types.ShowMessageRequestClientCapabilities.ShowMessageRequestClientCapabilities)
   , {-|
   Capabilities specific to the showDocument request.
 
   @since 3.16.0
-
   -}
   _showDocument :: (Maybe Language.LSP.Protocol.Internal.Types.ShowDocumentClientCapabilities.ShowDocumentClientCapabilities)
   }

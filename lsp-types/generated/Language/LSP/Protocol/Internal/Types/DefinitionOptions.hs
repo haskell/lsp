@@ -13,7 +13,6 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 Server Capabilities for a `DefinitionRequest`.
-
 -}
 data DefinitionOptions = DefinitionOptions 
   { {-|

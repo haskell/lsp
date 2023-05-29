@@ -16,37 +16,30 @@ import qualified Language.LSP.Protocol.Types.Common
 Options for notifications/requests for user operations on files.
 
 @since 3.16.0
-
 -}
 data FileOperationOptions = FileOperationOptions 
   { {-|
   The server is interested in receiving didCreateFiles notifications.
-
   -}
   _didCreate :: (Maybe Language.LSP.Protocol.Internal.Types.FileOperationRegistrationOptions.FileOperationRegistrationOptions)
   , {-|
   The server is interested in receiving willCreateFiles requests.
-
   -}
   _willCreate :: (Maybe Language.LSP.Protocol.Internal.Types.FileOperationRegistrationOptions.FileOperationRegistrationOptions)
   , {-|
   The server is interested in receiving didRenameFiles notifications.
-
   -}
   _didRename :: (Maybe Language.LSP.Protocol.Internal.Types.FileOperationRegistrationOptions.FileOperationRegistrationOptions)
   , {-|
   The server is interested in receiving willRenameFiles requests.
-
   -}
   _willRename :: (Maybe Language.LSP.Protocol.Internal.Types.FileOperationRegistrationOptions.FileOperationRegistrationOptions)
   , {-|
   The server is interested in receiving didDeleteFiles file notifications.
-
   -}
   _didDelete :: (Maybe Language.LSP.Protocol.Internal.Types.FileOperationRegistrationOptions.FileOperationRegistrationOptions)
   , {-|
   The server is interested in receiving willDeleteFiles file requests.
-
   -}
   _willDelete :: (Maybe Language.LSP.Protocol.Internal.Types.FileOperationRegistrationOptions.FileOperationRegistrationOptions)
   }

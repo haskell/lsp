@@ -18,12 +18,10 @@ import qualified Language.LSP.Protocol.Types.LspEnum
 A set of predefined position encoding kinds.
 
 @since 3.17.0
-
 -}
 data PositionEncodingKind = 
     {-|
   Character offsets count UTF-8 code units.
-
   -}
   PositionEncodingKind_UTF8
   | {-|
@@ -31,7 +29,6 @@ data PositionEncodingKind =
 
   This is the default and must always be supported
   by servers
-
   -}
   PositionEncodingKind_UTF16
   | {-|
@@ -40,7 +37,6 @@ data PositionEncodingKind =
   Implementation note: these are the same as Unicode code points,
   so this `PositionEncodingKind` may also be used for an
   encoding-agnostic representation of character offsets.
-
   -}
   PositionEncodingKind_UTF32
   | PositionEncodingKind_Custom Data.Text.Text

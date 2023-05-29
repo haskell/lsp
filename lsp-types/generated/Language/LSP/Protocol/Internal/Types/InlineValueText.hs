@@ -17,17 +17,14 @@ import qualified Language.LSP.Protocol.Types.Common
 Provide inline value as text.
 
 @since 3.17.0
-
 -}
 data InlineValueText = InlineValueText 
   { {-|
   The document range for which the inline value applies.
-
   -}
   _range :: Language.LSP.Protocol.Internal.Types.Range.Range
   , {-|
   The text of the inline value.
-
   -}
   _text :: Data.Text.Text
   }

@@ -18,33 +18,27 @@ import qualified Language.LSP.Protocol.Types.Common
 Parameters of the document diagnostic request.
 
 @since 3.17.0
-
 -}
 data DocumentDiagnosticParams = DocumentDiagnosticParams 
   { {-|
   An optional token that a server can use to report work done progress.
-
   -}
   _workDoneToken :: (Maybe Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken)
   , {-|
   An optional token that a server can use to report partial results (e.g. streaming) to
   the client.
-
   -}
   _partialResultToken :: (Maybe Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken)
   , {-|
   The text document.
-
   -}
   _textDocument :: Language.LSP.Protocol.Internal.Types.TextDocumentIdentifier.TextDocumentIdentifier
   , {-|
   The additional identifier  provided during registration.
-
   -}
   _identifier :: (Maybe Data.Text.Text)
   , {-|
   The result id of a previous response if provided.
-
   -}
   _previousResultId :: (Maybe Data.Text.Text)
   }

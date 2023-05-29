@@ -30,7 +30,6 @@ Glob patterns can have the following syntax:
 @sample A language filter that applies to all package.json paths: `{ language: 'json', pattern: '**package.json' }`
 
 @since 3.17.0
-
 -}
 newtype TextDocumentFilter = TextDocumentFilter ((Row.Rec ("language" Row..== Data.Text.Text Row..+ ("scheme" Row..== (Maybe Data.Text.Text) Row..+ ("pattern" Row..== (Maybe Data.Text.Text) Row..+ Row.Empty)))) Language.LSP.Protocol.Types.Common.|? ((Row.Rec ("language" Row..== (Maybe Data.Text.Text) Row..+ ("scheme" Row..== Data.Text.Text Row..+ ("pattern" Row..== (Maybe Data.Text.Text) Row..+ Row.Empty)))) Language.LSP.Protocol.Types.Common.|? (Row.Rec ("language" Row..== (Maybe Data.Text.Text) Row..+ ("scheme" Row..== (Maybe Data.Text.Text) Row..+ ("pattern" Row..== Data.Text.Text Row..+ Row.Empty))))))
   deriving newtype (Aeson.ToJSON, Aeson.FromJSON)

@@ -26,14 +26,12 @@ data WorkDoneProgressBegin = WorkDoneProgressBegin
   the kind of operation being performed.
 
   Examples: "Indexing" or "Linking dependencies".
-
   -}
   _title :: Data.Text.Text
   , {-|
   Controls if a cancel button should show to allow the user to cancel the
   long running operation. Clients that don't support cancellation are allowed
   to ignore the setting.
-
   -}
   _cancellable :: (Maybe Bool)
   , {-|
@@ -42,7 +40,6 @@ data WorkDoneProgressBegin = WorkDoneProgressBegin
 
   Examples: "3/25 files", "project/src/module2", "node_modules/some_dep".
   If unset, the previous progress message (if any) is still valid.
-
   -}
   _message :: (Maybe Data.Text.Text)
   , {-|
@@ -52,7 +49,6 @@ data WorkDoneProgressBegin = WorkDoneProgressBegin
 
   The value should be steadily rising. Clients are free to ignore values
   that are not following this rule. The value range is [0, 100].
-
   -}
   _percentage :: (Maybe Language.LSP.Protocol.Types.Common.UInt)
   }

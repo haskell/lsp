@@ -22,24 +22,20 @@ import qualified Language.LSP.Protocol.Types.Uri
 A full diagnostic report with a set of related documents.
 
 @since 3.17.0
-
 -}
 data RelatedFullDocumentDiagnosticReport = RelatedFullDocumentDiagnosticReport 
   { {-|
   A full document diagnostic report.
-
   -}
   _kind :: (Language.LSP.Protocol.Types.Singletons.AString "full")
   , {-|
   An optional result id. If provided it will
   be sent on the next diagnostic request for the
   same document.
-
   -}
   _resultId :: (Maybe Data.Text.Text)
   , {-|
   The actual items.
-
   -}
   _items :: [Language.LSP.Protocol.Internal.Types.Diagnostic.Diagnostic]
   , {-|
@@ -50,7 +46,6 @@ data RelatedFullDocumentDiagnosticReport = RelatedFullDocumentDiagnosticReport
   a.cpp and result in errors in a header file b.hpp.
 
   @since 3.17.0
-
   -}
   _relatedDocuments :: (Maybe (Data.Map.Map Language.LSP.Protocol.Types.Uri.Uri (Language.LSP.Protocol.Internal.Types.FullDocumentDiagnosticReport.FullDocumentDiagnosticReport Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.UnchangedDocumentDiagnosticReport.UnchangedDocumentDiagnosticReport)))
   }

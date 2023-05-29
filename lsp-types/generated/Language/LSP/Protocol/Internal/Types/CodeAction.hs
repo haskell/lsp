@@ -23,24 +23,20 @@ A code action represents a change that can be performed in code, e.g. to fix a p
 to refactor code.
 
 A CodeAction must set either `edit` and/or a `command`. If both are supplied, the `edit` is applied first, then the `command` is executed.
-
 -}
 data CodeAction = CodeAction 
   { {-|
   A short, human-readable, title for this code action.
-
   -}
   _title :: Data.Text.Text
   , {-|
   The kind of the code action.
 
   Used to filter code actions.
-
   -}
   _kind :: (Maybe Language.LSP.Protocol.Internal.Types.CodeActionKind.CodeActionKind)
   , {-|
   The diagnostics that this code action resolves.
-
   -}
   _diagnostics :: (Maybe [Language.LSP.Protocol.Internal.Types.Diagnostic.Diagnostic])
   , {-|
@@ -51,7 +47,6 @@ data CodeAction = CodeAction
   A refactoring should be marked preferred if it is the most reasonable choice of actions to take.
 
   @since 3.15.0
-
   -}
   _isPreferred :: (Maybe Bool)
   , {-|
@@ -70,19 +65,16 @@ data CodeAction = CodeAction
       error message with `reason` in the editor.
 
   @since 3.16.0
-
   -}
   _disabled :: (Maybe (Row.Rec ("reason" Row..== Data.Text.Text Row..+ Row.Empty)))
   , {-|
   The workspace edit this code action performs.
-
   -}
   _edit :: (Maybe Language.LSP.Protocol.Internal.Types.WorkspaceEdit.WorkspaceEdit)
   , {-|
   A command this code action executes. If a code action
   provides an edit and a command, first the edit is
   executed and then the command.
-
   -}
   _command :: (Maybe Language.LSP.Protocol.Internal.Types.Command.Command)
   , {-|
@@ -90,7 +82,6 @@ data CodeAction = CodeAction
   a `textDocument/codeAction` and a `codeAction/resolve` request.
 
   @since 3.16.0
-
   -}
   _data_ :: (Maybe Data.Aeson.Value)
   }

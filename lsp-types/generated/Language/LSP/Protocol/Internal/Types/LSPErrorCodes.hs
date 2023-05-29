@@ -25,7 +25,6 @@ data LSPErrorCodes =
   the request failed.
 
   @since 3.17.0
-
   -}
   LSPErrorCodes_RequestFailed
   | {-|
@@ -34,7 +33,6 @@ data LSPErrorCodes =
   server cancellable.
 
   @since 3.17.0
-
   -}
   LSPErrorCodes_ServerCancelled
   | {-|
@@ -46,13 +44,11 @@ data LSPErrorCodes =
 
   If a client decides that a result is not of any use anymore
   the client should cancel the request.
-
   -}
   LSPErrorCodes_ContentModified
   | {-|
   The client has canceled a request and a server as detected
   the cancel.
-
   -}
   LSPErrorCodes_RequestCancelled
   | LSPErrorCodes_Custom Language.LSP.Protocol.Types.Common.Int32

@@ -16,17 +16,14 @@ import qualified Language.LSP.Protocol.Types.Common
 {-|
 A parameter literal used in requests to pass a text document and a position inside that
 document.
-
 -}
 data TextDocumentPositionParams = TextDocumentPositionParams 
   { {-|
   The text document.
-
   -}
   _textDocument :: Language.LSP.Protocol.Internal.Types.TextDocumentIdentifier.TextDocumentIdentifier
   , {-|
   The position inside the text document.
-
   -}
   _position :: Language.LSP.Protocol.Internal.Types.Position.Position
   }

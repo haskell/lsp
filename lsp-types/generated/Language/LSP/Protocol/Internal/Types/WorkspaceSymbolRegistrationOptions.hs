@@ -13,7 +13,6 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 Registration options for a `WorkspaceSymbolRequest`.
-
 -}
 data WorkspaceSymbolRegistrationOptions = WorkspaceSymbolRegistrationOptions 
   { {-|
@@ -25,7 +24,6 @@ data WorkspaceSymbolRegistrationOptions = WorkspaceSymbolRegistrationOptions
   information for a workspace symbol.
 
   @since 3.17.0
-
   -}
   _resolveProvider :: (Maybe Bool)
   }

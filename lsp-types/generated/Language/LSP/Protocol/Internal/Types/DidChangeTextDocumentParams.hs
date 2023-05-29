@@ -15,14 +15,12 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 The change text document notification's parameters.
-
 -}
 data DidChangeTextDocumentParams = DidChangeTextDocumentParams 
   { {-|
   The document that did change. The version number points
   to the version after all provided content changes have
   been applied.
-
   -}
   _textDocument :: Language.LSP.Protocol.Internal.Types.VersionedTextDocumentIdentifier.VersionedTextDocumentIdentifier
   , {-|
@@ -37,7 +35,6 @@ data DidChangeTextDocumentParams = DidChangeTextDocumentParams
   - apply the 'textDocument/didChange' notifications in the order you receive them.
   - apply the `TextDocumentContentChangeEvent`s in a single notification in the order
     you receive them.
-
   -}
   _contentChanges :: [Language.LSP.Protocol.Internal.Types.TextDocumentContentChangeEvent.TextDocumentContentChangeEvent]
   }

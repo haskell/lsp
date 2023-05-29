@@ -16,12 +16,10 @@ import qualified Language.LSP.Protocol.Types.Common
 Signature help represents the signature of something
 callable. There can be multiple signature but only one
 active and only one active parameter.
-
 -}
 data SignatureHelp = SignatureHelp 
   { {-|
   One or more signatures.
-
   -}
   _signatures :: [Language.LSP.Protocol.Internal.Types.SignatureInformation.SignatureInformation]
   , {-|
@@ -34,7 +32,6 @@ data SignatureHelp = SignatureHelp
 
   In future version of the protocol this property might become
   mandatory to better express this.
-
   -}
   _activeSignature :: (Maybe Language.LSP.Protocol.Types.Common.UInt)
   , {-|
@@ -45,7 +42,6 @@ data SignatureHelp = SignatureHelp
   In future version of the protocol this property might become
   mandatory to better express the active parameter if the
   active signature does have any.
-
   -}
   _activeParameter :: (Maybe Language.LSP.Protocol.Types.Common.UInt)
   }

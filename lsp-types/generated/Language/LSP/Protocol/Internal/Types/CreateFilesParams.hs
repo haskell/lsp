@@ -17,12 +17,10 @@ The parameters sent in notifications/requests for user-initiated creation of
 files.
 
 @since 3.16.0
-
 -}
 data CreateFilesParams = CreateFilesParams 
   { {-|
   An array of all files/folders created in this operation.
-
   -}
   _files :: [Language.LSP.Protocol.Internal.Types.FileCreate.FileCreate]
   }

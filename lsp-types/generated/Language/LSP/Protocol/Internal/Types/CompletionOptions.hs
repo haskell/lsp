@@ -15,7 +15,6 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 Completion options.
-
 -}
 data CompletionOptions = CompletionOptions 
   { {-|
@@ -31,7 +30,6 @@ data CompletionOptions = CompletionOptions
 
   If code complete should automatically be trigger on characters not being valid inside
   an identifier (for example `.` in JavaScript) list them in `triggerCharacters`.
-
   -}
   _triggerCharacters :: (Maybe [Data.Text.Text])
   , {-|
@@ -43,13 +41,11 @@ data CompletionOptions = CompletionOptions
   completion item the ones on the completion item win.
 
   @since 3.2.0
-
   -}
   _allCommitCharacters :: (Maybe [Data.Text.Text])
   , {-|
   The server provides support to resolve additional
   information for a completion item.
-
   -}
   _resolveProvider :: (Maybe Bool)
   , {-|
@@ -57,7 +53,6 @@ data CompletionOptions = CompletionOptions
   capabilities.
 
   @since 3.17.0
-
   -}
   _completionItem :: (Maybe (Row.Rec ("labelDetailsSupport" Row..== (Maybe Bool) Row..+ Row.Empty)))
   }

@@ -14,12 +14,10 @@ import qualified Language.LSP.Protocol.Types.Common
 {-|
 Value-object that contains additional information when
 requesting references.
-
 -}
 data ReferenceContext = ReferenceContext 
   { {-|
   Include the declaration of the current symbol.
-
   -}
   _includeDeclaration :: Bool
   }

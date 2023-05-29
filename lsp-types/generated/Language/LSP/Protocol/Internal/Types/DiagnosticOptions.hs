@@ -16,7 +16,6 @@ import qualified Language.LSP.Protocol.Types.Common
 Diagnostic options.
 
 @since 3.17.0
-
 -}
 data DiagnosticOptions = DiagnosticOptions 
   { {-|
@@ -26,7 +25,6 @@ data DiagnosticOptions = DiagnosticOptions
   , {-|
   An optional identifier under which the diagnostics are
   managed by the client.
-
   -}
   _identifier :: (Maybe Data.Text.Text)
   , {-|
@@ -34,12 +32,10 @@ data DiagnosticOptions = DiagnosticOptions
   editing code in one file can result in a different diagnostic
   set in another file. Inter file dependencies are common for
   most programming languages and typically uncommon for linters.
-
   -}
   _interFileDependencies :: Bool
   , {-|
   The server provides support for workspace diagnostics as well.
-
   -}
   _workspaceDiagnostics :: Bool
   }

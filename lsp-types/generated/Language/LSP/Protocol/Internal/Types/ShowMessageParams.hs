@@ -15,17 +15,14 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 The parameters of a notification message.
-
 -}
 data ShowMessageParams = ShowMessageParams 
   { {-|
   The message type. See `MessageType`
-
   -}
   _type_ :: Language.LSP.Protocol.Internal.Types.MessageType.MessageType
   , {-|
   The actual message.
-
   -}
   _message :: Data.Text.Text
   }

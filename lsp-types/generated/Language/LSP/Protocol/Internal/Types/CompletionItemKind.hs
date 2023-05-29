@@ -16,7 +16,6 @@ import qualified Language.LSP.Protocol.Types.LspEnum
 
 {-|
 The kind of a completion entry.
-
 -}
 data CompletionItemKind = 
     {-|

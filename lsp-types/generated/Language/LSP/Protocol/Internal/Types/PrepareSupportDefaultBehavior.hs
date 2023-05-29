@@ -21,7 +21,6 @@ data PrepareSupportDefaultBehavior =
     {-|
   The client's default behavior is to select the identifier
   according the to language's syntax rule.
-
   -}
   PrepareSupportDefaultBehavior_Identifier
   deriving stock (Show, Eq, Ord, Generic)

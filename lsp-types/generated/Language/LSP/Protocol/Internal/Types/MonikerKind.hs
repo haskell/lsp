@@ -18,23 +18,19 @@ import qualified Language.LSP.Protocol.Types.LspEnum
 The moniker kind.
 
 @since 3.16.0
-
 -}
 data MonikerKind = 
     {-|
   The moniker represent a symbol that is imported into a project
-
   -}
   MonikerKind_Import
   | {-|
   The moniker represents a symbol that is exported from a project
-
   -}
   MonikerKind_Export
   | {-|
   The moniker represents a symbol that is local to a project (e.g. a local
   variable of a function, a class not visible outside the project, ...)
-
   -}
   MonikerKind_Local
   deriving stock (Show, Eq, Ord, Generic)

@@ -17,17 +17,14 @@ import qualified Language.LSP.Protocol.Types.Common
 A document highlight is a range inside a text document which deserves
 special attention. Usually a document highlight is visualized by changing
 the background color of its range.
-
 -}
 data DocumentHighlight = DocumentHighlight 
   { {-|
   The range this highlight applies to.
-
   -}
   _range :: Language.LSP.Protocol.Internal.Types.Range.Range
   , {-|
   The highlight kind, default is `DocumentHighlightKind.Text`.
-
   -}
   _kind :: (Maybe Language.LSP.Protocol.Internal.Types.DocumentHighlightKind.DocumentHighlightKind)
   }

@@ -22,49 +22,40 @@ Represents programming constructs like functions or constructors in the context
 of call hierarchy.
 
 @since 3.16.0
-
 -}
 data CallHierarchyItem = CallHierarchyItem 
   { {-|
   The name of this item.
-
   -}
   _name :: Data.Text.Text
   , {-|
   The kind of this item.
-
   -}
   _kind :: Language.LSP.Protocol.Internal.Types.SymbolKind.SymbolKind
   , {-|
   Tags for this item.
-
   -}
   _tags :: (Maybe [Language.LSP.Protocol.Internal.Types.SymbolTag.SymbolTag])
   , {-|
   More detail for this item, e.g. the signature of a function.
-
   -}
   _detail :: (Maybe Data.Text.Text)
   , {-|
   The resource identifier of this item.
-
   -}
   _uri :: Language.LSP.Protocol.Types.Uri.Uri
   , {-|
   The range enclosing this symbol not including leading/trailing whitespace but everything else, e.g. comments and code.
-
   -}
   _range :: Language.LSP.Protocol.Internal.Types.Range.Range
   , {-|
   The range that should be selected and revealed when this symbol is being picked, e.g. the name of a function.
   Must be contained by the `CallHierarchyItem.range`.
-
   -}
   _selectionRange :: Language.LSP.Protocol.Internal.Types.Range.Range
   , {-|
   A data entry field that is preserved between a call hierarchy prepare and
   incoming calls or outgoing calls requests.
-
   -}
   _data_ :: (Maybe Data.Aeson.Value)
   }

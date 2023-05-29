@@ -15,13 +15,11 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 Registration options for a `CodeActionRequest`.
-
 -}
 data CodeActionRegistrationOptions = CodeActionRegistrationOptions 
   { {-|
   A document selector to identify the scope of the registration. If set to null
   the document selector provided on the client side will be used.
-
   -}
   _documentSelector :: (Language.LSP.Protocol.Internal.Types.DocumentSelector.DocumentSelector Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Types.Common.Null)
   , {-|
@@ -33,7 +31,6 @@ data CodeActionRegistrationOptions = CodeActionRegistrationOptions
 
   The list of kinds may be generic, such as `CodeActionKind.Refactor`, or the server
   may list out every specific kind they provide.
-
   -}
   _codeActionKinds :: (Maybe [Language.LSP.Protocol.Internal.Types.CodeActionKind.CodeActionKind])
   , {-|
@@ -41,7 +38,6 @@ data CodeActionRegistrationOptions = CodeActionRegistrationOptions
   information for a code action.
 
   @since 3.16.0
-
   -}
   _resolveProvider :: (Maybe Bool)
   }

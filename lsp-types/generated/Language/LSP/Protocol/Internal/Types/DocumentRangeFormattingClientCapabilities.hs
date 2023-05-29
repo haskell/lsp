@@ -13,12 +13,10 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 Client capabilities of a `DocumentRangeFormattingRequest`.
-
 -}
 data DocumentRangeFormattingClientCapabilities = DocumentRangeFormattingClientCapabilities 
   { {-|
   Whether range formatting supports dynamic registration.
-
   -}
   _dynamicRegistration :: (Maybe Bool)
   }

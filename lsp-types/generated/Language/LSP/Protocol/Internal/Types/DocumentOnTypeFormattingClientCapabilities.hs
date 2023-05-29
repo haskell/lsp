@@ -13,12 +13,10 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 Client capabilities of a `DocumentOnTypeFormattingRequest`.
-
 -}
 data DocumentOnTypeFormattingClientCapabilities = DocumentOnTypeFormattingClientCapabilities 
   { {-|
   Whether on type formatting supports dynamic registration.
-
   -}
   _dynamicRegistration :: (Maybe Bool)
   }

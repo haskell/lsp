@@ -20,18 +20,15 @@ relatively to a base URI. The common value for a `baseUri` is a workspace
 folder root, but it can be another absolute URI as well.
 
 @since 3.17.0
-
 -}
 data RelativePattern = RelativePattern 
   { {-|
   A workspace folder or a base URI to which this pattern will be matched
   against relatively.
-
   -}
   _baseUri :: (Language.LSP.Protocol.Internal.Types.WorkspaceFolder.WorkspaceFolder Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Types.Uri.Uri)
   , {-|
   The actual glob pattern;
-
   -}
   _pattern :: Language.LSP.Protocol.Internal.Types.Pattern.Pattern
   }

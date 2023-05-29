@@ -14,7 +14,6 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 Provider options for a `CodeActionRequest`.
-
 -}
 data CodeActionOptions = CodeActionOptions 
   { {-|
@@ -26,7 +25,6 @@ data CodeActionOptions = CodeActionOptions
 
   The list of kinds may be generic, such as `CodeActionKind.Refactor`, or the server
   may list out every specific kind they provide.
-
   -}
   _codeActionKinds :: (Maybe [Language.LSP.Protocol.Internal.Types.CodeActionKind.CodeActionKind])
   , {-|
@@ -34,7 +32,6 @@ data CodeActionOptions = CodeActionOptions
   information for a code action.
 
   @since 3.16.0
-
   -}
   _resolveProvider :: (Maybe Bool)
   }

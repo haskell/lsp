@@ -15,7 +15,6 @@ import qualified Language.LSP.Protocol.Types.Common
 Call hierarchy options used during static registration.
 
 @since 3.16.0
-
 -}
 data CallHierarchyOptions = CallHierarchyOptions 
   { {-|

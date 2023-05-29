@@ -20,7 +20,6 @@ import qualified Language.LSP.Protocol.Types.Common
 General client capabilities.
 
 @since 3.16.0
-
 -}
 data GeneralClientCapabilities = GeneralClientCapabilities 
   { {-|
@@ -30,21 +29,18 @@ data GeneralClientCapabilities = GeneralClientCapabilities
   anymore since the information is outdated).
 
   @since 3.17.0
-
   -}
   _staleRequestSupport :: (Maybe (Row.Rec ("cancel" Row..== Bool Row..+ ("retryOnContentModified" Row..== [Data.Text.Text] Row..+ Row.Empty))))
   , {-|
   Client capabilities specific to regular expressions.
 
   @since 3.16.0
-
   -}
   _regularExpressions :: (Maybe Language.LSP.Protocol.Internal.Types.RegularExpressionsClientCapabilities.RegularExpressionsClientCapabilities)
   , {-|
   Client capabilities specific to the client's markdown parser.
 
   @since 3.16.0
-
   -}
   _markdown :: (Maybe Language.LSP.Protocol.Internal.Types.MarkdownClientCapabilities.MarkdownClientCapabilities)
   , {-|
@@ -66,7 +62,6 @@ data GeneralClientCapabilities = GeneralClientCapabilities
   side.
 
   @since 3.17.0
-
   -}
   _positionEncodings :: (Maybe [Language.LSP.Protocol.Internal.Types.PositionEncodingKind.PositionEncodingKind])
   }

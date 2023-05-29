@@ -19,23 +19,19 @@ If only a range is specified, the variable name will be extracted from the under
 An optional variable name can be used to override the extracted name.
 
 @since 3.17.0
-
 -}
 data InlineValueVariableLookup = InlineValueVariableLookup 
   { {-|
   The document range for which the inline value applies.
   The range is used to extract the variable name from the underlying document.
-
   -}
   _range :: Language.LSP.Protocol.Internal.Types.Range.Range
   , {-|
   If specified the name of the variable to look up.
-
   -}
   _variableName :: (Maybe Data.Text.Text)
   , {-|
   How to perform the lookup.
-
   -}
   _caseSensitiveLookup :: Bool
   }

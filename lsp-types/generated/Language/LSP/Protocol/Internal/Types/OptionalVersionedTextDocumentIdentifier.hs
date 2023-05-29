@@ -14,12 +14,10 @@ import qualified Language.LSP.Protocol.Types.Uri
 
 {-|
 A text document identifier to optionally denote a specific version of a text document.
-
 -}
 data OptionalVersionedTextDocumentIdentifier = OptionalVersionedTextDocumentIdentifier 
   { {-|
   The text document's uri.
-
   -}
   _uri :: Language.LSP.Protocol.Types.Uri.Uri
   , {-|
@@ -28,7 +26,6 @@ data OptionalVersionedTextDocumentIdentifier = OptionalVersionedTextDocumentIden
   (the server has not received an open notification before) the server can send
   `null` to indicate that the version is unknown and the content on disk is the
   truth (as specified with document content ownership).
-
   -}
   _version :: (Language.LSP.Protocol.Types.Common.Int32 Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Types.Common.Null)
   }

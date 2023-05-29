@@ -15,24 +15,20 @@ import qualified Language.LSP.Protocol.Types.Uri
 
 {-|
 The publish diagnostic notification's parameters.
-
 -}
 data PublishDiagnosticsParams = PublishDiagnosticsParams 
   { {-|
   The URI for which diagnostic information is reported.
-
   -}
   _uri :: Language.LSP.Protocol.Types.Uri.Uri
   , {-|
   Optional the version number of the document the diagnostics are published for.
 
   @since 3.15.0
-
   -}
   _version :: (Maybe Language.LSP.Protocol.Types.Common.Int32)
   , {-|
   An array of diagnostic information items.
-
   -}
   _diagnostics :: [Language.LSP.Protocol.Internal.Types.Diagnostic.Diagnostic]
   }

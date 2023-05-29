@@ -44,8 +44,10 @@ data CodeGenEnv = CodeGenEnv {
   , outputDir :: FilePath
   }
 
+-- | Monad for running overall code generation in, has access to the environment and settings.
 type CodeGenM = ReaderT CodeGenEnv IO
-type ModuleGenM = WriterT (Set.Set T.Text) (ReaderT CodeGenEnv IO)
+-- | Monad for running module generation in, the same as 'CodeGenM' with the ability to record imports.
+type ModuleGenM = WriterT (Set.Set T.Text) CodeGenM
 
 typesModSegment :: T.Text
 typesModSegment = "Types"
@@ -63,22 +65,15 @@ toAnyclassDerive = ["NFData"]
 indentSize :: Int
 indentSize = 2
 
-deprecatedPragma :: T.Text -> T.Text -> Doc ann
-deprecatedPragma name reason = "{-# DEPRECATED" <+> pretty name <+> dquotes (pretty reason) <+> "#-}"
-
 optDeprecated :: T.Text -> Maybe T.Text -> [Doc ann]
 optDeprecated name mreason = case mreason of
-  Just reason -> [deprecatedPragma name reason]
+  Just reason -> ["{-# DEPRECATED" <+> pretty name <+> dquotes (pretty reason) <+> "#-}"]
   Nothing -> []
 
+-- TODO: since and proposed are a mess, figure out whether there's a useful way to include them
 mkDocumentation :: Maybe T.Text -> Maybe T.Text -> Maybe Bool -> ModuleGenM (Maybe T.Text)
-mkDocumentation doc _since proposed =
-  -- TODO: since and proposed are a mess, figure out whether there's a useful way to include them
-  let docLines = catMaybes [doc]
-  in
-    if null docLines
-    then pure Nothing
-    else Just <$> (fixupDocumentation $ T.unlines docLines)
+mkDocumentation (Just doc) _since proposed = Just <$> fixupDocumentation doc
+mkDocumentation Nothing _since proposed = pure Nothing
 
 fixupDocumentation :: T.Text -> ModuleGenM T.Text
 fixupDocumentation t = do
@@ -115,7 +110,7 @@ genModule name pragmas mexports action = do
       printed = T.pack $ show mod
 
       modSegments = T.unpack <$> T.splitOn "." fullModName
-      modulePath = (foldl (</>) dir modSegments) <.> "hs"
+      modulePath = foldl (</>) dir modSegments <.> "hs"
 
   lift $ createDirectoryIfMissing True $ takeDirectory modulePath
   lift $ T.writeFile modulePath printed
@@ -134,9 +129,6 @@ ensureLSPImport mod qual = do
   mp <- asks modulePrefix
   ensureImport (mp <> "." <> mod) qual
 
-ensureLSPImport' :: T.Text -> ModuleGenM T.Text
-ensureLSPImport' mod = ensureLSPImport mod Qual
-
 entityName :: T.Text -> T.Text -> ModuleGenM T.Text
 entityName mod n = do
   qual <- ensureImport mod Qual
@@ -144,7 +136,7 @@ entityName mod n = do
 
 lspEntityName :: T.Text -> T.Text -> ModuleGenM T.Text
 lspEntityName mod n = do
-  qual <- ensureLSPImport' mod
+  qual <- ensureLSPImport mod Qual
   pure $ qual <> "." <> n
 
 genFromMetaModel :: T.Text -> FilePath -> MetaModel -> IO ()
@@ -163,8 +155,7 @@ genFromMetaModel prefix dir mm = do
     genLensModule structNames
     pure ()
   pure ()
-
-  -- | Names we can't put in Haskell code.
+-- | Names we can't put in Haskell code.
 reservedNames :: Set.Set T.Text
 reservedNames = Set.fromList [ "data", "type" ]
 
@@ -200,13 +191,13 @@ makeFieldName n = "_" <> sanitizeName n
 
 buildTables :: MetaModel -> (SymbolTable, StructTable)
 buildTables (MetaModel{structures, enumerations, typeAliases}) =
-  let bothEntries = (flip fmap) structures $ \s@Structure{name} ->
+  let bothEntries = flip fmap structures $ \s@Structure{name} ->
         ((name, makeToplevelName name), (name, s))
       (entries, sentries) = unzip bothEntries
 
-      entries' = (flip fmap) enumerations $ \Enumeration{name} -> (name, makeToplevelName name)
+      entries' = flip fmap enumerations $ \Enumeration{name} -> (name, makeToplevelName name)
 
-      entries'' = (flip fmap) typeAliases $ \TypeAlias{name} -> (name, makeToplevelName name)
+      entries'' = flip fmap typeAliases $ \TypeAlias{name} -> (name, makeToplevelName name)
       symbolTable = Map.fromList $ entries <> entries' <> entries''
 
       structTable = Map.fromList sentries
@@ -287,8 +278,6 @@ printStruct :: T.Text -> Structure -> ModuleGenM (Doc ann)
 printStruct tn s@Structure{name, documentation, since, proposed, deprecated} = do
   let structName = name
 
-  let ctor = makeToplevelName name
-
   props <- getStructProperties s
   args <- for props $ \Property{name, type_, optional, documentation, since, proposed, deprecated} -> do
       pty <- convertType type_
@@ -309,21 +298,21 @@ printStruct tn s@Structure{name, documentation, since, proposed, deprecated} = d
             anyclassDeriv = "deriving anyclass" <+> tupled (fmap pretty toAnyclassDerive)
         in indent indentSize $ hardvcat [stockDeriv, anyclassDeriv]
   dataDoc <- multilineHaddock . pretty <$> mkDocumentation documentation since proposed
-  let dataDecl = "data" <+> pretty tn <+> "=" <+> pretty ctor <+> nest indentSize (encloseSep (line <> "{ ") (line <> "}") ", " args)
+  let dataDecl = "data" <+> pretty tn <+> "=" <+> pretty tn <+> nest indentSize (encloseSep (line <> "{ ") (line <> "}") ", " args)
       datad = hardvcat (deprecations ++ [dataDoc, dataDecl, derivDoc])
 
   ensureImport "Data.Aeson" (QualAs "Aeson")
   ensureImport "Data.Row.Aeson" (QualAs "Aeson")
   matcherName <- entityName "Language.LSP.Protocol.Types.Common" ".=?"
   let toJsonD =
-        let (unzip -> (args, pairEs)) = (flip fmap) (zip props [0..]) $ \(Property{name, optional}, i) ->
+        let (unzip -> (args, pairEs)) = flip fmap (zip props [0..]) $ \(Property{name, optional}, i) ->
               let n :: T.Text = "arg" <> (T.pack $ show i)
                   pairE = case optional of
                     Just True -> dquotes (pretty name) <+> pretty matcherName <+> pretty n
                     _ -> brackets (dquotes (pretty name) <+> "Aeson..=" <+> pretty n)
               in (pretty n, pairE)
             body = "Aeson.object $ concat $ " <+> encloseSep "[" "]" "," pairEs
-            toJsonDoc = "toJSON" <+> parens (pretty ctor <+> hsep args) <+> "=" <+> nest indentSize body
+            toJsonDoc = "toJSON" <+> parens (pretty tn <+> hsep args) <+> "=" <+> nest indentSize body
             instanceDoc = "instance Aeson.ToJSON" <+> pretty tn <+> "where" <> nest indentSize (hardline <> toJsonDoc)
         in instanceDoc
 
@@ -333,7 +322,7 @@ printStruct tn s@Structure{name, documentation, since, proposed, deprecated} = d
           case optional of
             Just True -> pretty vn <+> "Aeson..:!" <+> dquotes (pretty name)
             _         -> pretty vn <+> "Aeson..:" <+> dquotes (pretty name)
-    let lamBody = mkIterApplicativeApp (pretty ctor) exprs
+    let lamBody = mkIterApplicativeApp (pretty tn) exprs
     let body = "Aeson.withObject" <+> dquotes (pretty structName) <+> "$" <+> "\\" <> pretty vn <+> "->" <+> nest indentSize lamBody
     let fromJsonDoc = "parseJSON" <+> "=" <+> nest indentSize body
     let instanceDoc = "instance Aeson.FromJSON" <+> pretty tn <+> "where" <> nest indentSize (hardline <> fromJsonDoc)
@@ -408,7 +397,7 @@ printEnum tn Enumeration{name, type_, values, supportsCustomValues, documentatio
 
   -- https://github.com/microsoft/vscode-languageserver-node/issues/1035
   let badEnumValues = ["jsonrpcReservedErrorRangeStart", "jsonrpcReservedErrorRangeEnd", "serverErrorStart", "serverErrorEnd"]
-      values' = filter (\EnumerationEntry{name} -> not $ name `elem` badEnumValues) values
+      values' = filter (\EnumerationEntry{name} -> name `notElem` badEnumValues) values
   -- The associations between constructor names and their literals
   assocs <- for values' $ \EnumerationEntry{name, value, documentation, since, proposed} -> do
         let cn = makeConstrName (Just enumName) name
@@ -455,12 +444,12 @@ printEnum tn Enumeration{name, type_, values, supportsCustomValues, documentatio
 
   setFromListN <- pretty <$> entityName "Data.Set" "fromList"
   let knownValuesD =
-        let valuesList = nest indentSize $ encloseSep "[" "]" "," $ (flip fmap) assocs $ \(n, _, _) -> pretty n
+        let valuesList = nest indentSize $ encloseSep "[" "]" "," $ flip fmap assocs $ \(n, _, _) -> pretty n
         in knownValuesN <+> "=" <+> setFromListN <+> valuesList
 
   let toBaseTypeD =
         -- xToValue X1 = <X1 value>
-        let normalClauses = (flip fmap) assocs $ \(n, v, _) -> toBaseTypeN <+> pretty n <+> "=" <+> v
+        let normalClauses = flip fmap assocs $ \(n, v, _) -> toBaseTypeN <+> pretty n <+> "=" <+> v
         -- xToValue (CustomX c) = c
             customClause = case customCon of
               Just (cn, _) ->
@@ -475,7 +464,7 @@ printEnum tn Enumeration{name, type_, values, supportsCustomValues, documentatio
         -- valueToX <X1 value> = X
         -- or
         -- valueToX <X1 value> = Just X
-            normalClauses = (flip fmap) assocs $ \(n, v, _) -> fn <+> v <+> "=" <+> if custom then pretty n else "pure" <+> pretty n
+            normalClauses = flip fmap assocs $ \(n, v, _) -> fn <+> v <+> "=" <+> if custom then pretty n else "pure" <+> pretty n
         -- valueToX c = CustomX c
         -- or
         -- valueToX _ = Nothing
@@ -807,7 +796,7 @@ genLensModule names = do
     decls <- for names $ \thn -> do
       nm <- pretty <$> lspEntityName (typesModSegment <> "." <> thn) thn
       let lensesD = mkLensesN <+> "''" <> nm
-      pure $ lensesD
+      pure lensesD
     pure $ hardvcat decls
 
 ---------------
@@ -833,16 +822,10 @@ hardvcat :: [Doc ann] -> Doc ann
 hardvcat = concatWith (\x y -> x <> hardline <> y)
 
 mkIterApplicativeApp :: Doc a -> [Doc a] -> Doc a
-mkIterApplicativeApp hd = go
-    where
-      go [] = "pure" <+> hd
-      go (a:rest) =
-        let acc = hd <+> "<$>" <+> a
-        in go' acc rest
-      go' acc [] = acc
-      go' acc (a:rest) =
-        let acc' = acc <+> "<*>" <+> a
-        in go' acc' rest
+mkIterApplicativeApp hd [] = "pure" <+> hd
+mkIterApplicativeApp hd (a:rest) =
+  let acc = hd <+> "<$>" <+> a
+  in foldl' (\acc a -> acc <+> "<*>" <+> a) acc rest
 
 {- Note [Code generation approach]
 The approach we take here is quite primitive: we just print out Haskell modules

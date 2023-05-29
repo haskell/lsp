@@ -18,7 +18,6 @@ import qualified Language.LSP.Protocol.Types.Common
 data MessageActionItem = MessageActionItem 
   { {-|
   A short title like 'Retry', 'Open Log' etc.
-
   -}
   _title :: Data.Text.Text
   }

@@ -15,18 +15,15 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 The parameters sent in a save text document notification
-
 -}
 data DidSaveTextDocumentParams = DidSaveTextDocumentParams 
   { {-|
   The document that was saved.
-
   -}
   _textDocument :: Language.LSP.Protocol.Internal.Types.TextDocumentIdentifier.TextDocumentIdentifier
   , {-|
   Optional the content when saved. Depends on the includeText value
   when the save notification was requested.
-
   -}
   _text :: (Maybe Data.Text.Text)
   }

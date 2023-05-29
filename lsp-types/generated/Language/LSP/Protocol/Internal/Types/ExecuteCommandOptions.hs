@@ -14,7 +14,6 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 The server capabilities of a `ExecuteCommandRequest`.
-
 -}
 data ExecuteCommandOptions = ExecuteCommandOptions 
   { {-|
@@ -23,7 +22,6 @@ data ExecuteCommandOptions = ExecuteCommandOptions
   _workDoneProgress :: (Maybe Bool)
   , {-|
   The commands to be executed on the server
-
   -}
   _commands :: [Data.Text.Text]
   }

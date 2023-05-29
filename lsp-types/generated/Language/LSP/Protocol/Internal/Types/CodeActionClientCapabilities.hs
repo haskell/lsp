@@ -16,12 +16,10 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 The Client Capabilities of a `CodeActionRequest`.
-
 -}
 data CodeActionClientCapabilities = CodeActionClientCapabilities 
   { {-|
   Whether code action supports dynamic registration.
-
   -}
   _dynamicRegistration :: (Maybe Bool)
   , {-|
@@ -30,21 +28,18 @@ data CodeActionClientCapabilities = CodeActionClientCapabilities
   set the request can only return `Command` literals.
 
   @since 3.8.0
-
   -}
   _codeActionLiteralSupport :: (Maybe (Row.Rec ("codeActionKind" Row..== (Row.Rec ("valueSet" Row..== [Language.LSP.Protocol.Internal.Types.CodeActionKind.CodeActionKind] Row..+ Row.Empty)) Row..+ Row.Empty)))
   , {-|
   Whether code action supports the `isPreferred` property.
 
   @since 3.15.0
-
   -}
   _isPreferredSupport :: (Maybe Bool)
   , {-|
   Whether code action supports the `disabled` property.
 
   @since 3.16.0
-
   -}
   _disabledSupport :: (Maybe Bool)
   , {-|
@@ -53,7 +48,6 @@ data CodeActionClientCapabilities = CodeActionClientCapabilities
   `codeAction/resolve` request.
 
   @since 3.16.0
-
   -}
   _dataSupport :: (Maybe Bool)
   , {-|
@@ -61,7 +55,6 @@ data CodeActionClientCapabilities = CodeActionClientCapabilities
   properties via a separate `codeAction/resolve` request.
 
   @since 3.16.0
-
   -}
   _resolveSupport :: (Maybe (Row.Rec ("properties" Row..== [Data.Text.Text] Row..+ Row.Empty)))
   , {-|
@@ -72,7 +65,6 @@ data CodeActionClientCapabilities = CodeActionClientCapabilities
   for confirmation.
 
   @since 3.16.0
-
   -}
   _honorsChangeAnnotations :: (Maybe Bool)
   }

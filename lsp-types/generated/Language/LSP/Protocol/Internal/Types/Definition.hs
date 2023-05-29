@@ -19,7 +19,6 @@ defined.
 
 Servers should prefer returning `DefinitionLink` over `Definition` if supported
 by the client.
-
 -}
 newtype Definition = Definition (Language.LSP.Protocol.Internal.Types.Location.Location Language.LSP.Protocol.Types.Common.|? [Language.LSP.Protocol.Internal.Types.Location.Location])
   deriving newtype (Aeson.ToJSON, Aeson.FromJSON)

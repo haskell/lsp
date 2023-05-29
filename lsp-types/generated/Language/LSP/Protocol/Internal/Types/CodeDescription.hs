@@ -16,12 +16,10 @@ import qualified Language.LSP.Protocol.Types.Uri
 Structure to capture a description for an error code.
 
 @since 3.16.0
-
 -}
 data CodeDescription = CodeDescription 
   { {-|
   An URI to open with more information about the diagnostic error.
-
   -}
   _href :: Language.LSP.Protocol.Types.Uri.Uri
   }

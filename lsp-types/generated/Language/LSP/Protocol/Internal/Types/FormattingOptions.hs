@@ -13,38 +13,32 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 Value-object describing what options formatting should use.
-
 -}
 data FormattingOptions = FormattingOptions 
   { {-|
   Size of a tab in spaces.
-
   -}
   _tabSize :: Language.LSP.Protocol.Types.Common.UInt
   , {-|
   Prefer spaces over tabs.
-
   -}
   _insertSpaces :: Bool
   , {-|
   Trim trailing whitespace on a line.
 
   @since 3.15.0
-
   -}
   _trimTrailingWhitespace :: (Maybe Bool)
   , {-|
   Insert a newline character at the end of the file if one does not exist.
 
   @since 3.15.0
-
   -}
   _insertFinalNewline :: (Maybe Bool)
   , {-|
   Trim all newlines after the final newline at the end of the file.
 
   @since 3.15.0
-
   -}
   _trimFinalNewlines :: (Maybe Bool)
   }

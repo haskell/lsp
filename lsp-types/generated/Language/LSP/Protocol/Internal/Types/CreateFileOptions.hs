@@ -13,17 +13,14 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 Options to create a file.
-
 -}
 data CreateFileOptions = CreateFileOptions 
   { {-|
   Overwrite existing file. Overwrite wins over `ignoreIfExists`
-
   -}
   _overwrite :: (Maybe Bool)
   , {-|
   Ignore if exists.
-
   -}
   _ignoreIfExists :: (Maybe Bool)
   }

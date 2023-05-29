@@ -15,7 +15,6 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 @since 3.16.0
-
 -}
 data SemanticTokensDelta = SemanticTokensDelta 
   { {-|
@@ -24,7 +23,6 @@ data SemanticTokensDelta = SemanticTokensDelta
   _resultId :: (Maybe Data.Text.Text)
   , {-|
   The semantic token edits to transform a previous result into a new result.
-
   -}
   _edits :: [Language.LSP.Protocol.Internal.Types.SemanticTokensEdit.SemanticTokensEdit]
   }

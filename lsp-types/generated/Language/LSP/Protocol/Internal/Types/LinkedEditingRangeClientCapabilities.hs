@@ -15,14 +15,12 @@ import qualified Language.LSP.Protocol.Types.Common
 Client capabilities for the linked editing range request.
 
 @since 3.16.0
-
 -}
 data LinkedEditingRangeClientCapabilities = LinkedEditingRangeClientCapabilities 
   { {-|
   Whether implementation supports dynamic registration. If this is set to `true`
   the client supports the new `(TextDocumentRegistrationOptions & StaticRegistrationOptions)`
   return value for the corresponding server capability as well.
-
   -}
   _dynamicRegistration :: (Maybe Bool)
   }

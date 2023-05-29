@@ -19,28 +19,23 @@ import qualified Language.LSP.Protocol.Types.Common
 A parameter literal used in inline value requests.
 
 @since 3.17.0
-
 -}
 data InlineValueParams = InlineValueParams 
   { {-|
   An optional token that a server can use to report work done progress.
-
   -}
   _workDoneToken :: (Maybe Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken)
   , {-|
   The text document.
-
   -}
   _textDocument :: Language.LSP.Protocol.Internal.Types.TextDocumentIdentifier.TextDocumentIdentifier
   , {-|
   The document range for which inline values should be computed.
-
   -}
   _range :: Language.LSP.Protocol.Internal.Types.Range.Range
   , {-|
   Additional information about the context in which inline values were
   requested.
-
   -}
   _context :: Language.LSP.Protocol.Internal.Types.InlineValueContext.InlineValueContext
   }

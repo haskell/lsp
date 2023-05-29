@@ -14,7 +14,6 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 The parameters of a configuration request.
-
 -}
 data ConfigurationParams = ConfigurationParams 
   { {-|

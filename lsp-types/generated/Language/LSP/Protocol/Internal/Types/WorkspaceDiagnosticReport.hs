@@ -16,7 +16,6 @@ import qualified Language.LSP.Protocol.Types.Common
 A workspace diagnostic report.
 
 @since 3.17.0
-
 -}
 data WorkspaceDiagnosticReport = WorkspaceDiagnosticReport 
   { {-|

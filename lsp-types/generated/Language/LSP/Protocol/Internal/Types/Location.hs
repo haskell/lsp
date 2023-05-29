@@ -16,7 +16,6 @@ import qualified Language.LSP.Protocol.Types.Uri
 {-|
 Represents a location inside a resource, such as a line
 inside a text file.
-
 -}
 data Location = Location 
   { {-|

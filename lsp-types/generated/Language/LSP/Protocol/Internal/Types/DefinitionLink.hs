@@ -16,7 +16,6 @@ Information about where a symbol is defined.
 
 Provides additional metadata over normal `Location` definitions, including the range of
 the defining symbol
-
 -}
 newtype DefinitionLink = DefinitionLink Language.LSP.Protocol.Internal.Types.LocationLink.LocationLink
   deriving newtype (Aeson.ToJSON, Aeson.FromJSON)

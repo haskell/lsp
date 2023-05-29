@@ -18,19 +18,16 @@ import qualified Language.LSP.Protocol.Types.LspEnum
 The document diagnostic report kinds.
 
 @since 3.17.0
-
 -}
 data DocumentDiagnosticReportKind = 
     {-|
   A diagnostic report with a full
   set of problems.
-
   -}
   DocumentDiagnosticReportKind_Full
   | {-|
   A report indicating that the last
   returned report is still accurate.
-
   -}
   DocumentDiagnosticReportKind_Unchanged
   deriving stock (Show, Eq, Ord, Generic)

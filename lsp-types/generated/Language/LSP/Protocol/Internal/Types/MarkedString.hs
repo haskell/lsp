@@ -27,7 +27,6 @@ ${value}
 
 Note that markdown strings will be sanitized - that means html will be escaped.
 @deprecated use MarkupContent instead.
-
 -}
 newtype MarkedString = MarkedString (Data.Text.Text Language.LSP.Protocol.Types.Common.|? (Row.Rec ("language" Row..== Data.Text.Text Row..+ ("value" Row..== Data.Text.Text Row..+ Row.Empty))))
   deriving newtype (Aeson.ToJSON, Aeson.FromJSON)

@@ -14,7 +14,6 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 Provider options for a `DocumentSymbolRequest`.
-
 -}
 data DocumentSymbolOptions = DocumentSymbolOptions 
   { {-|
@@ -26,7 +25,6 @@ data DocumentSymbolOptions = DocumentSymbolOptions
   are shown for the same document.
 
   @since 3.16.0
-
   -}
   _label :: (Maybe Data.Text.Text)
   }

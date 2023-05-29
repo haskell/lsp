@@ -19,18 +19,15 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 Completion client capabilities
-
 -}
 data CompletionClientCapabilities = CompletionClientCapabilities 
   { {-|
   Whether completion supports dynamic registration.
-
   -}
   _dynamicRegistration :: (Maybe Bool)
   , {-|
   The client supports the following `CompletionItem` specific
   capabilities.
-
   -}
   _completionItem :: (Maybe (Row.Rec ("snippetSupport" Row..== (Maybe Bool) Row..+ ("commitCharactersSupport" Row..== (Maybe Bool) Row..+ ("documentationFormat" Row..== (Maybe [Language.LSP.Protocol.Internal.Types.MarkupKind.MarkupKind]) Row..+ ("deprecatedSupport" Row..== (Maybe Bool) Row..+ ("preselectSupport" Row..== (Maybe Bool) Row..+ ("tagSupport" Row..== (Maybe (Row.Rec ("valueSet" Row..== [Language.LSP.Protocol.Internal.Types.CompletionItemTag.CompletionItemTag] Row..+ Row.Empty))) Row..+ ("insertReplaceSupport" Row..== (Maybe Bool) Row..+ ("resolveSupport" Row..== (Maybe (Row.Rec ("properties" Row..== [Data.Text.Text] Row..+ Row.Empty))) Row..+ ("insertTextModeSupport" Row..== (Maybe (Row.Rec ("valueSet" Row..== [Language.LSP.Protocol.Internal.Types.InsertTextMode.InsertTextMode] Row..+ Row.Empty))) Row..+ ("labelDetailsSupport" Row..== (Maybe Bool) Row..+ Row.Empty))))))))))))
   , {-|
@@ -43,13 +40,11 @@ data CompletionClientCapabilities = CompletionClientCapabilities
   text in either `insertText` or `textEdit`.
 
   @since 3.17.0
-
   -}
   _insertTextMode :: (Maybe Language.LSP.Protocol.Internal.Types.InsertTextMode.InsertTextMode)
   , {-|
   The client supports to send additional context information for a
   `textDocument/completion` request.
-
   -}
   _contextSupport :: (Maybe Bool)
   , {-|
@@ -57,7 +52,6 @@ data CompletionClientCapabilities = CompletionClientCapabilities
   capabilities.
 
   @since 3.17.0
-
   -}
   _completionList :: (Maybe (Row.Rec ("itemDefaults" Row..== (Maybe [Data.Text.Text]) Row..+ Row.Empty)))
   }

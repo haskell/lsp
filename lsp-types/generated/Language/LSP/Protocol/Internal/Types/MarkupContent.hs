@@ -36,17 +36,14 @@ let markdown: MarkdownContent = {
 
 *Please Note* that clients might sanitize the return markdown. A client could decide to
 remove HTML from the markdown to avoid script execution.
-
 -}
 data MarkupContent = MarkupContent 
   { {-|
   The type of the Markup
-
   -}
   _kind :: Language.LSP.Protocol.Internal.Types.MarkupKind.MarkupKind
   , {-|
   The content itself
-
   -}
   _value :: Data.Text.Text
   }

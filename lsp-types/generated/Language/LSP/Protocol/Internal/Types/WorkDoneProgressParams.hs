@@ -18,7 +18,6 @@ import qualified Language.LSP.Protocol.Types.Common
 data WorkDoneProgressParams = WorkDoneProgressParams 
   { {-|
   An optional token that a server can use to report work done progress.
-
   -}
   _workDoneToken :: (Maybe Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken)
   }

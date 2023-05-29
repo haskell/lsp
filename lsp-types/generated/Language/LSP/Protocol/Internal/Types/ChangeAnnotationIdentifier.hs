@@ -13,7 +13,6 @@ import qualified Data.Text
 
 {-|
 An identifier to refer to a change annotation stored with a workspace edit.
-
 -}
 newtype ChangeAnnotationIdentifier = ChangeAnnotationIdentifier Data.Text.Text
   deriving newtype ( Aeson.ToJSON

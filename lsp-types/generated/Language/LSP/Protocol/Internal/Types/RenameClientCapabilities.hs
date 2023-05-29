@@ -18,7 +18,6 @@ import qualified Language.LSP.Protocol.Types.Common
 data RenameClientCapabilities = RenameClientCapabilities 
   { {-|
   Whether rename supports dynamic registration.
-
   -}
   _dynamicRegistration :: (Maybe Bool)
   , {-|
@@ -26,7 +25,6 @@ data RenameClientCapabilities = RenameClientCapabilities
   before execution.
 
   @since 3.12.0
-
   -}
   _prepareSupport :: (Maybe Bool)
   , {-|
@@ -36,7 +34,6 @@ data RenameClientCapabilities = RenameClientCapabilities
   client.
 
   @since 3.16.0
-
   -}
   _prepareSupportDefaultBehavior :: (Maybe Language.LSP.Protocol.Internal.Types.PrepareSupportDefaultBehavior.PrepareSupportDefaultBehavior)
   , {-|
@@ -47,7 +44,6 @@ data RenameClientCapabilities = RenameClientCapabilities
   for confirmation.
 
   @since 3.16.0
-
   -}
   _honorsChangeAnnotations :: (Maybe Bool)
   }

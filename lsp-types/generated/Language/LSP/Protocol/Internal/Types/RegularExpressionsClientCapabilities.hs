@@ -16,17 +16,14 @@ import qualified Language.LSP.Protocol.Types.Common
 Client capabilities specific to regular expressions.
 
 @since 3.16.0
-
 -}
 data RegularExpressionsClientCapabilities = RegularExpressionsClientCapabilities 
   { {-|
   The engine's name.
-
   -}
   _engine :: Data.Text.Text
   , {-|
   The engine's version.
-
   -}
   _version :: (Maybe Data.Text.Text)
   }

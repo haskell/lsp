@@ -14,7 +14,6 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 @since 3.16.0
-
 -}
 data SemanticTokens = SemanticTokens 
   { {-|
@@ -22,12 +21,10 @@ data SemanticTokens = SemanticTokens
   the client will include the result id in the next semantic token request.
   A server can then instead of computing all semantic tokens again simply
   send a delta.
-
   -}
   _resultId :: (Maybe Data.Text.Text)
   , {-|
   The actual tokens.
-
   -}
   _data_ :: [Language.LSP.Protocol.Types.Common.UInt]
   }

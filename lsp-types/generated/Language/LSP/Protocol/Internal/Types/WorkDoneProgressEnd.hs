@@ -24,7 +24,6 @@ data WorkDoneProgressEnd = WorkDoneProgressEnd
   , {-|
   Optional, a final message indicating to for example indicate the outcome
   of the operation.
-
   -}
   _message :: (Maybe Data.Text.Text)
   }

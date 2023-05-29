@@ -13,7 +13,6 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 Provider options for a `RenameRequest`.
-
 -}
 data RenameOptions = RenameOptions 
   { {-|
@@ -24,7 +23,6 @@ data RenameOptions = RenameOptions
   Renames should be checked and tested before being executed.
 
   @since version 3.12.0
-
   -}
   _prepareProvider :: (Maybe Bool)
   }

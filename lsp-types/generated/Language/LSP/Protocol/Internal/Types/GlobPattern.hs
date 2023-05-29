@@ -17,7 +17,6 @@ import qualified Language.LSP.Protocol.Types.Common
 The glob pattern. Either a string pattern or a relative pattern.
 
 @since 3.17.0
-
 -}
 newtype GlobPattern = GlobPattern (Language.LSP.Protocol.Internal.Types.Pattern.Pattern Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.RelativePattern.RelativePattern)
   deriving newtype (Aeson.ToJSON, Aeson.FromJSON)

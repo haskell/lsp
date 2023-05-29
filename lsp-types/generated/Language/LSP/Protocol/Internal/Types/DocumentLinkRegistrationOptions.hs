@@ -14,13 +14,11 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 Registration options for a `DocumentLinkRequest`.
-
 -}
 data DocumentLinkRegistrationOptions = DocumentLinkRegistrationOptions 
   { {-|
   A document selector to identify the scope of the registration. If set to null
   the document selector provided on the client side will be used.
-
   -}
   _documentSelector :: (Language.LSP.Protocol.Internal.Types.DocumentSelector.DocumentSelector Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Types.Common.Null)
   , {-|
@@ -29,7 +27,6 @@ data DocumentLinkRegistrationOptions = DocumentLinkRegistrationOptions
   _workDoneProgress :: (Maybe Bool)
   , {-|
   Document links have a resolve provider as well.
-
   -}
   _resolveProvider :: (Maybe Bool)
   }

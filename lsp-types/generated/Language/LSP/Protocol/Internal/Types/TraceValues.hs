@@ -20,17 +20,14 @@ import qualified Language.LSP.Protocol.Types.LspEnum
 data TraceValues = 
     {-|
   Turn tracing off.
-
   -}
   TraceValues_Off
   | {-|
   Trace messages only.
-
   -}
   TraceValues_Messages
   | {-|
   Verbose message tracing.
-
   -}
   TraceValues_Verbose
   deriving stock (Show, Eq, Ord, Generic)

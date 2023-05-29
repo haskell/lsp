@@ -14,12 +14,10 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 Describe options to be used when registered for text document change events.
-
 -}
 data DidChangeWatchedFilesRegistrationOptions = DidChangeWatchedFilesRegistrationOptions 
   { {-|
   The watchers to register.
-
   -}
   _watchers :: [Language.LSP.Protocol.Internal.Types.FileSystemWatcher.FileSystemWatcher]
   }

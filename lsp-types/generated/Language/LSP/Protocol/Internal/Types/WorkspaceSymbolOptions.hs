@@ -13,7 +13,6 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 Server capabilities for a `WorkspaceSymbolRequest`.
-
 -}
 data WorkspaceSymbolOptions = WorkspaceSymbolOptions 
   { {-|
@@ -25,7 +24,6 @@ data WorkspaceSymbolOptions = WorkspaceSymbolOptions
   information for a workspace symbol.
 
   @since 3.17.0
-
   -}
   _resolveProvider :: (Maybe Bool)
   }

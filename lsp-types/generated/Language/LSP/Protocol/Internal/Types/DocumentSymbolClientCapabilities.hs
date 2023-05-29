@@ -16,23 +16,19 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 Client Capabilities for a `DocumentSymbolRequest`.
-
 -}
 data DocumentSymbolClientCapabilities = DocumentSymbolClientCapabilities 
   { {-|
   Whether document symbol supports dynamic registration.
-
   -}
   _dynamicRegistration :: (Maybe Bool)
   , {-|
   Specific capabilities for the `SymbolKind` in the
   `textDocument/documentSymbol` request.
-
   -}
   _symbolKind :: (Maybe (Row.Rec ("valueSet" Row..== (Maybe [Language.LSP.Protocol.Internal.Types.SymbolKind.SymbolKind]) Row..+ Row.Empty)))
   , {-|
   The client supports hierarchical document symbols.
-
   -}
   _hierarchicalDocumentSymbolSupport :: (Maybe Bool)
   , {-|
@@ -41,7 +37,6 @@ data DocumentSymbolClientCapabilities = DocumentSymbolClientCapabilities
   Clients supporting tags have to handle unknown tags gracefully.
 
   @since 3.16.0
-
   -}
   _tagSupport :: (Maybe (Row.Rec ("valueSet" Row..== [Language.LSP.Protocol.Internal.Types.SymbolTag.SymbolTag] Row..+ Row.Empty)))
   , {-|
@@ -49,7 +44,6 @@ data DocumentSymbolClientCapabilities = DocumentSymbolClientCapabilities
   registering a document symbol provider.
 
   @since 3.16.0
-
   -}
   _labelSupport :: (Maybe Bool)
   }

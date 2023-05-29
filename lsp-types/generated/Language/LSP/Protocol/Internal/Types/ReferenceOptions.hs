@@ -13,7 +13,6 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 Reference options.
-
 -}
 data ReferenceOptions = ReferenceOptions 
   { {-|

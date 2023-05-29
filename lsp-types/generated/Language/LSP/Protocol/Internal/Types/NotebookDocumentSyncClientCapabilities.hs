@@ -15,7 +15,6 @@ import qualified Language.LSP.Protocol.Types.Common
 Notebook specific client capabilities.
 
 @since 3.17.0
-
 -}
 data NotebookDocumentSyncClientCapabilities = NotebookDocumentSyncClientCapabilities 
   { {-|
@@ -23,12 +22,10 @@ data NotebookDocumentSyncClientCapabilities = NotebookDocumentSyncClientCapabili
   set to `true` the client supports the new
   `(TextDocumentRegistrationOptions & StaticRegistrationOptions)`
   return value for the corresponding server capability as well.
-
   -}
   _dynamicRegistration :: (Maybe Bool)
   , {-|
   The client supports sending execution summary data per cell.
-
   -}
   _executionSummarySupport :: (Maybe Bool)
   }

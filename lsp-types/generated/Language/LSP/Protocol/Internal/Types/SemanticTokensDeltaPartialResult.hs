@@ -14,7 +14,6 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 @since 3.16.0
-
 -}
 data SemanticTokensDeltaPartialResult = SemanticTokensDeltaPartialResult 
   { {-|

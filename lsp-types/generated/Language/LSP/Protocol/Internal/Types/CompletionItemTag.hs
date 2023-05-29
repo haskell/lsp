@@ -19,12 +19,10 @@ Completion item tags are extra annotations that tweak the rendering of a complet
 item.
 
 @since 3.15.0
-
 -}
 data CompletionItemTag = 
     {-|
   Render a completion as obsolete, usually using a strike-out.
-
   -}
   CompletionItemTag_Deprecated
   deriving stock (Show, Eq, Ord, Generic)

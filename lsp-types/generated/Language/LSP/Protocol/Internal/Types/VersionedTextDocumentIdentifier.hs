@@ -14,17 +14,14 @@ import qualified Language.LSP.Protocol.Types.Uri
 
 {-|
 A text document identifier to denote a specific version of a text document.
-
 -}
 data VersionedTextDocumentIdentifier = VersionedTextDocumentIdentifier 
   { {-|
   The text document's uri.
-
   -}
   _uri :: Language.LSP.Protocol.Types.Uri.Uri
   , {-|
   The version number of this document.
-
   -}
   _version :: Language.LSP.Protocol.Types.Common.Int32
   }

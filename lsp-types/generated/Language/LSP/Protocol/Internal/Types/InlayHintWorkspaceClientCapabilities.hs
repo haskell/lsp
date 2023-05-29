@@ -15,7 +15,6 @@ import qualified Language.LSP.Protocol.Types.Common
 Client workspace capabilities specific to inlay hints.
 
 @since 3.17.0
-
 -}
 data InlayHintWorkspaceClientCapabilities = InlayHintWorkspaceClientCapabilities 
   { {-|
@@ -26,7 +25,6 @@ data InlayHintWorkspaceClientCapabilities = InlayHintWorkspaceClientCapabilities
   inlay hints currently shown. It should be used with absolute care and
   is useful for situation where a server for example detects a project wide
   change that requires such a calculation.
-
   -}
   _refreshSupport :: (Maybe Bool)
   }

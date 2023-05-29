@@ -27,7 +27,6 @@ import qualified Language.LSP.Protocol.Types.Uri
 data InitializeParams = InitializeParams 
   { {-|
   An optional token that a server can use to report work done progress.
-
   -}
   _workDoneToken :: (Maybe Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken)
   , {-|
@@ -36,14 +35,12 @@ data InitializeParams = InitializeParams
 
   Is `null` if the process has not been started by another process.
   If the parent process is not alive then the server should exit.
-
   -}
   _processId :: (Language.LSP.Protocol.Types.Common.Int32 Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Types.Common.Null)
   , {-|
   Information about the client
 
   @since 3.15.0
-
   -}
   _clientInfo :: (Maybe (Row.Rec ("name" Row..== Data.Text.Text Row..+ ("version" Row..== (Maybe Data.Text.Text) Row..+ Row.Empty))))
   , {-|
@@ -55,7 +52,6 @@ data InitializeParams = InitializeParams
   (See https://en.wikipedia.org/wiki/IETF_language_tag)
 
   @since 3.16.0
-
   -}
   _locale :: (Maybe Data.Text.Text)
   , {-|
@@ -63,7 +59,6 @@ data InitializeParams = InitializeParams
   if no folder is open.
 
   @deprecated in favour of rootUri.
-
   -}
   _rootPath :: (Maybe (Data.Text.Text Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Types.Common.Null))
   , {-|
@@ -72,22 +67,18 @@ data InitializeParams = InitializeParams
   `rootUri` wins.
 
   @deprecated in favour of workspaceFolders.
-
   -}
   _rootUri :: (Language.LSP.Protocol.Types.Uri.Uri Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Types.Common.Null)
   , {-|
   The capabilities provided by the client (editor or tool)
-
   -}
   _capabilities :: Language.LSP.Protocol.Internal.Types.ClientCapabilities.ClientCapabilities
   , {-|
   User provided initialization options.
-
   -}
   _initializationOptions :: (Maybe Data.Aeson.Value)
   , {-|
   The initial trace setting. If omitted trace is disabled ('off').
-
   -}
   _trace :: (Maybe Language.LSP.Protocol.Internal.Types.TraceValues.TraceValues)
   , {-|
@@ -98,7 +89,6 @@ data InitializeParams = InitializeParams
   configured.
 
   @since 3.6.0
-
   -}
   _workspaceFolders :: (Maybe ([Language.LSP.Protocol.Internal.Types.WorkspaceFolder.WorkspaceFolder] Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Types.Common.Null))
   }

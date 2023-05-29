@@ -13,7 +13,6 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 Code Lens provider options of a `CodeLensRequest`.
-
 -}
 data CodeLensOptions = CodeLensOptions 
   { {-|
@@ -22,7 +21,6 @@ data CodeLensOptions = CodeLensOptions
   _workDoneProgress :: (Maybe Bool)
   , {-|
   Code lens has a resolve provider as well.
-
   -}
   _resolveProvider :: (Maybe Bool)
   }

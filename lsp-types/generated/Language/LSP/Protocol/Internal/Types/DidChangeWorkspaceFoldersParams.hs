@@ -14,12 +14,10 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 The parameters of a `workspace/didChangeWorkspaceFolders` notification.
-
 -}
 data DidChangeWorkspaceFoldersParams = DidChangeWorkspaceFoldersParams 
   { {-|
   The actual workspace folder change event.
-
   -}
   _event :: Language.LSP.Protocol.Internal.Types.WorkspaceFoldersChangeEvent.WorkspaceFoldersChangeEvent
   }

@@ -20,7 +20,6 @@ import qualified Language.LSP.Protocol.Types.Common
 data WorkspaceEditClientCapabilities = WorkspaceEditClientCapabilities 
   { {-|
   The client supports versioned document changes in `WorkspaceEdit`s
-
   -}
   _documentChanges :: (Maybe Bool)
   , {-|
@@ -28,7 +27,6 @@ data WorkspaceEditClientCapabilities = WorkspaceEditClientCapabilities
   support 'create', 'rename' and 'delete' files and folders.
 
   @since 3.13.0
-
   -}
   _resourceOperations :: (Maybe [Language.LSP.Protocol.Internal.Types.ResourceOperationKind.ResourceOperationKind])
   , {-|
@@ -36,7 +34,6 @@ data WorkspaceEditClientCapabilities = WorkspaceEditClientCapabilities
   fails.
 
   @since 3.13.0
-
   -}
   _failureHandling :: (Maybe Language.LSP.Protocol.Internal.Types.FailureHandlingKind.FailureHandlingKind)
   , {-|
@@ -47,7 +44,6 @@ data WorkspaceEditClientCapabilities = WorkspaceEditClientCapabilities
   character.
 
   @since 3.16.0
-
   -}
   _normalizesLineEndings :: (Maybe Bool)
   , {-|
@@ -55,7 +51,6 @@ data WorkspaceEditClientCapabilities = WorkspaceEditClientCapabilities
   create file, rename file and delete file changes.
 
   @since 3.16.0
-
   -}
   _changeAnnotationSupport :: (Maybe (Row.Rec ("groupsOnLabel" Row..== (Maybe Bool) Row..+ Row.Empty)))
   }

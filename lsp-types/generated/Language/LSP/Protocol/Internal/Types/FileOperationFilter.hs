@@ -18,17 +18,14 @@ A filter to describe in which file operation requests or notifications
 the server is interested in receiving.
 
 @since 3.16.0
-
 -}
 data FileOperationFilter = FileOperationFilter 
   { {-|
   A Uri scheme like `file` or `untitled`.
-
   -}
   _scheme :: (Maybe Data.Text.Text)
   , {-|
   The actual file operation pattern.
-
   -}
   _pattern :: Language.LSP.Protocol.Internal.Types.FileOperationPattern.FileOperationPattern
   }

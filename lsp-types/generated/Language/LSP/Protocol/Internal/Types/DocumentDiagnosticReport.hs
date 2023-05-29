@@ -21,7 +21,6 @@ has changed in terms of diagnostics in comparison to the last
 pull request.
 
 @since 3.17.0
-
 -}
 newtype DocumentDiagnosticReport = DocumentDiagnosticReport (Language.LSP.Protocol.Internal.Types.RelatedFullDocumentDiagnosticReport.RelatedFullDocumentDiagnosticReport Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.RelatedUnchangedDocumentDiagnosticReport.RelatedUnchangedDocumentDiagnosticReport)
   deriving newtype (Aeson.ToJSON, Aeson.FromJSON)

@@ -17,12 +17,10 @@ import qualified Language.LSP.Protocol.Types.LspEnum
 {-|
 Defines whether the insert text in a completion item should be interpreted as
 plain text or a snippet.
-
 -}
 data InsertTextFormat = 
     {-|
   The primary text to be inserted is treated as a plain string.
-
   -}
   InsertTextFormat_PlainText
   | {-|
@@ -34,7 +32,6 @@ data InsertTextFormat =
   that is typing in one will update others too.
 
   See also: https://microsoft.github.io/language-server-protocol/specifications/specification-current/#snippet_syntax
-
   -}
   InsertTextFormat_Snippet
   deriving stock (Show, Eq, Ord, Generic)

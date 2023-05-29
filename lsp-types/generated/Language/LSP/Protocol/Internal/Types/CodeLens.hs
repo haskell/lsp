@@ -20,23 +20,19 @@ source text, like the number of references, a way to run tests, etc.
 
 A code lens is _unresolved_ when no command is associated to it. For performance
 reasons the creation of a code lens and resolving should be done in two stages.
-
 -}
 data CodeLens = CodeLens 
   { {-|
   The range in which this code lens is valid. Should only span a single line.
-
   -}
   _range :: Language.LSP.Protocol.Internal.Types.Range.Range
   , {-|
   The command this code lens represents.
-
   -}
   _command :: (Maybe Language.LSP.Protocol.Internal.Types.Command.Command)
   , {-|
   A data entry field that is preserved on a code lens item between
   a `CodeLensRequest` and a `CodeLensResolveRequest`
-
   -}
   _data_ :: (Maybe Data.Aeson.Value)
   }

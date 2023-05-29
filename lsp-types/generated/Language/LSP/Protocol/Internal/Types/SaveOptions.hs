@@ -13,12 +13,10 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 Save options.
-
 -}
 data SaveOptions = SaveOptions 
   { {-|
   The client is supposed to include the content on save.
-
   -}
   _includeText :: (Maybe Bool)
   }

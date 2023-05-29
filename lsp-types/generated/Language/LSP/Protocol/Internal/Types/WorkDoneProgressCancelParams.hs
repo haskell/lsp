@@ -18,7 +18,6 @@ import qualified Language.LSP.Protocol.Types.Common
 data WorkDoneProgressCancelParams = WorkDoneProgressCancelParams 
   { {-|
   The token to be used to report progress.
-
   -}
   _token :: Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken
   }

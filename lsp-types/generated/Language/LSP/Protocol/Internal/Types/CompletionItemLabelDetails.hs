@@ -16,19 +16,16 @@ import qualified Language.LSP.Protocol.Types.Common
 Additional details for a completion item label.
 
 @since 3.17.0
-
 -}
 data CompletionItemLabelDetails = CompletionItemLabelDetails 
   { {-|
   An optional string which is rendered less prominently directly after `CompletionItem.label`,
   without any spacing. Should be used for function signatures and type annotations.
-
   -}
   _detail :: (Maybe Data.Text.Text)
   , {-|
   An optional string which is rendered less prominently after `CompletionItem.detail`. Should be used
   for fully qualified names and file paths.
-
   -}
   _description :: (Maybe Data.Text.Text)
   }

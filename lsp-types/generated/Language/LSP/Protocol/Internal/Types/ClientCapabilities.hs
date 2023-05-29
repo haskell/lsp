@@ -19,41 +19,34 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 Defines the capabilities provided by the client.
-
 -}
 data ClientCapabilities = ClientCapabilities 
   { {-|
   Workspace specific client capabilities.
-
   -}
   _workspace :: (Maybe Language.LSP.Protocol.Internal.Types.WorkspaceClientCapabilities.WorkspaceClientCapabilities)
   , {-|
   Text document specific client capabilities.
-
   -}
   _textDocument :: (Maybe Language.LSP.Protocol.Internal.Types.TextDocumentClientCapabilities.TextDocumentClientCapabilities)
   , {-|
   Capabilities specific to the notebook document support.
 
   @since 3.17.0
-
   -}
   _notebookDocument :: (Maybe Language.LSP.Protocol.Internal.Types.NotebookDocumentClientCapabilities.NotebookDocumentClientCapabilities)
   , {-|
   Window specific client capabilities.
-
   -}
   _window :: (Maybe Language.LSP.Protocol.Internal.Types.WindowClientCapabilities.WindowClientCapabilities)
   , {-|
   General client capabilities.
 
   @since 3.16.0
-
   -}
   _general :: (Maybe Language.LSP.Protocol.Internal.Types.GeneralClientCapabilities.GeneralClientCapabilities)
   , {-|
   Experimental client capabilities.
-
   -}
   _experimental :: (Maybe Data.Aeson.Value)
   }

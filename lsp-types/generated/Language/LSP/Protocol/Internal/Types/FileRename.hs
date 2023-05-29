@@ -16,17 +16,14 @@ import qualified Language.LSP.Protocol.Types.Common
 Represents information on a file/folder rename.
 
 @since 3.16.0
-
 -}
 data FileRename = FileRename 
   { {-|
   A file:// URI for the original location of the file/folder being renamed.
-
   -}
   _oldUri :: Data.Text.Text
   , {-|
   A file:// URI for the new location of the file/folder being renamed.
-
   -}
   _newUri :: Data.Text.Text
   }

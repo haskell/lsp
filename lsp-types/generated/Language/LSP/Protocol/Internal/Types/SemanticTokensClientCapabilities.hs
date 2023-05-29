@@ -16,14 +16,12 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 @since 3.16.0
-
 -}
 data SemanticTokensClientCapabilities = SemanticTokensClientCapabilities 
   { {-|
   Whether implementation supports dynamic registration. If this is set to `true`
   the client supports the new `(TextDocumentRegistrationOptions & StaticRegistrationOptions)`
   return value for the corresponding server capability as well.
-
   -}
   _dynamicRegistration :: (Maybe Bool)
   , {-|
@@ -35,32 +33,26 @@ data SemanticTokensClientCapabilities = SemanticTokensClientCapabilities
   `request.range` are both set to true but the server only provides a
   range provider the client might not render a minimap correctly or might
   even decide to not show any semantic tokens at all.
-
   -}
   _requests :: (Row.Rec ("range" Row..== (Maybe (Bool Language.LSP.Protocol.Types.Common.|? (Row.Rec Row.Empty))) Row..+ ("full" Row..== (Maybe (Bool Language.LSP.Protocol.Types.Common.|? (Row.Rec ("delta" Row..== (Maybe Bool) Row..+ Row.Empty)))) Row..+ Row.Empty)))
   , {-|
   The token types that the client supports.
-
   -}
   _tokenTypes :: [Data.Text.Text]
   , {-|
   The token modifiers that the client supports.
-
   -}
   _tokenModifiers :: [Data.Text.Text]
   , {-|
   The token formats the clients supports.
-
   -}
   _formats :: [Language.LSP.Protocol.Internal.Types.TokenFormat.TokenFormat]
   , {-|
   Whether the client supports tokens that can overlap each other.
-
   -}
   _overlappingTokenSupport :: (Maybe Bool)
   , {-|
   Whether the client supports tokens that can span multiple lines.
-
   -}
   _multilineTokenSupport :: (Maybe Bool)
   , {-|
@@ -70,7 +62,6 @@ data SemanticTokensClientCapabilities = SemanticTokensClientCapabilities
   needs to retrigger the request.
 
   @since 3.17.0
-
   -}
   _serverCancelSupport :: (Maybe Bool)
   , {-|
@@ -84,7 +75,6 @@ data SemanticTokensClientCapabilities = SemanticTokensClientCapabilities
   specified.
 
   @since 3.17.0
-
   -}
   _augmentsSyntaxTokens :: (Maybe Bool)
   }

@@ -15,23 +15,19 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 General parameters to to register for an notification or to register a provider.
-
 -}
 data Registration = Registration 
   { {-|
   The id used to register the request. The id can be used to deregister
   the request again.
-
   -}
   _id :: Data.Text.Text
   , {-|
   The method / capability to register for.
-
   -}
   _method :: Data.Text.Text
   , {-|
   Options necessary for the registration.
-
   -}
   _registerOptions :: (Maybe Data.Aeson.Value)
   }

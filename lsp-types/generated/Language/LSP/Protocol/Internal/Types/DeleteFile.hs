@@ -17,29 +17,24 @@ import qualified Language.LSP.Protocol.Types.Uri
 
 {-|
 Delete file operation
-
 -}
 data DeleteFile = DeleteFile 
   { {-|
   An optional annotation identifier describing the operation.
 
   @since 3.16.0
-
   -}
   _annotationId :: (Maybe Language.LSP.Protocol.Internal.Types.ChangeAnnotationIdentifier.ChangeAnnotationIdentifier)
   , {-|
   A delete
-
   -}
   _kind :: (Language.LSP.Protocol.Types.Singletons.AString "delete")
   , {-|
   The file to delete.
-
   -}
   _uri :: Language.LSP.Protocol.Types.Uri.Uri
   , {-|
   Delete options.
-
   -}
   _options :: (Maybe Language.LSP.Protocol.Internal.Types.DeleteFileOptions.DeleteFileOptions)
   }

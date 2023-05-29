@@ -20,17 +20,14 @@ import qualified Language.LSP.Protocol.Types.LspEnum
 data WatchKind = 
     {-|
   Interested in create events.
-
   -}
   WatchKind_Create
   | {-|
   Interested in change events
-
   -}
   WatchKind_Change
   | {-|
   Interested in delete events
-
   -}
   WatchKind_Delete
   | WatchKind_Custom Language.LSP.Protocol.Types.Common.UInt

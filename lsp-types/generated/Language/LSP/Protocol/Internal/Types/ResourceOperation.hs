@@ -15,19 +15,16 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 A generic resource operation.
-
 -}
 data ResourceOperation = ResourceOperation 
   { {-|
   The resource operation kind.
-
   -}
   _kind :: Data.Text.Text
   , {-|
   An optional annotation identifier describing the operation.
 
   @since 3.16.0
-
   -}
   _annotationId :: (Maybe Language.LSP.Protocol.Internal.Types.ChangeAnnotationIdentifier.ChangeAnnotationIdentifier)
   }

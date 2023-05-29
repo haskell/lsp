@@ -14,7 +14,6 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 Server Capabilities for a `SignatureHelpRequest`.
-
 -}
 data SignatureHelpOptions = SignatureHelpOptions 
   { {-|
@@ -23,7 +22,6 @@ data SignatureHelpOptions = SignatureHelpOptions
   _workDoneProgress :: (Maybe Bool)
   , {-|
   List of characters that trigger signature help automatically.
-
   -}
   _triggerCharacters :: (Maybe [Data.Text.Text])
   , {-|
@@ -33,7 +31,6 @@ data SignatureHelpOptions = SignatureHelpOptions
   are also counted as re-trigger characters.
 
   @since 3.15.0
-
   -}
   _retriggerCharacters :: (Maybe [Data.Text.Text])
   }

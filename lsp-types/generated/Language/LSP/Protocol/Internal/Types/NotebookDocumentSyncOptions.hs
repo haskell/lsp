@@ -28,18 +28,15 @@ document that contain at least one matching
 cell will be synced.
 
 @since 3.17.0
-
 -}
 data NotebookDocumentSyncOptions = NotebookDocumentSyncOptions 
   { {-|
   The notebooks to be synced
-
   -}
   _notebookSelector :: [((Row.Rec ("notebook" Row..== (Data.Text.Text Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.NotebookDocumentFilter.NotebookDocumentFilter) Row..+ ("cells" Row..== (Maybe [(Row.Rec ("language" Row..== Data.Text.Text Row..+ Row.Empty))]) Row..+ Row.Empty))) Language.LSP.Protocol.Types.Common.|? (Row.Rec ("notebook" Row..== (Maybe (Data.Text.Text Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.NotebookDocumentFilter.NotebookDocumentFilter)) Row..+ ("cells" Row..== [(Row.Rec ("language" Row..== Data.Text.Text Row..+ Row.Empty))] Row..+ Row.Empty))))]
   , {-|
   Whether save notification should be forwarded to
   the server. Will only be honored if mode === `notebook`.
-
   -}
   _save :: (Maybe Bool)
   }

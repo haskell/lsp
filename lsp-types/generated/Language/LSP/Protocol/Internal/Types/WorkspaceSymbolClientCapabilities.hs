@@ -17,17 +17,14 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 Client capabilities for a `WorkspaceSymbolRequest`.
-
 -}
 data WorkspaceSymbolClientCapabilities = WorkspaceSymbolClientCapabilities 
   { {-|
   Symbol request supports dynamic registration.
-
   -}
   _dynamicRegistration :: (Maybe Bool)
   , {-|
   Specific capabilities for the `SymbolKind` in the `workspace/symbol` request.
-
   -}
   _symbolKind :: (Maybe (Row.Rec ("valueSet" Row..== (Maybe [Language.LSP.Protocol.Internal.Types.SymbolKind.SymbolKind]) Row..+ Row.Empty)))
   , {-|
@@ -35,7 +32,6 @@ data WorkspaceSymbolClientCapabilities = WorkspaceSymbolClientCapabilities
   Clients supporting tags have to handle unknown tags gracefully.
 
   @since 3.16.0
-
   -}
   _tagSupport :: (Maybe (Row.Rec ("valueSet" Row..== [Language.LSP.Protocol.Internal.Types.SymbolTag.SymbolTag] Row..+ Row.Empty)))
   , {-|
@@ -44,7 +40,6 @@ data WorkspaceSymbolClientCapabilities = WorkspaceSymbolClientCapabilities
   properties.
 
   @since 3.17.0
-
   -}
   _resolveSupport :: (Maybe (Row.Rec ("properties" Row..== [Data.Text.Text] Row..+ Row.Empty)))
   }

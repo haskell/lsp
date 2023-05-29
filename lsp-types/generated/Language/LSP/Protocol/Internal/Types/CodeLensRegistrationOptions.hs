@@ -14,13 +14,11 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 Registration options for a `CodeLensRequest`.
-
 -}
 data CodeLensRegistrationOptions = CodeLensRegistrationOptions 
   { {-|
   A document selector to identify the scope of the registration. If set to null
   the document selector provided on the client side will be used.
-
   -}
   _documentSelector :: (Language.LSP.Protocol.Internal.Types.DocumentSelector.DocumentSelector Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Types.Common.Null)
   , {-|
@@ -29,7 +27,6 @@ data CodeLensRegistrationOptions = CodeLensRegistrationOptions
   _workDoneProgress :: (Maybe Bool)
   , {-|
   Code lens has a resolve provider as well.
-
   -}
   _resolveProvider :: (Maybe Bool)
   }

@@ -17,18 +17,15 @@ import qualified Language.LSP.Protocol.Types.Common
 The parameter of a `typeHierarchy/subtypes` request.
 
 @since 3.17.0
-
 -}
 data TypeHierarchySubtypesParams = TypeHierarchySubtypesParams 
   { {-|
   An optional token that a server can use to report work done progress.
-
   -}
   _workDoneToken :: (Maybe Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken)
   , {-|
   An optional token that a server can use to report partial results (e.g. streaming) to
   the client.
-
   -}
   _partialResultToken :: (Maybe Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken)
   , {-|

@@ -17,7 +17,6 @@ import qualified Language.LSP.Protocol.Types.Common
 The params sent in a change notebook document notification.
 
 @since 3.17.0
-
 -}
 data DidChangeNotebookDocumentParams = DidChangeNotebookDocumentParams 
   { {-|
@@ -25,7 +24,6 @@ data DidChangeNotebookDocumentParams = DidChangeNotebookDocumentParams
   to the version after all provided changes have been applied. If
   only the text document content of a cell changes the notebook version
   doesn't necessarily have to change.
-
   -}
   _notebookDocument :: Language.LSP.Protocol.Internal.Types.VersionedNotebookDocumentIdentifier.VersionedNotebookDocumentIdentifier
   , {-|
@@ -42,7 +40,6 @@ data DidChangeNotebookDocumentParams = DidChangeNotebookDocumentParams
   - apply the 'notebookDocument/didChange' notifications in the order you receive them.
   - apply the `NotebookChangeEvent`s in a single notification in the order
     you receive them.
-
   -}
   _change :: Language.LSP.Protocol.Internal.Types.NotebookDocumentChangeEvent.NotebookDocumentChangeEvent
   }

@@ -18,32 +18,26 @@ import qualified Language.LSP.Protocol.Types.LspEnum
 Moniker uniqueness level to define scope of the moniker.
 
 @since 3.16.0
-
 -}
 data UniquenessLevel = 
     {-|
   The moniker is only unique inside a document
-
   -}
   UniquenessLevel_Document
   | {-|
   The moniker is unique inside a project for which a dump got created
-
   -}
   UniquenessLevel_Project
   | {-|
   The moniker is unique inside the group to which a project belongs
-
   -}
   UniquenessLevel_Group
   | {-|
   The moniker is unique inside the moniker scheme.
-
   -}
   UniquenessLevel_Scheme
   | {-|
   The moniker is globally unique
-
   -}
   UniquenessLevel_Global
   deriving stock (Show, Eq, Ord, Generic)

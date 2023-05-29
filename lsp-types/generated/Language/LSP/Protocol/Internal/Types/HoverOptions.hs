@@ -13,7 +13,6 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 Hover options.
-
 -}
 data HoverOptions = HoverOptions 
   { {-|

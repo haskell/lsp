@@ -16,23 +16,19 @@ import qualified Language.LSP.Protocol.Types.LspEnum
 
 {-|
 Represents reasons why a text document is saved.
-
 -}
 data TextDocumentSaveReason = 
     {-|
   Manually triggered, e.g. by the user pressing save, by starting debugging,
   or by an API call.
-
   -}
   TextDocumentSaveReason_Manual
   | {-|
   Automatic after a delay.
-
   -}
   TextDocumentSaveReason_AfterDelay
   | {-|
   When the editor lost focus.
-
   -}
   TextDocumentSaveReason_FocusOut
   deriving stock (Show, Eq, Ord, Generic)

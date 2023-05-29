@@ -16,18 +16,15 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 The result of a hover request.
-
 -}
 data Hover = Hover 
   { {-|
   The hover's content
-
   -}
   _contents :: (Language.LSP.Protocol.Internal.Types.MarkupContent.MarkupContent Language.LSP.Protocol.Types.Common.|? (Language.LSP.Protocol.Internal.Types.MarkedString.MarkedString Language.LSP.Protocol.Types.Common.|? [Language.LSP.Protocol.Internal.Types.MarkedString.MarkedString]))
   , {-|
   An optional range inside the text document that is used to
   visualize the hover, e.g. by changing the background color.
-
   -}
   _range :: (Maybe Language.LSP.Protocol.Internal.Types.Range.Range)
   }

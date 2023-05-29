@@ -13,21 +13,18 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 Since 3.6.0
-
 -}
 data TypeDefinitionClientCapabilities = TypeDefinitionClientCapabilities 
   { {-|
   Whether implementation supports dynamic registration. If this is set to `true`
   the client supports the new `TypeDefinitionRegistrationOptions` return value
   for the corresponding server capability as well.
-
   -}
   _dynamicRegistration :: (Maybe Bool)
   , {-|
   The client supports additional metadata in the form of definition links.
 
   Since 3.14.0
-
   -}
   _linkSupport :: (Maybe Bool)
   }

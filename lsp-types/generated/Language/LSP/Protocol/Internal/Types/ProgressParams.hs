@@ -19,12 +19,10 @@ import qualified Language.LSP.Protocol.Types.Common
 data ProgressParams = ProgressParams 
   { {-|
   The progress token provided by the client or server.
-
   -}
   _token :: Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken
   , {-|
   The progress data.
-
   -}
   _value :: Data.Aeson.Value
   }

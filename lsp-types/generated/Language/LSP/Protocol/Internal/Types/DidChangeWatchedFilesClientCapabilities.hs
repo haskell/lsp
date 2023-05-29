@@ -19,7 +19,6 @@ data DidChangeWatchedFilesClientCapabilities = DidChangeWatchedFilesClientCapabi
   Did change watched files notification supports dynamic registration. Please note
   that the current protocol doesn't support static configuration for file changes
   from the server side.
-
   -}
   _dynamicRegistration :: (Maybe Bool)
   , {-|
@@ -27,7 +26,6 @@ data DidChangeWatchedFilesClientCapabilities = DidChangeWatchedFilesClientCapabi
   or not.
 
   @since 3.17.0
-
   -}
   _relativePatternSupport :: (Maybe Bool)
   }

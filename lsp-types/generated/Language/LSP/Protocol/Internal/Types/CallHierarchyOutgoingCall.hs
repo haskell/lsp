@@ -17,19 +17,16 @@ import qualified Language.LSP.Protocol.Types.Common
 Represents an outgoing call, e.g. calling a getter from a method or a method from a constructor etc.
 
 @since 3.16.0
-
 -}
 data CallHierarchyOutgoingCall = CallHierarchyOutgoingCall 
   { {-|
   The item that is called.
-
   -}
   _to :: Language.LSP.Protocol.Internal.Types.CallHierarchyItem.CallHierarchyItem
   , {-|
   The range at which this item is called. This is the range relative to the caller, e.g the item
   passed to `CallHierarchyItemProvider.provideCallHierarchyOutgoingCalls`
   and not `CallHierarchyOutgoingCall.to`.
-
   -}
   _fromRanges :: [Language.LSP.Protocol.Internal.Types.Range.Range]
   }

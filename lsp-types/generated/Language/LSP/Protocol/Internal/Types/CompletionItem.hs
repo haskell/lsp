@@ -26,7 +26,6 @@ import qualified Language.LSP.Protocol.Types.Common
 {-|
 A completion item represents a text snippet that is
 proposed to complete text that is being typed.
-
 -}
 data CompletionItem = CompletionItem 
   { {-|
@@ -37,44 +36,37 @@ data CompletionItem = CompletionItem
 
   If label details are provided the label itself should
   be an unqualified name of the completion item.
-
   -}
   _label :: Data.Text.Text
   , {-|
   Additional details for the label
 
   @since 3.17.0
-
   -}
   _labelDetails :: (Maybe Language.LSP.Protocol.Internal.Types.CompletionItemLabelDetails.CompletionItemLabelDetails)
   , {-|
   The kind of this completion item. Based of the kind
   an icon is chosen by the editor.
-
   -}
   _kind :: (Maybe Language.LSP.Protocol.Internal.Types.CompletionItemKind.CompletionItemKind)
   , {-|
   Tags for this completion item.
 
   @since 3.15.0
-
   -}
   _tags :: (Maybe [Language.LSP.Protocol.Internal.Types.CompletionItemTag.CompletionItemTag])
   , {-|
   A human-readable string with additional information
   about this item, like type or symbol information.
-
   -}
   _detail :: (Maybe Data.Text.Text)
   , {-|
   A human-readable string that represents a doc-comment.
-
   -}
   _documentation :: (Maybe (Data.Text.Text Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.MarkupContent.MarkupContent))
   , {-|
   Indicates if this item is deprecated.
   @deprecated Use `tags` instead.
-
   -}
   _deprecated :: (Maybe Bool)
   , {-|
@@ -83,21 +75,18 @@ data CompletionItem = CompletionItem
   *Note* that only one completion item can be selected and that the
   tool / client decides which item that is. The rule is that the *first*
   item of those that match best is selected.
-
   -}
   _preselect :: (Maybe Bool)
   , {-|
   A string that should be used when comparing this item
   with other items. When `falsy` the `CompletionItem.label`
   is used.
-
   -}
   _sortText :: (Maybe Data.Text.Text)
   , {-|
   A string that should be used when filtering a set of
   completion items. When `falsy` the `CompletionItem.label`
   is used.
-
   -}
   _filterText :: (Maybe Data.Text.Text)
   , {-|
@@ -112,7 +101,6 @@ data CompletionItem = CompletionItem
   `console` is provided it will only insert `sole`. Therefore it is
   recommended to use `textEdit` instead since it avoids additional client
   side interpretation.
-
   -}
   _insertText :: (Maybe Data.Text.Text)
   , {-|
@@ -122,7 +110,6 @@ data CompletionItem = CompletionItem
 
   Please note that the insertTextFormat doesn't apply to
   `additionalTextEdits`.
-
   -}
   _insertTextFormat :: (Maybe Language.LSP.Protocol.Internal.Types.InsertTextFormat.InsertTextFormat)
   , {-|
@@ -131,7 +118,6 @@ data CompletionItem = CompletionItem
   the `textDocument.completion.insertTextMode` client capability.
 
   @since 3.16.0
-
   -}
   _insertTextMode :: (Maybe Language.LSP.Protocol.Internal.Types.InsertTextMode.InsertTextMode)
   , {-|
@@ -155,7 +141,6 @@ data CompletionItem = CompletionItem
   contained and starting at the same position.
 
   @since 3.16.0 additional type `InsertReplaceEdit`
-
   -}
   _textEdit :: (Maybe (Language.LSP.Protocol.Internal.Types.TextEdit.TextEdit Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.InsertReplaceEdit.InsertReplaceEdit))
   , {-|
@@ -169,7 +154,6 @@ data CompletionItem = CompletionItem
   property is used as a text.
 
   @since 3.17.0
-
   -}
   _textEditText :: (Maybe Data.Text.Text)
   , {-|
@@ -180,27 +164,23 @@ data CompletionItem = CompletionItem
   Additional text edits should be used to change text unrelated to the current cursor position
   (for example adding an import statement at the top of the file if the completion item will
   insert an unqualified type).
-
   -}
   _additionalTextEdits :: (Maybe [Language.LSP.Protocol.Internal.Types.TextEdit.TextEdit])
   , {-|
   An optional set of characters that when pressed while this completion is active will accept it first and
   then type that character. *Note* that all commit characters should have `length=1` and that superfluous
   characters will be ignored.
-
   -}
   _commitCharacters :: (Maybe [Data.Text.Text])
   , {-|
   An optional `Command` that is executed *after* inserting this completion. *Note* that
   additional modifications to the current document should be described with the
   `CompletionItem.additionalTextEdits`-property.
-
   -}
   _command :: (Maybe Language.LSP.Protocol.Internal.Types.Command.Command)
   , {-|
   A data entry field that is preserved on a completion item between a
   `CompletionRequest`.
-
   -}
   _data_ :: (Maybe Data.Aeson.Value)
   }

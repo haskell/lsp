@@ -16,22 +16,18 @@ import qualified Language.LSP.Protocol.Types.LspEnum
 
 {-|
 A document highlight kind.
-
 -}
 data DocumentHighlightKind = 
     {-|
   A textual occurrence.
-
   -}
   DocumentHighlightKind_Text
   | {-|
   Read-access of a symbol, like reading a variable.
-
   -}
   DocumentHighlightKind_Read
   | {-|
   Write-access of a symbol, like writing to a variable.
-
   -}
   DocumentHighlightKind_Write
   deriving stock (Show, Eq, Ord, Generic)

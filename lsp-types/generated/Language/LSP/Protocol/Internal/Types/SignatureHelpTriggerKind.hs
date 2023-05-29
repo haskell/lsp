@@ -18,22 +18,18 @@ import qualified Language.LSP.Protocol.Types.LspEnum
 How a signature help was triggered.
 
 @since 3.15.0
-
 -}
 data SignatureHelpTriggerKind = 
     {-|
   Signature help was invoked manually by the user or by a command.
-
   -}
   SignatureHelpTriggerKind_Invoked
   | {-|
   Signature help was triggered by a trigger character.
-
   -}
   SignatureHelpTriggerKind_TriggerCharacter
   | {-|
   Signature help was triggered by the cursor moving or by the document content changing.
-
   -}
   SignatureHelpTriggerKind_ContentChange
   deriving stock (Show, Eq, Ord, Generic)

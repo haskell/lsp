@@ -17,27 +17,22 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 The parameters of a `DocumentRangeFormattingRequest`.
-
 -}
 data DocumentRangeFormattingParams = DocumentRangeFormattingParams 
   { {-|
   An optional token that a server can use to report work done progress.
-
   -}
   _workDoneToken :: (Maybe Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken)
   , {-|
   The document to format.
-
   -}
   _textDocument :: Language.LSP.Protocol.Internal.Types.TextDocumentIdentifier.TextDocumentIdentifier
   , {-|
   The range to format
-
   -}
   _range :: Language.LSP.Protocol.Internal.Types.Range.Range
   , {-|
   The format options
-
   -}
   _options :: Language.LSP.Protocol.Internal.Types.FormattingOptions.FormattingOptions
   }

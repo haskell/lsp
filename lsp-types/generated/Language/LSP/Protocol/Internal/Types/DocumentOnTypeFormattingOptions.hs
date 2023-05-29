@@ -14,17 +14,14 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 Provider options for a `DocumentOnTypeFormattingRequest`.
-
 -}
 data DocumentOnTypeFormattingOptions = DocumentOnTypeFormattingOptions 
   { {-|
   A character on which formatting should be triggered, like `{`.
-
   -}
   _firstTriggerCharacter :: Data.Text.Text
   , {-|
   More trigger characters.
-
   -}
   _moreTriggerCharacter :: (Maybe [Data.Text.Text])
   }

@@ -24,53 +24,44 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 Workspace specific client capabilities.
-
 -}
 data WorkspaceClientCapabilities = WorkspaceClientCapabilities 
   { {-|
   The client supports applying batch edits
   to the workspace by supporting the request
   'workspace/applyEdit'
-
   -}
   _applyEdit :: (Maybe Bool)
   , {-|
   Capabilities specific to `WorkspaceEdit`s.
-
   -}
   _workspaceEdit :: (Maybe Language.LSP.Protocol.Internal.Types.WorkspaceEditClientCapabilities.WorkspaceEditClientCapabilities)
   , {-|
   Capabilities specific to the `workspace/didChangeConfiguration` notification.
-
   -}
   _didChangeConfiguration :: (Maybe Language.LSP.Protocol.Internal.Types.DidChangeConfigurationClientCapabilities.DidChangeConfigurationClientCapabilities)
   , {-|
   Capabilities specific to the `workspace/didChangeWatchedFiles` notification.
-
   -}
   _didChangeWatchedFiles :: (Maybe Language.LSP.Protocol.Internal.Types.DidChangeWatchedFilesClientCapabilities.DidChangeWatchedFilesClientCapabilities)
   , {-|
   Capabilities specific to the `workspace/symbol` request.
-
   -}
   _symbol :: (Maybe Language.LSP.Protocol.Internal.Types.WorkspaceSymbolClientCapabilities.WorkspaceSymbolClientCapabilities)
   , {-|
   Capabilities specific to the `workspace/executeCommand` request.
-
   -}
   _executeCommand :: (Maybe Language.LSP.Protocol.Internal.Types.ExecuteCommandClientCapabilities.ExecuteCommandClientCapabilities)
   , {-|
   The client has support for workspace folders.
 
   @since 3.6.0
-
   -}
   _workspaceFolders :: (Maybe Bool)
   , {-|
   The client supports `workspace/configuration` requests.
 
   @since 3.6.0
-
   -}
   _configuration :: (Maybe Bool)
   , {-|
@@ -78,7 +69,6 @@ data WorkspaceClientCapabilities = WorkspaceClientCapabilities
   workspace.
 
   @since 3.16.0.
-
   -}
   _semanticTokens :: (Maybe Language.LSP.Protocol.Internal.Types.SemanticTokensWorkspaceClientCapabilities.SemanticTokensWorkspaceClientCapabilities)
   , {-|
@@ -86,14 +76,12 @@ data WorkspaceClientCapabilities = WorkspaceClientCapabilities
   workspace.
 
   @since 3.16.0.
-
   -}
   _codeLens :: (Maybe Language.LSP.Protocol.Internal.Types.CodeLensWorkspaceClientCapabilities.CodeLensWorkspaceClientCapabilities)
   , {-|
   The client has support for file notifications/requests for user operations on files.
 
   Since 3.16.0
-
   -}
   _fileOperations :: (Maybe Language.LSP.Protocol.Internal.Types.FileOperationClientCapabilities.FileOperationClientCapabilities)
   , {-|
@@ -101,7 +89,6 @@ data WorkspaceClientCapabilities = WorkspaceClientCapabilities
   workspace.
 
   @since 3.17.0.
-
   -}
   _inlineValue :: (Maybe Language.LSP.Protocol.Internal.Types.InlineValueWorkspaceClientCapabilities.InlineValueWorkspaceClientCapabilities)
   , {-|
@@ -109,7 +96,6 @@ data WorkspaceClientCapabilities = WorkspaceClientCapabilities
   workspace.
 
   @since 3.17.0.
-
   -}
   _inlayHint :: (Maybe Language.LSP.Protocol.Internal.Types.InlayHintWorkspaceClientCapabilities.InlayHintWorkspaceClientCapabilities)
   , {-|
@@ -117,7 +103,6 @@ data WorkspaceClientCapabilities = WorkspaceClientCapabilities
   workspace.
 
   @since 3.17.0.
-
   -}
   _diagnostics :: (Maybe Language.LSP.Protocol.Internal.Types.DiagnosticWorkspaceClientCapabilities.DiagnosticWorkspaceClientCapabilities)
   }

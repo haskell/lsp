@@ -13,14 +13,12 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 @since 3.17.0
-
 -}
 data TypeHierarchyClientCapabilities = TypeHierarchyClientCapabilities 
   { {-|
   Whether implementation supports dynamic registration. If this is set to `true`
   the client supports the new `(TextDocumentRegistrationOptions & StaticRegistrationOptions)`
   return value for the corresponding server capability as well.
-
   -}
   _dynamicRegistration :: (Maybe Bool)
   }

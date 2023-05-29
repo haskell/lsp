@@ -16,7 +16,6 @@ import qualified Data.Text
 {-|
 LSP object definition.
 @since 3.17.0
-
 -}
 newtype LSPObject = LSPObject (Data.Map.Map Data.Text.Text Data.Aeson.Value)
   deriving newtype (Aeson.ToJSON, Aeson.FromJSON)

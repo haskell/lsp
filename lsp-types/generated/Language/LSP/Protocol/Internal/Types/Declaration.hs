@@ -14,7 +14,6 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 The declaration of a symbol representation as one or many `Location`.
-
 -}
 newtype Declaration = Declaration (Language.LSP.Protocol.Internal.Types.Location.Location Language.LSP.Protocol.Types.Common.|? [Language.LSP.Protocol.Internal.Types.Location.Location])
   deriving newtype (Aeson.ToJSON, Aeson.FromJSON)

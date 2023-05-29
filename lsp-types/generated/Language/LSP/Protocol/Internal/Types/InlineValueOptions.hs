@@ -15,7 +15,6 @@ import qualified Language.LSP.Protocol.Types.Common
 Inline value options used during static registration.
 
 @since 3.17.0
-
 -}
 data InlineValueOptions = InlineValueOptions 
   { {-|

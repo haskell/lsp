@@ -13,19 +13,16 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 @since 3.14.0
-
 -}
 data DeclarationClientCapabilities = DeclarationClientCapabilities 
   { {-|
   Whether declaration supports dynamic registration. If this is set to `true`
   the client supports the new `DeclarationRegistrationOptions` return value
   for the corresponding server capability as well.
-
   -}
   _dynamicRegistration :: (Maybe Bool)
   , {-|
   The client supports additional metadata in the form of declaration links.
-
   -}
   _linkSupport :: (Maybe Bool)
   }

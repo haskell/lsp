@@ -18,13 +18,11 @@ import qualified Language.LSP.Protocol.Types.Common
 data HoverClientCapabilities = HoverClientCapabilities 
   { {-|
   Whether hover supports dynamic registration.
-
   -}
   _dynamicRegistration :: (Maybe Bool)
   , {-|
   Client supports the following content formats for the content
   property. The order describes the preferred format of the client.
-
   -}
   _contentFormat :: (Maybe [Language.LSP.Protocol.Internal.Types.MarkupKind.MarkupKind])
   }

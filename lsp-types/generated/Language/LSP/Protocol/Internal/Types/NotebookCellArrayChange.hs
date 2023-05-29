@@ -17,22 +17,18 @@ A change describing how to move a `NotebookCell`
 array from state S to S'.
 
 @since 3.17.0
-
 -}
 data NotebookCellArrayChange = NotebookCellArrayChange 
   { {-|
   The start oftest of the cell that changed.
-
   -}
   _start :: Language.LSP.Protocol.Types.Common.UInt
   , {-|
   The deleted cells
-
   -}
   _deleteCount :: Language.LSP.Protocol.Types.Common.UInt
   , {-|
   The new cells, if any
-
   -}
   _cells :: (Maybe [Language.LSP.Protocol.Internal.Types.NotebookCell.NotebookCell])
   }

@@ -16,12 +16,10 @@ import qualified Language.LSP.Protocol.Types.Common
 Represents information on a file/folder delete.
 
 @since 3.16.0
-
 -}
 data FileDelete = FileDelete 
   { {-|
   A file:// URI for the location of the file/folder being deleted.
-
   -}
   _uri :: Data.Text.Text
   }

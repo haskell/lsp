@@ -14,18 +14,15 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 @since 3.17.0
-
 -}
 data InlineValueContext = InlineValueContext 
   { {-|
   The stack frame (as a DAP Id) where the execution has stopped.
-
   -}
   _frameId :: Language.LSP.Protocol.Types.Common.Int32
   , {-|
   The document range where execution has stopped.
   Typically the end position of the range denotes the line where the inline values are shown.
-
   -}
   _stoppedLocation :: Language.LSP.Protocol.Internal.Types.Range.Range
   }

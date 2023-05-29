@@ -15,17 +15,14 @@ import qualified Language.LSP.Protocol.Types.Uri
 
 {-|
 An event describing a file change.
-
 -}
 data FileEvent = FileEvent 
   { {-|
   The file's uri.
-
   -}
   _uri :: Language.LSP.Protocol.Types.Uri.Uri
   , {-|
   The change type.
-
   -}
   _type_ :: Language.LSP.Protocol.Internal.Types.FileChangeType.FileChangeType
   }

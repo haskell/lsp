@@ -17,19 +17,16 @@ import qualified Language.LSP.Protocol.Types.Uri
 Params to show a document.
 
 @since 3.16.0
-
 -}
 data ShowDocumentParams = ShowDocumentParams 
   { {-|
   The document uri to show.
-
   -}
   _uri :: Language.LSP.Protocol.Types.Uri.Uri
   , {-|
   Indicates to show the resource in an external program.
   To show for example `https://code.visualstudio.com/`
   in the default WEB browser set `external` to `true`.
-
   -}
   _external :: (Maybe Bool)
   , {-|
@@ -37,7 +34,6 @@ data ShowDocumentParams = ShowDocumentParams
   showing the document should take focus or not.
   Clients might ignore this property if an external
   program is started.
-
   -}
   _takeFocus :: (Maybe Bool)
   , {-|
@@ -45,7 +41,6 @@ data ShowDocumentParams = ShowDocumentParams
   document. Clients might ignore the property if an
   external program is started or the file is not a text
   file.
-
   -}
   _selection :: (Maybe Language.LSP.Protocol.Internal.Types.Range.Range)
   }

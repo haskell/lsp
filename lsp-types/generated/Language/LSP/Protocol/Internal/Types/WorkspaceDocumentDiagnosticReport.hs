@@ -17,7 +17,6 @@ import qualified Language.LSP.Protocol.Types.Common
 A workspace diagnostic document report.
 
 @since 3.17.0
-
 -}
 newtype WorkspaceDocumentDiagnosticReport = WorkspaceDocumentDiagnosticReport (Language.LSP.Protocol.Internal.Types.WorkspaceFullDocumentDiagnosticReport.WorkspaceFullDocumentDiagnosticReport Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.WorkspaceUnchangedDocumentDiagnosticReport.WorkspaceUnchangedDocumentDiagnosticReport)
   deriving newtype (Aeson.ToJSON, Aeson.FromJSON)

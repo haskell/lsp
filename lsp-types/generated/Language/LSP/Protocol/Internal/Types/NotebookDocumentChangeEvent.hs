@@ -23,19 +23,16 @@ import qualified Language.LSP.Protocol.Types.Common
 A change event for a notebook document.
 
 @since 3.17.0
-
 -}
 data NotebookDocumentChangeEvent = NotebookDocumentChangeEvent 
   { {-|
   The changed meta data if any.
 
   Note: should always be an object literal (e.g. LSPObject)
-
   -}
   _metadata :: (Maybe Data.Aeson.Object)
   , {-|
   Changes to cells
-
   -}
   _cells :: (Maybe (Row.Rec ("structure" Row..== (Maybe (Row.Rec ("array" Row..== Language.LSP.Protocol.Internal.Types.NotebookCellArrayChange.NotebookCellArrayChange Row..+ ("didOpen" Row..== (Maybe [Language.LSP.Protocol.Internal.Types.TextDocumentItem.TextDocumentItem]) Row..+ ("didClose" Row..== (Maybe [Language.LSP.Protocol.Internal.Types.TextDocumentIdentifier.TextDocumentIdentifier]) Row..+ Row.Empty))))) Row..+ ("data" Row..== (Maybe [Language.LSP.Protocol.Internal.Types.NotebookCell.NotebookCell]) Row..+ ("textContent" Row..== (Maybe [(Row.Rec ("document" Row..== Language.LSP.Protocol.Internal.Types.VersionedTextDocumentIdentifier.VersionedTextDocumentIdentifier Row..+ ("changes" Row..== [Language.LSP.Protocol.Internal.Types.TextDocumentContentChangeEvent.TextDocumentContentChangeEvent] Row..+ Row.Empty)))]) Row..+ Row.Empty)))))
   }

@@ -13,12 +13,10 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 The client capabilities  of a `CodeLensRequest`.
-
 -}
 data CodeLensClientCapabilities = CodeLensClientCapabilities 
   { {-|
   Whether code lens supports dynamic registration.
-
   -}
   _dynamicRegistration :: (Maybe Bool)
   }

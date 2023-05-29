@@ -26,7 +26,6 @@ data WorkDoneProgressReport = WorkDoneProgressReport
 
   Clients that don't support cancellation or don't support controlling the button's
   enablement state are allowed to ignore the property.
-
   -}
   _cancellable :: (Maybe Bool)
   , {-|
@@ -35,7 +34,6 @@ data WorkDoneProgressReport = WorkDoneProgressReport
 
   Examples: "3/25 files", "project/src/module2", "node_modules/some_dep".
   If unset, the previous progress message (if any) is still valid.
-
   -}
   _message :: (Maybe Data.Text.Text)
   , {-|
@@ -45,7 +43,6 @@ data WorkDoneProgressReport = WorkDoneProgressReport
 
   The value should be steadily rising. Clients are free to ignore values
   that are not following this rule. The value range is [0, 100]
-
   -}
   _percentage :: (Maybe Language.LSP.Protocol.Types.Common.UInt)
   }

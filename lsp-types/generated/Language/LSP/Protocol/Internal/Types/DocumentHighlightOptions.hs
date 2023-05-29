@@ -13,7 +13,6 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 Provider options for a `DocumentHighlightRequest`.
-
 -}
 data DocumentHighlightOptions = DocumentHighlightOptions 
   { {-|

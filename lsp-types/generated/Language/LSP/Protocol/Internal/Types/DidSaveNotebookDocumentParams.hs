@@ -16,12 +16,10 @@ import qualified Language.LSP.Protocol.Types.Common
 The params sent in a save notebook document notification.
 
 @since 3.17.0
-
 -}
 data DidSaveNotebookDocumentParams = DidSaveNotebookDocumentParams 
   { {-|
   The notebook document that got saved.
-
   -}
   _notebookDocument :: Language.LSP.Protocol.Internal.Types.NotebookDocumentIdentifier.NotebookDocumentIdentifier
   }

@@ -14,12 +14,10 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 Show message request client capabilities
-
 -}
 data ShowMessageRequestClientCapabilities = ShowMessageRequestClientCapabilities 
   { {-|
   Capabilities specific to the `MessageActionItem` type.
-
   -}
   _messageActionItem :: (Maybe (Row.Rec ("additionalPropertiesSupport" Row..== (Maybe Bool) Row..+ Row.Empty)))
   }

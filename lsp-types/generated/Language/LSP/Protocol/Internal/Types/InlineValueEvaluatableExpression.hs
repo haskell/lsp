@@ -19,18 +19,15 @@ If only a range is specified, the expression will be extracted from the underlyi
 An optional expression can be used to override the extracted expression.
 
 @since 3.17.0
-
 -}
 data InlineValueEvaluatableExpression = InlineValueEvaluatableExpression 
   { {-|
   The document range for which the inline value applies.
   The range is used to extract the evaluatable expression from the underlying document.
-
   -}
   _range :: Language.LSP.Protocol.Internal.Types.Range.Range
   , {-|
   If specified the expression overrides the extracted expression.
-
   -}
   _expression :: (Maybe Data.Text.Text)
   }

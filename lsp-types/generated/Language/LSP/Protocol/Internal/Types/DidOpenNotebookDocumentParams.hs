@@ -17,18 +17,15 @@ import qualified Language.LSP.Protocol.Types.Common
 The params sent in an open notebook document notification.
 
 @since 3.17.0
-
 -}
 data DidOpenNotebookDocumentParams = DidOpenNotebookDocumentParams 
   { {-|
   The notebook document that got opened.
-
   -}
   _notebookDocument :: Language.LSP.Protocol.Internal.Types.NotebookDocument.NotebookDocument
   , {-|
   The text documents that represent the content
   of a notebook cell.
-
   -}
   _cellTextDocuments :: [Language.LSP.Protocol.Internal.Types.TextDocumentItem.TextDocumentItem]
   }

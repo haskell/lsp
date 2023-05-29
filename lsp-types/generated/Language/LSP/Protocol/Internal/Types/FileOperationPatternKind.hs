@@ -19,17 +19,14 @@ A pattern kind describing if a glob pattern matches a file a folder or
 both.
 
 @since 3.16.0
-
 -}
 data FileOperationPatternKind = 
     {-|
   The pattern matches a file only.
-
   -}
   FileOperationPatternKind_File
   | {-|
   The pattern matches a folder only.
-
   -}
   FileOperationPatternKind_Folder
   deriving stock (Show, Eq, Ord, Generic)

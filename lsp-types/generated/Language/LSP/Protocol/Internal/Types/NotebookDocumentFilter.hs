@@ -19,7 +19,6 @@ different properties. The properties will be match
 against the notebook's URI (same as with documents)
 
 @since 3.17.0
-
 -}
 newtype NotebookDocumentFilter = NotebookDocumentFilter ((Row.Rec ("notebookType" Row..== Data.Text.Text Row..+ ("scheme" Row..== (Maybe Data.Text.Text) Row..+ ("pattern" Row..== (Maybe Data.Text.Text) Row..+ Row.Empty)))) Language.LSP.Protocol.Types.Common.|? ((Row.Rec ("notebookType" Row..== (Maybe Data.Text.Text) Row..+ ("scheme" Row..== Data.Text.Text Row..+ ("pattern" Row..== (Maybe Data.Text.Text) Row..+ Row.Empty)))) Language.LSP.Protocol.Types.Common.|? (Row.Rec ("notebookType" Row..== (Maybe Data.Text.Text) Row..+ ("scheme" Row..== (Maybe Data.Text.Text) Row..+ ("pattern" Row..== Data.Text.Text Row..+ Row.Empty))))))
   deriving newtype (Aeson.ToJSON, Aeson.FromJSON)

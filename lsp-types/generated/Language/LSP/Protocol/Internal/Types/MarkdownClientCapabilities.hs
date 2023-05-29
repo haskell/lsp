@@ -16,17 +16,14 @@ import qualified Language.LSP.Protocol.Types.Common
 Client capabilities specific to the used markdown parser.
 
 @since 3.16.0
-
 -}
 data MarkdownClientCapabilities = MarkdownClientCapabilities 
   { {-|
   The name of the parser.
-
   -}
   _parser :: Data.Text.Text
   , {-|
   The version of the parser.
-
   -}
   _version :: (Maybe Data.Text.Text)
   , {-|
@@ -34,7 +31,6 @@ data MarkdownClientCapabilities = MarkdownClientCapabilities
   Markdown.
 
   @since 3.17.0
-
   -}
   _allowedTags :: (Maybe [Data.Text.Text])
   }

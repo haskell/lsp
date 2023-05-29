@@ -16,27 +16,22 @@ import qualified Language.LSP.Protocol.Types.LspEnum
 
 {-|
 The diagnostic's severity.
-
 -}
 data DiagnosticSeverity = 
     {-|
   Reports an error.
-
   -}
   DiagnosticSeverity_Error
   | {-|
   Reports a warning.
-
   -}
   DiagnosticSeverity_Warning
   | {-|
   Reports an information.
-
   -}
   DiagnosticSeverity_Information
   | {-|
   Reports a hint.
-
   -}
   DiagnosticSeverity_Hint
   deriving stock (Show, Eq, Ord, Generic)

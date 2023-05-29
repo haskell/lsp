@@ -20,7 +20,6 @@ an clients can specify additional token types via the
 corresponding client capabilities.
 
 @since 3.16.0
-
 -}
 data SemanticTokenModifiers = 
     {-|

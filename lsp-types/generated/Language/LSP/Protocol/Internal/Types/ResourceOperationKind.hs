@@ -20,17 +20,14 @@ import qualified Language.LSP.Protocol.Types.LspEnum
 data ResourceOperationKind = 
     {-|
   Supports creating new files and folders.
-
   -}
   ResourceOperationKind_Create
   | {-|
   Supports renaming existing files and folders.
-
   -}
   ResourceOperationKind_Rename
   | {-|
   Supports deleting existing files and folders.
-
   -}
   ResourceOperationKind_Delete
   deriving stock (Show, Eq, Ord, Generic)

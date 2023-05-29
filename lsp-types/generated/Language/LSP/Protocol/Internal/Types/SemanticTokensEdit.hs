@@ -13,22 +13,18 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 @since 3.16.0
-
 -}
 data SemanticTokensEdit = SemanticTokensEdit 
   { {-|
   The start offset of the edit.
-
   -}
   _start :: Language.LSP.Protocol.Types.Common.UInt
   , {-|
   The count of elements to remove.
-
   -}
   _deleteCount :: Language.LSP.Protocol.Types.Common.UInt
   , {-|
   The elements to insert.
-
   -}
   _data_ :: (Maybe [Language.LSP.Protocol.Types.Common.UInt])
   }

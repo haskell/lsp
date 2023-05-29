@@ -15,19 +15,16 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 The parameters passed via a apply workspace edit request.
-
 -}
 data ApplyWorkspaceEditParams = ApplyWorkspaceEditParams 
   { {-|
   An optional label of the workspace edit. This label is
   presented in the user interface for example on an undo
   stack to undo the workspace edit.
-
   -}
   _label :: (Maybe Data.Text.Text)
   , {-|
   The edits to apply.
-
   -}
   _edit :: Language.LSP.Protocol.Internal.Types.WorkspaceEdit.WorkspaceEdit
   }

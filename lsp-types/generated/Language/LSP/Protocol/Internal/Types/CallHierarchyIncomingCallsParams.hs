@@ -17,18 +17,15 @@ import qualified Language.LSP.Protocol.Types.Common
 The parameter of a `callHierarchy/incomingCalls` request.
 
 @since 3.16.0
-
 -}
 data CallHierarchyIncomingCallsParams = CallHierarchyIncomingCallsParams 
   { {-|
   An optional token that a server can use to report work done progress.
-
   -}
   _workDoneToken :: (Maybe Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken)
   , {-|
   An optional token that a server can use to report partial results (e.g. streaming) to
   the client.
-
   -}
   _partialResultToken :: (Maybe Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken)
   , {-|

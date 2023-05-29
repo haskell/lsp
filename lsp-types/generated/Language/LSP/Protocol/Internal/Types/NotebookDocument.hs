@@ -19,23 +19,19 @@ import qualified Language.LSP.Protocol.Types.Uri
 A notebook document.
 
 @since 3.17.0
-
 -}
 data NotebookDocument = NotebookDocument 
   { {-|
   The notebook document's uri.
-
   -}
   _uri :: Language.LSP.Protocol.Types.Uri.Uri
   , {-|
   The type of the notebook.
-
   -}
   _notebookType :: Data.Text.Text
   , {-|
   The version number of this document (it will increase after each
   change, including undo/redo).
-
   -}
   _version :: Language.LSP.Protocol.Types.Common.Int32
   , {-|
@@ -43,12 +39,10 @@ data NotebookDocument = NotebookDocument
   document.
 
   Note: should always be an object literal (e.g. LSPObject)
-
   -}
   _metadata :: (Maybe Data.Aeson.Object)
   , {-|
   The cells of a notebook.
-
   -}
   _cells :: [Language.LSP.Protocol.Internal.Types.NotebookCell.NotebookCell]
   }

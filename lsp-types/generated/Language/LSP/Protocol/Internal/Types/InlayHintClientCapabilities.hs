@@ -17,18 +17,15 @@ import qualified Language.LSP.Protocol.Types.Common
 Inlay hint client capabilities.
 
 @since 3.17.0
-
 -}
 data InlayHintClientCapabilities = InlayHintClientCapabilities 
   { {-|
   Whether inlay hints support dynamic registration.
-
   -}
   _dynamicRegistration :: (Maybe Bool)
   , {-|
   Indicates which properties a client can resolve lazily on an inlay
   hint.
-
   -}
   _resolveSupport :: (Maybe (Row.Rec ("properties" Row..== [Data.Text.Text] Row..+ Row.Empty)))
   }

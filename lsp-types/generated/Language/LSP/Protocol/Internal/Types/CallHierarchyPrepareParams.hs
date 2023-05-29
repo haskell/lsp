@@ -18,22 +18,18 @@ import qualified Language.LSP.Protocol.Types.Common
 The parameter of a `textDocument/prepareCallHierarchy` request.
 
 @since 3.16.0
-
 -}
 data CallHierarchyPrepareParams = CallHierarchyPrepareParams 
   { {-|
   The text document.
-
   -}
   _textDocument :: Language.LSP.Protocol.Internal.Types.TextDocumentIdentifier.TextDocumentIdentifier
   , {-|
   The position inside the text document.
-
   -}
   _position :: Language.LSP.Protocol.Internal.Types.Position.Position
   , {-|
   An optional token that a server can use to report work done progress.
-
   -}
   _workDoneToken :: (Maybe Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken)
   }

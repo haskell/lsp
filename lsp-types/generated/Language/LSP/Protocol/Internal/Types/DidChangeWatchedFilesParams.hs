@@ -14,12 +14,10 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 The watched files change notification's parameters.
-
 -}
 data DidChangeWatchedFilesParams = DidChangeWatchedFilesParams 
   { {-|
   The actual file events.
-
   -}
   _changes :: [Language.LSP.Protocol.Internal.Types.FileEvent.FileEvent]
   }

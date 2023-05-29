@@ -16,28 +16,23 @@ import qualified Language.LSP.Protocol.Types.Uri
 {-|
 An item to transfer a text document from the client to the
 server.
-
 -}
 data TextDocumentItem = TextDocumentItem 
   { {-|
   The text document's uri.
-
   -}
   _uri :: Language.LSP.Protocol.Types.Uri.Uri
   , {-|
   The text document's language identifier.
-
   -}
   _languageId :: Data.Text.Text
   , {-|
   The version number of this document (it will increase after each
   change, including undo/redo).
-
   -}
   _version :: Language.LSP.Protocol.Types.Common.Int32
   , {-|
   The content of the opened text document.
-
   -}
   _text :: Data.Text.Text
   }

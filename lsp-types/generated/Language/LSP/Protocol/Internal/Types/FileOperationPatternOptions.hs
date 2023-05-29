@@ -15,12 +15,10 @@ import qualified Language.LSP.Protocol.Types.Common
 Matching options for the file operation pattern.
 
 @since 3.16.0
-
 -}
 data FileOperationPatternOptions = FileOperationPatternOptions 
   { {-|
   The pattern should be matched ignoring casing.
-
   -}
   _ignoreCase :: (Maybe Bool)
   }

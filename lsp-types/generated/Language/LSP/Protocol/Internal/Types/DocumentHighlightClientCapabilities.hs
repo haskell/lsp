@@ -13,12 +13,10 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 Client Capabilities for a `DocumentHighlightRequest`.
-
 -}
 data DocumentHighlightClientCapabilities = DocumentHighlightClientCapabilities 
   { {-|
   Whether document highlight supports dynamic registration.
-
   -}
   _dynamicRegistration :: (Maybe Bool)
   }

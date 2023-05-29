@@ -15,19 +15,16 @@ import qualified Language.LSP.Protocol.Types.Common
 Client capabilities specific to diagnostic pull requests.
 
 @since 3.17.0
-
 -}
 data DiagnosticClientCapabilities = DiagnosticClientCapabilities 
   { {-|
   Whether implementation supports dynamic registration. If this is set to `true`
   the client supports the new `(TextDocumentRegistrationOptions & StaticRegistrationOptions)`
   return value for the corresponding server capability as well.
-
   -}
   _dynamicRegistration :: (Maybe Bool)
   , {-|
   Whether the clients supports related documents for document diagnostic pulls.
-
   -}
   _relatedDocumentSupport :: (Maybe Bool)
   }

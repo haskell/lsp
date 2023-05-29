@@ -17,25 +17,21 @@ import qualified Language.LSP.Protocol.Types.LspEnum
 {-|
 Defines how the host (editor) should sync
 document changes to the language server.
-
 -}
 data TextDocumentSyncKind = 
     {-|
   Documents should not be synced at all.
-
   -}
   TextDocumentSyncKind_None
   | {-|
   Documents are synced by always sending the full content
   of the document.
-
   -}
   TextDocumentSyncKind_Full
   | {-|
   Documents are synced by sending the full content on open.
   After that only incremental updates to the document are
   send.
-
   -}
   TextDocumentSyncKind_Incremental
   deriving stock (Show, Eq, Ord, Generic)

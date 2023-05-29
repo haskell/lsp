@@ -16,17 +16,14 @@ import qualified Language.LSP.Protocol.Types.Uri
 A versioned notebook document identifier.
 
 @since 3.17.0
-
 -}
 data VersionedNotebookDocumentIdentifier = VersionedNotebookDocumentIdentifier 
   { {-|
   The version number of this notebook document.
-
   -}
   _version :: Language.LSP.Protocol.Types.Common.Int32
   , {-|
   The notebook document's uri.
-
   -}
   _uri :: Language.LSP.Protocol.Types.Uri.Uri
   }

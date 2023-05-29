@@ -13,17 +13,14 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 Rename file options
-
 -}
 data RenameFileOptions = RenameFileOptions 
   { {-|
   Overwrite target if existing. Overwrite wins over `ignoreIfExists`
-
   -}
   _overwrite :: (Maybe Bool)
   , {-|
   Ignores if target exists.
-
   -}
   _ignoreIfExists :: (Maybe Bool)
   }

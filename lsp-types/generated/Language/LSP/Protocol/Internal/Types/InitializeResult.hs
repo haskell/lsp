@@ -16,19 +16,16 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 The result returned from an initialize request.
-
 -}
 data InitializeResult = InitializeResult 
   { {-|
   The capabilities the language server provides.
-
   -}
   _capabilities :: Language.LSP.Protocol.Internal.Types.ServerCapabilities.ServerCapabilities
   , {-|
   Information about the server.
 
   @since 3.15.0
-
   -}
   _serverInfo :: (Maybe (Row.Rec ("name" Row..== Data.Text.Text Row..+ ("version" Row..== (Maybe Data.Text.Text) Row..+ Row.Empty))))
   }

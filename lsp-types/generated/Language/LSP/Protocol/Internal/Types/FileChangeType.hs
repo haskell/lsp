@@ -16,22 +16,18 @@ import qualified Language.LSP.Protocol.Types.LspEnum
 
 {-|
 The file event type
-
 -}
 data FileChangeType = 
     {-|
   The file got created.
-
   -}
   FileChangeType_Created
   | {-|
   The file got changed.
-
   -}
   FileChangeType_Changed
   | {-|
   The file got deleted.
-
   -}
   FileChangeType_Deleted
   deriving stock (Show, Eq, Ord, Generic)

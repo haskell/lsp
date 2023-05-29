@@ -24,7 +24,6 @@ data WorkspaceFoldersInitializeParams = WorkspaceFoldersInitializeParams
   configured.
 
   @since 3.6.0
-
   -}
   _workspaceFolders :: (Maybe ([Language.LSP.Protocol.Internal.Types.WorkspaceFolder.WorkspaceFolder] Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Types.Common.Null))
   }

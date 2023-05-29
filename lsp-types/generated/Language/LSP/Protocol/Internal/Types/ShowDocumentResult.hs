@@ -15,12 +15,10 @@ import qualified Language.LSP.Protocol.Types.Common
 The result of a showDocument request.
 
 @since 3.16.0
-
 -}
 data ShowDocumentResult = ShowDocumentResult 
   { {-|
   A boolean indicating if the show was successful.
-
   -}
   _success :: Bool
   }

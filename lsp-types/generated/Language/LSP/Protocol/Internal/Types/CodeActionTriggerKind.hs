@@ -18,12 +18,10 @@ import qualified Language.LSP.Protocol.Types.LspEnum
 The reason why code actions were requested.
 
 @since 3.17.0
-
 -}
 data CodeActionTriggerKind = 
     {-|
   Code actions were explicitly requested by the user or by an extension.
-
   -}
   CodeActionTriggerKind_Invoked
   | {-|
@@ -31,7 +29,6 @@ data CodeActionTriggerKind =
 
   This typically happens when current selection in a file changes, but can
   also be triggered when file content changes.
-
   -}
   CodeActionTriggerKind_Automatic
   deriving stock (Show, Eq, Ord, Generic)

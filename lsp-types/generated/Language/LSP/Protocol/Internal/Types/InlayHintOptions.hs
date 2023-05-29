@@ -15,7 +15,6 @@ import qualified Language.LSP.Protocol.Types.Common
 Inlay hint options used during static registration.
 
 @since 3.17.0
-
 -}
 data InlayHintOptions = InlayHintOptions 
   { {-|
@@ -25,7 +24,6 @@ data InlayHintOptions = InlayHintOptions
   , {-|
   The server provides support to resolve additional
   information for an inlay hint item.
-
   -}
   _resolveProvider :: (Maybe Bool)
   }

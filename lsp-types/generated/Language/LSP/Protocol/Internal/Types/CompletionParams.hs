@@ -17,34 +17,28 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 Completion parameters
-
 -}
 data CompletionParams = CompletionParams 
   { {-|
   The text document.
-
   -}
   _textDocument :: Language.LSP.Protocol.Internal.Types.TextDocumentIdentifier.TextDocumentIdentifier
   , {-|
   The position inside the text document.
-
   -}
   _position :: Language.LSP.Protocol.Internal.Types.Position.Position
   , {-|
   An optional token that a server can use to report work done progress.
-
   -}
   _workDoneToken :: (Maybe Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken)
   , {-|
   An optional token that a server can use to report partial results (e.g. streaming) to
   the client.
-
   -}
   _partialResultToken :: (Maybe Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken)
   , {-|
   The completion context. This is only available it the client specifies
   to send this using the client capability `textDocument.completion.contextSupport === true`
-
   -}
   _context :: (Maybe Language.LSP.Protocol.Internal.Types.CompletionContext.CompletionContext)
   }

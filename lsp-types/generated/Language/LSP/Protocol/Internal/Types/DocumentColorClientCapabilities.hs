@@ -19,7 +19,6 @@ data DocumentColorClientCapabilities = DocumentColorClientCapabilities
   Whether implementation supports dynamic registration. If this is set to `true`
   the client supports the new `DocumentColorRegistrationOptions` return value
   for the corresponding server capability as well.
-
   -}
   _dynamicRegistration :: (Maybe Bool)
   }

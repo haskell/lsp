@@ -67,7 +67,6 @@ import qualified Language.LSP.Protocol.Types.Common
 {-|
 Defines the capabilities provided by a language
 server.
-
 -}
 data ServerCapabilities = ServerCapabilities 
   { {-|
@@ -80,201 +79,166 @@ data ServerCapabilities = ServerCapabilities
   If omitted it defaults to 'utf-16'.
 
   @since 3.17.0
-
   -}
   _positionEncoding :: (Maybe Language.LSP.Protocol.Internal.Types.PositionEncodingKind.PositionEncodingKind)
   , {-|
   Defines how text documents are synced. Is either a detailed structure
   defining each notification or for backwards compatibility the
   TextDocumentSyncKind number.
-
   -}
   _textDocumentSync :: (Maybe (Language.LSP.Protocol.Internal.Types.TextDocumentSyncOptions.TextDocumentSyncOptions Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.TextDocumentSyncKind.TextDocumentSyncKind))
   , {-|
   Defines how notebook documents are synced.
 
   @since 3.17.0
-
   -}
   _notebookDocumentSync :: (Maybe (Language.LSP.Protocol.Internal.Types.NotebookDocumentSyncOptions.NotebookDocumentSyncOptions Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.NotebookDocumentSyncRegistrationOptions.NotebookDocumentSyncRegistrationOptions))
   , {-|
   The server provides completion support.
-
   -}
   _completionProvider :: (Maybe Language.LSP.Protocol.Internal.Types.CompletionOptions.CompletionOptions)
   , {-|
   The server provides hover support.
-
   -}
   _hoverProvider :: (Maybe (Bool Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.HoverOptions.HoverOptions))
   , {-|
   The server provides signature help support.
-
   -}
   _signatureHelpProvider :: (Maybe Language.LSP.Protocol.Internal.Types.SignatureHelpOptions.SignatureHelpOptions)
   , {-|
   The server provides Goto Declaration support.
-
   -}
   _declarationProvider :: (Maybe (Bool Language.LSP.Protocol.Types.Common.|? (Language.LSP.Protocol.Internal.Types.DeclarationOptions.DeclarationOptions Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.DeclarationRegistrationOptions.DeclarationRegistrationOptions)))
   , {-|
   The server provides goto definition support.
-
   -}
   _definitionProvider :: (Maybe (Bool Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.DefinitionOptions.DefinitionOptions))
   , {-|
   The server provides Goto Type Definition support.
-
   -}
   _typeDefinitionProvider :: (Maybe (Bool Language.LSP.Protocol.Types.Common.|? (Language.LSP.Protocol.Internal.Types.TypeDefinitionOptions.TypeDefinitionOptions Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.TypeDefinitionRegistrationOptions.TypeDefinitionRegistrationOptions)))
   , {-|
   The server provides Goto Implementation support.
-
   -}
   _implementationProvider :: (Maybe (Bool Language.LSP.Protocol.Types.Common.|? (Language.LSP.Protocol.Internal.Types.ImplementationOptions.ImplementationOptions Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.ImplementationRegistrationOptions.ImplementationRegistrationOptions)))
   , {-|
   The server provides find references support.
-
   -}
   _referencesProvider :: (Maybe (Bool Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.ReferenceOptions.ReferenceOptions))
   , {-|
   The server provides document highlight support.
-
   -}
   _documentHighlightProvider :: (Maybe (Bool Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.DocumentHighlightOptions.DocumentHighlightOptions))
   , {-|
   The server provides document symbol support.
-
   -}
   _documentSymbolProvider :: (Maybe (Bool Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.DocumentSymbolOptions.DocumentSymbolOptions))
   , {-|
   The server provides code actions. CodeActionOptions may only be
   specified if the client states that it supports
   `codeActionLiteralSupport` in its initial `initialize` request.
-
   -}
   _codeActionProvider :: (Maybe (Bool Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.CodeActionOptions.CodeActionOptions))
   , {-|
   The server provides code lens.
-
   -}
   _codeLensProvider :: (Maybe Language.LSP.Protocol.Internal.Types.CodeLensOptions.CodeLensOptions)
   , {-|
   The server provides document link support.
-
   -}
   _documentLinkProvider :: (Maybe Language.LSP.Protocol.Internal.Types.DocumentLinkOptions.DocumentLinkOptions)
   , {-|
   The server provides color provider support.
-
   -}
   _colorProvider :: (Maybe (Bool Language.LSP.Protocol.Types.Common.|? (Language.LSP.Protocol.Internal.Types.DocumentColorOptions.DocumentColorOptions Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.DocumentColorRegistrationOptions.DocumentColorRegistrationOptions)))
   , {-|
   The server provides workspace symbol support.
-
   -}
   _workspaceSymbolProvider :: (Maybe (Bool Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.WorkspaceSymbolOptions.WorkspaceSymbolOptions))
   , {-|
   The server provides document formatting.
-
   -}
   _documentFormattingProvider :: (Maybe (Bool Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.DocumentFormattingOptions.DocumentFormattingOptions))
   , {-|
   The server provides document range formatting.
-
   -}
   _documentRangeFormattingProvider :: (Maybe (Bool Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.DocumentRangeFormattingOptions.DocumentRangeFormattingOptions))
   , {-|
   The server provides document formatting on typing.
-
   -}
   _documentOnTypeFormattingProvider :: (Maybe Language.LSP.Protocol.Internal.Types.DocumentOnTypeFormattingOptions.DocumentOnTypeFormattingOptions)
   , {-|
   The server provides rename support. RenameOptions may only be
   specified if the client states that it supports
   `prepareSupport` in its initial `initialize` request.
-
   -}
   _renameProvider :: (Maybe (Bool Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.RenameOptions.RenameOptions))
   , {-|
   The server provides folding provider support.
-
   -}
   _foldingRangeProvider :: (Maybe (Bool Language.LSP.Protocol.Types.Common.|? (Language.LSP.Protocol.Internal.Types.FoldingRangeOptions.FoldingRangeOptions Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.FoldingRangeRegistrationOptions.FoldingRangeRegistrationOptions)))
   , {-|
   The server provides selection range support.
-
   -}
   _selectionRangeProvider :: (Maybe (Bool Language.LSP.Protocol.Types.Common.|? (Language.LSP.Protocol.Internal.Types.SelectionRangeOptions.SelectionRangeOptions Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.SelectionRangeRegistrationOptions.SelectionRangeRegistrationOptions)))
   , {-|
   The server provides execute command support.
-
   -}
   _executeCommandProvider :: (Maybe Language.LSP.Protocol.Internal.Types.ExecuteCommandOptions.ExecuteCommandOptions)
   , {-|
   The server provides call hierarchy support.
 
   @since 3.16.0
-
   -}
   _callHierarchyProvider :: (Maybe (Bool Language.LSP.Protocol.Types.Common.|? (Language.LSP.Protocol.Internal.Types.CallHierarchyOptions.CallHierarchyOptions Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.CallHierarchyRegistrationOptions.CallHierarchyRegistrationOptions)))
   , {-|
   The server provides linked editing range support.
 
   @since 3.16.0
-
   -}
   _linkedEditingRangeProvider :: (Maybe (Bool Language.LSP.Protocol.Types.Common.|? (Language.LSP.Protocol.Internal.Types.LinkedEditingRangeOptions.LinkedEditingRangeOptions Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.LinkedEditingRangeRegistrationOptions.LinkedEditingRangeRegistrationOptions)))
   , {-|
   The server provides semantic tokens support.
 
   @since 3.16.0
-
   -}
   _semanticTokensProvider :: (Maybe (Language.LSP.Protocol.Internal.Types.SemanticTokensOptions.SemanticTokensOptions Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.SemanticTokensRegistrationOptions.SemanticTokensRegistrationOptions))
   , {-|
   The server provides moniker support.
 
   @since 3.16.0
-
   -}
   _monikerProvider :: (Maybe (Bool Language.LSP.Protocol.Types.Common.|? (Language.LSP.Protocol.Internal.Types.MonikerOptions.MonikerOptions Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.MonikerRegistrationOptions.MonikerRegistrationOptions)))
   , {-|
   The server provides type hierarchy support.
 
   @since 3.17.0
-
   -}
   _typeHierarchyProvider :: (Maybe (Bool Language.LSP.Protocol.Types.Common.|? (Language.LSP.Protocol.Internal.Types.TypeHierarchyOptions.TypeHierarchyOptions Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.TypeHierarchyRegistrationOptions.TypeHierarchyRegistrationOptions)))
   , {-|
   The server provides inline values.
 
   @since 3.17.0
-
   -}
   _inlineValueProvider :: (Maybe (Bool Language.LSP.Protocol.Types.Common.|? (Language.LSP.Protocol.Internal.Types.InlineValueOptions.InlineValueOptions Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.InlineValueRegistrationOptions.InlineValueRegistrationOptions)))
   , {-|
   The server provides inlay hints.
 
   @since 3.17.0
-
   -}
   _inlayHintProvider :: (Maybe (Bool Language.LSP.Protocol.Types.Common.|? (Language.LSP.Protocol.Internal.Types.InlayHintOptions.InlayHintOptions Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.InlayHintRegistrationOptions.InlayHintRegistrationOptions)))
   , {-|
   The server has support for pull model diagnostics.
 
   @since 3.17.0
-
   -}
   _diagnosticProvider :: (Maybe (Language.LSP.Protocol.Internal.Types.DiagnosticOptions.DiagnosticOptions Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.DiagnosticRegistrationOptions.DiagnosticRegistrationOptions))
   , {-|
   Workspace specific server capabilities.
-
   -}
   _workspace :: (Maybe (Row.Rec ("workspaceFolders" Row..== (Maybe Language.LSP.Protocol.Internal.Types.WorkspaceFoldersServerCapabilities.WorkspaceFoldersServerCapabilities) Row..+ ("fileOperations" Row..== (Maybe Language.LSP.Protocol.Internal.Types.FileOperationOptions.FileOperationOptions) Row..+ Row.Empty))))
   , {-|
   Experimental server capabilities.
-
   -}
   _experimental :: (Maybe Data.Aeson.Value)
   }

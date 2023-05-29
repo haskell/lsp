@@ -21,7 +21,6 @@ import qualified Language.LSP.Protocol.Types.Common
 {-|
 Represents a collection of `CompletionItem` to be presented
 in the editor.
-
 -}
 data CompletionList = CompletionList 
   { {-|
@@ -29,7 +28,6 @@ data CompletionList = CompletionList
 
   Recomputed lists have all their items replaced (not appended) in the
   incomplete completion sessions.
-
   -}
   _isIncomplete :: Bool
   , {-|
@@ -46,12 +44,10 @@ data CompletionList = CompletionList
   capability.
 
   @since 3.17.0
-
   -}
   _itemDefaults :: (Maybe (Row.Rec ("commitCharacters" Row..== (Maybe [Data.Text.Text]) Row..+ ("editRange" Row..== (Maybe (Language.LSP.Protocol.Internal.Types.Range.Range Language.LSP.Protocol.Types.Common.|? (Row.Rec ("insert" Row..== Language.LSP.Protocol.Internal.Types.Range.Range Row..+ ("replace" Row..== Language.LSP.Protocol.Internal.Types.Range.Range Row..+ Row.Empty))))) Row..+ ("insertTextFormat" Row..== (Maybe Language.LSP.Protocol.Internal.Types.InsertTextFormat.InsertTextFormat) Row..+ ("insertTextMode" Row..== (Maybe Language.LSP.Protocol.Internal.Types.InsertTextMode.InsertTextMode) Row..+ ("data" Row..== (Maybe Data.Aeson.Value) Row..+ Row.Empty)))))))
   , {-|
   The completion items.
-
   -}
   _items :: [Language.LSP.Protocol.Internal.Types.CompletionItem.CompletionItem]
   }

@@ -17,12 +17,10 @@ The parameters sent in notifications/requests for user-initiated deletes of
 files.
 
 @since 3.16.0
-
 -}
 data DeleteFilesParams = DeleteFilesParams 
   { {-|
   An array of all files/folders deleted in this operation.
-
   -}
   _files :: [Language.LSP.Protocol.Internal.Types.FileDelete.FileDelete]
   }

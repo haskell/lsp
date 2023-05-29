@@ -14,17 +14,14 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 The workspace folder change event.
-
 -}
 data WorkspaceFoldersChangeEvent = WorkspaceFoldersChangeEvent 
   { {-|
   The array of added workspace folders
-
   -}
   _added :: [Language.LSP.Protocol.Internal.Types.WorkspaceFolder.WorkspaceFolder]
   , {-|
   The array of the removed workspace folders
-
   -}
   _removed :: [Language.LSP.Protocol.Internal.Types.WorkspaceFolder.WorkspaceFolder]
   }

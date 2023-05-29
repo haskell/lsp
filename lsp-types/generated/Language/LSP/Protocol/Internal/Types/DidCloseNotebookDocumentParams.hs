@@ -17,18 +17,15 @@ import qualified Language.LSP.Protocol.Types.Common
 The params sent in a close notebook document notification.
 
 @since 3.17.0
-
 -}
 data DidCloseNotebookDocumentParams = DidCloseNotebookDocumentParams 
   { {-|
   The notebook document that got closed.
-
   -}
   _notebookDocument :: Language.LSP.Protocol.Internal.Types.NotebookDocumentIdentifier.NotebookDocumentIdentifier
   , {-|
   The text documents that represent the content
   of a notebook cell that got closed.
-
   -}
   _cellTextDocuments :: [Language.LSP.Protocol.Internal.Types.TextDocumentIdentifier.TextDocumentIdentifier]
   }

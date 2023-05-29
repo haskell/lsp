@@ -18,7 +18,6 @@ import qualified Language.LSP.Protocol.Types.Common
 data WorkspaceFoldersServerCapabilities = WorkspaceFoldersServerCapabilities 
   { {-|
   The server has support for workspace folders
-
   -}
   _supported :: (Maybe Bool)
   , {-|
@@ -29,7 +28,6 @@ data WorkspaceFoldersServerCapabilities = WorkspaceFoldersServerCapabilities
   under which the notification is registered on the client
   side. The ID can be used to unregister for these events
   using the `client/unregisterCapability` request.
-
   -}
   _changeNotifications :: (Maybe (Data.Text.Text Language.LSP.Protocol.Types.Common.|? Bool))
   }

@@ -18,24 +18,20 @@ import qualified Language.LSP.Protocol.Types.Singletons
 A diagnostic report with a full set of problems.
 
 @since 3.17.0
-
 -}
 data FullDocumentDiagnosticReport = FullDocumentDiagnosticReport 
   { {-|
   A full document diagnostic report.
-
   -}
   _kind :: (Language.LSP.Protocol.Types.Singletons.AString "full")
   , {-|
   An optional result id. If provided it will
   be sent on the next diagnostic request for the
   same document.
-
   -}
   _resultId :: (Maybe Data.Text.Text)
   , {-|
   The actual items.
-
   -}
   _items :: [Language.LSP.Protocol.Internal.Types.Diagnostic.Diagnostic]
   }

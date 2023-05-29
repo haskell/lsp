@@ -14,12 +14,10 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 The parameters of a change configuration notification.
-
 -}
 data DidChangeConfigurationParams = DidChangeConfigurationParams 
   { {-|
   The actual changed settings
-
   -}
   _settings :: Data.Aeson.Value
   }

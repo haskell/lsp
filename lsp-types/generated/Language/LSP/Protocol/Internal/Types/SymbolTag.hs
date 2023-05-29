@@ -18,12 +18,10 @@ import qualified Language.LSP.Protocol.Types.LspEnum
 Symbol tags are extra annotations that tweak the rendering of a symbol.
 
 @since 3.16
-
 -}
 data SymbolTag = 
     {-|
   Render a symbol as obsolete, usually using a strike-out.
-
   -}
   SymbolTag_Deprecated
   deriving stock (Show, Eq, Ord, Generic)

@@ -14,12 +14,10 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 The parameters sent in a close text document notification
-
 -}
 data DidCloseTextDocumentParams = DidCloseTextDocumentParams 
   { {-|
   The document that was closed.
-
   -}
   _textDocument :: Language.LSP.Protocol.Internal.Types.TextDocumentIdentifier.TextDocumentIdentifier
   }

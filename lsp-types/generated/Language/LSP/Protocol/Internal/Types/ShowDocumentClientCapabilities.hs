@@ -15,13 +15,11 @@ import qualified Language.LSP.Protocol.Types.Common
 Client capabilities for the showDocument request.
 
 @since 3.16.0
-
 -}
 data ShowDocumentClientCapabilities = ShowDocumentClientCapabilities 
   { {-|
   The client has support for the showDocument
   request.
-
   -}
   _support :: Bool
   }

@@ -14,18 +14,15 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 General parameters to unregister a request or notification.
-
 -}
 data Unregistration = Unregistration 
   { {-|
   The id used to unregister the request or notification. Usually an id
   provided during the register request.
-
   -}
   _id :: Data.Text.Text
   , {-|
   The method to unregister for.
-
   -}
   _method :: Data.Text.Text
   }

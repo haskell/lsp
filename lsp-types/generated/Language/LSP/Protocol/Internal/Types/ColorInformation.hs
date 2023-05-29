@@ -15,17 +15,14 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 Represents a color range from a document.
-
 -}
 data ColorInformation = ColorInformation 
   { {-|
   The range in the document where this color appears.
-
   -}
   _range :: Language.LSP.Protocol.Internal.Types.Range.Range
   , {-|
   The actual color value for this color range.
-
   -}
   _color :: Language.LSP.Protocol.Internal.Types.Color.Color
   }

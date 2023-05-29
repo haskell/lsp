@@ -15,14 +15,12 @@ import qualified Language.LSP.Protocol.Types.Common
 Client capabilities specific to the moniker request.
 
 @since 3.16.0
-
 -}
 data MonikerClientCapabilities = MonikerClientCapabilities 
   { {-|
   Whether moniker supports dynamic registration. If this is set to `true`
   the client supports the new `MonikerRegistrationOptions` return value
   for the corresponding server capability as well.
-
   -}
   _dynamicRegistration :: (Maybe Bool)
   }

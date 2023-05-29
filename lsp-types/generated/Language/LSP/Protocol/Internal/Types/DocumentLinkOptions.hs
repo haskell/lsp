@@ -13,7 +13,6 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 Provider options for a `DocumentLinkRequest`.
-
 -}
 data DocumentLinkOptions = DocumentLinkOptions 
   { {-|
@@ -22,7 +21,6 @@ data DocumentLinkOptions = DocumentLinkOptions
   _workDoneProgress :: (Maybe Bool)
   , {-|
   Document links have a resolve provider as well.
-
   -}
   _resolveProvider :: (Maybe Bool)
   }

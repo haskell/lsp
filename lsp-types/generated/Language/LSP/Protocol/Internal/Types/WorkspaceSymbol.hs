@@ -24,24 +24,20 @@ A special workspace symbol that supports locations without a range.
 See also SymbolInformation.
 
 @since 3.17.0
-
 -}
 data WorkspaceSymbol = WorkspaceSymbol 
   { {-|
   The name of this symbol.
-
   -}
   _name :: Data.Text.Text
   , {-|
   The kind of this symbol.
-
   -}
   _kind :: Language.LSP.Protocol.Internal.Types.SymbolKind.SymbolKind
   , {-|
   Tags for this symbol.
 
   @since 3.16.0
-
   -}
   _tags :: (Maybe [Language.LSP.Protocol.Internal.Types.SymbolTag.SymbolTag])
   , {-|
@@ -49,7 +45,6 @@ data WorkspaceSymbol = WorkspaceSymbol
   user interface purposes (e.g. to render a qualifier in the user interface
   if necessary). It can't be used to re-infer a hierarchy for the document
   symbols.
-
   -}
   _containerName :: (Maybe Data.Text.Text)
   , {-|
@@ -58,13 +53,11 @@ data WorkspaceSymbol = WorkspaceSymbol
   capability `workspace.symbol.resolveSupport`.
 
   See SymbolInformation#location for more details.
-
   -}
   _location :: (Language.LSP.Protocol.Internal.Types.Location.Location Language.LSP.Protocol.Types.Common.|? (Row.Rec ("uri" Row..== Language.LSP.Protocol.Types.Uri.Uri Row..+ Row.Empty)))
   , {-|
   A data entry field that is preserved on a workspace symbol between a
   workspace symbol request and a workspace symbol resolve request.
-
   -}
   _data_ :: (Maybe Data.Aeson.Value)
   }

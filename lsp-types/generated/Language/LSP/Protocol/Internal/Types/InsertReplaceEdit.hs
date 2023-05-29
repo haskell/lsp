@@ -17,22 +17,18 @@ import qualified Language.LSP.Protocol.Types.Common
 A special text edit to provide an insert and a replace operation.
 
 @since 3.16.0
-
 -}
 data InsertReplaceEdit = InsertReplaceEdit 
   { {-|
   The string to be inserted.
-
   -}
   _newText :: Data.Text.Text
   , {-|
   The range if the insert is requested
-
   -}
   _insert :: Language.LSP.Protocol.Internal.Types.Range.Range
   , {-|
   The range if the replace is requested.
-
   -}
   _replace :: Language.LSP.Protocol.Internal.Types.Range.Range
   }

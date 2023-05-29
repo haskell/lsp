@@ -19,24 +19,20 @@ import qualified Language.LSP.Protocol.Types.Common
 {-|
 Represents information about programming constructs like variables, classes,
 interfaces etc.
-
 -}
 data SymbolInformation = SymbolInformation 
   { {-|
   The name of this symbol.
-
   -}
   _name :: Data.Text.Text
   , {-|
   The kind of this symbol.
-
   -}
   _kind :: Language.LSP.Protocol.Internal.Types.SymbolKind.SymbolKind
   , {-|
   Tags for this symbol.
 
   @since 3.16.0
-
   -}
   _tags :: (Maybe [Language.LSP.Protocol.Internal.Types.SymbolTag.SymbolTag])
   , {-|
@@ -44,14 +40,12 @@ data SymbolInformation = SymbolInformation
   user interface purposes (e.g. to render a qualifier in the user interface
   if necessary). It can't be used to re-infer a hierarchy for the document
   symbols.
-
   -}
   _containerName :: (Maybe Data.Text.Text)
   , {-|
   Indicates if this symbol is deprecated.
 
   @deprecated Use tags instead
-
   -}
   _deprecated :: (Maybe Bool)
   , {-|
@@ -64,7 +58,6 @@ data SymbolInformation = SymbolInformation
   The range doesn't have to denote a node range in the sense of an abstract
   syntax tree. It can therefore not be used to re-construct a hierarchy of
   the symbols.
-
   -}
   _location :: Language.LSP.Protocol.Internal.Types.Location.Location
   }

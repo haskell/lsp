@@ -22,12 +22,10 @@ import qualified Language.LSP.Protocol.Types.Common
 Inlay hint information.
 
 @since 3.17.0
-
 -}
 data InlayHint = InlayHint 
   { {-|
   The position of this hint.
-
   -}
   _position :: Language.LSP.Protocol.Internal.Types.Position.Position
   , {-|
@@ -35,13 +33,11 @@ data InlayHint = InlayHint
   InlayHintLabelPart label parts.
 
   *Note* that neither the string nor the label part can be empty.
-
   -}
   _label :: (Data.Text.Text Language.LSP.Protocol.Types.Common.|? [Language.LSP.Protocol.Internal.Types.InlayHintLabelPart.InlayHintLabelPart])
   , {-|
   The kind of this hint. Can be omitted in which case the client
   should fall back to a reasonable default.
-
   -}
   _kind :: (Maybe Language.LSP.Protocol.Internal.Types.InlayHintKind.InlayHintKind)
   , {-|
@@ -50,12 +46,10 @@ data InlayHint = InlayHint
   *Note* that edits are expected to change the document so that the inlay
   hint (or its nearest variant) is now part of the document and the inlay
   hint itself is now obsolete.
-
   -}
   _textEdits :: (Maybe [Language.LSP.Protocol.Internal.Types.TextEdit.TextEdit])
   , {-|
   The tooltip text when you hover over this item.
-
   -}
   _tooltip :: (Maybe (Data.Text.Text Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.MarkupContent.MarkupContent))
   , {-|
@@ -64,7 +58,6 @@ data InlayHint = InlayHint
   Note: Padding should use the editor's background color, not the
   background color of the hint itself. That means padding can be used
   to visually align/separate an inlay hint.
-
   -}
   _paddingLeft :: (Maybe Bool)
   , {-|
@@ -73,13 +66,11 @@ data InlayHint = InlayHint
   Note: Padding should use the editor's background color, not the
   background color of the hint itself. That means padding can be used
   to visually align/separate an inlay hint.
-
   -}
   _paddingRight :: (Maybe Bool)
   , {-|
   A data entry field that is preserved on an inlay hint between
   a `textDocument/inlayHint` and a `inlayHint/resolve` request.
-
   -}
   _data_ :: (Maybe Data.Aeson.Value)
   }

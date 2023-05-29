@@ -17,18 +17,15 @@ import qualified Language.LSP.Protocol.Types.Uri
 A previous result id in a workspace pull request.
 
 @since 3.17.0
-
 -}
 data PreviousResultId = PreviousResultId 
   { {-|
   The URI for which the client knowns a
   result id.
-
   -}
   _uri :: Language.LSP.Protocol.Types.Uri.Uri
   , {-|
   The value of the previous result id.
-
   -}
   _value :: Data.Text.Text
   }

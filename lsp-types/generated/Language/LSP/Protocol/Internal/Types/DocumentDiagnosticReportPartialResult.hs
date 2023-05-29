@@ -19,7 +19,6 @@ import qualified Language.LSP.Protocol.Types.Uri
 A partial result for a document diagnostic report.
 
 @since 3.17.0
-
 -}
 data DocumentDiagnosticReportPartialResult = DocumentDiagnosticReportPartialResult 
   { {-|

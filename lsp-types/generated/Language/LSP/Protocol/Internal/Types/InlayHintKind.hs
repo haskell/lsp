@@ -18,17 +18,14 @@ import qualified Language.LSP.Protocol.Types.LspEnum
 Inlay hint kinds.
 
 @since 3.17.0
-
 -}
 data InlayHintKind = 
     {-|
   An inlay hint that for a type annotation.
-
   -}
   InlayHintKind_Type
   | {-|
   An inlay hint that is for a parameter.
-
   -}
   InlayHintKind_Parameter
   deriving stock (Show, Eq, Ord, Generic)

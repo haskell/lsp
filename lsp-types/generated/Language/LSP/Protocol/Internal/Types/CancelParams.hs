@@ -18,7 +18,6 @@ import qualified Language.LSP.Protocol.Types.Common
 data CancelParams = CancelParams 
   { {-|
   The request id to cancel.
-
   -}
   _id :: (Language.LSP.Protocol.Types.Common.Int32 Language.LSP.Protocol.Types.Common.|? Data.Text.Text)
   }

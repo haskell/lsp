@@ -22,7 +22,6 @@ Inline value information can be provided by different means:
 The InlineValue types combines all inline value types into one type.
 
 @since 3.17.0
-
 -}
 newtype InlineValue = InlineValue (Language.LSP.Protocol.Internal.Types.InlineValueText.InlineValueText Language.LSP.Protocol.Types.Common.|? (Language.LSP.Protocol.Internal.Types.InlineValueVariableLookup.InlineValueVariableLookup Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.InlineValueEvaluatableExpression.InlineValueEvaluatableExpression))
   deriving newtype (Aeson.ToJSON, Aeson.FromJSON)

@@ -14,12 +14,10 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 The parameters sent in an open text document notification
-
 -}
 data DidOpenTextDocumentParams = DidOpenTextDocumentParams 
   { {-|
   The document that was opened.
-
   -}
   _textDocument :: Language.LSP.Protocol.Internal.Types.TextDocumentItem.TextDocumentItem
   }

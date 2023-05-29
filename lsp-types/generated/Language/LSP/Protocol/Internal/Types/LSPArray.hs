@@ -14,7 +14,6 @@ import qualified Data.Row.Aeson as Aeson
 {-|
 LSP arrays.
 @since 3.17.0
-
 -}
 newtype LSPArray = LSPArray [Data.Aeson.Value]
   deriving newtype (Aeson.ToJSON, Aeson.FromJSON)

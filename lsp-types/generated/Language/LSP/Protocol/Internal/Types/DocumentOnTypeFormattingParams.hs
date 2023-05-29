@@ -17,19 +17,16 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 The parameters of a `DocumentOnTypeFormattingRequest`.
-
 -}
 data DocumentOnTypeFormattingParams = DocumentOnTypeFormattingParams 
   { {-|
   The document to format.
-
   -}
   _textDocument :: Language.LSP.Protocol.Internal.Types.TextDocumentIdentifier.TextDocumentIdentifier
   , {-|
   The position around which the on type formatting should happen.
   This is not necessarily the exact position where the character denoted
   by the property `ch` got typed.
-
   -}
   _position :: Language.LSP.Protocol.Internal.Types.Position.Position
   , {-|
@@ -37,12 +34,10 @@ data DocumentOnTypeFormattingParams = DocumentOnTypeFormattingParams
   on type request. That is not necessarily the last character that
   got inserted into the document since the client could auto insert
   characters as well (e.g. like automatic brace completion).
-
   -}
   _ch :: Data.Text.Text
   , {-|
   The formatting options.
-
   -}
   _options :: Language.LSP.Protocol.Internal.Types.FormattingOptions.FormattingOptions
   }

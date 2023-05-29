@@ -15,12 +15,10 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 The publish diagnostic client capabilities.
-
 -}
 data PublishDiagnosticsClientCapabilities = PublishDiagnosticsClientCapabilities 
   { {-|
   Whether the clients accepts diagnostics with related information.
-
   -}
   _relatedInformation :: (Maybe Bool)
   , {-|
@@ -28,7 +26,6 @@ data PublishDiagnosticsClientCapabilities = PublishDiagnosticsClientCapabilities
   Clients supporting tags have to handle unknown tags gracefully.
 
   @since 3.15.0
-
   -}
   _tagSupport :: (Maybe (Row.Rec ("valueSet" Row..== [Language.LSP.Protocol.Internal.Types.DiagnosticTag.DiagnosticTag] Row..+ Row.Empty)))
   , {-|
@@ -36,14 +33,12 @@ data PublishDiagnosticsClientCapabilities = PublishDiagnosticsClientCapabilities
   `textDocument/publishDiagnostics` notification's parameter.
 
   @since 3.15.0
-
   -}
   _versionSupport :: (Maybe Bool)
   , {-|
   Client supports a codeDescription property
 
   @since 3.16.0
-
   -}
   _codeDescriptionSupport :: (Maybe Bool)
   , {-|
@@ -52,7 +47,6 @@ data PublishDiagnosticsClientCapabilities = PublishDiagnosticsClientCapabilities
   `textDocument/codeAction` request.
 
   @since 3.16.0
-
   -}
   _dataSupport :: (Maybe Bool)
   }

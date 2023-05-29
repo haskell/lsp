@@ -15,18 +15,15 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 Contains additional information about the context in which a completion request is triggered.
-
 -}
 data CompletionContext = CompletionContext 
   { {-|
   How the completion was triggered.
-
   -}
   _triggerKind :: Language.LSP.Protocol.Internal.Types.CompletionTriggerKind.CompletionTriggerKind
   , {-|
   The trigger character (a single character) that has trigger code complete.
   Is undefined if `triggerKind !== CompletionTriggerKind.TriggerCharacter`
-
   -}
   _triggerCharacter :: (Maybe Data.Text.Text)
   }

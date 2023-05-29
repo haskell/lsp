@@ -21,7 +21,6 @@ The glob pattern to watch relative to the base path. Glob patterns can have the 
 - `[!...]` to negate a range of characters to match in a path segment (e.g., `example.[!0-9]` to match on `example.a`, `example.b`, but not `example.0`)
 
 @since 3.17.0
-
 -}
 newtype Pattern = Pattern Data.Text.Text
   deriving newtype ( Aeson.ToJSON

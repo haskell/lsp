@@ -16,7 +16,6 @@ import qualified Language.LSP.Protocol.Types.LspEnum
 
 {-|
 Predefined error codes.
-
 -}
 data ErrorCodes = 
     {-|
@@ -42,7 +41,6 @@ data ErrorCodes =
   | {-|
   Error code indicating that a server received a notification or
   request before the server has received the `initialize` request.
-
   -}
   ErrorCodes_ServerNotInitialized
   | {-|

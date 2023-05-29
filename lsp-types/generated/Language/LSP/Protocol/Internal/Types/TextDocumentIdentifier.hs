@@ -14,12 +14,10 @@ import qualified Language.LSP.Protocol.Types.Uri
 
 {-|
 A literal to identify a text document in the client.
-
 -}
 data TextDocumentIdentifier = TextDocumentIdentifier 
   { {-|
   The text document's uri.
-
   -}
   _uri :: Language.LSP.Protocol.Types.Uri.Uri
   }

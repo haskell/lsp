@@ -24,17 +24,14 @@ For example:
     end : { line 6, character : 0 }
 }
 ```
-
 -}
 data Range = Range 
   { {-|
   The range's start position.
-
   -}
   _start :: Language.LSP.Protocol.Internal.Types.Position.Position
   , {-|
   The range's end position.
-
   -}
   _end :: Language.LSP.Protocol.Internal.Types.Position.Position
   }

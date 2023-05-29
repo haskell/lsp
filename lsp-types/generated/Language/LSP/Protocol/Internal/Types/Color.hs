@@ -13,27 +13,22 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 Represents a color in RGBA space.
-
 -}
 data Color = Color 
   { {-|
   The red component of this color in the range [0-1].
-
   -}
   _red :: Float
   , {-|
   The green component of this color in the range [0-1].
-
   -}
   _green :: Float
   , {-|
   The blue component of this color in the range [0-1].
-
   -}
   _blue :: Float
   , {-|
   The alpha component of this color in the range [0-1].
-
   -}
   _alpha :: Float
   }

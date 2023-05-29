@@ -16,22 +16,18 @@ import qualified Language.LSP.Protocol.Types.LspEnum
 
 {-|
 A set of predefined range kinds.
-
 -}
 data FoldingRangeKind = 
     {-|
   Folding range for a comment
-
   -}
   FoldingRangeKind_Comment
   | {-|
   Folding range for an import or include
-
   -}
   FoldingRangeKind_Imports
   | {-|
   Folding range for a region (e.g. `#region`)
-
   -}
   FoldingRangeKind_Region
   | FoldingRangeKind_Custom Data.Text.Text

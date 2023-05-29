@@ -15,12 +15,10 @@ import qualified Language.LSP.Protocol.Types.Common
 Client capabilities specific to inline values.
 
 @since 3.17.0
-
 -}
 data InlineValueClientCapabilities = InlineValueClientCapabilities 
   { {-|
   Whether implementation supports dynamic registration for inline value providers.
-
   -}
   _dynamicRegistration :: (Maybe Bool)
   }

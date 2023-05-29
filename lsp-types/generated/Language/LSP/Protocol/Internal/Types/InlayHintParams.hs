@@ -18,22 +18,18 @@ import qualified Language.LSP.Protocol.Types.Common
 A parameter literal used in inlay hint requests.
 
 @since 3.17.0
-
 -}
 data InlayHintParams = InlayHintParams 
   { {-|
   An optional token that a server can use to report work done progress.
-
   -}
   _workDoneToken :: (Maybe Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken)
   , {-|
   The text document.
-
   -}
   _textDocument :: Language.LSP.Protocol.Internal.Types.TextDocumentIdentifier.TextDocumentIdentifier
   , {-|
   The document range for which inlay hints should be computed.
-
   -}
   _range :: Language.LSP.Protocol.Internal.Types.Range.Range
   }

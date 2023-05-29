@@ -33,12 +33,10 @@ are provided. So a workspace edit for example can consist of the following two c
 An invalid sequence (e.g. (1) delete file a.txt and (2) insert text into file a.txt) will
 cause failure of the operation. How the client recovers from the failure is described by
 the client capability: `workspace.workspaceEdit.failureHandling`
-
 -}
 data WorkspaceEdit = WorkspaceEdit 
   { {-|
   Holds changes to existing resources.
-
   -}
   _changes :: (Maybe (Data.Map.Map Language.LSP.Protocol.Types.Uri.Uri [Language.LSP.Protocol.Internal.Types.TextEdit.TextEdit]))
   , {-|
@@ -52,7 +50,6 @@ data WorkspaceEdit = WorkspaceEdit
 
   If a client neither supports `documentChanges` nor `workspace.workspaceEdit.resourceOperations` then
   only plain `TextEdit`s using the `changes` property are supported.
-
   -}
   _documentChanges :: (Maybe [(Language.LSP.Protocol.Internal.Types.TextDocumentEdit.TextDocumentEdit Language.LSP.Protocol.Types.Common.|? (Language.LSP.Protocol.Internal.Types.CreateFile.CreateFile Language.LSP.Protocol.Types.Common.|? (Language.LSP.Protocol.Internal.Types.RenameFile.RenameFile Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.DeleteFile.DeleteFile)))])
   , {-|
@@ -62,7 +59,6 @@ data WorkspaceEdit = WorkspaceEdit
   Whether clients honor this property depends on the client capability `workspace.changeAnnotationSupport`.
 
   @since 3.16.0
-
   -}
   _changeAnnotations :: (Maybe (Data.Map.Map Language.LSP.Protocol.Internal.Types.ChangeAnnotationIdentifier.ChangeAnnotationIdentifier Language.LSP.Protocol.Internal.Types.ChangeAnnotation.ChangeAnnotation))
   }

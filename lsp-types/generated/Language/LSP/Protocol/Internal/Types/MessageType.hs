@@ -16,27 +16,22 @@ import qualified Language.LSP.Protocol.Types.LspEnum
 
 {-|
 The message type
-
 -}
 data MessageType = 
     {-|
   An error message.
-
   -}
   MessageType_Error
   | {-|
   A warning message.
-
   -}
   MessageType_Warning
   | {-|
   An information message.
-
   -}
   MessageType_Info
   | {-|
   A log message.
-
   -}
   MessageType_Log
   deriving stock (Show, Eq, Ord, Generic)

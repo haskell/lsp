@@ -19,12 +19,10 @@ Describes textual changes on a text document. A TextDocumentEdit describes all c
 on a document version Si and after they are applied move the document to version Si+1.
 So the creator of a TextDocumentEdit doesn't need to sort the array of edits or do any
 kind of ordering. However the edits must be non overlapping.
-
 -}
 data TextDocumentEdit = TextDocumentEdit 
   { {-|
   The text document to change.
-
   -}
   _textDocument :: Language.LSP.Protocol.Internal.Types.OptionalVersionedTextDocumentIdentifier.OptionalVersionedTextDocumentIdentifier
   , {-|
@@ -32,7 +30,6 @@ data TextDocumentEdit = TextDocumentEdit
 
   @since 3.16.0 - support for AnnotatedTextEdit. This is guarded using a
   client capability.
-
   -}
   _edits :: [(Language.LSP.Protocol.Internal.Types.TextEdit.TextEdit Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.AnnotatedTextEdit.AnnotatedTextEdit)]
   }

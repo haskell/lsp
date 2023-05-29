@@ -16,24 +16,20 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 A base for all symbol information.
-
 -}
 data BaseSymbolInformation = BaseSymbolInformation 
   { {-|
   The name of this symbol.
-
   -}
   _name :: Data.Text.Text
   , {-|
   The kind of this symbol.
-
   -}
   _kind :: Language.LSP.Protocol.Internal.Types.SymbolKind.SymbolKind
   , {-|
   Tags for this symbol.
 
   @since 3.16.0
-
   -}
   _tags :: (Maybe [Language.LSP.Protocol.Internal.Types.SymbolTag.SymbolTag])
   , {-|
@@ -41,7 +37,6 @@ data BaseSymbolInformation = BaseSymbolInformation
   user interface purposes (e.g. to render a qualifier in the user interface
   if necessary). It can't be used to re-infer a hierarchy for the document
   symbols.
-
   -}
   _containerName :: (Maybe Data.Text.Text)
   }

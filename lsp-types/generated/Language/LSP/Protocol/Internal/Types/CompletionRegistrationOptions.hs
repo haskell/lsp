@@ -16,13 +16,11 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 Registration options for a `CompletionRequest`.
-
 -}
 data CompletionRegistrationOptions = CompletionRegistrationOptions 
   { {-|
   A document selector to identify the scope of the registration. If set to null
   the document selector provided on the client side will be used.
-
   -}
   _documentSelector :: (Language.LSP.Protocol.Internal.Types.DocumentSelector.DocumentSelector Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Types.Common.Null)
   , {-|
@@ -38,7 +36,6 @@ data CompletionRegistrationOptions = CompletionRegistrationOptions
 
   If code complete should automatically be trigger on characters not being valid inside
   an identifier (for example `.` in JavaScript) list them in `triggerCharacters`.
-
   -}
   _triggerCharacters :: (Maybe [Data.Text.Text])
   , {-|
@@ -50,13 +47,11 @@ data CompletionRegistrationOptions = CompletionRegistrationOptions
   completion item the ones on the completion item win.
 
   @since 3.2.0
-
   -}
   _allCommitCharacters :: (Maybe [Data.Text.Text])
   , {-|
   The server provides support to resolve additional
   information for a completion item.
-
   -}
   _resolveProvider :: (Maybe Bool)
   , {-|
@@ -64,7 +59,6 @@ data CompletionRegistrationOptions = CompletionRegistrationOptions
   capabilities.
 
   @since 3.17.0
-
   -}
   _completionItem :: (Maybe (Row.Rec ("labelDetailsSupport" Row..== (Maybe Bool) Row..+ Row.Empty)))
   }

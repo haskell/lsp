@@ -18,24 +18,20 @@ import qualified Language.LSP.Protocol.Types.Common
 Represents the signature of something callable. A signature
 can have a label, like a function-name, a doc-comment, and
 a set of parameters.
-
 -}
 data SignatureInformation = SignatureInformation 
   { {-|
   The label of this signature. Will be shown in
   the UI.
-
   -}
   _label :: Data.Text.Text
   , {-|
   The human-readable doc-comment of this signature. Will be shown
   in the UI but can be omitted.
-
   -}
   _documentation :: (Maybe (Data.Text.Text Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.MarkupContent.MarkupContent))
   , {-|
   The parameters of this signature.
-
   -}
   _parameters :: (Maybe [Language.LSP.Protocol.Internal.Types.ParameterInformation.ParameterInformation])
   , {-|
@@ -44,7 +40,6 @@ data SignatureInformation = SignatureInformation
   If provided, this is used in place of `SignatureHelp.activeParameter`.
 
   @since 3.16.0
-
   -}
   _activeParameter :: (Maybe Language.LSP.Protocol.Types.Common.UInt)
   }

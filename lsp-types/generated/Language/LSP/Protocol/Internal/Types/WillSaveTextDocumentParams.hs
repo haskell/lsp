@@ -15,17 +15,14 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 The parameters sent in a will save text document notification.
-
 -}
 data WillSaveTextDocumentParams = WillSaveTextDocumentParams 
   { {-|
   The document that will be saved.
-
   -}
   _textDocument :: Language.LSP.Protocol.Internal.Types.TextDocumentIdentifier.TextDocumentIdentifier
   , {-|
   The 'TextDocumentSaveReason'.
-
   -}
   _reason :: Language.LSP.Protocol.Internal.Types.TextDocumentSaveReason.TextDocumentSaveReason
   }

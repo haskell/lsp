@@ -16,12 +16,10 @@ import qualified Language.LSP.Protocol.Types.Common
 The options to register for file operations.
 
 @since 3.16.0
-
 -}
 data FileOperationRegistrationOptions = FileOperationRegistrationOptions 
   { {-|
   The actual filters.
-
   -}
   _filters :: [Language.LSP.Protocol.Internal.Types.FileOperationFilter.FileOperationFilter]
   }

@@ -20,19 +20,16 @@ An inlay hint label part allows for interactive and composite labels
 of inlay hints.
 
 @since 3.17.0
-
 -}
 data InlayHintLabelPart = InlayHintLabelPart 
   { {-|
   The value of this label part.
-
   -}
   _value :: Data.Text.Text
   , {-|
   The tooltip text when you hover over this label part. Depending on
   the client capability `inlayHint.resolveSupport` clients might resolve
   this property late using the resolve request.
-
   -}
   _tooltip :: (Maybe (Data.Text.Text Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.MarkupContent.MarkupContent))
   , {-|
@@ -47,7 +44,6 @@ data InlayHintLabelPart = InlayHintLabelPart
 
   Depending on the client capability `inlayHint.resolveSupport` clients
   might resolve this property late using the resolve request.
-
   -}
   _location :: (Maybe Language.LSP.Protocol.Internal.Types.Location.Location)
   , {-|
@@ -55,7 +51,6 @@ data InlayHintLabelPart = InlayHintLabelPart
 
   Depending on the client capability `inlayHint.resolveSupport` clients
   might resolve this property late using the resolve request.
-
   -}
   _command :: (Maybe Language.LSP.Protocol.Internal.Types.Command.Command)
   }

@@ -20,7 +20,6 @@ an clients can specify additional token types via the
 corresponding client capabilities.
 
 @since 3.16.0
-
 -}
 data SemanticTokenTypes = 
     {-|
@@ -30,7 +29,6 @@ data SemanticTokenTypes =
   | {-|
   Represents a generic type. Acts as a fallback for types which can't be mapped to
   a specific type like class or enum.
-
   -}
   SemanticTokenTypes_Type
   | {-|
@@ -115,7 +113,6 @@ data SemanticTokenTypes =
   SemanticTokenTypes_Operator
   | {-|
   @since 3.17.0
-
   -}
   SemanticTokenTypes_Decorator
   | SemanticTokenTypes_Custom Data.Text.Text

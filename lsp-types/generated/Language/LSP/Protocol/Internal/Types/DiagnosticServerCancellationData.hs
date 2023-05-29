@@ -15,7 +15,6 @@ import qualified Language.LSP.Protocol.Types.Common
 Cancellation data returned from a diagnostic request.
 
 @since 3.17.0
-
 -}
 data DiagnosticServerCancellationData = DiagnosticServerCancellationData 
   { {-|

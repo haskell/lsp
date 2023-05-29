@@ -13,12 +13,10 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 Client Capabilities for a `ReferencesRequest`.
-
 -}
 data ReferenceClientCapabilities = ReferenceClientCapabilities 
   { {-|
   Whether references supports dynamic registration.
-
   -}
   _dynamicRegistration :: (Maybe Bool)
   }

@@ -16,22 +16,18 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 The parameters of a `ExecuteCommandRequest`.
-
 -}
 data ExecuteCommandParams = ExecuteCommandParams 
   { {-|
   An optional token that a server can use to report work done progress.
-
   -}
   _workDoneToken :: (Maybe Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken)
   , {-|
   The identifier of the actual command handler.
-
   -}
   _command :: Data.Text.Text
   , {-|
   Arguments that the command should be invoked with.
-
   -}
   _arguments :: (Maybe [Data.Aeson.Value])
   }
