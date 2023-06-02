@@ -140,6 +140,9 @@ instance {-# OVERLAPPING #-} Arbitrary (Maybe Void) where
 instance (ErrorData m ~ Maybe Void) => Arbitrary (TResponseError m) where
   arbitrary = TResponseError <$> arbitrary <*> arbitrary <*> pure Nothing
 
+instance Arbitrary ResponseError where
+  arbitrary = ResponseError <$> arbitrary <*> arbitrary <*> pure Nothing
+
 instance (Arbitrary (MessageResult m), ErrorData m ~ Maybe Void) => Arbitrary (TResponseMessage m) where
   arbitrary = TResponseMessage <$> arbitrary <*> arbitrary <*> arbitrary
 

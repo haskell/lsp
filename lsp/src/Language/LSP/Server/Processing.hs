@@ -163,9 +163,9 @@ initializeRequestHandler ServerDefinition{..} vfs sendFunc req = do
     makeResponseMessage rid result = TResponseMessage "2.0" (Just rid) (Right result)
     makeResponseError origId err = TResponseMessage "2.0" (Just origId) (Left err)
 
-    initializeErrorHandler :: (TResponseError Method_Initialize -> IO ()) -> E.SomeException -> IO (Maybe a)
+    initializeErrorHandler :: (ResponseError -> IO ()) -> E.SomeException -> IO (Maybe a)
     initializeErrorHandler sendResp e = do
-        sendResp $ TResponseError ErrorCodes_InternalError msg Nothing
+        sendResp $ ResponseError ErrorCodes_InternalError msg Nothing
         pure Nothing
       where
         msg = T.pack $ unwords ["Error on initialize:", show e]
@@ -350,7 +350,7 @@ handle' logger mAction m msg = do
   env <- getLspEnv
   let Handlers{reqHandlers, notHandlers} = resHandlers env
 
-  let mkRspCb :: TRequestMessage (m1 :: Method ClientToServer Request) -> Either (TResponseError m1) (MessageResult m1) -> IO ()
+  let mkRspCb :: TRequestMessage (m1 :: Method ClientToServer Request) -> Either ResponseError (MessageResult m1) -> IO ()
       mkRspCb req (Left  err) = runLspT env $ sendToClient $
         FromServerRsp (req ^. method) $ TResponseMessage "2.0" (Just (req ^. LSP.id)) (Left err)
       mkRspCb req (Right rsp) = runLspT env $ sendToClient $
@@ -370,7 +370,7 @@ handle' logger mAction m msg = do
         | SMethod_Shutdown <- m -> liftIO $ shutdownRequestHandler msg (mkRspCb msg)
         | otherwise -> do
             let errorMsg = T.pack $ unwords ["lsp:no handler for: ", show m]
-                err = TResponseError ErrorCodes_MethodNotFound errorMsg Nothing
+                err = ResponseError ErrorCodes_MethodNotFound errorMsg Nothing
             sendToClient $
               FromServerRsp (msg ^. method) $ TResponseMessage "2.0" (Just (msg ^. LSP.id)) (Left err)
 
@@ -382,7 +382,7 @@ handle' logger mAction m msg = do
         Just h -> liftIO $ h req (mkRspCb req)
         Nothing -> do
           let errorMsg = T.pack $ unwords ["lsp:no handler for: ", show m]
-              err = TResponseError ErrorCodes_MethodNotFound errorMsg Nothing
+              err = ResponseError ErrorCodes_MethodNotFound errorMsg Nothing
           sendToClient $
             FromServerRsp (req ^. method) $ TResponseMessage "2.0" (Just (req ^. LSP.id)) (Left err)
   where
