@@ -132,7 +132,8 @@ data TResponseMessage (m :: Method f Request) =
   TResponseMessage
     { _jsonrpc :: Text
     , _id      :: Maybe (LspId m)
-    , _result  :: Either (TResponseError m) (MessageResult m)
+    -- TODO: use `TResponseError m` for the error type, this will require quite a lot of adaptation downstream
+    , _result  :: Either ResponseError (MessageResult m)
     } deriving stock Generic
 
 deriving stock instance (Eq   (MessageResult m), Eq (ErrorData m)) => Eq (TResponseMessage m)

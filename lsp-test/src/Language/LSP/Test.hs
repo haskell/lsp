@@ -522,7 +522,7 @@ getDocumentSymbols doc = do
     Right (InL xs) -> return (Left xs)
     Right (InR (InL xs)) -> return (Right xs)
     Right (InR (InR _)) -> return (Right [])
-    Left err -> throw (UnexpectedResponseError (SomeLspId $ fromJust rspLid) (toUntypedResponseError err))
+    Left err -> throw (UnexpectedResponseError (SomeLspId $ fromJust rspLid) err)
 
 -- | Returns the code actions in the specified range.
 getCodeActions :: TextDocumentIdentifier -> Range -> Session [Command |? CodeAction]
@@ -533,7 +533,7 @@ getCodeActions doc range = do
   case rsp ^. result of
     Right (InL xs) -> return xs
     Right (InR _) -> return []
-    Left error -> throw (UnexpectedResponseError (SomeLspId $ fromJust $ rsp ^. LSP.id) (toUntypedResponseError error))
+    Left error -> throw (UnexpectedResponseError (SomeLspId $ fromJust $ rsp ^. LSP.id) error)
 
 -- | Returns all the code actions in a document by
 -- querying the code actions at each of the current
@@ -550,7 +550,7 @@ getAllCodeActions doc = do
       TResponseMessage _ rspLid res <- request SMethod_TextDocumentCodeAction (CodeActionParams Nothing Nothing doc (diag ^. range) ctx)
 
       case res of
-        Left e -> throw (UnexpectedResponseError (SomeLspId $ fromJust rspLid) (toUntypedResponseError e))
+        Left e -> throw (UnexpectedResponseError (SomeLspId $ fromJust rspLid) e)
         Right (InL cmdOrCAs) -> pure (acc ++ cmdOrCAs)
         Right (InR _) -> pure acc
 
@@ -725,7 +725,7 @@ getResponseResult :: (ToJSON (ErrorData m)) => TResponseMessage m -> MessageResu
 getResponseResult rsp =
   case rsp ^. result of
     Right x -> x
-    Left err -> throw $ UnexpectedResponseError (SomeLspId $ fromJust $ rsp ^. LSP.id) (toUntypedResponseError err)
+    Left err -> throw $ UnexpectedResponseError (SomeLspId $ fromJust $ rsp ^. LSP.id) err
 
 -- | Applies formatting to the specified document.
 formatDoc :: TextDocumentIdentifier -> FormattingOptions -> Session ()
