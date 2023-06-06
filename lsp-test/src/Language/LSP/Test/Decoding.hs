@@ -15,8 +15,8 @@ import qualified Data.ByteString.Lazy.Char8    as B
 import           Data.Maybe
 import           System.IO
 import           System.IO.Error
-import           Language.LSP.Protocol.Message hiding (error)
-import qualified Language.LSP.Protocol.Types.Lens as J
+import           Language.LSP.Protocol.Message
+import qualified Language.LSP.Protocol.Lens as J
 import           Language.LSP.Test.Exceptions
 
 import Data.IxMap

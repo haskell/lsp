@@ -33,7 +33,7 @@ library
 
   reexported-modules:
     , Language.LSP.Protocol.Types
-    , Language.LSP.Protocol.Types.Lens
+    , Language.LSP.Protocol.Lens
     , Language.LSP.Protocol.Capabilities
     , Language.LSP.Protocol.Message
 

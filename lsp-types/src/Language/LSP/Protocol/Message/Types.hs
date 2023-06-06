@@ -8,7 +8,6 @@
 module Language.LSP.Protocol.Message.Types where
 
 import           Language.LSP.Protocol.Types.Common
-import           Language.LSP.Protocol.Internal.Lens
 import           Language.LSP.Protocol.Internal.Method
 import           Language.LSP.Protocol.Types
 import           Language.LSP.Protocol.Message.LspId
@@ -16,7 +15,6 @@ import           Language.LSP.Protocol.Message.Meta
 import           Language.LSP.Protocol.Message.Method ()
 import           Language.LSP.Protocol.Utils.Misc
 
-import           Control.Lens.TH
 import           Data.Aeson                         hiding (Null)
 import qualified Data.Aeson                         as J
 import           Data.Aeson.TH
@@ -224,11 +222,3 @@ addNullField :: String -> Value -> Value
 addNullField s (Object o) = Object $ o <> fromString s .= J.Null
 addNullField _ v          = v
 
-makeFieldsNoPrefix ''RequestMessage
-makeFieldsNoPrefix ''ResponseMessage
-makeFieldsNoPrefix ''NotificationMessage
-makeFieldsNoPrefix ''ResponseError
-makeFieldsNoPrefix ''TRequestMessage
-makeFieldsNoPrefix ''TResponseMessage
-makeFieldsNoPrefix ''TNotificationMessage
-makeFieldsNoPrefix ''TResponseError

@@ -16,7 +16,6 @@ import           Language.LSP.Protocol.Message.Meta
 import           Language.LSP.Protocol.Message.Method
 import           Language.LSP.Protocol.Utils.Misc
 
-import           Control.Lens.TH
 import           Data.Aeson
 import           Data.Text                         (Text)
 import qualified Data.Text                         as T
@@ -115,5 +114,3 @@ toSomeUnregistration r =
     Success r' -> Just r'
     _          -> Nothing
 
-makeFieldsNoPrefix ''TRegistration
-makeFieldsNoPrefix ''TUnregistration

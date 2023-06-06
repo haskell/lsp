@@ -4,9 +4,9 @@ module Main where
 
 import Language.LSP.Server
 import qualified Language.LSP.Test as Test
-import Language.LSP.Protocol.Types hiding (error)
-import Language.LSP.Protocol.Types.Lens hiding (options)
-import Language.LSP.Protocol.Message hiding (options, error)
+import Language.LSP.Protocol.Types
+import qualified Language.LSP.Protocol.Lens as J
+import Language.LSP.Protocol.Message 
 import Control.Monad.IO.Class
 import System.IO
 import Control.Monad
@@ -57,7 +57,7 @@ main = hspec $ do
         -- First make sure that we get a $/progress begin notification
         skipManyTill Test.anyMessage $ do
           x <- Test.message SMethod_Progress
-          guard $ has (params . value . _workDoneProgressBegin) x
+          guard $ has (J.params . J.value . _workDoneProgressBegin) x
           
         -- Then kill the thread
         liftIO $ putMVar killVar ()
@@ -65,7 +65,7 @@ main = hspec $ do
         -- Then make sure we still get a $/progress end notification
         skipManyTill Test.anyMessage $ do
           x <- Test.message SMethod_Progress
-          guard $ has (params . value . _workDoneProgressEnd) x
+          guard $ has (J.params . J.value . _workDoneProgressEnd) x
 
   describe "workspace folders" $
     it "keeps track of open workspace folders" $ do

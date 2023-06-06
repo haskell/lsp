@@ -17,8 +17,8 @@ import UnliftIO
 import System.Directory
 import System.FilePath
 import System.Process
-import Language.LSP.Protocol.Types hiding (options)
-import Language.LSP.Protocol.Message hiding (error)
+import Language.LSP.Protocol.Types
+import Language.LSP.Protocol.Message
 import Data.Proxy
 
 withDummyServer :: ((Handle, Handle) -> IO ()) -> IO ()

@@ -23,7 +23,7 @@ import           Control.Lens hiding (List, Iso)
 import           Language.LSP.Test
 import           Language.LSP.Protocol.Message
 import           Language.LSP.Protocol.Types
-import qualified Language.LSP.Protocol.Types.Lens as J
+import qualified Language.LSP.Protocol.Lens as J
 import           System.Directory
 import           System.FilePath
 import           System.Timeout
@@ -42,7 +42,7 @@ main = hspec $ around withDummyServer $ do
         in session `shouldThrow` anySessionException
     it "initializeResponse" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "." $ do
       rsp <- initializeResponse
-      liftIO $ rsp ^. result `shouldSatisfy` isRight
+      liftIO $ rsp ^. J.result `shouldSatisfy` isRight
 
     it "runSessionWithConfig" $ \(hin, hout) ->
       runSessionWithHandles hin hout def fullCaps "." $ return ()
@@ -145,7 +145,7 @@ main = hspec $ around withDummyServer $ do
         editReq <- message SMethod_WorkspaceApplyEdit
         liftIO $ do
           let Just [InL(TextDocumentEdit vdoc [InL edit_])] =
-                editReq ^. params . J.edit . J.documentChanges
+                editReq ^. J.params . J.edit . J.documentChanges
           vdoc `shouldBe` OptionalVersionedTextDocumentIdentifier  (doc ^. J.uri) (InL beforeVersion)
           edit_ `shouldBe` TextEdit (Range (Position 0 0) (Position 0 5)) "howdy"
 
@@ -172,7 +172,7 @@ main = hspec $ around withDummyServer $ do
 
         editReq <- message SMethod_WorkspaceApplyEdit
         liftIO $ do
-          let (Just cs) = editReq ^. params . J.edit . J.changes
+          let (Just cs) = editReq ^. J.params . J.edit . J.changes
               [(u, es)] = M.toList cs
           u `shouldBe` doc ^. J.uri
           es `shouldBe` [TextEdit (Range (Position 0 0) (Position 0 5)) "howdy"]
@@ -362,7 +362,7 @@ main = hspec $ around withDummyServer $ do
 
       doc <- createDoc "Foo.watch" "haskell" ""
       msg <- message SMethod_WindowLogMessage
-      liftIO $ msg ^. params . J.message `shouldBe` "got workspace/didChangeWatchedFiles"
+      liftIO $ msg ^. J.params . J.message `shouldBe` "got workspace/didChangeWatchedFiles"
 
       [SomeRegistration (TRegistration _ regMethod regOpts)] <- getRegisteredCapabilities
       liftIO $ do
@@ -391,7 +391,7 @@ main = hspec $ around withDummyServer $ do
 
       doc <- createDoc (curDir </> "Foo.watch") "haskell" ""
       msg <- message SMethod_WindowLogMessage
-      liftIO $ msg ^. params . J.message `shouldBe` "got workspace/didChangeWatchedFiles"
+      liftIO $ msg ^. J.params . J.message `shouldBe` "got workspace/didChangeWatchedFiles"
 
       -- now unregister it by sending a specific createDoc
       createDoc ".unregister.abs" "haskell" ""

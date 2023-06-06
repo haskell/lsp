@@ -118,9 +118,8 @@ import Data.Default
 import Data.List
 import Data.Maybe
 import Language.LSP.Protocol.Types
-import Language.LSP.Protocol.Message hiding (id)
-import qualified Language.LSP.Protocol.Types.Lens as J
-import qualified Language.LSP.Protocol.Message as LSP
+import Language.LSP.Protocol.Message
+import qualified Language.LSP.Protocol.Lens as J
 import qualified Language.LSP.Protocol.Capabilities as C
 import Language.LSP.VFS
 import Language.LSP.Test.Compat
@@ -228,7 +227,7 @@ runSessionWithHandles' serverProc serverIn serverOut config' caps rootDir sessio
     -- collect them and then...
     (inBetween, initRspMsg) <- manyTill_ anyMessage (responseForId SMethod_Initialize initReqId)
 
-    case initRspMsg ^. LSP.result of
+    case initRspMsg ^. J.result of
       Left error -> liftIO $ putStrLn ("Error while initializing: " ++ show error)
       Right _ -> pure ()
 
@@ -307,13 +306,13 @@ getDocumentEdit doc = do
   documentContents doc
   where
     checkDocumentChanges req =
-      let changes = req ^. params . J.edit . J.documentChanges
+      let changes = req ^. J.params . J.edit . J.documentChanges
           maybeDocs = fmap (fmap documentChangeUri) changes
       in case maybeDocs of
         Just docs -> (doc ^. J.uri) `elem` docs
         Nothing -> False
     checkChanges req =
-      let mMap = req ^. params . J.edit . J.changes
+      let mMap = req ^. J.params . J.edit . J.changes
         in maybe False (Map.member (doc ^. J.uri)) mMap
 
 -- | Sends a request to the server and waits for its response.
@@ -433,7 +432,7 @@ createDoc file languageId contents = do
       createHits _ = False
 
       regHits :: TRegistration Method_WorkspaceDidChangeWatchedFiles -> Bool
-      regHits reg = foldl' (\acc w -> acc || watchHits w) False (reg ^. registerOptions . _Just . J.watchers)
+      regHits reg = foldl' (\acc w -> acc || watchHits w) False (reg ^. J.registerOptions . _Just . J.watchers)
 
       clientCapsSupports =
           caps ^? J.workspace . _Just . J.didChangeWatchedFiles . _Just . J.dynamicRegistration . _Just
@@ -489,7 +488,7 @@ getDocUri file = do
 waitForDiagnostics :: Session [Diagnostic]
 waitForDiagnostics = do
   diagsNot <- skipManyTill anyMessage (message SMethod_TextDocumentPublishDiagnostics)
-  let diags = diagsNot ^. params . J.diagnostics
+  let diags = diagsNot ^. J.params . J.diagnostics
   return diags
 
 -- | The same as 'waitForDiagnostics', but will only match a specific
@@ -511,7 +510,7 @@ waitForDiagnosticsSource src = do
 noDiagnostics :: Session ()
 noDiagnostics = do
   diagsNot <- message SMethod_TextDocumentPublishDiagnostics
-  when (diagsNot ^. params . J.diagnostics /= []) $ liftIO $ throw UnexpectedDiagnostics
+  when (diagsNot ^. J.params . J.diagnostics /= []) $ liftIO $ throw UnexpectedDiagnostics
 
 -- | Returns the symbols in a document.
 getDocumentSymbols :: TextDocumentIdentifier -> Session (Either [SymbolInformation] [DocumentSymbol])
@@ -529,7 +528,7 @@ getCodeActions doc range = do
   ctx <- getCodeActionContextInRange doc range
   rsp <- request SMethod_TextDocumentCodeAction (CodeActionParams Nothing Nothing doc range ctx)
 
-  case rsp ^. result of
+  case rsp ^. J.result of
     Right (InL xs) -> return xs
     Right (InR _) -> return []
     Left error -> throw (UnexpectedResponseError (SomeLspId $ fromJust $ rsp ^. J.id) error)
@@ -722,7 +721,7 @@ getHighlights doc pos =
 -- Returns the result if successful.
 getResponseResult :: (ToJSON (ErrorData m)) => TResponseMessage m -> MessageResult m
 getResponseResult rsp =
-  case rsp ^. result of
+  case rsp ^. J.result of
     Right x -> x
     Left err -> throw $ UnexpectedResponseError (SomeLspId $ fromJust $ rsp ^. J.id) err
 

@@ -65,8 +65,8 @@ import qualified Data.Text.IO as T
 import Data.Maybe
 import Data.Function
 import Language.LSP.Protocol.Types as LSP
-import qualified Language.LSP.Protocol.Types.Lens as J
-import Language.LSP.Protocol.Message as LSP hiding (error)
+import qualified Language.LSP.Protocol.Lens as J
+import Language.LSP.Protocol.Message as LSP
 import Language.LSP.VFS
 import Language.LSP.Test.Compat
 import Language.LSP.Test.Decoding
@@ -322,31 +322,31 @@ documentChangeUri (InR (InR (InR x))) = x ^. J.uri
 
 updateState :: (MonadIO m, HasReader SessionContext m, HasState SessionState m)
             => FromServerMessage -> m ()
-updateState (FromServerMess SMethod_Progress req) = case req ^. params . J.value of
+updateState (FromServerMess SMethod_Progress req) = case req ^. J.params . J.value of
   v | Just _ <- v ^? _workDoneProgressBegin ->
-    modify $ \s -> s { curProgressSessions = Set.insert (req ^. params . J.token) $ curProgressSessions s }
+    modify $ \s -> s { curProgressSessions = Set.insert (req ^. J.params . J.token) $ curProgressSessions s }
   v | Just _ <- v ^? _workDoneProgressEnd ->
-    modify $ \s -> s { curProgressSessions = Set.delete (req ^. params . J.token) $ curProgressSessions s }
+    modify $ \s -> s { curProgressSessions = Set.delete (req ^. J.params . J.token) $ curProgressSessions s }
   _ -> pure ()
 
 -- Keep track of dynamic capability registration
 updateState (FromServerMess SMethod_ClientRegisterCapability req) = do
   let
     regs :: [SomeRegistration]
-    regs = req ^.. params . J.registrations . traversed . to toSomeRegistration . _Just
-  let newRegs = (\sr@(SomeRegistration r) -> (r ^. LSP.id, sr)) <$> regs
+    regs = req ^.. J.params . J.registrations . traversed . to toSomeRegistration . _Just
+  let newRegs = (\sr@(SomeRegistration r) -> (r ^. J.id, sr)) <$> regs
   modify $ \s ->
     s { curDynCaps = Map.union (Map.fromList newRegs) (curDynCaps s) }
 
 updateState (FromServerMess SMethod_ClientUnregisterCapability req) = do
-  let unRegs = (^. J.id) <$> req ^. params . J.unregisterations
+  let unRegs = (^. J.id) <$> req ^. J.params . J.unregisterations
   modify $ \s ->
     let newCurDynCaps = foldr' Map.delete (curDynCaps s) unRegs
     in s { curDynCaps = newCurDynCaps }
 
 updateState (FromServerMess SMethod_TextDocumentPublishDiagnostics n) = do
-  let diags = n ^. params . J.diagnostics
-      doc = n ^. params . J.uri
+  let diags = n ^. J.params . J.diagnostics
+      doc = n ^. J.params . J.uri
   modify $ \s ->
     let newDiags = Map.insert (toNormalizedUri doc) diags (curDiagnostics s)
       in s { curDiagnostics = newDiags }
@@ -354,7 +354,7 @@ updateState (FromServerMess SMethod_TextDocumentPublishDiagnostics n) = do
 updateState (FromServerMess SMethod_WorkspaceApplyEdit r) = do
 
   -- First, prefer the versioned documentChanges field
-  allChangeParams <- case r ^. params . J.edit . J.documentChanges of
+  allChangeParams <- case r ^. J.params . J.edit . J.documentChanges of
     Just (cs) -> do
       mapM_ (checkIfNeedsOpened . documentChangeUri) cs
       -- replace the user provided version numbers with the VFS ones + 1
@@ -362,7 +362,7 @@ updateState (FromServerMess SMethod_WorkspaceApplyEdit r) = do
       cs' <- traverseOf (traverse . _L . J.textDocument . _versionedTextDocumentIdentifier) bumpNewestVersion cs
       return $ mapMaybe getParamsFromDocumentChange cs'
     -- Then fall back to the changes field
-    Nothing -> case r ^. params . J.edit . J.changes of
+    Nothing -> case r ^. J.params . J.edit . J.changes of
       Just cs -> do
         mapM_ checkIfNeedsOpened (Map.keys cs)
         concat <$> mapM (uncurry getChangeParams) (Map.toList cs)

@@ -87,7 +87,7 @@ import           Data.Text.Utf16.Rope ( Rope )
 import qualified Data.Text.Utf16.Rope as Rope
 import           Data.Text.Prettyprint.Doc hiding (line)
 import qualified Language.LSP.Protocol.Types             as J
-import qualified Language.LSP.Protocol.Types.Lens        as J
+import qualified Language.LSP.Protocol.Lens        as J
 import qualified Language.LSP.Protocol.Message           as J
 import           System.FilePath
 import           Data.Hashable

@@ -31,9 +31,9 @@ import Data.List.NonEmpty (NonEmpty(..))
 import           Data.Row
 import qualified Data.Text as T
 import qualified Data.Text.Lazy.Encoding as TL
-import qualified Language.LSP.Protocol.Types.Lens as J
+import qualified Language.LSP.Protocol.Lens as J
 import           Language.LSP.Protocol.Types
-import           Language.LSP.Protocol.Message hiding (error, id)
+import           Language.LSP.Protocol.Message
 import           Language.LSP.Protocol.Utils.SMethodMap (SMethodMap)
 import qualified Language.LSP.Protocol.Utils.SMethodMap as SMethodMap
 import           Language.LSP.Server.Core
@@ -99,7 +99,7 @@ processMessage logger jsonStr = do
           pure $ handle logger m mess
         FromClientRsp (P.Pair (ServerResponseCallback f) (Const !newMap)) res -> do
           writeTVar pendingResponsesVar newMap
-          pure $ liftIO $ f (res ^. result)
+          pure $ liftIO $ f (res ^. J.result)
   where
     parser :: ResponseMap -> Value -> Parser (FromClientMessage' (P.Product ServerResponseCallback (Const ResponseMap)))
     parser rm = parseClientMessage $ \i ->
@@ -123,7 +123,7 @@ initializeRequestHandler ServerDefinition{..} vfs sendFunc req = do
       handleErr (Right a) = pure $ Just a
   flip E.catch (initializeErrorHandler $ sendResp . makeResponseError (req ^. J.id)) $ handleErr <=< runExceptT $ mdo
 
-    let p = req ^. params
+    let p = req ^. J.params
         rootDir = getFirst $ foldMap First [ p ^? J.rootUri . _L >>= uriToFilePath
                                            , p ^? J.rootPath . _Just . _L <&> T.unpack ]
 
@@ -427,7 +427,7 @@ shutdownRequestHandler _req k = do
 handleConfigChange :: (m ~ LspM config) => LogAction m (WithSeverity LspProcessingLog) -> TMessage Method_WorkspaceDidChangeConfiguration -> m ()
 handleConfigChange logger req = do
   parseConfig <- LspT $ asks resParseConfig
-  let s = req ^. params . J.settings
+  let s = req ^. J.params . J.settings
   res <- stateState resConfig $ \oldConfig -> case parseConfig oldConfig s of
     Left err -> (Left err, oldConfig)
     Right !newConfig -> (Right (), newConfig)

@@ -48,9 +48,9 @@ import qualified Data.Text as T
 import           Data.Text ( Text )
 import qualified Data.UUID as UUID
 import Language.LSP.Protocol.Types
-import Language.LSP.Protocol.Message hiding (error, params)
+import Language.LSP.Protocol.Message
 import qualified Language.LSP.Protocol.Types as J
-import qualified Language.LSP.Protocol.Types.Lens as J
+import qualified Language.LSP.Protocol.Lens as J
 import qualified Language.LSP.Protocol.Message as J
 import           Language.LSP.Protocol.Utils.SMethodMap (SMethodMap)
 import qualified Language.LSP.Protocol.Utils.SMethodMap as SMethodMap

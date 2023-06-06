@@ -1,9 +1,5 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE EmptyCase #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeInType #-}
-{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE TypeInType #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
@@ -35,7 +31,7 @@ import Data.Conduit.Parser hiding (named)
 import qualified Data.Conduit.Parser (named)
 import qualified Data.Text as T
 import Data.Typeable
-import Language.LSP.Protocol.Message hiding (error)
+import Language.LSP.Protocol.Message
 import Language.LSP.Test.Session
 import GHC.TypeLits (KnownSymbol, symbolVal)
 import Data.GADT.Compare

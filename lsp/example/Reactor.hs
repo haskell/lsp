@@ -46,7 +46,7 @@ import           System.IO
 import           Language.LSP.Diagnostics
 import           Language.LSP.Logging (defaultClientLogger)
 import qualified Language.LSP.Protocol.Types            as LSP
-import qualified Language.LSP.Protocol.Types.Lens       as LSP
+import qualified Language.LSP.Protocol.Lens       as LSP
 import qualified Language.LSP.Protocol.Message          as LSP
 import           Language.LSP.VFS
 import           System.Exit

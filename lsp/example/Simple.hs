@@ -3,8 +3,8 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 
 import Language.LSP.Server
-import Language.LSP.Protocol.Types hiding (range)
-import Language.LSP.Protocol.Message hiding (params)
+import Language.LSP.Protocol.Types 
+import Language.LSP.Protocol.Message 
 import Control.Monad.IO.Class
 import qualified Data.Text as T
 

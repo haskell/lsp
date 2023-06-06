@@ -8,7 +8,7 @@ import           Data.Aeson             hiding (Null)
 import           Data.Row
 import           Data.Maybe (fromJust)
 import           Language.LSP.Protocol.Types
-import           Language.LSP.Protocol.Types.Lens
+import           Language.LSP.Protocol.Lens
 import           Language.LSP.Protocol.Message
 import           Test.Hspec
 
