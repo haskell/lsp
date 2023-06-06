@@ -39,22 +39,22 @@ defaultSemanticTokensLegend = SemanticTokensLegend
 -- | A single 'semantic token' as described in the LSP specification, using absolute positions.
 -- This is the kind of token that is usually easiest for editors to produce.
 data SemanticTokenAbsolute = SemanticTokenAbsolute {
-  line           :: UInt,
-  startChar      :: UInt,
-  length         :: UInt,
-  tokenType      :: SemanticTokenTypes,
-  tokenModifiers :: [SemanticTokenModifiers]
+  _line           :: UInt,
+  _startChar      :: UInt,
+  _length         :: UInt,
+  _tokenType      :: SemanticTokenTypes,
+  _tokenModifiers :: [SemanticTokenModifiers]
 } deriving stock (Show, Eq, Ord)
 -- Note: we want the Ord instance to sort the tokens textually: this is achieved due to the
 -- order of the constructors
 
 -- | A single 'semantic token' as described in the LSP specification, using relative positions.
 data SemanticTokenRelative = SemanticTokenRelative {
-  deltaLine      :: UInt,
-  deltaStartChar :: UInt,
-  length         :: UInt,
-  tokenType      :: SemanticTokenTypes,
-  tokenModifiers :: [SemanticTokenModifiers]
+  _deltaLine      :: UInt,
+  _deltaStartChar :: UInt,
+  _length         :: UInt,
+  _tokenType      :: SemanticTokenTypes,
+  _tokenModifiers :: [SemanticTokenModifiers]
 } deriving stock (Show, Eq, Ord)
 -- Note: we want the Ord instance to sort the tokens textually: this is achieved due to the
 -- order of the constructors
