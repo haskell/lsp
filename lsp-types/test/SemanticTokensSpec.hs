@@ -4,7 +4,7 @@ module SemanticTokensSpec where
 
 import           Data.Either        (isRight)
 import           Data.List          (unfoldr)
-import           Language.LSP.Protocol.Types hiding (context)
+import           Language.LSP.Protocol.Types
 import           Test.Hspec
 
 spec :: Spec

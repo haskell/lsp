@@ -4,7 +4,8 @@ module Main where
 
 import Language.LSP.Server
 import qualified Language.LSP.Test as Test
-import Language.LSP.Protocol.Types hiding (options, error)
+import Language.LSP.Protocol.Types hiding (error)
+import Language.LSP.Protocol.Types.Lens hiding (options)
 import Language.LSP.Protocol.Message hiding (options, error)
 import Control.Monad.IO.Class
 import System.IO

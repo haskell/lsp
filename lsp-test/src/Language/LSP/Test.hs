@@ -118,9 +118,8 @@ import Data.Default
 import Data.List
 import Data.Maybe
 import Language.LSP.Protocol.Types
-  hiding (capabilities, message, executeCommand, applyEdit, rename, to, id)
-import Language.LSP.Protocol.Message
-import qualified Language.LSP.Protocol.Types as LSP
+import Language.LSP.Protocol.Message hiding (id)
+import qualified Language.LSP.Protocol.Types.Lens as J
 import qualified Language.LSP.Protocol.Message as LSP
 import qualified Language.LSP.Protocol.Capabilities as C
 import Language.LSP.VFS
@@ -293,7 +292,7 @@ envOverrideConfig cfg = do
 documentContents :: TextDocumentIdentifier -> Session T.Text
 documentContents doc = do
   vfs <- vfs <$> get
-  let Just file = vfs ^. vfsMap . at (toNormalizedUri (doc ^. uri))
+  let Just file = vfs ^. vfsMap . at (toNormalizedUri (doc ^. J.uri))
   return (virtualFileText file)
 
 -- | Parses an ApplyEditRequest, checks that it is for the passed document
@@ -308,14 +307,14 @@ getDocumentEdit doc = do
   documentContents doc
   where
     checkDocumentChanges req =
-      let changes = req ^. params . edit . documentChanges
+      let changes = req ^. params . J.edit . J.documentChanges
           maybeDocs = fmap (fmap documentChangeUri) changes
       in case maybeDocs of
-        Just docs -> (doc ^. uri) `elem` docs
+        Just docs -> (doc ^. J.uri) `elem` docs
         Nothing -> False
     checkChanges req =
-      let mMap = req ^. params . edit . changes
-        in maybe False (Map.member (doc ^. uri)) mMap
+      let mMap = req ^. params . J.edit . J.changes
+        in maybe False (Map.member (doc ^. J.uri)) mMap
 
 -- | Sends a request to the server and waits for its response.
 -- Will skip any messages in between the request and the response
@@ -434,10 +433,10 @@ createDoc file languageId contents = do
       createHits _ = False
 
       regHits :: TRegistration Method_WorkspaceDidChangeWatchedFiles -> Bool
-      regHits reg = foldl' (\acc w -> acc || watchHits w) False (reg ^. registerOptions . _Just . watchers)
+      regHits reg = foldl' (\acc w -> acc || watchHits w) False (reg ^. registerOptions . _Just . J.watchers)
 
       clientCapsSupports =
-          caps ^? workspace . _Just . didChangeWatchedFiles . _Just . dynamicRegistration . _Just
+          caps ^? J.workspace . _Just . J.didChangeWatchedFiles . _Just . J.dynamicRegistration . _Just
             == Just True
       shouldSend = clientCapsSupports && foldl' (\acc r -> acc || regHits r) False regs
 
@@ -469,14 +468,14 @@ openDoc' file languageId contents = do
 -- | Closes a text document and sends a textDocument/didOpen notification to the server.
 closeDoc :: TextDocumentIdentifier -> Session ()
 closeDoc docId = do
-  let params = DidCloseTextDocumentParams (TextDocumentIdentifier (docId ^. uri))
+  let params = DidCloseTextDocumentParams (TextDocumentIdentifier (docId ^. J.uri))
   sendNotification SMethod_TextDocumentDidClose params
 
 -- | Changes a text document and sends a textDocument/didOpen notification to the server.
 changeDoc :: TextDocumentIdentifier -> [TextDocumentContentChangeEvent] -> Session ()
 changeDoc docId changes = do
   verDoc <- getVersionedDoc docId
-  let params = DidChangeTextDocumentParams (verDoc & version +~ 1) changes
+  let params = DidChangeTextDocumentParams (verDoc & J.version +~ 1) changes
   sendNotification SMethod_TextDocumentDidChange params
 
 -- | Gets the Uri for the file corrected to the session directory.
@@ -490,7 +489,7 @@ getDocUri file = do
 waitForDiagnostics :: Session [Diagnostic]
 waitForDiagnostics = do
   diagsNot <- skipManyTill anyMessage (message SMethod_TextDocumentPublishDiagnostics)
-  let diags = diagsNot ^. params . LSP.diagnostics
+  let diags = diagsNot ^. params . J.diagnostics
   return diags
 
 -- | The same as 'waitForDiagnostics', but will only match a specific
@@ -504,7 +503,7 @@ waitForDiagnosticsSource src = do
     else return res
   where
     matches :: Diagnostic -> Bool
-    matches d = d ^. source == Just (T.pack src)
+    matches d = d ^. J.source == Just (T.pack src)
 
 -- | Expects a 'PublishDiagnosticsNotification' and throws an
 -- 'UnexpectedDiagnostics' exception if there are any diagnostics
@@ -512,7 +511,7 @@ waitForDiagnosticsSource src = do
 noDiagnostics :: Session ()
 noDiagnostics = do
   diagsNot <- message SMethod_TextDocumentPublishDiagnostics
-  when (diagsNot ^. params . LSP.diagnostics /= []) $ liftIO $ throw UnexpectedDiagnostics
+  when (diagsNot ^. params . J.diagnostics /= []) $ liftIO $ throw UnexpectedDiagnostics
 
 -- | Returns the symbols in a document.
 getDocumentSymbols :: TextDocumentIdentifier -> Session (Either [SymbolInformation] [DocumentSymbol])
@@ -533,7 +532,7 @@ getCodeActions doc range = do
   case rsp ^. result of
     Right (InL xs) -> return xs
     Right (InR _) -> return []
-    Left error -> throw (UnexpectedResponseError (SomeLspId $ fromJust $ rsp ^. LSP.id) error)
+    Left error -> throw (UnexpectedResponseError (SomeLspId $ fromJust $ rsp ^. J.id) error)
 
 -- | Returns all the code actions in a document by
 -- querying the code actions at each of the current
@@ -547,7 +546,7 @@ getAllCodeActions doc = do
   where
     go :: CodeActionContext -> [Command |? CodeAction] -> Diagnostic -> Session [Command |? CodeAction]
     go ctx acc diag = do
-      TResponseMessage _ rspLid res <- request SMethod_TextDocumentCodeAction (CodeActionParams Nothing Nothing doc (diag ^. range) ctx)
+      TResponseMessage _ rspLid res <- request SMethod_TextDocumentCodeAction (CodeActionParams Nothing Nothing doc (diag ^. J.range) ctx)
 
       case res of
         Left e -> throw (UnexpectedResponseError (SomeLspId $ fromJust rspLid) e)
@@ -582,7 +581,7 @@ getCodeActionContext doc = do
 -- | Returns the current diagnostics that have been sent to the client.
 -- Note that this does not wait for more to come in.
 getCurrentDiagnostics :: TextDocumentIdentifier -> Session [Diagnostic]
-getCurrentDiagnostics doc = fromMaybe [] . Map.lookup (toNormalizedUri $ doc ^. uri) . curDiagnostics <$> get
+getCurrentDiagnostics doc = fromMaybe [] . Map.lookup (toNormalizedUri $ doc ^. J.uri) . curDiagnostics <$> get
 
 -- | Returns the tokens of all progress sessions that have started but not yet ended.
 getIncompleteProgressSessions :: Session (Set.Set ProgressToken)
@@ -591,8 +590,8 @@ getIncompleteProgressSessions = curProgressSessions <$> get
 -- | Executes a command.
 executeCommand :: Command -> Session ()
 executeCommand cmd = do
-  let args = decode $ encode $ fromJust $ cmd ^. arguments
-      execParams = ExecuteCommandParams Nothing (cmd ^. command) args
+  let args = decode $ encode $ fromJust $ cmd ^. J.arguments
+      execParams = ExecuteCommandParams Nothing (cmd ^. J.command) args
   void $ sendRequest SMethod_WorkspaceExecuteCommand execParams
 
 -- | Executes a code action.
@@ -601,8 +600,8 @@ executeCommand cmd = do
 -- be applied first.
 executeCodeAction :: CodeAction -> Session ()
 executeCodeAction action = do
-  maybe (return ()) handleEdit $ action ^. edit
-  maybe (return ()) executeCommand $ action ^. command
+  maybe (return ()) handleEdit $ action ^. J.edit
+  maybe (return ()) executeCommand $ action ^. J.command
 
   where handleEdit :: WorkspaceEdit -> Session ()
         handleEdit e =
@@ -627,14 +626,14 @@ applyEdit doc edit = do
 
   caps <- asks sessionCapabilities
 
-  let supportsDocChanges = fromMaybe False $ caps ^? LSP.workspace . _Just . LSP.workspaceEdit . _Just . documentChanges . _Just
+  let supportsDocChanges = fromMaybe False $ caps ^? J.workspace . _Just . J.workspaceEdit . _Just . J.documentChanges . _Just
 
   let wEdit = if supportsDocChanges
       then
         let docEdit = TextDocumentEdit (review _versionedTextDocumentIdentifier verDoc) [InL edit]
         in WorkspaceEdit Nothing (Just [InL docEdit]) Nothing
       else
-        let changes = Map.singleton (doc ^. uri) [edit]
+        let changes = Map.singleton (doc ^. J.uri) [edit]
         in WorkspaceEdit (Just changes) Nothing Nothing
 
   let req = TRequestMessage "" (IdInt 0) SMethod_WorkspaceApplyEdit (ApplyWorkspaceEditParams Nothing wEdit)
@@ -650,7 +649,7 @@ getCompletions doc pos = do
 
   case getResponseResult rsp of
     InL items -> return items
-    InR (InL c) -> return $ c ^. LSP.items
+    InR (InL c) -> return $ c ^. J.items
     InR (InR _) -> return []
 
 -- | Returns the references for the position in the document.
@@ -725,7 +724,7 @@ getResponseResult :: (ToJSON (ErrorData m)) => TResponseMessage m -> MessageResu
 getResponseResult rsp =
   case rsp ^. result of
     Right x -> x
-    Left err -> throw $ UnexpectedResponseError (SomeLspId $ fromJust $ rsp ^. LSP.id) err
+    Left err -> throw $ UnexpectedResponseError (SomeLspId $ fromJust $ rsp ^. J.id) err
 
 -- | Applies formatting to the specified document.
 formatDoc :: TextDocumentIdentifier -> FormattingOptions -> Session ()
@@ -743,7 +742,7 @@ formatRange doc opts range = do
 
 applyTextEdits :: TextDocumentIdentifier -> [TextEdit] -> Session ()
 applyTextEdits doc edits =
-  let wEdit = WorkspaceEdit (Just (Map.singleton (doc ^. uri) edits)) Nothing Nothing
+  let wEdit = WorkspaceEdit (Just (Map.singleton (doc ^. J.uri) edits)) Nothing Nothing
       -- Send a dummy message to updateState so it can do bookkeeping
       req = TRequestMessage "" (IdInt 0) SMethod_WorkspaceApplyEdit (ApplyWorkspaceEditParams Nothing wEdit)
   in updateState (FromServerMess SMethod_WorkspaceApplyEdit req)

@@ -22,12 +22,9 @@ module Language.LSP.Protocol.Types (
   , module SemanticTokens
   -- * Main LSP types and functions
   , module Generated
-  -- * Generated lens classes
-  , module Lens
   ) where
 
 import Language.LSP.Protocol.Internal.Types as Generated
-import Language.LSP.Protocol.Internal.Lens as Lens
 import Language.LSP.Protocol.Types.Common as Common
 import Language.LSP.Protocol.Types.Location as Locations
 import Language.LSP.Protocol.Types.LspEnum as LspEnum

@@ -10,8 +10,9 @@ module Language.LSP.Test.Files
   )
 where
 
-import           Language.LSP.Protocol.Message hiding (error)
-import           Language.LSP.Protocol.Types hiding (id)
+import           Language.LSP.Protocol.Message hiding (error, id)
+import           Language.LSP.Protocol.Types
+import           Language.LSP.Protocol.Types.Lens hiding (id)
 import           Control.Lens
 import qualified Data.Map.Strict           as M
 import qualified Data.Text                     as T

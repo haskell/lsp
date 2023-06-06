@@ -6,7 +6,7 @@ module Main where
 
 import Language.LSP.Server
 import qualified Language.LSP.Test as Test
-import Language.LSP.Protocol.Types hiding (options, range, start, end)
+import Language.LSP.Protocol.Types
 import Language.LSP.Protocol.Message
 import Control.Monad.IO.Class
 import Control.Monad

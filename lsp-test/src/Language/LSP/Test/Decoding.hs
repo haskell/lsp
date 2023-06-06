@@ -16,7 +16,7 @@ import           Data.Maybe
 import           System.IO
 import           System.IO.Error
 import           Language.LSP.Protocol.Message hiding (error)
-import           Language.LSP.Protocol.Types
+import qualified Language.LSP.Protocol.Types.Lens as J
 import           Language.LSP.Test.Exceptions
 
 import Data.IxMap
@@ -64,10 +64,10 @@ getRequestMap = foldl' helper emptyIxMap
   helper acc msg = case msg of
     FromClientMess m mess -> case splitClientMethod m of
       IsClientNot -> acc
-      IsClientReq -> fromJust $ updateRequestMap acc (mess ^. id) m
+      IsClientReq -> fromJust $ updateRequestMap acc (mess ^. J.id) m
       IsClientEither -> case mess of
         NotMess _ -> acc
-        ReqMess msg -> fromJust $ updateRequestMap acc (msg ^. id) m
+        ReqMess msg -> fromJust $ updateRequestMap acc (msg ^. J.id) m
     _ -> acc
 
 decodeFromServerMsg :: RequestMap -> B.ByteString -> (RequestMap, FromServerMessage)
