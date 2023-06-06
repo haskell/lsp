@@ -54,12 +54,23 @@ deriveJSON lspOptions ''RequestMessage
 -- | Response error type as defined in the spec.
 data ResponseError =
   ResponseError
-    { _code    :: ErrorCodes
+    { _code    :: LSPErrorCodes |? ErrorCodes
     , _message :: Text
     , _xdata   :: Maybe Value
     } deriving stock (Show, Eq, Generic)
 
-deriveJSON lspOptions ''ResponseError
+deriveToJSON lspOptions ''ResponseError
+instance FromJSON ResponseError where
+    parseJSON = 
+      let errorCode = withObject "ResponseError" $ \v -> ResponseError
+                        <$> v .: "code"
+                        <*> v .: "message"
+                        <*> v .:? "data"
+      in fmap go . errorCode
+      where go :: ResponseError -> ResponseError
+            go x@(ResponseError (InR (ErrorCodes_Custom n)) _ _) = 
+              x{_code = InL (fromOpenEnumBaseType n)}
+            go x = x
 
 -- | Response message type as defined in the spec.
 data ResponseMessage =
@@ -109,7 +120,7 @@ instance (ToJSON (MessageParams m)) => ToJSON (TRequestMessage m) where
 
 data TResponseError (m :: Method f Request) =
   TResponseError
-    { _code    :: ErrorCodes
+    { _code    :: LSPErrorCodes |? ErrorCodes
     , _message :: Text
     , _xdata   :: Maybe (ErrorData m)
     } deriving stock Generic
@@ -118,7 +129,16 @@ deriving stock instance Eq   (ErrorData m) => Eq (TResponseError m)
 deriving stock instance Show (ErrorData m) => Show (TResponseError m)
 
 instance (FromJSON (ErrorData m)) => FromJSON (TResponseError m) where
-  parseJSON = genericParseJSON lspOptions
+  parseJSON = 
+    let errorCode = withObject "ResponseError" $ \v -> TResponseError
+                      <$> v .: "code"
+                      <*> v .: "message"
+                      <*> v .:? "data"
+    in fmap go . errorCode
+    where go :: TResponseError m -> TResponseError m
+          go x@(TResponseError (InR (ErrorCodes_Custom n)) _ _) = 
+            x{_code = InL (fromOpenEnumBaseType n)}
+          go x = x
 instance (ToJSON (ErrorData m)) => ToJSON (TResponseError m) where
   toJSON     = genericToJSON lspOptions
   toEncoding = genericToEncoding lspOptions

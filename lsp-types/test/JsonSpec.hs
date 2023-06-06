@@ -161,6 +161,14 @@ instance Arbitrary ErrorCodes where
       , ErrorCodes_UnknownErrorCode
       ]
 
+instance Arbitrary LSPErrorCodes where
+  arbitrary =
+    elements
+      [ LSPErrorCodes_RequestFailed
+      , LSPErrorCodes_ServerCancelled
+      , LSPErrorCodes_ContentModified
+      , LSPErrorCodes_RequestCancelled
+      ]
 -- ---------------------------------------------------------------------
 
 instance Arbitrary DidChangeWatchedFilesRegistrationOptions where

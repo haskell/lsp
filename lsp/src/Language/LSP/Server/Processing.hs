@@ -165,7 +165,7 @@ initializeRequestHandler ServerDefinition{..} vfs sendFunc req = do
 
     initializeErrorHandler :: (ResponseError -> IO ()) -> E.SomeException -> IO (Maybe a)
     initializeErrorHandler sendResp e = do
-        sendResp $ ResponseError ErrorCodes_InternalError msg Nothing
+        sendResp $ ResponseError (InR ErrorCodes_InternalError) msg Nothing
         pure Nothing
       where
         msg = T.pack $ unwords ["Error on initialize:", show e]
@@ -370,7 +370,7 @@ handle' logger mAction m msg = do
         | SMethod_Shutdown <- m -> liftIO $ shutdownRequestHandler msg (mkRspCb msg)
         | otherwise -> do
             let errorMsg = T.pack $ unwords ["lsp:no handler for: ", show m]
-                err = ResponseError ErrorCodes_MethodNotFound errorMsg Nothing
+                err = ResponseError (InR ErrorCodes_MethodNotFound) errorMsg Nothing
             sendToClient $
               FromServerRsp (msg ^. J.method) $ TResponseMessage "2.0" (Just (msg ^. J.id)) (Left err)
 
@@ -382,7 +382,7 @@ handle' logger mAction m msg = do
         Just h -> liftIO $ h req (mkRspCb req)
         Nothing -> do
           let errorMsg = T.pack $ unwords ["lsp:no handler for: ", show m]
-              err = ResponseError ErrorCodes_MethodNotFound errorMsg Nothing
+              err = ResponseError (InR ErrorCodes_MethodNotFound) errorMsg Nothing
           sendToClient $
             FromServerRsp (req ^. J.method) $ TResponseMessage "2.0" (Just (req ^. J.id)) (Left err)
   where
