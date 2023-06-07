@@ -2,14 +2,11 @@
 module Language.LSP.Protocol.Lens (
   -- * Generated lens classes
     module Lens
-  -- Custom lets classes for Message.Types
+  -- Custom lets classes for Type
   , module TypesLens
-  -- Custom lens classes for Message.Registration
-  , module RegistrationLens
-  -- Custom lens classes for Types.SemanticToken
-  , module SemanticTokenLens) where
+  -- Custom lens classes for Message
+  , module MessageLens) where
 
 import Language.LSP.Protocol.Internal.Lens as Lens
-import Language.LSP.Protocol.Message.TypesLens as TypesLens
-import Language.LSP.Protocol.Message.RegistrationLens as RegistrationLens
-import Language.LSP.Protocol.Types.SemanticTokensLens as SemanticTokenLens
+import Language.LSP.Protocol.Message.Lens as MessageLens
+import Language.LSP.Protocol.Types.Lens as TypesLens

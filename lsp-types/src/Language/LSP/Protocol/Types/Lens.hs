@@ -1,6 +1,6 @@
 {-#LANGUAGE TemplateHaskell #-}
 
-module Language.LSP.Protocol.Types.SemanticTokensLens where
+module Language.LSP.Protocol.Types.Lens where
 
 import Language.LSP.Protocol.Internal.Lens
 import Language.LSP.Protocol.Types.SemanticTokens

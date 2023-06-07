@@ -105,22 +105,21 @@ library
     Language.LSP.Protocol.Utils.SMethodMap
 
   other-modules:
+    Language.LSP.Protocol.Message.Lens
     Language.LSP.Protocol.Message.LspId
     Language.LSP.Protocol.Message.Meta
     Language.LSP.Protocol.Message.Method
     Language.LSP.Protocol.Message.Parsing
     Language.LSP.Protocol.Message.Registration
-    Language.LSP.Protocol.Message.RegistrationLens
     Language.LSP.Protocol.Message.Types
-    Language.LSP.Protocol.Message.TypesLens
     Language.LSP.Protocol.Types.Common
     Language.LSP.Protocol.Types.Edit
+    Language.LSP.Protocol.Types.Lens
     Language.LSP.Protocol.Types.Location
     Language.LSP.Protocol.Types.LspEnum
     Language.LSP.Protocol.Types.MarkupContent
     Language.LSP.Protocol.Types.Progress
     Language.LSP.Protocol.Types.SemanticTokens
-    Language.LSP.Protocol.Types.SemanticTokensLens
     Language.LSP.Protocol.Types.Singletons
     Language.LSP.Protocol.Types.Uri
     Language.LSP.Protocol.Types.Uri.OsPath
