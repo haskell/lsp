@@ -57,6 +57,21 @@ data ResponseError =
     , _xdata   :: Maybe Value
     } deriving stock (Show, Eq, Generic)
 
+{- Note [ErrorCodes and LSPErrorCodes]
+
+Confusingly, the metamodel defines _two_ enums for error codes. One of
+these covers JSON RPC errors and one covers LSP-specific errors. We want
+to accept either, mostly so we can make use of the pre-specified enum values.
+
+However, _both_ of them are listed as accepting custom values. This means
+that `LSPErrorCodes |? ErrorCodes` isn't quite right: when we parse it from
+JSON, if we get an error code that isn't a known value of `LSPErrorCodes`, we
+will just use the custom value constructor, without trying `ErrorCodes`.
+
+It's hard to find any other good way of representing things properly with what
+we've got, so in the end we decided to patch up the JSON parsing with a custom
+instance.
+-}
 deriveToJSON lspOptions ''ResponseError
 instance FromJSON ResponseError where
     parseJSON = 
