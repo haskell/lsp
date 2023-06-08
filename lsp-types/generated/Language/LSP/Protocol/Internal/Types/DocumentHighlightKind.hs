@@ -48,3 +48,4 @@ instance Language.LSP.Protocol.Types.LspEnum.LspEnum DocumentHighlightKind where
   fromEnumBaseType 3 = pure DocumentHighlightKind_Write
   fromEnumBaseType _ = Nothing
 
+

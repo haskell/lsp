@@ -45,3 +45,4 @@ instance Language.LSP.Protocol.Types.LspEnum.LspEnum DocumentDiagnosticReportKin
   fromEnumBaseType "unchanged" = pure DocumentDiagnosticReportKind_Unchanged
   fromEnumBaseType _ = Nothing
 
+

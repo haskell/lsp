@@ -36,3 +36,4 @@ instance Language.LSP.Protocol.Types.LspEnum.LspEnum SymbolTag where
   fromEnumBaseType 1 = pure SymbolTag_Deprecated
   fromEnumBaseType _ = Nothing
 
+

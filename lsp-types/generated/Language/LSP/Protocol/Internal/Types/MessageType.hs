@@ -55,3 +55,4 @@ instance Language.LSP.Protocol.Types.LspEnum.LspEnum MessageType where
   fromEnumBaseType 4 = pure MessageType_Log
   fromEnumBaseType _ = Nothing
 
+

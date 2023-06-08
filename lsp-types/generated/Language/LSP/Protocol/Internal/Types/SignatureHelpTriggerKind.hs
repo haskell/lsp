@@ -50,3 +50,4 @@ instance Language.LSP.Protocol.Types.LspEnum.LspEnum SignatureHelpTriggerKind wh
   fromEnumBaseType 3 = pure SignatureHelpTriggerKind_ContentChange
   fromEnumBaseType _ = Nothing
 
+

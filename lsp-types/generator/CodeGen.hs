@@ -106,7 +106,13 @@ genModule name pragmas mexports action = do
       -- TODO: replace with regex
       isSelfImport imp = (" " <> fullModName <> " ") `T.isInfixOf` imp || (" " <> fullModName) `T.isSuffixOf` imp
       importSection = hardvcat (fmap pretty $ filter (not . isSelfImport) $ toList imports)
-      mod = warning <> hardline <> pragmaSection <> hardline <> optionsSection <> hardline <> header <> hardline <> hardline <> importSection <> hardline <> hardline <> doc
+      mod = warning <> hardline
+          <> pragmaSection <> hardline
+          <> optionsSection <> hardline
+          <> header <> hardline <> hardline
+          <> importSection 
+          <> hardline <> hardline 
+          <> doc <> hardline
       printed = T.pack $ show mod
 
       modSegments = T.unpack <$> T.splitOn "." fullModName

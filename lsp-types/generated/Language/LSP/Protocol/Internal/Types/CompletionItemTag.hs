@@ -37,3 +37,4 @@ instance Language.LSP.Protocol.Types.LspEnum.LspEnum CompletionItemTag where
   fromEnumBaseType 1 = pure CompletionItemTag_Deprecated
   fromEnumBaseType _ = Nothing
 
+

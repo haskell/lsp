@@ -48,3 +48,4 @@ instance Language.LSP.Protocol.Types.LspEnum.LspEnum DiagnosticTag where
   fromEnumBaseType 2 = pure DiagnosticTag_Deprecated
   fromEnumBaseType _ = Nothing
 
+

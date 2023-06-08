@@ -76,3 +76,4 @@ instance Language.LSP.Protocol.Types.LspEnum.LspOpenEnum LSPErrorCodes where
   fromOpenEnumBaseType -32800 = LSPErrorCodes_RequestCancelled
   fromOpenEnumBaseType arg = LSPErrorCodes_Custom arg
 
+

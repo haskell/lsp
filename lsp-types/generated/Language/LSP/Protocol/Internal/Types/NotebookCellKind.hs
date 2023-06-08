@@ -43,3 +43,4 @@ instance Language.LSP.Protocol.Types.LspEnum.LspEnum NotebookCellKind where
   fromEnumBaseType 2 = pure NotebookCellKind_Code
   fromEnumBaseType _ = Nothing
 
+

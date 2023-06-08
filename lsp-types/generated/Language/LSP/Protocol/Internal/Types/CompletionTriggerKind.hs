@@ -50,3 +50,4 @@ instance Language.LSP.Protocol.Types.LspEnum.LspEnum CompletionTriggerKind where
   fromEnumBaseType 3 = pure CompletionTriggerKind_TriggerForIncompleteCompletions
   fromEnumBaseType _ = Nothing
 
+

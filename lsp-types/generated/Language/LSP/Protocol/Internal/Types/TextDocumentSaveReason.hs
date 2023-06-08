@@ -49,3 +49,4 @@ instance Language.LSP.Protocol.Types.LspEnum.LspEnum TextDocumentSaveReason wher
   fromEnumBaseType 3 = pure TextDocumentSaveReason_FocusOut
   fromEnumBaseType _ = Nothing
 
+

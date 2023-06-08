@@ -60,3 +60,4 @@ instance Language.LSP.Protocol.Types.LspEnum.LspEnum FailureHandlingKind where
   fromEnumBaseType "undo" = pure FailureHandlingKind_Undo
   fromEnumBaseType _ = Nothing
 
+

@@ -64,3 +64,4 @@ instance Language.LSP.Protocol.Types.LspEnum.LspEnum UniquenessLevel where
   fromEnumBaseType "global" = pure UniquenessLevel_Global
   fromEnumBaseType _ = Nothing
 
+
