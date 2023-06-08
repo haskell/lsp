@@ -1,11 +1,13 @@
 {-# LANGUAGE TypeInType #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE TypeApplications #-}
 module DummyServer where
 
 import Control.Monad
 import Control.Monad.Reader
-import Data.Aeson hiding (defaultOptions)
-import qualified Data.HashMap.Strict as HM
+import Data.Aeson hiding (defaultOptions, Null)
+import qualified Data.Map.Strict as M
 import Data.List (isSuffixOf)
 import Data.String
 import UnliftIO.Concurrent
@@ -15,8 +17,9 @@ import UnliftIO
 import System.Directory
 import System.FilePath
 import System.Process
-import Language.LSP.Types
-import Data.Default
+import Language.LSP.Protocol.Types
+import Language.LSP.Protocol.Message
+import Data.Proxy
 
 withDummyServer :: ((Handle, Handle) -> IO ()) -> IO ()
 withDummyServer f = do
@@ -31,7 +34,7 @@ withDummyServer f = do
         , staticHandlers = handlers
         , interpretHandler = \env ->
             Iso (\m -> runLspT env (runReaderT m handlerEnv)) liftIO
-        , options = defaultOptions {executeCommandCommands = Just ["doAnEdit"]}
+        , options = defaultOptions {optExecuteCommandCommands = Just ["doAnEdit"]}
         }
 
   bracket
@@ -41,51 +44,52 @@ withDummyServer f = do
 
 
 data HandlerEnv = HandlerEnv
-  { relRegToken :: MVar (RegistrationToken WorkspaceDidChangeWatchedFiles)
-  , absRegToken :: MVar (RegistrationToken WorkspaceDidChangeWatchedFiles)
+  { relRegToken :: MVar (RegistrationToken Method_WorkspaceDidChangeWatchedFiles)
+  , absRegToken :: MVar (RegistrationToken Method_WorkspaceDidChangeWatchedFiles)
   }
 
 handlers :: Handlers (ReaderT HandlerEnv (LspM ()))
 handlers =
   mconcat
-    [ notificationHandler SInitialized $
+    [ notificationHandler SMethod_Initialized $
         \_noti ->
-          sendNotification SWindowLogMessage $
-            LogMessageParams MtLog "initialized"
-    , requestHandler STextDocumentHover $
-        \_req responder ->
-          responder $
-            Right $
-              Just $
-                Hover (HoverContents (MarkupContent MkPlainText "hello")) Nothing
-    , requestHandler STextDocumentDocumentSymbol $
+          sendNotification SMethod_WindowLogMessage $
+            LogMessageParams MessageType_Log "initialized"
+    , requestHandler SMethod_TextDocumentHover $
         \_req responder ->
           responder $
             Right $
               InL $
-                List
-                  [ DocumentSymbol
-                      "foo"
-                      Nothing
-                      SkObject
-                      Nothing
-                      Nothing
-                      (mkRange 0 0 3 6)
-                      (mkRange 0 0 3 6)
-                      Nothing
-                  ]
-     , notificationHandler STextDocumentDidOpen $
+                Hover (InL (MarkupContent MarkupKind_PlainText "hello")) Nothing
+    , requestHandler SMethod_TextDocumentDocumentSymbol $
+        \_req responder ->
+          responder $
+            Right $
+              InR $ InL
+                [ DocumentSymbol
+                    "foo"
+                    Nothing
+                    SymbolKind_Object
+                    Nothing
+                    Nothing
+                    (mkRange 0 0 3 6)
+                    (mkRange 0 0 3 6)
+                    Nothing
+                ]
+     , notificationHandler SMethod_TextDocumentDidOpen $
         \noti -> do
-          let NotificationMessage _ _ (DidOpenTextDocumentParams doc) = noti
+          let TNotificationMessage _ _ (DidOpenTextDocumentParams doc) = noti
               TextDocumentItem uri _ _ _ = doc
               Just fp = uriToFilePath uri
               diag =
                 Diagnostic
                   (mkRange 0 0 0 1)
-                  (Just DsWarning)
+                  (Just DiagnosticSeverity_Warning)
                   (Just (InL 42))
+                  Nothing
                   (Just "dummy-server")
                   "Here's a warning"
+                  Nothing
                   Nothing
                   Nothing
           withRunInIO $
@@ -96,39 +100,37 @@ handlers =
                     do
                       threadDelay (2 * 10 ^ 6)
                       runInIO $
-                        sendNotification STextDocumentPublishDiagnostics $
-                          PublishDiagnosticsParams uri Nothing (List [diag])
+                        sendNotification SMethod_TextDocumentPublishDiagnostics $
+                          PublishDiagnosticsParams uri Nothing [diag]
               -- also act as a registerer for workspace/didChangeWatchedFiles
               when (".register" `isSuffixOf` fp) $
                 do
                   let regOpts =
-                        DidChangeWatchedFilesRegistrationOptions $
-                          List
-                            [ FileSystemWatcher
-                                "*.watch"
-                                (Just (WatchKind True True True))
-                            ]
+                        DidChangeWatchedFilesRegistrationOptions
+                          [ FileSystemWatcher
+                              (GlobPattern $ InL $ Pattern "*.watch")
+                              (Just WatchKind_Create)
+                          ]
                   Just token <- runInIO $
-                    registerCapability SWorkspaceDidChangeWatchedFiles regOpts $
+                    registerCapability SMethod_WorkspaceDidChangeWatchedFiles regOpts $
                       \_noti ->
-                        sendNotification SWindowLogMessage $
-                          LogMessageParams MtLog "got workspace/didChangeWatchedFiles"
+                        sendNotification SMethod_WindowLogMessage $
+                          LogMessageParams MessageType_Log "got workspace/didChangeWatchedFiles"
                   runInIO $ asks relRegToken >>= \v -> putMVar v token
               when (".register.abs" `isSuffixOf` fp) $
                 do
                   curDir <- getCurrentDirectory
                   let regOpts =
-                        DidChangeWatchedFilesRegistrationOptions $
-                          List
-                            [ FileSystemWatcher
-                                (fromString $ curDir </> "*.watch")
-                                (Just (WatchKind True True True))
-                            ]
+                        DidChangeWatchedFilesRegistrationOptions
+                          [ FileSystemWatcher
+                              (GlobPattern $ InL $ Pattern $ fromString $ curDir </> "*.watch")
+                              (Just WatchKind_Create)
+                          ]
                   Just token <- runInIO $
-                    registerCapability SWorkspaceDidChangeWatchedFiles regOpts $
+                    registerCapability SMethod_WorkspaceDidChangeWatchedFiles regOpts $
                       \_noti ->
-                        sendNotification SWindowLogMessage $
-                          LogMessageParams MtLog "got workspace/didChangeWatchedFiles"
+                        sendNotification SMethod_WindowLogMessage $
+                          LogMessageParams MessageType_Log "got workspace/didChangeWatchedFiles"
                   runInIO $ asks absRegToken >>= \v -> putMVar v token
               -- also act as an unregisterer for workspace/didChangeWatchedFiles
               when (".unregister" `isSuffixOf` fp) $
@@ -142,56 +144,57 @@ handlers =
 
       -- this handler is used by the
       -- "text document VFS / sends back didChange notifications (documentChanges)" test
-    , notificationHandler STextDocumentDidChange $ \noti -> do
-        let NotificationMessage _ _ params = noti
-        void $ sendNotification (SCustomMethod "custom/textDocument/didChange") (toJSON params)
+    , notificationHandler SMethod_TextDocumentDidChange $ \noti -> do
+        let TNotificationMessage _ _ params = noti
+        void $ sendNotification (SMethod_CustomMethod (Proxy @"custom/textDocument/didChange")) (toJSON params)
 
-     , requestHandler SWorkspaceExecuteCommand $ \req resp -> do
+     , requestHandler SMethod_WorkspaceExecuteCommand $ \req resp -> do
        case req of
-        RequestMessage _ _ _ (ExecuteCommandParams Nothing "doAnEdit" (Just (List [val]))) -> do
+        TRequestMessage _ _ _ (ExecuteCommandParams Nothing "doAnEdit" (Just [val])) -> do
           let
             Success docUri = fromJSON val
-            edit = List [TextEdit (mkRange 0 0 0 5) "howdy"]
+            edit = [TextEdit (mkRange 0 0 0 5) "howdy"]
             params =
               ApplyWorkspaceEditParams (Just "Howdy edit") $
-                WorkspaceEdit (Just (HM.singleton docUri edit)) Nothing Nothing
-          resp $ Right Null
-          void $ sendRequest SWorkspaceApplyEdit params (const (pure ()))
-        RequestMessage _ _ _ (ExecuteCommandParams Nothing "doAVersionedEdit" (Just (List [val]))) -> do
+                WorkspaceEdit (Just (M.singleton docUri edit)) Nothing Nothing
+          resp $ Right $ InR $ Null
+          void $ sendRequest SMethod_WorkspaceApplyEdit params (const (pure ()))
+        TRequestMessage _ _ _ (ExecuteCommandParams Nothing "doAVersionedEdit" (Just [val])) -> do
           let
             Success versionedDocUri = fromJSON val
-            edit = List [InL (TextEdit (mkRange 0 0 0 5) "howdy")]
+            edit = [InL (TextEdit (mkRange 0 0 0 5) "howdy")]
             documentEdit = TextDocumentEdit versionedDocUri edit
             params =
               ApplyWorkspaceEditParams (Just "Howdy edit") $
-                WorkspaceEdit Nothing (Just (List [InL documentEdit])) Nothing
-          resp $ Right Null
-          void $ sendRequest SWorkspaceApplyEdit params (const (pure ()))
-        RequestMessage _ _ _ (ExecuteCommandParams _ name _) ->
+                WorkspaceEdit Nothing (Just [InL documentEdit]) Nothing
+          resp $ Right $ InR Null
+          void $ sendRequest SMethod_WorkspaceApplyEdit params (const (pure ()))
+        TRequestMessage _ _ _ (ExecuteCommandParams _ name _) ->
           error $ "unsupported command: " <> show name
-     , requestHandler STextDocumentCodeAction $ \req resp -> do
-        let RequestMessage _ _ _ params = req
+     , requestHandler SMethod_TextDocumentCodeAction $ \req resp -> do
+        let TRequestMessage _ _ _ params = req
             CodeActionParams _ _ _ _ cactx = params
-            CodeActionContext diags _ = cactx
+            CodeActionContext diags _ _ = cactx
             codeActions = fmap diag2ca diags
             diag2ca d =
               CodeAction
                 "Delete this"
                 Nothing
-                (Just (List [d]))
+                (Just [d])
                 Nothing
                 Nothing
                 Nothing
                 (Just (Command "" "deleteThis" Nothing))
                 Nothing
-        resp $ Right $ InR <$> codeActions
-     , requestHandler STextDocumentCompletion $ \_req resp -> do
-        let res = CompletionList True (List [item])
+        resp $ Right $ InL $ InR <$> codeActions
+     , requestHandler SMethod_TextDocumentCompletion $ \_req resp -> do
+        let res = CompletionList True Nothing [item]
             item =
               CompletionItem
                 "foo"
-                (Just CiConstant)
-                (Just (List []))
+                Nothing
+                (Just CompletionItemKind_Constant)
+                (Just [])
                 Nothing
                 Nothing
                 Nothing
@@ -206,15 +209,16 @@ handlers =
                 Nothing
                 Nothing
                 Nothing
-        resp $ Right $ InR res
-     , requestHandler STextDocumentPrepareCallHierarchy $ \req resp -> do
-        let RequestMessage _ _ _ params = req
+                Nothing
+        resp $ Right $ InR $ InL res
+     , requestHandler SMethod_TextDocumentPrepareCallHierarchy $ \req resp -> do
+        let TRequestMessage _ _ _ params = req
             CallHierarchyPrepareParams _ pos _ = params
             Position x y = pos
             item =
               CallHierarchyItem
                 "foo"
-                SkMethod
+                SymbolKind_Method
                 Nothing
                 Nothing
                 (Uri "")
@@ -222,21 +226,21 @@ handlers =
                 (Range (Position 2 3) (Position 4 5))
                 Nothing
         if x == 0 && y == 0
-          then resp $ Right Nothing
-          else resp $ Right $ Just $ List [item]
-     , requestHandler SCallHierarchyIncomingCalls $ \req resp -> do
-        let RequestMessage _ _ _ params = req
+          then resp $ Right $ InR Null
+          else resp $ Right $ InL [item]
+     , requestHandler SMethod_CallHierarchyIncomingCalls $ \req resp -> do
+        let TRequestMessage _ _ _ params = req
             CallHierarchyIncomingCallsParams _ _ item = params
-        resp $ Right $ Just $
-          List [CallHierarchyIncomingCall item (List [Range (Position 2 3) (Position 4 5)])]
-     , requestHandler SCallHierarchyOutgoingCalls $ \req resp -> do
-        let RequestMessage _ _ _ params = req
+        resp $ Right $ InL
+          [CallHierarchyIncomingCall item [Range (Position 2 3) (Position 4 5)]]
+     , requestHandler SMethod_CallHierarchyOutgoingCalls $ \req resp -> do
+        let TRequestMessage _ _ _ params = req
             CallHierarchyOutgoingCallsParams _ _ item = params
-        resp $ Right $ Just $
-          List [CallHierarchyOutgoingCall item (List [Range (Position 4 5) (Position 2 3)])]
-     , requestHandler STextDocumentSemanticTokensFull $ \_req resp -> do
-        let tokens = makeSemanticTokens def [SemanticTokenAbsolute 0 1 2 SttType []]
+        resp $ Right $ InL
+          [CallHierarchyOutgoingCall item [Range (Position 4 5) (Position 2 3)]]
+     , requestHandler SMethod_TextDocumentSemanticTokensFull $ \_req resp -> do
+        let tokens = makeSemanticTokens defaultSemanticTokensLegend [SemanticTokenAbsolute 0 1 2 SemanticTokenTypes_Type []]
         case tokens of
-          Left t -> resp $ Left $ ResponseError InternalError t Nothing
-          Right tokens -> resp $ Right $ Just tokens
+          Left t -> resp $ Left $ ResponseError (InR ErrorCodes_InternalError) t Nothing
+          Right tokens -> resp $ Right $ InL tokens
     ]

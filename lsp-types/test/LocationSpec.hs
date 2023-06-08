@@ -2,7 +2,7 @@
 
 module LocationSpec where
 
-import           Language.LSP.Types
+import           Language.LSP.Protocol.Types
 import           Test.Hspec
 
 main :: IO ()

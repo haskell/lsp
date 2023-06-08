@@ -1,7 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE TypeInType #-}
 module Language.LSP.Test.Decoding where
 
@@ -17,8 +15,8 @@ import qualified Data.ByteString.Lazy.Char8    as B
 import           Data.Maybe
 import           System.IO
 import           System.IO.Error
-import           Language.LSP.Types
-import           Language.LSP.Types.Lens
+import           Language.LSP.Protocol.Message
+import qualified Language.LSP.Protocol.Lens as L
 import           Language.LSP.Test.Exceptions
 
 import Data.IxMap
@@ -51,7 +49,7 @@ getHeaders h = do
           | isEOFError e = throw UnexpectedServerTermination
           | otherwise = throw e
 
-type RequestMap = IxMap LspId (SMethod :: Method FromClient Request -> Type )
+type RequestMap = IxMap LspId (SMethod :: Method ClientToServer Request -> Type )
 
 newRequestMap :: RequestMap
 newRequestMap = emptyIxMap
@@ -66,10 +64,10 @@ getRequestMap = foldl' helper emptyIxMap
   helper acc msg = case msg of
     FromClientMess m mess -> case splitClientMethod m of
       IsClientNot -> acc
-      IsClientReq -> fromJust $ updateRequestMap acc (mess ^. id) m
+      IsClientReq -> fromJust $ updateRequestMap acc (mess ^. L.id) m
       IsClientEither -> case mess of
         NotMess _ -> acc
-        ReqMess msg -> fromJust $ updateRequestMap acc (msg ^. id) m
+        ReqMess msg -> fromJust $ updateRequestMap acc (msg ^. L.id) m
     _ -> acc
 
 decodeFromServerMsg :: RequestMap -> B.ByteString -> (RequestMap, FromServerMessage)

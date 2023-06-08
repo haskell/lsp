@@ -2,7 +2,12 @@
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
+-- We're testing our own deprecated function here!
+{-# OPTIONS_GHC -Wno-deprecations #-}
+{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
+
 #if MIN_VERSION_filepath(1,4,100)
+
 #define OS_PATH
 #endif
 
@@ -15,10 +20,8 @@ import qualified System.OsPath           as OsPath
 import           Control.Monad           (when)
 import           Data.List
 import           Data.Text               (Text, pack)
-import           Language.LSP.Types
+import           Language.LSP.Protocol.Types
 
-import           Control.Exception       (IOException, throwIO)
-import           Data.Maybe              (fromJust)
 import           GHC.IO.Encoding         (setFileSystemEncoding)
 import           Network.URI
 import           System.FilePath         (normalise)
@@ -89,12 +92,12 @@ platformAwareUriFilePathSpec = do
 
   it "converts a Windows file path to a URI" $ do
     let theFilePath = platformAwareFilePathToUri windowsOS "c:/Functional.hs"
-    theFilePath `shouldBe` (Uri "file:///c:/Functional.hs")
+    theFilePath `shouldBe` Uri "file:///c:/Functional.hs"
 
   it "converts a POSIX file path to a URI and back" $ do
     let theFilePath = platformAwareFilePathToUri "posix" "./Functional.hs"
-    theFilePath `shouldBe` (Uri "file://./Functional.hs")
-    let Just (URI scheme' auth' path' query' frag') =  parseURI "file://./Functional.hs"
+    theFilePath `shouldBe` Uri "file://./Functional.hs"
+    let Just (URI scheme' auth' path' query' frag') = parseURI "file://./Functional.hs"
     (scheme',auth',path',query',frag') `shouldBe`
       ("file:"
       ,Just (URIAuth {uriUserInfo = "", uriRegName = ".", uriPort = ""}) -- AZ: Seems odd
@@ -201,8 +204,8 @@ uriFilePathSpec = do
 
   it "converts a file path with initial current dir to a URI and back" $ do
     let uri = filePathToUri withInitialCurrentDirFilePath
-    uri `shouldBe` (Uri (pack withInitialCurrentDirUriStr))
-    let Just (URI scheme' auth' path' query' frag') =  parseURI withInitialCurrentDirUriStr
+    uri `shouldBe` Uri (pack withInitialCurrentDirUriStr)
+    let Just (URI scheme' auth' path' query' frag') = parseURI withInitialCurrentDirUriStr
     (scheme',auth',path',query',frag') `shouldBe` withInitialCurrentDirUriParts
     Just "Functional.hs" `shouldBe` uriToFilePath uri
 

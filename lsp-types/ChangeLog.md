@@ -1,12 +1,23 @@
 # Revision history for lsp-types
 
+## 2.0.0.0
+
+* Breaking change: major restructure to generate types and methods from the LSP metamodel.
+    * Full support for version 3.17 of the LSP specification, many accuracy fixes
+    * Generated types follow the spec very closely, e.g. using anonymous types, using `a |? Null` instead of `Maybe a`
+    * Anonymous record types in the spec are now represented using `row-types`
+    * Many constructors are now prefixed with their type names
+    * Documentation from the spec is transferred
+    * Three top level modules: `Types` (main protocol types), `Message` (messages and methods), `Capabilities` (capabilities)
+* New typeclasses for handling LSP enumerations: `LspEnum` and `LspOpenEnum`
+
 ## 1.6.0.0
 
 * Add `isSubRangeOf` and `positionInRange` helper functions
 * Add `ServerCancelled`, `RequestFailed` and `ErrorCodeCustom` server error types
 * Fix "workspace/semanticTokens/refresh" to be a server method instead of a client method
 * Use a packed representation for `NormalizedFilePath`
-* Add converions from `OsPath` to `NormalizedFilePath` in `Language.LSP.Types.Uri.OsPath` when using new enough `filepath`
+* Add conversions from `OsPath` to `NormalizedFilePath` in `Language.LSP.Types.Uri.OsPath` when using new enough `filepath`
  
 ## 1.5.0.0
 

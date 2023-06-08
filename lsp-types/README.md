@@ -7,6 +7,10 @@ It is part of the [lsp](https://github.com/haskell/lsp) family of
 packages, along with [lsp](https://hackage.haskell.org/package/lsp)
 and [lsp-test](https://hackage.haskell.org/package/lsp-test)
 
+## Updating the generated code
+
+To update the generated code, run `cabal run generator` from the `lsp-types` directory.
+
 ## Useful links
 
 - https://github.com/haskell/lsp

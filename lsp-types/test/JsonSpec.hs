@@ -1,23 +1,34 @@
-{-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE FlexibleContexts     #-}
-{-# LANGUAGE TypeInType           #-}
-{-# LANGUAGE FlexibleInstances    #-}
-{-# LANGUAGE OverloadedStrings    #-}
-{-# LANGUAGE TypeSynonymInstances #-}
-{-# OPTIONS_GHC -fno-warn-orphans #-}
--- For the use of MarkedString
+{-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
+{-# LANGUAGE TypeApplications           #-}
+{-# LANGUAGE TypeInType                 #-}
+{-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE UndecidableInstances       #-}
+{-# LANGUAGE DerivingStrategies         #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE StandaloneDeriving         #-}
+{-# LANGUAGE TypeOperators              #-}
+
+-- we're using some deprecated stuff from the LSP spec, that's fine
 {-# OPTIONS_GHC -fno-warn-deprecations #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 -- | Test for JSON serialization
 module JsonSpec where
 
-import           Language.LSP.Types
+import           Language.LSP.Protocol.Types
+import           Language.LSP.Protocol.Message
 
-import qualified Data.Aeson                    as J
-import           Data.List(isPrefixOf)
+import qualified Data.Aeson                as J
+import           Data.List                 (isPrefixOf)
+import qualified Data.Row                  as R
+import qualified Data.Row.Records          as R
+import           Data.Void
 import           Test.Hspec
 import           Test.Hspec.QuickCheck
-import           Test.QuickCheck               hiding (Success)
-import           Test.QuickCheck.Instances     ()
+import           Test.QuickCheck           hiding (Success)
+import           Test.QuickCheck.Instances ()
 
 -- import Debug.Trace
 -- ---------------------------------------------------------------------
@@ -38,19 +49,14 @@ jsonSpec :: Spec
 jsonSpec = do
   describe "General JSON instances round trip" $ do
   -- DataTypesJSON
-    prop "LanguageString" (propertyJsonRoundtrip :: LanguageString -> Property)
     prop "MarkedString"   (propertyJsonRoundtrip :: MarkedString -> Property)
     prop "MarkupContent"  (propertyJsonRoundtrip :: MarkupContent -> Property)
-    prop "HoverContents"  (propertyJsonRoundtrip :: HoverContents -> Property)
-    prop "ResponseError"  (propertyJsonRoundtrip :: ResponseError -> Property)
     prop "WatchedFiles"   (propertyJsonRoundtrip :: DidChangeWatchedFilesRegistrationOptions -> Property)
-    prop "ResponseMessage Initialize"
-         (propertyJsonRoundtrip :: ResponseMessage 'TextDocumentHover -> Property)
-    -- prop "ResponseMessage JSON value"
-        --  (propertyJsonRoundtrip :: ResponseMessage J.Value -> Property)
+    prop "ResponseMessage Hover"
+         (propertyJsonRoundtrip :: TResponseMessage 'Method_TextDocumentHover -> Property)
   describe "JSON decoding regressions" $
     it "CompletionItem" $
-      (J.decode "{\"jsonrpc\":\"2.0\",\"result\":[{\"label\":\"raisebox\"}],\"id\":1}" :: Maybe (ResponseMessage 'TextDocumentCompletion))
+      (J.decode "{\"jsonrpc\":\"2.0\",\"result\":[{\"label\":\"raisebox\"}],\"id\":1}" :: Maybe (TResponseMessage 'Method_TextDocumentCompletion))
         `shouldNotBe` Nothing
 
 
@@ -60,18 +66,18 @@ responseMessageSpec = do
     it "decodes result = null" $ do
       let input = "{\"jsonrpc\": \"2.0\", \"id\": 123, \"result\": null}"
         in  J.decode input `shouldBe` Just
-              ((ResponseMessage "2.0" (Just (IdInt 123)) (Right J.Null)) :: ResponseMessage 'WorkspaceExecuteCommand)
+              ((TResponseMessage "2.0" (Just (IdInt 123)) (Right $ InR Null)) :: TResponseMessage 'Method_WorkspaceExecuteCommand)
     it "handles missing params field" $ do
       J.eitherDecode "{ \"jsonrpc\": \"2.0\", \"id\": 15, \"method\": \"shutdown\"}"
-        `shouldBe` Right (RequestMessage "2.0" (IdInt 15) SShutdown Empty)
+        `shouldBe` Right (TRequestMessage "2.0" (IdInt 15) SMethod_Shutdown Nothing)
   describe "invalid JSON" $ do
     it "throws if neither result nor error is present" $ do
-      (J.eitherDecode "{\"jsonrpc\":\"2.0\",\"id\":1}" :: Either String (ResponseMessage 'Initialize))
+      (J.eitherDecode "{\"jsonrpc\":\"2.0\",\"id\":1}" :: Either String (TResponseMessage 'Method_Initialize))
         `shouldBe` Left ("Error in $: both error and result cannot be Nothing")
     it "throws if both result and error are present" $ do
       (J.eitherDecode
-        "{\"jsonrpc\":\"2.0\",\"id\": 1,\"result\":{\"capabilities\": {}},\"error\":{\"code\":-32700,\"message\":\"\",\"data\":null}}"
-        :: Either String (ResponseMessage 'Initialize))
+        "{\"jsonrpc\":\"2.0\",\"id\": 1,\"result\":{\"capabilities\": {}},\"error\":{\"code\":-32700,\"message\":\"\",\"data\":{ \"retry\":false}}}"
+        :: Either String (TResponseMessage 'Method_Initialize))
         `shouldSatisfy`
           (either (\err -> "Error in $: both error and result cannot be present" `isPrefixOf` err) (\_ -> False))
 
@@ -82,28 +88,39 @@ propertyJsonRoundtrip a = J.Success a === J.fromJSON (J.toJSON a)
 
 -- ---------------------------------------------------------------------
 
-instance Arbitrary LanguageString where
-  arbitrary = LanguageString <$> arbitrary <*> arbitrary
+instance (Arbitrary a, Arbitrary b) => Arbitrary (a |? b) where
+  arbitrary = oneof [InL <$> arbitrary, InR <$> arbitrary]
 
-instance Arbitrary MarkedString where
-  arbitrary = oneof [PlainString <$> arbitrary, CodeString <$> arbitrary]
+instance Arbitrary Null where
+  arbitrary = pure Null
+
+instance (R.AllUniqueLabels r, R.Forall r Arbitrary) => Arbitrary (R.Rec r) where
+  arbitrary = R.fromLabelsA @Arbitrary $ \_l -> arbitrary
+
+deriving newtype instance Arbitrary MarkedString
 
 instance Arbitrary MarkupContent where
   arbitrary = MarkupContent <$> arbitrary <*> arbitrary
 
 instance Arbitrary MarkupKind where
-  arbitrary = oneof [pure MkPlainText,pure MkMarkdown]
-
-instance Arbitrary HoverContents where
-  arbitrary = oneof [ HoverContentsMS <$> arbitrary
-                    , HoverContents <$> arbitrary
-                    ]
+  arbitrary = oneof [pure MarkupKind_PlainText,pure MarkupKind_Markdown]
 
 instance Arbitrary UInt where
   arbitrary = fromInteger <$> arbitrary
 
 instance Arbitrary Uri where
   arbitrary = Uri <$> arbitrary
+
+--deriving newtype instance Arbitrary URI
+
+instance Arbitrary WorkspaceFolder where
+  arbitrary = WorkspaceFolder <$> arbitrary <*> arbitrary
+
+instance Arbitrary RelativePattern where
+  arbitrary = RelativePattern <$> arbitrary <*> arbitrary
+
+deriving newtype instance Arbitrary Pattern
+deriving newtype instance Arbitrary GlobPattern
 
 instance Arbitrary Position where
   arbitrary = Position <$> arbitrary <*> arbitrary
@@ -117,48 +134,41 @@ instance Arbitrary Range where
 instance Arbitrary Hover where
   arbitrary = Hover <$> arbitrary <*> arbitrary
 
-instance Arbitrary (ResponseResult m) => Arbitrary (ResponseMessage m) where
-  arbitrary =
-    oneof
-      [ ResponseMessage
-          <$> arbitrary
-          <*> arbitrary
-          <*> (Right <$> arbitrary)
-      , ResponseMessage
-          <$> arbitrary
-          <*> arbitrary
-          <*> (Left <$> arbitrary)
-      ]
+instance {-# OVERLAPPING #-} Arbitrary (Maybe Void) where
+  arbitrary = pure Nothing
 
-instance Arbitrary (LspId m) where
-  arbitrary = oneof [IdInt <$> arbitrary, IdString <$> arbitrary]
+instance (ErrorData m ~ Maybe Void) => Arbitrary (TResponseError m) where
+  arbitrary = TResponseError <$> arbitrary <*> arbitrary <*> pure Nothing
 
 instance Arbitrary ResponseError where
   arbitrary = ResponseError <$> arbitrary <*> arbitrary <*> pure Nothing
 
-instance Arbitrary ErrorCode where
+instance (Arbitrary (MessageResult m), ErrorData m ~ Maybe Void) => Arbitrary (TResponseMessage m) where
+  arbitrary = TResponseMessage <$> arbitrary <*> arbitrary <*> arbitrary
+
+instance Arbitrary (LspId m) where
+  arbitrary = oneof [IdInt <$> arbitrary, IdString <$> arbitrary]
+
+instance Arbitrary ErrorCodes where
   arbitrary =
     elements
-      [ ParseError
-      , InvalidRequest
-      , MethodNotFound
-      , InvalidParams
-      , InternalError
-      , ServerErrorStart
-      , ServerErrorEnd
-      , ServerNotInitialized
-      , UnknownErrorCode
-      , RequestCancelled
-      , ContentModified
+      [ ErrorCodes_ParseError
+      , ErrorCodes_InvalidRequest
+      , ErrorCodes_MethodNotFound
+      , ErrorCodes_InvalidParams
+      , ErrorCodes_InternalError
+      , ErrorCodes_ServerNotInitialized
+      , ErrorCodes_UnknownErrorCode
       ]
 
--- | make lists of maximum length 3 for test performance
-smallList :: Gen a -> Gen [a]
-smallList = resize 3 . listOf
-
-instance (Arbitrary a) => Arbitrary (List a) where
-  arbitrary = List <$> arbitrary
-
+instance Arbitrary LSPErrorCodes where
+  arbitrary =
+    elements
+      [ LSPErrorCodes_RequestFailed
+      , LSPErrorCodes_ServerCancelled
+      , LSPErrorCodes_ContentModified
+      , LSPErrorCodes_RequestCancelled
+      ]
 -- ---------------------------------------------------------------------
 
 instance Arbitrary DidChangeWatchedFilesRegistrationOptions where
@@ -167,7 +177,8 @@ instance Arbitrary DidChangeWatchedFilesRegistrationOptions where
 instance Arbitrary FileSystemWatcher where
   arbitrary = FileSystemWatcher <$> arbitrary <*> arbitrary
 
+-- TODO: watchKind is weird
 instance Arbitrary WatchKind where
-  arbitrary = WatchKind <$> arbitrary <*> arbitrary <*> arbitrary
+  arbitrary = oneof [pure WatchKind_Change, pure WatchKind_Create, pure WatchKind_Delete]
 
 -- ---------------------------------------------------------------------

@@ -1,7 +1,7 @@
-cabal-version:       2.4
-name:                lsp-test
-version:             0.14.1.0
-synopsis:            Functional test framework for LSP servers.
+cabal-version:      2.4
+name:               lsp-test
+version:            0.15.0.0
+synopsis:           Functional test framework for LSP servers.
 description:
   A test framework for writing tests against
   <https://microsoft.github.io/language-server-protocol/ Language Server Protocol servers>.
@@ -10,126 +10,145 @@ description:
   To see examples of it in action, check out <https://github.com/haskell/haskell-ide-engine haskell-ide-engine>,
   <https://github.com/haskell/haskell-language-server haskell-language-server> and
   <https://github.com/digital-asset/ghcide ghcide>.
-homepage:            https://github.com/haskell/lsp/blob/master/lsp-test/README.md
-license:             BSD-3-Clause
-license-file:        LICENSE
-author:              Luke Lau
-maintainer:          luke_lau@icloud.com
-bug-reports:         https://github.com/haskell/lsp/issues
-copyright:           2021 Luke Lau
-category:            Testing
-build-type:          Simple
-extra-source-files:  README.md
-                   , ChangeLog.md
-                   , test/data/**/*.hs
-tested-with:         GHC == 8.4.4, GHC == 8.6.5, GHC == 8.8.3, GHC == 8.10.1, GHC == 8.10.2
+
+homepage:
+  https://github.com/haskell/lsp/blob/master/lsp-test/README.md
+
+license:            BSD-3-Clause
+license-file:       LICENSE
+author:             Luke Lau
+maintainer:         luke_lau@icloud.com
+bug-reports:        https://github.com/haskell/lsp/issues
+copyright:          2021 Luke Lau
+category:           Testing
+build-type:         Simple
+extra-source-files:
+  ChangeLog.md
+  README.md
+  test/data/**/*.hs
 
 source-repository head
   type:     git
   location: https://github.com/haskell/lsp
 
 library
-  hs-source-dirs:      src
-  exposed-modules:     Language.LSP.Test
-  reexported-modules:  lsp-types:Language.LSP.Types
-                     , lsp-types:Language.LSP.Types.Capabilities
-                     , parser-combinators:Control.Applicative.Combinators
-  default-language:    Haskell2010
-  build-depends:       base >= 4.10 && < 5
-                     , lsp-types == 1.5.* || == 1.6.*
-                     , lsp == 1.5.* || == 1.6.*
-                     , aeson
-                     , time
-                     , aeson-pretty
-                     , ansi-terminal
-                     , async >= 2.0
-                     , bytestring
-                     , co-log-core
-                     , conduit
-                     , conduit-parse == 0.2.*
-                     , containers >= 0.5.9
-                     , data-default
-                     , Diff >= 0.3
-                     , directory
-                     , exceptions
-                     , filepath
-                     , Glob >= 0.9 && < 0.11
-                     , lens
-                     , mtl < 2.4
-                     , parser-combinators >= 1.2
-                     , process >= 1.6
-                     , text
-                     , transformers
-                     , unordered-containers
-                     , some
+  hs-source-dirs:     src
+  default-language:   Haskell2010
+  exposed-modules:    Language.LSP.Test
+  reexported-modules:
+    lsp-types:Language.LSP.Protocol.Types
+    , lsp-types:Language.LSP.Protocol.Message
+    , lsp-types:Language.LSP.Protocol.Capabilities
+    , parser-combinators:Control.Applicative.Combinators
+
+  build-depends:
+    , aeson
+    , aeson-pretty
+    , ansi-terminal
+    , async                 >=2.0
+    , base                  >=4.10  && <5
+    , bytestring
+    , co-log-core
+    , conduit
+    , conduit-parse         ^>=0.2
+    , containers            >=0.5.9
+    , data-default
+    , Diff                  >=0.3
+    , directory
+    , exceptions
+    , filepath
+    , Glob                  >=0.9   && <0.11
+    , lens
+    , lsp                   ^>=2.0
+    , lsp-types             ^>=2.0
+    , mtl                   <2.4
+    , parser-combinators    >=1.2
+    , process               >=1.6
+    , row-types
+    , some
+    , text
+    , time
+    , transformers
+
   if os(windows)
-    build-depends:     Win32
+    build-depends: Win32
   else
-    build-depends:     unix
-  other-modules:       Language.LSP.Test.Compat
-                       Language.LSP.Test.Decoding
-                       Language.LSP.Test.Exceptions
-                       Language.LSP.Test.Files
-                       Language.LSP.Test.Parsing
-                       Language.LSP.Test.Server
-                       Language.LSP.Test.Session
-  ghc-options:         -W
+    build-depends: unix
+
+  other-modules:
+    Language.LSP.Test.Compat
+    Language.LSP.Test.Decoding
+    Language.LSP.Test.Exceptions
+    Language.LSP.Test.Files
+    Language.LSP.Test.Parsing
+    Language.LSP.Test.Server
+    Language.LSP.Test.Session
+
+  ghc-options:        -W
 
 test-suite tests
-  type:                exitcode-stdio-1.0
-  main-is:             Test.hs
-  other-modules:       DummyServer
-  hs-source-dirs:      test
-  ghc-options:         -W
-  build-depends:       base >= 4.10 && < 5
-                     , hspec
-                     , lens
-                     , lsp == 1.6.*
-                     , lsp-test
-                     , data-default
-                     , aeson
-                     , unordered-containers
-                     , text
-                     , directory
-                     , filepath
-                     , unliftio
-                     , process
-                     , mtl < 2.4
-                     , aeson
-  default-language:    Haskell2010
+  type:             exitcode-stdio-1.0
+  hs-source-dirs:   test
+  main-is:          Test.hs
+  default-language: Haskell2010
+  ghc-options:      -W
+  other-modules:    DummyServer
+  build-depends:
+    , aeson
+    , base          >=4.10 && <5
+    , containers
+    , data-default
+    , directory
+    , filepath
+    , hspec
+    , lens
+    , lsp           ^>=2.0
+    , lsp-test
+    , mtl           <2.4
+    , parser-combinators
+    , process
+    , text
+    , unliftio
+
 
 test-suite func-test
-  main-is:             FuncTest.hs
-  hs-source-dirs:      func-test
-  type:                exitcode-stdio-1.0
-  build-depends:       base
-                     , lsp-test
-                     , lsp
-                     , process
-                     , co-log-core
-                     , lens
-                     , unliftio
-                     , hspec
-  default-language:    Haskell2010
+  type:             exitcode-stdio-1.0
+  hs-source-dirs:   func-test
+  default-language: Haskell2010
+  main-is:          FuncTest.hs
+  build-depends:
+    , base
+    , co-log-core
+    , hspec
+    , lens
+    , lsp
+    , lsp-test
+    , parser-combinators
+    , process
+    , unliftio
+
 
 test-suite example
-  main-is:             Test.hs
-  hs-source-dirs:      example
-  type:                exitcode-stdio-1.0
-  default-language:    Haskell2010
-  build-depends:       base
-                     , lsp-test
-                     , parser-combinators
-  build-tool-depends:  lsp:lsp-demo-reactor-server
+  type:               exitcode-stdio-1.0
+  hs-source-dirs:     example
+  default-language:   Haskell2010
+  main-is:            Test.hs
+  build-depends:
+    , base
+    , lsp-test
+    , parser-combinators
+  build-tool-depends: lsp:lsp-demo-reactor-server
 
 benchmark simple-bench
-  main-is:             SimpleBench.hs
-  hs-source-dirs:      bench
-  type:                exitcode-stdio-1.0
-  build-depends:       base
-                     , lsp-test
-                     , lsp
-                     , process
-                     , extra
-  default-language:    Haskell2010
-  ghc-options: -Wall -O2 -eventlog -rtsopts
+  type:             exitcode-stdio-1.0
+  hs-source-dirs:   bench
+  default-language: Haskell2010
+  main-is:          SimpleBench.hs
+  ghc-options:      -Wall -O2 -eventlog -rtsopts
+  build-depends:
+    , base
+    , extra
+    , lsp
+    , lsp-test
+    , process
+

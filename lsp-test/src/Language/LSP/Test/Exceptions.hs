@@ -1,7 +1,7 @@
 module Language.LSP.Test.Exceptions where
 
 import Control.Exception
-import Language.LSP.Types
+import Language.LSP.Protocol.Message
 import Data.Aeson
 import Data.Aeson.Encode.Pretty
 import Data.Algorithm.Diff
@@ -16,7 +16,7 @@ data SessionException = Timeout (Maybe FromServerMessage)
                       | ReplayOutOfOrder FromServerMessage [FromServerMessage]
                       | UnexpectedDiagnostics
                       | IncorrectApplyEditRequest String
-                      | UnexpectedResponseError SomeLspId  ResponseError
+                      | UnexpectedResponseError SomeLspId ResponseError
                       | UnexpectedServerTermination
                       | IllegalInitSequenceMessage FromServerMessage
                       | MessageSendError Value IOError

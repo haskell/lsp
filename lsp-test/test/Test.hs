@@ -3,29 +3,27 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE TypeApplications #-}
 
 import DummyServer
 import           Test.Hspec
 import           Data.Aeson
 import           Data.Default
-import qualified Data.HashMap.Strict as HM
+import qualified Data.Map.Strict as M
 import           Data.Either
 import           Data.Maybe
 import qualified Data.Text as T
 import           Data.Type.Equality
+import           Data.Proxy
 import           Control.Applicative.Combinators
 import           Control.Concurrent
 import           Control.Monad.IO.Class
 import           Control.Monad
 import           Control.Lens hiding (List, Iso)
 import           Language.LSP.Test
-import           Language.LSP.Types
-import           Language.LSP.Types.Lens hiding
-  (capabilities, message, rename, applyEdit)
-import qualified Language.LSP.Types.Lens as LSP
-import           Language.LSP.Types.Capabilities as LSP
+import           Language.LSP.Protocol.Message
+import           Language.LSP.Protocol.Types
+import qualified Language.LSP.Protocol.Lens as L
 import           System.Directory
 import           System.FilePath
 import           System.Timeout
@@ -44,10 +42,10 @@ main = hspec $ around withDummyServer $ do
         in session `shouldThrow` anySessionException
     it "initializeResponse" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "." $ do
       rsp <- initializeResponse
-      liftIO $ rsp ^. result `shouldSatisfy` isRight
+      liftIO $ rsp ^. L.result `shouldSatisfy` isRight
 
     it "runSessionWithConfig" $ \(hin, hout) ->
-      runSessionWithHandles hin hout def didChangeCaps "." $ return ()
+      runSessionWithHandles hin hout def fullCaps "." $ return ()
 
     describe "withTimeout" $ do
       it "times out" $ \(hin, hout) ->
@@ -56,7 +54,7 @@ main = hspec $ around withDummyServer $ do
                     -- won't receive a request - will timeout
                     -- incoming logging requests shouldn't increase the
                     -- timeout
-                    withTimeout 5 $ skipManyTill anyMessage (message SWorkspaceApplyEdit)
+                    withTimeout 5 $ skipManyTill anyMessage (message SMethod_WorkspaceApplyEdit)
           -- wait just a bit longer than 5 seconds so we have time
           -- to open the document
           in timeout 6000000 sesh `shouldThrow` anySessionException
@@ -96,7 +94,7 @@ main = hspec $ around withDummyServer $ do
                 withTimeout 10 $ liftIO $ threadDelay 7000000
                 getDocumentSymbols doc
                 -- should now timeout
-                skipManyTill anyMessage (message SWorkspaceApplyEdit)
+                skipManyTill anyMessage (message SMethod_WorkspaceApplyEdit)
             isTimeout (Timeout _) = True
             isTimeout _ = False
         in sesh `shouldThrow` isTimeout
@@ -106,7 +104,7 @@ main = hspec $ around withDummyServer $ do
       it "throw on time out" $ \(hin, hout) ->
         let sesh = runSessionWithHandles hin hout (def {messageTimeout = 10}) fullCaps "." $ do
                 skipMany loggingNotification
-                _ <- message SWorkspaceApplyEdit
+                _ <- message SMethod_WorkspaceApplyEdit
                 return ()
         in sesh `shouldThrow` anySessionException
 
@@ -119,17 +117,17 @@ main = hspec $ around withDummyServer $ do
 
       describe "UnexpectedMessageException" $ do
         it "throws when there's an unexpected message" $ \(hin, hout) ->
-          let selector (UnexpectedMessage "Publish diagnostics notification" (FromServerMess SWindowLogMessage _)) = True
+          let selector (UnexpectedMessage "Publish diagnostics notification" (FromServerMess SMethod_WindowLogMessage _)) = True
               selector _ = False
             in runSessionWithHandles hin hout def fullCaps "." publishDiagnosticsNotification `shouldThrow` selector
         it "provides the correct types that were expected and received" $ \(hin, hout) ->
-          let selector (UnexpectedMessage "Response for: STextDocumentRename" (FromServerRsp STextDocumentDocumentSymbol _)) = True
+          let selector (UnexpectedMessage "Response for: SMethod_TextDocumentRename" (FromServerRsp SMethod_TextDocumentDocumentSymbol _)) = True
               selector _ = False
               sesh = do
                 doc <- openDoc "test/data/renamePass/Desktop/simple.hs" "haskell"
-                sendRequest STextDocumentDocumentSymbol (DocumentSymbolParams Nothing Nothing doc)
+                sendRequest SMethod_TextDocumentDocumentSymbol (DocumentSymbolParams Nothing Nothing doc)
                 skipMany anyNotification
-                response STextDocumentRename -- the wrong type
+                response SMethod_TextDocumentRename -- the wrong type
             in runSessionWithHandles hin hout def fullCaps "." sesh
               `shouldThrow` selector
 
@@ -139,20 +137,20 @@ main = hspec $ around withDummyServer $ do
         doc <- openDoc "test/data/refactor/Main.hs" "haskell"
         VersionedTextDocumentIdentifier _ beforeVersion <- getVersionedDoc doc
 
-        let args = toJSON (VersionedTextDocumentIdentifier (doc ^. uri) beforeVersion)
-            reqParams = ExecuteCommandParams Nothing "doAVersionedEdit" (Just (List [args]))
+        let args = toJSON (VersionedTextDocumentIdentifier (doc ^. L.uri) beforeVersion)
+            reqParams = ExecuteCommandParams Nothing "doAVersionedEdit" (Just [args])
 
-        request_ SWorkspaceExecuteCommand reqParams
+        request_ SMethod_WorkspaceExecuteCommand reqParams
 
-        editReq <- message SWorkspaceApplyEdit
+        editReq <- message SMethod_WorkspaceApplyEdit
         liftIO $ do
-          let Just (List [InL(TextDocumentEdit vdoc (List [InL edit_]))]) =
-                editReq ^. params . edit . documentChanges
-          vdoc `shouldBe` VersionedTextDocumentIdentifier  (doc ^. uri) beforeVersion
+          let Just [InL(TextDocumentEdit vdoc [InL edit_])] =
+                editReq ^. L.params . L.edit . L.documentChanges
+          vdoc `shouldBe` OptionalVersionedTextDocumentIdentifier  (doc ^. L.uri) (InL beforeVersion)
           edit_ `shouldBe` TextEdit (Range (Position 0 0) (Position 0 5)) "howdy"
 
-        change <- customNotification "custom/textDocument/didChange"
-        let NotMess (NotificationMessage _ _ (c::Value)) = change
+        change <- customNotification (Proxy @"custom/textDocument/didChange")
+        let NotMess (TNotificationMessage _ _ (c::Value)) = change
             Success (DidChangeTextDocumentParams reportedVDoc _edit) = fromJSON c
             VersionedTextDocumentIdentifier _ reportedVersion = reportedVDoc
 
@@ -168,15 +166,15 @@ main = hspec $ around withDummyServer $ do
       runSessionWithHandles hin hout def fullCaps "." $ do
         doc <- openDoc "test/data/refactor/Main.hs" "haskell"
 
-        let args = toJSON (doc ^. uri)
-            reqParams = ExecuteCommandParams Nothing "doAnEdit" (Just (List [args]))
-        request_ SWorkspaceExecuteCommand reqParams
+        let args = toJSON (doc ^. L.uri)
+            reqParams = ExecuteCommandParams Nothing "doAnEdit" (Just [args])
+        request_ SMethod_WorkspaceExecuteCommand reqParams
 
-        editReq <- message SWorkspaceApplyEdit
+        editReq <- message SMethod_WorkspaceApplyEdit
         liftIO $ do
-          let (Just cs) = editReq ^. params . edit . changes
-              [(u, List es)] = HM.toList cs
-          u `shouldBe` doc ^. uri
+          let (Just cs) = editReq ^. L.params . L.edit . L.changes
+              [(u, es)] = M.toList cs
+          u `shouldBe` doc ^. L.uri
           es `shouldBe` [TextEdit (Range (Position 0 0) (Position 0 5)) "howdy"]
         contents <- documentContents doc
         liftIO $ contents `shouldBe` "howdy:: IO Int\nmain = return (42)\n"
@@ -186,9 +184,9 @@ main = hspec $ around withDummyServer $ do
       runSessionWithHandles hin hout def fullCaps "." $ do
         doc <- openDoc "test/data/refactor/Main.hs" "haskell"
 
-        let args = toJSON (doc ^. uri)
-            reqParams = ExecuteCommandParams Nothing "doAnEdit" (Just (List [args]))
-        request_ SWorkspaceExecuteCommand reqParams
+        let args = toJSON (doc ^. L.uri)
+            reqParams = ExecuteCommandParams Nothing "doAnEdit" (Just [args])
+        request_ SMethod_WorkspaceExecuteCommand reqParams
         contents <- getDocumentEdit doc
         liftIO $ contents `shouldBe` "howdy:: IO Int\nmain = return (42)\n"
 
@@ -198,7 +196,7 @@ main = hspec $ around withDummyServer $ do
       waitForDiagnostics
       [InR action] <- getCodeActions doc (Range (Position 0 0) (Position 0 2))
       actions <- getCodeActions doc (Range (Position 1 14) (Position 1 18))
-      liftIO $ action ^. title `shouldBe` "Delete this"
+      liftIO $ action ^. L.title `shouldBe` "Delete this"
       liftIO $ actions `shouldSatisfy` null
 
   describe "getAllCodeActions" $
@@ -208,8 +206,8 @@ main = hspec $ around withDummyServer $ do
       actions <- getAllCodeActions doc
       liftIO $ do
         let [InR action] = actions
-        action ^. title `shouldBe` "Delete this"
-        action ^. command . _Just . command  `shouldBe` "deleteThis"
+        action ^. L.title `shouldBe` "Delete this"
+        action ^. L.command . _Just . L.command  `shouldBe` "deleteThis"
 
   describe "getDocumentSymbols" $
     it "works" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "." $ do
@@ -217,19 +215,19 @@ main = hspec $ around withDummyServer $ do
 
       skipMany loggingNotification
 
-      Left (mainSymbol:_) <- getDocumentSymbols doc
+      Right (mainSymbol:_) <- getDocumentSymbols doc
 
       liftIO $ do
-        mainSymbol ^. name `shouldBe` "foo"
-        mainSymbol ^. kind `shouldBe` SkObject
-        mainSymbol ^. range `shouldBe` mkRange 0 0 3 6
+        mainSymbol ^. L.name `shouldBe` "foo"
+        mainSymbol ^. L.kind `shouldBe` SymbolKind_Object
+        mainSymbol ^. L.range `shouldBe` mkRange 0 0 3 6
 
   describe "applyEdit" $ do
-    it "increments the version" $ \(hin, hout) -> runSessionWithHandles hin hout def docChangesCaps "." $ do
+    it "increments the version" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "." $ do
       doc <- openDoc "test/data/renamePass/Desktop/simple.hs" "haskell"
-      VersionedTextDocumentIdentifier _ (Just oldVersion) <- getVersionedDoc doc
+      VersionedTextDocumentIdentifier _ oldVersion <- getVersionedDoc doc
       let edit = TextEdit (Range (Position 1 1) (Position 1 3)) "foo"
-      VersionedTextDocumentIdentifier _ (Just newVersion) <- applyEdit doc edit
+      VersionedTextDocumentIdentifier _ newVersion <- applyEdit doc edit
       liftIO $ newVersion `shouldBe` oldVersion + 1
     it "changes the document contents" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "." $ do
       doc <- openDoc "test/data/renamePass/Desktop/simple.hs" "haskell"
@@ -244,7 +242,7 @@ main = hspec $ around withDummyServer $ do
 
       comps <- getCompletions doc (Position 5 5)
       let item = head comps
-      liftIO $ item ^. label `shouldBe` "foo"
+      liftIO $ item ^. L.label `shouldBe` "foo"
 
   -- describe "getReferences" $
   --   it "works" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "." $ do
@@ -277,8 +275,8 @@ main = hspec $ around withDummyServer $ do
       openDoc "test/data/Error.hs" "haskell"
       [diag] <- waitForDiagnosticsSource "dummy-server"
       liftIO $ do
-        diag ^. severity `shouldBe` Just DsWarning
-        diag ^. source `shouldBe` Just "dummy-server"
+        diag ^. L.severity `shouldBe` Just DiagnosticSeverity_Warning
+        diag ^. L.source `shouldBe` Just "dummy-server"
 
   -- describe "rename" $ do
   --   it "works" $ \(hin, hout) -> pendingWith "HaRe not in hie-bios yet"
@@ -328,24 +326,24 @@ main = hspec $ around withDummyServer $ do
   describe "satisfy" $
     it "works" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "." $ do
       openDoc "test/data/Format.hs" "haskell"
-      let pred (FromServerMess SWindowLogMessage _) = True
+      let pred (FromServerMess SMethod_WindowLogMessage _) = True
           pred _ = False
       void $ satisfy pred
 
   describe "satisfyMaybe" $ do
     it "returns matched data on match" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "." $ do
       -- Wait for window/logMessage "initialized" from the server.
-      let pred (FromServerMess SWindowLogMessage _) = Just "match" :: Maybe String
+      let pred (FromServerMess SMethod_WindowLogMessage _) = Just "match" :: Maybe String
           pred _ = Nothing :: Maybe String
       result <- satisfyMaybe pred
       liftIO $ result `shouldBe` "match"
 
     it "doesn't return if no match" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "." $ do
-      let pred (FromServerMess STextDocumentPublishDiagnostics _) = Just "matched" :: Maybe String
+      let pred (FromServerMess SMethod_TextDocumentPublishDiagnostics _) = Just "matched" :: Maybe String
           pred _ = Nothing :: Maybe String
       -- We expect a window/logMessage from the server, but
       -- not a textDocument/publishDiagnostics.
-      result <- satisfyMaybe pred <|> (message SWindowLogMessage *> pure "no match")
+      result <- satisfyMaybe pred <|> (message SMethod_WindowLogMessage *> pure "no match")
       liftIO $ result `shouldBe` "no match"
 
   describe "ignoreLogNotifications" $
@@ -360,26 +358,26 @@ main = hspec $ around withDummyServer $ do
       loggingNotification -- initialized log message
 
       createDoc ".register" "haskell" ""
-      message SClientRegisterCapability
+      message SMethod_ClientRegisterCapability
 
       doc <- createDoc "Foo.watch" "haskell" ""
-      msg <- message SWindowLogMessage
-      liftIO $ msg ^. params . LSP.message `shouldBe` "got workspace/didChangeWatchedFiles"
+      msg <- message SMethod_WindowLogMessage
+      liftIO $ msg ^. L.params . L.message `shouldBe` "got workspace/didChangeWatchedFiles"
 
-      [SomeRegistration (Registration _ regMethod regOpts)] <- getRegisteredCapabilities
+      [SomeRegistration (TRegistration _ regMethod regOpts)] <- getRegisteredCapabilities
       liftIO $ do
-        case regMethod `mEqClient` SWorkspaceDidChangeWatchedFiles of
+        case regMethod `mEqClient` SMethod_WorkspaceDidChangeWatchedFiles of
           Just (Right HRefl) ->
-            regOpts `shouldBe` (Just (DidChangeWatchedFilesRegistrationOptions $ List
-                                      [ FileSystemWatcher "*.watch" (Just (WatchKind True True True)) ]))
+            regOpts `shouldBe` (Just $ DidChangeWatchedFilesRegistrationOptions
+                                [ FileSystemWatcher (GlobPattern $ InL $ Pattern "*.watch") (Just WatchKind_Create) ])
           _ -> expectationFailure "Registration wasn't on workspace/didChangeWatchedFiles"
 
       -- now unregister it by sending a specific createDoc
       createDoc ".unregister" "haskell" ""
-      message SClientUnregisterCapability
+      message SMethod_ClientUnregisterCapability
 
       createDoc "Bar.watch" "haskell" ""
-      void $ sendRequest STextDocumentHover $ HoverParams doc (Position 0 0) Nothing
+      void $ sendRequest SMethod_TextDocumentHover $ HoverParams doc (Position 0 0) Nothing
       count 0 $ loggingNotification
       void $ anyResponse
 
@@ -389,18 +387,18 @@ main = hspec $ around withDummyServer $ do
       loggingNotification -- initialized log message
 
       createDoc ".register.abs" "haskell" ""
-      message SClientRegisterCapability
+      message SMethod_ClientRegisterCapability
 
       doc <- createDoc (curDir </> "Foo.watch") "haskell" ""
-      msg <- message SWindowLogMessage
-      liftIO $ msg ^. params . LSP.message `shouldBe` "got workspace/didChangeWatchedFiles"
+      msg <- message SMethod_WindowLogMessage
+      liftIO $ msg ^. L.params . L.message `shouldBe` "got workspace/didChangeWatchedFiles"
 
       -- now unregister it by sending a specific createDoc
       createDoc ".unregister.abs" "haskell" ""
-      message SClientUnregisterCapability
+      message SMethod_ClientUnregisterCapability
 
       createDoc (curDir </> "Bar.watch") "haskell" ""
-      void $ sendRequest STextDocumentHover $ HoverParams doc (Position 0 0) Nothing
+      void $ sendRequest SMethod_TextDocumentHover $ HoverParams doc (Position 0 0) Nothing
       count 0 $ loggingNotification
       void $ anyResponse
 
@@ -408,37 +406,25 @@ main = hspec $ around withDummyServer $ do
     let workPos = Position 1 0
         notWorkPos = Position 0 0
         params pos = CallHierarchyPrepareParams (TextDocumentIdentifier (Uri "")) pos Nothing
-        item = CallHierarchyItem "foo" SkFunction Nothing Nothing (Uri "")
+        item = CallHierarchyItem "foo" SymbolKind_Function Nothing Nothing (Uri "")
                                  (Range (Position 1 2) (Position 3 4))
                                  (Range (Position 1 2) (Position 3 4))
                                  Nothing
     it "prepare works" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "." $ do
       rsp <- prepareCallHierarchy (params workPos)
-      liftIO $ head rsp ^. range `shouldBe` Range (Position 2 3) (Position 4 5)
+      liftIO $ head rsp ^. L.range `shouldBe` Range (Position 2 3) (Position 4 5)
     it "prepare not works" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "." $ do
       rsp <- prepareCallHierarchy (params notWorkPos)
       liftIO $ rsp `shouldBe` []
     it "incoming calls" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "." $ do
-      [CallHierarchyIncomingCall _ (List fromRanges)] <- incomingCalls (CallHierarchyIncomingCallsParams Nothing Nothing item)
+      [CallHierarchyIncomingCall _ fromRanges] <- incomingCalls (CallHierarchyIncomingCallsParams Nothing Nothing item)
       liftIO $ head fromRanges `shouldBe` Range (Position 2 3) (Position 4 5)
     it "outgoing calls" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "." $ do
-      [CallHierarchyOutgoingCall _ (List fromRanges)] <- outgoingCalls (CallHierarchyOutgoingCallsParams Nothing Nothing item)
+      [CallHierarchyOutgoingCall _ fromRanges] <- outgoingCalls (CallHierarchyOutgoingCallsParams Nothing Nothing item)
       liftIO $ head fromRanges `shouldBe` Range (Position 4 5) (Position 2 3)
 
   describe "semantic tokens" $ do
     it "full works" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "." $ do
       let doc = TextDocumentIdentifier (Uri "")
-      Just toks <- getSemanticTokens doc
-      liftIO $ toks ^. xdata `shouldBe` List [0,1,2,1,0]
-
-didChangeCaps :: ClientCapabilities
-didChangeCaps = def { _workspace = Just workspaceCaps }
-  where
-    workspaceCaps = def { _didChangeConfiguration = Just configCaps }
-    configCaps = DidChangeConfigurationClientCapabilities (Just True)
-
-docChangesCaps :: ClientCapabilities
-docChangesCaps = def { _workspace = Just workspaceCaps }
-  where
-    workspaceCaps = def { _workspaceEdit = Just editCaps }
-    editCaps = WorkspaceEditClientCapabilities (Just True) Nothing Nothing Nothing Nothing
+      InL toks <- getSemanticTokens doc
+      liftIO $ toks ^. L.data_ `shouldBe` [0,1,2,1,0]

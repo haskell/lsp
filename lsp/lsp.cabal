@@ -1,122 +1,140 @@
-cabal-version:       2.2
-name:                lsp
-version:             1.6.0.0
-synopsis:            Haskell library for the Microsoft Language Server Protocol
+cabal-version:      2.2
+name:               lsp
+version:            2.0.0.0
+synopsis:           Haskell library for the Microsoft Language Server Protocol
+description:
+  An implementation of the types, and basic message server to
+  allow language implementors to support the Language Server
+  Protocol for their specific language.
+  .
+  An example of this is for Haskell via the Haskell Language
+  Server, at https://github.com/haskell/haskell-language-server
 
-description:         An implementation of the types, and basic message server to
-                     allow language implementors to support the Language Server
-                     Protocol for their specific language.
-                     .
-                     An example of this is for Haskell via the Haskell Language
-                     Server, at https://github.com/haskell/haskell-language-server
+homepage:           https://github.com/haskell/lsp
+license:            MIT
+license-file:       LICENSE
+author:             Alan Zimmerman
+maintainer:         alan.zimm@gmail.com
+copyright:          Alan Zimmerman, 2016-2021
+category:           Development
+build-type:         Simple
+extra-source-files:
+  ChangeLog.md
+  README.md
 
-homepage:            https://github.com/haskell/lsp
-license:             MIT
-license-file:        LICENSE
-author:              Alan Zimmerman
-maintainer:          alan.zimm@gmail.com
-copyright:           Alan Zimmerman, 2016-2021
-category:            Development
-build-type:          Simple
-extra-source-files:  ChangeLog.md, README.md
+source-repository head
+  type:     git
+  location: https://github.com/haskell/lsp
 
 library
-  reexported-modules:  Language.LSP.Types
-                     , Language.LSP.Types.Capabilities
-                     , Language.LSP.Types.Lens
-  exposed-modules:     Language.LSP.Server
-                     , Language.LSP.Diagnostics
-                     , Language.LSP.Logging
-                     , Language.LSP.VFS
-  other-modules:       Language.LSP.Server.Core
-                     , Language.LSP.Server.Control
-                     , Language.LSP.Server.Processing
-  ghc-options:         -Wall
-  build-depends:       base >= 4.11 && < 5
-                     , async >= 2.0
-                     , aeson >=1.0.0.0
-                     , attoparsec
-                     , bytestring
-                     , containers
-                     , co-log-core >= 0.3.1.0
-                     , data-default
-                     , directory
-                     , exceptions
-                     , filepath
-                     , hashable
-                     , lsp-types == 1.6.*
-                     , lens >= 4.15.2
-                     , mtl < 2.4
-                     , prettyprinter
-                     , sorted-list == 0.2.1.*
-                     , stm == 2.5.*
-                     , temporary
-                     , text
-                     , text-rope
-                     , transformers >= 0.5.6 && < 0.7
-                     , unordered-containers
-                     , unliftio-core >= 0.2.0.0
-                     -- used for generating random uuids for dynamic registration
-                     , random
-                     , uuid-types >= 1.0.5
-  hs-source-dirs:      src
-  default-language:    Haskell2010
-  ghc-options: -Wall -fprint-explicit-kinds
+  hs-source-dirs:     src
+  default-language:   Haskell2010
+  ghc-options:        -Wall -fprint-explicit-kinds
+
+  reexported-modules:
+    , Language.LSP.Protocol.Types
+    , Language.LSP.Protocol.Lens
+    , Language.LSP.Protocol.Capabilities
+    , Language.LSP.Protocol.Message
+
+  exposed-modules:
+    Language.LSP.Diagnostics
+    Language.LSP.Logging
+    Language.LSP.Server
+    Language.LSP.VFS
+
+  other-modules:
+    Language.LSP.Server.Control
+    Language.LSP.Server.Core
+    Language.LSP.Server.Processing
+
+  ghc-options:        -Wall
+  build-depends:
+    , aeson                 >=1.0.0.0
+    , async                 >=2.0
+    , attoparsec
+    , base                  >=4.11    && <5
+    , bytestring
+    , co-log-core           >=0.3.1.0
+    , containers
+    , data-default
+    , directory
+    , exceptions
+    , filepath
+    , hashable
+    , lens                  >=4.15.2
+    , lsp-types             ^>=2.0
+    , mtl                   <2.4
+    , prettyprinter
+    , random
+    , row-types
+    , sorted-list           ^>=0.2.1
+    , stm                   ^>=2.5
+    , temporary
+    , text
+    , text-rope
+    , transformers          >=0.5.6   && <0.7
+    , unliftio-core         >=0.2.0.0
+    , unordered-containers
+    , uuid                  >=1.3
 
 executable lsp-demo-reactor-server
-  main-is:             Reactor.hs
-  hs-source-dirs:      example
-  default-language:    Haskell2010
-  ghc-options:         -Wall -Wno-unticked-promoted-constructors
+  main-is:          Reactor.hs
+  hs-source-dirs:   example
+  default-language: Haskell2010
+  ghc-options:      -Wall -Wno-unticked-promoted-constructors
+  build-depends:
+    , aeson
+    , base
+    , co-log-core
+    , lens           >=4.15.2
+    , lsp
+    , prettyprinter
+    , stm
+    , text
 
-  build-depends:       base 
-                     , aeson
-                     , co-log-core
-                     , lens >= 4.15.2
-                     , stm
-                     , prettyprinter
-                     , text
-                     -- the package library. Comment this out if you want repl changes to propagate
-                     , lsp
+  -- the package library. Comment this out if you want repl changes to propagate
   if !flag(demo)
-    buildable:         False
+    buildable: False
 
 executable lsp-demo-simple-server
-  main-is:             Simple.hs
-  hs-source-dirs:      example
-  default-language:    Haskell2010
-  ghc-options:         -Wall -Wno-unticked-promoted-constructors
-  build-depends:       base 
-                    -- the package library. Comment this out if you want repl changes to propagate
-                     , lsp
-                     , text
+  main-is:          Simple.hs
+  hs-source-dirs:   example
+  default-language: Haskell2010
+  ghc-options:      -Wall -Wno-unticked-promoted-constructors
+  build-depends:
+    , base
+    , lsp
+    , text
+
+  -- the package library. Comment this out if you want repl changes to propagate
   if !flag(demo)
-    buildable:         False
+    buildable: False
 
 flag demo
   description: Build the demo executables
   default:     False
 
-
 test-suite lsp-test
-  type:                exitcode-stdio-1.0
-  hs-source-dirs:      test
-  main-is:             Main.hs
-  other-modules:       Spec
-                       DiagnosticsSpec
-                       VspSpec
-  build-depends:       base
-                     , containers
-                     , lsp
-                     , hspec
-                     , sorted-list == 0.2.1.*
-                     , text
-                     , text-rope
-                     , unordered-containers
-  build-tool-depends:  hspec-discover:hspec-discover
-  ghc-options:         -threaded -rtsopts -with-rtsopts=-N -Wall
-  default-language:    Haskell2010
+  type:               exitcode-stdio-1.0
+  hs-source-dirs:     test
+  main-is:            Main.hs
+  other-modules:
+    DiagnosticsSpec
+    Spec
+    VspSpec
 
-source-repository head
-  type:     git
-  location: https://github.com/haskell/lsp
+  build-depends:
+    , base
+    , containers
+    , hspec
+    , lsp
+    , row-types
+    , sorted-list           >=0.2.1 && <0.2.2
+    , text
+    , text-rope
+    , unordered-containers
+
+  build-tool-depends: hspec-discover:hspec-discover
+  ghc-options:        -threaded -rtsopts -with-rtsopts=-N -Wall
+  default-language:   Haskell2010
