@@ -44,3 +44,4 @@ instance Language.LSP.Protocol.Types.LspEnum.LspEnum MarkupKind where
   fromEnumBaseType "markdown" = pure MarkupKind_Markdown
   fromEnumBaseType _ = Nothing
 
+

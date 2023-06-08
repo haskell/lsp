@@ -81,3 +81,4 @@ instance Language.LSP.Protocol.Types.LspEnum.LspOpenEnum ErrorCodes where
   fromOpenEnumBaseType -32001 = ErrorCodes_UnknownErrorCode
   fromOpenEnumBaseType arg = ErrorCodes_Custom arg
 
+

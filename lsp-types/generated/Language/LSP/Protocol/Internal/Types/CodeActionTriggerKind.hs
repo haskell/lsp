@@ -46,3 +46,4 @@ instance Language.LSP.Protocol.Types.LspEnum.LspEnum CodeActionTriggerKind where
   fromEnumBaseType 2 = pure CodeActionTriggerKind_Automatic
   fromEnumBaseType _ = Nothing
 
+

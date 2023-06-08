@@ -209,3 +209,4 @@ instance Language.LSP.Protocol.Types.LspEnum.LspEnum SymbolKind where
   fromEnumBaseType 26 = pure SymbolKind_TypeParameter
   fromEnumBaseType _ = Nothing
 
+

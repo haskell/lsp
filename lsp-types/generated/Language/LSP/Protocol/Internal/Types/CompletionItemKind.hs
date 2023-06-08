@@ -202,3 +202,4 @@ instance Language.LSP.Protocol.Types.LspEnum.LspEnum CompletionItemKind where
   fromEnumBaseType 25 = pure CompletionItemKind_TypeParameter
   fromEnumBaseType _ = Nothing
 
+

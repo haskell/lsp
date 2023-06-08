@@ -42,3 +42,4 @@ instance Language.LSP.Protocol.Types.LspEnum.LspEnum InlayHintKind where
   fromEnumBaseType 2 = pure InlayHintKind_Parameter
   fromEnumBaseType _ = Nothing
 
+

@@ -126,3 +126,4 @@ instance Language.LSP.Protocol.Types.LspEnum.LspOpenEnum CodeActionKind where
   fromOpenEnumBaseType "source.fixAll" = CodeActionKind_SourceFixAll
   fromOpenEnumBaseType arg = CodeActionKind_Custom arg
 
+

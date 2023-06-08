@@ -106,3 +106,4 @@ instance Language.LSP.Protocol.Types.LspEnum.LspOpenEnum SemanticTokenModifiers 
   fromOpenEnumBaseType "defaultLibrary" = SemanticTokenModifiers_DefaultLibrary
   fromOpenEnumBaseType arg = SemanticTokenModifiers_Custom arg
 
+

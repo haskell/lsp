@@ -49,3 +49,4 @@ instance Language.LSP.Protocol.Types.LspEnum.LspEnum InsertTextFormat where
   fromEnumBaseType 2 = pure InsertTextFormat_Snippet
   fromEnumBaseType _ = Nothing
 
+

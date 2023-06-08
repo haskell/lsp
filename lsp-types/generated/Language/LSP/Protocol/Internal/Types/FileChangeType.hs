@@ -48,3 +48,4 @@ instance Language.LSP.Protocol.Types.LspEnum.LspEnum FileChangeType where
   fromEnumBaseType 3 = pure FileChangeType_Deleted
   fromEnumBaseType _ = Nothing
 
+

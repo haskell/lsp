@@ -55,3 +55,4 @@ instance Language.LSP.Protocol.Types.LspEnum.LspEnum DiagnosticSeverity where
   fromEnumBaseType 4 = pure DiagnosticSeverity_Hint
   fromEnumBaseType _ = Nothing
 
+

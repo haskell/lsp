@@ -52,3 +52,4 @@ instance Language.LSP.Protocol.Types.LspEnum.LspOpenEnum WatchKind where
   fromOpenEnumBaseType 4 = WatchKind_Delete
   fromOpenEnumBaseType arg = WatchKind_Custom arg
 
+

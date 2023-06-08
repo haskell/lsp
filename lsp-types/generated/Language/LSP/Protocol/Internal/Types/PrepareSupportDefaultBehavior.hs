@@ -35,3 +35,4 @@ instance Language.LSP.Protocol.Types.LspEnum.LspEnum PrepareSupportDefaultBehavi
   fromEnumBaseType 1 = pure PrepareSupportDefaultBehavior_Identifier
   fromEnumBaseType _ = Nothing
 
+

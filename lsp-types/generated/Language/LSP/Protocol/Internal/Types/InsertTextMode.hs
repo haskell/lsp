@@ -54,3 +54,4 @@ instance Language.LSP.Protocol.Types.LspEnum.LspEnum InsertTextMode where
   fromEnumBaseType 2 = pure InsertTextMode_AdjustIndentation
   fromEnumBaseType _ = Nothing
 
+

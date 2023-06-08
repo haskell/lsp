@@ -48,3 +48,4 @@ instance Language.LSP.Protocol.Types.LspEnum.LspEnum ResourceOperationKind where
   fromEnumBaseType "delete" = pure ResourceOperationKind_Delete
   fromEnumBaseType _ = Nothing
 
+

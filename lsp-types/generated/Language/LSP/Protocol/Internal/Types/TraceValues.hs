@@ -48,3 +48,4 @@ instance Language.LSP.Protocol.Types.LspEnum.LspEnum TraceValues where
   fromEnumBaseType "verbose" = pure TraceValues_Verbose
   fromEnumBaseType _ = Nothing
 
+

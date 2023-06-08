@@ -44,3 +44,4 @@ instance Language.LSP.Protocol.Types.LspEnum.LspEnum FileOperationPatternKind wh
   fromEnumBaseType "folder" = pure FileOperationPatternKind_Folder
   fromEnumBaseType _ = Nothing
 
+

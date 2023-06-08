@@ -198,3 +198,4 @@ instance Language.LSP.Protocol.Types.LspEnum.LspOpenEnum SemanticTokenTypes wher
   fromOpenEnumBaseType "decorator" = SemanticTokenTypes_Decorator
   fromOpenEnumBaseType arg = SemanticTokenTypes_Custom arg
 
+

@@ -52,3 +52,4 @@ instance Language.LSP.Protocol.Types.LspEnum.LspEnum TextDocumentSyncKind where
   fromEnumBaseType 2 = pure TextDocumentSyncKind_Incremental
   fromEnumBaseType _ = Nothing
 
+

@@ -62,3 +62,4 @@ instance Language.LSP.Protocol.Types.LspEnum.LspOpenEnum PositionEncodingKind wh
   fromOpenEnumBaseType "utf-32" = PositionEncodingKind_UTF32
   fromOpenEnumBaseType arg = PositionEncodingKind_Custom arg
 
+

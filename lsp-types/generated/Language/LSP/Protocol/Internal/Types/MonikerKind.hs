@@ -51,3 +51,4 @@ instance Language.LSP.Protocol.Types.LspEnum.LspEnum MonikerKind where
   fromEnumBaseType "local" = pure MonikerKind_Local
   fromEnumBaseType _ = Nothing
 
+

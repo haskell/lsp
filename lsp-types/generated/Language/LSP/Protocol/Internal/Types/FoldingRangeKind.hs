@@ -53,3 +53,4 @@ instance Language.LSP.Protocol.Types.LspEnum.LspOpenEnum FoldingRangeKind where
   fromOpenEnumBaseType "region" = FoldingRangeKind_Region
   fromOpenEnumBaseType arg = FoldingRangeKind_Custom arg
 
+

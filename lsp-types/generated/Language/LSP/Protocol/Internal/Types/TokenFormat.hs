@@ -34,3 +34,4 @@ instance Language.LSP.Protocol.Types.LspEnum.LspEnum TokenFormat where
   fromEnumBaseType "relative" = pure TokenFormat_Relative
   fromEnumBaseType _ = Nothing
 
+
