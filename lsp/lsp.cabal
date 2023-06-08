@@ -32,7 +32,8 @@ library
   ghc-options:        -Wall -fprint-explicit-kinds
 
   reexported-modules:
-    Language.LSP.Protocol.Types
+    , Language.LSP.Protocol.Types
+    , Language.LSP.Protocol.Lens
     , Language.LSP.Protocol.Capabilities
     , Language.LSP.Protocol.Message
 

@@ -8,7 +8,6 @@
 module Language.LSP.Protocol.Message.Types where
 
 import           Language.LSP.Protocol.Types.Common
-import           Language.LSP.Protocol.Internal.Lens
 import           Language.LSP.Protocol.Internal.Method
 import           Language.LSP.Protocol.Types
 import           Language.LSP.Protocol.Message.LspId
@@ -16,7 +15,6 @@ import           Language.LSP.Protocol.Message.Meta
 import           Language.LSP.Protocol.Message.Method ()
 import           Language.LSP.Protocol.Utils.Misc
 
-import           Control.Lens.TH
 import           Data.Aeson                         hiding (Null)
 import qualified Data.Aeson                         as J
 import           Data.Aeson.TH
@@ -54,12 +52,38 @@ deriveJSON lspOptions ''RequestMessage
 -- | Response error type as defined in the spec.
 data ResponseError =
   ResponseError
-    { _code    :: ErrorCodes
+    { _code    :: LSPErrorCodes |? ErrorCodes
     , _message :: Text
     , _xdata   :: Maybe Value
     } deriving stock (Show, Eq, Generic)
 
-deriveJSON lspOptions ''ResponseError
+{- Note [ErrorCodes and LSPErrorCodes]
+
+Confusingly, the metamodel defines _two_ enums for error codes. One of
+these covers JSON RPC errors and one covers LSP-specific errors. We want
+to accept either, mostly so we can make use of the pre-specified enum values.
+
+However, _both_ of them are listed as accepting custom values. This means
+that `LSPErrorCodes |? ErrorCodes` isn't quite right: when we parse it from
+JSON, if we get an error code that isn't a known value of `LSPErrorCodes`, we
+will just use the custom value constructor, without trying `ErrorCodes`.
+
+It's hard to find any other good way of representing things properly with what
+we've got, so in the end we decided to patch up the JSON parsing with a custom
+instance.
+-}
+deriveToJSON lspOptions ''ResponseError
+instance FromJSON ResponseError where
+    parseJSON = 
+      let errorCode = withObject "ResponseError" $ \v -> ResponseError
+                        <$> v .: "code"
+                        <*> v .: "message"
+                        <*> v .:? "data"
+      in fmap go . errorCode
+      where go :: ResponseError -> ResponseError
+            go x@(ResponseError (InR (ErrorCodes_Custom n)) _ _) = 
+              x{_code = InL (fromOpenEnumBaseType n)}
+            go x = x
 
 -- | Response message type as defined in the spec.
 data ResponseMessage =
@@ -109,7 +133,7 @@ instance (ToJSON (MessageParams m)) => ToJSON (TRequestMessage m) where
 
 data TResponseError (m :: Method f Request) =
   TResponseError
-    { _code    :: ErrorCodes
+    { _code    :: LSPErrorCodes |? ErrorCodes
     , _message :: Text
     , _xdata   :: Maybe (ErrorData m)
     } deriving stock Generic
@@ -118,7 +142,16 @@ deriving stock instance Eq   (ErrorData m) => Eq (TResponseError m)
 deriving stock instance Show (ErrorData m) => Show (TResponseError m)
 
 instance (FromJSON (ErrorData m)) => FromJSON (TResponseError m) where
-  parseJSON = genericParseJSON lspOptions
+  parseJSON = 
+    let errorCode = withObject "ResponseError" $ \v -> TResponseError
+                      <$> v .: "code"
+                      <*> v .: "message"
+                      <*> v .:? "data"
+    in fmap go . errorCode
+    where go :: TResponseError m -> TResponseError m
+          go x@(TResponseError (InR (ErrorCodes_Custom n)) _ _) = 
+            x{_code = InL (fromOpenEnumBaseType n)}
+          go x = x
 instance (ToJSON (ErrorData m)) => ToJSON (TResponseError m) where
   toJSON     = genericToJSON lspOptions
   toEncoding = genericToEncoding lspOptions
@@ -204,11 +237,3 @@ addNullField :: String -> Value -> Value
 addNullField s (Object o) = Object $ o <> fromString s .= J.Null
 addNullField _ v          = v
 
-makeFieldsNoPrefix ''RequestMessage
-makeFieldsNoPrefix ''ResponseMessage
-makeFieldsNoPrefix ''NotificationMessage
-makeFieldsNoPrefix ''ResponseError
-makeFieldsNoPrefix ''TRequestMessage
-makeFieldsNoPrefix ''TResponseMessage
-makeFieldsNoPrefix ''TNotificationMessage
-makeFieldsNoPrefix ''TResponseError

@@ -20,7 +20,7 @@ import qualified System.OsPath           as OsPath
 import           Control.Monad           (when)
 import           Data.List
 import           Data.Text               (Text, pack)
-import           Language.LSP.Protocol.Types hiding (uri, start)
+import           Language.LSP.Protocol.Types
 
 import           GHC.IO.Encoding         (setFileSystemEncoding)
 import           Network.URI

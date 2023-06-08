@@ -22,40 +22,40 @@ module Language.LSP.Server.Processing where
 
 import           Colog.Core (LogAction (..), WithSeverity (..), Severity (..), (<&))
 
-import Control.Lens hiding (Empty)
-import Data.Aeson hiding (Options, Error)
-import Data.Aeson.Types hiding (Options, Error)
+import           Control.Lens hiding (Empty)
+import           Data.Aeson hiding (Options, Error, Null)
+import           Data.Aeson.Types hiding (Options, Error, Null)
 import qualified Data.ByteString.Lazy as BSL
-import Data.List
+import           Data.List
 import Data.List.NonEmpty (NonEmpty(..))
 import           Data.Row
 import qualified Data.Text as T
 import qualified Data.Text.Lazy.Encoding as TL
-import qualified Language.LSP.Protocol.Types as LSP
-import Language.LSP.Protocol.Types hiding (id)
-import Language.LSP.Protocol.Message hiding (error)
+import qualified Language.LSP.Protocol.Lens as L
+import           Language.LSP.Protocol.Types
+import           Language.LSP.Protocol.Message
 import           Language.LSP.Protocol.Utils.SMethodMap (SMethodMap)
 import qualified Language.LSP.Protocol.Utils.SMethodMap as SMethodMap
-import Language.LSP.Server.Core
-import Language.LSP.VFS as VFS
+import           Language.LSP.Server.Core
+import           Language.LSP.VFS as VFS
 import qualified Data.Functor.Product as P
 import qualified Control.Exception as E
-import Data.Monoid 
-import Control.Monad
-import Control.Monad.IO.Class
-import Control.Monad.Except ()
-import Control.Concurrent.STM
-import Control.Monad.Trans.Except
-import Control.Monad.Reader
-import Data.IxMap
-import Data.Maybe
+import           Data.Monoid 
+import           Control.Monad
+import           Control.Monad.IO.Class
+import           Control.Monad.Except ()
+import           Control.Concurrent.STM
+import           Control.Monad.Trans.Except
+import           Control.Monad.Reader
+import           Data.IxMap
+import           Data.Maybe
 import qualified Data.Map.Strict as Map
-import Data.Text.Prettyprint.Doc
-import System.Exit
-import GHC.TypeLits (symbolVal)
-import Control.Monad.State
-import Control.Monad.Writer.Strict 
-import Data.Foldable (traverse_)
+import           Data.Text.Prettyprint.Doc
+import           System.Exit
+import           GHC.TypeLits (symbolVal)
+import           Control.Monad.State
+import           Control.Monad.Writer.Strict 
+import           Data.Foldable (traverse_)
 
 data LspProcessingLog =
   VfsLog VfsLog
@@ -99,7 +99,7 @@ processMessage logger jsonStr = do
           pure $ handle logger m mess
         FromClientRsp (P.Pair (ServerResponseCallback f) (Const !newMap)) res -> do
           writeTVar pendingResponsesVar newMap
-          pure $ liftIO $ f (res ^. result)
+          pure $ liftIO $ f (res ^. L.result)
   where
     parser :: ResponseMap -> Value -> Parser (FromClientMessage' (P.Product ServerResponseCallback (Const ResponseMap)))
     parser rm = parseClientMessage $ \i ->
@@ -118,20 +118,20 @@ initializeRequestHandler
 initializeRequestHandler ServerDefinition{..} vfs sendFunc req = do
   let sendResp = sendFunc . FromServerRsp SMethod_Initialize
       handleErr (Left err) = do
-        sendResp $ makeResponseError (req ^. LSP.id) err
+        sendResp $ makeResponseError (req ^. L.id) err
         pure Nothing
       handleErr (Right a) = pure $ Just a
-  flip E.catch (initializeErrorHandler $ sendResp . makeResponseError (req ^. LSP.id)) $ handleErr <=< runExceptT $ mdo
+  flip E.catch (initializeErrorHandler $ sendResp . makeResponseError (req ^. L.id)) $ handleErr <=< runExceptT $ mdo
 
-    let p = req ^. params
-        rootDir = getFirst $ foldMap First [ p ^? rootUri . _L >>= uriToFilePath
-                                           , p ^? rootPath . _Just . _L <&> T.unpack ]
+    let p = req ^. L.params
+        rootDir = getFirst $ foldMap First [ p ^? L.rootUri . _L >>= uriToFilePath
+                                           , p ^? L.rootPath . _Just . _L <&> T.unpack ]
 
-    let initialWfs = case p ^. workspaceFolders of
+    let initialWfs = case p ^. L.workspaceFolders of
           Just (InL xs) -> xs
           _ -> []
 
-        initialConfig = case onConfigurationChange defaultConfig <$> (p ^. initializationOptions) of
+        initialConfig = case onConfigurationChange defaultConfig <$> (p ^. L.initializationOptions) of
           Just (Right newConfig) -> newConfig
           _ -> defaultConfig
 
@@ -151,13 +151,13 @@ initializeRequestHandler ServerDefinition{..} vfs sendFunc req = do
       pure LanguageContextState{..}
 
     -- Call the 'duringInitialization' callback to let the server kick stuff up
-    let env = LanguageContextEnv handlers onConfigurationChange sendFunc stateVars (p ^. capabilities) rootDir
+    let env = LanguageContextEnv handlers onConfigurationChange sendFunc stateVars (p ^. L.capabilities) rootDir
         handlers = transmuteHandlers interpreter staticHandlers
         interpreter = interpretHandler initializationResult
     initializationResult <- ExceptT $ doInitialize env req
 
-    let serverCaps = inferServerCapabilities (p ^. capabilities) options handlers
-    liftIO $ sendResp $ makeResponseMessage (req ^. LSP.id) (InitializeResult serverCaps (optServerInfo options))
+    let serverCaps = inferServerCapabilities (p ^. L.capabilities) options handlers
+    liftIO $ sendResp $ makeResponseMessage (req ^. L.id) (InitializeResult serverCaps (optServerInfo options))
     pure env
   where
     makeResponseMessage rid result = TResponseMessage "2.0" (Just rid) (Right result)
@@ -165,7 +165,7 @@ initializeRequestHandler ServerDefinition{..} vfs sendFunc req = do
 
     initializeErrorHandler :: (ResponseError -> IO ()) -> E.SomeException -> IO (Maybe a)
     initializeErrorHandler sendResp e = do
-        sendResp $ ResponseError ErrorCodes_InternalError msg Nothing
+        sendResp $ ResponseError (InR ErrorCodes_InternalError) msg Nothing
         pure Nothing
       where
         msg = T.pack $ unwords ["Error on initialize:", show e]
@@ -253,7 +253,7 @@ inferServerCapabilities clientCaps o h =
       | otherwise = Nothing
 
     clientSupportsCodeActionKinds = isJust $
-      clientCaps ^? textDocument . _Just . codeAction . _Just . codeActionLiteralSupport
+      clientCaps ^? L.textDocument . _Just . L.codeAction . _Just . L.codeActionLiteralSupport
 
     codeActionProvider
       | clientSupportsCodeActionKinds
@@ -289,7 +289,7 @@ inferServerCapabilities clientCaps o h =
       | otherwise = Nothing
 
     clientSupportsPrepareRename = fromMaybe False $
-      clientCaps ^? textDocument . _Just . rename . _Just . prepareSupport . _Just
+      clientCaps ^? L.textDocument . _Just . L.rename . _Just . L.prepareSupport . _Just
 
     renameProvider
       | clientSupportsPrepareRename
@@ -352,9 +352,9 @@ handle' logger mAction m msg = do
 
   let mkRspCb :: TRequestMessage (m1 :: Method ClientToServer Request) -> Either ResponseError (MessageResult m1) -> IO ()
       mkRspCb req (Left  err) = runLspT env $ sendToClient $
-        FromServerRsp (req ^. method) $ TResponseMessage "2.0" (Just (req ^. LSP.id)) (Left err)
+        FromServerRsp (req ^. L.method) $ TResponseMessage "2.0" (Just (req ^. L.id)) (Left err)
       mkRspCb req (Right rsp) = runLspT env $ sendToClient $
-        FromServerRsp (req ^. method) $ TResponseMessage "2.0" (Just (req ^. LSP.id)) (Right rsp)
+        FromServerRsp (req ^. L.method) $ TResponseMessage "2.0" (Just (req ^. L.id)) (Right rsp)
 
   case splitClientMethod m of
     IsClientNot -> case pickHandler dynNotHandlers notHandlers of
@@ -370,9 +370,9 @@ handle' logger mAction m msg = do
         | SMethod_Shutdown <- m -> liftIO $ shutdownRequestHandler msg (mkRspCb msg)
         | otherwise -> do
             let errorMsg = T.pack $ unwords ["lsp:no handler for: ", show m]
-                err = ResponseError ErrorCodes_MethodNotFound errorMsg Nothing
+                err = ResponseError (InR ErrorCodes_MethodNotFound) errorMsg Nothing
             sendToClient $
-              FromServerRsp (msg ^. method) $ TResponseMessage "2.0" (Just (msg ^. LSP.id)) (Left err)
+              FromServerRsp (msg ^. L.method) $ TResponseMessage "2.0" (Just (msg ^. L.id)) (Left err)
 
     IsClientEither -> case msg of
       NotMess noti -> case pickHandler dynNotHandlers notHandlers of
@@ -382,9 +382,9 @@ handle' logger mAction m msg = do
         Just h -> liftIO $ h req (mkRspCb req)
         Nothing -> do
           let errorMsg = T.pack $ unwords ["lsp:no handler for: ", show m]
-              err = ResponseError ErrorCodes_MethodNotFound errorMsg Nothing
+              err = ResponseError (InR ErrorCodes_MethodNotFound) errorMsg Nothing
           sendToClient $
-            FromServerRsp (req ^. method) $ TResponseMessage "2.0" (Just (req ^. LSP.id)) (Left err)
+            FromServerRsp (req ^. L.method) $ TResponseMessage "2.0" (Just (req ^. L.id)) (Left err)
   where
     -- | Checks to see if there's a dynamic handler, and uses it in favour of the
     -- static handler, if it exists.
@@ -422,12 +422,12 @@ exitNotificationHandler logger _ = do
 -- | Default Shutdown handler
 shutdownRequestHandler :: Handler IO Method_Shutdown
 shutdownRequestHandler _req k = do
-  k $ Right LSP.Null
+  k $ Right Null
 
 handleConfigChange :: (m ~ LspM config) => LogAction m (WithSeverity LspProcessingLog) -> TMessage Method_WorkspaceDidChangeConfiguration -> m ()
 handleConfigChange logger req = do
   parseConfig <- LspT $ asks resParseConfig
-  let s = req ^. params . settings
+  let s = req ^. L.params . L.settings
   res <- stateState resConfig $ \oldConfig -> case parseConfig oldConfig s of
     Left err -> (Left err, oldConfig)
     Right !newConfig -> (Right (), newConfig)
@@ -460,8 +460,8 @@ vfsFunc logger modifyVfs req = do
 -- | Updates the list of workspace folders
 updateWorkspaceFolders :: TMessage Method_WorkspaceDidChangeWorkspaceFolders -> LspM config ()
 updateWorkspaceFolders (TNotificationMessage _ _ params) = do
-  let toRemove = params ^. event . removed
-      toAdd = params ^. event . added
+  let toRemove = params ^. L.event . L.removed
+      toAdd = params ^. L.event . L.added
       newWfs oldWfs = foldr delete oldWfs toRemove <> toAdd
   modifyState resWorkspaceFolders newWfs
 

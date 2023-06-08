@@ -105,6 +105,7 @@ test-suite tests
     , lsp           ^>=2.0
     , lsp-test
     , mtl           <2.4
+    , parser-combinators
     , process
     , text
     , unliftio
@@ -122,6 +123,7 @@ test-suite func-test
     , lens
     , lsp
     , lsp-test
+    , parser-combinators
     , process
     , unliftio
 

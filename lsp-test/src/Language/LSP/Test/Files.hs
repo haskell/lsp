@@ -10,10 +10,11 @@ module Language.LSP.Test.Files
   )
 where
 
-import           Language.LSP.Protocol.Message hiding (error)
-import           Language.LSP.Protocol.Types hiding (id)
+import           Language.LSP.Protocol.Message
+import           Language.LSP.Protocol.Types
+import qualified Language.LSP.Protocol.Lens    as L
 import           Control.Lens
-import qualified Data.Map.Strict           as M
+import qualified Data.Map.Strict               as M
 import qualified Data.Text                     as T
 import           Data.Maybe
 import           System.Directory
@@ -40,7 +41,7 @@ swapFiles relCurBaseDir msgs = do
 rootDir :: [Event] -> FilePath
 rootDir (ClientEv _ (FromClientMess SMethod_Initialize req):_) =
   fromMaybe (error "Couldn't find root dir") $ do
-    rootUri <- case req ^. params . rootUri of
+    rootUri <- case req ^. L.params . L.rootUri of
         InL r -> Just r
         InR _ -> error "Couldn't find root dir"
     uriToFilePath rootUri
@@ -54,46 +55,46 @@ mapUris f event =
 
   where
     --TODO: Handle all other URIs that might need swapped
-    fromClientMsg (FromClientMess m@SMethod_Initialize                 r) = FromClientMess m $ params .~ transformInit (r ^. params) $ r
-    fromClientMsg (FromClientMess m@SMethod_TextDocumentDidOpen        n) = FromClientMess m $ swapUri (params . textDocument) n
-    fromClientMsg (FromClientMess m@SMethod_TextDocumentDidChange      n) = FromClientMess m $ swapUri (params . textDocument) n
-    fromClientMsg (FromClientMess m@SMethod_TextDocumentWillSave       n) = FromClientMess m $ swapUri (params . textDocument) n
-    fromClientMsg (FromClientMess m@SMethod_TextDocumentDidSave        n) = FromClientMess m $ swapUri (params . textDocument) n
-    fromClientMsg (FromClientMess m@SMethod_TextDocumentDidClose       n) = FromClientMess m $ swapUri (params . textDocument) n
-    fromClientMsg (FromClientMess m@SMethod_TextDocumentDocumentSymbol n) = FromClientMess m $ swapUri (params . textDocument) n
-    fromClientMsg (FromClientMess m@SMethod_TextDocumentRename         n) = FromClientMess m $ swapUri (params . textDocument) n
+    fromClientMsg (FromClientMess m@SMethod_Initialize                 r) = FromClientMess m $ L.params .~ transformInit (r ^. L.params) $ r
+    fromClientMsg (FromClientMess m@SMethod_TextDocumentDidOpen        n) = FromClientMess m $ swapUri (L.params . L.textDocument) n
+    fromClientMsg (FromClientMess m@SMethod_TextDocumentDidChange      n) = FromClientMess m $ swapUri (L.params . L.textDocument) n
+    fromClientMsg (FromClientMess m@SMethod_TextDocumentWillSave       n) = FromClientMess m $ swapUri (L.params . L.textDocument) n
+    fromClientMsg (FromClientMess m@SMethod_TextDocumentDidSave        n) = FromClientMess m $ swapUri (L.params . L.textDocument) n
+    fromClientMsg (FromClientMess m@SMethod_TextDocumentDidClose       n) = FromClientMess m $ swapUri (L.params . L.textDocument) n
+    fromClientMsg (FromClientMess m@SMethod_TextDocumentDocumentSymbol n) = FromClientMess m $ swapUri (L.params . L.textDocument) n
+    fromClientMsg (FromClientMess m@SMethod_TextDocumentRename         n) = FromClientMess m $ swapUri (L.params . L.textDocument) n
     fromClientMsg x = x
 
     fromServerMsg :: FromServerMessage -> FromServerMessage
-    fromServerMsg (FromServerMess m@SMethod_WorkspaceApplyEdit r) = FromServerMess m $ params . edit .~ swapWorkspaceEdit (r ^. params . edit) $ r
-    fromServerMsg (FromServerMess m@SMethod_TextDocumentPublishDiagnostics n) = FromServerMess m $ swapUri params n
+    fromServerMsg (FromServerMess m@SMethod_WorkspaceApplyEdit r) = FromServerMess m $ L.params . L.edit .~ swapWorkspaceEdit (r ^. L.params . L.edit) $ r
+    fromServerMsg (FromServerMess m@SMethod_TextDocumentPublishDiagnostics n) = FromServerMess m $ swapUri L.params n
     fromServerMsg (FromServerRsp m@SMethod_TextDocumentDocumentSymbol r) =
       let swapUri' :: ([SymbolInformation] |? [DocumentSymbol] |? Null) -> [SymbolInformation] |? [DocumentSymbol] |? Null
           swapUri' (InR (InL dss)) = InR $ InL dss -- no file locations here
           swapUri' (InR (InR n)) = InR $ InR n
-          swapUri' (InL si) = InL (swapUri location <$> si)
-      in FromServerRsp m $ r & result . _Right %~ swapUri'
-    fromServerMsg (FromServerRsp m@SMethod_TextDocumentRename r) = FromServerRsp m $ r & result . _Right . _L %~ swapWorkspaceEdit
+          swapUri' (InL si) = InL (swapUri L.location <$> si)
+      in FromServerRsp m $ r & L.result . _Right %~ swapUri'
+    fromServerMsg (FromServerRsp m@SMethod_TextDocumentRename r) = FromServerRsp m $ r & L.result . _Right . _L %~ swapWorkspaceEdit
     fromServerMsg x = x
 
     swapWorkspaceEdit :: WorkspaceEdit -> WorkspaceEdit
     swapWorkspaceEdit e =
       let swapDocumentChangeUri :: DocumentChange -> DocumentChange
-          swapDocumentChangeUri (InL textDocEdit) = InL $ swapUri textDocument textDocEdit
+          swapDocumentChangeUri (InL textDocEdit) = InL $ swapUri L.textDocument textDocEdit
           swapDocumentChangeUri (InR (InL createFile)) = InR $ InL $ swapUri id createFile
           -- for RenameFile, we swap `newUri`
-          swapDocumentChangeUri (InR (InR (InL renameFile))) = InR $ InR $ InL $ newUri .~ f (renameFile ^. newUri) $ renameFile
+          swapDocumentChangeUri (InR (InR (InL renameFile))) = InR $ InR $ InL $ L.newUri .~ f (renameFile ^. L.newUri) $ renameFile
           swapDocumentChangeUri (InR (InR (InR deleteFile))) = InR $ InR $ InR $ swapUri id deleteFile
-       in e & changes . _Just %~ swapKeys f
-            & documentChanges . _Just . traversed%~ swapDocumentChangeUri
+       in e & L.changes . _Just %~ swapKeys f
+            & L.documentChanges . _Just . traversed%~ swapDocumentChangeUri
 
     swapKeys :: (Uri -> Uri) -> M.Map Uri b -> M.Map Uri b
     swapKeys f = M.foldlWithKey' (\acc k v -> M.insert (f k) v acc) M.empty
 
-    swapUri :: HasUri b Uri => Lens' a b -> a -> a
+    swapUri :: L.HasUri b Uri => Lens' a b -> a -> a
     swapUri lens x =
-      let newUri = f (x ^. lens . uri)
-        in (lens . uri) .~ newUri $ x
+      let newUri = f (x ^. lens . L.uri)
+        in (lens . L.uri) .~ newUri $ x
 
     -- | Transforms rootUri/rootPath.
     transformInit :: InitializeParams -> InitializeParams
@@ -104,5 +105,5 @@ mapUris f event =
             in case uriToFilePath (f uri) of
               Just fp -> T.pack fp
               Nothing -> p
-      in x & rootUri . _L %~ f
-           & rootPath . _Just . _L %~ modifyRootPath
+      in x & L.rootUri . _L %~ f
+           & L.rootPath . _Just . _L %~ modifyRootPath

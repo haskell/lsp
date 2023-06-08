@@ -17,8 +17,8 @@ import UnliftIO
 import System.Directory
 import System.FilePath
 import System.Process
-import Language.LSP.Protocol.Types hiding (options)
-import Language.LSP.Protocol.Message hiding (error)
+import Language.LSP.Protocol.Types
+import Language.LSP.Protocol.Message
 import Data.Proxy
 
 withDummyServer :: ((Handle, Handle) -> IO ()) -> IO ()
@@ -241,6 +241,6 @@ handlers =
      , requestHandler SMethod_TextDocumentSemanticTokensFull $ \_req resp -> do
         let tokens = makeSemanticTokens defaultSemanticTokensLegend [SemanticTokenAbsolute 0 1 2 SemanticTokenTypes_Type []]
         case tokens of
-          Left t -> resp $ Left $ ResponseError ErrorCodes_InternalError t Nothing
+          Left t -> resp $ Left $ ResponseError (InR ErrorCodes_InternalError) t Nothing
           Right tokens -> resp $ Right $ InL tokens
     ]

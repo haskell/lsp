@@ -100,10 +100,12 @@ library
     Language.LSP.Protocol.Capabilities
     Language.LSP.Protocol.Message
     Language.LSP.Protocol.Types
+    Language.LSP.Protocol.Lens
     Language.LSP.Protocol.Utils.Misc
     Language.LSP.Protocol.Utils.SMethodMap
 
   other-modules:
+    Language.LSP.Protocol.Message.Lens
     Language.LSP.Protocol.Message.LspId
     Language.LSP.Protocol.Message.Meta
     Language.LSP.Protocol.Message.Method
@@ -112,6 +114,7 @@ library
     Language.LSP.Protocol.Message.Types
     Language.LSP.Protocol.Types.Common
     Language.LSP.Protocol.Types.Edit
+    Language.LSP.Protocol.Types.Lens
     Language.LSP.Protocol.Types.Location
     Language.LSP.Protocol.Types.LspEnum
     Language.LSP.Protocol.Types.MarkupContent

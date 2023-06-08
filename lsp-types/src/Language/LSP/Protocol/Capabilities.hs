@@ -10,7 +10,7 @@ module Language.LSP.Protocol.Capabilities
 
 import           Data.Row
 import qualified Data.Set                          as Set
-import           Language.LSP.Protocol.Types hiding (resourceOperations, general, window)
+import           Language.LSP.Protocol.Types
 import           Prelude                           hiding (min)
 
 {-

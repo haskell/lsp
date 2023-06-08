@@ -47,9 +47,10 @@ import           Data.Ord (Down (Down))
 import qualified Data.Text as T
 import           Data.Text ( Text )
 import qualified Data.UUID as UUID
-import Language.LSP.Protocol.Types hiding (success, uri, method, title, cancellable, percentage, version, edits)
-import Language.LSP.Protocol.Message hiding (error, params)
+import Language.LSP.Protocol.Types
+import Language.LSP.Protocol.Message
 import qualified Language.LSP.Protocol.Types as J
+import qualified Language.LSP.Protocol.Lens as J
 import qualified Language.LSP.Protocol.Message as J
 import           Language.LSP.Protocol.Utils.SMethodMap (SMethodMap)
 import qualified Language.LSP.Protocol.Utils.SMethodMap as SMethodMap
@@ -469,7 +470,7 @@ getRootPath = resRootPath <$> getLspEnv
 getWorkspaceFolders :: MonadLsp config m => m (Maybe [WorkspaceFolder])
 getWorkspaceFolders = do
   clientCaps <- getClientCapabilities
-  let clientSupportsWfs = fromMaybe False $ clientCaps ^? workspace . _Just . workspaceFolders . _Just
+  let clientSupportsWfs = fromMaybe False $ clientCaps ^? J.workspace . _Just . J.workspaceFolders . _Just
   if clientSupportsWfs
     then Just <$> getsState resWorkspaceFolders
     else pure Nothing
@@ -647,7 +648,7 @@ withProgressBase indefinite title cancellable f = do
               WorkDoneProgressReport J.AString Nothing msg percentage
 
 clientSupportsProgress :: J.ClientCapabilities -> Bool
-clientSupportsProgress caps = fromMaybe False $ caps ^? window . _Just . workDoneProgress . _Just
+clientSupportsProgress caps = fromMaybe False $ caps ^? J.window . _Just . J.workDoneProgress . _Just
 
 {-# INLINE clientSupportsProgress #-}
 
