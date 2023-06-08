@@ -27,6 +27,7 @@ import           Control.Lens
 import           Data.Aeson          hiding (Null)
 import qualified Data.Aeson          as J
 import           Data.Hashable
+import           Data.String         (fromString)
 import           Data.Int            (Int32)
 import           Data.Mod.Word
 import           GHC.Generics        hiding (UInt)
@@ -122,8 +123,10 @@ nullToMaybe :: a |? Null -> Maybe a
 nullToMaybe (InL a) = Just a
 nullToMaybe (InR _) = Nothing
 
+  -- We use String so we can use fromString on it to get a key that works
+  -- in both aeson-1 and aeson-2
 -- | Include a value in an JSON object optionally, omitting it if it is 'Nothing'.
-(.=?) :: (J.KeyValue kv, J.ToJSON v) => J.Key -> Maybe v -> [kv]
+(.=?) :: (J.KeyValue kv, J.ToJSON v) => String -> Maybe v -> [kv]
 k .=? v = case v of
-  Just v' -> [k J..= v']
+  Just v' -> [fromString k J..= v']
   Nothing -> mempty
