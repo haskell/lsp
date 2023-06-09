@@ -19,7 +19,7 @@ module Language.LSP.Protocol.Types.Uri.OsPath
 import           Control.Exception      hiding (try)
 import           Control.Monad.Catch
 import           GHC.IO.Encoding        (getFileSystemEncoding)
-import           Language.LSP.Types.Uri
+import           Language.LSP.Protocol.Types.Uri
 import           System.IO
 import           System.IO.Unsafe       (unsafePerformIO)
 import           System.OsPath

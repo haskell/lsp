@@ -74,6 +74,7 @@ library
     , deepseq
     , Diff              >=0.2
     , dlist
+    , exceptions
     , hashable
     , lens              >=4.15.2
     , mod
