@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ghc: ['9.4', '9.2', '9.0', '8.10']
+        ghc: ['9.6', '9.4', '9.2', '9.0', '8.10']
         # Unlikely that we'll succeed on windows and fail on macos,
         # including it is just burning CI time. But windows could have
         # path or IO issues, so worth including
