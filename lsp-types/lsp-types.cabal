@@ -71,6 +71,7 @@ library
     , base              >=4.11    && <5
     , binary
     , containers
+    , data-default
     , deepseq
     , Diff              >=0.2
     , dlist
@@ -114,6 +115,7 @@ library
     Language.LSP.Protocol.Message.Registration
     Language.LSP.Protocol.Message.Types
     Language.LSP.Protocol.Types.Common
+    Language.LSP.Protocol.Types.CustomInstances
     Language.LSP.Protocol.Types.Edit
     Language.LSP.Protocol.Types.Lens
     Language.LSP.Protocol.Types.Location

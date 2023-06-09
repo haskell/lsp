@@ -1,4 +1,5 @@
 {-#LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Language.LSP.Protocol.Types.Lens where
 

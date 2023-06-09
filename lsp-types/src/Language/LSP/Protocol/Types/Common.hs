@@ -18,6 +18,7 @@ module Language.LSP.Protocol.Types.Common (
   , Null (..)
   , absorbNull
   , nullToMaybe
+  , maybeToNull
   , (.=?)
 ) where
 
@@ -122,6 +123,16 @@ absorbNull (InR _) = mempty
 nullToMaybe :: a |? Null -> Maybe a
 nullToMaybe (InL a) = Just a
 nullToMaybe (InR _) = Nothing
+
+maybeToNull :: Maybe a -> a |? Null
+maybeToNull (Just x) = InL x
+maybeToNull Nothing  = InR Null
+
+instance Semigroup s => Semigroup (s |? Null) where
+  InL x <> InL y = InL (x <> y)
+  InL x <> InR _ = InL x
+  InR _ <> InL x = InL x
+  InR _ <> InR y = InR y
 
   -- We use String so we can use fromString on it to get a key that works
   -- in both aeson-1 and aeson-2
