@@ -19,7 +19,6 @@ This is crucial to match what LSP clients expect.
 module Data.Row.Aeson where
 
 import           Data.Aeson
-import           Data.Aeson.KeyMap     (singleton)
 import           Data.Aeson.Types      (Parser, typeMismatch)
 import           Data.List             (intercalate)
 
@@ -39,25 +38,27 @@ import           Data.String
 -- | Serialise a value as an entry in a JSON object. This allows customizing the
 -- behaviour in the object context, in order to e.g. omit the field.
 class ToJSONEntry a where
-  toJSONEntry :: Key -> a -> Object
+  -- We use String so we can use fromString on it to get a key that works
+  -- in both aeson-1 and aeson-2
+  toJSONEntry :: String -> a -> Object
 
 instance {-# OVERLAPPING #-} ToJSON a => ToJSONEntry (Maybe a) where
   -- Omit Nothing fields
   toJSONEntry _ Nothing = mempty
-  toJSONEntry k v       = singleton k (toJSON v)
+  toJSONEntry k v       = fromString k .= toJSON v
 
 instance {-# OVERLAPPABLE #-} ToJSON a => ToJSONEntry a where
-  toJSONEntry k v = singleton k (toJSON v)
+  toJSONEntry k v = fromString k .= toJSON v
 
 class FromJSONEntry a where
-  parseJSONEntry :: Object -> Key -> Parser a
+  parseJSONEntry :: Object -> String -> Parser a
 
 instance {-# OVERLAPPING #-} FromJSON a => FromJSONEntry (Maybe a) where
   -- Parse Nothing fields as optional
-  parseJSONEntry o k = o .:? k
+  parseJSONEntry o k = o .:? (fromString k)
 
 instance {-# OVERLAPPABLE #-} FromJSON a => FromJSONEntry a where
-  parseJSONEntry o k = o .: k
+  parseJSONEntry o k = o .: (fromString k)
 
 ------
 
