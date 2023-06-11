@@ -43,6 +43,8 @@ import Control.Lens hiding (List, Empty)
 import Control.Monad
 import Control.Monad.Catch (MonadThrow)
 import Control.Monad.Except
+import Control.Monad.IO.Class
+import Control.Monad.Trans.Class
 #if __GLASGOW_HASKELL__ == 806
 import Control.Monad.Fail
 #endif

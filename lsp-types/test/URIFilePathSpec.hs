@@ -18,7 +18,9 @@ import qualified System.OsPath           as OsPath
 #endif
 
 import           Control.Monad           (when)
+import           Control.Exception       (throwIO)
 import           Data.List
+import           Data.Maybe              (fromJust)
 import           Data.Text               (Text, pack)
 import           Language.LSP.Protocol.Types
 
