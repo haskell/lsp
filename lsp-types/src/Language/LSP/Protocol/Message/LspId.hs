@@ -5,6 +5,7 @@ import qualified Data.Aeson                         as A
 import           Data.Hashable
 import           Data.IxMap
 import           Data.Text                          (Text)
+import           GHC.Generics
 
 import           Language.LSP.Protocol.Types.Common
 import           Language.LSP.Protocol.Internal.Method
@@ -12,7 +13,7 @@ import           Language.LSP.Protocol.Message.Meta
 
 -- | Id used for a request, Can be either a String or an Int
 data LspId (m :: Method f Request) = IdInt !Int32 | IdString !Text
-  deriving stock (Show,Read,Eq,Ord)
+  deriving stock (Show,Read,Eq,Ord,Generic)
 
 instance A.ToJSON (LspId m) where
   toJSON (IdInt i)    = A.toJSON i
