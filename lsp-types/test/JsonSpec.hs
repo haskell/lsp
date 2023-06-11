@@ -67,7 +67,7 @@ responseMessageSpec = do
     it "decodes result = null" $ do
       let input = "{\"jsonrpc\": \"2.0\", \"id\": 123, \"result\": null}"
         in  J.decode input `shouldBe` Just
-              ((TResponseMessage "2.0" (Just (IdInt 123)) (Right $ InR Null)) :: TResponseMessage 'Method_WorkspaceExecuteCommand)
+              ((TResponseMessage "2.0" (Just (IdInt 123)) (Right $ InL J.Null)) :: TResponseMessage 'Method_WorkspaceExecuteCommand)
     it "handles missing params field" $ do
       J.eitherDecode "{ \"jsonrpc\": \"2.0\", \"id\": 15, \"method\": \"shutdown\"}"
         `shouldBe` Right (TRequestMessage "2.0" (IdInt 15) SMethod_Shutdown Nothing)

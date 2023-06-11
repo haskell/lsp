@@ -85,6 +85,8 @@ library
     , some
     , template-haskell
     , text
+    -- needed for aeson < 1
+    , unordered-containers
 
   if flag(force-ospath)
     build-depends: filepath ^>=1.4.100.0
