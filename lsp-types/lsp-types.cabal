@@ -126,6 +126,7 @@ library
     Language.LSP.Protocol.Types.Singletons
     Language.LSP.Protocol.Types.Uri
     Language.LSP.Protocol.Types.Uri.OsPath
+    Language.LSP.Protocol.Types.WatchKinds
 
   -- The generated modules
   -- In principle these could be in a separate component,
