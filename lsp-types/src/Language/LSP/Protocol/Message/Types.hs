@@ -81,8 +81,8 @@ instance FromJSON ResponseError where
                         <*> v .:? "data"
       in fmap go . errorCode
       where go :: ResponseError -> ResponseError
-            go x@(ResponseError (InR (ErrorCodes_Custom n)) _ _) = 
-              x{_code = InL (fromOpenEnumBaseType n)}
+            go x@(ResponseError (InL (LSPErrorCodes_Custom n)) _ _) = 
+              x{_code = InR (fromOpenEnumBaseType n)}
             go x = x
 
 -- | Response message type as defined in the spec.
@@ -149,8 +149,8 @@ instance (FromJSON (ErrorData m)) => FromJSON (TResponseError m) where
                       <*> v .:? "data"
     in fmap go . errorCode
     where go :: TResponseError m -> TResponseError m
-          go x@(TResponseError (InR (ErrorCodes_Custom n)) _ _) = 
-            x{_code = InL (fromOpenEnumBaseType n)}
+          go x@(TResponseError (InL (LSPErrorCodes_Custom n)) _ _) = 
+            x{_code = InR (fromOpenEnumBaseType n)}
           go x = x
 instance (ToJSON (ErrorData m)) => ToJSON (TResponseError m) where
   toJSON     = genericToJSON lspOptions

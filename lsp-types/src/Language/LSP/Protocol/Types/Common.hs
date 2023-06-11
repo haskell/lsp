@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP                  #-}
 {-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE DeriveAnyClass             #-}
 {-# LANGUAGE DeriveGeneric              #-}
@@ -21,12 +22,17 @@ module Language.LSP.Protocol.Types.Common (
   , (.=?)
 ) where
 
-import           Control.Applicative
 import           Control.DeepSeq
 import           Control.Lens
 import           Data.Aeson          hiding (Null)
 import qualified Data.Aeson          as J
+#if MIN_VERSION_aeson(2,0,0)
+import qualified Data.Aeson.KeyMap   as KM
+#else
+import qualified Data.HashMap.Strict   as KM
+#endif
 import           Data.Hashable
+import           Data.Set            as Set
 import           Data.String         (fromString)
 import           Data.Int            (Int32)
 import           Data.Mod.Word
@@ -93,11 +99,35 @@ instance (ToJSON a, ToJSON b) => ToJSON (a |? b) where
   toJSON (InL x) = toJSON x
   toJSON (InR x) = toJSON x
 
-instance (FromJSON a, FromJSON b) => FromJSON (a |? b) where
-  -- Important: Try to parse the **rightmost** type first, as in the specification
-  -- the more complex types tend to appear on the right of the |, e.g.
-  -- @colorProvider?: boolean | DocumentColorOptions | DocumentColorRegistrationOptions;@
-  parseJSON v = InR <$> parseJSON v <|> InL <$> parseJSON v
+instance (FromJSON a, ToJSON a, FromJSON b, ToJSON b) => FromJSON (a |? b) where
+  -- Truly atrocious and abominable hack. The issue is tha we may have siutations
+  -- where some input JSON can parse correctly as both sides of the union, because
+  -- we have no tag. What do we do in this situation? It's very unclear, and the
+  -- spec is no help. The heuristic we adopt here is that it is better to take
+  -- the version with "more fields". How do we work that out? By converting back
+  -- to JSON and looking at the object fields.
+  --
+  -- Possibly we could do better by relying on Generic instances for a and b
+  -- in order to work out which has more fields on the Haskell side.
+  parseJSON v = do
+    let ra :: Result a = fromJSON v
+        rb :: Result b = fromJSON v
+    case (ra, rb) of
+      (Success a, Error _) -> pure $ InL a
+      (Error _, Success b) -> pure $ InR b
+      (Error e, Error _) -> fail e
+      (Success a, Success b) -> case (toJSON a, toJSON b) of
+        -- Both sides encode to the same thing, just pick one arbitrarily
+        (l, r) | l == r -> pure $ InL a
+        (Object oa, Object ob) -> 
+          let ka = Set.fromList $ KM.keys oa
+              kb = Set.fromList $ KM.keys ob
+          in if kb `Set.isSubsetOf` ka
+          then pure $ InL a
+          else if ka `Set.isSubsetOf` kb
+          then pure $ InR b
+          else fail $ "Could not decide which type of value to produce, left encodes to an object with keys: " ++ show ka ++ "; right has keys " ++ show kb
+        (l, r) -> fail $ "Could not decide which type of value to produce, left encodes to: " ++ show l ++ "; right encodes to: " ++ show r
 
 -- We could use 'Proxy' for this, as aeson also serializes it to/from null,
 -- but this is more explicit.
