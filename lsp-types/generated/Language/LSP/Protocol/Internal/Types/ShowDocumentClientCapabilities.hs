@@ -6,9 +6,11 @@
 module Language.LSP.Protocol.Internal.Types.ShowDocumentClientCapabilities where
 
 import Control.DeepSeq
+import Data.Hashable
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
+import qualified Data.Row.Hashable as Hashable
 import qualified Language.LSP.Protocol.Types.Common
 
 {-|
@@ -24,7 +26,7 @@ data ShowDocumentClientCapabilities = ShowDocumentClientCapabilities
   _support :: Bool
   }
   deriving stock (Show, Eq, Ord, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, Hashable)
 
 instance Aeson.ToJSON ShowDocumentClientCapabilities where
   toJSON (ShowDocumentClientCapabilities arg0) = Aeson.object $ concat $  [["support" Aeson..= arg0]]

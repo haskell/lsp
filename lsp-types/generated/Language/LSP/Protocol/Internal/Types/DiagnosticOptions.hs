@@ -6,9 +6,11 @@
 module Language.LSP.Protocol.Internal.Types.DiagnosticOptions where
 
 import Control.DeepSeq
+import Data.Hashable
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
+import qualified Data.Row.Hashable as Hashable
 import qualified Data.Text
 import qualified Language.LSP.Protocol.Types.Common
 
@@ -40,7 +42,7 @@ data DiagnosticOptions = DiagnosticOptions
   _workspaceDiagnostics :: Bool
   }
   deriving stock (Show, Eq, Ord, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, Hashable)
 
 instance Aeson.ToJSON DiagnosticOptions where
   toJSON (DiagnosticOptions arg0 arg1 arg2 arg3) = Aeson.object $ concat $  ["workDoneProgress" Language.LSP.Protocol.Types.Common..=? arg0

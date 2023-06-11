@@ -51,6 +51,7 @@ jsonSpec = do
   -- DataTypesJSON
     prop "MarkedString"   (propertyJsonRoundtrip :: MarkedString -> Property)
     prop "MarkupContent"  (propertyJsonRoundtrip :: MarkupContent -> Property)
+    prop "TextDocumentContentChangeEvent"  (propertyJsonRoundtrip :: TextDocumentContentChangeEvent -> Property)
     prop "WatchedFiles"   (propertyJsonRoundtrip :: DidChangeWatchedFilesRegistrationOptions -> Property)
     prop "ResponseMessage Hover"
          (propertyJsonRoundtrip :: TResponseMessage 'Method_TextDocumentHover -> Property)
@@ -66,7 +67,7 @@ responseMessageSpec = do
     it "decodes result = null" $ do
       let input = "{\"jsonrpc\": \"2.0\", \"id\": 123, \"result\": null}"
         in  J.decode input `shouldBe` Just
-              ((TResponseMessage "2.0" (Just (IdInt 123)) (Right $ InR Null)) :: TResponseMessage 'Method_WorkspaceExecuteCommand)
+              ((TResponseMessage "2.0" (Just (IdInt 123)) (Right $ InL J.Null)) :: TResponseMessage 'Method_WorkspaceExecuteCommand)
     it "handles missing params field" $ do
       J.eitherDecode "{ \"jsonrpc\": \"2.0\", \"id\": 15, \"method\": \"shutdown\"}"
         `shouldBe` Right (TRequestMessage "2.0" (IdInt 15) SMethod_Shutdown Nothing)
@@ -90,64 +91,79 @@ propertyJsonRoundtrip a = J.Success a === J.fromJSON (J.toJSON a)
 
 instance (Arbitrary a, Arbitrary b) => Arbitrary (a |? b) where
   arbitrary = oneof [InL <$> arbitrary, InR <$> arbitrary]
+  shrink = genericShrink
 
 instance Arbitrary Null where
   arbitrary = pure Null
 
 instance (R.AllUniqueLabels r, R.Forall r Arbitrary) => Arbitrary (R.Rec r) where
   arbitrary = R.fromLabelsA @Arbitrary $ \_l -> arbitrary
+  shrink record = R.traverse @Arbitrary @[] shrink record
 
 deriving newtype instance Arbitrary MarkedString
 
 instance Arbitrary MarkupContent where
   arbitrary = MarkupContent <$> arbitrary <*> arbitrary
+  shrink = genericShrink
 
 instance Arbitrary MarkupKind where
   arbitrary = oneof [pure MarkupKind_PlainText,pure MarkupKind_Markdown]
+  shrink = genericShrink
 
 instance Arbitrary UInt where
   arbitrary = fromInteger <$> arbitrary
 
 instance Arbitrary Uri where
   arbitrary = Uri <$> arbitrary
+  shrink = genericShrink
 
 --deriving newtype instance Arbitrary URI
 
 instance Arbitrary WorkspaceFolder where
   arbitrary = WorkspaceFolder <$> arbitrary <*> arbitrary
+  shrink = genericShrink
 
 instance Arbitrary RelativePattern where
   arbitrary = RelativePattern <$> arbitrary <*> arbitrary
+  shrink = genericShrink
 
 deriving newtype instance Arbitrary Pattern
 deriving newtype instance Arbitrary GlobPattern
 
 instance Arbitrary Position where
   arbitrary = Position <$> arbitrary <*> arbitrary
+  shrink = genericShrink
 
 instance Arbitrary Location where
   arbitrary = Location <$> arbitrary <*> arbitrary
+  shrink = genericShrink
 
 instance Arbitrary Range where
   arbitrary = Range <$> arbitrary <*> arbitrary
+  shrink = genericShrink
 
 instance Arbitrary Hover where
   arbitrary = Hover <$> arbitrary <*> arbitrary
+  shrink = genericShrink
 
 instance {-# OVERLAPPING #-} Arbitrary (Maybe Void) where
   arbitrary = pure Nothing
 
 instance (ErrorData m ~ Maybe Void) => Arbitrary (TResponseError m) where
   arbitrary = TResponseError <$> arbitrary <*> arbitrary <*> pure Nothing
+  shrink = genericShrink
 
 instance Arbitrary ResponseError where
   arbitrary = ResponseError <$> arbitrary <*> arbitrary <*> pure Nothing
+  shrink = genericShrink
 
 instance (Arbitrary (MessageResult m), ErrorData m ~ Maybe Void) => Arbitrary (TResponseMessage m) where
   arbitrary = TResponseMessage <$> arbitrary <*> arbitrary <*> arbitrary
+  shrink = genericShrink
 
 instance Arbitrary (LspId m) where
   arbitrary = oneof [IdInt <$> arbitrary, IdString <$> arbitrary]
+  shrink = genericShrink
 
 instance Arbitrary ErrorCodes where
   arbitrary =
@@ -160,6 +176,7 @@ instance Arbitrary ErrorCodes where
       , ErrorCodes_ServerNotInitialized
       , ErrorCodes_UnknownErrorCode
       ]
+  shrink = genericShrink
 
 instance Arbitrary LSPErrorCodes where
   arbitrary =
@@ -169,16 +186,24 @@ instance Arbitrary LSPErrorCodes where
       , LSPErrorCodes_ContentModified
       , LSPErrorCodes_RequestCancelled
       ]
+  shrink = genericShrink
 -- ---------------------------------------------------------------------
 
 instance Arbitrary DidChangeWatchedFilesRegistrationOptions where
   arbitrary = DidChangeWatchedFilesRegistrationOptions <$> arbitrary
+  shrink = genericShrink
 
 instance Arbitrary FileSystemWatcher where
   arbitrary = FileSystemWatcher <$> arbitrary <*> arbitrary
+  shrink = genericShrink
 
 -- TODO: watchKind is weird
 instance Arbitrary WatchKind where
   arbitrary = oneof [pure WatchKind_Change, pure WatchKind_Create, pure WatchKind_Delete]
+  shrink = genericShrink
 
 -- ---------------------------------------------------------------------
+--
+instance Arbitrary TextDocumentContentChangeEvent where
+  arbitrary = TextDocumentContentChangeEvent <$> arbitrary
+  shrink = genericShrink

@@ -1,6 +1,7 @@
 module Language.LSP.Protocol.Types.Singletons where
 
 import           Data.Aeson
+import           Data.Hashable
 import           Data.Proxy
 import qualified Data.Text    as T
 import           Control.DeepSeq
@@ -22,6 +23,8 @@ instance Ord (AString s) where
   compare _ _ = EQ
 instance NFData (AString s) where
   rnf a = seq a ()
+instance Hashable (AString sym) where
+  hashWithSalt s AString = hashWithSalt s (symbolVal (Proxy @sym))
 
 instance ToJSON (AString s) where
   toJSON AString = toJSON (T.pack (symbolVal (Proxy @s)))
@@ -48,6 +51,8 @@ instance Ord (AnInteger n) where
   compare _ _ = EQ
 instance NFData (AnInteger s) where
   rnf a = seq a ()
+instance Hashable (AnInteger i) where
+  hashWithSalt s AnInteger = hashWithSalt s (natVal (Proxy @i))
 
 instance ToJSON (AnInteger n) where
   toJSON AnInteger = toJSON (natVal (Proxy @n))

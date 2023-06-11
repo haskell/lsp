@@ -6,9 +6,11 @@
 module Language.LSP.Protocol.Internal.Types.DocumentDiagnosticParams where
 
 import Control.DeepSeq
+import Data.Hashable
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
+import qualified Data.Row.Hashable as Hashable
 import qualified Data.Text
 import qualified Language.LSP.Protocol.Internal.Types.ProgressToken
 import qualified Language.LSP.Protocol.Internal.Types.TextDocumentIdentifier
@@ -43,7 +45,7 @@ data DocumentDiagnosticParams = DocumentDiagnosticParams
   _previousResultId :: (Maybe Data.Text.Text)
   }
   deriving stock (Show, Eq, Ord, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, Hashable)
 
 instance Aeson.ToJSON DocumentDiagnosticParams where
   toJSON (DocumentDiagnosticParams arg0 arg1 arg2 arg3 arg4) = Aeson.object $ concat $  ["workDoneToken" Language.LSP.Protocol.Types.Common..=? arg0

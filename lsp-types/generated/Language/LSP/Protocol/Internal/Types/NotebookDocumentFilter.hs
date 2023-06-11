@@ -6,10 +6,12 @@
 module Language.LSP.Protocol.Internal.Types.NotebookDocumentFilter where
 
 import Control.DeepSeq
+import Data.Hashable
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row as Row
 import qualified Data.Row.Aeson as Aeson
+import qualified Data.Row.Hashable as Hashable
 import qualified Data.Text
 import qualified Language.LSP.Protocol.Types.Common
 
@@ -23,4 +25,4 @@ against the notebook's URI (same as with documents)
 newtype NotebookDocumentFilter = NotebookDocumentFilter ((Row.Rec ("notebookType" Row..== Data.Text.Text Row..+ ("scheme" Row..== (Maybe Data.Text.Text) Row..+ ("pattern" Row..== (Maybe Data.Text.Text) Row..+ Row.Empty)))) Language.LSP.Protocol.Types.Common.|? ((Row.Rec ("notebookType" Row..== (Maybe Data.Text.Text) Row..+ ("scheme" Row..== Data.Text.Text Row..+ ("pattern" Row..== (Maybe Data.Text.Text) Row..+ Row.Empty)))) Language.LSP.Protocol.Types.Common.|? (Row.Rec ("notebookType" Row..== (Maybe Data.Text.Text) Row..+ ("scheme" Row..== (Maybe Data.Text.Text) Row..+ ("pattern" Row..== Data.Text.Text Row..+ Row.Empty))))))
   deriving newtype (Aeson.ToJSON, Aeson.FromJSON)
   deriving stock (Show, Eq, Ord, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, Hashable)

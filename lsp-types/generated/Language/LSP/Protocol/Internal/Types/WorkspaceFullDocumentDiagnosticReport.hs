@@ -6,9 +6,11 @@
 module Language.LSP.Protocol.Internal.Types.WorkspaceFullDocumentDiagnosticReport where
 
 import Control.DeepSeq
+import Data.Hashable
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
+import qualified Data.Row.Hashable as Hashable
 import qualified Data.Text
 import qualified Language.LSP.Protocol.Internal.Types.Diagnostic
 import qualified Language.LSP.Protocol.Types.Common
@@ -46,7 +48,7 @@ data WorkspaceFullDocumentDiagnosticReport = WorkspaceFullDocumentDiagnosticRepo
   _version :: (Language.LSP.Protocol.Types.Common.Int32 Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Types.Common.Null)
   }
   deriving stock (Show, Eq, Ord, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, Hashable)
 
 instance Aeson.ToJSON WorkspaceFullDocumentDiagnosticReport where
   toJSON (WorkspaceFullDocumentDiagnosticReport arg0 arg1 arg2 arg3 arg4) = Aeson.object $ concat $  [["kind" Aeson..= arg0]

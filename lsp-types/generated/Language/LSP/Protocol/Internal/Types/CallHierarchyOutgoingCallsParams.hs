@@ -6,9 +6,11 @@
 module Language.LSP.Protocol.Internal.Types.CallHierarchyOutgoingCallsParams where
 
 import Control.DeepSeq
+import Data.Hashable
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
+import qualified Data.Row.Hashable as Hashable
 import qualified Language.LSP.Protocol.Internal.Types.CallHierarchyItem
 import qualified Language.LSP.Protocol.Internal.Types.ProgressToken
 import qualified Language.LSP.Protocol.Types.Common
@@ -34,7 +36,7 @@ data CallHierarchyOutgoingCallsParams = CallHierarchyOutgoingCallsParams
   _item :: Language.LSP.Protocol.Internal.Types.CallHierarchyItem.CallHierarchyItem
   }
   deriving stock (Show, Eq, Ord, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, Hashable)
 
 instance Aeson.ToJSON CallHierarchyOutgoingCallsParams where
   toJSON (CallHierarchyOutgoingCallsParams arg0 arg1 arg2) = Aeson.object $ concat $  ["workDoneToken" Language.LSP.Protocol.Types.Common..=? arg0

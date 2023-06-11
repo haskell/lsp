@@ -6,9 +6,11 @@
 module Language.LSP.Protocol.Internal.Types.PositionEncodingKind where
 
 import Control.DeepSeq
+import Data.Hashable
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
+import qualified Data.Row.Hashable as Hashable
 import qualified Data.Set
 import qualified Data.String
 import qualified Data.Text
@@ -41,7 +43,7 @@ data PositionEncodingKind =
   PositionEncodingKind_UTF32
   | PositionEncodingKind_Custom Data.Text.Text
   deriving stock (Show, Eq, Ord, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, Hashable)
   deriving ( Aeson.ToJSON
   , Aeson.FromJSON
   , Data.String.IsString ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum PositionEncodingKind Data.Text.Text)

@@ -6,9 +6,11 @@
 module Language.LSP.Protocol.Internal.Types.UnchangedDocumentDiagnosticReport where
 
 import Control.DeepSeq
+import Data.Hashable
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
+import qualified Data.Row.Hashable as Hashable
 import qualified Data.Text
 import qualified Language.LSP.Protocol.Types.Common
 import qualified Language.LSP.Protocol.Types.Singletons
@@ -34,7 +36,7 @@ data UnchangedDocumentDiagnosticReport = UnchangedDocumentDiagnosticReport
   _resultId :: Data.Text.Text
   }
   deriving stock (Show, Eq, Ord, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, Hashable)
 
 instance Aeson.ToJSON UnchangedDocumentDiagnosticReport where
   toJSON (UnchangedDocumentDiagnosticReport arg0 arg1) = Aeson.object $ concat $  [["kind" Aeson..= arg0]

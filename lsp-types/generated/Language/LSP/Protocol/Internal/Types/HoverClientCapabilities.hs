@@ -6,9 +6,11 @@
 module Language.LSP.Protocol.Internal.Types.HoverClientCapabilities where
 
 import Control.DeepSeq
+import Data.Hashable
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
+import qualified Data.Row.Hashable as Hashable
 import qualified Language.LSP.Protocol.Internal.Types.MarkupKind
 import qualified Language.LSP.Protocol.Types.Common
 
@@ -27,7 +29,7 @@ data HoverClientCapabilities = HoverClientCapabilities
   _contentFormat :: (Maybe [Language.LSP.Protocol.Internal.Types.MarkupKind.MarkupKind])
   }
   deriving stock (Show, Eq, Ord, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, Hashable)
 
 instance Aeson.ToJSON HoverClientCapabilities where
   toJSON (HoverClientCapabilities arg0 arg1) = Aeson.object $ concat $  ["dynamicRegistration" Language.LSP.Protocol.Types.Common..=? arg0

@@ -6,9 +6,11 @@
 module Language.LSP.Protocol.Internal.Types.CodeLensWorkspaceClientCapabilities where
 
 import Control.DeepSeq
+import Data.Hashable
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
+import qualified Data.Row.Hashable as Hashable
 import qualified Language.LSP.Protocol.Types.Common
 
 {-|
@@ -27,7 +29,7 @@ data CodeLensWorkspaceClientCapabilities = CodeLensWorkspaceClientCapabilities
   _refreshSupport :: (Maybe Bool)
   }
   deriving stock (Show, Eq, Ord, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, Hashable)
 
 instance Aeson.ToJSON CodeLensWorkspaceClientCapabilities where
   toJSON (CodeLensWorkspaceClientCapabilities arg0) = Aeson.object $ concat $  ["refreshSupport" Language.LSP.Protocol.Types.Common..=? arg0]

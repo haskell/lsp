@@ -6,9 +6,11 @@
 module Language.LSP.Protocol.Internal.Types.CodeLensParams where
 
 import Control.DeepSeq
+import Data.Hashable
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
+import qualified Data.Row.Hashable as Hashable
 import qualified Language.LSP.Protocol.Internal.Types.ProgressToken
 import qualified Language.LSP.Protocol.Internal.Types.TextDocumentIdentifier
 import qualified Language.LSP.Protocol.Types.Common
@@ -32,7 +34,7 @@ data CodeLensParams = CodeLensParams
   _textDocument :: Language.LSP.Protocol.Internal.Types.TextDocumentIdentifier.TextDocumentIdentifier
   }
   deriving stock (Show, Eq, Ord, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, Hashable)
 
 instance Aeson.ToJSON CodeLensParams where
   toJSON (CodeLensParams arg0 arg1 arg2) = Aeson.object $ concat $  ["workDoneToken" Language.LSP.Protocol.Types.Common..=? arg0
