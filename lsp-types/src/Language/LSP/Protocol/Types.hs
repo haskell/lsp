@@ -22,8 +22,8 @@ module Language.LSP.Protocol.Types (
   , module SemanticTokens
   -- * Main LSP types and functions
   , module Generated
-  -- ** Custom instances for the generated types
-  , module CustomInstances
+  -- ** Orphan instances for the generated types
+  , module Orphans
   ) where
 
 import Language.LSP.Protocol.Internal.Types as Generated
@@ -37,4 +37,4 @@ import Language.LSP.Protocol.Types.Singletons as Singletons
 import Language.LSP.Protocol.Types.Uri as Uri
 import Language.LSP.Protocol.Types.Uri.OsPath as Uri
 import Language.LSP.Protocol.Types.Edit as Edits
-import Language.LSP.Protocol.Types.CustomInstances as CustomInstances
+import Language.LSP.Protocol.Types.Orphans as Orphans

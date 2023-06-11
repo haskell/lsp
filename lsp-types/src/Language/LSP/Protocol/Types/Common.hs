@@ -128,6 +128,7 @@ maybeToNull :: Maybe a -> a |? Null
 maybeToNull (Just x) = InL x
 maybeToNull Nothing  = InR Null
 
+-- This is equivalent to the instance for 'Maybe s'
 instance Semigroup s => Semigroup (s |? Null) where
   InL x <> InL y = InL (x <> y)
   InL x <> InR _ = InL x
