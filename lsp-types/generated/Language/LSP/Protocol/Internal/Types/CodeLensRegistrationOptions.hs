@@ -6,9 +6,11 @@
 module Language.LSP.Protocol.Internal.Types.CodeLensRegistrationOptions where
 
 import Control.DeepSeq
+import Data.Hashable
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
+import qualified Data.Row.Hashable as Hashable
 import qualified Language.LSP.Protocol.Internal.Types.DocumentSelector
 import qualified Language.LSP.Protocol.Types.Common
 
@@ -31,7 +33,7 @@ data CodeLensRegistrationOptions = CodeLensRegistrationOptions
   _resolveProvider :: (Maybe Bool)
   }
   deriving stock (Show, Eq, Ord, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, Hashable)
 
 instance Aeson.ToJSON CodeLensRegistrationOptions where
   toJSON (CodeLensRegistrationOptions arg0 arg1 arg2) = Aeson.object $ concat $  [["documentSelector" Aeson..= arg0]

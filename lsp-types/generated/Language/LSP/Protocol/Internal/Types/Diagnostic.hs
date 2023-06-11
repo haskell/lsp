@@ -6,10 +6,12 @@
 module Language.LSP.Protocol.Internal.Types.Diagnostic where
 
 import Control.DeepSeq
+import Data.Hashable
 import GHC.Generics
 import qualified Data.Aeson
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
+import qualified Data.Row.Hashable as Hashable
 import qualified Data.Text
 import qualified Language.LSP.Protocol.Internal.Types.CodeDescription
 import qualified Language.LSP.Protocol.Internal.Types.DiagnosticRelatedInformation
@@ -73,7 +75,7 @@ data Diagnostic = Diagnostic
   _data_ :: (Maybe Data.Aeson.Value)
   }
   deriving stock (Show, Eq, Ord, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, Hashable)
 
 instance Aeson.ToJSON Diagnostic where
   toJSON (Diagnostic arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8) = Aeson.object $ concat $  [["range" Aeson..= arg0]

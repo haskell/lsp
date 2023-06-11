@@ -6,9 +6,11 @@
 module Language.LSP.Protocol.Internal.Types.WorkspaceDiagnosticParams where
 
 import Control.DeepSeq
+import Data.Hashable
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
+import qualified Data.Row.Hashable as Hashable
 import qualified Data.Text
 import qualified Language.LSP.Protocol.Internal.Types.PreviousResultId
 import qualified Language.LSP.Protocol.Internal.Types.ProgressToken
@@ -40,7 +42,7 @@ data WorkspaceDiagnosticParams = WorkspaceDiagnosticParams
   _previousResultIds :: [Language.LSP.Protocol.Internal.Types.PreviousResultId.PreviousResultId]
   }
   deriving stock (Show, Eq, Ord, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, Hashable)
 
 instance Aeson.ToJSON WorkspaceDiagnosticParams where
   toJSON (WorkspaceDiagnosticParams arg0 arg1 arg2 arg3) = Aeson.object $ concat $  ["workDoneToken" Language.LSP.Protocol.Types.Common..=? arg0

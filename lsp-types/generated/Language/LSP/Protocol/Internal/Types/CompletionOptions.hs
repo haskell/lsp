@@ -6,10 +6,12 @@
 module Language.LSP.Protocol.Internal.Types.CompletionOptions where
 
 import Control.DeepSeq
+import Data.Hashable
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row as Row
 import qualified Data.Row.Aeson as Aeson
+import qualified Data.Row.Hashable as Hashable
 import qualified Data.Text
 import qualified Language.LSP.Protocol.Types.Common
 
@@ -57,7 +59,7 @@ data CompletionOptions = CompletionOptions
   _completionItem :: (Maybe (Row.Rec ("labelDetailsSupport" Row..== (Maybe Bool) Row..+ Row.Empty)))
   }
   deriving stock (Show, Eq, Ord, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, Hashable)
 
 instance Aeson.ToJSON CompletionOptions where
   toJSON (CompletionOptions arg0 arg1 arg2 arg3 arg4) = Aeson.object $ concat $  ["workDoneProgress" Language.LSP.Protocol.Types.Common..=? arg0

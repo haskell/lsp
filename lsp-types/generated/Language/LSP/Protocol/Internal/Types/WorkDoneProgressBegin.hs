@@ -6,9 +6,11 @@
 module Language.LSP.Protocol.Internal.Types.WorkDoneProgressBegin where
 
 import Control.DeepSeq
+import Data.Hashable
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
+import qualified Data.Row.Hashable as Hashable
 import qualified Data.Text
 import qualified Language.LSP.Protocol.Types.Common
 import qualified Language.LSP.Protocol.Types.Singletons
@@ -53,7 +55,7 @@ data WorkDoneProgressBegin = WorkDoneProgressBegin
   _percentage :: (Maybe Language.LSP.Protocol.Types.Common.UInt)
   }
   deriving stock (Show, Eq, Ord, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, Hashable)
 
 instance Aeson.ToJSON WorkDoneProgressBegin where
   toJSON (WorkDoneProgressBegin arg0 arg1 arg2 arg3 arg4) = Aeson.object $ concat $  [["kind" Aeson..= arg0]

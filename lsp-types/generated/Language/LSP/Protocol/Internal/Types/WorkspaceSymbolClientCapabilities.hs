@@ -6,10 +6,12 @@
 module Language.LSP.Protocol.Internal.Types.WorkspaceSymbolClientCapabilities where
 
 import Control.DeepSeq
+import Data.Hashable
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row as Row
 import qualified Data.Row.Aeson as Aeson
+import qualified Data.Row.Hashable as Hashable
 import qualified Data.Text
 import qualified Language.LSP.Protocol.Internal.Types.SymbolKind
 import qualified Language.LSP.Protocol.Internal.Types.SymbolTag
@@ -44,7 +46,7 @@ data WorkspaceSymbolClientCapabilities = WorkspaceSymbolClientCapabilities
   _resolveSupport :: (Maybe (Row.Rec ("properties" Row..== [Data.Text.Text] Row..+ Row.Empty)))
   }
   deriving stock (Show, Eq, Ord, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, Hashable)
 
 instance Aeson.ToJSON WorkspaceSymbolClientCapabilities where
   toJSON (WorkspaceSymbolClientCapabilities arg0 arg1 arg2 arg3) = Aeson.object $ concat $  ["dynamicRegistration" Language.LSP.Protocol.Types.Common..=? arg0

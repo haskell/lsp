@@ -6,9 +6,11 @@
 module Language.LSP.Protocol.Internal.Types.LogMessageParams where
 
 import Control.DeepSeq
+import Data.Hashable
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
+import qualified Data.Row.Hashable as Hashable
 import qualified Data.Text
 import qualified Language.LSP.Protocol.Internal.Types.MessageType
 import qualified Language.LSP.Protocol.Types.Common
@@ -27,7 +29,7 @@ data LogMessageParams = LogMessageParams
   _message :: Data.Text.Text
   }
   deriving stock (Show, Eq, Ord, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, Hashable)
 
 instance Aeson.ToJSON LogMessageParams where
   toJSON (LogMessageParams arg0 arg1) = Aeson.object $ concat $  [["type" Aeson..= arg0]

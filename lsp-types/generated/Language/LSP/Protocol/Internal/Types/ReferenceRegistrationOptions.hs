@@ -6,9 +6,11 @@
 module Language.LSP.Protocol.Internal.Types.ReferenceRegistrationOptions where
 
 import Control.DeepSeq
+import Data.Hashable
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
+import qualified Data.Row.Hashable as Hashable
 import qualified Language.LSP.Protocol.Internal.Types.DocumentSelector
 import qualified Language.LSP.Protocol.Types.Common
 
@@ -27,7 +29,7 @@ data ReferenceRegistrationOptions = ReferenceRegistrationOptions
   _workDoneProgress :: (Maybe Bool)
   }
   deriving stock (Show, Eq, Ord, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, Hashable)
 
 instance Aeson.ToJSON ReferenceRegistrationOptions where
   toJSON (ReferenceRegistrationOptions arg0 arg1) = Aeson.object $ concat $  [["documentSelector" Aeson..= arg0]

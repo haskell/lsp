@@ -6,9 +6,11 @@
 module Language.LSP.Protocol.Internal.Types.DocumentSelector where
 
 import Control.DeepSeq
+import Data.Hashable
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
+import qualified Data.Row.Hashable as Hashable
 import qualified Language.LSP.Protocol.Internal.Types.DocumentFilter
 
 {-|
@@ -21,4 +23,4 @@ The use of a string as a document filter is deprecated @since 3.16.0.
 newtype DocumentSelector = DocumentSelector [Language.LSP.Protocol.Internal.Types.DocumentFilter.DocumentFilter]
   deriving newtype (Aeson.ToJSON, Aeson.FromJSON)
   deriving stock (Show, Eq, Ord, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, Hashable)

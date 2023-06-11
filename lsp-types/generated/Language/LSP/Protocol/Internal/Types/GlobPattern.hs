@@ -6,9 +6,11 @@
 module Language.LSP.Protocol.Internal.Types.GlobPattern where
 
 import Control.DeepSeq
+import Data.Hashable
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
+import qualified Data.Row.Hashable as Hashable
 import qualified Language.LSP.Protocol.Internal.Types.Pattern
 import qualified Language.LSP.Protocol.Internal.Types.RelativePattern
 import qualified Language.LSP.Protocol.Types.Common
@@ -21,4 +23,4 @@ The glob pattern. Either a string pattern or a relative pattern.
 newtype GlobPattern = GlobPattern (Language.LSP.Protocol.Internal.Types.Pattern.Pattern Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.RelativePattern.RelativePattern)
   deriving newtype (Aeson.ToJSON, Aeson.FromJSON)
   deriving stock (Show, Eq, Ord, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, Hashable)

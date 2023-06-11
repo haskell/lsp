@@ -6,9 +6,11 @@
 module Language.LSP.Protocol.Internal.Types.TextDocumentPositionParams where
 
 import Control.DeepSeq
+import Data.Hashable
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
+import qualified Data.Row.Hashable as Hashable
 import qualified Language.LSP.Protocol.Internal.Types.Position
 import qualified Language.LSP.Protocol.Internal.Types.TextDocumentIdentifier
 import qualified Language.LSP.Protocol.Types.Common
@@ -28,7 +30,7 @@ data TextDocumentPositionParams = TextDocumentPositionParams
   _position :: Language.LSP.Protocol.Internal.Types.Position.Position
   }
   deriving stock (Show, Eq, Ord, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, Hashable)
 
 instance Aeson.ToJSON TextDocumentPositionParams where
   toJSON (TextDocumentPositionParams arg0 arg1) = Aeson.object $ concat $  [["textDocument" Aeson..= arg0]

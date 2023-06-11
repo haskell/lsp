@@ -6,9 +6,11 @@
 module Language.LSP.Protocol.Internal.Types.SemanticTokensDelta where
 
 import Control.DeepSeq
+import Data.Hashable
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
+import qualified Data.Row.Hashable as Hashable
 import qualified Data.Text
 import qualified Language.LSP.Protocol.Internal.Types.SemanticTokensEdit
 import qualified Language.LSP.Protocol.Types.Common
@@ -27,7 +29,7 @@ data SemanticTokensDelta = SemanticTokensDelta
   _edits :: [Language.LSP.Protocol.Internal.Types.SemanticTokensEdit.SemanticTokensEdit]
   }
   deriving stock (Show, Eq, Ord, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, Hashable)
 
 instance Aeson.ToJSON SemanticTokensDelta where
   toJSON (SemanticTokensDelta arg0 arg1) = Aeson.object $ concat $  ["resultId" Language.LSP.Protocol.Types.Common..=? arg0

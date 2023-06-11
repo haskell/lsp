@@ -6,9 +6,11 @@
 module Language.LSP.Protocol.Internal.Types.UnregistrationParams where
 
 import Control.DeepSeq
+import Data.Hashable
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
+import qualified Data.Row.Hashable as Hashable
 import qualified Language.LSP.Protocol.Internal.Types.Unregistration
 import qualified Language.LSP.Protocol.Types.Common
 
@@ -22,7 +24,7 @@ data UnregistrationParams = UnregistrationParams
   _unregisterations :: [Language.LSP.Protocol.Internal.Types.Unregistration.Unregistration]
   }
   deriving stock (Show, Eq, Ord, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, Hashable)
 
 instance Aeson.ToJSON UnregistrationParams where
   toJSON (UnregistrationParams arg0) = Aeson.object $ concat $  [["unregisterations" Aeson..= arg0]]

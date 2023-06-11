@@ -6,9 +6,11 @@
 module Language.LSP.Protocol.Internal.Types.RegistrationParams where
 
 import Control.DeepSeq
+import Data.Hashable
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
+import qualified Data.Row.Hashable as Hashable
 import qualified Language.LSP.Protocol.Internal.Types.Registration
 import qualified Language.LSP.Protocol.Types.Common
 
@@ -22,7 +24,7 @@ data RegistrationParams = RegistrationParams
   _registrations :: [Language.LSP.Protocol.Internal.Types.Registration.Registration]
   }
   deriving stock (Show, Eq, Ord, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, Hashable)
 
 instance Aeson.ToJSON RegistrationParams where
   toJSON (RegistrationParams arg0) = Aeson.object $ concat $  [["registrations" Aeson..= arg0]]

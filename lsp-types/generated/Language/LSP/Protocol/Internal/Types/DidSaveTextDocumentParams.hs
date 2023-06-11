@@ -6,9 +6,11 @@
 module Language.LSP.Protocol.Internal.Types.DidSaveTextDocumentParams where
 
 import Control.DeepSeq
+import Data.Hashable
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
+import qualified Data.Row.Hashable as Hashable
 import qualified Data.Text
 import qualified Language.LSP.Protocol.Internal.Types.TextDocumentIdentifier
 import qualified Language.LSP.Protocol.Types.Common
@@ -28,7 +30,7 @@ data DidSaveTextDocumentParams = DidSaveTextDocumentParams
   _text :: (Maybe Data.Text.Text)
   }
   deriving stock (Show, Eq, Ord, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, Hashable)
 
 instance Aeson.ToJSON DidSaveTextDocumentParams where
   toJSON (DidSaveTextDocumentParams arg0 arg1) = Aeson.object $ concat $  [["textDocument" Aeson..= arg0]

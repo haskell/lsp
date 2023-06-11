@@ -6,9 +6,11 @@
 module Language.LSP.Protocol.Internal.Types.TextDocumentSyncOptions where
 
 import Control.DeepSeq
+import Data.Hashable
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
+import qualified Data.Row.Hashable as Hashable
 import qualified Language.LSP.Protocol.Internal.Types.SaveOptions
 import qualified Language.LSP.Protocol.Internal.Types.TextDocumentSyncKind
 import qualified Language.LSP.Protocol.Types.Common
@@ -44,7 +46,7 @@ data TextDocumentSyncOptions = TextDocumentSyncOptions
   _save :: (Maybe (Bool Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.SaveOptions.SaveOptions))
   }
   deriving stock (Show, Eq, Ord, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, Hashable)
 
 instance Aeson.ToJSON TextDocumentSyncOptions where
   toJSON (TextDocumentSyncOptions arg0 arg1 arg2 arg3 arg4) = Aeson.object $ concat $  ["openClose" Language.LSP.Protocol.Types.Common..=? arg0

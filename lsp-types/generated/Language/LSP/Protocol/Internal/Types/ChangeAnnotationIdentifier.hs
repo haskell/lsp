@@ -6,9 +6,11 @@
 module Language.LSP.Protocol.Internal.Types.ChangeAnnotationIdentifier where
 
 import Control.DeepSeq
+import Data.Hashable
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
+import qualified Data.Row.Hashable as Hashable
 import qualified Data.Text
 
 {-|
@@ -20,4 +22,4 @@ newtype ChangeAnnotationIdentifier = ChangeAnnotationIdentifier Data.Text.Text
   , Aeson.ToJSONKey
   , Aeson.FromJSONKey )
   deriving stock (Show, Eq, Ord, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, Hashable)
