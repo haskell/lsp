@@ -51,6 +51,7 @@ jsonSpec = do
   -- DataTypesJSON
     prop "MarkedString"   (propertyJsonRoundtrip :: MarkedString -> Property)
     prop "MarkupContent"  (propertyJsonRoundtrip :: MarkupContent -> Property)
+    prop "TextDocumentContentChangeEvent"  (propertyJsonRoundtrip :: TextDocumentContentChangeEvent -> Property)
     prop "WatchedFiles"   (propertyJsonRoundtrip :: DidChangeWatchedFilesRegistrationOptions -> Property)
     prop "ResponseMessage Hover"
          (propertyJsonRoundtrip :: TResponseMessage 'Method_TextDocumentHover -> Property)
@@ -96,6 +97,7 @@ instance Arbitrary Null where
 
 instance (R.AllUniqueLabels r, R.Forall r Arbitrary) => Arbitrary (R.Rec r) where
   arbitrary = R.fromLabelsA @Arbitrary $ \_l -> arbitrary
+  shrink record = R.traverse @Arbitrary @[] shrink record
 
 deriving newtype instance Arbitrary MarkedString
 
@@ -124,6 +126,7 @@ deriving newtype instance Arbitrary GlobPattern
 
 instance Arbitrary Position where
   arbitrary = Position <$> arbitrary <*> arbitrary
+  shrink (Position s e) = [ Position s' e' | s' <- shrink s, e' <- shrink e ]
 
 instance Arbitrary Location where
   arbitrary = Location <$> arbitrary <*> arbitrary
@@ -182,3 +185,6 @@ instance Arbitrary WatchKind where
   arbitrary = oneof [pure WatchKind_Change, pure WatchKind_Create, pure WatchKind_Delete]
 
 -- ---------------------------------------------------------------------
+--
+instance Arbitrary TextDocumentContentChangeEvent where
+  arbitrary = TextDocumentContentChangeEvent <$> arbitrary
