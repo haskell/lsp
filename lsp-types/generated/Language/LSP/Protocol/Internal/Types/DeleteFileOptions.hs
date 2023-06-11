@@ -6,9 +6,11 @@
 module Language.LSP.Protocol.Internal.Types.DeleteFileOptions where
 
 import Control.DeepSeq
+import Data.Hashable
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
+import qualified Data.Row.Hashable as Hashable
 import qualified Language.LSP.Protocol.Types.Common
 
 {-|
@@ -25,7 +27,7 @@ data DeleteFileOptions = DeleteFileOptions
   _ignoreIfNotExists :: (Maybe Bool)
   }
   deriving stock (Show, Eq, Ord, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, Hashable)
 
 instance Aeson.ToJSON DeleteFileOptions where
   toJSON (DeleteFileOptions arg0 arg1) = Aeson.object $ concat $  ["recursive" Language.LSP.Protocol.Types.Common..=? arg0

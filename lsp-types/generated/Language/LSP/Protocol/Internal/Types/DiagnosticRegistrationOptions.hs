@@ -6,9 +6,11 @@
 module Language.LSP.Protocol.Internal.Types.DiagnosticRegistrationOptions where
 
 import Control.DeepSeq
+import Data.Hashable
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
+import qualified Data.Row.Hashable as Hashable
 import qualified Data.Text
 import qualified Language.LSP.Protocol.Internal.Types.DocumentSelector
 import qualified Language.LSP.Protocol.Types.Common
@@ -51,7 +53,7 @@ data DiagnosticRegistrationOptions = DiagnosticRegistrationOptions
   _id :: (Maybe Data.Text.Text)
   }
   deriving stock (Show, Eq, Ord, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, Hashable)
 
 instance Aeson.ToJSON DiagnosticRegistrationOptions where
   toJSON (DiagnosticRegistrationOptions arg0 arg1 arg2 arg3 arg4 arg5) = Aeson.object $ concat $  [["documentSelector" Aeson..= arg0]

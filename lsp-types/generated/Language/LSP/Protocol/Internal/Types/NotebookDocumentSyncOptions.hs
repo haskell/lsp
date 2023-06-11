@@ -6,10 +6,12 @@
 module Language.LSP.Protocol.Internal.Types.NotebookDocumentSyncOptions where
 
 import Control.DeepSeq
+import Data.Hashable
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row as Row
 import qualified Data.Row.Aeson as Aeson
+import qualified Data.Row.Hashable as Hashable
 import qualified Data.Text
 import qualified Language.LSP.Protocol.Internal.Types.NotebookDocumentFilter
 import qualified Language.LSP.Protocol.Types.Common
@@ -41,7 +43,7 @@ data NotebookDocumentSyncOptions = NotebookDocumentSyncOptions
   _save :: (Maybe Bool)
   }
   deriving stock (Show, Eq, Ord, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, Hashable)
 
 instance Aeson.ToJSON NotebookDocumentSyncOptions where
   toJSON (NotebookDocumentSyncOptions arg0 arg1) = Aeson.object $ concat $  [["notebookSelector" Aeson..= arg0]

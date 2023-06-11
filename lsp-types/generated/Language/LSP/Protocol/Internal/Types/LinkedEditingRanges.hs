@@ -6,9 +6,11 @@
 module Language.LSP.Protocol.Internal.Types.LinkedEditingRanges where
 
 import Control.DeepSeq
+import Data.Hashable
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
+import qualified Data.Row.Hashable as Hashable
 import qualified Data.Text
 import qualified Language.LSP.Protocol.Internal.Types.Range
 import qualified Language.LSP.Protocol.Types.Common
@@ -32,7 +34,7 @@ data LinkedEditingRanges = LinkedEditingRanges
   _wordPattern :: (Maybe Data.Text.Text)
   }
   deriving stock (Show, Eq, Ord, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, Hashable)
 
 instance Aeson.ToJSON LinkedEditingRanges where
   toJSON (LinkedEditingRanges arg0 arg1) = Aeson.object $ concat $  [["ranges" Aeson..= arg0]

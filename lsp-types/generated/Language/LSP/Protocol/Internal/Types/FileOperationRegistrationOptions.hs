@@ -6,9 +6,11 @@
 module Language.LSP.Protocol.Internal.Types.FileOperationRegistrationOptions where
 
 import Control.DeepSeq
+import Data.Hashable
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
+import qualified Data.Row.Hashable as Hashable
 import qualified Language.LSP.Protocol.Internal.Types.FileOperationFilter
 import qualified Language.LSP.Protocol.Types.Common
 
@@ -24,7 +26,7 @@ data FileOperationRegistrationOptions = FileOperationRegistrationOptions
   _filters :: [Language.LSP.Protocol.Internal.Types.FileOperationFilter.FileOperationFilter]
   }
   deriving stock (Show, Eq, Ord, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, Hashable)
 
 instance Aeson.ToJSON FileOperationRegistrationOptions where
   toJSON (FileOperationRegistrationOptions arg0) = Aeson.object $ concat $  [["filters" Aeson..= arg0]]

@@ -6,9 +6,11 @@
 module Language.LSP.Protocol.Internal.Types.CreateFilesParams where
 
 import Control.DeepSeq
+import Data.Hashable
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
+import qualified Data.Row.Hashable as Hashable
 import qualified Language.LSP.Protocol.Internal.Types.FileCreate
 import qualified Language.LSP.Protocol.Types.Common
 
@@ -25,7 +27,7 @@ data CreateFilesParams = CreateFilesParams
   _files :: [Language.LSP.Protocol.Internal.Types.FileCreate.FileCreate]
   }
   deriving stock (Show, Eq, Ord, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, Hashable)
 
 instance Aeson.ToJSON CreateFilesParams where
   toJSON (CreateFilesParams arg0) = Aeson.object $ concat $  [["files" Aeson..= arg0]]

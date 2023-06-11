@@ -6,9 +6,11 @@
 module Language.LSP.Protocol.Internal.Types.FormattingOptions where
 
 import Control.DeepSeq
+import Data.Hashable
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
+import qualified Data.Row.Hashable as Hashable
 import qualified Language.LSP.Protocol.Types.Common
 
 {-|
@@ -43,7 +45,7 @@ data FormattingOptions = FormattingOptions
   _trimFinalNewlines :: (Maybe Bool)
   }
   deriving stock (Show, Eq, Ord, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, Hashable)
 
 instance Aeson.ToJSON FormattingOptions where
   toJSON (FormattingOptions arg0 arg1 arg2 arg3 arg4) = Aeson.object $ concat $  [["tabSize" Aeson..= arg0]

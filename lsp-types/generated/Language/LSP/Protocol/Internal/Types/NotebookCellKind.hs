@@ -6,9 +6,11 @@
 module Language.LSP.Protocol.Internal.Types.NotebookCellKind where
 
 import Control.DeepSeq
+import Data.Hashable
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
+import qualified Data.Row.Hashable as Hashable
 import qualified Data.Set
 import qualified Data.String
 import qualified Language.LSP.Protocol.Types.Common
@@ -29,7 +31,7 @@ data NotebookCellKind =
   -}
   NotebookCellKind_Code
   deriving stock (Show, Eq, Ord, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, Hashable)
   deriving ( Aeson.ToJSON
   , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum NotebookCellKind Language.LSP.Protocol.Types.Common.UInt)
 

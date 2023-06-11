@@ -6,10 +6,12 @@
 module Language.LSP.Protocol.Internal.Types.NotebookDocument where
 
 import Control.DeepSeq
+import Data.Hashable
 import GHC.Generics
 import qualified Data.Aeson
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
+import qualified Data.Row.Hashable as Hashable
 import qualified Data.Text
 import qualified Language.LSP.Protocol.Internal.Types.NotebookCell
 import qualified Language.LSP.Protocol.Types.Common
@@ -47,7 +49,7 @@ data NotebookDocument = NotebookDocument
   _cells :: [Language.LSP.Protocol.Internal.Types.NotebookCell.NotebookCell]
   }
   deriving stock (Show, Eq, Ord, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, Hashable)
 
 instance Aeson.ToJSON NotebookDocument where
   toJSON (NotebookDocument arg0 arg1 arg2 arg3 arg4) = Aeson.object $ concat $  [["uri" Aeson..= arg0]

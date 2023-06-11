@@ -6,9 +6,11 @@
 module Language.LSP.Protocol.Internal.Types.TextDocumentEdit where
 
 import Control.DeepSeq
+import Data.Hashable
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
+import qualified Data.Row.Hashable as Hashable
 import qualified Language.LSP.Protocol.Internal.Types.AnnotatedTextEdit
 import qualified Language.LSP.Protocol.Internal.Types.OptionalVersionedTextDocumentIdentifier
 import qualified Language.LSP.Protocol.Internal.Types.TextEdit
@@ -34,7 +36,7 @@ data TextDocumentEdit = TextDocumentEdit
   _edits :: [(Language.LSP.Protocol.Internal.Types.TextEdit.TextEdit Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.AnnotatedTextEdit.AnnotatedTextEdit)]
   }
   deriving stock (Show, Eq, Ord, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, Hashable)
 
 instance Aeson.ToJSON TextDocumentEdit where
   toJSON (TextDocumentEdit arg0 arg1) = Aeson.object $ concat $  [["textDocument" Aeson..= arg0]

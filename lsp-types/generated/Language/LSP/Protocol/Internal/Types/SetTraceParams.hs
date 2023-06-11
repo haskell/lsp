@@ -6,9 +6,11 @@
 module Language.LSP.Protocol.Internal.Types.SetTraceParams where
 
 import Control.DeepSeq
+import Data.Hashable
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
+import qualified Data.Row.Hashable as Hashable
 import qualified Language.LSP.Protocol.Internal.Types.TraceValues
 import qualified Language.LSP.Protocol.Types.Common
 
@@ -22,7 +24,7 @@ data SetTraceParams = SetTraceParams
   _value :: Language.LSP.Protocol.Internal.Types.TraceValues.TraceValues
   }
   deriving stock (Show, Eq, Ord, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, Hashable)
 
 instance Aeson.ToJSON SetTraceParams where
   toJSON (SetTraceParams arg0) = Aeson.object $ concat $  [["value" Aeson..= arg0]]

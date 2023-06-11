@@ -76,7 +76,7 @@ instance FromJSON UInt where
 data a |? b = InL a
             | InR b
   deriving stock (Read, Show, Eq, Ord, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, Hashable)
 infixr |?
 
 -- | Prism for the left-hand side of an '(|?)'.
@@ -137,7 +137,7 @@ instance (FromJSON a, ToJSON a, FromJSON b, ToJSON b) => FromJSON (a |? b) where
 -- as distinct from an optional value of type @a@.
 data Null = Null
   deriving stock (Eq, Ord, Show, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, Hashable)
 
 instance ToJSON Null where
   toJSON Null = J.Null

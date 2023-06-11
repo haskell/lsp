@@ -60,7 +60,7 @@ toStockDerive :: [T.Text]
 toStockDerive = ["Show", "Eq", "Ord", "Generic"]
 
 toAnyclassDerive :: [T.Text]
-toAnyclassDerive = ["NFData"]
+toAnyclassDerive = ["NFData", "Hashable"]
 
 indentSize :: Int
 indentSize = 2
@@ -150,7 +150,8 @@ genFromMetaModel prefix dir mm = do
   let (symbolTable, structTable) = buildTables mm
   flip runReaderT (CodeGenEnv symbolTable structTable prefix dir) $ do
     structModuleNames <- traverse genStruct (structures mm)
-    aliasModuleNames <- traverse genAlias (typeAliases mm)
+    -- Don't even generate LSPAny, LSPObject, or LSPArry
+    aliasModuleNames <- traverse genAlias (filter (\TypeAlias{name} -> name `notElem` ["LSPAny", "LSPObject", "LSPArray"]) (typeAliases mm))
     enumModuleNames <- traverse genEnum (enumerations mm)
     methodModuleName <- genMethods (requests mm) (notifications mm)
     -- not the methods, we export them separately!
@@ -299,6 +300,7 @@ printStruct tn s@Structure{name, documentation, since, proposed, deprecated} = d
 
   ensureImport "GHC.Generics" Unqual
   ensureImport "Control.DeepSeq" Unqual
+  ensureImport "Data.Hashable" Unqual
   let derivDoc =
         let stockDeriv = "deriving stock" <+> tupled (fmap pretty toStockDerive)
             anyclassDeriv = "deriving anyclass" <+> tupled (fmap pretty toAnyclassDerive)
@@ -309,6 +311,7 @@ printStruct tn s@Structure{name, documentation, since, proposed, deprecated} = d
 
   ensureImport "Data.Aeson" (QualAs "Aeson")
   ensureImport "Data.Row.Aeson" (QualAs "Aeson")
+  ensureImport "Data.Row.Hashable" (QualAs "Hashable")
   matcherName <- entityName "Language.LSP.Protocol.Types.Common" ".=?"
   let toJsonD =
         let (unzip -> (args, pairEs)) = flip fmap (zip props [0..]) $ \(Property{name, optional}, i) ->
@@ -423,6 +426,7 @@ printEnum tn Enumeration{name, type_, values, supportsCustomValues, documentatio
 
   ensureImport "Data.Aeson" (QualAs "Aeson")
   ensureImport "Data.Row.Aeson" (QualAs "Aeson")
+  ensureImport "Data.Row.Hashable" (QualAs "Hashable")
 
   lspEnumN <- pretty <$> entityName "Language.LSP.Protocol.Types.LspEnum" "LspEnum"
   let knownValuesN = "knownValues"
@@ -437,6 +441,7 @@ printEnum tn Enumeration{name, type_, values, supportsCustomValues, documentatio
 
   ensureImport "GHC.Generics" Unqual
   ensureImport "Control.DeepSeq" Unqual
+  ensureImport "Data.Hashable" Unqual
   dataDoc <- multilineHaddock . pretty <$> mkDocumentation documentation since proposed
   let derivDoc =
         let
@@ -512,8 +517,10 @@ printAlias hsName TypeAlias{name, type_, documentation, since, proposed, depreca
 
   ensureImport "GHC.Generics" Unqual
   ensureImport "Control.DeepSeq" Unqual
+  ensureImport "Data.Hashable" Unqual
   ensureImport "Data.Aeson" (QualAs "Aeson")
   ensureImport "Data.Row.Aeson" (QualAs "Aeson")
+  ensureImport "Data.Row.Hashable" (QualAs "Hashable")
   -- In practice, it seems that only base types and aliases to base types get used as map keys, so deriving
   -- To/FromJSONKey for them seems to be enough
   let derivDoc =

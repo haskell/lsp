@@ -6,9 +6,11 @@
 module Language.LSP.Protocol.Internal.Types.RenameFile where
 
 import Control.DeepSeq
+import Data.Hashable
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
+import qualified Data.Row.Hashable as Hashable
 import qualified Language.LSP.Protocol.Internal.Types.ChangeAnnotationIdentifier
 import qualified Language.LSP.Protocol.Internal.Types.RenameFileOptions
 import qualified Language.LSP.Protocol.Types.Common
@@ -43,7 +45,7 @@ data RenameFile = RenameFile
   _options :: (Maybe Language.LSP.Protocol.Internal.Types.RenameFileOptions.RenameFileOptions)
   }
   deriving stock (Show, Eq, Ord, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, Hashable)
 
 instance Aeson.ToJSON RenameFile where
   toJSON (RenameFile arg0 arg1 arg2 arg3 arg4) = Aeson.object $ concat $  ["annotationId" Language.LSP.Protocol.Types.Common..=? arg0

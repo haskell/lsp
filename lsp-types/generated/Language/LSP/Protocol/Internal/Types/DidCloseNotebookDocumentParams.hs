@@ -6,9 +6,11 @@
 module Language.LSP.Protocol.Internal.Types.DidCloseNotebookDocumentParams where
 
 import Control.DeepSeq
+import Data.Hashable
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
+import qualified Data.Row.Hashable as Hashable
 import qualified Language.LSP.Protocol.Internal.Types.NotebookDocumentIdentifier
 import qualified Language.LSP.Protocol.Internal.Types.TextDocumentIdentifier
 import qualified Language.LSP.Protocol.Types.Common
@@ -30,7 +32,7 @@ data DidCloseNotebookDocumentParams = DidCloseNotebookDocumentParams
   _cellTextDocuments :: [Language.LSP.Protocol.Internal.Types.TextDocumentIdentifier.TextDocumentIdentifier]
   }
   deriving stock (Show, Eq, Ord, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, Hashable)
 
 instance Aeson.ToJSON DidCloseNotebookDocumentParams where
   toJSON (DidCloseNotebookDocumentParams arg0 arg1) = Aeson.object $ concat $  [["notebookDocument" Aeson..= arg0]
