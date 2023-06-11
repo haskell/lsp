@@ -418,7 +418,7 @@ createDoc file languageId contents = do
       watchHits :: FileSystemWatcher -> Bool
       watchHits (FileSystemWatcher (GlobPattern (InL (Pattern pattern))) kind) =
         -- If WatchKind is excluded, defaults to all true as per spec
-        fileMatches (T.unpack pattern) && createHits (fromMaybe WatchKind_Create kind)
+        fileMatches (T.unpack pattern) && containsCreate (fromMaybe WatchKind_Create kind)
       -- TODO: Relative patterns
       watchHits _ = False
 
@@ -427,9 +427,6 @@ createDoc file languageId contents = do
         where relOrAbs
                 | isAbsolute pattern = absFile
                 | otherwise = file
-
-      createHits WatchKind_Create = True
-      createHits _ = False
 
       regHits :: TRegistration Method_WorkspaceDidChangeWatchedFiles -> Bool
       regHits reg = foldl' (\acc w -> acc || watchHits w) False (reg ^. L.registerOptions . _Just . L.watchers)
