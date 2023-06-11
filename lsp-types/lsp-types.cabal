@@ -100,6 +100,7 @@ library
   exposed-modules:
     Data.IxMap
     Data.Row.Aeson
+    Data.Row.Hashable
     Language.LSP.Protocol.Capabilities
     Language.LSP.Protocol.Message
     Language.LSP.Protocol.Types
@@ -340,10 +341,7 @@ library
     Language.LSP.Protocol.Internal.Types.LocationLink
     Language.LSP.Protocol.Internal.Types.LogMessageParams
     Language.LSP.Protocol.Internal.Types.LogTraceParams
-    Language.LSP.Protocol.Internal.Types.LSPAny
-    Language.LSP.Protocol.Internal.Types.LSPArray
     Language.LSP.Protocol.Internal.Types.LSPErrorCodes
-    Language.LSP.Protocol.Internal.Types.LSPObject
     Language.LSP.Protocol.Internal.Types.MarkdownClientCapabilities
     Language.LSP.Protocol.Internal.Types.MarkedString
     Language.LSP.Protocol.Internal.Types.MarkupContent

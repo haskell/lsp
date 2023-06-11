@@ -6,9 +6,11 @@
 module Language.LSP.Protocol.Internal.Types.Hover where
 
 import Control.DeepSeq
+import Data.Hashable
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
+import qualified Data.Row.Hashable as Hashable
 import qualified Language.LSP.Protocol.Internal.Types.MarkedString
 import qualified Language.LSP.Protocol.Internal.Types.MarkupContent
 import qualified Language.LSP.Protocol.Internal.Types.Range
@@ -29,7 +31,7 @@ data Hover = Hover
   _range :: (Maybe Language.LSP.Protocol.Internal.Types.Range.Range)
   }
   deriving stock (Show, Eq, Ord, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, Hashable)
 
 instance Aeson.ToJSON Hover where
   toJSON (Hover arg0 arg1) = Aeson.object $ concat $  [["contents" Aeson..= arg0]

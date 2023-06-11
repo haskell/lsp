@@ -6,9 +6,11 @@
 module Language.LSP.Protocol.Internal.Types.PublishDiagnosticsParams where
 
 import Control.DeepSeq
+import Data.Hashable
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
+import qualified Data.Row.Hashable as Hashable
 import qualified Language.LSP.Protocol.Internal.Types.Diagnostic
 import qualified Language.LSP.Protocol.Types.Common
 import qualified Language.LSP.Protocol.Types.Uri
@@ -33,7 +35,7 @@ data PublishDiagnosticsParams = PublishDiagnosticsParams
   _diagnostics :: [Language.LSP.Protocol.Internal.Types.Diagnostic.Diagnostic]
   }
   deriving stock (Show, Eq, Ord, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, Hashable)
 
 instance Aeson.ToJSON PublishDiagnosticsParams where
   toJSON (PublishDiagnosticsParams arg0 arg1 arg2) = Aeson.object $ concat $  [["uri" Aeson..= arg0]

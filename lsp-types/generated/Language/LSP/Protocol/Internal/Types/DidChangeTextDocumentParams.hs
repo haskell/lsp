@@ -6,9 +6,11 @@
 module Language.LSP.Protocol.Internal.Types.DidChangeTextDocumentParams where
 
 import Control.DeepSeq
+import Data.Hashable
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
+import qualified Data.Row.Hashable as Hashable
 import qualified Language.LSP.Protocol.Internal.Types.TextDocumentContentChangeEvent
 import qualified Language.LSP.Protocol.Internal.Types.VersionedTextDocumentIdentifier
 import qualified Language.LSP.Protocol.Types.Common
@@ -39,7 +41,7 @@ data DidChangeTextDocumentParams = DidChangeTextDocumentParams
   _contentChanges :: [Language.LSP.Protocol.Internal.Types.TextDocumentContentChangeEvent.TextDocumentContentChangeEvent]
   }
   deriving stock (Show, Eq, Ord, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, Hashable)
 
 instance Aeson.ToJSON DidChangeTextDocumentParams where
   toJSON (DidChangeTextDocumentParams arg0 arg1) = Aeson.object $ concat $  [["textDocument" Aeson..= arg0]

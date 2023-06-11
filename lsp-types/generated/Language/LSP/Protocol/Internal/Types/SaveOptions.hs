@@ -6,9 +6,11 @@
 module Language.LSP.Protocol.Internal.Types.SaveOptions where
 
 import Control.DeepSeq
+import Data.Hashable
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
+import qualified Data.Row.Hashable as Hashable
 import qualified Language.LSP.Protocol.Types.Common
 
 {-|
@@ -21,7 +23,7 @@ data SaveOptions = SaveOptions
   _includeText :: (Maybe Bool)
   }
   deriving stock (Show, Eq, Ord, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, Hashable)
 
 instance Aeson.ToJSON SaveOptions where
   toJSON (SaveOptions arg0) = Aeson.object $ concat $  ["includeText" Language.LSP.Protocol.Types.Common..=? arg0]

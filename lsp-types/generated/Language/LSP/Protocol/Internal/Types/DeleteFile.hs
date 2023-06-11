@@ -6,9 +6,11 @@
 module Language.LSP.Protocol.Internal.Types.DeleteFile where
 
 import Control.DeepSeq
+import Data.Hashable
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
+import qualified Data.Row.Hashable as Hashable
 import qualified Language.LSP.Protocol.Internal.Types.ChangeAnnotationIdentifier
 import qualified Language.LSP.Protocol.Internal.Types.DeleteFileOptions
 import qualified Language.LSP.Protocol.Types.Common
@@ -39,7 +41,7 @@ data DeleteFile = DeleteFile
   _options :: (Maybe Language.LSP.Protocol.Internal.Types.DeleteFileOptions.DeleteFileOptions)
   }
   deriving stock (Show, Eq, Ord, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, Hashable)
 
 instance Aeson.ToJSON DeleteFile where
   toJSON (DeleteFile arg0 arg1 arg2 arg3) = Aeson.object $ concat $  ["annotationId" Language.LSP.Protocol.Types.Common..=? arg0

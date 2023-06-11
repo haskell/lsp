@@ -199,10 +199,7 @@ import Language.LSP.Protocol.Internal.Types.InlineValueWorkspaceClientCapabiliti
 import Language.LSP.Protocol.Internal.Types.InsertReplaceEdit as Export
 import Language.LSP.Protocol.Internal.Types.InsertTextFormat as Export
 import Language.LSP.Protocol.Internal.Types.InsertTextMode as Export
-import Language.LSP.Protocol.Internal.Types.LSPAny as Export
-import Language.LSP.Protocol.Internal.Types.LSPArray as Export
 import Language.LSP.Protocol.Internal.Types.LSPErrorCodes as Export
-import Language.LSP.Protocol.Internal.Types.LSPObject as Export
 import Language.LSP.Protocol.Internal.Types.LinkedEditingRangeClientCapabilities as Export
 import Language.LSP.Protocol.Internal.Types.LinkedEditingRangeOptions as Export
 import Language.LSP.Protocol.Internal.Types.LinkedEditingRangeParams as Export

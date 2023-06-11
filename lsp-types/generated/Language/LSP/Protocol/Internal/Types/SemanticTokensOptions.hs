@@ -6,10 +6,12 @@
 module Language.LSP.Protocol.Internal.Types.SemanticTokensOptions where
 
 import Control.DeepSeq
+import Data.Hashable
 import GHC.Generics
 import qualified Data.Aeson as Aeson
 import qualified Data.Row as Row
 import qualified Data.Row.Aeson as Aeson
+import qualified Data.Row.Hashable as Hashable
 import qualified Language.LSP.Protocol.Internal.Types.SemanticTokensLegend
 import qualified Language.LSP.Protocol.Types.Common
 
@@ -36,7 +38,7 @@ data SemanticTokensOptions = SemanticTokensOptions
   _full :: (Maybe (Bool Language.LSP.Protocol.Types.Common.|? (Row.Rec ("delta" Row..== (Maybe Bool) Row..+ Row.Empty))))
   }
   deriving stock (Show, Eq, Ord, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, Hashable)
 
 instance Aeson.ToJSON SemanticTokensOptions where
   toJSON (SemanticTokensOptions arg0 arg1 arg2 arg3) = Aeson.object $ concat $  ["workDoneProgress" Language.LSP.Protocol.Types.Common..=? arg0
