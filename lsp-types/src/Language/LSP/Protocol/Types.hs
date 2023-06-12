@@ -20,6 +20,8 @@ module Language.LSP.Protocol.Types (
   , module Progress
   -- ** Semantic tokens
   , module SemanticTokens
+  -- ** WatchKinds
+  , module WatchKinds
   -- * Main LSP types and functions
   , module Generated
   -- ** Orphan instances for the generated types
@@ -38,3 +40,4 @@ import Language.LSP.Protocol.Types.Uri as Uri
 import Language.LSP.Protocol.Types.Uri.OsPath as Uri
 import Language.LSP.Protocol.Types.Edit as Edits
 import Language.LSP.Protocol.Types.Orphans as Orphans
+import Language.LSP.Protocol.Types.WatchKinds as WatchKinds
