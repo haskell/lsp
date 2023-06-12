@@ -71,6 +71,7 @@ library
     , base              >=4.11    && <5
     , binary
     , containers
+    , data-default
     , deepseq
     , Diff              >=0.2
     , dlist
@@ -122,6 +123,7 @@ library
     Language.LSP.Protocol.Types.Location
     Language.LSP.Protocol.Types.LspEnum
     Language.LSP.Protocol.Types.MarkupContent
+    Language.LSP.Protocol.Types.Orphans
     Language.LSP.Protocol.Types.Progress
     Language.LSP.Protocol.Types.SemanticTokens
     Language.LSP.Protocol.Types.Singletons
