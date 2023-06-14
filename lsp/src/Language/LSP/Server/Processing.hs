@@ -253,15 +253,20 @@ inferServerCapabilities clientCaps o h =
       | otherwise = Nothing
 
     clientSupportsCodeActionKinds = isJust $
-      clientCaps ^? L.textDocument . _Just . L.codeAction . _Just . L.codeActionLiteralSupport
+      clientCaps ^? L.textDocument . _Just . L.codeAction . _Just . L.codeActionLiteralSupport . _Just
 
     codeActionProvider
-      | clientSupportsCodeActionKinds
-      , supported_b SMethod_TextDocumentCodeAction = Just $ case optCodeActionKinds o of
-          Just ks -> InR $ CodeActionOptions Nothing (Just ks) (supported SMethod_CodeLensResolve)
-          Nothing -> InL True
-      | supported_b SMethod_TextDocumentCodeAction = Just (InL True)
+      | supported_b SMethod_TextDocumentCodeAction = Just $ InR $
+          CodeActionOptions {
+            _workDoneProgress = Nothing
+           , _codeActionKinds = codeActionKinds (optCodeActionKinds o)
+           , _resolveProvider = supported SMethod_CodeActionResolve
+          }
       | otherwise = Just (InL False)
+
+    codeActionKinds (Just ks)
+      | clientSupportsCodeActionKinds = Just ks
+    codeActionKinds _ = Nothing
 
     signatureHelpProvider
       | supported_b SMethod_TextDocumentSignatureHelp = Just $
