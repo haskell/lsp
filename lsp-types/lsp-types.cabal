@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               lsp-types
-version:            2.0.0.0
+version:            2.0.0.1
 synopsis:
   Haskell library for the Microsoft Language Server Protocol, data types
 
@@ -19,6 +19,7 @@ build-type:         Simple
 extra-source-files:
   ChangeLog.md
   README.md
+  metaModel.json
 
 source-repository head
   type:     git
