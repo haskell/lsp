@@ -24,7 +24,6 @@ import qualified Language.LSP.Protocol.Internal.Types.MarkupContent
 import qualified Language.LSP.Protocol.Internal.Types.TextEdit
 import qualified Language.LSP.Protocol.Types.Common
 
-{-# DEPRECATED _deprecated "Use `tags` instead." #-}
 {-|
 A completion item represents a text snippet that is
 proposed to complete text that is being typed.

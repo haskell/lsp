@@ -20,8 +20,6 @@ import qualified Language.LSP.Protocol.Internal.Types.TraceValues
 import qualified Language.LSP.Protocol.Types.Common
 import qualified Language.LSP.Protocol.Types.Uri
 
-{-# DEPRECATED _rootPath "in favour of rootUri." #-}
-{-# DEPRECATED _rootUri "in favour of workspaceFolders." #-}
 {-|
 The initialize parameters
 -}

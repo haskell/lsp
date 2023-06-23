@@ -295,8 +295,12 @@ printStruct tn s@Structure{name, documentation, since, proposed, deprecated} = d
       propDoc <- multilineHaddock . pretty <$> mkDocumentation documentation since proposed
       pure $ hardvcat [propDoc, pretty n <+> "::" <+> mty]
 
-  -- Annoyingly, this won't deprecate the lens, which is defined somewhere else entirely. Unclear what to do about that.
-  let deprecations = optDeprecated tn deprecated ++ (flip concatMap props $ \Property{name, deprecated} -> optDeprecated (makeFieldName name) deprecated)
+  -- We do *not* deprecate fields. We can't really represent this properly: typically a deprecated field
+  -- is optional, and the "correct" thing to do is to omit it. But in our representaiton that means passing
+  -- Nothing as the value, which counts as "using" the field. So there is no way for users to avoid the
+  -- deprecation warning, which is silly. To do this properly we'd need to do something clever with
+  -- pattern synonyms maybe?
+  let deprecations = optDeprecated tn deprecated
 
   ensureImport "GHC.Generics" Unqual
   ensureImport "Control.DeepSeq" Unqual

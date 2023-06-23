@@ -17,7 +17,6 @@ import qualified Language.LSP.Protocol.Internal.Types.SymbolKind
 import qualified Language.LSP.Protocol.Internal.Types.SymbolTag
 import qualified Language.LSP.Protocol.Types.Common
 
-{-# DEPRECATED _deprecated "Use tags instead" #-}
 {-|
 Represents programming constructs like variables, classes, interfaces etc.
 that appear in a document. Document symbols can be hierarchical and they
