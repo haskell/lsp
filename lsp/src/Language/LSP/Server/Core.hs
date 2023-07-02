@@ -294,10 +294,12 @@ data ServerDefinition config = forall m a.
       -- language server implementation the chance to create any processes or
       -- start new threads that may be necessary for the server lifecycle. It can
       -- also return an error in the initialization if necessary.
-    , staticHandlers :: Handlers m
+    , staticHandlers :: ClientCapabilities -> Handlers m
       -- ^ Handlers for any methods you want to statically support.
       -- The handlers here cannot be unregistered during the server's lifetime
       -- and will be registered statically in the initialize request.
+      -- The handlers provided can depend on the client capabilities, which
+      -- are static across the lifetime of the server.
     , interpretHandler :: a -> (m <~> IO)
       -- ^ How to run the handlers in your own monad of choice, @m@.
       -- It is passed the result of 'doInitialize', so typically you will want
