@@ -17,7 +17,6 @@ import qualified Language.LSP.Protocol.Internal.Types.SymbolKind
 import qualified Language.LSP.Protocol.Internal.Types.SymbolTag
 import qualified Language.LSP.Protocol.Types.Common
 
-{-# DEPRECATED _deprecated "Use tags instead" #-}
 {-|
 Represents information about programming constructs like variables, classes,
 interfaces etc.

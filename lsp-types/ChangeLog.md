@@ -1,5 +1,13 @@
 # Revision history for lsp-types
 
+## 2.0.0.2
+
+* Removed deprecation pragmas from fields, as these cannot currently be avoided.
+
+## 2.0.0.1
+
+* Fixed missing `extra-source-files` for `metamodel.json`.
+
 ## 2.0.0.0
 
 * Breaking change: major restructure to generate types and methods from the LSP metamodel.
