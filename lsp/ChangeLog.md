@@ -1,5 +1,9 @@
 # Revision history for lsp
 
+## 2.0.0.1
+
+* Fix handling of optional methods.
+
 ## 2.0.0.0
 
 * Support `lsp-types-2.0.0.0`.
