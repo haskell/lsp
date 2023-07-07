@@ -33,7 +33,7 @@ import           Unsafe.Coerce
 -- | Is this an "optional" method which servers and clients are allowed to ignore?
 isOptionalMethod :: SomeMethod -> Bool
 -- See https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#dollarRequests
-isOptionalMethod m = "$" `isPrefixOf` someMethodToMethodString m
+isOptionalMethod m = "$/" `isPrefixOf` someMethodToMethodString m
 
 deriving stock instance Show SomeMethod
 instance Eq SomeMethod where
