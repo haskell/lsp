@@ -69,12 +69,14 @@ module Language.LSP.Test
   , executeCommand
   -- ** Code Actions
   , getCodeActions
+  , getAndResolveCodeActions
   , getAllCodeActions
   , executeCodeAction
   , resolveCodeAction
   , resolveAndExecuteCodeAction
   -- ** Completions
   , getCompletions
+  , getAndResolveCompletions
   -- ** References
   , getReferences
   -- ** Definitions
@@ -95,6 +97,7 @@ module Language.LSP.Test
   , applyEdit
   -- ** Code lenses
   , getCodeLenses
+  , getAndResolveCodeLenses
   , resolveCodeLens
   -- ** Call hierarchy
   , prepareCallHierarchy
@@ -533,6 +536,17 @@ getCodeActions doc range = do
     Right (InR _) -> return []
     Left error -> throw (UnexpectedResponseError (SomeLspId $ fromJust $ rsp ^. L.id) error)
 
+-- | Returns the Returns the code actions in the specified range, resolving any with 
+-- a non empty _data_ field.
+getAndResolveCodeActions :: TextDocumentIdentifier -> Range -> Session [Command |? CodeAction]
+getAndResolveCodeActions doc range = do
+  items <- getCodeActions doc range
+  forM items leaveCommandResolveCodeAction
+  where leaveCommandResolveCodeAction l@(InL _) = pure l
+        leaveCommandResolveCodeAction (InR r) | isJust (r ^. L.data_) = 
+          InR <$> resolveCodeAction r
+        leaveCommandResolveCodeAction r@(InR _) = pure r
+
 -- | Returns all the code actions in a document by
 -- querying the code actions at each of the current
 -- diagnostics' positions.
@@ -667,6 +681,21 @@ getCompletions doc pos = do
     InR (InL c) -> return $ c ^. L.items
     InR (InR _) -> return []
 
+-- | Returns the completions for the position in the document, resolving any with 
+-- a non empty _data_ field.
+getAndResolveCompletions :: TextDocumentIdentifier -> Position -> Session [CompletionItem]
+getAndResolveCompletions doc pos = do
+  items <- getCompletions doc pos
+  forM items (\item -> if isJust (item ^. L.data_) then resolveCompletion item else pure item)
+
+-- |Resolves the provided completion item.
+resolveCompletion :: CompletionItem -> Session CompletionItem
+resolveCompletion ci = do
+  rsp <- request SMethod_CompletionItemResolve ci
+  case rsp ^. L.result of
+    Right ci -> return ci
+    Left error -> throw (UnexpectedResponseError (SomeLspId $ fromJust $ rsp ^. L.id) error)
+
 -- | Returns the references for the position in the document.
 getReferences :: TextDocumentIdentifier -- ^ The document to lookup in.
               -> Position -- ^ The position to lookup.
@@ -767,6 +796,13 @@ getCodeLenses :: TextDocumentIdentifier -> Session [CodeLens]
 getCodeLenses tId = do
     rsp <- request SMethod_TextDocumentCodeLens (CodeLensParams Nothing Nothing tId)
     pure $ absorbNull $ getResponseResult rsp
+
+-- | RReturns the code lenses for the specified document, resolving any with 
+-- a non empty _data_ field.
+getAndResolveCodeLenses :: TextDocumentIdentifier -> Session [CodeLens]
+getAndResolveCodeLenses tId = do
+    codeLenses <- getCodeLenses tId
+    forM codeLenses (\codeLens -> if isJust (codeLens ^. L.data_) then resolveCodeLens codeLens else pure codeLens)
 
 -- |Resolves the provided code lens.
 resolveCodeLens :: CodeLens -> Session CodeLens

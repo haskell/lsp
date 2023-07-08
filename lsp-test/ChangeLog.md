@@ -2,7 +2,7 @@
 
 ## HEAD
 
-* Adds `resolveCodeAction`, `resolveCodeLens` and `executeAndResolveCodeAction` functions to resolve code lens and code actions 
+* Adds helper functions to resolve code lens, code actions, and completion items.
 
 ## 0.15.0.0
 
