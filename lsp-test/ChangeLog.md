@@ -1,5 +1,9 @@
 # Revision history for lsp-test
 
+## HEAD
+
+* Adds `resolveCodeAction`, `resolveCodeLens` and `executeAndResolveCodeAction` functions to resolve code lens and code actions 
+
 ## 0.15.0.0
 
 * Support `lsp-types-2.0.0.0` and `lsp-2.0.0.0`.

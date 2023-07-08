@@ -71,6 +71,8 @@ module Language.LSP.Test
   , getCodeActions
   , getAllCodeActions
   , executeCodeAction
+  , resolveCodeAction
+  , resolveAndExecuteCodeAction
   -- ** Completions
   , getCompletions
   -- ** References
@@ -93,6 +95,7 @@ module Language.LSP.Test
   , applyEdit
   -- ** Code lenses
   , getCodeLenses
+  , resolveCodeLens
   -- ** Call hierarchy
   , prepareCallHierarchy
   , incomingCalls
@@ -605,6 +608,22 @@ executeCodeAction action = do
           let req = TRequestMessage "" (IdInt 0) SMethod_WorkspaceApplyEdit (ApplyWorkspaceEditParams Nothing e)
             in updateState (FromServerMess SMethod_WorkspaceApplyEdit req)
 
+-- |Resolves the provided code action.
+resolveCodeAction :: CodeAction -> Session CodeAction
+resolveCodeAction ca = do
+  rsp <- request SMethod_CodeActionResolve ca
+  case rsp ^. L.result of
+    Right ca -> return ca
+    Left error -> throw (UnexpectedResponseError (SomeLspId $ fromJust $ rsp ^. L.id) error)
+
+-- |If a code action contains a _data_ field, resolves, the code action, then 
+-- executes it. Otherwise, just executes it.
+resolveAndExecuteCodeAction :: CodeAction -> Session ()
+resolveAndExecuteCodeAction ca@CodeAction{_data_=Just _} = do
+  caRsp <- resolveCodeAction ca
+  executeCodeAction caRsp
+resolveAndExecuteCodeAction ca = executeCodeAction ca
+
 -- | Adds the current version to the document, as tracked by the session.
 getVersionedDoc :: TextDocumentIdentifier -> Session VersionedTextDocumentIdentifier
 getVersionedDoc (TextDocumentIdentifier uri) = do
@@ -748,6 +767,14 @@ getCodeLenses :: TextDocumentIdentifier -> Session [CodeLens]
 getCodeLenses tId = do
     rsp <- request SMethod_TextDocumentCodeLens (CodeLensParams Nothing Nothing tId)
     pure $ absorbNull $ getResponseResult rsp
+
+-- |Resolves the provided code lens.
+resolveCodeLens :: CodeLens -> Session CodeLens
+resolveCodeLens cl = do
+  rsp <- request SMethod_CodeLensResolve cl
+  case rsp ^. L.result of
+    Right cl -> return cl
+    Left error -> throw (UnexpectedResponseError (SomeLspId $ fromJust $ rsp ^. L.id) error)
 
 -- | Pass a param and return the response from `prepareCallHierarchy`
 prepareCallHierarchy :: CallHierarchyPrepareParams -> Session [CallHierarchyItem]
