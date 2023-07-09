@@ -1,6 +1,6 @@
 cabal-version:      2.2
 name:               lsp
-version:            2.0.0.0
+version:            2.0.0.1
 synopsis:           Haskell library for the Microsoft Language Server Protocol
 description:
   An implementation of the types, and basic message server to
@@ -63,7 +63,7 @@ library
     , filepath
     , hashable
     , lens                  >=4.15.2
-    , lsp-types             ^>=2.0
+    , lsp-types             ^>=2.0.1
     , mtl                   <2.4
     , prettyprinter
     , random

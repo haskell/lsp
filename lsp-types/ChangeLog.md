@@ -1,8 +1,9 @@
 # Revision history for lsp-types
 
-## 2.0.0.2
+## 2.0.1.0
 
 * Removed deprecation pragmas from fields, as these cannot currently be avoided.
+* Added `isOptionalMethod`, that checks whether a method is optional according to the spec.
 
 ## 2.0.0.1
 

@@ -404,11 +404,8 @@ handle' logger mAction m msg = do
     -- See https://microsoft.github.io/language-server-protocol/specifications/specification-current/#-notifications-and-requests.
     reportMissingHandler :: m ()
     reportMissingHandler =
-      let optional = isOptionalNotification m
+      let optional = isOptionalMethod (SomeMethod m)
       in logger <& MissingHandler optional m `WithSeverity` if optional then Warning else Error
-    isOptionalNotification (SMethod_CustomMethod p)
-      | "$/" `T.isPrefixOf` T.pack (symbolVal p) = True
-    isOptionalNotification _  = False
 
 progressCancelHandler :: (m ~ LspM config) => LogAction m (WithSeverity LspProcessingLog) -> TMessage Method_WindowWorkDoneProgressCancel -> m ()
 progressCancelHandler logger (TNotificationMessage _ _ (WorkDoneProgressCancelParams tid)) = do
