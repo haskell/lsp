@@ -70,7 +70,7 @@ main :: IO Int
 main = runServer $ ServerDefinition
   { onConfigurationChange = const $ pure $ Right ()
   , doInitialize = \env _req -> pure $ Right env
-  , staticHandlers = handlers
+  , staticHandlers = \_caps -> handlers
   , interpretHandler = \env -> Iso (runLspT env) liftIO
   , options = defaultOptions
   }

@@ -96,7 +96,7 @@ run = flip E.catches handlers $ do
             J.Success cfg -> Right cfg
       , doInitialize = \env _ -> forkIO (reactor stderrLogger rin) >> pure (Right env)
       -- Handlers log to both the client and stderr
-      , staticHandlers = lspHandlers dualLogger rin
+      , staticHandlers = \_caps -> lspHandlers dualLogger rin
       , interpretHandler = \env -> Iso (runLspT env) liftIO
       , options = lspOptions
       }

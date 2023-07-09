@@ -126,6 +126,7 @@ initializeRequestHandler ServerDefinition{..} vfs sendFunc req = do
     let p = req ^. L.params
         rootDir = getFirst $ foldMap First [ p ^? L.rootUri . _L >>= uriToFilePath
                                            , p ^? L.rootPath . _Just . _L <&> T.unpack ]
+        clientCaps = (p ^. L.capabilities)
 
     let initialWfs = case p ^. L.workspaceFolders of
           Just (InL xs) -> xs
@@ -152,11 +153,11 @@ initializeRequestHandler ServerDefinition{..} vfs sendFunc req = do
 
     -- Call the 'duringInitialization' callback to let the server kick stuff up
     let env = LanguageContextEnv handlers onConfigurationChange sendFunc stateVars (p ^. L.capabilities) rootDir
-        handlers = transmuteHandlers interpreter staticHandlers
+        handlers = transmuteHandlers interpreter (staticHandlers clientCaps)
         interpreter = interpretHandler initializationResult
     initializationResult <- ExceptT $ doInitialize env req
 
-    let serverCaps = inferServerCapabilities (p ^. L.capabilities) options handlers
+    let serverCaps = inferServerCapabilities clientCaps options handlers
     liftIO $ sendResp $ makeResponseMessage (req ^. L.id) (InitializeResult serverCaps (optServerInfo options))
     pure env
   where
