@@ -536,7 +536,7 @@ getCodeActions doc range = do
     Right (InR _) -> return []
     Left error -> throw (UnexpectedResponseError (SomeLspId $ fromJust $ rsp ^. L.id) error)
 
--- | Returns the Returns the code actions in the specified range, resolving any with 
+-- | Returns the code actions in the specified range, resolving any with 
 -- a non empty _data_ field.
 getAndResolveCodeActions :: TextDocumentIdentifier -> Range -> Session [Command |? CodeAction]
 getAndResolveCodeActions doc range = do
