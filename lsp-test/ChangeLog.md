@@ -1,6 +1,6 @@
 # Revision history for lsp-test
 
-## HEAD
+## 0.15.0.1
 
 * Adds helper functions to resolve code lens, code actions, and completion items.
 

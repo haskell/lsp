@@ -142,6 +142,7 @@ import System.FilePath
 import System.Process (ProcessHandle, CreateProcess)
 import qualified System.FilePath.Glob as Glob
 import Control.Monad.State (execState)
+import Data.Traversable (for)
 
 -- | Starts a new session.
 --
