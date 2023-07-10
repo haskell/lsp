@@ -542,7 +542,7 @@ getCodeActions doc range = do
 getAndResolveCodeActions :: TextDocumentIdentifier -> Range -> Session [Command |? CodeAction]
 getAndResolveCodeActions doc range = do
   items <- getCodeActions doc range
-  for items \case 
+  for items $ \case 
     l@(InL _) -> pure l
     (InR r) | isJust (r ^. L.data_) ->  InR <$> resolveCodeAction r
     r@(InR _) -> pure r
