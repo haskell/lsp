@@ -541,11 +541,10 @@ getCodeActions doc range = do
 getAndResolveCodeActions :: TextDocumentIdentifier -> Range -> Session [Command |? CodeAction]
 getAndResolveCodeActions doc range = do
   items <- getCodeActions doc range
-  forM items leaveCommandResolveCodeAction
-  where leaveCommandResolveCodeAction l@(InL _) = pure l
-        leaveCommandResolveCodeAction (InR r) | isJust (r ^. L.data_) = 
-          InR <$> resolveCodeAction r
-        leaveCommandResolveCodeAction r@(InR _) = pure r
+  for items \case 
+    l@(InL _) -> pure l
+    (InR r) | isJust (r ^. L.data_) ->  InR <$> resolveCodeAction r
+    r@(InR _) = pure r
 
 -- | Returns all the code actions in a document by
 -- querying the code actions at each of the current
@@ -628,9 +627,9 @@ resolveCodeAction ca = do
   rsp <- request SMethod_CodeActionResolve ca
   case rsp ^. L.result of
     Right ca -> return ca
-    Left error -> throw (UnexpectedResponseError (SomeLspId $ fromJust $ rsp ^. L.id) error)
+    Left er -> throw (UnexpectedResponseError (SomeLspId $ fromJust $ rsp ^. L.id) er)
 
--- |If a code action contains a _data_ field, resolves, the code action, then 
+-- |If a code action contains a _data_ field: resolves the code action, then 
 -- executes it. Otherwise, just executes it.
 resolveAndExecuteCodeAction :: CodeAction -> Session ()
 resolveAndExecuteCodeAction ca@CodeAction{_data_=Just _} = do
@@ -686,7 +685,7 @@ getCompletions doc pos = do
 getAndResolveCompletions :: TextDocumentIdentifier -> Position -> Session [CompletionItem]
 getAndResolveCompletions doc pos = do
   items <- getCompletions doc pos
-  forM items (\item -> if isJust (item ^. L.data_) then resolveCompletion item else pure item)
+  for items $ \item -> if isJust (item ^. L.data_) then resolveCompletion item else pure item
 
 -- |Resolves the provided completion item.
 resolveCompletion :: CompletionItem -> Session CompletionItem
@@ -797,12 +796,12 @@ getCodeLenses tId = do
     rsp <- request SMethod_TextDocumentCodeLens (CodeLensParams Nothing Nothing tId)
     pure $ absorbNull $ getResponseResult rsp
 
--- | RReturns the code lenses for the specified document, resolving any with 
+-- | Returns the code lenses for the specified document, resolving any with 
 -- a non empty _data_ field.
 getAndResolveCodeLenses :: TextDocumentIdentifier -> Session [CodeLens]
 getAndResolveCodeLenses tId = do
     codeLenses <- getCodeLenses tId
-    forM codeLenses (\codeLens -> if isJust (codeLens ^. L.data_) then resolveCodeLens codeLens else pure codeLens)
+    for codeLenses $ \codeLens -> if isJust (codeLens ^. L.data_) then resolveCodeLens codeLens else pure codeLens
 
 -- |Resolves the provided code lens.
 resolveCodeLens :: CodeLens -> Session CodeLens
