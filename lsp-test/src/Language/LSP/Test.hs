@@ -7,6 +7,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE LambdaCase #-}
 
 {-|
 Module      : Language.LSP.Test
@@ -544,7 +545,7 @@ getAndResolveCodeActions doc range = do
   for items \case 
     l@(InL _) -> pure l
     (InR r) | isJust (r ^. L.data_) ->  InR <$> resolveCodeAction r
-    r@(InR _) = pure r
+    r@(InR _) -> pure r
 
 -- | Returns all the code actions in a document by
 -- querying the code actions at each of the current
