@@ -6,7 +6,7 @@ packages:
 package lsp
   flags: +demo
 
-index-state: 2023-05-18T00:00:00Z
+index-state: 2023-07-09T00:00:00Z
 
 tests: True
 benchmarks: True
