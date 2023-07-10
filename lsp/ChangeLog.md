@@ -1,5 +1,13 @@
 # Revision history for lsp
 
+## 2.1.0.0
+
+* Fix handling of optional methods.
+* `staticHandlers` now takes the client capabilities as an argument. 
+  These are static across the lifecycle of the server, so this allows
+  a server to decide at construction e.g. whether to provide handlers
+  for resolve methods depending on whether the client supports it.
+
 ## 2.0.0.0
 
 * Support `lsp-types-2.0.0.0`.

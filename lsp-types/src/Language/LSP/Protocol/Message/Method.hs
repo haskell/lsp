@@ -14,6 +14,7 @@ module Language.LSP.Protocol.Message.Method where
 
 import           Data.Aeson.Types
 import           Data.Function                      (on)
+import           Data.List                          (isPrefixOf)
 import           Data.GADT.Compare
 import           Data.Proxy
 import           Data.Type.Equality
@@ -28,6 +29,11 @@ import           Unsafe.Coerce
 ---------------
 -- SomeMethod
 ---------------
+
+-- | Is this an "optional" method which servers and clients are allowed to ignore?
+isOptionalMethod :: SomeMethod -> Bool
+-- See https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#dollarRequests
+isOptionalMethod m = "$/" `isPrefixOf` someMethodToMethodString m
 
 deriving stock instance Show SomeMethod
 instance Eq SomeMethod where

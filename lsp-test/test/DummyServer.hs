@@ -31,7 +31,7 @@ withDummyServer f = do
         { doInitialize = \env _req -> pure $ Right env
         , defaultConfig = ()
         , onConfigurationChange = const $ pure $ Right ()
-        , staticHandlers = handlers
+        , staticHandlers = \_caps -> handlers
         , interpretHandler = \env ->
             Iso (\m -> runLspT env (runReaderT m handlerEnv)) liftIO
         , options = defaultOptions {optExecuteCommandCommands = Just ["doAnEdit"]}
