@@ -1,5 +1,9 @@
 # Revision history for lsp-test
 
+## 0.15.0.1
+
+* Adds helper functions to resolve code lens, code actions, and completion items.
+
 ## 0.15.0.0
 
 * Support `lsp-types-2.0.0.0` and `lsp-2.0.0.0`.
