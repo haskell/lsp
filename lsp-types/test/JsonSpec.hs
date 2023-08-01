@@ -41,7 +41,9 @@ main = hspec spec
 spec :: Spec
 spec = do
   describe "dispatcher" jsonSpec
-  describe "ResponseMessage"  responseMessageSpec
+  describe "RequestMessage" requestMessageSpec
+  describe "ResponseMessage" responseMessageSpec
+  describe "NotificationMesssage" notificationMessageSpec
 
 -- ---------------------------------------------------------------------
 
@@ -61,6 +63,13 @@ jsonSpec = do
         `shouldNotBe` Nothing
 
 
+requestMessageSpec :: Spec
+requestMessageSpec = do
+  describe "edge cases" $ do
+    it "handles missing params field" $ do
+      J.eitherDecode "{ \"jsonrpc\": \"2.0\", \"id\": 15, \"method\": \"shutdown\"}"
+        `shouldBe` Right (TRequestMessage "2.0" (IdInt 15) SMethod_Shutdown Nothing)
+
 responseMessageSpec :: Spec
 responseMessageSpec = do
   describe "edge cases" $ do
@@ -68,9 +77,6 @@ responseMessageSpec = do
       let input = "{\"jsonrpc\": \"2.0\", \"id\": 123, \"result\": null}"
         in  J.decode input `shouldBe` Just
               ((TResponseMessage "2.0" (Just (IdInt 123)) (Right $ InL J.Null)) :: TResponseMessage 'Method_WorkspaceExecuteCommand)
-    it "handles missing params field" $ do
-      J.eitherDecode "{ \"jsonrpc\": \"2.0\", \"id\": 15, \"method\": \"shutdown\"}"
-        `shouldBe` Right (TRequestMessage "2.0" (IdInt 15) SMethod_Shutdown Nothing)
   describe "invalid JSON" $ do
     it "throws if neither result nor error is present" $ do
       (J.eitherDecode "{\"jsonrpc\":\"2.0\",\"id\":1}" :: Either String (TResponseMessage 'Method_Initialize))
@@ -81,6 +87,13 @@ responseMessageSpec = do
         :: Either String (TResponseMessage 'Method_Initialize))
         `shouldSatisfy`
           (either (\err -> "Error in $: both error and result cannot be present" `isPrefixOf` err) (\_ -> False))
+
+notificationMessageSpec :: Spec
+notificationMessageSpec = do
+  describe "edge cases" $ do
+    it "handles missing params field" $ do
+      J.eitherDecode "{ \"jsonrpc\": \"2.0\", \"method\": \"exit\"}"
+        `shouldBe` Right (TNotificationMessage "2.0" SMethod_Exit Nothing)
 
 -- ---------------------------------------------------------------------
 
