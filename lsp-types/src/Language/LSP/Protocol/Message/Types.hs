@@ -108,8 +108,19 @@ data TNotificationMessage (m :: Method f Notification) =
 deriving stock instance Eq   (MessageParams m) => Eq (TNotificationMessage m)
 deriving stock instance Show (MessageParams m) => Show (TNotificationMessage m)
 
+{- Note [Missing 'params']
+The 'params' field on requrests and notificaoins may be omitted according to the
+JSON-RPC spec, but that doesn't quite work the way we want with the generic aeson
+instance. Even if the 'MessageParams' type family happens to resolve to a 'Maybe',
+we handle it generically and so we end up asserting that it must be present.
+
+We fix this in a slightly dumb way by just adding the field in if it is missing,
+set to null (which parses correctly for those 'Maybe' parameters also).
+-}
+
 instance (FromJSON (MessageParams m), FromJSON (SMethod m)) => FromJSON (TNotificationMessage m) where
-  parseJSON = genericParseJSON lspOptions
+  -- See Note [Missing 'params']
+  parseJSON = genericParseJSON lspOptions . addNullField "params"
 instance (ToJSON (MessageParams m)) => ToJSON (TNotificationMessage m) where
   toJSON     = genericToJSON lspOptions
   toEncoding = genericToEncoding lspOptions
@@ -126,6 +137,7 @@ deriving stock instance Eq   (MessageParams m) => Eq (TRequestMessage m)
 deriving stock instance Show (MessageParams m) => Show (TRequestMessage m)
 
 instance (FromJSON (MessageParams m), FromJSON (SMethod m)) => FromJSON (TRequestMessage m) where
+  -- See Note [Missing 'params']
   parseJSON = genericParseJSON lspOptions . addNullField "params"
 instance (ToJSON (MessageParams m)) => ToJSON (TRequestMessage m) where
   toJSON     = genericToJSON lspOptions
