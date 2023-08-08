@@ -1,5 +1,9 @@
 # Revision history for lsp-types
 
+## 2.0.1.1
+
+* Fix parsing of notifications with missing params
+
 ## 2.0.1.0
 
 * Removed deprecation pragmas from fields, as these cannot currently be avoided.
