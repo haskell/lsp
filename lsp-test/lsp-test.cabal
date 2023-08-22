@@ -59,6 +59,7 @@ library
     , filepath
     , Glob                  >=0.9   && <0.11
     , lens
+    , lens-aeson
     , lsp                   ^>=2.1
     , lsp-types             ^>=2.0
     , mtl                   <2.4

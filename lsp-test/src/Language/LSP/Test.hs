@@ -49,6 +49,8 @@ module Language.LSP.Test
 
   -- ** Initialization
   , initializeResponse
+  -- ** Config
+  , setConfig
   -- ** Documents
   , createDoc
   , openDoc
@@ -121,6 +123,7 @@ import qualified Data.Set as Set
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import Data.Aeson hiding (Null)
+import qualified Data.Aeson as J
 import Data.Default
 import Data.List
 import Data.Maybe
@@ -224,7 +227,8 @@ runSessionWithHandles' serverProc serverIn serverOut config' caps rootDir sessio
                                           Nothing
                                           (InL $ filePathToUri absRootDir)
                                           caps
-                                          (lspConfig config')
+                                          -- TODO: make this configurable?
+                                          (Just $ lspConfig config')
                                           (Just TraceValues_Off)
                                           (fmap InL $ initialWorkspaceFolders config)
   runSession' serverIn serverOut serverProc listenServer config caps rootDir exitServer $ do
@@ -242,10 +246,6 @@ runSessionWithHandles' serverProc serverIn serverOut config' caps rootDir sessio
     initRspVar <- initRsp <$> ask
     liftIO $ putMVar initRspVar initRspMsg
     sendNotification SMethod_Initialized InitializedParams
-
-    case lspConfig config of
-      Just cfg -> sendNotification SMethod_WorkspaceDidChangeConfiguration (DidChangeConfigurationParams cfg)
-      Nothing -> return ()
 
     -- ... relay them back to the user Session so they can match on them!
     -- As long as they are allowed.
@@ -400,6 +400,20 @@ sendResponse = sendMessage
 -- so if you need to test it use this.
 initializeResponse :: Session (TResponseMessage Method_Initialize)
 initializeResponse = ask >>= (liftIO . readMVar) . initRsp
+
+-- | Set the client config. This will send a notification to the server that the
+-- config has changed.
+setConfig :: Value
+          -> Session ()
+setConfig newConfig = do
+  modify (\ss -> ss { curLspConfig = newConfig})
+  caps <- asks sessionCapabilities
+  let supportsConfiguration = fromMaybe False $ caps ^? L.workspace . _Just . L.configuration . _Just
+      -- TODO: make this configurable?
+      -- if they support workspace/configuration then be annoying and don't send the full config so
+      -- they have to request it
+      configToSend = if supportsConfiguration then J.Null else newConfig
+  sendNotification SMethod_WorkspaceDidChangeConfiguration $ DidChangeConfigurationParams configToSend
 
 -- | /Creates/ a new text document. This is different from 'openDoc'
 -- as it sends a workspace/didChangeWatchedFiles notification letting the server

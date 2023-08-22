@@ -1,5 +1,16 @@
 # Revision history for lsp-test
 
+## Unreleased
+
+- Many changes relating to LSP client configuration
+    - `lsp-test` now responds to `workspace/configuration` requests.
+    - New function `setConfig` for setting the client configuration and notifying the server.
+    - `lsp-test` does not send a `workspace/didChangeConfiguration` request on startup.
+    - New `SessionConfig` option to ignore `workspace/configuration` requests, as they
+      are often not useful in sessions. This is on by default.
+- `ignoreLogNotifications` is now on by default. Experience shows the norm is to ignore these
+  and it is simpler to turn this on only when they are required.
+
 ## 0.15.0.1
 
 * Adds helper functions to resolve code lens, code actions, and completion items.

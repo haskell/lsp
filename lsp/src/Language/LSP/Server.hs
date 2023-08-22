@@ -33,6 +33,10 @@ module Language.LSP.Server
   , sendRequest
   , sendNotification
 
+  -- * Config
+  , requestConfigUpdate
+  , tryChangeConfig
+
   -- * VFS
   , getVirtualFile
   , getVirtualFiles

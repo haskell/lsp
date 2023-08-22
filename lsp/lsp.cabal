@@ -62,6 +62,7 @@ library
     , exceptions
     , filepath
     , hashable
+    , lens-aeson
     , lens                  >=4.15.2
     , lsp-types             ^>=2.0.1
     , mtl                   <2.4

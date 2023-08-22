@@ -32,7 +32,6 @@ import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Encoding as TL
 import qualified Data.Text as T
-import qualified Data.Text.Encoding as T
 import           Data.Text.Prettyprint.Doc
 import           Data.List
 import           Language.LSP.Server.Core
@@ -167,16 +166,18 @@ ioLoop ioLogger logger clientIn serverDefinition vfs sendMsg = do
       case J.eitherDecode $ BSL.fromStrict msg of
         Left err -> ioLogger <& DecodeInitializeError err `WithSeverity` Error
         Right initialize -> do
-          mInitResp <- Processing.initializeRequestHandler serverDefinition vfs sendMsg initialize
+          mInitResp <- Processing.initializeRequestHandler pioLogger serverDefinition vfs sendMsg initialize
           case mInitResp of
             Nothing -> pure ()
             Just env -> runLspT env $ loop (parse parser remainder)
   where
 
+    pioLogger =  L.cmap (fmap LspProcessingLog) ioLogger
+    pLogger =  L.cmap (fmap LspProcessingLog) logger
+
     loop :: Result BS.ByteString -> LspM config ()
     loop = go
       where
-        pLogger =  L.cmap (fmap LspProcessingLog) logger
         go r = do
           res <- parseOne logger clientIn r
           case res of
@@ -210,14 +211,16 @@ parseOne logger clientIn = go
           pure Nothing
         else go (c bs)
     go (Done remainder msg) = do
-      logger <& ParsedMsg (T.decodeUtf8 msg) `WithSeverity` Debug
+      -- TODO: figure out how to re-enable
+      -- This can lead to infinite recursion in logging, see https://github.com/haskell/lsp/issues/447
+      -- logger <& ParsedMsg (T.decodeUtf8 msg) `WithSeverity` Debug
       pure $ Just (msg,remainder)
 
 -- ---------------------------------------------------------------------
 
 -- | Simple server to make sure all output is serialised
 sendServer :: LogAction IO (WithSeverity LspServerLog) -> TChan J.Value -> (BSL.ByteString -> IO ()) -> IO ()
-sendServer logger msgChan clientOut = do
+sendServer _logger msgChan clientOut = do
   forever $ do
     msg <- atomically $ readTChan msgChan
 
@@ -231,7 +234,9 @@ sendServer logger msgChan clientOut = do
                 , str ]
 
     clientOut out
-    logger <& SendMsg (TL.decodeUtf8 str) `WithSeverity` Debug
+    -- TODO: figure out how to re-enable
+    -- This can lead to infinite recursion in logging, see https://github.com/haskell/lsp/issues/447
+    -- logger <& SendMsg (TL.decodeUtf8 str) `WithSeverity` Debug
 
 -- |
 --

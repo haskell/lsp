@@ -10,6 +10,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE LambdaCase #-}
 
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 -- there's just so much!
@@ -20,9 +21,10 @@
 
 module Language.LSP.Server.Processing where
 
-import           Colog.Core (LogAction (..), WithSeverity (..), Severity (..), (<&))
+import           Colog.Core (LogAction (..), WithSeverity (..), Severity (..), (<&), cmap)
 
 import           Control.Lens hiding (Empty)
+import           Data.Aeson.Lens ()
 import           Data.Aeson hiding (Options, Error, Null)
 import           Data.Aeson.Types hiding (Options, Error, Null)
 import qualified Data.ByteString.Lazy as BSL
@@ -52,16 +54,16 @@ import           Data.Maybe
 import qualified Data.Map.Strict as Map
 import           Data.Text.Prettyprint.Doc
 import           System.Exit
-import           GHC.TypeLits (symbolVal)
 import           Control.Monad.State
 import           Control.Monad.Writer.Strict 
 import           Data.Foldable (traverse_)
+import Data.String (fromString)
 
 data LspProcessingLog =
   VfsLog VfsLog
+  | LspCore LspCoreLog
   | MessageProcessingError BSL.ByteString String
   | forall m . MissingHandler Bool (SClientMethod m)
-  | ConfigurationParseError Value T.Text
   | ProgressCancel ProgressToken
   | Exiting
 
@@ -69,6 +71,7 @@ deriving instance Show LspProcessingLog
 
 instance Pretty LspProcessingLog where
   pretty (VfsLog l) = pretty l
+  pretty (LspCore l) = pretty l
   pretty (MessageProcessingError bs err) =
     vsep [
       "LSP: incoming message parse error:"
@@ -77,13 +80,6 @@ instance Pretty LspProcessingLog where
       , pretty (TL.decodeUtf8 bs)
       ]
   pretty (MissingHandler _ m) = "LSP: no handler for:" <+> viaShow m
-  pretty (ConfigurationParseError settings err) =
-    vsep [
-      "LSP: configuration parse error:"
-      , pretty err
-      , "when parsing"
-      , viaShow settings
-      ]
   pretty (ProgressCancel tid) = "LSP: cancelling action for token:" <+> viaShow tid
   pretty Exiting = "LSP: Got exit, exiting"
 
@@ -110,12 +106,13 @@ processMessage logger jsonStr = do
 
 -- | Call this to initialize the session
 initializeRequestHandler
-  :: ServerDefinition config
+  :: LogAction IO (WithSeverity LspProcessingLog)
+  -> ServerDefinition config
   -> VFS
   -> (FromServerMessage -> IO ())
   -> TMessage Method_Initialize
   -> IO (Maybe (LanguageContextEnv config))
-initializeRequestHandler ServerDefinition{..} vfs sendFunc req = do
+initializeRequestHandler logger ServerDefinition{..} vfs sendFunc req = do
   let sendResp = sendFunc . FromServerRsp SMethod_Initialize
       handleErr (Left err) = do
         sendResp $ makeResponseError (req ^. L.id) err
@@ -132,9 +129,17 @@ initializeRequestHandler ServerDefinition{..} vfs sendFunc req = do
           Just (InL xs) -> xs
           _ -> []
 
-        initialConfig = case onConfigurationChange defaultConfig <$> (p ^. L.initializationOptions) of
-          Just (Right newConfig) -> newConfig
-          _ -> defaultConfig
+        -- See Note [LSP configuration]
+        configObject = lookForConfigSection configSection <$> (p ^. L.initializationOptions)
+
+    initialConfig <- case configObject of
+      Just o -> case parseConfig defaultConfig o of
+          Right newConfig -> pure newConfig
+          Left err -> do
+            -- Warn not error here, since initializationOptions is pretty unspecified
+            liftIO $ logger <& (LspCore $ ConfigurationParseError o err) `WithSeverity` Warning
+            pure defaultConfig
+      Nothing -> pure defaultConfig
 
     stateVars <- liftIO $ do
       resVFS              <- newTVarIO (VFSData vfs mempty)
@@ -152,7 +157,8 @@ initializeRequestHandler ServerDefinition{..} vfs sendFunc req = do
       pure LanguageContextState{..}
 
     -- Call the 'duringInitialization' callback to let the server kick stuff up
-    let env = LanguageContextEnv handlers onConfigurationChange sendFunc stateVars (p ^. L.capabilities) rootDir
+    let env = LanguageContextEnv handlers configSection parseConfig configChanger sendFunc stateVars (p ^. L.capabilities) rootDir
+        configChanger config = forward interpreter (onConfigChange config)
         handlers = transmuteHandlers interpreter (staticHandlers clientCaps)
         interpreter = interpretHandler initializationResult
     initializationResult <- ExceptT $ doInitialize env req
@@ -330,7 +336,9 @@ handle :: (m ~ LspM config) => LogAction m (WithSeverity LspProcessingLog) -> SC
 handle logger m msg =
   case m of
     SMethod_WorkspaceDidChangeWorkspaceFolders -> handle' logger (Just updateWorkspaceFolders) m msg
-    SMethod_WorkspaceDidChangeConfiguration    -> handle' logger (Just $ handleConfigChange logger) m msg
+    SMethod_WorkspaceDidChangeConfiguration    -> handle' logger (Just $ handleDidChangeConfiguration logger) m msg
+    -- See Note [LSP configuration]
+    SMethod_Initialized                        -> handle' logger (Just $ \_ -> requestConfigUpdate (cmap (fmap LspCore) logger)) m msg
     SMethod_TextDocumentDidOpen                -> handle' logger (Just $ vfsFunc logger openVFS) m msg
     SMethod_TextDocumentDidChange              -> handle' logger (Just $ vfsFunc logger changeFromClientVFS) m msg
     SMethod_TextDocumentDidClose               -> handle' logger (Just $ vfsFunc logger closeVFS) m msg
@@ -427,17 +435,21 @@ shutdownRequestHandler :: Handler IO Method_Shutdown
 shutdownRequestHandler _req k = do
   k $ Right Null
 
-handleConfigChange :: (m ~ LspM config) => LogAction m (WithSeverity LspProcessingLog) -> TMessage Method_WorkspaceDidChangeConfiguration -> m ()
-handleConfigChange logger req = do
-  parseConfig <- LspT $ asks resParseConfig
-  let s = req ^. L.params . L.settings
-  res <- stateState resConfig $ \oldConfig -> case parseConfig oldConfig s of
-    Left err -> (Left err, oldConfig)
-    Right !newConfig -> (Right (), newConfig)
-  case res of
-    Left err -> do
-      logger <& ConfigurationParseError s err `WithSeverity` Error
-    Right () -> pure ()
+-- | Try to find the configuration section in an object that might represent "all" the settings.
+-- The heuristic we use is to look for a property with the right name, and use that if we find
+-- it. Otherwise we fall back to the whole object.
+-- See Note [LSP configuration]
+lookForConfigSection :: T.Text -> Value -> Value
+lookForConfigSection section (Object o) | Just s' <- o ^. at (fromString $ T.unpack section) = s'
+lookForConfigSection _ o = o
+
+-- | Handle a workspace/didChangeConfiguration request.
+handleDidChangeConfiguration :: (m ~ LspM config) => LogAction m (WithSeverity LspProcessingLog) -> TMessage Method_WorkspaceDidChangeConfiguration -> m ()
+handleDidChangeConfiguration logger req = do
+  section <- LspT $ asks resConfigSection
+  tryChangeConfig (cmap (fmap LspCore) logger) (lookForConfigSection section $ req ^. L.params . L.settings)
+  -- See Note [LSP configuration]
+  requestConfigUpdate (cmap (fmap LspCore) logger)
 
 vfsFunc :: forall m n a config
         . (m ~ LspM config, n ~ WriterT [WithSeverity VfsLog] (State VFS))

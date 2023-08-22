@@ -9,6 +9,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeInType #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Language.LSP.Test.Session
   ( Session(..)
@@ -43,8 +44,6 @@ import Control.Lens hiding (List, Empty)
 import Control.Monad
 import Control.Monad.Catch (MonadThrow)
 import Control.Monad.Except
-import Control.Monad.IO.Class
-import Control.Monad.Trans.Class
 #if __GLASGOW_HASKELL__ == 806
 import Control.Monad.Fail
 #endif
@@ -54,7 +53,9 @@ import Control.Monad.Trans.State (StateT, runStateT, execState)
 import qualified Control.Monad.Trans.State as State
 import qualified Data.ByteString.Lazy.Char8 as B
 import Data.Aeson hiding (Error, Null)
+import qualified Data.Aeson as J
 import Data.Aeson.Encode.Pretty
+import Data.Aeson.Lens ()
 import Data.Conduit as Conduit
 import Data.Conduit.Parser as Parser
 import Data.Default
@@ -84,6 +85,8 @@ import System.Timeout ( timeout )
 import Data.IORef
 import Colog.Core (LogAction (..), WithSeverity (..), Severity (..))
 import Data.Row
+import Data.String (fromString)
+import Data.Either (partitionEithers)
 
 -- | A session representing one instance of launching and connecting to a server.
 --
@@ -112,12 +115,18 @@ data SessionConfig = SessionConfig
   -- ^ Trace the messages sent and received to stdout, defaults to False.
   -- Can be overriden with the environment variable @LSP_TEST_LOG_MESSAGES@.
   , logColor       :: Bool -- ^ Add ANSI color to the logged messages, defaults to True.
-  , lspConfig      :: Maybe Value -- ^ The initial LSP config as JSON value, defaults to Nothing.
+  , lspConfig      :: Value
+  -- ^ The initial LSP config as JSON value, defaults to Null.
+  -- This should include the config section for the server if it has one, i.e. if
+  -- the server has a 'mylang' config section, then the config should be an object
+  -- with a 'mylang' key whose value is the actual config for the server. You
+  -- can also include other config sections if your server may request those.
   , ignoreLogNotifications :: Bool
-  -- ^ Whether or not to ignore 'Language.LSP.Types.ShowMessageNotification' and
-  -- 'Language.LSP.Types.LogMessageNotification', defaults to False.
-  --
-  -- @since 0.9.0.0
+  -- ^ Whether or not to ignore @window/showMessage@ and @window/logMessage@ notifications 
+  -- from the server, defaults to True.
+  , ignoreConfigurationRequests :: Bool
+  -- ^ Whether or not to ignore @workspace/configuration@ requests from the server,
+  -- defaults to True.
   , initialWorkspaceFolders :: Maybe [WorkspaceFolder]
   -- ^ The initial workspace folders to send in the @initialize@ request.
   -- Defaults to Nothing.
@@ -125,7 +134,7 @@ data SessionConfig = SessionConfig
 
 -- | The configuration used in 'Language.LSP.Test.runSession'.
 defaultConfig :: SessionConfig
-defaultConfig = SessionConfig 60 False False True Nothing False Nothing
+defaultConfig = SessionConfig 60 False False True J.Null True True Nothing
 
 instance Default SessionConfig where
   def = defaultConfig
@@ -179,6 +188,7 @@ data SessionState = SessionState
   -- Used for providing exception information
   , lastReceivedMessage :: !(Maybe FromServerMessage)
   , curDynCaps :: !(Map.Map T.Text SomeRegistration)
+  , curLspConfig :: Value
   -- ^ The capabilities that the server has dynamically registered with us so
   -- far
   , curProgressSessions :: !(Set.Set ProgressToken)
@@ -227,14 +237,8 @@ runSessionMonad context state (Session session) = runReaderT (runStateT conduit 
 
     chanSource = do
       msg <- liftIO $ readChan (messageChan context)
-      unless (ignoreLogNotifications (config context) && isLogNotification msg) $
-        yield msg
+      yield msg
       chanSource
-
-    isLogNotification (ServerMessage (FromServerMess SMethod_WindowShowMessage _)) = True
-    isLogNotification (ServerMessage (FromServerMess SMethod_WindowLogMessage _)) = True
-    isLogNotification (ServerMessage (FromServerMess SMethod_WindowShowDocument _)) = True
-    isLogNotification _ = False
 
     watchdog :: ConduitM SessionMessage FromServerMessage (StateT SessionState (ReaderT SessionContext IO)) ()
     watchdog = Conduit.awaitForever $ \msg -> do
@@ -273,7 +277,7 @@ runSession' serverIn serverOut mServerProc serverHandler config caps rootDir exi
   mainThreadId <- myThreadId
 
   let context = SessionContext serverIn absRootDir messageChan timeoutIdVar reqMap initRsp config caps
-      initState vfs = SessionState 0 vfs mempty False Nothing mempty mempty
+      initState vfs = SessionState 0 vfs mempty False Nothing mempty (lspConfig config) mempty
       runSession' ses = initVFS $ \vfs -> runSessionMonad context (initState vfs) ses
 
       errorHandler = throwTo mainThreadId :: SessionException -> IO ()
@@ -302,17 +306,44 @@ runSession' serverIn serverOut mServerProc serverHandler config caps rootDir exi
 
 updateStateC :: ConduitM FromServerMessage FromServerMessage (StateT SessionState (ReaderT SessionContext IO)) ()
 updateStateC = awaitForever $ \msg -> do
+  context <- ask @SessionContext
   updateState msg
-  respond msg
-  yield msg
-  where
-    respond :: (MonadIO m, HasReader SessionContext m) => FromServerMessage -> m ()
-    respond (FromServerMess SMethod_WindowWorkDoneProgressCreate req) =
+  case msg of
+    FromServerMess SMethod_WindowWorkDoneProgressCreate req ->
       sendMessage $ TResponseMessage "2.0" (Just $ req ^. L.id) (Right Null)
-    respond (FromServerMess SMethod_WorkspaceApplyEdit r) = do
+    FromServerMess SMethod_WorkspaceApplyEdit r -> do
       sendMessage $ TResponseMessage "2.0" (Just $ r ^. L.id) (Right $ ApplyWorkspaceEditResult True Nothing Nothing)
-    respond _ = pure ()
+    FromServerMess SMethod_WorkspaceConfiguration r -> do
+      let requestedSections = mapMaybe (\i -> i ^? L.section . _Just) $ r ^. L.params . L.items
+      c <- curLspConfig <$> get @SessionState
+      case c of
+        Object o -> do
+          let configsOrErrs = (flip fmap) requestedSections $ \section ->
+                case o ^. at (fromString $ T.unpack section) of
+                  Just config -> Right config
+                  Nothing -> Left section
 
+          let (errs, configs) = partitionEithers configsOrErrs
+
+          if null errs
+          then sendMessage $ TResponseMessage "2.0" (Just $ r ^. L.id) (Right configs)
+          else sendMessage @_ @(TResponseError Method_WorkspaceConfiguration) $
+            TResponseError (InL LSPErrorCodes_RequestFailed) ("No configuration for requested sections: " <> (T.pack $ show errs)) Nothing
+
+        _ -> sendMessage @_ @(TResponseError Method_WorkspaceConfiguration) $ TResponseError (InL LSPErrorCodes_RequestFailed) "No configuration" Nothing
+    _ -> pure ()
+  unless ((ignoreLogNotifications (config context) && isLogNotification msg) || (ignoreConfigurationRequests (config context) && isConfigRequest msg)) $
+    yield msg
+
+  where
+
+    isLogNotification (FromServerMess SMethod_WindowShowMessage _) = True
+    isLogNotification (FromServerMess SMethod_WindowLogMessage _) = True
+    isLogNotification (FromServerMess SMethod_WindowShowDocument _) = True
+    isLogNotification _ = False
+
+    isConfigRequest (FromServerMess SMethod_WorkspaceConfiguration _) = True
+    isConfigRequest _ = False
 
 -- extract Uri out from DocumentChange
 -- didn't put this in `lsp-types` because TH was getting in the way

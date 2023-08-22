@@ -20,6 +20,8 @@ module Language.LSP.Test.Parsing
   , anyNotification
   , anyMessage
   , loggingNotification
+  , configurationRequest
+  , loggingOrConfiguration
   , publishDiagnosticsNotification
   ) where
 
@@ -206,6 +208,16 @@ loggingNotification = named "Logging notification" $ satisfy shouldSkip
     shouldSkip (FromServerMess SMethod_WindowShowMessageRequest _) = True
     shouldSkip (FromServerMess SMethod_WindowShowDocument _) = True
     shouldSkip _ = False
+
+-- | Matches if the message is a configuration request from the server.
+configurationRequest :: Session FromServerMessage
+configurationRequest = named "Configuration request" $ satisfy shouldSkip
+  where
+    shouldSkip (FromServerMess SMethod_WorkspaceConfiguration _) = True
+    shouldSkip _ = False
+
+loggingOrConfiguration :: Session FromServerMessage
+loggingOrConfiguration = loggingNotification <|> configurationRequest
 
 -- | Matches a 'Language.LSP.Types.TextDocumentPublishDiagnostics'
 -- (textDocument/publishDiagnostics) notification.

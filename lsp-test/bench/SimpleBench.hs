@@ -32,8 +32,10 @@ handlers = mconcat
 
 server :: ServerDefinition ()
 server = ServerDefinition
-  { onConfigurationChange = const $ const $ Right ()
+  { parseConfig = const $ const $ Right ()
+  , onConfigChange = const  $ pure ()
   , defaultConfig = ()
+  , configSection = "demo"
   , doInitialize = \env _req -> pure $ Right env
   , staticHandlers = \_caps -> handlers
   , interpretHandler = \env -> Iso (runLspT env) liftIO
