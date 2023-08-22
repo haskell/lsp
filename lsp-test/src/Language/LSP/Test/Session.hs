@@ -318,6 +318,7 @@ updateStateC = awaitForever $ \msg -> do
       c <- curLspConfig <$> get @SessionState
       case c of
         Object o -> do
+          -- check for each requested section whether we have it
           let configsOrErrs = (flip fmap) requestedSections $ \section ->
                 case o ^. at (fromString $ T.unpack section) of
                   Just config -> Right config
@@ -325,6 +326,7 @@ updateStateC = awaitForever $ \msg -> do
 
           let (errs, configs) = partitionEithers configsOrErrs
 
+          -- we have to return exactly the number of sections requested, so if we can't find all of them then that's an error
           if null errs
           then sendMessage $ TResponseMessage "2.0" (Just $ r ^. L.id) (Right configs)
           else sendMessage @_ @(TResponseError Method_WorkspaceConfiguration) $
