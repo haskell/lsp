@@ -8,6 +8,8 @@ module Language.LSP.Protocol.Internal.Types.TextDocumentSaveRegistrationOptions 
 import Control.DeepSeq
 import Data.Hashable
 import GHC.Generics
+import Language.LSP.Protocol.Utils.Misc
+import Prettyprinter
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
@@ -30,6 +32,7 @@ data TextDocumentSaveRegistrationOptions = TextDocumentSaveRegistrationOptions
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
+  deriving Pretty via (ViaJSON TextDocumentSaveRegistrationOptions)
 
 instance Aeson.ToJSON TextDocumentSaveRegistrationOptions where
   toJSON (TextDocumentSaveRegistrationOptions arg0 arg1) = Aeson.object $ concat $  [["documentSelector" Aeson..= arg0]

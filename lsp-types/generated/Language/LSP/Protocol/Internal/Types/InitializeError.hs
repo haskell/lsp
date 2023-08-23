@@ -8,6 +8,8 @@ module Language.LSP.Protocol.Internal.Types.InitializeError where
 import Control.DeepSeq
 import Data.Hashable
 import GHC.Generics
+import Language.LSP.Protocol.Utils.Misc
+import Prettyprinter
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
@@ -28,6 +30,7 @@ data InitializeError = InitializeError
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
+  deriving Pretty via (ViaJSON InitializeError)
 
 instance Aeson.ToJSON InitializeError where
   toJSON (InitializeError arg0) = Aeson.object $ concat $  [["retry" Aeson..= arg0]]

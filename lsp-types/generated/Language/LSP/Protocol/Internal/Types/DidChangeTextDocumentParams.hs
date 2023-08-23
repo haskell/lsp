@@ -8,6 +8,8 @@ module Language.LSP.Protocol.Internal.Types.DidChangeTextDocumentParams where
 import Control.DeepSeq
 import Data.Hashable
 import GHC.Generics
+import Language.LSP.Protocol.Utils.Misc
+import Prettyprinter
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
@@ -42,6 +44,7 @@ data DidChangeTextDocumentParams = DidChangeTextDocumentParams
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
+  deriving Pretty via (ViaJSON DidChangeTextDocumentParams)
 
 instance Aeson.ToJSON DidChangeTextDocumentParams where
   toJSON (DidChangeTextDocumentParams arg0 arg1) = Aeson.object $ concat $  [["textDocument" Aeson..= arg0]

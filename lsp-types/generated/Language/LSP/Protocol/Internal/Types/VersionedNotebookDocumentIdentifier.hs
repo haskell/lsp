@@ -8,6 +8,8 @@ module Language.LSP.Protocol.Internal.Types.VersionedNotebookDocumentIdentifier 
 import Control.DeepSeq
 import Data.Hashable
 import GHC.Generics
+import Language.LSP.Protocol.Utils.Misc
+import Prettyprinter
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
@@ -31,6 +33,7 @@ data VersionedNotebookDocumentIdentifier = VersionedNotebookDocumentIdentifier
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
+  deriving Pretty via (ViaJSON VersionedNotebookDocumentIdentifier)
 
 instance Aeson.ToJSON VersionedNotebookDocumentIdentifier where
   toJSON (VersionedNotebookDocumentIdentifier arg0 arg1) = Aeson.object $ concat $  [["version" Aeson..= arg0]

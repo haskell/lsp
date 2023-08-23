@@ -24,6 +24,7 @@ import           GHC.TypeLits                       (KnownSymbol, sameSymbol,
 import           Language.LSP.Protocol.Internal.Method
 import           Language.LSP.Protocol.Message.Meta
 import           Language.LSP.Protocol.Utils.Misc
+import           Prettyprinter
 import           Unsafe.Coerce
 
 ---------------
@@ -48,6 +49,8 @@ instance FromJSON SomeMethod where
   parseJSON v = do
     s <- parseJSON v
     pure $ methodStringToSomeMethod s
+
+deriving via ViaJSON SomeMethod instance Pretty SomeMethod
 
 ---------------
 -- SMethod
@@ -104,6 +107,8 @@ instance KnownSymbol s => FromJSON (SMethod ('Method_CustomMethod s :: Method f 
 -- instance FromJSON (SMethod Method_X)
 makeSingletonFromJSON 'SomeMethod ''SMethod ['SMethod_CustomMethod]
 
+deriving via ViaJSON (SMethod m) instance Pretty (SMethod m)
+
 ---------------
 -- Extras
 ---------------
@@ -142,6 +147,8 @@ instance FromJSON SomeClientMethod where
 instance ToJSON SomeClientMethod where
   toJSON (SomeClientMethod sm) = toJSON $ someMethodToMethodString $ SomeMethod sm
 
+deriving via ViaJSON SomeClientMethod instance Pretty SomeClientMethod
+
 instance FromJSON SomeServerMethod where
   parseJSON v = do
     (SomeMethod sm) <- parseJSON v
@@ -151,6 +158,8 @@ instance FromJSON SomeServerMethod where
 
 instance ToJSON SomeServerMethod where
   toJSON (SomeServerMethod sm) = toJSON $ someMethodToMethodString $ SomeMethod sm
+
+deriving via ViaJSON SomeServerMethod instance Pretty SomeServerMethod
 
 {- Note [Parsing methods that go both ways]
 

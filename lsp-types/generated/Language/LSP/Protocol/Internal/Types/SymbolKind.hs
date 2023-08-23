@@ -8,6 +8,8 @@ module Language.LSP.Protocol.Internal.Types.SymbolKind where
 import Control.DeepSeq
 import Data.Hashable
 import GHC.Generics
+import Language.LSP.Protocol.Utils.Misc
+import Prettyprinter
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
@@ -128,6 +130,7 @@ data SymbolKind =
   deriving anyclass (NFData, Hashable)
   deriving ( Aeson.ToJSON
   , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum SymbolKind Language.LSP.Protocol.Types.Common.UInt)
+  deriving Pretty via (ViaJSON SymbolKind)
 
 instance Language.LSP.Protocol.Types.LspEnum.LspEnum SymbolKind where
   knownValues = Data.Set.fromList [SymbolKind_File

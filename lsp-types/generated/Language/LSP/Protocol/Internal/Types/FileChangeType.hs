@@ -8,6 +8,8 @@ module Language.LSP.Protocol.Internal.Types.FileChangeType where
 import Control.DeepSeq
 import Data.Hashable
 import GHC.Generics
+import Language.LSP.Protocol.Utils.Misc
+import Prettyprinter
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
@@ -36,6 +38,7 @@ data FileChangeType =
   deriving anyclass (NFData, Hashable)
   deriving ( Aeson.ToJSON
   , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum FileChangeType Language.LSP.Protocol.Types.Common.UInt)
+  deriving Pretty via (ViaJSON FileChangeType)
 
 instance Language.LSP.Protocol.Types.LspEnum.LspEnum FileChangeType where
   knownValues = Data.Set.fromList [FileChangeType_Created

@@ -8,6 +8,8 @@ module Language.LSP.Protocol.Internal.Types.WorkDoneProgressBegin where
 import Control.DeepSeq
 import Data.Hashable
 import GHC.Generics
+import Language.LSP.Protocol.Utils.Misc
+import Prettyprinter
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
@@ -56,6 +58,7 @@ data WorkDoneProgressBegin = WorkDoneProgressBegin
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
+  deriving Pretty via (ViaJSON WorkDoneProgressBegin)
 
 instance Aeson.ToJSON WorkDoneProgressBegin where
   toJSON (WorkDoneProgressBegin arg0 arg1 arg2 arg3 arg4) = Aeson.object $ concat $  [["kind" Aeson..= arg0]

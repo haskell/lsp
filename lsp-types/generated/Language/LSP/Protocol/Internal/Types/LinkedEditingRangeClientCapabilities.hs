@@ -8,6 +8,8 @@ module Language.LSP.Protocol.Internal.Types.LinkedEditingRangeClientCapabilities
 import Control.DeepSeq
 import Data.Hashable
 import GHC.Generics
+import Language.LSP.Protocol.Utils.Misc
+import Prettyprinter
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
@@ -28,6 +30,7 @@ data LinkedEditingRangeClientCapabilities = LinkedEditingRangeClientCapabilities
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
+  deriving Pretty via (ViaJSON LinkedEditingRangeClientCapabilities)
 
 instance Aeson.ToJSON LinkedEditingRangeClientCapabilities where
   toJSON (LinkedEditingRangeClientCapabilities arg0) = Aeson.object $ concat $  ["dynamicRegistration" Language.LSP.Protocol.Types.Common..=? arg0]

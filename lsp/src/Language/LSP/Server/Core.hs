@@ -61,6 +61,7 @@ import           Language.LSP.Protocol.Types
 import qualified Language.LSP.Protocol.Types            as L
 import           Language.LSP.Protocol.Utils.SMethodMap (SMethodMap)
 import qualified Language.LSP.Protocol.Utils.SMethodMap as SMethodMap
+import           Language.LSP.Protocol.Utils.Misc (prettyJSON)
 import           Language.LSP.VFS
 import           Prettyprinter
 import           System.Random                          hiding (next)
@@ -82,17 +83,17 @@ data LspCoreLog =
   deriving Show
 
 instance Pretty LspCoreLog where
-  pretty (NewConfig config) = "LSP: set new config:" <+> viaShow config
+  pretty (NewConfig config) = "LSP: set new config:" <+> prettyJSON config
   pretty (ConfigurationNotSupported) = "LSP: not requesting configuration since the client does not support workspace/configuration"
   pretty (ConfigurationParseError settings err) =
     vsep [
       "LSP: configuration parse error:"
       , pretty err
       , "when parsing"
-      , viaShow settings
+      , prettyJSON settings
       ]
-  pretty (BadConfigurationResponse err) = "LSP: error when requesting configuration: " <+> viaShow err
-  pretty (WrongConfigSections sections) = "LSP: expected only one configuration section, got: " <+> viaShow sections
+  pretty (BadConfigurationResponse err) = "LSP: error when requesting configuration: " <+> pretty err
+  pretty (WrongConfigSections sections) = "LSP: expected only one configuration section, got: " <+> (prettyJSON $ J.toJSON sections)
 
 newtype LspT config m a = LspT { unLspT :: ReaderT (LanguageContextEnv config) m a }
   deriving (Functor, Applicative, Monad, MonadCatch, MonadIO, MonadMask, MonadThrow, MonadTrans, MonadUnliftIO, MonadFix)

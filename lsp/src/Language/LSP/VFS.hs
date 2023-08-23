@@ -126,13 +126,13 @@ data VfsLog =
 instance Pretty VfsLog where
   pretty (SplitInsideCodePoint pos r) =
     "VFS: asked to make change inside code point. Position" <+> viaShow pos <+> "in" <+> viaShow r
-  pretty (URINotFound uri) = "VFS: don't know about URI" <+> viaShow uri
-  pretty (Opening uri) = "VFS: opening" <+> viaShow uri
-  pretty (Closing uri) = "VFS: closing" <+> viaShow uri
-  pretty (PersistingFile uri fp) = "VFS: Writing virtual file for" <+> viaShow uri <+> "to" <+> viaShow fp
+  pretty (URINotFound uri) = "VFS: don't know about URI" <+> pretty uri
+  pretty (Opening uri) = "VFS: opening" <+> pretty uri
+  pretty (Closing uri) = "VFS: closing" <+> pretty uri
+  pretty (PersistingFile uri fp) = "VFS: Writing virtual file for" <+> pretty uri <+> "to" <+> viaShow fp
   pretty (CantRecursiveDelete uri) =
-    "VFS: can't recursively delete" <+> viaShow uri <+> "because we don't track directory status"
-  pretty (DeleteNonExistent uri) = "VFS: asked to delete non-existent file" <+> viaShow uri
+    "VFS: can't recursively delete" <+> pretty uri <+> "because we don't track directory status"
+  pretty (DeleteNonExistent uri) = "VFS: asked to delete non-existent file" <+> pretty uri
 
 makeFieldsNoPrefix ''VirtualFile
 makeFieldsNoPrefix ''VFS

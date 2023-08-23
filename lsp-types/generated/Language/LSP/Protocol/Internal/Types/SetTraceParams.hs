@@ -8,6 +8,8 @@ module Language.LSP.Protocol.Internal.Types.SetTraceParams where
 import Control.DeepSeq
 import Data.Hashable
 import GHC.Generics
+import Language.LSP.Protocol.Utils.Misc
+import Prettyprinter
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
@@ -25,6 +27,7 @@ data SetTraceParams = SetTraceParams
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
+  deriving Pretty via (ViaJSON SetTraceParams)
 
 instance Aeson.ToJSON SetTraceParams where
   toJSON (SetTraceParams arg0) = Aeson.object $ concat $  [["value" Aeson..= arg0]]

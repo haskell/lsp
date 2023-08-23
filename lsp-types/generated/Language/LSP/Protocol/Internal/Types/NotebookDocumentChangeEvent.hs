@@ -8,6 +8,8 @@ module Language.LSP.Protocol.Internal.Types.NotebookDocumentChangeEvent where
 import Control.DeepSeq
 import Data.Hashable
 import GHC.Generics
+import Language.LSP.Protocol.Utils.Misc
+import Prettyprinter
 import qualified Data.Aeson
 import qualified Data.Aeson as Aeson
 import qualified Data.Row as Row
@@ -40,6 +42,7 @@ data NotebookDocumentChangeEvent = NotebookDocumentChangeEvent
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
+  deriving Pretty via (ViaJSON NotebookDocumentChangeEvent)
 
 instance Aeson.ToJSON NotebookDocumentChangeEvent where
   toJSON (NotebookDocumentChangeEvent arg0 arg1) = Aeson.object $ concat $  ["metadata" Language.LSP.Protocol.Types.Common..=? arg0

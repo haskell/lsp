@@ -8,6 +8,8 @@ module Language.LSP.Protocol.Internal.Types.CodeLensRegistrationOptions where
 import Control.DeepSeq
 import Data.Hashable
 import GHC.Generics
+import Language.LSP.Protocol.Utils.Misc
+import Prettyprinter
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
@@ -34,6 +36,7 @@ data CodeLensRegistrationOptions = CodeLensRegistrationOptions
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
+  deriving Pretty via (ViaJSON CodeLensRegistrationOptions)
 
 instance Aeson.ToJSON CodeLensRegistrationOptions where
   toJSON (CodeLensRegistrationOptions arg0 arg1 arg2) = Aeson.object $ concat $  [["documentSelector" Aeson..= arg0]

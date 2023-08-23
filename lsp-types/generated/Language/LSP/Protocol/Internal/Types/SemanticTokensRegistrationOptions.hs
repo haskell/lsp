@@ -8,6 +8,8 @@ module Language.LSP.Protocol.Internal.Types.SemanticTokensRegistrationOptions wh
 import Control.DeepSeq
 import Data.Hashable
 import GHC.Generics
+import Language.LSP.Protocol.Utils.Misc
+import Prettyprinter
 import qualified Data.Aeson as Aeson
 import qualified Data.Row as Row
 import qualified Data.Row.Aeson as Aeson
@@ -51,6 +53,7 @@ data SemanticTokensRegistrationOptions = SemanticTokensRegistrationOptions
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
+  deriving Pretty via (ViaJSON SemanticTokensRegistrationOptions)
 
 instance Aeson.ToJSON SemanticTokensRegistrationOptions where
   toJSON (SemanticTokensRegistrationOptions arg0 arg1 arg2 arg3 arg4 arg5) = Aeson.object $ concat $  [["documentSelector" Aeson..= arg0]

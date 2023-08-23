@@ -8,6 +8,8 @@ module Language.LSP.Protocol.Internal.Types.DiagnosticWorkspaceClientCapabilitie
 import Control.DeepSeq
 import Data.Hashable
 import GHC.Generics
+import Language.LSP.Protocol.Utils.Misc
+import Prettyprinter
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
@@ -32,6 +34,7 @@ data DiagnosticWorkspaceClientCapabilities = DiagnosticWorkspaceClientCapabiliti
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
+  deriving Pretty via (ViaJSON DiagnosticWorkspaceClientCapabilities)
 
 instance Aeson.ToJSON DiagnosticWorkspaceClientCapabilities where
   toJSON (DiagnosticWorkspaceClientCapabilities arg0) = Aeson.object $ concat $  ["refreshSupport" Language.LSP.Protocol.Types.Common..=? arg0]

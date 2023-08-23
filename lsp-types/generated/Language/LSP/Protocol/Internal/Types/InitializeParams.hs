@@ -8,6 +8,8 @@ module Language.LSP.Protocol.Internal.Types.InitializeParams where
 import Control.DeepSeq
 import Data.Hashable
 import GHC.Generics
+import Language.LSP.Protocol.Utils.Misc
+import Prettyprinter
 import qualified Data.Aeson
 import qualified Data.Aeson as Aeson
 import qualified Data.Row as Row
@@ -94,6 +96,7 @@ data InitializeParams = InitializeParams
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
+  deriving Pretty via (ViaJSON InitializeParams)
 
 instance Aeson.ToJSON InitializeParams where
   toJSON (InitializeParams arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8 arg9) = Aeson.object $ concat $  ["workDoneToken" Language.LSP.Protocol.Types.Common..=? arg0

@@ -7,13 +7,19 @@ module Language.LSP.Protocol.Utils.Misc
   , makeRegHelper
   , lspOptions
   , lspOptionsUntagged
+  , prettyJSON
+  , ViaJSON (..)
   ) where
 
 import           Control.Monad
-import           Data.Aeson
-import           Data.List
+import           Data.Aeson    
+import           Data.Aeson.Text     as Aeson
+import qualified Data.Foldable       as F
+import qualified Data.Foldable.WithIndex as F
+import           Data.List           hiding (group)
 import           Data.Maybe          (mapMaybe)
 import           Language.Haskell.TH
+import           Prettyprinter
 
 -- ---------------------------------------------------------------------
 
@@ -98,3 +104,21 @@ lspOptions = defaultOptions { omitNothingFields = True, fieldLabelModifier = mod
 -- | Standard options for use when generating JSON instances for an untagged union
 lspOptionsUntagged :: Options
 lspOptionsUntagged = lspOptions { sumEncoding = UntaggedValue }
+
+prettyJSON :: Value -> Doc ann
+prettyJSON = \case
+  Array vec ->
+    let docs = fmap prettyJSON (F.toList vec)
+        separator = ","
+    in group $ nest 2 ("[" <> line <> vsep (punctuate separator docs)) <> line <> "]"
+  Object km ->
+    let docs = fmap (\(k, v) -> pretty (show k) <> ":" <+> prettyJSON v) (F.itoList km)
+        separator = ","
+    in group $ nest 2 ("{" <> line <> vsep (punctuate separator docs)) <> line <> "}"
+  -- for atomic objects, piggyback off aeson's encoding
+  v -> pretty $ Aeson.encodeToLazyText v
+
+newtype ViaJSON a = ViaJSON a
+
+instance ToJSON a => Pretty (ViaJSON a) where
+  pretty (ViaJSON a) = prettyJSON $ toJSON a

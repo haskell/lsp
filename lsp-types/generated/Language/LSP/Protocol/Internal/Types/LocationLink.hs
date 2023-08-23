@@ -8,6 +8,8 @@ module Language.LSP.Protocol.Internal.Types.LocationLink where
 import Control.DeepSeq
 import Data.Hashable
 import GHC.Generics
+import Language.LSP.Protocol.Utils.Misc
+import Prettyprinter
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
@@ -45,6 +47,7 @@ data LocationLink = LocationLink
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
+  deriving Pretty via (ViaJSON LocationLink)
 
 instance Aeson.ToJSON LocationLink where
   toJSON (LocationLink arg0 arg1 arg2 arg3) = Aeson.object $ concat $  ["originSelectionRange" Language.LSP.Protocol.Types.Common..=? arg0

@@ -8,6 +8,8 @@ module Language.LSP.Protocol.Internal.Types.HoverClientCapabilities where
 import Control.DeepSeq
 import Data.Hashable
 import GHC.Generics
+import Language.LSP.Protocol.Utils.Misc
+import Prettyprinter
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
@@ -30,6 +32,7 @@ data HoverClientCapabilities = HoverClientCapabilities
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
+  deriving Pretty via (ViaJSON HoverClientCapabilities)
 
 instance Aeson.ToJSON HoverClientCapabilities where
   toJSON (HoverClientCapabilities arg0 arg1) = Aeson.object $ concat $  ["dynamicRegistration" Language.LSP.Protocol.Types.Common..=? arg0

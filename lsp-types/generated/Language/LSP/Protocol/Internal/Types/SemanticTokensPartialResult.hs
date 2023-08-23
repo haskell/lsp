@@ -8,6 +8,8 @@ module Language.LSP.Protocol.Internal.Types.SemanticTokensPartialResult where
 import Control.DeepSeq
 import Data.Hashable
 import GHC.Generics
+import Language.LSP.Protocol.Utils.Misc
+import Prettyprinter
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
@@ -24,6 +26,7 @@ data SemanticTokensPartialResult = SemanticTokensPartialResult
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
+  deriving Pretty via (ViaJSON SemanticTokensPartialResult)
 
 instance Aeson.ToJSON SemanticTokensPartialResult where
   toJSON (SemanticTokensPartialResult arg0) = Aeson.object $ concat $  [["data" Aeson..= arg0]]

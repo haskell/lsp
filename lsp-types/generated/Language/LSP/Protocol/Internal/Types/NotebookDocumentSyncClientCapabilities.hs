@@ -8,6 +8,8 @@ module Language.LSP.Protocol.Internal.Types.NotebookDocumentSyncClientCapabiliti
 import Control.DeepSeq
 import Data.Hashable
 import GHC.Generics
+import Language.LSP.Protocol.Utils.Misc
+import Prettyprinter
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
@@ -33,6 +35,7 @@ data NotebookDocumentSyncClientCapabilities = NotebookDocumentSyncClientCapabili
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
+  deriving Pretty via (ViaJSON NotebookDocumentSyncClientCapabilities)
 
 instance Aeson.ToJSON NotebookDocumentSyncClientCapabilities where
   toJSON (NotebookDocumentSyncClientCapabilities arg0 arg1) = Aeson.object $ concat $  ["dynamicRegistration" Language.LSP.Protocol.Types.Common..=? arg0

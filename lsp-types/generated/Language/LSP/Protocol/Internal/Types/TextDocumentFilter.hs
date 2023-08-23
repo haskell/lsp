@@ -8,6 +8,8 @@ module Language.LSP.Protocol.Internal.Types.TextDocumentFilter where
 import Control.DeepSeq
 import Data.Hashable
 import GHC.Generics
+import Language.LSP.Protocol.Utils.Misc
+import Prettyprinter
 import qualified Data.Aeson as Aeson
 import qualified Data.Row as Row
 import qualified Data.Row.Aeson as Aeson
@@ -37,3 +39,4 @@ newtype TextDocumentFilter = TextDocumentFilter ((Row.Rec ("language" Row..== Da
   deriving newtype (Aeson.ToJSON, Aeson.FromJSON)
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
+  deriving Pretty via (ViaJSON TextDocumentFilter)

@@ -8,6 +8,8 @@ module Language.LSP.Protocol.Internal.Types.RenameClientCapabilities where
 import Control.DeepSeq
 import Data.Hashable
 import GHC.Generics
+import Language.LSP.Protocol.Utils.Misc
+import Prettyprinter
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
@@ -51,6 +53,7 @@ data RenameClientCapabilities = RenameClientCapabilities
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
+  deriving Pretty via (ViaJSON RenameClientCapabilities)
 
 instance Aeson.ToJSON RenameClientCapabilities where
   toJSON (RenameClientCapabilities arg0 arg1 arg2 arg3) = Aeson.object $ concat $  ["dynamicRegistration" Language.LSP.Protocol.Types.Common..=? arg0

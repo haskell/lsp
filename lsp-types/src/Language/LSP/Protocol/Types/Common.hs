@@ -37,9 +37,11 @@ import           Data.Set            as Set
 import           Data.String         (fromString)
 import           Data.Int            (Int32)
 import           Data.Mod.Word
+import           Language.LSP.Protocol.Utils.Misc
 import           GHC.Generics        hiding (UInt)
 import           GHC.TypeNats        hiding (Mod)
 import           Text.Read           (Read (readPrec))
+import           Prettyprinter
 
 -- | The "uinteger" type in the LSP spec.
 --
@@ -56,6 +58,9 @@ instance Show UInt where
 
 instance Read UInt where
   readPrec = fromInteger <$> readPrec
+
+instance Pretty UInt where
+  pretty = viaShow
 
 instance Real UInt where
   toRational (UInt u) = toRational $ unMod u
@@ -78,6 +83,7 @@ data a |? b = InL a
             | InR b
   deriving stock (Read, Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
+  deriving Pretty via (ViaJSON (a |? b))
 infixr |?
 
 -- | Prism for the left-hand side of an '(|?)'.
@@ -139,6 +145,7 @@ instance (FromJSON a, ToJSON a, FromJSON b, ToJSON b) => FromJSON (a |? b) where
 data Null = Null
   deriving stock (Eq, Ord, Show, Generic)
   deriving anyclass (NFData, Hashable)
+  deriving Pretty via (ViaJSON Null)
 
 instance ToJSON Null where
   toJSON Null = J.Null

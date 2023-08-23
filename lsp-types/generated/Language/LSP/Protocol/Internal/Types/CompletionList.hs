@@ -8,6 +8,8 @@ module Language.LSP.Protocol.Internal.Types.CompletionList where
 import Control.DeepSeq
 import Data.Hashable
 import GHC.Generics
+import Language.LSP.Protocol.Utils.Misc
+import Prettyprinter
 import qualified Data.Aeson
 import qualified Data.Aeson as Aeson
 import qualified Data.Row as Row
@@ -55,6 +57,7 @@ data CompletionList = CompletionList
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
+  deriving Pretty via (ViaJSON CompletionList)
 
 instance Aeson.ToJSON CompletionList where
   toJSON (CompletionList arg0 arg1 arg2) = Aeson.object $ concat $  [["isIncomplete" Aeson..= arg0]

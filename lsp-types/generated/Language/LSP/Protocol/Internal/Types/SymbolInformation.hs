@@ -8,6 +8,8 @@ module Language.LSP.Protocol.Internal.Types.SymbolInformation where
 import Control.DeepSeq
 import Data.Hashable
 import GHC.Generics
+import Language.LSP.Protocol.Utils.Misc
+import Prettyprinter
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
@@ -64,6 +66,7 @@ data SymbolInformation = SymbolInformation
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
+  deriving Pretty via (ViaJSON SymbolInformation)
 
 instance Aeson.ToJSON SymbolInformation where
   toJSON (SymbolInformation arg0 arg1 arg2 arg3 arg4 arg5) = Aeson.object $ concat $  [["name" Aeson..= arg0]

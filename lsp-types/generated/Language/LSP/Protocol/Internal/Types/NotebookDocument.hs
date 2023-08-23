@@ -8,6 +8,8 @@ module Language.LSP.Protocol.Internal.Types.NotebookDocument where
 import Control.DeepSeq
 import Data.Hashable
 import GHC.Generics
+import Language.LSP.Protocol.Utils.Misc
+import Prettyprinter
 import qualified Data.Aeson
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
@@ -50,6 +52,7 @@ data NotebookDocument = NotebookDocument
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
+  deriving Pretty via (ViaJSON NotebookDocument)
 
 instance Aeson.ToJSON NotebookDocument where
   toJSON (NotebookDocument arg0 arg1 arg2 arg3 arg4) = Aeson.object $ concat $  [["uri" Aeson..= arg0]

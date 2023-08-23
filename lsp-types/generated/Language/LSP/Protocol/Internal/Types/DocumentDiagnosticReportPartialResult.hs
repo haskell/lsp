@@ -8,6 +8,8 @@ module Language.LSP.Protocol.Internal.Types.DocumentDiagnosticReportPartialResul
 import Control.DeepSeq
 import Data.Hashable
 import GHC.Generics
+import Language.LSP.Protocol.Utils.Misc
+import Prettyprinter
 import qualified Data.Aeson as Aeson
 import qualified Data.Map
 import qualified Data.Row.Aeson as Aeson
@@ -30,6 +32,7 @@ data DocumentDiagnosticReportPartialResult = DocumentDiagnosticReportPartialResu
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
+  deriving Pretty via (ViaJSON DocumentDiagnosticReportPartialResult)
 
 instance Aeson.ToJSON DocumentDiagnosticReportPartialResult where
   toJSON (DocumentDiagnosticReportPartialResult arg0) = Aeson.object $ concat $  [["relatedDocuments" Aeson..= arg0]]

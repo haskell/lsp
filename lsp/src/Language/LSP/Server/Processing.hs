@@ -84,8 +84,8 @@ instance Pretty LspProcessingLog where
       , "when processing"
       , pretty (TL.decodeUtf8 bs)
       ]
-  pretty (MissingHandler _ m) = "LSP: no handler for:" <+> viaShow m
-  pretty (ProgressCancel tid) = "LSP: cancelling action for token:" <+> viaShow tid
+  pretty (MissingHandler _ m) = "LSP: no handler for:" <+> pretty m
+  pretty (ProgressCancel tid) = "LSP: cancelling action for token:" <+> pretty tid
   pretty Exiting = "LSP: Got exit, exiting"
 
 processMessage :: (m ~ LspM config) => LogAction m (WithSeverity LspProcessingLog) -> BSL.ByteString -> m ()

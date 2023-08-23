@@ -8,6 +8,8 @@ module Language.LSP.Protocol.Internal.Types.WillSaveTextDocumentParams where
 import Control.DeepSeq
 import Data.Hashable
 import GHC.Generics
+import Language.LSP.Protocol.Utils.Misc
+import Prettyprinter
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
@@ -30,6 +32,7 @@ data WillSaveTextDocumentParams = WillSaveTextDocumentParams
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
+  deriving Pretty via (ViaJSON WillSaveTextDocumentParams)
 
 instance Aeson.ToJSON WillSaveTextDocumentParams where
   toJSON (WillSaveTextDocumentParams arg0 arg1) = Aeson.object $ concat $  [["textDocument" Aeson..= arg0]

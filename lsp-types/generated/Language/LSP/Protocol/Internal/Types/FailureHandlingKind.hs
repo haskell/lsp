@@ -8,6 +8,8 @@ module Language.LSP.Protocol.Internal.Types.FailureHandlingKind where
 import Control.DeepSeq
 import Data.Hashable
 import GHC.Generics
+import Language.LSP.Protocol.Utils.Misc
+import Prettyprinter
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
@@ -45,6 +47,7 @@ data FailureHandlingKind =
   deriving anyclass (NFData, Hashable)
   deriving ( Aeson.ToJSON
   , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum FailureHandlingKind Data.Text.Text)
+  deriving Pretty via (ViaJSON FailureHandlingKind)
 
 instance Language.LSP.Protocol.Types.LspEnum.LspEnum FailureHandlingKind where
   knownValues = Data.Set.fromList [FailureHandlingKind_Abort

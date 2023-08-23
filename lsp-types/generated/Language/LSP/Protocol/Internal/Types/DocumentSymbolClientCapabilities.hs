@@ -8,6 +8,8 @@ module Language.LSP.Protocol.Internal.Types.DocumentSymbolClientCapabilities whe
 import Control.DeepSeq
 import Data.Hashable
 import GHC.Generics
+import Language.LSP.Protocol.Utils.Misc
+import Prettyprinter
 import qualified Data.Aeson as Aeson
 import qualified Data.Row as Row
 import qualified Data.Row.Aeson as Aeson
@@ -51,6 +53,7 @@ data DocumentSymbolClientCapabilities = DocumentSymbolClientCapabilities
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
+  deriving Pretty via (ViaJSON DocumentSymbolClientCapabilities)
 
 instance Aeson.ToJSON DocumentSymbolClientCapabilities where
   toJSON (DocumentSymbolClientCapabilities arg0 arg1 arg2 arg3 arg4) = Aeson.object $ concat $  ["dynamicRegistration" Language.LSP.Protocol.Types.Common..=? arg0
