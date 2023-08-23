@@ -316,7 +316,7 @@ updateStateC = awaitForever $ \msg -> do
       sendMessage $ TResponseMessage "2.0" (Just $ r ^. L.id) (Right $ ApplyWorkspaceEditResult True Nothing Nothing)
     FromServerMess SMethod_WorkspaceConfiguration r -> do
       let requestedSections = mapMaybe (\i -> i ^? L.section . _Just) $ r ^. L.params . L.items
-      o <- curLspConfig <$> get @SessionState
+      let o = curLspConfig state
       -- check for each requested section whether we have it
       let configsOrErrs = (flip fmap) requestedSections $ \section ->
             case o ^. at (fromString $ T.unpack section) of
