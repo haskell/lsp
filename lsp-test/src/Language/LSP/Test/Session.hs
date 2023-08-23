@@ -42,6 +42,7 @@ import Control.Concurrent hiding (yield)
 import Control.Exception
 import Control.Lens hiding (List, Empty)
 import Control.Monad
+import Control.Monad.IO.Class
 import Control.Monad.Catch (MonadThrow)
 import Control.Monad.Except
 #if __GLASGOW_HASKELL__ == 806
