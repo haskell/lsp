@@ -52,7 +52,10 @@ module Language.LSP.Test
   -- ** Initialization
   , initializeResponse
   -- ** Config
+  , modifyConfig
   , setConfig
+  , modifyConfigSection
+  , setConfigSection
   -- ** Documents
   , createDoc
   , openDoc
@@ -148,6 +151,7 @@ import System.Process (ProcessHandle, CreateProcess)
 import qualified System.FilePath.Glob as Glob
 import Control.Monad.State (execState)
 import Data.Traversable (for)
+import Data.String (fromString)
 
 -- | Starts a new session.
 --
@@ -411,12 +415,14 @@ setIgnoringConfigurationRequests :: Bool -> Session ()
 setIgnoringConfigurationRequests value = do
   modify (\ss -> ss { ignoringConfigurationRequests = value })
 
--- | Set the client config. This will send a notification to the server that the
+-- | Modify the client config. This will send a notification to the server that the
 -- config has changed.
-setConfig :: Object
-          -> Session ()
-setConfig newConfig = do
-  modify (\ss -> ss { curLspConfig = newConfig})
+modifyConfig :: (Object -> Object) -> Session ()
+modifyConfig f = do
+  oldConfig <- curLspConfig <$> get
+  let newConfig = f oldConfig
+  modify (\ss -> ss { curLspConfig = newConfig })
+
   caps <- asks sessionCapabilities
   let supportsConfiguration = fromMaybe False $ caps ^? L.workspace . _Just . L.configuration . _Just
       -- TODO: make this configurable?
@@ -424,6 +430,21 @@ setConfig newConfig = do
       -- they have to request it
       configToSend = if supportsConfiguration then J.Null else Object newConfig
   sendNotification SMethod_WorkspaceDidChangeConfiguration $ DidChangeConfigurationParams configToSend
+
+-- | Set the client config. This will send a notification to the server that the
+-- config has changed.
+setConfig :: Object -> Session ()
+setConfig newConfig = modifyConfig (const newConfig)
+
+-- | Modify a client config section (if already present, otherwise does nothing).
+-- This will send a notification to the server that the config has changed.
+modifyConfigSection :: String -> (Value -> Value) -> Session ()
+modifyConfigSection section f = modifyConfig (\o -> o & ix (fromString section) %~ f)
+
+-- | Set a client config section. This will send a notification to the server that the
+-- config has changed.
+setConfigSection :: String -> Value -> Session ()
+setConfigSection section settings = modifyConfig (\o -> o & at(fromString section) ?~ settings)
 
 -- | /Creates/ a new text document. This is different from 'openDoc'
 -- as it sends a workspace/didChangeWatchedFiles notification letting the server

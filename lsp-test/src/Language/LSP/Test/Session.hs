@@ -115,7 +115,7 @@ data SessionConfig = SessionConfig
   -- Can be overriden with the environment variable @LSP_TEST_LOG_MESSAGES@.
   , logColor       :: Bool -- ^ Add ANSI color to the logged messages, defaults to True.
   , lspConfig      :: Object
-  -- ^ The initial LSP config as JSON value, defaults to the empty object.
+  -- ^ The initial LSP config as JSON object, defaults to the empty object.
   -- This should include the config section for the server if it has one, i.e. if
   -- the server has a 'mylang' config section, then the config should be an object
   -- with a 'mylang' key whose value is the actual config for the server. You
