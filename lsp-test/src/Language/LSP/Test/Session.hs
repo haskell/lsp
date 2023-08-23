@@ -192,6 +192,8 @@ data SessionState = SessionState
   -- ^ The capabilities that the server has dynamically registered with us so
   -- far
   , curProgressSessions :: !(Set.Set ProgressToken)
+  , ignoringLogNotifications :: Bool
+  , ignoringConfigurationRequests :: Bool
   }
 
 class Monad m => HasState s m where
@@ -277,7 +279,7 @@ runSession' serverIn serverOut mServerProc serverHandler config caps rootDir exi
   mainThreadId <- myThreadId
 
   let context = SessionContext serverIn absRootDir messageChan timeoutIdVar reqMap initRsp config caps
-      initState vfs = SessionState 0 vfs mempty False Nothing mempty (lspConfig config) mempty
+      initState vfs = SessionState 0 vfs mempty False Nothing mempty (lspConfig config) mempty (ignoreLogNotifications config) (ignoreConfigurationRequests config)
       runSession' ses = initVFS $ \vfs -> runSessionMonad context (initState vfs) ses
 
       errorHandler = throwTo mainThreadId :: SessionException -> IO ()
@@ -306,7 +308,7 @@ runSession' serverIn serverOut mServerProc serverHandler config caps rootDir exi
 
 updateStateC :: ConduitM FromServerMessage FromServerMessage (StateT SessionState (ReaderT SessionContext IO)) ()
 updateStateC = awaitForever $ \msg -> do
-  context <- ask @SessionContext
+  state <- get @SessionState
   updateState msg
   case msg of
     FromServerMess SMethod_WindowWorkDoneProgressCreate req ->
@@ -334,7 +336,7 @@ updateStateC = awaitForever $ \msg -> do
 
         _ -> sendMessage @_ @(TResponseError Method_WorkspaceConfiguration) $ TResponseError (InL LSPErrorCodes_RequestFailed) "No configuration" Nothing
     _ -> pure ()
-  unless ((ignoreLogNotifications (config context) && isLogNotification msg) || (ignoreConfigurationRequests (config context) && isConfigRequest msg)) $
+  unless ((ignoringLogNotifications state && isLogNotification msg) || (ignoringConfigurationRequests state && isConfigRequest msg)) $
     yield msg
 
   where

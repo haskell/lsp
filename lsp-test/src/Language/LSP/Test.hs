@@ -29,6 +29,8 @@ module Language.LSP.Test
   , runSessionWithConfigCustomProcess
   , runSessionWithHandles
   , runSessionWithHandles'
+  , setIgnoringLogNotifications
+  , setIgnoringConfigurationRequests
   -- ** Config
   , SessionConfig(..)
   , defaultConfig
@@ -400,6 +402,14 @@ sendResponse = sendMessage
 -- so if you need to test it use this.
 initializeResponse :: Session (TResponseMessage Method_Initialize)
 initializeResponse = ask >>= (liftIO . readMVar) . initRsp
+
+setIgnoringLogNotifications :: Bool -> Session ()
+setIgnoringLogNotifications value = do
+  modify (\ss -> ss { ignoringLogNotifications = value })
+
+setIgnoringConfigurationRequests :: Bool -> Session ()
+setIgnoringConfigurationRequests value = do
+  modify (\ss -> ss { ignoringConfigurationRequests = value })
 
 -- | Set the client config. This will send a notification to the server that the
 -- config has changed.
