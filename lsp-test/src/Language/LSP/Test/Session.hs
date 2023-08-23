@@ -53,7 +53,6 @@ import Control.Monad.Trans.State (StateT, runStateT, execState)
 import qualified Control.Monad.Trans.State as State
 import qualified Data.ByteString.Lazy.Char8 as B
 import Data.Aeson hiding (Error, Null)
-import qualified Data.Aeson as J
 import Data.Aeson.Encode.Pretty
 import Data.Aeson.Lens ()
 import Data.Conduit as Conduit
@@ -115,8 +114,8 @@ data SessionConfig = SessionConfig
   -- ^ Trace the messages sent and received to stdout, defaults to False.
   -- Can be overriden with the environment variable @LSP_TEST_LOG_MESSAGES@.
   , logColor       :: Bool -- ^ Add ANSI color to the logged messages, defaults to True.
-  , lspConfig      :: Value
-  -- ^ The initial LSP config as JSON value, defaults to Null.
+  , lspConfig      :: Object
+  -- ^ The initial LSP config as JSON value, defaults to the empty object.
   -- This should include the config section for the server if it has one, i.e. if
   -- the server has a 'mylang' config section, then the config should be an object
   -- with a 'mylang' key whose value is the actual config for the server. You
@@ -134,7 +133,7 @@ data SessionConfig = SessionConfig
 
 -- | The configuration used in 'Language.LSP.Test.runSession'.
 defaultConfig :: SessionConfig
-defaultConfig = SessionConfig 60 False False True J.Null True True Nothing
+defaultConfig = SessionConfig 60 False False True mempty True True Nothing
 
 instance Default SessionConfig where
   def = defaultConfig
@@ -188,9 +187,9 @@ data SessionState = SessionState
   -- Used for providing exception information
   , lastReceivedMessage :: !(Maybe FromServerMessage)
   , curDynCaps :: !(Map.Map T.Text SomeRegistration)
-  , curLspConfig :: Value
   -- ^ The capabilities that the server has dynamically registered with us so
   -- far
+  , curLspConfig :: Object
   , curProgressSessions :: !(Set.Set ProgressToken)
   , ignoringLogNotifications :: Bool
   , ignoringConfigurationRequests :: Bool
@@ -317,24 +316,20 @@ updateStateC = awaitForever $ \msg -> do
       sendMessage $ TResponseMessage "2.0" (Just $ r ^. L.id) (Right $ ApplyWorkspaceEditResult True Nothing Nothing)
     FromServerMess SMethod_WorkspaceConfiguration r -> do
       let requestedSections = mapMaybe (\i -> i ^? L.section . _Just) $ r ^. L.params . L.items
-      c <- curLspConfig <$> get @SessionState
-      case c of
-        Object o -> do
-          -- check for each requested section whether we have it
-          let configsOrErrs = (flip fmap) requestedSections $ \section ->
-                case o ^. at (fromString $ T.unpack section) of
-                  Just config -> Right config
-                  Nothing -> Left section
+      o <- curLspConfig <$> get @SessionState
+      -- check for each requested section whether we have it
+      let configsOrErrs = (flip fmap) requestedSections $ \section ->
+            case o ^. at (fromString $ T.unpack section) of
+              Just config -> Right config
+              Nothing -> Left section
 
-          let (errs, configs) = partitionEithers configsOrErrs
+      let (errs, configs) = partitionEithers configsOrErrs
 
-          -- we have to return exactly the number of sections requested, so if we can't find all of them then that's an error
-          if null errs
-          then sendMessage $ TResponseMessage "2.0" (Just $ r ^. L.id) (Right configs)
-          else sendMessage @_ @(TResponseError Method_WorkspaceConfiguration) $
-            TResponseError (InL LSPErrorCodes_RequestFailed) ("No configuration for requested sections: " <> (T.pack $ show errs)) Nothing
-
-        _ -> sendMessage @_ @(TResponseError Method_WorkspaceConfiguration) $ TResponseError (InL LSPErrorCodes_RequestFailed) "No configuration" Nothing
+      -- we have to return exactly the number of sections requested, so if we can't find all of them then that's an error
+      if null errs
+      then sendMessage $ TResponseMessage "2.0" (Just $ r ^. L.id) (Right configs)
+      else sendMessage @_ @(TResponseError Method_WorkspaceConfiguration) $
+        TResponseError (InL LSPErrorCodes_RequestFailed) ("No configuration for requested sections: " <> (T.pack $ show errs)) Nothing
     _ -> pure ()
   unless ((ignoringLogNotifications state && isLogNotification msg) || (ignoringConfigurationRequests state && isConfigRequest msg)) $
     yield msg

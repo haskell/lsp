@@ -9,6 +9,7 @@ import DummyServer
 import           Test.Hspec
 import           Data.Aeson
 import qualified Data.Aeson as J
+import qualified Data.Aeson.KeyMap as J
 import           Data.Default
 import qualified Data.Map.Strict as M
 import           Data.Either
@@ -145,7 +146,7 @@ main = hspec $ around withDummyServer $ do
         c <- requestConfig
         -- from the server definition
         liftIO $ c `shouldBe` 1
-        setConfig $ J.object ["dummy" J..= toJSON @Int 2]
+        setConfig $ J.singleton "dummy" (toJSON @Int 2)
         -- ensure the configuration change has happened
         configurationRequest
         c <- requestConfig

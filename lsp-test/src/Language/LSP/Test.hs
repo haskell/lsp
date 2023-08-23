@@ -230,7 +230,7 @@ runSessionWithHandles' serverProc serverIn serverOut config' caps rootDir sessio
                                           (InL $ filePathToUri absRootDir)
                                           caps
                                           -- TODO: make this configurable?
-                                          (Just $ lspConfig config')
+                                          (Just $ Object $ lspConfig config')
                                           (Just TraceValues_Off)
                                           (fmap InL $ initialWorkspaceFolders config)
   runSession' serverIn serverOut serverProc listenServer config caps rootDir exitServer $ do
@@ -413,7 +413,7 @@ setIgnoringConfigurationRequests value = do
 
 -- | Set the client config. This will send a notification to the server that the
 -- config has changed.
-setConfig :: Value
+setConfig :: Object
           -> Session ()
 setConfig newConfig = do
   modify (\ss -> ss { curLspConfig = newConfig})
@@ -422,7 +422,7 @@ setConfig newConfig = do
       -- TODO: make this configurable?
       -- if they support workspace/configuration then be annoying and don't send the full config so
       -- they have to request it
-      configToSend = if supportsConfiguration then J.Null else newConfig
+      configToSend = if supportsConfiguration then J.Null else Object newConfig
   sendNotification SMethod_WorkspaceDidChangeConfiguration $ DidChangeConfigurationParams configToSend
 
 -- | /Creates/ a new text document. This is different from 'openDoc'
