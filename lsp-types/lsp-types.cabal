@@ -79,6 +79,7 @@ library
     , exceptions
     , hashable          >=1.3.4.0
     , indexed-traversable
+    , indexed-traversable-instances
     , lens              >=4.15.2
     , lens-aeson
     , mod
