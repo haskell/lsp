@@ -7,8 +7,10 @@ module DummyServer where
 import Control.Monad
 import Control.Monad.Reader
 import Data.Aeson hiding (defaultOptions, Null)
+import qualified Data.Aeson as J
 import qualified Data.Map.Strict as M
 import Data.List (isSuffixOf)
+import qualified Data.Text as T
 import Data.String
 import UnliftIO.Concurrent
 import Language.LSP.Server
@@ -27,10 +29,15 @@ withDummyServer f = do
   (houtRead, houtWrite) <- createPipe
 
   handlerEnv <- HandlerEnv <$> newEmptyMVar <*> newEmptyMVar
-  let definition = ServerDefinition
+  let
+    definition = ServerDefinition
         { doInitialize = \env _req -> pure $ Right env
-        , defaultConfig = ()
-        , onConfigurationChange = const $ pure $ Right ()
+        , defaultConfig = 1 :: Int
+        , configSection = "dummy"
+        , parseConfig = \_old new -> case fromJSON new of
+            J.Success v -> Right v
+            J.Error err -> Left $ T.pack err
+        , onConfigChange = const $ pure ()
         , staticHandlers = \_caps -> handlers
         , interpretHandler = \env ->
             Iso (\m -> runLspT env (runReaderT m handlerEnv)) liftIO
@@ -48,13 +55,18 @@ data HandlerEnv = HandlerEnv
   , absRegToken :: MVar (RegistrationToken Method_WorkspaceDidChangeWatchedFiles)
   }
 
-handlers :: Handlers (ReaderT HandlerEnv (LspM ()))
+handlers :: Handlers (ReaderT HandlerEnv (LspM Int))
 handlers =
   mconcat
     [ notificationHandler SMethod_Initialized $
         \_noti ->
           sendNotification SMethod_WindowLogMessage $
             LogMessageParams MessageType_Log "initialized"
+
+    , requestHandler (SMethod_CustomMethod (Proxy @"getConfig")) $ \_req resp -> do
+        config <- getConfig
+        resp $ Right $ toJSON config
+
     , requestHandler SMethod_TextDocumentHover $
         \_req responder ->
           responder $

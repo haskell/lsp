@@ -1,5 +1,18 @@
 # Revision history for lsp-test
 
+## Unreleased
+
+- The client configuration is now _mandatory_ and is an `Object` rather than a `Value`.
+- `lsp-test` now responds to `workspace/configuration` requests.
+- `lsp-test` does _not_ send a `workspace/didChangeConfiguration` request on startup.
+- New functions for modifying the client configuration and notifying the server.
+- `ignoreLogNotifications` is now _on by default_. Experience shows the norm is to ignore these
+  and it is simpler to turn this on only when they are required.
+- `ignoreConfigurationRequests` option to ignore `workspace/configuration` requests, also on
+  by default.
+- New functions `setIgnoringLogNotifications` and `setIgnoringConfigurationRequests` to change
+  whether such messages are ignored during a `Session` without having to change the `SessionConfig`.
+
 ## 0.15.0.1
 
 * Adds helper functions to resolve code lens, code actions, and completion items.

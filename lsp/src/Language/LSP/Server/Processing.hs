@@ -1,15 +1,16 @@
-{-# LANGUAGE TypeInType #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE RecursiveDo #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE BangPatterns        #-}
+{-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE GADTs               #-}
+{-# LANGUAGE LambdaCase          #-}
+{-# LANGUAGE NamedFieldPuns      #-}
+{-# LANGUAGE OverloadedLabels    #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE RankNTypes          #-}
+{-# LANGUAGE RecordWildCards     #-}
+{-# LANGUAGE RecursiveDo         #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE StandaloneDeriving  #-}
+{-# LANGUAGE TypeInType          #-}
 
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 -- there's just so much!
@@ -20,48 +21,54 @@
 
 module Language.LSP.Server.Processing where
 
-import           Colog.Core (LogAction (..), WithSeverity (..), Severity (..), (<&))
+import           Colog.Core                             (LogAction (..),
+                                                         Severity (..),
+                                                         WithSeverity (..),
+                                                         cmap, (<&))
 
-import           Control.Lens hiding (Empty)
-import           Data.Aeson hiding (Options, Error, Null)
-import           Data.Aeson.Types hiding (Options, Error, Null)
-import qualified Data.ByteString.Lazy as BSL
+import           Control.Concurrent.STM
+import qualified Control.Exception                      as E
+import           Control.Lens                           hiding (Empty)
+import           Control.Monad
+import           Control.Monad.Except                   ()
+import           Control.Monad.IO.Class
+import           Control.Monad.Reader
+import           Control.Monad.State
+import           Control.Monad.Trans.Except
+import           Control.Monad.Writer.Strict
+import           Data.Aeson                             hiding (Error, Null,
+                                                         Options)
+import           Data.Aeson.Lens                        ()
+import           Data.Aeson.Types                       hiding (Error, Null,
+                                                         Options)
+import qualified Data.ByteString.Lazy                   as BSL
+import           Data.Foldable                          (traverse_)
+import qualified Data.Functor.Product                   as P
+import           Data.IxMap
 import           Data.List
-import Data.List.NonEmpty (NonEmpty(..))
+import           Data.List.NonEmpty                     (NonEmpty (..))
+import qualified Data.Map.Strict                        as Map
+import           Data.Maybe
+import           Data.Monoid
 import           Data.Row
-import qualified Data.Text as T
-import qualified Data.Text.Lazy.Encoding as TL
-import qualified Language.LSP.Protocol.Lens as L
-import           Language.LSP.Protocol.Types
+import           Data.String                            (fromString)
+import qualified Data.Text                              as T
+import qualified Data.Text.Lazy.Encoding                as TL
+import           Data.Text.Prettyprint.Doc
+import qualified Language.LSP.Protocol.Lens             as L
 import           Language.LSP.Protocol.Message
+import           Language.LSP.Protocol.Types
 import           Language.LSP.Protocol.Utils.SMethodMap (SMethodMap)
 import qualified Language.LSP.Protocol.Utils.SMethodMap as SMethodMap
 import           Language.LSP.Server.Core
-import           Language.LSP.VFS as VFS
-import qualified Data.Functor.Product as P
-import qualified Control.Exception as E
-import           Data.Monoid 
-import           Control.Monad
-import           Control.Monad.IO.Class
-import           Control.Monad.Except ()
-import           Control.Concurrent.STM
-import           Control.Monad.Trans.Except
-import           Control.Monad.Reader
-import           Data.IxMap
-import           Data.Maybe
-import qualified Data.Map.Strict as Map
-import           Data.Text.Prettyprint.Doc
+import           Language.LSP.VFS                       as VFS
 import           System.Exit
-import           GHC.TypeLits (symbolVal)
-import           Control.Monad.State
-import           Control.Monad.Writer.Strict 
-import           Data.Foldable (traverse_)
 
 data LspProcessingLog =
   VfsLog VfsLog
+  | LspCore LspCoreLog
   | MessageProcessingError BSL.ByteString String
   | forall m . MissingHandler Bool (SClientMethod m)
-  | ConfigurationParseError Value T.Text
   | ProgressCancel ProgressToken
   | Exiting
 
@@ -69,6 +76,7 @@ deriving instance Show LspProcessingLog
 
 instance Pretty LspProcessingLog where
   pretty (VfsLog l) = pretty l
+  pretty (LspCore l) = pretty l
   pretty (MessageProcessingError bs err) =
     vsep [
       "LSP: incoming message parse error:"
@@ -77,13 +85,6 @@ instance Pretty LspProcessingLog where
       , pretty (TL.decodeUtf8 bs)
       ]
   pretty (MissingHandler _ m) = "LSP: no handler for:" <+> viaShow m
-  pretty (ConfigurationParseError settings err) =
-    vsep [
-      "LSP: configuration parse error:"
-      , pretty err
-      , "when parsing"
-      , viaShow settings
-      ]
   pretty (ProgressCancel tid) = "LSP: cancelling action for token:" <+> viaShow tid
   pretty Exiting = "LSP: Got exit, exiting"
 
@@ -110,12 +111,13 @@ processMessage logger jsonStr = do
 
 -- | Call this to initialize the session
 initializeRequestHandler
-  :: ServerDefinition config
+  :: LogAction IO (WithSeverity LspProcessingLog)
+  -> ServerDefinition config
   -> VFS
   -> (FromServerMessage -> IO ())
   -> TMessage Method_Initialize
   -> IO (Maybe (LanguageContextEnv config))
-initializeRequestHandler ServerDefinition{..} vfs sendFunc req = do
+initializeRequestHandler logger ServerDefinition{..} vfs sendFunc req = do
   let sendResp = sendFunc . FromServerRsp SMethod_Initialize
       handleErr (Left err) = do
         sendResp $ makeResponseError (req ^. L.id) err
@@ -130,11 +132,19 @@ initializeRequestHandler ServerDefinition{..} vfs sendFunc req = do
 
     let initialWfs = case p ^. L.workspaceFolders of
           Just (InL xs) -> xs
-          _ -> []
+          _             -> []
 
-        initialConfig = case onConfigurationChange defaultConfig <$> (p ^. L.initializationOptions) of
-          Just (Right newConfig) -> newConfig
-          _ -> defaultConfig
+        -- See Note [LSP configuration]
+        configObject = lookForConfigSection configSection <$> (p ^. L.initializationOptions)
+
+    initialConfig <- case configObject of
+      Just o -> case parseConfig defaultConfig o of
+          Right newConfig -> pure newConfig
+          Left err -> do
+            -- Warn not error here, since initializationOptions is pretty unspecified
+            liftIO $ logger <& (LspCore $ ConfigurationParseError o err) `WithSeverity` Warning
+            pure defaultConfig
+      Nothing -> pure defaultConfig
 
     stateVars <- liftIO $ do
       resVFS              <- newTVarIO (VFSData vfs mempty)
@@ -152,7 +162,8 @@ initializeRequestHandler ServerDefinition{..} vfs sendFunc req = do
       pure LanguageContextState{..}
 
     -- Call the 'duringInitialization' callback to let the server kick stuff up
-    let env = LanguageContextEnv handlers onConfigurationChange sendFunc stateVars (p ^. L.capabilities) rootDir
+    let env = LanguageContextEnv handlers configSection parseConfig configChanger sendFunc stateVars (p ^. L.capabilities) rootDir
+        configChanger config = forward interpreter (onConfigChange config)
         handlers = transmuteHandlers interpreter (staticHandlers clientCaps)
         interpreter = interpretHandler initializationResult
     initializationResult <- ExceptT $ doInitialize env req
@@ -235,8 +246,8 @@ inferServerCapabilities clientCaps o h =
 
     supported_b :: forall m. SClientMethod m -> Bool
     supported_b m = case splitClientMethod m of
-      IsClientNot -> SMethodMap.member m $ notHandlers h
-      IsClientReq -> SMethodMap.member m $ reqHandlers h
+      IsClientNot    -> SMethodMap.member m $ notHandlers h
+      IsClientReq    -> SMethodMap.member m $ reqHandlers h
       IsClientEither -> error "capabilities depend on custom method"
 
     singleton :: a -> [a]
@@ -316,7 +327,7 @@ inferServerCapabilities clientCaps o h =
       | otherwise = Nothing
 
     sync = case optTextDocumentSync o of
-            Just x -> Just (InL x)
+            Just x  -> Just (InL x)
             Nothing -> Nothing
 
     workspace = #workspaceFolders .== workspaceFolder .+ #fileOperations .== Nothing
@@ -330,7 +341,9 @@ handle :: (m ~ LspM config) => LogAction m (WithSeverity LspProcessingLog) -> SC
 handle logger m msg =
   case m of
     SMethod_WorkspaceDidChangeWorkspaceFolders -> handle' logger (Just updateWorkspaceFolders) m msg
-    SMethod_WorkspaceDidChangeConfiguration    -> handle' logger (Just $ handleConfigChange logger) m msg
+    SMethod_WorkspaceDidChangeConfiguration    -> handle' logger (Just $ handleDidChangeConfiguration logger) m msg
+    -- See Note [LSP configuration]
+    SMethod_Initialized                        -> handle' logger (Just $ \_ -> requestConfigUpdate (cmap (fmap LspCore) logger)) m msg
     SMethod_TextDocumentDidOpen                -> handle' logger (Just $ vfsFunc logger openVFS) m msg
     SMethod_TextDocumentDidChange              -> handle' logger (Just $ vfsFunc logger changeFromClientVFS) m msg
     SMethod_TextDocumentDidClose               -> handle' logger (Just $ vfsFunc logger closeVFS) m msg
@@ -382,7 +395,7 @@ handle' logger mAction m msg = do
 
     IsClientEither -> case msg of
       NotMess noti -> case pickHandler dynNotHandlers notHandlers of
-        Just h -> liftIO $ h noti
+        Just h  -> liftIO $ h noti
         Nothing -> reportMissingHandler
       ReqMess req -> case pickHandler dynReqHandlers reqHandlers of
         Just h -> liftIO $ h req (mkRspCb req)
@@ -397,8 +410,8 @@ handle' logger mAction m msg = do
     pickHandler :: RegistrationMap t -> SMethodMap (ClientMessageHandler IO t) -> Maybe (Handler IO meth)
     pickHandler dynHandlerMap staticHandler = case (SMethodMap.lookup m dynHandlerMap, SMethodMap.lookup m staticHandler) of
       (Just (P.Pair _ (ClientMessageHandler h)), _) -> Just h
-      (Nothing, Just (ClientMessageHandler h)) -> Just h
-      (Nothing, Nothing) -> Nothing
+      (Nothing, Just (ClientMessageHandler h))      -> Just h
+      (Nothing, Nothing)                            -> Nothing
 
     -- '$/' notifications should/could be ignored by server.
     -- Don't log errors in that case.
@@ -427,17 +440,29 @@ shutdownRequestHandler :: Handler IO Method_Shutdown
 shutdownRequestHandler _req k = do
   k $ Right Null
 
-handleConfigChange :: (m ~ LspM config) => LogAction m (WithSeverity LspProcessingLog) -> TMessage Method_WorkspaceDidChangeConfiguration -> m ()
-handleConfigChange logger req = do
-  parseConfig <- LspT $ asks resParseConfig
-  let s = req ^. L.params . L.settings
-  res <- stateState resConfig $ \oldConfig -> case parseConfig oldConfig s of
-    Left err -> (Left err, oldConfig)
-    Right !newConfig -> (Right (), newConfig)
-  case res of
-    Left err -> do
-      logger <& ConfigurationParseError s err `WithSeverity` Error
-    Right () -> pure ()
+-- | Try to find the configuration section in an object that might represent "all" the settings.
+-- The heuristic we use is to look for a property with the right name, and use that if we find
+-- it. Otherwise we fall back to the whole object.
+-- See Note [LSP configuration]
+lookForConfigSection :: T.Text -> Value -> Value
+lookForConfigSection section (Object o) | Just s' <- o ^. at (fromString $ T.unpack section) = s'
+lookForConfigSection _ o = o
+
+-- | Handle a workspace/didChangeConfiguration request.
+handleDidChangeConfiguration :: (m ~ LspM config) => LogAction m (WithSeverity LspProcessingLog) -> TMessage Method_WorkspaceDidChangeConfiguration -> m ()
+handleDidChangeConfiguration logger req = do
+  section <- LspT $ asks resConfigSection
+  -- See Note [LSP configuration]
+
+  -- There are a few cases:
+  -- 1. Client supports `workspace/configuration` and sends nothing in `workspace/didChangeConfiguration`
+  --    Then we will fail the first attempt and succeed the second one.
+  -- 2. Client does not support `workspace/configuration` and sends updated config in `workspace/didChangeConfiguration`.
+  --    Then we will succeed the first attempt and fail (or in fact do nothing in) the second one.
+  -- 3. Client supports `workspace/configuration` and sends updated config in `workspace/didChangeConfiguration`.
+  --    Then both will succeed, which is a bit redundant but not a big deal.
+  tryChangeConfig (cmap (fmap LspCore) logger) (lookForConfigSection section $ req ^. L.params . L.settings)
+  requestConfigUpdate (cmap (fmap LspCore) logger)
 
 vfsFunc :: forall m n a config
         . (m ~ LspM config, n ~ WriterT [WithSeverity VfsLog] (State VFS))

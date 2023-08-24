@@ -8,6 +8,7 @@
 import DummyServer
 import           Test.Hspec
 import           Data.Aeson
+import qualified Data.Aeson as J
 import           Data.Default
 import qualified Data.Map.Strict as M
 import           Data.Either
@@ -103,14 +104,12 @@ main = hspec $ around withDummyServer $ do
     describe "SessionException" $ do
       it "throw on time out" $ \(hin, hout) ->
         let sesh = runSessionWithHandles hin hout (def {messageTimeout = 10}) fullCaps "." $ do
-                skipMany loggingNotification
                 _ <- message SMethod_WorkspaceApplyEdit
                 return ()
         in sesh `shouldThrow` anySessionException
 
       it "don't throw when no time out" $ \(hin, hout) ->
         runSessionWithHandles hin hout (def {messageTimeout = 5}) fullCaps "." $ do
-          loggingNotification
           liftIO $ threadDelay $ 6 * 1000000
           _ <- openDoc "test/data/renamePass/Desktop/simple.hs" "haskell"
           return ()
@@ -119,7 +118,7 @@ main = hspec $ around withDummyServer $ do
         it "throws when there's an unexpected message" $ \(hin, hout) ->
           let selector (UnexpectedMessage "Publish diagnostics notification" (FromServerMess SMethod_WindowLogMessage _)) = True
               selector _ = False
-            in runSessionWithHandles hin hout def fullCaps "." publishDiagnosticsNotification `shouldThrow` selector
+            in runSessionWithHandles hin hout (def {ignoreLogNotifications=False}) fullCaps "." publishDiagnosticsNotification `shouldThrow` selector
         it "provides the correct types that were expected and received" $ \(hin, hout) ->
           let selector (UnexpectedMessage "Response for: SMethod_TextDocumentRename" (FromServerRsp SMethod_TextDocumentDocumentSymbol _)) = True
               selector _ = False
@@ -130,6 +129,29 @@ main = hspec $ around withDummyServer $ do
                 response SMethod_TextDocumentRename -- the wrong type
             in runSessionWithHandles hin hout def fullCaps "." sesh
               `shouldThrow` selector
+
+  describe "config" $ do
+    it "updates config correctly" $ \(hin, hout) ->
+      runSessionWithHandles hin hout (def { ignoreConfigurationRequests = False }) fullCaps "." $ do
+        configurationRequest -- initialized configuration request
+        let requestConfig = do
+              resp <- request (SMethod_CustomMethod (Proxy @"getConfig")) J.Null
+              case resp ^? L.result . _Right of
+                Just val -> case fromJSON @Int val of
+                  J.Success v -> pure v
+                  J.Error err -> fail err
+                Nothing -> fail "no result"
+
+        c <- requestConfig
+        -- from the server definition
+        liftIO $ c `shouldBe` 1
+        setConfigSection "dummy" (toJSON @Int 2)
+        -- ensure the configuration change has happened
+        configurationRequest
+        c <- requestConfig
+        liftIO $ c `shouldBe` 2
+
+        pure ()
 
   describe "text document VFS" $ do
     it "sends back didChange notifications (documentChanges)" $ \(hin, hout) ->
@@ -212,8 +234,6 @@ main = hspec $ around withDummyServer $ do
   describe "getDocumentSymbols" $
     it "works" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "." $ do
       doc <- openDoc "test/data/renamePass/Desktop/simple.hs" "haskell"
-
-      skipMany loggingNotification
 
       Right (mainSymbol:_) <- getDocumentSymbols doc
 
@@ -324,21 +344,21 @@ main = hspec $ around withDummyServer $ do
       in sesh `shouldThrow` anyException
 
   describe "satisfy" $
-    it "works" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "." $ do
+    it "works" $ \(hin, hout) -> runSessionWithHandles hin hout (def {ignoreLogNotifications=False}) fullCaps "." $ do
       openDoc "test/data/Format.hs" "haskell"
       let pred (FromServerMess SMethod_WindowLogMessage _) = True
           pred _ = False
       void $ satisfy pred
 
   describe "satisfyMaybe" $ do
-    it "returns matched data on match" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "." $ do
+    it "returns matched data on match" $ \(hin, hout) -> runSessionWithHandles hin hout (def {ignoreLogNotifications=False}) fullCaps "." $ do
       -- Wait for window/logMessage "initialized" from the server.
       let pred (FromServerMess SMethod_WindowLogMessage _) = Just "match" :: Maybe String
           pred _ = Nothing :: Maybe String
       result <- satisfyMaybe pred
       liftIO $ result `shouldBe` "match"
 
-    it "doesn't return if no match" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "." $ do
+    it "doesn't return if no match" $ \(hin, hout) -> runSessionWithHandles hin hout (def {ignoreLogNotifications=False}) fullCaps "." $ do
       let pred (FromServerMess SMethod_TextDocumentPublishDiagnostics _) = Just "matched" :: Maybe String
           pred _ = Nothing :: Maybe String
       -- We expect a window/logMessage from the server, but
@@ -354,9 +374,8 @@ main = hspec $ around withDummyServer $ do
 
   describe "dynamic capabilities" $ do
 
-    it "keeps track" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "." $ do
+    it "keeps track" $ \(hin, hout) -> runSessionWithHandles hin hout (def {ignoreLogNotifications=False}) fullCaps "." $ do
       loggingNotification -- initialized log message
-
       createDoc ".register" "haskell" ""
       message SMethod_ClientRegisterCapability
 
@@ -378,13 +397,11 @@ main = hspec $ around withDummyServer $ do
 
       createDoc "Bar.watch" "haskell" ""
       void $ sendRequest SMethod_TextDocumentHover $ HoverParams doc (Position 0 0) Nothing
-      count 0 $ loggingNotification
       void $ anyResponse
 
-    it "handles absolute patterns" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "" $ do
-      curDir <- liftIO $ getCurrentDirectory
-
+    it "handles absolute patterns" $ \(hin, hout) -> runSessionWithHandles hin hout (def {ignoreLogNotifications=False}) fullCaps "" $ do
       loggingNotification -- initialized log message
+      curDir <- liftIO $ getCurrentDirectory
 
       createDoc ".register.abs" "haskell" ""
       message SMethod_ClientRegisterCapability
@@ -399,7 +416,6 @@ main = hspec $ around withDummyServer $ do
 
       createDoc (curDir </> "Bar.watch") "haskell" ""
       void $ sendRequest SMethod_TextDocumentHover $ HoverParams doc (Position 0 0) Nothing
-      count 0 $ loggingNotification
       void $ anyResponse
 
   describe "call hierarchy" $ do

@@ -90,10 +90,12 @@ run = flip E.catches handlers $ do
 
     serverDefinition = ServerDefinition
       { defaultConfig = Config {fooTheBar = False, wibbleFactor = 0 }
-      , onConfigurationChange = \_old v -> do
+      , parseConfig = \_old v -> do
           case J.fromJSON v of
             J.Error e -> Left (T.pack e)
             J.Success cfg -> Right cfg
+      , onConfigChange = const $ pure ()
+      , configSection = "demo"
       , doInitialize = \env _ -> forkIO (reactor stderrLogger rin) >> pure (Right env)
       -- Handlers log to both the client and stderr
       , staticHandlers = \_caps -> lspHandlers dualLogger rin

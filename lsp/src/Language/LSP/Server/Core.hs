@@ -1,70 +1,98 @@
+{-# LANGUAGE BangPatterns               #-}
+{-# LANGUAGE BinaryLiterals             #-}
+{-# LANGUAGE DerivingVia                #-}
+{-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE FunctionalDependencies     #-}
+{-# LANGUAGE GADTs                      #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE TypeFamilyDependencies #-}
-{-# LANGUAGE DerivingVia          #-}
-{-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE BangPatterns         #-}
-{-# LANGUAGE GADTs                #-}
-{-# LANGUAGE BinaryLiterals       #-}
-{-# LANGUAGE OverloadedStrings    #-}
-{-# LANGUAGE RankNTypes           #-}
-{-# LANGUAGE ScopedTypeVariables  #-}
-{-# LANGUAGE FlexibleContexts     #-}
-{-# LANGUAGE TypeInType           #-}
-{-# LANGUAGE FlexibleInstances    #-}
-{-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE RoleAnnotations #-}
+{-# LANGUAGE LambdaCase                 #-}
+{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE RankNTypes                 #-}
+{-# LANGUAGE RoleAnnotations            #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
+{-# LANGUAGE TypeFamilyDependencies     #-}
+{-# LANGUAGE TypeInType                 #-}
+{-# LANGUAGE TypeOperators              #-}
+{-# LANGUAGE UndecidableInstances       #-}
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 {-# OPTIONS_GHC -fprint-explicit-kinds #-}
 
-
 module Language.LSP.Server.Core where
 
-import           Colog.Core (LogAction (..), WithSeverity (..))
+import           Colog.Core                             (LogAction (..),
+                                                         Severity (..),
+                                                         WithSeverity (..),
+                                                         (<&))
 import           Control.Concurrent.Async
 import           Control.Concurrent.STM
-import qualified Control.Exception as E
+import qualified Control.Exception                      as E
+import           Control.Lens                           (_Just, at, (^.), (^?))
 import           Control.Monad
+import           Control.Monad.Catch                    (MonadCatch, MonadMask,
+                                                         MonadThrow)
 import           Control.Monad.Fix
 import           Control.Monad.IO.Class
-import           Control.Monad.Trans.Reader
-import           Control.Monad.Trans.Class
 import           Control.Monad.IO.Unlift
-import           Control.Lens ( (^.), (^?), _Just, at)
-import qualified Data.Aeson as J
+import           Control.Monad.Trans.Class
+import           Control.Monad.Trans.Identity
+import           Control.Monad.Trans.Reader
+import qualified Data.Aeson                             as J
 import           Data.Default
 import           Data.Functor.Product
+import qualified Data.HashMap.Strict                    as HM
 import           Data.IxMap
-import qualified Data.HashMap.Strict as HM
 import           Data.Kind
-import qualified Data.List as L
-import           Data.List.NonEmpty (NonEmpty(..))
-import qualified Data.Map.Strict as Map
+import qualified Data.List                              as L
+import           Data.List.NonEmpty                     (NonEmpty (..))
+import qualified Data.Map.Strict                        as Map
 import           Data.Maybe
+import           Data.Monoid                            (Ap (..))
+import           Data.Ord                               (Down (Down))
 import           Data.Row
-import           Data.Monoid (Ap(..))
-import           Data.Ord (Down (Down))
-import qualified Data.Text as T
-import           Data.Text ( Text )
-import qualified Data.UUID as UUID
-import Language.LSP.Protocol.Types
-import Language.LSP.Protocol.Message
-import qualified Language.LSP.Protocol.Types as J
-import qualified Language.LSP.Protocol.Lens as J
-import qualified Language.LSP.Protocol.Message as J
+import           Data.Text                              (Text)
+import qualified Data.Text                              as T
+import qualified Data.UUID                              as UUID
+import           Language.LSP.Diagnostics
+import qualified Language.LSP.Protocol.Lens             as L
+import           Language.LSP.Protocol.Message
+import qualified Language.LSP.Protocol.Message          as L
+import           Language.LSP.Protocol.Types
+import qualified Language.LSP.Protocol.Types            as L
 import           Language.LSP.Protocol.Utils.SMethodMap (SMethodMap)
 import qualified Language.LSP.Protocol.Utils.SMethodMap as SMethodMap
 import           Language.LSP.VFS
-import           Language.LSP.Diagnostics
-import           System.Random hiding (next)
-import           Control.Monad.Trans.Identity
-import           Control.Monad.Catch (MonadMask, MonadCatch, MonadThrow)
+import           Prettyprinter
+import           System.Random                          hiding (next)
 
 -- ---------------------------------------------------------------------
 {-# ANN module ("HLint: ignore Eta reduce"         :: String) #-}
 {-# ANN module ("HLint: ignore Redundant do"       :: String) #-}
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
 -- ---------------------------------------------------------------------
+
+data LspCoreLog =
+  -- TODO: arguably it would be nicer to have the config object itself in there, but
+  -- then we're going to need 'Pretty config' constraints everywhere
+  NewConfig J.Value
+  | ConfigurationParseError J.Value T.Text
+  | ConfigurationNotSupported
+  | BadConfigurationResponse ResponseError
+  | WrongConfigSections [J.Value]
+  deriving Show
+
+instance Pretty LspCoreLog where
+  pretty (NewConfig config) = "LSP: set new config:" <+> viaShow config
+  pretty (ConfigurationNotSupported) = "LSP: not requesting configuration since the client does not support workspace/configuration"
+  pretty (ConfigurationParseError settings err) =
+    vsep [
+      "LSP: configuration parse error:"
+      , pretty err
+      , "when parsing"
+      , viaShow settings
+      ]
+  pretty (BadConfigurationResponse err) = "LSP: error when requesting configuration: " <+> viaShow err
+  pretty (WrongConfigSections sections) = "LSP: expected only one configuration section, got: " <+> viaShow sections
 
 newtype LspT config m a = LspT { unLspT :: ReaderT (LanguageContextEnv config) m a }
   deriving (Functor, Applicative, Monad, MonadCatch, MonadIO, MonadMask, MonadThrow, MonadTrans, MonadUnliftIO, MonadFix)
@@ -98,13 +126,15 @@ instance MonadLsp c m => MonadLsp c (IdentityT m) where
 
 data LanguageContextEnv config =
   LanguageContextEnv
-  { resHandlers            :: !(Handlers IO)
-  , resParseConfig         :: !(config -> J.Value -> Either T.Text config)
-  , resSendMessage         :: !(FromServerMessage -> IO ())
+  { resHandlers           :: !(Handlers IO)
+  , resConfigSection      :: T.Text
+  , resParseConfig        :: !(config -> J.Value -> Either T.Text config)
+  , resOnConfigChange     :: !(config -> IO ())
+  , resSendMessage        :: !(FromServerMessage -> IO ())
   -- We keep the state in a TVar to be thread safe
-  , resState               :: !(LanguageContextState config)
-  , resClientCapabilities  :: !J.ClientCapabilities
-  , resRootPath            :: !(Maybe FilePath)
+  , resState              :: !(LanguageContextState config)
+  , resClientCapabilities :: !L.ClientCapabilities
+  , resRootPath           :: !(Maybe FilePath)
   }
 
 -- ---------------------------------------------------------------------
@@ -149,7 +179,7 @@ type family Handler (f :: Type -> Type) (m :: Method from t) = (result :: Type) 
 -- | How to convert two isomorphic data structures between each other.
 data m <~> n
   = Iso
-  { forward :: forall a. m a -> n a
+  { forward  :: forall a. m a -> n a
   , backward :: forall a. n a -> m a
   }
 
@@ -168,15 +198,15 @@ mapHandlers mapReq mapNot (Handlers reqs nots) = Handlers reqs' nots'
 -- | state used by the LSP dispatcher to manage the message loop
 data LanguageContextState config =
   LanguageContextState
-  { resVFS                 :: !(TVar VFSData)
-  , resDiagnostics         :: !(TVar DiagnosticStore)
-  , resConfig              :: !(TVar config)
-  , resWorkspaceFolders    :: !(TVar [WorkspaceFolder])
-  , resProgressData        :: !ProgressData
-  , resPendingResponses    :: !(TVar ResponseMap)
-  , resRegistrationsNot    :: !(TVar (RegistrationMap Notification))
-  , resRegistrationsReq    :: !(TVar (RegistrationMap Request))
-  , resLspId               :: !(TVar Int32)
+  { resVFS              :: !(TVar VFSData)
+  , resDiagnostics      :: !(TVar DiagnosticStore)
+  , resConfig           :: !(TVar config)
+  , resWorkspaceFolders :: !(TVar [WorkspaceFolder])
+  , resProgressData     :: !ProgressData
+  , resPendingResponses :: !(TVar ResponseMap)
+  , resRegistrationsNot :: !(TVar (RegistrationMap Notification))
+  , resRegistrationsReq :: !(TVar (RegistrationMap Request))
+  , resLspId            :: !(TVar Int32)
   }
 
 type ResponseMap = IxMap LspId (Product SMethod ServerResponseCallback)
@@ -192,7 +222,7 @@ data ProgressData = ProgressData { progressNextId :: !(TVar Int32)
 
 data VFSData =
   VFSData
-    { vfsData :: !VFS
+    { vfsData    :: !VFS
     , reverseMap :: !(Map.Map FilePath FilePath)
     }
 
@@ -220,7 +250,7 @@ getsState f = do
 -- If you set handlers for some requests, you may need to set some of these options.
 data Options =
   Options
-    { optTextDocumentSync                 :: Maybe J.TextDocumentSyncOptions
+    { optTextDocumentSync                 :: Maybe L.TextDocumentSyncOptions
     -- |  The characters that trigger completion automatically.
     , optCompletionTriggerCharacters      :: Maybe [Char]
     -- | The list of all possible characters that commit a completion. This field can be used
@@ -274,6 +304,7 @@ instance E.Exception ProgressCancelledException
 -- @since 0.11.0.0
 data ProgressCancellable = Cancellable | NotCancellable
 
+-- See Note [LSP configuration] for discussion of the configuration-related fields
 -- | Contains all the callbacks to use for initialized the language server.
 -- it is parameterized over a config type variable representing the type for the
 -- specific configuration data the language server needs to use.
@@ -281,13 +312,29 @@ data ServerDefinition config = forall m a.
   ServerDefinition
     { defaultConfig :: config
       -- ^ The default value we initialize the config variable to.
-    , onConfigurationChange :: config -> J.Value -> Either T.Text config
-      -- ^ @onConfigurationChange oldConfig newConfig@ is called whenever the
-      -- clients sends a message with a changed client configuration. This
-      -- callback should return either the parsed configuration data or an error
-      -- indicating what went wrong. The parsed configuration object will be
-      -- stored internally and can be accessed via 'config'.
-      -- It is also called on the `initializationOptions` field of the InitializeParams
+    , configSection :: T.Text
+      -- ^ The "config section" that this server uses. This is used to identify the settings
+      -- that are relevant to the server.
+    , parseConfig :: config -> J.Value -> Either T.Text config
+      -- ^ @parseConfig oldConfig newConfigObject@ is called whenever we
+      -- get updated configuration from the client.
+      --
+      -- @parseConfig@ is called on the object corresponding to the server's
+      -- config section, it should not itself try to look for the config section.
+      --
+      -- Note that the 'J.Value' may represent only a partial object in the case where we
+      -- are handling a @workspace/didChangeConfiguration@ request where the client sends
+      -- only the changed settings. This is also the main circumstance where the old configuration
+      -- argument is useful. It is generally fine for servers to ignore this case and just
+      -- assume that the 'J.Value' represents a full new config and ignore the old configuration.
+      -- This will only be problematic in the case of clients which behave as above and *also*
+      -- don't support @workspace/configuration@, which is discouraged.
+      --
+    , onConfigChange :: config -> m ()
+      -- ^ This callback is called any time the configuration is updated, with
+      -- the new config. Servers that want to react to config changes should provide
+      -- a callback here, it is not sufficient to just add e.g. a @workspace/didChangeConfiguration@
+      -- handler.
     , doInitialize :: LanguageContextEnv config -> TMessage Method_Initialize -> IO (Either ResponseError a)
       -- ^ Called *after* receiving the @initialize@ request and *before*
       -- returning the response. This callback will be invoked to offer the
@@ -341,7 +388,7 @@ sendNotification
 sendNotification m params =
   let msg = TNotificationMessage "2.0" m params
   in case splitServerMethod m of
-        IsServerNot -> sendToClient $ fromServerNot msg
+        IsServerNot    -> sendToClient $ fromServerNot msg
         IsServerEither -> sendToClient $ FromServerMess m $ NotMess msg
 
 sendRequest :: forall (m :: Method ServerToClient Request) f config. MonadLsp config f
@@ -357,7 +404,7 @@ sendRequest m params resHandler = do
 
   let msg = TRequestMessage "2.0" reqId m params
   ~() <- case splitServerMethod m of
-    IsServerReq -> sendToClient $ fromServerReq msg
+    IsServerReq    -> sendToClient $ fromServerReq msg
     IsServerEither -> sendToClient $ FromServerMess m $ ReqMess msg
   return reqId
 
@@ -395,7 +442,7 @@ persistVirtualFile logger uri = do
               Just uri_fp -> Map.insert fn uri_fp $ reverseMap vfs
               -- TODO: Does the VFS make sense for URIs which are not files?
               -- The reverse map should perhaps be (FilePath -> URI)
-              Nothing -> reverseMap vfs
+              Nothing     -> reverseMap vfs
             !vfs' = vfs {reverseMap = revMap}
             act = do
               write
@@ -405,11 +452,11 @@ persistVirtualFile logger uri = do
 -- | Given a text document identifier, annotate it with the latest version.
 getVersionedTextDoc :: MonadLsp config m => TextDocumentIdentifier -> m VersionedTextDocumentIdentifier
 getVersionedTextDoc doc = do
-  let uri = doc ^. J.uri
+  let uri = doc ^. L.uri
   mvf <- getVirtualFile (toNormalizedUri uri)
   let ver = case mvf of
         Just (VirtualFile lspver _ _) -> lspver
-        Nothing -> 0
+        Nothing                       -> 0
   return (VersionedTextDocumentIdentifier uri ver)
 
 {-# INLINE getVersionedTextDoc #-}
@@ -458,7 +505,7 @@ setConfig config = stateState resConfig (const ((), config))
 
 {-# INLINE setConfig #-}
 
-getClientCapabilities :: MonadLsp config m => m J.ClientCapabilities
+getClientCapabilities :: MonadLsp config m => m L.ClientCapabilities
 getClientCapabilities = resClientCapabilities <$> getLspEnv
 
 {-# INLINE getClientCapabilities #-}
@@ -472,7 +519,7 @@ getRootPath = resRootPath <$> getLspEnv
 getWorkspaceFolders :: MonadLsp config m => m (Maybe [WorkspaceFolder])
 getWorkspaceFolders = do
   clientCaps <- getClientCapabilities
-  let clientSupportsWfs = fromMaybe False $ clientCaps ^? J.workspace . _Just . J.workspaceFolders . _Just
+  let clientSupportsWfs = fromMaybe False $ clientCaps ^? L.workspace . _Just . L.workspaceFolders . _Just
   if clientSupportsWfs
     then Just <$> getsState resWorkspaceFolders
     else pure Nothing
@@ -493,8 +540,8 @@ registerCapability method regOpts f = do
   clientCaps <- resClientCapabilities <$> getLspEnv
   handlers <- resHandlers <$> getLspEnv
   let alreadyStaticallyRegistered = case splitClientMethod method of
-        IsClientNot -> SMethodMap.member method $ notHandlers handlers
-        IsClientReq -> SMethodMap.member method $ reqHandlers handlers
+        IsClientNot    -> SMethodMap.member method $ notHandlers handlers
+        IsClientReq    -> SMethodMap.member method $ reqHandlers handlers
         IsClientEither -> error "Cannot register capability for custom methods"
   go clientCaps alreadyStaticallyRegistered
   where
@@ -505,8 +552,8 @@ registerCapability method regOpts f = do
       -- First, check to see if the client supports dynamic registration on this method
       | dynamicSupported clientCaps = do
           uuid <- liftIO $ UUID.toText <$> getStdRandom random
-          let registration = J.TRegistration uuid method (Just regOpts)
-              params = J.RegistrationParams [toUntypedRegistration registration]
+          let registration = L.TRegistration uuid method (Just regOpts)
+              params = L.RegistrationParams [toUntypedRegistration registration]
               regId = RegistrationId uuid
           rio <- askUnliftIO
           ~() <- case splitClientMethod method of
@@ -526,42 +573,42 @@ registerCapability method regOpts f = do
 
     -- Also I'm thinking we should move this function to somewhere in messages.hs so
     -- we don't forget to update it when adding new methods...
-    capDyn :: J.HasDynamicRegistration a (Maybe Bool) => Maybe a -> Bool
-    capDyn (Just x) = fromMaybe False $ x ^. J.dynamicRegistration
+    capDyn :: L.HasDynamicRegistration a (Maybe Bool) => Maybe a -> Bool
+    capDyn (Just x) = fromMaybe False $ x ^. L.dynamicRegistration
     capDyn Nothing  = False
 
     -- | Checks if client capabilities declares that the method supports dynamic registration
     dynamicSupported clientCaps = case method of
-      SMethod_WorkspaceDidChangeConfiguration  -> capDyn $ clientCaps ^? J.workspace . _Just . J.didChangeConfiguration . _Just
-      SMethod_WorkspaceDidChangeWatchedFiles   -> capDyn $ clientCaps ^? J.workspace . _Just . J.didChangeWatchedFiles . _Just
-      SMethod_WorkspaceSymbol                  -> capDyn $ clientCaps ^? J.workspace . _Just . J.symbol . _Just
-      SMethod_WorkspaceExecuteCommand          -> capDyn $ clientCaps ^? J.workspace . _Just . J.executeCommand . _Just
-      SMethod_TextDocumentDidOpen              -> capDyn $ clientCaps ^? J.textDocument . _Just . J.synchronization . _Just
-      SMethod_TextDocumentDidChange            -> capDyn $ clientCaps ^? J.textDocument . _Just . J.synchronization . _Just
-      SMethod_TextDocumentDidClose             -> capDyn $ clientCaps ^? J.textDocument . _Just . J.synchronization . _Just
-      SMethod_TextDocumentCompletion           -> capDyn $ clientCaps ^? J.textDocument . _Just . J.completion . _Just
-      SMethod_TextDocumentHover                -> capDyn $ clientCaps ^? J.textDocument . _Just . J.hover . _Just
-      SMethod_TextDocumentSignatureHelp        -> capDyn $ clientCaps ^? J.textDocument . _Just . J.signatureHelp . _Just
-      SMethod_TextDocumentDeclaration          -> capDyn $ clientCaps ^? J.textDocument . _Just . J.declaration . _Just
-      SMethod_TextDocumentDefinition           -> capDyn $ clientCaps ^? J.textDocument . _Just . J.definition . _Just
-      SMethod_TextDocumentTypeDefinition       -> capDyn $ clientCaps ^? J.textDocument . _Just . J.typeDefinition . _Just
-      SMethod_TextDocumentImplementation       -> capDyn $ clientCaps ^? J.textDocument . _Just . J.implementation . _Just
-      SMethod_TextDocumentReferences           -> capDyn $ clientCaps ^? J.textDocument . _Just . J.references . _Just
-      SMethod_TextDocumentDocumentHighlight    -> capDyn $ clientCaps ^? J.textDocument . _Just . J.documentHighlight . _Just
-      SMethod_TextDocumentDocumentSymbol       -> capDyn $ clientCaps ^? J.textDocument . _Just . J.documentSymbol . _Just
-      SMethod_TextDocumentCodeAction           -> capDyn $ clientCaps ^? J.textDocument . _Just . J.codeAction . _Just
-      SMethod_TextDocumentCodeLens             -> capDyn $ clientCaps ^? J.textDocument . _Just . J.codeLens . _Just
-      SMethod_TextDocumentDocumentLink         -> capDyn $ clientCaps ^? J.textDocument . _Just . J.documentLink . _Just
-      SMethod_TextDocumentDocumentColor        -> capDyn $ clientCaps ^? J.textDocument . _Just . J.colorProvider . _Just
-      SMethod_TextDocumentColorPresentation    -> capDyn $ clientCaps ^? J.textDocument . _Just . J.colorProvider . _Just
-      SMethod_TextDocumentFormatting           -> capDyn $ clientCaps ^? J.textDocument . _Just . J.formatting . _Just
-      SMethod_TextDocumentRangeFormatting      -> capDyn $ clientCaps ^? J.textDocument . _Just . J.rangeFormatting . _Just
-      SMethod_TextDocumentOnTypeFormatting     -> capDyn $ clientCaps ^? J.textDocument . _Just . J.onTypeFormatting . _Just
-      SMethod_TextDocumentRename               -> capDyn $ clientCaps ^? J.textDocument . _Just . J.rename . _Just
-      SMethod_TextDocumentFoldingRange         -> capDyn $ clientCaps ^? J.textDocument . _Just . J.foldingRange . _Just
-      SMethod_TextDocumentSelectionRange       -> capDyn $ clientCaps ^? J.textDocument . _Just . J.selectionRange . _Just
-      SMethod_TextDocumentPrepareCallHierarchy -> capDyn $ clientCaps ^? J.textDocument . _Just . J.callHierarchy . _Just
-      --SMethod_TextDocumentSemanticTokens       -> capDyn $ clientCaps ^? J.textDocument . _Just . J.semanticTokens . _Just
+      SMethod_WorkspaceDidChangeConfiguration  -> capDyn $ clientCaps ^? L.workspace . _Just . L.didChangeConfiguration . _Just
+      SMethod_WorkspaceDidChangeWatchedFiles   -> capDyn $ clientCaps ^? L.workspace . _Just . L.didChangeWatchedFiles . _Just
+      SMethod_WorkspaceSymbol                  -> capDyn $ clientCaps ^? L.workspace . _Just . L.symbol . _Just
+      SMethod_WorkspaceExecuteCommand          -> capDyn $ clientCaps ^? L.workspace . _Just . L.executeCommand . _Just
+      SMethod_TextDocumentDidOpen              -> capDyn $ clientCaps ^? L.textDocument . _Just . L.synchronization . _Just
+      SMethod_TextDocumentDidChange            -> capDyn $ clientCaps ^? L.textDocument . _Just . L.synchronization . _Just
+      SMethod_TextDocumentDidClose             -> capDyn $ clientCaps ^? L.textDocument . _Just . L.synchronization . _Just
+      SMethod_TextDocumentCompletion           -> capDyn $ clientCaps ^? L.textDocument . _Just . L.completion . _Just
+      SMethod_TextDocumentHover                -> capDyn $ clientCaps ^? L.textDocument . _Just . L.hover . _Just
+      SMethod_TextDocumentSignatureHelp        -> capDyn $ clientCaps ^? L.textDocument . _Just . L.signatureHelp . _Just
+      SMethod_TextDocumentDeclaration          -> capDyn $ clientCaps ^? L.textDocument . _Just . L.declaration . _Just
+      SMethod_TextDocumentDefinition           -> capDyn $ clientCaps ^? L.textDocument . _Just . L.definition . _Just
+      SMethod_TextDocumentTypeDefinition       -> capDyn $ clientCaps ^? L.textDocument . _Just . L.typeDefinition . _Just
+      SMethod_TextDocumentImplementation       -> capDyn $ clientCaps ^? L.textDocument . _Just . L.implementation . _Just
+      SMethod_TextDocumentReferences           -> capDyn $ clientCaps ^? L.textDocument . _Just . L.references . _Just
+      SMethod_TextDocumentDocumentHighlight    -> capDyn $ clientCaps ^? L.textDocument . _Just . L.documentHighlight . _Just
+      SMethod_TextDocumentDocumentSymbol       -> capDyn $ clientCaps ^? L.textDocument . _Just . L.documentSymbol . _Just
+      SMethod_TextDocumentCodeAction           -> capDyn $ clientCaps ^? L.textDocument . _Just . L.codeAction . _Just
+      SMethod_TextDocumentCodeLens             -> capDyn $ clientCaps ^? L.textDocument . _Just . L.codeLens . _Just
+      SMethod_TextDocumentDocumentLink         -> capDyn $ clientCaps ^? L.textDocument . _Just . L.documentLink . _Just
+      SMethod_TextDocumentDocumentColor        -> capDyn $ clientCaps ^? L.textDocument . _Just . L.colorProvider . _Just
+      SMethod_TextDocumentColorPresentation    -> capDyn $ clientCaps ^? L.textDocument . _Just . L.colorProvider . _Just
+      SMethod_TextDocumentFormatting           -> capDyn $ clientCaps ^? L.textDocument . _Just . L.formatting . _Just
+      SMethod_TextDocumentRangeFormatting      -> capDyn $ clientCaps ^? L.textDocument . _Just . L.rangeFormatting . _Just
+      SMethod_TextDocumentOnTypeFormatting     -> capDyn $ clientCaps ^? L.textDocument . _Just . L.onTypeFormatting . _Just
+      SMethod_TextDocumentRename               -> capDyn $ clientCaps ^? L.textDocument . _Just . L.rename . _Just
+      SMethod_TextDocumentFoldingRange         -> capDyn $ clientCaps ^? L.textDocument . _Just . L.foldingRange . _Just
+      SMethod_TextDocumentSelectionRange       -> capDyn $ clientCaps ^? L.textDocument . _Just . L.selectionRange . _Just
+      SMethod_TextDocumentPrepareCallHierarchy -> capDyn $ clientCaps ^? L.textDocument . _Just . L.callHierarchy . _Just
+      --SMethod_TextDocumentSemanticTokens       -> capDyn $ clientCaps ^? L.textDocument . _Just . L.semanticTokens . _Just
       _                                        -> False
 
 -- | Sends a @client/unregisterCapability@ request and removes the handler
@@ -569,12 +616,12 @@ registerCapability method regOpts f = do
 unregisterCapability :: MonadLsp config f => RegistrationToken m -> f ()
 unregisterCapability (RegistrationToken m (RegistrationId uuid)) = do
   ~() <- case splitClientMethod m of
-    IsClientReq -> modifyState resRegistrationsReq $ SMethodMap.delete m
-    IsClientNot -> modifyState resRegistrationsNot $ SMethodMap.delete m
+    IsClientReq    -> modifyState resRegistrationsReq $ SMethodMap.delete m
+    IsClientNot    -> modifyState resRegistrationsNot $ SMethodMap.delete m
     IsClientEither -> error "Cannot unregister capability for custom methods"
 
-  let unregistration = J.TUnregistration uuid m
-      params = J.UnregistrationParams [toUntypedUnregistration unregistration]
+  let unregistration = L.TUnregistration uuid m
+      params = L.UnregistrationParams [toUntypedUnregistration unregistration]
   void $ sendRequest SMethod_ClientUnregisterCapability params $ \_res -> pure ()
 
 --------------------------------------------------------------------------------
@@ -596,7 +643,7 @@ getNewProgressId :: MonadLsp config m => m ProgressToken
 getNewProgressId = do
   stateState (progressNextId . resProgressData) $ \cur ->
     let !next = cur+1
-    in (J.ProgressToken $ J.InL cur, next)
+    in (L.ProgressToken $ L.InL cur, next)
 
 {-# INLINE getNewProgressId #-}
 
@@ -609,7 +656,7 @@ withProgressBase indefinite title cancellable f = do
         | indefinite = Nothing
         | otherwise = Just 0
       cancellable' = case cancellable of
-                      Cancellable -> True
+                      Cancellable    -> True
                       NotCancellable -> False
 
   -- Create progress token
@@ -621,7 +668,7 @@ withProgressBase indefinite title cancellable f = do
             -- An error occurred when the client was setting it up
             -- No need to do anything then, as per the spec
             Left _err -> pure ()
-            Right _ -> pure ()
+            Right _   -> pure ()
 
   -- Send the begin and done notifications via 'bracket_' so that they are always fired
   res <- withRunInIO $ \runInBase ->
@@ -629,11 +676,11 @@ withProgressBase indefinite title cancellable f = do
       -- Send begin notification
       (runInBase $ sendNotification SMethod_Progress $
         ProgressParams progId $ J.toJSON $
-          WorkDoneProgressBegin J.AString title (Just cancellable') Nothing initialPercentage)
+          WorkDoneProgressBegin L.AString title (Just cancellable') Nothing initialPercentage)
 
       -- Send end notification
       (runInBase $ sendNotification SMethod_Progress $
-        ProgressParams progId $ J.toJSON $ (WorkDoneProgressEnd J.AString Nothing)) $ do
+        ProgressParams progId $ J.toJSON $ (WorkDoneProgressEnd L.AString Nothing)) $ do
 
       -- Run f asynchronously
       aid <- async $ runInBase $ f (updater progId)
@@ -647,10 +694,10 @@ withProgressBase indefinite title cancellable f = do
   return res
   where updater progId (ProgressAmount percentage msg) = do
           sendNotification SMethod_Progress $ ProgressParams progId $ J.toJSON $
-              WorkDoneProgressReport J.AString Nothing msg percentage
+              WorkDoneProgressReport L.AString Nothing msg percentage
 
-clientSupportsProgress :: J.ClientCapabilities -> Bool
-clientSupportsProgress caps = fromMaybe False $ caps ^? J.window . _Just . J.workDoneProgress . _Just
+clientSupportsProgress :: L.ClientCapabilities -> Bool
+clientSupportsProgress caps = fromMaybe False $ caps ^? L.window . _Just . L.workDoneProgress . _Just
 
 {-# INLINE clientSupportsProgress #-}
 
@@ -686,14 +733,14 @@ withIndefiniteProgress title cancellable f = do
 -- | Aggregate all diagnostics pertaining to a particular version of a document,
 -- by source, and sends a @textDocument/publishDiagnostics@ notification with
 -- the total (limited by the first parameter) whenever it is updated.
-publishDiagnostics :: MonadLsp config m => Int -> NormalizedUri -> Maybe J.Int32 -> DiagnosticsBySource -> m ()
+publishDiagnostics :: MonadLsp config m => Int -> NormalizedUri -> Maybe L.Int32 -> DiagnosticsBySource -> m ()
 publishDiagnostics maxDiagnosticCount uri version diags = join $ stateState resDiagnostics $ \oldDiags->
   let !newDiags = updateDiagnostics oldDiags uri version diags
       mdp = getDiagnosticParamsFor maxDiagnosticCount newDiags uri
       act = case mdp of
         Nothing -> return ()
         Just params ->
-          sendToClient $ J.fromServerNot $ J.TNotificationMessage "2.0" J.SMethod_TextDocumentPublishDiagnostics params
+          sendToClient $ L.fromServerNot $ L.TNotificationMessage "2.0" L.SMethod_TextDocumentPublishDiagnostics params
       in (act,newDiags)
 
 -- ---------------------------------------------------------------------
@@ -710,31 +757,116 @@ flushDiagnosticsBySource maxDiagnosticCount msource = join $ stateState resDiagn
         case mdp of
           Nothing -> return ()
           Just params -> do
-            sendToClient $ J.fromServerNot $ J.TNotificationMessage "2.0" J.SMethod_TextDocumentPublishDiagnostics params
+            sendToClient $ L.fromServerNot $ L.TNotificationMessage "2.0" L.SMethod_TextDocumentPublishDiagnostics params
       in (act,newDiags)
 
 -- ---------------------------------------------------------------------
 
 -- | The changes in a workspace edit should be applied from the end of the file
 -- toward the start. Sort them into this order.
-reverseSortEdit :: J.WorkspaceEdit -> J.WorkspaceEdit
-reverseSortEdit (J.WorkspaceEdit cs dcs anns) = J.WorkspaceEdit cs' dcs' anns
+reverseSortEdit :: L.WorkspaceEdit -> L.WorkspaceEdit
+reverseSortEdit (L.WorkspaceEdit cs dcs anns) = L.WorkspaceEdit cs' dcs' anns
   where
     cs' :: Maybe (Map.Map Uri [TextEdit])
     cs' = (fmap . fmap ) sortTextEdits cs
 
-    dcs' :: Maybe [J.DocumentChange]
+    dcs' :: Maybe [L.DocumentChange]
     dcs' = (fmap . fmap) sortOnlyTextDocumentEdits dcs
 
-    sortTextEdits :: [J.TextEdit] -> [J.TextEdit]
-    sortTextEdits edits = L.sortOn (Down . (^. J.range)) edits
+    sortTextEdits :: [L.TextEdit] -> [L.TextEdit]
+    sortTextEdits edits = L.sortOn (Down . (^. L.range)) edits
 
-    sortOnlyTextDocumentEdits :: J.DocumentChange -> J.DocumentChange
-    sortOnlyTextDocumentEdits (J.InL (J.TextDocumentEdit td edits)) = J.InL $ J.TextDocumentEdit td edits'
+    sortOnlyTextDocumentEdits :: L.DocumentChange -> L.DocumentChange
+    sortOnlyTextDocumentEdits (L.InL (L.TextDocumentEdit td edits)) = L.InL $ L.TextDocumentEdit td edits'
       where
         edits' = L.sortOn (Down . editRange) edits
-    sortOnlyTextDocumentEdits (J.InR others) = J.InR others
+    sortOnlyTextDocumentEdits (L.InR others) = L.InR others
 
-    editRange :: J.TextEdit J.|? J.AnnotatedTextEdit -> J.Range
-    editRange (J.InR e) = e ^. J.range
-    editRange (J.InL e) = e ^. J.range
+    editRange :: L.TextEdit L.|? L.AnnotatedTextEdit -> L.Range
+    editRange (L.InR e) = e ^. L.range
+    editRange (L.InL e) = e ^. L.range
+
+--------------------------------------------------------------------------------
+-- CONFIG
+--------------------------------------------------------------------------------
+
+-- | Given a new config object, try to update our config with it.
+tryChangeConfig :: (m ~ LspM config) => LogAction m (WithSeverity LspCoreLog) -> J.Value -> m ()
+tryChangeConfig logger newConfigObject = do
+  parseCfg <- LspT $ asks resParseConfig
+  res <- stateState resConfig $ \oldConfig -> case parseCfg oldConfig newConfigObject of
+    Left err         -> (Left err, oldConfig)
+    Right newConfig -> (Right newConfig, newConfig)
+  case res of
+    Left err -> do
+      logger <& ConfigurationParseError newConfigObject err `WithSeverity` Warning
+    Right newConfig -> do
+      logger <& NewConfig newConfigObject `WithSeverity` Debug
+      cb <- LspT $ asks resOnConfigChange
+      liftIO $ cb newConfig
+
+-- | Send a `worksapce/configuration` request to update the server's config.
+--
+-- This is called automatically in response to `workspace/didChangeConfiguration` notifications
+-- from the client, so should not normally be called manually.
+requestConfigUpdate :: (m ~ LspM config) => LogAction m (WithSeverity LspCoreLog) -> m ()
+requestConfigUpdate logger = do
+  caps <- LspT $ asks resClientCapabilities
+  let supportsConfiguration = fromMaybe False $ caps ^? L.workspace . _Just . L.configuration . _Just
+  if supportsConfiguration
+  then do
+    section <- LspT $ asks resConfigSection
+    void $ sendRequest SMethod_WorkspaceConfiguration (ConfigurationParams [ConfigurationItem Nothing (Just section)]) $ \case
+      Right [newConfigObject] -> tryChangeConfig logger newConfigObject
+      Right sections -> logger <& WrongConfigSections sections `WithSeverity` Error
+      Left err -> logger <& BadConfigurationResponse err `WithSeverity` Error
+  else
+    logger <& ConfigurationNotSupported `WithSeverity` Debug
+
+{- Note [LSP configuration]
+LSP configuration is a huge mess.
+- The configuration model of the client is not specified
+- Many of the configuration messages are not specified in what they should return
+
+In particular, configuration appears in three places:
+1. The `initializationOptions` field of the `initialize` request.
+  - The contents of this are unspecified. "User provided initialization options".
+2. The `settings` field of the `workspace/didChangeConfiguration` notification.
+  - The contents of this are unspecified. "The actual changed settings".
+3. The `section` field of the response to the `workspace/configuration` request.
+  - This at least says it should be the settings corresponding to the sections
+    specified in the request.
+
+It's very hard to know what to do here. In particular, the first two cases seem
+like they could include arbitrary configuration from the client that might not
+relate to you. How you locate "your" settings is unclear.
+
+We are on firmer ground with case 3. Then at least it seems that we can pick
+a configuration section, just always ask for that, and require clients to use
+that for our settings. Furthermore, this is the method that is encouraged by the
+specification designers: https://github.com/microsoft/language-server-protocol/issues/567#issuecomment-420589320.
+
+For this reason we mostly try and rely on `workspace/configuration`. That means
+three things:
+- We require servers to give a specific configuration section for us to use
+  when requesting configuration.
+- We can try and make sense of `initializationOptions`, but regardless we should
+  send a `workspace/configuration` request afterwards (in the handler for the
+  `initialized` notification, which is the earliest we can send messages:
+  https://github.com/microsoft/language-server-protocol/issues/567#issuecomment-953772465)
+- We can try and make sense of `didChangeConfiguration`, but regardless we should
+  send a `workspace/configuration` request afterwards
+
+We do try to make sense of the first two cases also, especially because clients do
+not have to support `workspace/configuration`! In practice,
+many clients seem to follow the sensible approach laid out here:
+https://github.com/microsoft/language-server-protocol/issues/972#issuecomment-626668243
+
+To make this work, we try to be tolerant by using the following strategy.
+When we receive a configuration object from any of the sources above, we first
+check to see if it has a field corresponding to our configuration section. If it
+does, then we assume that it our config and try to parse it. If it does not, we
+try to parse the entire config object. This hopefully lets us handle a variety
+of sensible cases where the client sends us mostly our config, either wrapped
+in our section or not.
+-}

@@ -1,5 +1,18 @@
 # Revision history for lsp
 
+## Unreleased
+
+- Many changes relating to client configuration
+    - `lsp` now sends `workspace/configuration` requests in response to `intialized` and
+      `workspace/didChangeConfiguration` requests. It still attempts to parse configuration
+      from `intializationOptions` and `workspace/didChangeConfiguration` as a fallback.
+    - Servers must provide a configuration section for use in `workspace/configuration`.
+    - `parseConfig` will now be called on the object corresponding to the configuration
+      section, not the whole object.
+    - New callback for when configuration changes, to allow servers to react.
+- The logging of messages sent by the protocol has been disabled, as this can prove 
+  troublesome for servers that log these to the client: https://github.com/haskell/lsp/issues/447
+
 ## 2.1.0.0
 
 * Fix handling of optional methods.
