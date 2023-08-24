@@ -8,6 +8,8 @@ module Language.LSP.Protocol.Internal.Types.InitializeResult where
 import Control.DeepSeq
 import Data.Hashable
 import GHC.Generics
+import Language.LSP.Protocol.Utils.Misc
+import Prettyprinter
 import qualified Data.Aeson as Aeson
 import qualified Data.Row as Row
 import qualified Data.Row.Aeson as Aeson
@@ -33,6 +35,7 @@ data InitializeResult = InitializeResult
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
+  deriving Pretty via (ViaJSON InitializeResult)
 
 instance Aeson.ToJSON InitializeResult where
   toJSON (InitializeResult arg0 arg1) = Aeson.object $ concat $  [["capabilities" Aeson..= arg0]

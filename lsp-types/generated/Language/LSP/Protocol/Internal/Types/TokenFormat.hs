@@ -8,6 +8,8 @@ module Language.LSP.Protocol.Internal.Types.TokenFormat where
 import Control.DeepSeq
 import Data.Hashable
 import GHC.Generics
+import Language.LSP.Protocol.Utils.Misc
+import Prettyprinter
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
@@ -28,6 +30,7 @@ data TokenFormat =
   deriving anyclass (NFData, Hashable)
   deriving ( Aeson.ToJSON
   , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum TokenFormat Data.Text.Text)
+  deriving Pretty via (ViaJSON TokenFormat)
 
 instance Language.LSP.Protocol.Types.LspEnum.LspEnum TokenFormat where
   knownValues = Data.Set.fromList [TokenFormat_Relative]

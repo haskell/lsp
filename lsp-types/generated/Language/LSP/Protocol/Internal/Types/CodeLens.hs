@@ -8,6 +8,8 @@ module Language.LSP.Protocol.Internal.Types.CodeLens where
 import Control.DeepSeq
 import Data.Hashable
 import GHC.Generics
+import Language.LSP.Protocol.Utils.Misc
+import Prettyprinter
 import qualified Data.Aeson
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
@@ -40,6 +42,7 @@ data CodeLens = CodeLens
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
+  deriving Pretty via (ViaJSON CodeLens)
 
 instance Aeson.ToJSON CodeLens where
   toJSON (CodeLens arg0 arg1 arg2) = Aeson.object $ concat $  [["range" Aeson..= arg0]

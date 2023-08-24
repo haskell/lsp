@@ -8,6 +8,8 @@ module Language.LSP.Protocol.Internal.Types.DiagnosticTag where
 import Control.DeepSeq
 import Data.Hashable
 import GHC.Generics
+import Language.LSP.Protocol.Utils.Misc
+import Prettyprinter
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
@@ -39,6 +41,7 @@ data DiagnosticTag =
   deriving anyclass (NFData, Hashable)
   deriving ( Aeson.ToJSON
   , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum DiagnosticTag Language.LSP.Protocol.Types.Common.UInt)
+  deriving Pretty via (ViaJSON DiagnosticTag)
 
 instance Language.LSP.Protocol.Types.LspEnum.LspEnum DiagnosticTag where
   knownValues = Data.Set.fromList [DiagnosticTag_Unnecessary

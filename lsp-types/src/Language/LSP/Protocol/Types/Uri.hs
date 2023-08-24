@@ -40,11 +40,12 @@ import qualified System.FilePath         as FP
 import qualified System.FilePath.Posix   as FPP
 import qualified System.FilePath.Windows as FPW
 import qualified System.Info
+import           Prettyprinter
 
 -- | The @Uri@ type in the LSP specification.
 newtype Uri = Uri { getUri :: Text }
   deriving stock (Eq,Ord,Read,Show,Generic)
-  deriving newtype (A.FromJSON,A.ToJSON,Hashable,A.ToJSONKey,A.FromJSONKey)
+  deriving newtype (A.FromJSON,A.ToJSON,Hashable,A.ToJSONKey,A.FromJSONKey, Pretty)
 
 instance NFData Uri
 
@@ -66,6 +67,9 @@ instance Ord NormalizedUri where
 instance Hashable NormalizedUri where
   hash (NormalizedUri h _) = h
   hashWithSalt salt (NormalizedUri h _) = hashWithSalt salt h
+
+instance Pretty NormalizedUri where
+  pretty (NormalizedUri _ t) = pretty t
 
 instance NFData NormalizedUri
 

@@ -8,6 +8,8 @@ module Language.LSP.Protocol.Internal.Types.TypeHierarchyItem where
 import Control.DeepSeq
 import Data.Hashable
 import GHC.Generics
+import Language.LSP.Protocol.Utils.Misc
+import Prettyprinter
 import qualified Data.Aeson
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
@@ -64,6 +66,7 @@ data TypeHierarchyItem = TypeHierarchyItem
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
+  deriving Pretty via (ViaJSON TypeHierarchyItem)
 
 instance Aeson.ToJSON TypeHierarchyItem where
   toJSON (TypeHierarchyItem arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7) = Aeson.object $ concat $  [["name" Aeson..= arg0]

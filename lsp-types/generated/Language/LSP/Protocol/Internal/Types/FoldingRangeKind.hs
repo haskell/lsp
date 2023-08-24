@@ -8,6 +8,8 @@ module Language.LSP.Protocol.Internal.Types.FoldingRangeKind where
 import Control.DeepSeq
 import Data.Hashable
 import GHC.Generics
+import Language.LSP.Protocol.Utils.Misc
+import Prettyprinter
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
@@ -38,6 +40,7 @@ data FoldingRangeKind =
   deriving ( Aeson.ToJSON
   , Aeson.FromJSON
   , Data.String.IsString ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum FoldingRangeKind Data.Text.Text)
+  deriving Pretty via (ViaJSON FoldingRangeKind)
 
 instance Language.LSP.Protocol.Types.LspEnum.LspEnum FoldingRangeKind where
   knownValues = Data.Set.fromList [FoldingRangeKind_Comment

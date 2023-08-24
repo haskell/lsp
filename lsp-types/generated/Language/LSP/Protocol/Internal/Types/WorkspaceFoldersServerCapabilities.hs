@@ -8,6 +8,8 @@ module Language.LSP.Protocol.Internal.Types.WorkspaceFoldersServerCapabilities w
 import Control.DeepSeq
 import Data.Hashable
 import GHC.Generics
+import Language.LSP.Protocol.Utils.Misc
+import Prettyprinter
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
@@ -35,6 +37,7 @@ data WorkspaceFoldersServerCapabilities = WorkspaceFoldersServerCapabilities
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
+  deriving Pretty via (ViaJSON WorkspaceFoldersServerCapabilities)
 
 instance Aeson.ToJSON WorkspaceFoldersServerCapabilities where
   toJSON (WorkspaceFoldersServerCapabilities arg0 arg1) = Aeson.object $ concat $  ["supported" Language.LSP.Protocol.Types.Common..=? arg0

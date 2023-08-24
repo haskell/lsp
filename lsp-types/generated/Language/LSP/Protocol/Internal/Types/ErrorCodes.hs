@@ -8,6 +8,8 @@ module Language.LSP.Protocol.Internal.Types.ErrorCodes where
 import Control.DeepSeq
 import Data.Hashable
 import GHC.Generics
+import Language.LSP.Protocol.Utils.Misc
+import Prettyprinter
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
@@ -54,6 +56,7 @@ data ErrorCodes =
   deriving anyclass (NFData, Hashable)
   deriving ( Aeson.ToJSON
   , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum ErrorCodes Language.LSP.Protocol.Types.Common.Int32)
+  deriving Pretty via (ViaJSON ErrorCodes)
 
 instance Language.LSP.Protocol.Types.LspEnum.LspEnum ErrorCodes where
   knownValues = Data.Set.fromList [ErrorCodes_ParseError

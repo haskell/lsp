@@ -23,6 +23,7 @@ import           Data.String                        (IsString (..))
 import           Data.Text                          (Text)
 import           GHC.Generics
 import           GHC.TypeLits                       (KnownSymbol)
+import           Prettyprinter
 
 -- 'RequestMessage', 'ResponseMessage', 'ResponseError', and 'NotificationMessage'
 -- aren't present in the metamodel, although they should be.
@@ -37,6 +38,7 @@ data NotificationMessage =
     } deriving stock (Show, Eq, Generic)
 
 deriveJSON lspOptions ''NotificationMessage
+deriving via ViaJSON NotificationMessage instance Pretty NotificationMessage
 
 -- This isn't present in the metamodel.
 -- | Request message type as defined in the spec.
@@ -48,6 +50,7 @@ data RequestMessage = RequestMessage
     } deriving stock (Show, Eq, Generic)
 
 deriveJSON lspOptions ''RequestMessage
+deriving via ViaJSON RequestMessage instance Pretty RequestMessage
 
 -- | Response error type as defined in the spec.
 data ResponseError =
@@ -85,6 +88,8 @@ instance FromJSON ResponseError where
               x{_code = InR (fromOpenEnumBaseType n)}
             go x = x
 
+deriving via ViaJSON ResponseError instance Pretty ResponseError
+
 -- | Response message type as defined in the spec.
 data ResponseMessage =
   ResponseMessage
@@ -95,6 +100,8 @@ data ResponseMessage =
     } deriving stock (Show, Eq, Generic)
 
 deriveJSON lspOptions ''ResponseMessage
+
+deriving via ViaJSON ResponseMessage instance Pretty ResponseMessage
 
 -----
 -- | Typed notification message, containing the correct parameter payload.
@@ -125,6 +132,8 @@ instance (ToJSON (MessageParams m)) => ToJSON (TNotificationMessage m) where
   toJSON     = genericToJSON lspOptions
   toEncoding = genericToEncoding lspOptions
 
+deriving via ViaJSON (TNotificationMessage m) instance (ToJSON (MessageParams m)) => Pretty (TNotificationMessage m)
+
 -- | Typed request message, containing the correct parameter payload.
 data TRequestMessage (m :: Method f Request) = TRequestMessage
     { _jsonrpc :: Text
@@ -142,6 +151,8 @@ instance (FromJSON (MessageParams m), FromJSON (SMethod m)) => FromJSON (TReques
 instance (ToJSON (MessageParams m)) => ToJSON (TRequestMessage m) where
   toJSON     = genericToJSON lspOptions
   toEncoding = genericToEncoding lspOptions
+
+deriving via ViaJSON (TRequestMessage m) instance (ToJSON (MessageParams m)) => Pretty (TRequestMessage m)
 
 data TResponseError (m :: Method f Request) =
   TResponseError
@@ -167,6 +178,8 @@ instance (FromJSON (ErrorData m)) => FromJSON (TResponseError m) where
 instance (ToJSON (ErrorData m)) => ToJSON (TResponseError m) where
   toJSON     = genericToJSON lspOptions
   toEncoding = genericToEncoding lspOptions
+
+deriving via ViaJSON (TResponseError m) instance (ToJSON (ErrorData m)) => Pretty (TResponseError m)
 
 -- TODO: similar functions for the others?
 toUntypedResponseError :: (ToJSON (ErrorData m)) => TResponseError m -> ResponseError
@@ -208,6 +221,8 @@ instance (FromJSON (MessageResult a), FromJSON (ErrorData a)) => FromJSON (TResp
       (Nothing, Nothing) -> fail "both error and result cannot be Nothing"
     return $ TResponseMessage _jsonrpc _id result
 
+deriving via ViaJSON (TResponseMessage m) instance (ToJSON (MessageResult m), ToJSON (ErrorData m)) => Pretty (TResponseMessage m)
+
 -- | A typed custom message. A special data type is needed to distinguish between
 -- notifications and requests, since a CustomMethod can be both!
 data TCustomMessage s f t where
@@ -225,6 +240,7 @@ instance KnownSymbol s => FromJSON (TCustomMessage s f Request) where
 instance KnownSymbol s => FromJSON (TCustomMessage s f Notification) where
   parseJSON v = NotMess <$> parseJSON v
 
+deriving via ViaJSON (TCustomMessage s f t) instance (KnownSymbol s) => Pretty (TCustomMessage s f t)
 
 -- ---------------------------------------------------------------------
 -- Helper Type Families

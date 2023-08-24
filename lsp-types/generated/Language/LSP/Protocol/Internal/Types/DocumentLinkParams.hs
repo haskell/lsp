@@ -8,6 +8,8 @@ module Language.LSP.Protocol.Internal.Types.DocumentLinkParams where
 import Control.DeepSeq
 import Data.Hashable
 import GHC.Generics
+import Language.LSP.Protocol.Utils.Misc
+import Prettyprinter
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
@@ -35,6 +37,7 @@ data DocumentLinkParams = DocumentLinkParams
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
+  deriving Pretty via (ViaJSON DocumentLinkParams)
 
 instance Aeson.ToJSON DocumentLinkParams where
   toJSON (DocumentLinkParams arg0 arg1 arg2) = Aeson.object $ concat $  ["workDoneToken" Language.LSP.Protocol.Types.Common..=? arg0

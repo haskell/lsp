@@ -8,6 +8,8 @@ module Language.LSP.Protocol.Internal.Types.CreateFilesParams where
 import Control.DeepSeq
 import Data.Hashable
 import GHC.Generics
+import Language.LSP.Protocol.Utils.Misc
+import Prettyprinter
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
@@ -28,6 +30,7 @@ data CreateFilesParams = CreateFilesParams
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
+  deriving Pretty via (ViaJSON CreateFilesParams)
 
 instance Aeson.ToJSON CreateFilesParams where
   toJSON (CreateFilesParams arg0) = Aeson.object $ concat $  [["files" Aeson..= arg0]]

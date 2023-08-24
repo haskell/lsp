@@ -8,6 +8,8 @@ module Language.LSP.Protocol.Internal.Types.RelatedFullDocumentDiagnosticReport 
 import Control.DeepSeq
 import Data.Hashable
 import GHC.Generics
+import Language.LSP.Protocol.Utils.Misc
+import Prettyprinter
 import qualified Data.Aeson as Aeson
 import qualified Data.Map
 import qualified Data.Row.Aeson as Aeson
@@ -53,6 +55,7 @@ data RelatedFullDocumentDiagnosticReport = RelatedFullDocumentDiagnosticReport
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
+  deriving Pretty via (ViaJSON RelatedFullDocumentDiagnosticReport)
 
 instance Aeson.ToJSON RelatedFullDocumentDiagnosticReport where
   toJSON (RelatedFullDocumentDiagnosticReport arg0 arg1 arg2 arg3) = Aeson.object $ concat $  [["kind" Aeson..= arg0]

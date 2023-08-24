@@ -8,6 +8,8 @@ module Language.LSP.Protocol.Internal.Types.NotebookDocumentSyncOptions where
 import Control.DeepSeq
 import Data.Hashable
 import GHC.Generics
+import Language.LSP.Protocol.Utils.Misc
+import Prettyprinter
 import qualified Data.Aeson as Aeson
 import qualified Data.Row as Row
 import qualified Data.Row.Aeson as Aeson
@@ -44,6 +46,7 @@ data NotebookDocumentSyncOptions = NotebookDocumentSyncOptions
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
+  deriving Pretty via (ViaJSON NotebookDocumentSyncOptions)
 
 instance Aeson.ToJSON NotebookDocumentSyncOptions where
   toJSON (NotebookDocumentSyncOptions arg0 arg1) = Aeson.object $ concat $  [["notebookSelector" Aeson..= arg0]

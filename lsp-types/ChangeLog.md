@@ -1,5 +1,11 @@
 # Revision history for lsp-types
 
+## Unreleased
+
+- Add `Language.LSP.Protocol.Utils.Misc.prettyJSON :: Value -> Doc ann` for prettyprinting JSON, 
+  and `ViaJSON` as a deriving-via newtype wrapper for it.
+- Generate `Pretty` instances for all LSP types using `ViaJSON`.
+
 ## 2.0.1.1
 
 * Fix parsing of notifications with missing params

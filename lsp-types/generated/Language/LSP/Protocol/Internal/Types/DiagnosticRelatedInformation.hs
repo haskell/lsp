@@ -8,6 +8,8 @@ module Language.LSP.Protocol.Internal.Types.DiagnosticRelatedInformation where
 import Control.DeepSeq
 import Data.Hashable
 import GHC.Generics
+import Language.LSP.Protocol.Utils.Misc
+import Prettyprinter
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
@@ -32,6 +34,7 @@ data DiagnosticRelatedInformation = DiagnosticRelatedInformation
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
+  deriving Pretty via (ViaJSON DiagnosticRelatedInformation)
 
 instance Aeson.ToJSON DiagnosticRelatedInformation where
   toJSON (DiagnosticRelatedInformation arg0 arg1) = Aeson.object $ concat $  [["location" Aeson..= arg0]

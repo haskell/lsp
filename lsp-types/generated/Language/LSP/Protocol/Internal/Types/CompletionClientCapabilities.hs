@@ -8,6 +8,8 @@ module Language.LSP.Protocol.Internal.Types.CompletionClientCapabilities where
 import Control.DeepSeq
 import Data.Hashable
 import GHC.Generics
+import Language.LSP.Protocol.Utils.Misc
+import Prettyprinter
 import qualified Data.Aeson as Aeson
 import qualified Data.Row as Row
 import qualified Data.Row.Aeson as Aeson
@@ -59,6 +61,7 @@ data CompletionClientCapabilities = CompletionClientCapabilities
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
+  deriving Pretty via (ViaJSON CompletionClientCapabilities)
 
 instance Aeson.ToJSON CompletionClientCapabilities where
   toJSON (CompletionClientCapabilities arg0 arg1 arg2 arg3 arg4 arg5) = Aeson.object $ concat $  ["dynamicRegistration" Language.LSP.Protocol.Types.Common..=? arg0

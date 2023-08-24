@@ -8,6 +8,8 @@ module Language.LSP.Protocol.Internal.Types.Diagnostic where
 import Control.DeepSeq
 import Data.Hashable
 import GHC.Generics
+import Language.LSP.Protocol.Utils.Misc
+import Prettyprinter
 import qualified Data.Aeson
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
@@ -76,6 +78,7 @@ data Diagnostic = Diagnostic
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
+  deriving Pretty via (ViaJSON Diagnostic)
 
 instance Aeson.ToJSON Diagnostic where
   toJSON (Diagnostic arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8) = Aeson.object $ concat $  [["range" Aeson..= arg0]

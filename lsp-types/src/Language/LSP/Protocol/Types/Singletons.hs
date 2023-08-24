@@ -7,6 +7,7 @@ import qualified Data.Text    as T
 import           Control.DeepSeq
 import           GHC.TypeLits (KnownNat, KnownSymbol, Nat, Symbol, natVal,
                                symbolVal)
+import           Prettyprinter
 
 -- | A type whose only inhabitant is a single, statically-known string.
 --
@@ -17,6 +18,8 @@ data AString (s :: Symbol) where
 
 instance Show (AString s) where
   show AString = symbolVal (Proxy @s)
+instance Pretty (AString s) where
+  pretty = viaShow
 instance Eq (AString s) where
   _ == _ = True
 instance Ord (AString s) where
@@ -45,6 +48,8 @@ data AnInteger (n :: Nat) where
 
 instance Show (AnInteger n) where
   show AnInteger = show $ natVal (Proxy @n)
+instance Pretty (AnInteger n) where
+  pretty = viaShow
 instance Eq (AnInteger n) where
   _ == _ = True
 instance Ord (AnInteger n) where

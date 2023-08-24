@@ -8,6 +8,8 @@ module Language.LSP.Protocol.Internal.Types.PositionEncodingKind where
 import Control.DeepSeq
 import Data.Hashable
 import GHC.Generics
+import Language.LSP.Protocol.Utils.Misc
+import Prettyprinter
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
@@ -47,6 +49,7 @@ data PositionEncodingKind =
   deriving ( Aeson.ToJSON
   , Aeson.FromJSON
   , Data.String.IsString ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum PositionEncodingKind Data.Text.Text)
+  deriving Pretty via (ViaJSON PositionEncodingKind)
 
 instance Language.LSP.Protocol.Types.LspEnum.LspEnum PositionEncodingKind where
   knownValues = Data.Set.fromList [PositionEncodingKind_UTF8

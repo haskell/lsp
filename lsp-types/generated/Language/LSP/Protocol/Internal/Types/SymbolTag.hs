@@ -8,6 +8,8 @@ module Language.LSP.Protocol.Internal.Types.SymbolTag where
 import Control.DeepSeq
 import Data.Hashable
 import GHC.Generics
+import Language.LSP.Protocol.Utils.Misc
+import Prettyprinter
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
@@ -30,6 +32,7 @@ data SymbolTag =
   deriving anyclass (NFData, Hashable)
   deriving ( Aeson.ToJSON
   , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum SymbolTag Language.LSP.Protocol.Types.Common.UInt)
+  deriving Pretty via (ViaJSON SymbolTag)
 
 instance Language.LSP.Protocol.Types.LspEnum.LspEnum SymbolTag where
   knownValues = Data.Set.fromList [SymbolTag_Deprecated]

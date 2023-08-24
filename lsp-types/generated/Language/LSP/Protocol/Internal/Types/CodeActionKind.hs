@@ -8,6 +8,8 @@ module Language.LSP.Protocol.Internal.Types.CodeActionKind where
 import Control.DeepSeq
 import Data.Hashable
 import GHC.Generics
+import Language.LSP.Protocol.Utils.Misc
+import Prettyprinter
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
@@ -93,6 +95,7 @@ data CodeActionKind =
   deriving ( Aeson.ToJSON
   , Aeson.FromJSON
   , Data.String.IsString ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum CodeActionKind Data.Text.Text)
+  deriving Pretty via (ViaJSON CodeActionKind)
 
 instance Language.LSP.Protocol.Types.LspEnum.LspEnum CodeActionKind where
   knownValues = Data.Set.fromList [CodeActionKind_Empty

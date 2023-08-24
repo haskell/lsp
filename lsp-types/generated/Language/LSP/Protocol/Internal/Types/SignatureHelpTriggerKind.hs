@@ -8,6 +8,8 @@ module Language.LSP.Protocol.Internal.Types.SignatureHelpTriggerKind where
 import Control.DeepSeq
 import Data.Hashable
 import GHC.Generics
+import Language.LSP.Protocol.Utils.Misc
+import Prettyprinter
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
@@ -38,6 +40,7 @@ data SignatureHelpTriggerKind =
   deriving anyclass (NFData, Hashable)
   deriving ( Aeson.ToJSON
   , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum SignatureHelpTriggerKind Language.LSP.Protocol.Types.Common.UInt)
+  deriving Pretty via (ViaJSON SignatureHelpTriggerKind)
 
 instance Language.LSP.Protocol.Types.LspEnum.LspEnum SignatureHelpTriggerKind where
   knownValues = Data.Set.fromList [SignatureHelpTriggerKind_Invoked

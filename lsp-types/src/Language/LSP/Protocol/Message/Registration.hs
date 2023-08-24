@@ -20,6 +20,7 @@ import           Data.Aeson
 import           Data.Text                         (Text)
 import qualified Data.Text                         as T
 import           GHC.Generics
+import           Prettyprinter
 
 -- | Typed registration type, with correct options.
 data TRegistration (m :: Method ClientToServer t) =
@@ -51,6 +52,8 @@ makeRegHelper ''RegistrationOptions
 instance ToJSON (TRegistration m) where
   toJSON x@(TRegistration _ m _) = regHelper m (genericToJSON lspOptions x)
 
+deriving via ViaJSON (TRegistration m) instance Pretty (TRegistration m)
+
 data SomeRegistration = forall t (m :: Method ClientToServer t). SomeRegistration (TRegistration m)
 
 instance ToJSON SomeRegistration where
@@ -64,6 +67,8 @@ instance FromJSON SomeRegistration where
 
 instance Show SomeRegistration where
   show (SomeRegistration r@(TRegistration _ m _)) = regHelper m (show r)
+
+deriving via ViaJSON SomeRegistration instance Pretty SomeRegistration
 
 toUntypedRegistration :: TRegistration m -> Registration
 toUntypedRegistration (TRegistration i meth opts) = Registration i (T.pack $ someMethodToMethodString $ SomeMethod meth) (Just $ regHelper meth (toJSON opts))
@@ -93,6 +98,8 @@ deriving stock instance Show (TUnregistration m)
 instance ToJSON (TUnregistration m) where
   toJSON x@(TUnregistration _ m) = regHelper m (genericToJSON lspOptions x)
 
+deriving via ViaJSON (TUnregistration m) instance Pretty (TUnregistration m)
+
 data SomeUnregistration = forall t (m :: Method ClientToServer t). SomeUnregistration (TUnregistration m)
 
 instance ToJSON SomeUnregistration where
@@ -103,6 +110,8 @@ instance FromJSON SomeUnregistration where
     SomeClientMethod m <- o .: "method"
     r <- TUnregistration <$> o .: "id" <*> pure m
     pure (SomeUnregistration r)
+
+deriving via ViaJSON SomeUnregistration instance Pretty SomeUnregistration
 
 toUntypedUnregistration :: TUnregistration m -> Unregistration
 toUntypedUnregistration (TUnregistration i meth) = Unregistration i (T.pack $ someMethodToMethodString $ SomeMethod meth)

@@ -8,6 +8,8 @@ module Language.LSP.Protocol.Internal.Types.CompletionItemTag where
 import Control.DeepSeq
 import Data.Hashable
 import GHC.Generics
+import Language.LSP.Protocol.Utils.Misc
+import Prettyprinter
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
@@ -31,6 +33,7 @@ data CompletionItemTag =
   deriving anyclass (NFData, Hashable)
   deriving ( Aeson.ToJSON
   , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum CompletionItemTag Language.LSP.Protocol.Types.Common.UInt)
+  deriving Pretty via (ViaJSON CompletionItemTag)
 
 instance Language.LSP.Protocol.Types.LspEnum.LspEnum CompletionItemTag where
   knownValues = Data.Set.fromList [CompletionItemTag_Deprecated]

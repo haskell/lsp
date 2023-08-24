@@ -8,6 +8,8 @@ module Language.LSP.Protocol.Internal.Types.DiagnosticRegistrationOptions where
 import Control.DeepSeq
 import Data.Hashable
 import GHC.Generics
+import Language.LSP.Protocol.Utils.Misc
+import Prettyprinter
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
@@ -54,6 +56,7 @@ data DiagnosticRegistrationOptions = DiagnosticRegistrationOptions
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
+  deriving Pretty via (ViaJSON DiagnosticRegistrationOptions)
 
 instance Aeson.ToJSON DiagnosticRegistrationOptions where
   toJSON (DiagnosticRegistrationOptions arg0 arg1 arg2 arg3 arg4 arg5) = Aeson.object $ concat $  [["documentSelector" Aeson..= arg0]

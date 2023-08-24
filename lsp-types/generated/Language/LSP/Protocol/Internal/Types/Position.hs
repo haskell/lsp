@@ -8,6 +8,8 @@ module Language.LSP.Protocol.Internal.Types.Position where
 import Control.DeepSeq
 import Data.Hashable
 import GHC.Generics
+import Language.LSP.Protocol.Utils.Misc
+import Prettyprinter
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
@@ -63,6 +65,7 @@ data Position = Position
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
+  deriving Pretty via (ViaJSON Position)
 
 instance Aeson.ToJSON Position where
   toJSON (Position arg0 arg1) = Aeson.object $ concat $  [["line" Aeson..= arg0]

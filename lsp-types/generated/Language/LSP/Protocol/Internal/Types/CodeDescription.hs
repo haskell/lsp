@@ -8,6 +8,8 @@ module Language.LSP.Protocol.Internal.Types.CodeDescription where
 import Control.DeepSeq
 import Data.Hashable
 import GHC.Generics
+import Language.LSP.Protocol.Utils.Misc
+import Prettyprinter
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
@@ -27,6 +29,7 @@ data CodeDescription = CodeDescription
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
+  deriving Pretty via (ViaJSON CodeDescription)
 
 instance Aeson.ToJSON CodeDescription where
   toJSON (CodeDescription arg0) = Aeson.object $ concat $  [["href" Aeson..= arg0]]
