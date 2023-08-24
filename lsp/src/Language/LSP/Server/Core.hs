@@ -1,65 +1,69 @@
+{-# LANGUAGE BangPatterns               #-}
+{-# LANGUAGE BinaryLiterals             #-}
+{-# LANGUAGE DerivingVia                #-}
+{-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE FunctionalDependencies     #-}
+{-# LANGUAGE GADTs                      #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE TypeFamilyDependencies #-}
-{-# LANGUAGE DerivingVia          #-}
-{-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE BangPatterns         #-}
-{-# LANGUAGE GADTs                #-}
-{-# LANGUAGE BinaryLiterals       #-}
-{-# LANGUAGE OverloadedStrings    #-}
-{-# LANGUAGE RankNTypes           #-}
-{-# LANGUAGE ScopedTypeVariables  #-}
-{-# LANGUAGE FlexibleContexts     #-}
-{-# LANGUAGE TypeInType           #-}
-{-# LANGUAGE FlexibleInstances    #-}
-{-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE RoleAnnotations #-}
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE LambdaCase                 #-}
+{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE RankNTypes                 #-}
+{-# LANGUAGE RoleAnnotations            #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
+{-# LANGUAGE TypeFamilyDependencies     #-}
+{-# LANGUAGE TypeInType                 #-}
+{-# LANGUAGE TypeOperators              #-}
+{-# LANGUAGE UndecidableInstances       #-}
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 {-# OPTIONS_GHC -fprint-explicit-kinds #-}
 
 module Language.LSP.Server.Core where
 
-import           Colog.Core (LogAction (..), WithSeverity (..), Severity (..), (<&))
+import           Colog.Core                             (LogAction (..),
+                                                         Severity (..),
+                                                         WithSeverity (..),
+                                                         (<&))
 import           Control.Concurrent.Async
 import           Control.Concurrent.STM
-import qualified Control.Exception as E
+import qualified Control.Exception                      as E
+import           Control.Lens                           (_Just, at, (^.), (^?))
 import           Control.Monad
+import           Control.Monad.Catch                    (MonadCatch, MonadMask,
+                                                         MonadThrow)
 import           Control.Monad.Fix
 import           Control.Monad.IO.Class
-import           Control.Monad.Trans.Reader
-import           Control.Monad.Trans.Class
 import           Control.Monad.IO.Unlift
-import           Control.Lens ( (^.), (^?), _Just, at)
-import qualified Data.Aeson as J
+import           Control.Monad.Trans.Class
+import           Control.Monad.Trans.Identity
+import           Control.Monad.Trans.Reader
+import qualified Data.Aeson                             as J
 import           Data.Default
 import           Data.Functor.Product
+import qualified Data.HashMap.Strict                    as HM
 import           Data.IxMap
-import qualified Data.HashMap.Strict as HM
 import           Data.Kind
-import qualified Data.List as L
-import           Data.List.NonEmpty (NonEmpty(..))
-import qualified Data.Map.Strict as Map
+import qualified Data.List                              as L
+import           Data.List.NonEmpty                     (NonEmpty (..))
+import qualified Data.Map.Strict                        as Map
 import           Data.Maybe
+import           Data.Monoid                            (Ap (..))
+import           Data.Ord                               (Down (Down))
 import           Data.Row
-import           Data.Monoid (Ap(..))
-import           Data.Ord (Down (Down))
-import qualified Data.Text as T
-import           Data.Text ( Text )
-import qualified Data.UUID as UUID
-import Language.LSP.Protocol.Types
-import Language.LSP.Protocol.Message
-import qualified Language.LSP.Protocol.Types as L
-import qualified Language.LSP.Protocol.Lens as L
-import qualified Language.LSP.Protocol.Message as L
+import           Data.Text                              (Text)
+import qualified Data.Text                              as T
+import qualified Data.UUID                              as UUID
+import           Language.LSP.Diagnostics
+import qualified Language.LSP.Protocol.Lens             as L
+import           Language.LSP.Protocol.Message
+import qualified Language.LSP.Protocol.Message          as L
+import           Language.LSP.Protocol.Types
+import qualified Language.LSP.Protocol.Types            as L
 import           Language.LSP.Protocol.Utils.SMethodMap (SMethodMap)
 import qualified Language.LSP.Protocol.Utils.SMethodMap as SMethodMap
 import           Language.LSP.VFS
-import           Language.LSP.Diagnostics
-import           System.Random hiding (next)
-import           Control.Monad.Trans.Identity
-import           Control.Monad.Catch (MonadMask, MonadCatch, MonadThrow)
-import Prettyprinter
+import           Prettyprinter
+import           System.Random                          hiding (next)
 
 -- ---------------------------------------------------------------------
 {-# ANN module ("HLint: ignore Eta reduce"         :: String) #-}
@@ -122,15 +126,15 @@ instance MonadLsp c m => MonadLsp c (IdentityT m) where
 
 data LanguageContextEnv config =
   LanguageContextEnv
-  { resHandlers            :: !(Handlers IO)
-  , resConfigSection       :: T.Text
-  , resParseConfig         :: !(config -> J.Value -> Either T.Text config)
-  , resOnConfigChange      :: !(config -> IO ())
-  , resSendMessage         :: !(FromServerMessage -> IO ())
+  { resHandlers           :: !(Handlers IO)
+  , resConfigSection      :: T.Text
+  , resParseConfig        :: !(config -> J.Value -> Either T.Text config)
+  , resOnConfigChange     :: !(config -> IO ())
+  , resSendMessage        :: !(FromServerMessage -> IO ())
   -- We keep the state in a TVar to be thread safe
-  , resState               :: !(LanguageContextState config)
-  , resClientCapabilities  :: !L.ClientCapabilities
-  , resRootPath            :: !(Maybe FilePath)
+  , resState              :: !(LanguageContextState config)
+  , resClientCapabilities :: !L.ClientCapabilities
+  , resRootPath           :: !(Maybe FilePath)
   }
 
 -- ---------------------------------------------------------------------
@@ -175,7 +179,7 @@ type family Handler (f :: Type -> Type) (m :: Method from t) = (result :: Type) 
 -- | How to convert two isomorphic data structures between each other.
 data m <~> n
   = Iso
-  { forward :: forall a. m a -> n a
+  { forward  :: forall a. m a -> n a
   , backward :: forall a. n a -> m a
   }
 
@@ -194,15 +198,15 @@ mapHandlers mapReq mapNot (Handlers reqs nots) = Handlers reqs' nots'
 -- | state used by the LSP dispatcher to manage the message loop
 data LanguageContextState config =
   LanguageContextState
-  { resVFS                 :: !(TVar VFSData)
-  , resDiagnostics         :: !(TVar DiagnosticStore)
-  , resConfig              :: !(TVar config)
-  , resWorkspaceFolders    :: !(TVar [WorkspaceFolder])
-  , resProgressData        :: !ProgressData
-  , resPendingResponses    :: !(TVar ResponseMap)
-  , resRegistrationsNot    :: !(TVar (RegistrationMap Notification))
-  , resRegistrationsReq    :: !(TVar (RegistrationMap Request))
-  , resLspId               :: !(TVar Int32)
+  { resVFS              :: !(TVar VFSData)
+  , resDiagnostics      :: !(TVar DiagnosticStore)
+  , resConfig           :: !(TVar config)
+  , resWorkspaceFolders :: !(TVar [WorkspaceFolder])
+  , resProgressData     :: !ProgressData
+  , resPendingResponses :: !(TVar ResponseMap)
+  , resRegistrationsNot :: !(TVar (RegistrationMap Notification))
+  , resRegistrationsReq :: !(TVar (RegistrationMap Request))
+  , resLspId            :: !(TVar Int32)
   }
 
 type ResponseMap = IxMap LspId (Product SMethod ServerResponseCallback)
@@ -218,7 +222,7 @@ data ProgressData = ProgressData { progressNextId :: !(TVar Int32)
 
 data VFSData =
   VFSData
-    { vfsData :: !VFS
+    { vfsData    :: !VFS
     , reverseMap :: !(Map.Map FilePath FilePath)
     }
 
@@ -315,16 +319,17 @@ data ServerDefinition config = forall m a.
       -- ^ @parseConfig oldConfig newConfigObject@ is called whenever we
       -- get updated configuration from the client.
       --
-      -- @parseConfig@ is called on the object corresponding to the config section, it should
-      -- not itself try to look for the config section.
+      -- @parseConfig@ is called on the object corresponding to the server's
+      -- config section, it should not itself try to look for the config section.
       --
-      -- @parseConfig@ also receives the old configuration. This is only useful when parsing
-      -- changed settings from @workspace/didChangeConfiguration@ requests where the client
-      -- sends only the changed settings. However, this behaviour is discouraged, so in future
-      -- @parseConfig@ may change to only take a full new config object.
+      -- Note that the 'J.Value' may represent only a partial object in the case where we
+      -- are handling a @workspace/didChangeConfiguration@ request where the client sends
+      -- only the changed settings. This is also the main circumstance where the old configuration
+      -- argument is useful. It is generally fine for servers to ignore this case and just
+      -- assume that the 'J.Value' represents a full new config and ignore the old configuration.
+      -- This will only be problematic in the case of clients which behave as above and *also*
+      -- don't support @workspace/configuration@, which is discouraged.
       --
-      -- @parseConfig@ should return either the parsed configuration data or an error
-      -- indicating what went wrong.
     , onConfigChange :: config -> m ()
       -- ^ This callback is called any time the configuration is updated, with
       -- the new config. Servers that want to react to config changes should provide
@@ -383,7 +388,7 @@ sendNotification
 sendNotification m params =
   let msg = TNotificationMessage "2.0" m params
   in case splitServerMethod m of
-        IsServerNot -> sendToClient $ fromServerNot msg
+        IsServerNot    -> sendToClient $ fromServerNot msg
         IsServerEither -> sendToClient $ FromServerMess m $ NotMess msg
 
 sendRequest :: forall (m :: Method ServerToClient Request) f config. MonadLsp config f
@@ -399,7 +404,7 @@ sendRequest m params resHandler = do
 
   let msg = TRequestMessage "2.0" reqId m params
   ~() <- case splitServerMethod m of
-    IsServerReq -> sendToClient $ fromServerReq msg
+    IsServerReq    -> sendToClient $ fromServerReq msg
     IsServerEither -> sendToClient $ FromServerMess m $ ReqMess msg
   return reqId
 
@@ -437,7 +442,7 @@ persistVirtualFile logger uri = do
               Just uri_fp -> Map.insert fn uri_fp $ reverseMap vfs
               -- TODO: Does the VFS make sense for URIs which are not files?
               -- The reverse map should perhaps be (FilePath -> URI)
-              Nothing -> reverseMap vfs
+              Nothing     -> reverseMap vfs
             !vfs' = vfs {reverseMap = revMap}
             act = do
               write
@@ -451,7 +456,7 @@ getVersionedTextDoc doc = do
   mvf <- getVirtualFile (toNormalizedUri uri)
   let ver = case mvf of
         Just (VirtualFile lspver _ _) -> lspver
-        Nothing -> 0
+        Nothing                       -> 0
   return (VersionedTextDocumentIdentifier uri ver)
 
 {-# INLINE getVersionedTextDoc #-}
@@ -535,8 +540,8 @@ registerCapability method regOpts f = do
   clientCaps <- resClientCapabilities <$> getLspEnv
   handlers <- resHandlers <$> getLspEnv
   let alreadyStaticallyRegistered = case splitClientMethod method of
-        IsClientNot -> SMethodMap.member method $ notHandlers handlers
-        IsClientReq -> SMethodMap.member method $ reqHandlers handlers
+        IsClientNot    -> SMethodMap.member method $ notHandlers handlers
+        IsClientReq    -> SMethodMap.member method $ reqHandlers handlers
         IsClientEither -> error "Cannot register capability for custom methods"
   go clientCaps alreadyStaticallyRegistered
   where
@@ -611,8 +616,8 @@ registerCapability method regOpts f = do
 unregisterCapability :: MonadLsp config f => RegistrationToken m -> f ()
 unregisterCapability (RegistrationToken m (RegistrationId uuid)) = do
   ~() <- case splitClientMethod m of
-    IsClientReq -> modifyState resRegistrationsReq $ SMethodMap.delete m
-    IsClientNot -> modifyState resRegistrationsNot $ SMethodMap.delete m
+    IsClientReq    -> modifyState resRegistrationsReq $ SMethodMap.delete m
+    IsClientNot    -> modifyState resRegistrationsNot $ SMethodMap.delete m
     IsClientEither -> error "Cannot unregister capability for custom methods"
 
   let unregistration = L.TUnregistration uuid m
@@ -651,7 +656,7 @@ withProgressBase indefinite title cancellable f = do
         | indefinite = Nothing
         | otherwise = Just 0
       cancellable' = case cancellable of
-                      Cancellable -> True
+                      Cancellable    -> True
                       NotCancellable -> False
 
   -- Create progress token
@@ -663,7 +668,7 @@ withProgressBase indefinite title cancellable f = do
             -- An error occurred when the client was setting it up
             -- No need to do anything then, as per the spec
             Left _err -> pure ()
-            Right _ -> pure ()
+            Right _   -> pure ()
 
   -- Send the begin and done notifications via 'bracket_' so that they are always fired
   res <- withRunInIO $ \runInBase ->
@@ -790,8 +795,8 @@ tryChangeConfig :: (m ~ LspM config) => LogAction m (WithSeverity LspCoreLog) ->
 tryChangeConfig logger newConfigObject = do
   parseCfg <- LspT $ asks resParseConfig
   res <- stateState resConfig $ \oldConfig -> case parseCfg oldConfig newConfigObject of
-    Left err -> (Left err, oldConfig)
-    Right !newConfig -> (Right newConfig, newConfig)
+    Left err         -> (Left err, oldConfig)
+    Right newConfig -> (Right newConfig, newConfig)
   case res of
     Left err -> do
       logger <& ConfigurationParseError newConfigObject err `WithSeverity` Warning
@@ -811,11 +816,10 @@ requestConfigUpdate logger = do
   if supportsConfiguration
   then do
     section <- LspT $ asks resConfigSection
-    _ <- sendRequest SMethod_WorkspaceConfiguration (ConfigurationParams [ConfigurationItem Nothing (Just section)]) $ \case
+    void $ sendRequest SMethod_WorkspaceConfiguration (ConfigurationParams [ConfigurationItem Nothing (Just section)]) $ \case
       Right [newConfigObject] -> tryChangeConfig logger newConfigObject
       Right sections -> logger <& WrongConfigSections sections `WithSeverity` Error
       Left err -> logger <& BadConfigurationResponse err `WithSeverity` Error
-    pure ()
   else
     logger <& ConfigurationNotSupported `WithSeverity` Debug
 
