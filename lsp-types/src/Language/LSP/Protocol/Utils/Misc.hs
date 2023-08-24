@@ -16,6 +16,7 @@ import           Data.Aeson
 import           Data.Aeson.Text     as Aeson
 import qualified Data.Foldable       as F
 import qualified Data.Foldable.WithIndex as F
+import qualified Data.Functor.WithIndex.Instances ()
 import           Data.List           hiding (group)
 import           Data.Maybe          (mapMaybe)
 import           Language.Haskell.TH
