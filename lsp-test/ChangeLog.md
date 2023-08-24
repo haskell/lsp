@@ -2,14 +2,16 @@
 
 ## Unreleased
 
-- Many changes relating to LSP client configuration
-    - `lsp-test` now responds to `workspace/configuration` requests.
-    - New function `setConfig` for setting the client configuration and notifying the server.
-    - `lsp-test` does not send a `workspace/didChangeConfiguration` request on startup.
-    - New `SessionConfig` option to ignore `workspace/configuration` requests, as they
-      are often not useful in sessions. This is on by default.
-- `ignoreLogNotifications` is now on by default. Experience shows the norm is to ignore these
+- The client configuration is now _mandatory_ and is an `Object` rather than a `Value`.
+- `lsp-test` now responds to `workspace/configuration` requests.
+- `lsp-test` does _not_ send a `workspace/didChangeConfiguration` request on startup.
+- New functions for modifying the client configuration and notifying the server.
+- `ignoreLogNotifications` is now _on by default_. Experience shows the norm is to ignore these
   and it is simpler to turn this on only when they are required.
+- `ignoreConfigurationRequests` option to ignore `workspace/configuration` requests, also on
+  by default.
+- New functions `setIgnoringLogNotifications` and `setIgnoringConfigurationRequests` to change
+  whether such messages are ignored during a `Session` without having to change the `SessionConfig`.
 
 ## 0.15.0.1
 
