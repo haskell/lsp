@@ -34,6 +34,7 @@ source-repository head
 library
   hs-source-dirs:     src
   default-language:   Haskell2010
+  default-extensions: ImportQualifiedPost
   exposed-modules:    Language.LSP.Test
   reexported-modules:
     lsp-types:Language.LSP.Protocol.Types
@@ -92,6 +93,7 @@ test-suite tests
   hs-source-dirs:   test
   main-is:          Test.hs
   default-language: Haskell2010
+  default-extensions: ImportQualifiedPost
   ghc-options:      -W
   other-modules:    DummyServer
   build-depends:
@@ -116,6 +118,7 @@ test-suite func-test
   type:             exitcode-stdio-1.0
   hs-source-dirs:   func-test
   default-language: Haskell2010
+  default-extensions: ImportQualifiedPost
   main-is:          FuncTest.hs
   build-depends:
     , base
@@ -133,6 +136,7 @@ test-suite example
   type:               exitcode-stdio-1.0
   hs-source-dirs:     example
   default-language:   Haskell2010
+  default-extensions: ImportQualifiedPost
   main-is:            Test.hs
   build-depends:
     , base
@@ -144,6 +148,7 @@ benchmark simple-bench
   type:             exitcode-stdio-1.0
   hs-source-dirs:   bench
   default-language: Haskell2010
+  default-extensions: ImportQualifiedPost
   main-is:          SimpleBench.hs
   ghc-options:      -Wall -O2 -eventlog -rtsopts
   build-depends:

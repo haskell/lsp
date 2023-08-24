@@ -53,6 +53,7 @@ library
     FunctionalDependencies
     GADTs
     GeneralizedNewtypeDeriving
+    ImportQualifiedPost
     KindSignatures
     MultiParamTypeClasses
     NegativeLiterals
@@ -521,7 +522,7 @@ library metamodel
   visibility: public
   hs-source-dirs:     metamodel
   default-language:   Haskell2010
-  default-extensions: StrictData
+  default-extensions: StrictData ImportQualifiedPost
   exposed-modules:
     Language.LSP.MetaModel
     Language.LSP.MetaModel.Types
@@ -537,7 +538,7 @@ library metamodel
 executable generator
   hs-source-dirs:     generator
   default-language:   Haskell2010
-  default-extensions: StrictData
+  default-extensions: StrictData ImportQualifiedPost
   main-is:            Main.hs
   other-modules:      CodeGen
   build-depends:
@@ -555,6 +556,7 @@ test-suite lsp-types-test
   type:               exitcode-stdio-1.0
   hs-source-dirs:     test
   default-language:   Haskell2010
+  default-extensions: ImportQualifiedPost
   main-is:            Main.hs
   other-modules:
     CapabilitiesSpec
