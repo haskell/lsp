@@ -97,6 +97,7 @@ genModule name pragmas mexports action = do
       -- these are both common in the generated code
       ghcOptions :: [T.Text] = ["-Wno-unused-imports", "-Wno-unused-matches", "-Wno-deprecations"]
       fullModName = mp <> "." <> name
+      ignoreComments = ["{- ORMOLU_DISABLE -}", "{- HLINT ignore -}"]
       warning = "-- THIS IS A GENERATED FILE, DO NOT EDIT"
       pragmaSection = hardvcat (fmap (\p -> "{-#" <+> "LANGUAGE" <+> pretty p <+> "#-}") pragmas)
       optionsSection = hardvcat (fmap (\p -> "{-#" <+> "OPTIONS_GHC" <+> pretty p <+> "#-}") ghcOptions)
@@ -106,7 +107,8 @@ genModule name pragmas mexports action = do
       -- TODO: replace with regex
       isSelfImport imp = (" " <> fullModName <> " ") `T.isInfixOf` imp || (" " <> fullModName) `T.isSuffixOf` imp
       importSection = hardvcat (fmap pretty $ filter (not . isSelfImport) $ toList imports)
-      mod = warning <> hardline
+      mod = hardvcat ignoreComments <> hardline
+          <> warning <> hardline
           <> pragmaSection <> hardline
           <> optionsSection <> hardline
           <> header <> hardline <> hardline
