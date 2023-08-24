@@ -1,6 +1,6 @@
 # Revision history for lsp
 
-## Unreleased
+## 2.2.0.0
 
 - Many changes relating to client configuration
     - `lsp` now sends `workspace/configuration` requests in response to `intialized` and

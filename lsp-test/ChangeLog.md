@@ -1,6 +1,6 @@
 # Revision history for lsp-test
 
-## Unreleased
+## 0.16.0.0
 
 - The client configuration is now _mandatory_ and is an `Object` rather than a `Value`.
 - `lsp-test` now responds to `workspace/configuration` requests.
