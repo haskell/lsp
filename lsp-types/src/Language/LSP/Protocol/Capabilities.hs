@@ -64,11 +64,11 @@ capsForVersion (LSPVersion maj min) = caps
       , _workspaceFolders = since 3 6 True
       , _configuration = since 3 6 True
       , _semanticTokens = since 3 16 (SemanticTokensWorkspaceClientCapabilities $ Just True)
+      , _inlayHint = since 3 17 inlayHint
       -- TODO
       , _codeLens = Nothing
       , _fileOperations = Nothing
       , _inlineValue = Nothing
-      , _inlayHint = Nothing
       , _diagnostics = Nothing
       }
 
@@ -158,12 +158,12 @@ capsForVersion (LSPVersion maj min) = caps
           , _selectionRange=since 3 5 (SelectionRangeClientCapabilities dynamicReg)
           , _callHierarchy=since 3 16 (CallHierarchyClientCapabilities dynamicReg)
           , _semanticTokens=since 3 16 semanticTokensCapabilities
+          , _inlayHint=since 3 17 inlayHintCapabilities
           -- TODO
           , _linkedEditingRange=Nothing
           , _moniker=Nothing
           , _typeHierarchy=Nothing
           , _inlineValue=Nothing
-          , _inlayHint=Nothing
           , _diagnostic=Nothing
         }
 
@@ -184,6 +184,17 @@ capsForVersion (LSPVersion maj min) = caps
         , _contextSupport=since 3 3 True
         , _completionList=since 3 17 (#itemDefaults .== Just [])
         }
+    
+    inlayHint =
+      InlayHintWorkspaceClientCapabilities{
+        _refreshSupport=since 3 17 True
+      }
+    
+    inlayHintCapabilities =
+      InlayHintClientCapabilities{
+        _dynamicRegistration=dynamicReg,
+        _resolveSupport= since 3 17 (#properties .== [])
+      }
 
     completionItemCapabilities =
       #snippetSupport .== Just True
