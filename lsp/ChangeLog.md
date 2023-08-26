@@ -1,5 +1,9 @@
 # Revision history for lsp
 
+## Unreleased
+
+- Fix inference of server capabilities for newer methods (except notebook methods).
+
 ## 2.2.0.0
 
 - Many changes relating to client configuration

@@ -54,6 +54,7 @@ import           Data.Text                              (Text)
 import qualified Data.Text                              as T
 import qualified Data.UUID                              as UUID
 import           Language.LSP.Diagnostics
+import           Language.LSP.Protocol.Capabilities
 import qualified Language.LSP.Protocol.Lens             as L
 import           Language.LSP.Protocol.Message
 import qualified Language.LSP.Protocol.Message          as L
@@ -551,7 +552,7 @@ registerCapability method regOpts f = do
     go _clientCaps True = pure Nothing
     go clientCaps  False
       -- First, check to see if the client supports dynamic registration on this method
-      | dynamicSupported clientCaps = do
+      | dynamicRegistrationSupported method clientCaps = do
           uuid <- liftIO $ UUID.toText <$> getStdRandom random
           let registration = L.TRegistration uuid method (Just regOpts)
               params = L.RegistrationParams [toUntypedRegistration registration]
@@ -571,47 +572,6 @@ registerCapability method regOpts f = do
 
           pure (Just (RegistrationToken method regId))
       | otherwise        = pure Nothing
-
-    -- Also I'm thinking we should move this function to somewhere in messages.hs so
-    -- we don't forget to update it when adding new methods...
-    capDyn :: L.HasDynamicRegistration a (Maybe Bool) => Maybe a -> Bool
-    capDyn (Just x) = fromMaybe False $ x ^. L.dynamicRegistration
-    capDyn Nothing  = False
-
-    -- | Checks if client capabilities declares that the method supports dynamic registration
-    dynamicSupported clientCaps = case method of
-      SMethod_WorkspaceDidChangeConfiguration  -> capDyn $ clientCaps ^? L.workspace . _Just . L.didChangeConfiguration . _Just
-      SMethod_WorkspaceDidChangeWatchedFiles   -> capDyn $ clientCaps ^? L.workspace . _Just . L.didChangeWatchedFiles . _Just
-      SMethod_WorkspaceSymbol                  -> capDyn $ clientCaps ^? L.workspace . _Just . L.symbol . _Just
-      SMethod_WorkspaceExecuteCommand          -> capDyn $ clientCaps ^? L.workspace . _Just . L.executeCommand . _Just
-      SMethod_TextDocumentDidOpen              -> capDyn $ clientCaps ^? L.textDocument . _Just . L.synchronization . _Just
-      SMethod_TextDocumentDidChange            -> capDyn $ clientCaps ^? L.textDocument . _Just . L.synchronization . _Just
-      SMethod_TextDocumentDidClose             -> capDyn $ clientCaps ^? L.textDocument . _Just . L.synchronization . _Just
-      SMethod_TextDocumentCompletion           -> capDyn $ clientCaps ^? L.textDocument . _Just . L.completion . _Just
-      SMethod_TextDocumentHover                -> capDyn $ clientCaps ^? L.textDocument . _Just . L.hover . _Just
-      SMethod_TextDocumentSignatureHelp        -> capDyn $ clientCaps ^? L.textDocument . _Just . L.signatureHelp . _Just
-      SMethod_TextDocumentDeclaration          -> capDyn $ clientCaps ^? L.textDocument . _Just . L.declaration . _Just
-      SMethod_TextDocumentDefinition           -> capDyn $ clientCaps ^? L.textDocument . _Just . L.definition . _Just
-      SMethod_TextDocumentTypeDefinition       -> capDyn $ clientCaps ^? L.textDocument . _Just . L.typeDefinition . _Just
-      SMethod_TextDocumentImplementation       -> capDyn $ clientCaps ^? L.textDocument . _Just . L.implementation . _Just
-      SMethod_TextDocumentReferences           -> capDyn $ clientCaps ^? L.textDocument . _Just . L.references . _Just
-      SMethod_TextDocumentDocumentHighlight    -> capDyn $ clientCaps ^? L.textDocument . _Just . L.documentHighlight . _Just
-      SMethod_TextDocumentDocumentSymbol       -> capDyn $ clientCaps ^? L.textDocument . _Just . L.documentSymbol . _Just
-      SMethod_TextDocumentCodeAction           -> capDyn $ clientCaps ^? L.textDocument . _Just . L.codeAction . _Just
-      SMethod_TextDocumentCodeLens             -> capDyn $ clientCaps ^? L.textDocument . _Just . L.codeLens . _Just
-      SMethod_TextDocumentDocumentLink         -> capDyn $ clientCaps ^? L.textDocument . _Just . L.documentLink . _Just
-      SMethod_TextDocumentDocumentColor        -> capDyn $ clientCaps ^? L.textDocument . _Just . L.colorProvider . _Just
-      SMethod_TextDocumentColorPresentation    -> capDyn $ clientCaps ^? L.textDocument . _Just . L.colorProvider . _Just
-      SMethod_TextDocumentFormatting           -> capDyn $ clientCaps ^? L.textDocument . _Just . L.formatting . _Just
-      SMethod_TextDocumentRangeFormatting      -> capDyn $ clientCaps ^? L.textDocument . _Just . L.rangeFormatting . _Just
-      SMethod_TextDocumentOnTypeFormatting     -> capDyn $ clientCaps ^? L.textDocument . _Just . L.onTypeFormatting . _Just
-      SMethod_TextDocumentRename               -> capDyn $ clientCaps ^? L.textDocument . _Just . L.rename . _Just
-      SMethod_TextDocumentFoldingRange         -> capDyn $ clientCaps ^? L.textDocument . _Just . L.foldingRange . _Just
-      SMethod_TextDocumentSelectionRange       -> capDyn $ clientCaps ^? L.textDocument . _Just . L.selectionRange . _Just
-      SMethod_TextDocumentPrepareCallHierarchy -> capDyn $ clientCaps ^? L.textDocument . _Just . L.callHierarchy . _Just
-      SMethod_TextDocumentInlayHint            -> capDyn $ clientCaps ^? L.textDocument . _Just . L.inlayHint . _Just
-      --SMethod_TextDocumentSemanticTokens       -> capDyn $ clientCaps ^? L.textDocument . _Just . L.semanticTokens . _Just
-      _                                        -> False
 
 -- | Sends a @client/unregisterCapability@ request and removes the handler
 -- for that associated registration.

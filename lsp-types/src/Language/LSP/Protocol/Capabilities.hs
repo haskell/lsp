@@ -1,16 +1,23 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE OverloadedLabels      #-}
 {-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE RankNTypes #-}
 module Language.LSP.Protocol.Capabilities
   (
     fullCaps
   , LSPVersion(..)
   , capsForVersion
+  , dynamicRegistrationSupported
   ) where
 
+import           Control.Lens
 import           Data.Row
 import qualified Data.Set                          as Set
+import           Data.Maybe
 import           Language.LSP.Protocol.Types
+import           Language.LSP.Protocol.Message
+import qualified Language.LSP.Protocol.Lens as L
 import           Prelude                           hiding (min)
 
 {-
@@ -18,25 +25,14 @@ TODO: this is out-of-date/needs an audit
 TODO: can we generate this? process the 'since' annotations in the metamodel?
 -}
 
--- | Capabilities for full conformance to the current (v3.15) LSP specification.
+-- | Capabilities for full conformance to the current LSP specification.
 fullCaps :: ClientCapabilities
 fullCaps = capsForVersion (LSPVersion maxBound maxBound)
 
 -- | A specific version of the LSP specification.
-data LSPVersion = LSPVersion Int Int -- ^ Construct a major.minor version
+data LSPVersion = LSPVersion Int Int
 
 -- | Capabilities for full conformance to the LSP specification up until a version.
--- Some important milestones:
---
--- * 3.12 textDocument/prepareRename request
--- * 3.11 CodeActionOptions provided by the server
--- * 3.10 hierarchical document symbols, folding ranges
--- * 3.9 completion item preselect
--- * 3.8 codeAction literals
--- * 3.7 related information in diagnostics
--- * 3.6 workspace folders, colors, goto type/implementation
--- * 3.4 extended completion item and symbol item kinds
--- * 3.0 dynamic registration
 capsForVersion :: LSPVersion -> ClientCapabilities
 capsForVersion (LSPVersion maj min) = caps
   where
@@ -45,9 +41,8 @@ capsForVersion (LSPVersion maj min) = caps
       , _textDocument=Just td
       , _window=Just window
       , _general=since 3 16 general
+      , _notebookDocument=since 3 17 $ NotebookDocumentClientCapabilities $ NotebookDocumentSyncClientCapabilities dynamicReg (Just True)
       , _experimental=Nothing
-      -- TODO
-      , _notebookDocument=Nothing
       }
     w = WorkspaceClientCapabilities {
       _applyEdit = Just True
@@ -61,15 +56,14 @@ capsForVersion (LSPVersion maj min) = caps
       , _didChangeWatchedFiles = Just (DidChangeWatchedFilesClientCapabilities dynamicReg (Just True))
       , _symbol = Just symbolCapabilities
       , _executeCommand = Just (ExecuteCommandClientCapabilities dynamicReg)
+      , _codeLens = Just (CodeLensWorkspaceClientCapabilities $ Just True)
       , _workspaceFolders = since 3 6 True
       , _configuration = since 3 6 True
       , _semanticTokens = since 3 16 (SemanticTokensWorkspaceClientCapabilities $ Just True)
-      , _inlayHint = since 3 17 inlayHint
-      -- TODO
-      , _codeLens = Nothing
-      , _fileOperations = Nothing
-      , _inlineValue = Nothing
-      , _diagnostics = Nothing
+      , _inlayHint = since 3 17 (InlayHintWorkspaceClientCapabilities $ Just True)
+      , _fileOperations = since 3 16 fileOperations
+      , _inlineValue = since 3 17 (InlineValueWorkspaceClientCapabilities $ Just True)
+      , _diagnostics = since 3 17 (DiagnosticWorkspaceClientCapabilities $ Just True)
       }
 
     resourceOperations =
@@ -77,6 +71,15 @@ capsForVersion (LSPVersion maj min) = caps
       , ResourceOperationKind_Delete
       , ResourceOperationKind_Rename
       ]
+
+    fileOperations = FileOperationClientCapabilities
+      dynamicReg
+      (Just True)
+      (Just True)
+      (Just True)
+      (Just True)
+      (Just True)
+      (Just True)
 
     symbolCapabilities = WorkspaceSymbolClientCapabilities
       dynamicReg
@@ -158,13 +161,12 @@ capsForVersion (LSPVersion maj min) = caps
           , _selectionRange=since 3 5 (SelectionRangeClientCapabilities dynamicReg)
           , _callHierarchy=since 3 16 (CallHierarchyClientCapabilities dynamicReg)
           , _semanticTokens=since 3 16 semanticTokensCapabilities
+          , _linkedEditingRange=since 3 16 (LinkedEditingRangeClientCapabilities dynamicReg)
+          , _moniker=since 3 16 (MonikerClientCapabilities dynamicReg)
           , _inlayHint=since 3 17 inlayHintCapabilities
-          -- TODO
-          , _linkedEditingRange=Nothing
-          , _moniker=Nothing
-          , _typeHierarchy=Nothing
-          , _inlineValue=Nothing
-          , _diagnostic=Nothing
+          , _typeHierarchy=since 3 17 (TypeHierarchyClientCapabilities dynamicReg)
+          , _inlineValue=since 3 17 (InlineValueClientCapabilities dynamicReg)
+          , _diagnostic=since 3 17 (DiagnosticClientCapabilities dynamicReg (Just True))
         }
 
     sync =
@@ -184,16 +186,11 @@ capsForVersion (LSPVersion maj min) = caps
         , _contextSupport=since 3 3 True
         , _completionList=since 3 17 (#itemDefaults .== Just [])
         }
-    
-    inlayHint =
-      InlayHintWorkspaceClientCapabilities{
-        _refreshSupport=since 3 17 True
-      }
-    
+
     inlayHintCapabilities =
       InlayHintClientCapabilities{
         _dynamicRegistration=dynamicReg,
-        _resolveSupport= since 3 17 (#properties .== [])
+        _resolveSupport=Just (#properties .== [])
       }
 
     completionItemCapabilities =
@@ -312,8 +309,63 @@ capsForVersion (LSPVersion maj min) = caps
       _staleRequestSupport=since 3 16 (#cancel .== True .+ #retryOnContentModified .== [])
       , _regularExpressions=since 3 16 $ RegularExpressionsClientCapabilities "" Nothing
       , _markdown=since 3 16 $ MarkdownClientCapabilities "" Nothing (Just [])
-      -- TODO
-      , _positionEncodings=Nothing
+      , _positionEncodings=since 3 17 [PositionEncodingKind_UTF16]
       }
 
     allMarkups = [MarkupKind_PlainText, MarkupKind_Markdown]
+
+-- | Whether the client supports dynamic registration for the given method.
+dynamicRegistrationSupported :: SMethod m -> ClientCapabilities -> Bool
+dynamicRegistrationSupported method caps = fromMaybe False $ case method of
+  SMethod_WorkspaceDidChangeConfiguration  -> caps ^? ws . L.didChangeConfiguration . _Just . dyn
+  SMethod_WorkspaceDidChangeWatchedFiles   -> caps ^? ws . L.didChangeWatchedFiles . _Just . dyn
+  SMethod_WorkspaceSymbol                  -> caps ^? ws . L.symbol . _Just . dyn
+  SMethod_WorkspaceExecuteCommand          -> caps ^? ws . L.executeCommand . _Just . dyn
+  SMethod_WorkspaceWillCreateFiles         -> caps ^? ws . L.fileOperations . _Just . dyn
+  SMethod_WorkspaceDidCreateFiles          -> caps ^? ws . L.fileOperations . _Just . dyn
+  SMethod_WorkspaceWillDeleteFiles         -> caps ^? ws . L.fileOperations . _Just . dyn
+  SMethod_WorkspaceDidDeleteFiles          -> caps ^? ws . L.fileOperations . _Just . dyn
+  SMethod_TextDocumentDidOpen              -> caps ^? td . L.synchronization . _Just . dyn
+  SMethod_TextDocumentDidChange            -> caps ^? td . L.synchronization . _Just . dyn
+  SMethod_TextDocumentDidClose             -> caps ^? td . L.synchronization . _Just . dyn
+  SMethod_TextDocumentCompletion           -> caps ^? td . L.completion . _Just . dyn
+  SMethod_TextDocumentHover                -> caps ^? td . L.hover . _Just . dyn
+  SMethod_TextDocumentSignatureHelp        -> caps ^? td . L.signatureHelp . _Just . dyn
+  SMethod_TextDocumentDeclaration          -> caps ^? td . L.declaration . _Just . dyn
+  SMethod_TextDocumentDefinition           -> caps ^? td . L.definition . _Just . dyn
+  SMethod_TextDocumentTypeDefinition       -> caps ^? td . L.typeDefinition . _Just . dyn
+  SMethod_TextDocumentImplementation       -> caps ^? td . L.implementation . _Just . dyn
+  SMethod_TextDocumentReferences           -> caps ^? td . L.references . _Just . dyn
+  SMethod_TextDocumentDocumentHighlight    -> caps ^? td . L.documentHighlight . _Just . dyn
+  SMethod_TextDocumentDocumentSymbol       -> caps ^? td . L.documentSymbol . _Just . dyn
+  SMethod_TextDocumentCodeAction           -> caps ^? td . L.codeAction . _Just . dyn
+  SMethod_TextDocumentCodeLens             -> caps ^? td . L.codeLens . _Just . dyn
+  SMethod_TextDocumentDocumentLink         -> caps ^? td . L.documentLink . _Just . dyn
+  SMethod_TextDocumentDocumentColor        -> caps ^? td . L.colorProvider . _Just . dyn
+  SMethod_TextDocumentColorPresentation    -> caps ^? td . L.colorProvider . _Just . dyn
+  SMethod_TextDocumentFormatting           -> caps ^? td . L.formatting . _Just . dyn
+  SMethod_TextDocumentRangeFormatting      -> caps ^? td . L.rangeFormatting . _Just . dyn
+  SMethod_TextDocumentOnTypeFormatting     -> caps ^? td . L.onTypeFormatting . _Just . dyn
+  SMethod_TextDocumentRename               -> caps ^? td . L.rename . _Just . dyn
+  SMethod_TextDocumentFoldingRange         -> caps ^? td . L.foldingRange . _Just . dyn
+  SMethod_TextDocumentSelectionRange       -> caps ^? td . L.selectionRange . _Just . dyn
+  SMethod_TextDocumentLinkedEditingRange   -> caps ^? td . L.linkedEditingRange . _Just . dyn
+  SMethod_TextDocumentPrepareCallHierarchy -> caps ^? td . L.callHierarchy . _Just . dyn
+  SMethod_TextDocumentInlayHint            -> caps ^? td . L.inlayHint . _Just . dyn
+  SMethod_TextDocumentInlineValue          -> caps ^? td . L.inlineValue . _Just . dyn
+  SMethod_TextDocumentMoniker              -> caps ^? td . L.moniker . _Just . dyn
+  SMethod_TextDocumentPrepareTypeHierarchy -> caps ^? td . L.typeHierarchy . _Just . dyn
+  SMethod_TextDocumentDiagnostic           -> caps ^? td . L.diagnostic . _Just . dyn
+  -- semantic tokens is messed up due to it having you register with an otherwise non-existent method
+  --SMethod_TextDocumentSemanticTokens       -> capDyn $ clientCaps ^? L.textDocument . _Just . L.semanticTokens . _Just
+  -- Notebook document methods alway support dynamic registration, it seems?
+  _                                        -> Just False
+  where
+    td :: Traversal' ClientCapabilities TextDocumentClientCapabilities
+    td = L.textDocument . _Just
+
+    ws :: Traversal' ClientCapabilities WorkspaceClientCapabilities
+    ws = L.workspace . _Just
+
+    dyn :: L.HasDynamicRegistration a (Maybe Bool) => Traversal' a Bool
+    dyn = L.dynamicRegistration . _Just

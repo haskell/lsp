@@ -1,5 +1,10 @@
 # Revision history for lsp-types
 
+## Unreleased
+
+- Add `dynamicRegistrationSupported` to `Capabilities`.
+- Fully update `fullCaps` for recent spec versions.
+
 ## 2.0.2.0
 
 - Add `Language.LSP.Protocol.Utils.Misc.prettyJSON :: Value -> Doc ann` for prettyprinting JSON, 
