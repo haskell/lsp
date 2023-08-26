@@ -1,26 +1,28 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedRecordDot #-}
 
 module Language.LSP.Test.Decoding where
 
 import Control.Exception
-import Control.Lens
 import Data.Aeson
 import Data.Aeson.Types
 import Data.ByteString.Lazy.Char8 qualified as B
 import Data.Foldable
-import Data.Functor.Product
 import Data.Maybe
-import Language.LSP.Protocol.Lens qualified as L
-import Language.LSP.Protocol.Message
 import Language.LSP.Test.Exceptions
+import Language.LSP.Server ()
+import JSONRPC.Typed.Message
+import JSONRPC.Method qualified as Untyped
+import JSONRPC.Typed.Method (Role (..), SRole (..), toUntypedMethod)
 import System.IO
 import System.IO.Error
 import Prelude hiding (id)
-
-import Data.IxMap
-import Data.Kind
+import Data.Map qualified as Map
+import JSONRPC.Id
+import qualified Language.LSP.Protocol.Message as LSP
+import Data.Singletons
 
 {- | Fetches the next message bytes based on
  the Content-Length header
@@ -52,38 +54,30 @@ getHeaders h = do
     | isEOFError e = throw UnexpectedServerTermination
     | otherwise = throw e
 
-type RequestMap = IxMap LspId (SMethod :: Method ClientToServer Request -> Type)
+type RequestMap = Map.Map Id Untyped.Method
 
 newRequestMap :: RequestMap
-newRequestMap = emptyIxMap
+newRequestMap = mempty
 
-updateRequestMap :: RequestMap -> LspId m -> SClientMethod m -> Maybe RequestMap
-updateRequestMap reqMap id method = insertIxMap id method reqMap
+updateRequestMap :: RequestMap -> Id -> LSP.Method -> RequestMap
+updateRequestMap reqMap id method = Map.insert id (toUntypedMethod method) reqMap
 
-getRequestMap :: [FromClientMessage] -> RequestMap
-getRequestMap = foldl' helper emptyIxMap
+getRequestMap :: [SomeMessage Server LSP.Method] -> RequestMap
+getRequestMap = foldl' helper mempty
  where
-  helper :: RequestMap -> FromClientMessage -> RequestMap
-  helper acc msg = case msg of
-    FromClientMess m mess -> case splitClientMethod m of
-      IsClientNot -> acc
-      IsClientReq -> fromJust $ updateRequestMap acc (mess ^. L.id) m
-      IsClientEither -> case mess of
-        NotMess _ -> acc
-        ReqMess msg -> fromJust $ updateRequestMap acc (msg ^. L.id) m
-    _ -> acc
+  helper :: RequestMap -> SomeMessage Server LSP.Method -> RequestMap
+  helper acc (SomeMessage msg) = case msg of
+    Not _ _ -> acc
+    Rsp _ _ -> acc
+    Req m msg -> updateRequestMap acc (msg.id) (fromSing m)
 
-decodeFromServerMsg :: RequestMap -> B.ByteString -> (RequestMap, FromServerMessage)
+decodeFromServerMsg :: RequestMap -> B.ByteString -> (RequestMap, SomeMessage Server LSP.Method)
 decodeFromServerMsg reqMap bytes = unP $ parse p obj
  where
   obj = fromJust $ decode bytes :: Value
-  p = parseServerMessage $ \lid ->
-    let (mm, newMap) = pickFromIxMap lid reqMap
-     in case mm of
-          Nothing -> Nothing
-          Just m -> Just (m, Pair m (Const newMap))
-  unP (Success (FromServerMess m msg)) = (reqMap, FromServerMess m msg)
-  unP (Success (FromServerRsp (Pair m (Const newMap)) msg)) = (newMap, FromServerRsp m msg)
+  p = withSingI SServer $ parseSomeMessage (\m -> Map.lookup m reqMap)
+  unP (Success m@(SomeMessage (Rsp _ msg))) = (Map.delete (msg.id) reqMap, m)
+  unP (Success m) = (reqMap, m)
   unP (Error e) = error $ "Error decoding " <> show obj <> " :" <> e
 
 {-

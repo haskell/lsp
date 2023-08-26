@@ -26,31 +26,68 @@ source-repository head
   type:     git
   location: https://github.com/haskell/lsp
 
-common warnings
-  ghc-options: -Wall -Wunused-packages -Wno-unticked-promoted-constructors
+common lsp-common
+  default-language:   GHC2021
+  -- Various things we want on by default
+  -- * syntactic niceties, QOL
+  -- * we always want more deriving options
+  -- * we want all data strict by default
+  -- * we have lots of duplicte record fields
+  -- * extended type class stuff particularly for the
+  --   lens classes
+  -- * fancy types for singletons etc.
+  default-extensions:
+    DataKinds
+    DeriveAnyClass
+    DerivingStrategies
+    DerivingVia
+    DuplicateRecordFields
+    FunctionalDependencies
+    GADTs
+    LambdaCase
+    NegativeLiterals
+    OverloadedStrings
+    OverloadedLabels
+    OverloadedRecordDot
+    RoleAnnotations
+    StrictData
+    TypeFamilies
+    UndecidableInstances
+  ghc-options:
+    -Wall -Wunused-packages -Wno-unticked-promoted-constructors
+    -Wmissing-deriving-strategies
 
 library
-  import: warnings
+  import: lsp-common
   hs-source-dirs:     src
-  default-language:   GHC2021
   ghc-options:        -fprint-explicit-kinds
   reexported-modules:
     , Language.LSP.Protocol.Types
     , Language.LSP.Protocol.Lens
     , Language.LSP.Protocol.Capabilities
     , Language.LSP.Protocol.Message
+    , JSONRPC.Typed.Server
+    , JSONRPC.Typed.Method
+    , JSONRPC.Typed.RPC
+    , JSONRPC.Typed.Message
+    , JSONRPC.Id
+    , JSONRPC.Message
+    , JSONRPC.RPC
+    , JSONRPC.Method
+    , JSONRPC.Server
 
   exposed-modules:
     Language.LSP.Diagnostics
     Language.LSP.Logging
     Language.LSP.Server
     Language.LSP.VFS
-
-  other-modules:
-    Language.LSP.Server.Control
     Language.LSP.Server.Core
-    Language.LSP.Server.Processing
+    Language.LSP.Server.Config
+    Language.LSP.Server.Shutdown
     Language.LSP.Server.Progress
+    Language.LSP.Server.DynamicRegistration
+    Language.LSP.Server.WorkspaceFolders
+    Language.LSP.MethodInstance
 
   build-depends:
     , aeson                 >=2      && <2.3
@@ -65,14 +102,19 @@ library
     , exceptions            ^>=0.10
     , extra                 ^>=1.7
     , filepath              >=1.4 && < 1.6
+    , generic-lens
     , hashable              ^>=1.4
+    , jsonrpc-typed
     , lens                  >=5.1    && <5.4
     , lens-aeson            ^>=1.2
     , lsp-types             ^>=2.3
     , mtl                   >=2.2    && <2.4
     , prettyprinter         ^>=1.7
+    , singletons
     , sorted-list           ^>=0.2.1
     , stm                   ^>=2.5
+    , some
+    , temporary
     , text                  >=1      && <2.2
     , text-rope             ^>=0.2
     , transformers          >=0.5    && <0.7
@@ -80,11 +122,95 @@ library
     , unliftio-core         ^>=0.2
     , unordered-containers  ^>=0.2
 
+library jsonrpc-typed
+  import: lsp-common
+  hs-source-dirs:     jsonrpc-typed
+
+  exposed-modules:
+    JSONRPC.Typed.Server
+    JSONRPC.Typed.RPC
+    JSONRPC.Typed.Message
+    JSONRPC.Typed.Method
+
+    JSONRPC.Id
+    JSONRPC.Message
+    JSONRPC.IO
+    JSONRPC.RPC
+    JSONRPC.Method
+    JSONRPC.Server
+
+  other-modules:
+    JSONRPC.Server.Core
+    JSONRPC.Server.Control
+    JSONRPC.Server.Dispatch
+    JSONRPC.Utils
+
+  build-depends:
+    , aeson                 >=1.0.0.0
+    , attoparsec
+    , async
+    , base                  >=4.11    && <5
+    , bytestring
+    , co-log-core           >=0.3.1.0
+    , containers
+    , exceptions
+    , generic-lens
+    , hashable
+    , lens-aeson
+    , lens                  >=4.15.2
+    , lsp-types             ^>=2.3
+    , mtl                   <2.4
+    , prettyprinter
+    , singletons
+    , template-haskell
+    , th-abstraction
+    , stm                   ^>=2.5
+    , some
+    , text
+    , unliftio-core         >=0.2.0.0
+
+test-suite jsonrpc-typed-test
+  import:             lsp-common
+  type:               exitcode-stdio-1.0
+  hs-source-dirs:     jsonrpc-typed-test
+  main-is:            Driver.hs
+  other-modules:
+    Json
+    Server
+    TestLib
+
+  build-depends:
+    , base
+    , async
+    , bytestring
+    , dependent-sum-template
+    , co-log-core
+    , aeson
+    , jsonrpc-typed
+    , containers
+    , generic-lens
+    , lens
+    , lsp-types
+    , concurrent-output
+    , singletons
+    , singletons-th
+    , some
+    , stm
+    , prettyprinter
+    , QuickCheck
+    , tasty
+    , tasty-golden
+    , tasty-quickcheck
+    , tasty-hunit
+    , text
+
+  build-tool-depends: tasty-discover:tasty-discover
+  ghc-options:        -threaded -rtsopts -with-rtsopts=-N
+
 executable lsp-demo-reactor-server
-  import:             warnings
+  import: lsp-common
   main-is:            Reactor.hs
   hs-source-dirs:     example
-  default-language:   GHC2021
   build-depends:
     , aeson
     , base
@@ -100,10 +226,9 @@ executable lsp-demo-reactor-server
     buildable: False
 
 executable lsp-demo-simple-server
-  import:             warnings
+  import:             lsp-common
   main-is:            Simple.hs
   hs-source-dirs:     example
-  default-language:   GHC2021
   build-depends:
     , base
     , lsp
@@ -118,14 +243,14 @@ flag demo
   default:     False
 
 test-suite lsp-test
-  import:             warnings
+  import:             lsp-common
   type:               exitcode-stdio-1.0
   hs-source-dirs:     test
   main-is:            Main.hs
   other-modules:
     DiagnosticsSpec
     Spec
-    VspSpec
+    VfsSpec
 
   build-depends:
     , base
@@ -139,4 +264,3 @@ test-suite lsp-test
 
   build-tool-depends: hspec-discover:hspec-discover
   ghc-options:        -threaded -rtsopts -with-rtsopts=-N
-  default-language:   GHC2021

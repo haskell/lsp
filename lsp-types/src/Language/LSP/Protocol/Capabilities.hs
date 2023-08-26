@@ -33,7 +33,7 @@ data LSPVersion = LSPVersion Int Int
 
 ---- CLIENT CAPABILITIES
 
-type ClientCapability :: forall f t. Method f t -> Type
+type ClientCapability :: Method -> Type
 
 -- See Note [Capability mappings]
 
@@ -42,7 +42,7 @@ type ClientCapability :: forall f t. Method f t -> Type
 Where several methods are provided together (e.g. the three `callHierarchy` methods), we associate all of them
 with the capaiblity, even if there is one "primary" method.
 -}
-type family ClientCapability (m :: Method f t) where
+type family ClientCapability (m :: Method) where
   ClientCapability Method_TextDocumentDeclaration = DeclarationClientCapabilities
   ClientCapability Method_TextDocumentImplementation = ImplementationClientCapabilities
   ClientCapability Method_TextDocumentTypeDefinition = TypeDefinitionClientCapabilities
@@ -134,7 +134,6 @@ type family ClientCapability (m :: Method f t) where
   ClientCapability Method_SetTrace = Void
   ClientCapability Method_LogTrace = Void
   ClientCapability Method_CancelRequest = Void
-  ClientCapability (Method_CustomMethod s) = Void
 
 -- See Note [Capability mappings]
 
@@ -231,7 +230,6 @@ clientCapability = \case
   SMethod_SetTrace -> noCap
   SMethod_LogTrace -> noCap
   SMethod_CancelRequest -> noCap
-  (SMethod_CustomMethod _s) -> noCap
  where
   ws :: Lens' ClientCapabilities WorkspaceClientCapabilities
   ws = L.workspace . non emptyWorkspaceClientCaps
@@ -508,7 +506,6 @@ fullClientCapsForVersionAndMethod (LSPVersion maj min) = \case
   SMethod_SetTrace -> Nothing
   SMethod_LogTrace -> Nothing
   SMethod_CancelRequest -> Nothing
-  (SMethod_CustomMethod _s) -> Nothing
  where
   workDoneProgress = since 3 15 True
   showMessage = since 3 16 $ ShowMessageRequestClientCapabilities Nothing
@@ -757,7 +754,7 @@ fullClientCapsForVersionAndMethod (LSPVersion maj min) = \case
 type DocumentSyncCaps = TextDocumentSyncOptions |? TextDocumentSyncKind
 type NotebookDocumentSyncCaps = NotebookDocumentSyncOptions |? NotebookDocumentSyncRegistrationOptions
 
-type ServerCapability :: forall f t. Method f t -> Type
+type ServerCapability :: Method -> Type
 
 -- See Note [Capability mappings]
 
@@ -769,7 +766,7 @@ with the capaiblity, even if there is one "primary" method.
 For methods which strictly only need a client capability but which are closely related to a server capability
 (e.g. `codeLens/refresh`), we also associate them with that server capability.
 -}
-type family ServerCapability (m :: Method f t) where
+type family ServerCapability (m :: Method) where
   ServerCapability Method_TextDocumentDeclaration = Bool |? (DeclarationOptions |? DeclarationRegistrationOptions)
   ServerCapability Method_TextDocumentImplementation = Bool |? (ImplementationOptions |? ImplementationRegistrationOptions)
   ServerCapability Method_TextDocumentTypeDefinition = Bool |? (TypeDefinitionOptions |? TypeDefinitionRegistrationOptions)
@@ -863,7 +860,6 @@ type family ServerCapability (m :: Method f t) where
   ServerCapability Method_SetTrace = Void
   ServerCapability Method_LogTrace = Void
   ServerCapability Method_CancelRequest = Void
-  ServerCapability (Method_CustomMethod s) = Void
 
 -- See Note [Capability mappings]
 
@@ -960,7 +956,6 @@ serverCapability = \case
   SMethod_SetTrace -> noCap
   SMethod_LogTrace -> noCap
   SMethod_CancelRequest -> noCap
-  (SMethod_CustomMethod _s) -> noCap
  where
   fileOps :: Lens' ServerCapabilities (Maybe FileOperationOptions)
   fileOps = L.workspace . non emptyWorkspaceServerCaps . L.fileOperations

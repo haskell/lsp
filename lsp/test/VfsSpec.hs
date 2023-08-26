@@ -1,7 +1,7 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module VspSpec where
+module VfsSpec where
 
 import Data.String
 import Data.Text qualified as T
@@ -18,13 +18,7 @@ main :: IO ()
 main = hspec spec
 
 spec :: Spec
-spec = describe "VSP functions" vspSpec
-
--- -- |Used when running from ghci, and it sets the current directory to ./tests
--- tt :: IO ()
--- tt = do
---   cd ".."
---   hspec spec
+spec = describe "VFS functions" vspSpec
 
 -- ---------------------------------------------------------------------
 

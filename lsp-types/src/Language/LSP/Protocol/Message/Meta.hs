@@ -1,19 +1,18 @@
 module Language.LSP.Protocol.Message.Meta where
 
 -- | Which direction messages are sent in.
-data MessageDirection = ServerToClient | ClientToServer
+data Initiator = ServerInitiates | ClientInitiates | EitherInitiates
 
 -- | What kind of message is sent.
-data MessageKind = Notification | Request
+data RequestOrNotification = Notification | Request
 
--- | Singleton type for 'MessageDirection'.
-data SMessageDirection (f :: MessageDirection) where
-  SClientToServer :: SMessageDirection ClientToServer
-  SServerToClient :: SMessageDirection ServerToClient
-  SBothDirections :: SMessageDirection f
+-- | Singleton type for 'Initiator'.
+data SInitiator (f :: Initiator) where
+  SServerInitiates :: SInitiator ServerInitiates
+  SClientInitiates :: SInitiator ClientInitiates
+  SEitherInitiates :: SInitiator EitherInitiates
 
--- | Singleton type for 'MessageKind'.
-data SMessageKind (f :: MessageKind) where
-  SNotification :: SMessageKind Notification
-  SRequest :: SMessageKind Request
-  SBothTypes :: SMessageKind f
+-- | Singleton type for 'RequestOrNotification'.
+data SRequestOrNotification (f :: RequestOrNotification) where
+  SNotification :: SRequestOrNotification Notification
+  SRequest :: SRequestOrNotification Request

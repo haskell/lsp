@@ -1,10 +1,12 @@
 {- ORMOLU_DISABLE -}
 
 {-# LANGUAGE CPP               #-}
+{-# LANGUAGE DataKinds               #-}
 {-# LANGUAGE GADTs             #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE DataKinds #-}
 
 module Language.LSP.Test.Session
@@ -83,6 +85,9 @@ import Data.IORef
 import Colog.Core (LogAction (..), WithSeverity (..), Severity (..))
 import Data.String (fromString)
 import Data.Either (partitionEithers)
+import JSONRPC.Typed.Message
+import JSONRPC.Typed.Method (Role (..), SRole (..))
+import Data.Singletons
 
 -- | A session representing one instance of launching and connecting to a server.
 --
@@ -91,7 +96,7 @@ import Data.Either (partitionEithers)
 -- 'Language.LSP.Test.sendRequest' and
 -- 'Language.LSP.Test.sendNotification'.
 
-newtype Session a = Session (ConduitParser FromServerMessage (StateT SessionState (ReaderT SessionContext IO)) a)
+newtype Session a = Session (ConduitParser (SomeMessage Server LSP.Method) (StateT SessionState (ReaderT SessionContext IO)) a)
   deriving (Functor, Applicative, Monad, MonadIO, Alternative, MonadThrow)
 
 #if __GLASGOW_HASKELL__ >= 806
@@ -138,7 +143,7 @@ defaultConfig = SessionConfig 60 False False True mempty True True True Nothing
 instance Default SessionConfig where
   def = defaultConfig
 
-data SessionMessage = ServerMessage FromServerMessage
+data SessionMessage = ServerMessage (SomeMessage Server LSP.Method)
                     | TimeoutMessage Int
   deriving Show
 
@@ -150,7 +155,7 @@ data SessionContext = SessionContext
   -- Keep curTimeoutId in SessionContext, as its tied to messageChan
   , curTimeoutId :: IORef Int -- ^ The current timeout we are waiting on
   , requestMap :: MVar RequestMap
-  , initRsp :: MVar (TResponseMessage Method_Initialize)
+  , initRsp :: MVar (ResponseMessage Method_Initialize)
   , config :: SessionConfig
   , sessionCapabilities :: ClientCapabilities
   }
@@ -185,8 +190,8 @@ data SessionState = SessionState
   , overridingTimeout :: !Bool
   -- ^ The last received message from the server.
   -- Used for providing exception information
-  , lastReceivedMessage :: !(Maybe FromServerMessage)
-  , curDynCaps :: !(Map.Map T.Text SomeRegistration)
+  , lastReceivedMessage :: !(Maybe (SomeMessage Server LSP.Method))
+  , curDynCaps :: !(Map.Map T.Text Registration)
   -- ^ The capabilities that the server has dynamically registered with us so
   -- far
   , curLspConfig :: Object
@@ -242,7 +247,7 @@ runSessionMonad context state (Session session) = runReaderT (runStateT conduit 
       yield msg
       chanSource
 
-    watchdog :: ConduitM SessionMessage FromServerMessage (StateT SessionState (ReaderT SessionContext IO)) ()
+    watchdog :: ConduitM SessionMessage (SomeMessage Server LSP.Method) (StateT SessionState (ReaderT SessionContext IO)) ()
     watchdog = Conduit.awaitForever $ \msg -> do
       curId <- getCurTimeoutId
       case msg of
@@ -325,17 +330,19 @@ runSession' serverIn serverOut mServerProc serverHandler config caps rootDir exi
                          (const $ runSessionMonad context initState session)
   return result
 
-updateStateC :: ConduitM FromServerMessage FromServerMessage (StateT SessionState (ReaderT SessionContext IO)) ()
-updateStateC = awaitForever $ \msg -> do
+updateStateC :: ConduitM (SomeMessage Server LSP.Method) (SomeMessage Server LSP.Method) (StateT SessionState (ReaderT SessionContext IO)) ()
+updateStateC = withSingI SClient $ awaitForever $ \msg -> do
   state <- get @SessionState
   updateState msg
   case msg of
-    FromServerMess SMethod_WindowWorkDoneProgressCreate req ->
-      sendMessage $ TResponseMessage "2.0" (Just $ req ^. L.id) (Right Null)
-    FromServerMess SMethod_WorkspaceApplyEdit r -> do
-      sendMessage $ TResponseMessage "2.0" (Just $ r ^. L.id) (Right $ ApplyWorkspaceEditResult True Nothing Nothing)
-    FromServerMess SMethod_WorkspaceConfiguration r -> do
-      let requestedSections = mapMaybe (\i -> i ^? L.section . _Just) $ r ^. L.params . L.items
+    (SomeMessage (Req SMethod_WindowWorkDoneProgressCreate req)) ->
+      withSingI SMethod_WindowWorkDoneProgressCreate $
+        sendMessage $  ResponseMessage @_ @Method_WindowWorkDoneProgressCreate (req.id) (Right Null)
+    (SomeMessage (Req SMethod_WorkspaceApplyEdit r)) -> do
+      withSingI SMethod_WorkspaceApplyEdit $
+        sendMessage $ ResponseMessage @_ @Method_WorkspaceApplyEdit (r.id) (Right $ ApplyWorkspaceEditResult True Nothing Nothing)
+    (SomeMessage (Req SMethod_WorkspaceConfiguration r)) -> withSingI SMethod_WorkspaceConfiguration $ do
+      let requestedSections = mapMaybe (\i -> i ^? L.section . _Just) $ r ^. #params . L.items
       let o = curLspConfig state
       -- check for each requested section whether we have it
       let configsOrErrs = flip fmap requestedSections $ \section ->
@@ -346,10 +353,10 @@ updateStateC = awaitForever $ \msg -> do
       let (errs, configs) = partitionEithers configsOrErrs
 
       -- we have to return exactly the number of sections requested, so if we can't find all of them then that's an error
-      sendMessage $ TResponseMessage "2.0" (Just $ r ^. L.id) $
+      sendMessage $ ResponseMessage @_ @Method_WorkspaceConfiguration (r.id) $
         if null errs
         then Right configs
-        else Left $ TResponseError (InL LSPErrorCodes_RequestFailed) ("No configuration for requested sections: " <> T.pack (show errs)) Nothing
+        else Left $ ResponseError (-32803) ("No configuration for requested sections: " <> T.pack (show errs)) Nothing
     _ -> pure ()
   unless (
     (ignoringLogNotifications state && isLogNotification msg)
@@ -359,16 +366,19 @@ updateStateC = awaitForever $ \msg -> do
 
   where
 
-    isLogNotification (FromServerMess SMethod_WindowShowMessage _) = True
-    isLogNotification (FromServerMess SMethod_WindowLogMessage _) = True
-    isLogNotification (FromServerMess SMethod_WindowShowDocument _) = True
+    isLogNotification :: SomeMessage Server LSP.Method -> Bool
+    isLogNotification (SomeMessage (Not SMethod_WindowShowMessage _)) = True
+    isLogNotification (SomeMessage (Not SMethod_WindowLogMessage _)) = True
+    isLogNotification (SomeMessage (Req SMethod_WindowShowDocument _)) = True
     isLogNotification _ = False
 
-    isConfigRequest (FromServerMess SMethod_WorkspaceConfiguration _) = True
+    isConfigRequest :: SomeMessage Server LSP.Method -> Bool
+    isConfigRequest (SomeMessage (Req SMethod_WorkspaceConfiguration _)) = True
     isConfigRequest _ = False
 
-    isRegistrationRequest (FromServerMess SMethod_ClientRegisterCapability _) = True
-    isRegistrationRequest (FromServerMess SMethod_ClientUnregisterCapability _) = True
+    isRegistrationRequest :: SomeMessage Server LSP.Method -> Bool
+    isRegistrationRequest (SomeMessage (Req SMethod_ClientRegisterCapability _)) = True
+    isRegistrationRequest (SomeMessage (Req SMethod_ClientUnregisterCapability _)) = True
     isRegistrationRequest _ = False
 
 -- extract Uri out from DocumentChange
@@ -380,40 +390,40 @@ documentChangeUri (InR (InR (InL x))) = x ^. L.oldUri
 documentChangeUri (InR (InR (InR x))) = x ^. L.uri
 
 updateState :: (MonadIO m, HasReader SessionContext m, HasState SessionState m)
-            => FromServerMessage -> m ()
-updateState (FromServerMess SMethod_Progress req) = case req ^. L.params . L.value of
+            => SomeMessage Server LSP.Method -> m ()
+updateState (SomeMessage (Not SMethod_Progress req)) = case req ^. #params . L.value of
   v | Just _ <- v ^? _workDoneProgressBegin ->
-    modify $ \s -> s { curProgressSessions = Set.insert (req ^. L.params . L.token) $ curProgressSessions s }
+    modify $ \s -> s { curProgressSessions = Set.insert (req ^. #params . L.token) $ curProgressSessions s }
   v | Just _ <- v ^? _workDoneProgressEnd ->
-    modify $ \s -> s { curProgressSessions = Set.delete (req ^. L.params . L.token) $ curProgressSessions s }
+    modify $ \s -> s { curProgressSessions = Set.delete (req ^. #params . L.token) $ curProgressSessions s }
   _ -> pure ()
 
 -- Keep track of dynamic capability registration
-updateState (FromServerMess SMethod_ClientRegisterCapability req) = do
+updateState (SomeMessage (Req SMethod_ClientRegisterCapability req)) = do
   let
-    regs :: [SomeRegistration]
-    regs = req ^.. L.params . L.registrations . traversed . to toSomeRegistration . _Just
-  let newRegs = (\sr@(SomeRegistration r) -> (r ^. L.id, sr)) <$> regs
+    regs :: [Registration]
+    regs = req ^. #params . L.registrations
+  let newRegs = (\r -> (r ^. L.id, r)) <$> regs
   modify $ \s ->
     s { curDynCaps = Map.union (Map.fromList newRegs) (curDynCaps s) }
 
-updateState (FromServerMess SMethod_ClientUnregisterCapability req) = do
-  let unRegs = (^. L.id) <$> req ^. L.params . L.unregisterations
+updateState (SomeMessage (Req SMethod_ClientUnregisterCapability req)) = do
+  let unRegs = (^. L.id) <$> req ^. #params . L.unregisterations
   modify $ \s ->
     let newCurDynCaps = foldr' Map.delete (curDynCaps s) unRegs
     in s { curDynCaps = newCurDynCaps }
 
-updateState (FromServerMess SMethod_TextDocumentPublishDiagnostics n) = do
-  let diags = n ^. L.params . L.diagnostics
-      doc = n ^. L.params . L.uri
+updateState (SomeMessage (Not SMethod_TextDocumentPublishDiagnostics n)) = do
+  let diags = n ^. #params . L.diagnostics
+      doc = n ^. #params . L.uri
   modify $ \s ->
     let newDiags = Map.insert (toNormalizedUri doc) diags (curDiagnostics s)
       in s { curDiagnostics = newDiags }
 
-updateState (FromServerMess SMethod_WorkspaceApplyEdit r) = do
+updateState (SomeMessage (Req SMethod_WorkspaceApplyEdit r)) = do
 
   -- First, prefer the versioned documentChanges field
-  allChangeParams <- case r ^. L.params . L.edit . L.documentChanges of
+  allChangeParams <- case r ^. #params . L.edit . L.documentChanges of
     Just cs -> do
       mapM_ (checkIfNeedsOpened . documentChangeUri) cs
       -- replace the user provided version numbers with the VFS ones + 1
@@ -421,7 +431,7 @@ updateState (FromServerMess SMethod_WorkspaceApplyEdit r) = do
       cs' <- traverseOf (traverse . _L . L.textDocument . _versionedTextDocumentIdentifier) bumpNewestVersion cs
       return $ mapMaybe getParamsFromDocumentChange cs'
     -- Then fall back to the changes field
-    Nothing -> case r ^. L.params . L.edit . L.changes of
+    Nothing -> case r ^. #params . L.edit . L.changes of
       Just cs -> do
         mapM_ checkIfNeedsOpened (Map.keys cs)
         concat <$> mapM (uncurry getChangeParams) (Map.toList cs)
@@ -429,14 +439,14 @@ updateState (FromServerMess SMethod_WorkspaceApplyEdit r) = do
         error "WorkspaceEdit contains neither documentChanges nor changes!"
 
   modifyM $ \s -> do
-    let newVFS = flip execState (vfs s) $ changeFromServerVFS logger r
-    return $ s { vfs = newVFS }
+    let newVFS = flip execState (s.vfs) $ changeFromServerVFS logger (r.params)
+    return $ (s { vfs = newVFS } :: SessionState)
 
   let groupedParams = groupBy (\a b -> a ^. L.textDocument == b ^. L.textDocument) allChangeParams
       mergedParams = map mergeParams groupedParams
 
   -- TODO: Don't do this when replaying a session
-  forM_ mergedParams (sendMessage . TNotificationMessage "2.0" SMethod_TextDocumentDidChange)
+  forM_ mergedParams (sendMessage . NotificationMessage SMethod_TextDocumentDidChange)
 
   -- Update VFS to new document versions
   let sortedVersions = map (sortBy (compare `on` (^. L.textDocument . L.version))) groupedParams
@@ -444,27 +454,27 @@ updateState (FromServerMess SMethod_WorkspaceApplyEdit r) = do
 
   forM_ latestVersions $ \(VersionedTextDocumentIdentifier uri v) ->
     modify $ \s ->
-      let oldVFS = vfs s
+      let oldVFS = s.vfs
           update (VirtualFile _ file_ver t) = VirtualFile v (file_ver +1) t
-          newVFS = oldVFS & vfsMap . ix (toNormalizedUri uri) %~ update
-      in s { vfs = newVFS }
+          newVFS = oldVFS & #vfsMap . ix (toNormalizedUri uri) %~ update
+      in (s { vfs = newVFS } :: SessionState)
 
   where
         logger = LogAction $ \(WithSeverity msg sev) -> case sev of { Error -> error $ show msg; _ -> pure () }
         checkIfNeedsOpened uri = do
-          oldVFS <- vfs <$> get
+          SessionState{vfs=oldVFS} <- get
 
           -- if its not open, open it
-          unless (has (vfsMap . ix (toNormalizedUri uri)) oldVFS) $ do
+          unless (has (#vfsMap . ix (toNormalizedUri uri)) oldVFS) $ do
             let fp = fromJust $ uriToFilePath uri
             contents <- liftIO $ T.readFile fp
             let item = TextDocumentItem (filePathToUri fp) "" 0 contents
-                msg = TNotificationMessage "2.0" SMethod_TextDocumentDidOpen (DidOpenTextDocumentParams item)
+                msg = NotificationMessage SMethod_TextDocumentDidOpen (DidOpenTextDocumentParams item)
             sendMessage msg
 
             modifyM $ \s -> do
-              let newVFS = flip execState (vfs s) $ openVFS logger msg
-              return $ s { vfs = newVFS }
+              let newVFS = flip execState (s.vfs) $ openVFS logger msg.params
+              return $ (s { vfs = newVFS } :: SessionState)
 
         getParamsFromTextDocumentEdit :: TextDocumentEdit -> Maybe DidChangeTextDocumentParams
         getParamsFromTextDocumentEdit (TextDocumentEdit docId edits) =
@@ -485,8 +495,8 @@ updateState (FromServerMess SMethod_WorkspaceApplyEdit r) = do
         -- For a uri returns an infinite list of versions [n,n+1,n+2,...]
         -- where n is the current version
         textDocumentVersions uri = do
-          vfs <- vfs <$> get
-          let curVer = fromMaybe 0 $ vfs ^? vfsMap . ix (toNormalizedUri uri) . lsp_version
+          SessionState{vfs} <- get
+          let curVer = fromMaybe 0 $ vfs ^? #vfsMap . ix (toNormalizedUri uri) . #lspVersion
           pure $ map (VersionedTextDocumentIdentifier uri) [curVer + 1..]
 
         textDocumentEdits uri edits = do

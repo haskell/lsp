@@ -13,17 +13,18 @@ import Language.LSP.Protocol.Types
 import Language.LSP.Protocol.Utils.Misc
 
 import Data.Aeson
+import Data.Singletons
 import Data.Text (Text)
 import Data.Text qualified as T
 import GHC.Generics
 import Prettyprinter
 
 -- | Typed dynamic registration type, with correct options.
-data TRegistration (m :: Method ClientToServer t) = TRegistration
+data TRegistration (m :: Method) = TRegistration
   { _id :: Text
   -- ^ The id used to register the request. The id can be used to deregister
   -- the request again.
-  , _method :: SClientMethod m
+  , _method :: SMethod m
   -- ^ The method / capability to register for.
   , _registerOptions :: !(Maybe (RegistrationOptions m))
   -- ^ Options necessary for the registration.
@@ -34,6 +35,11 @@ data TRegistration (m :: Method ClientToServer t) = TRegistration
 deriving stock instance Eq (RegistrationOptions m) => Eq (TRegistration m)
 deriving stock instance Show (RegistrationOptions m) => Show (TRegistration m)
 
+toUntypedRegistration :: TRegistration m -> Registration
+toUntypedRegistration (TRegistration i meth opts) =
+  -- TODO!
+  Registration i (T.pack $ methodToMethodString $ fromSing meth) undefined -- (Just $ toJSON opts)
+
 -- TODO: can we do this generically somehow?
 -- This generates the function
 -- regHelper :: SMethod m
@@ -42,8 +48,9 @@ deriving stock instance Show (RegistrationOptions m) => Show (TRegistration m)
 --               , FromJSON ($regOptTcon m)
 --              => x)
 --           -> x
-makeRegHelper ''RegistrationOptions
+-- makeRegHelper ''RegistrationOptions
 
+{-
 instance ToJSON (TRegistration m) where
   toJSON x@(TRegistration _ m _) = regHelper m (genericToJSON lspOptions x)
 
@@ -65,20 +72,18 @@ instance Show SomeRegistration where
 
 deriving via ViaJSON SomeRegistration instance Pretty SomeRegistration
 
-toUntypedRegistration :: TRegistration m -> Registration
-toUntypedRegistration (TRegistration i meth opts) = Registration i (T.pack $ someMethodToMethodString $ SomeMethod meth) (Just $ regHelper meth (toJSON opts))
-
 toSomeRegistration :: Registration -> Maybe SomeRegistration
 toSomeRegistration r =
   let v = toJSON r
    in case fromJSON v of
         Success r' -> Just r'
         _ -> Nothing
+-}
 
 -- ---------------------------------------------------------------------
 
 -- | Typed dynamic unregistration type.
-data TUnregistration (m :: Method ClientToServer t) = TUnregistration
+data TUnregistration (m :: Method) = TUnregistration
   { _id :: Text
   -- ^ The id used to unregister the request or notification. Usually an id
   -- provided during the register request.
@@ -90,6 +95,10 @@ data TUnregistration (m :: Method ClientToServer t) = TUnregistration
 deriving stock instance Eq (TUnregistration m)
 deriving stock instance Show (TUnregistration m)
 
+toUntypedUnregistration :: TUnregistration m -> Unregistration
+toUntypedUnregistration (TUnregistration i meth) = Unregistration i (T.pack $ methodToMethodString $ fromSing meth)
+
+{-
 instance ToJSON (TUnregistration m) where
   toJSON x@(TUnregistration _ m) = regHelper m (genericToJSON lspOptions x)
 
@@ -117,3 +126,4 @@ toSomeUnregistration r =
    in case fromJSON v of
         Success r' -> Just r'
         _ -> Nothing
+-}

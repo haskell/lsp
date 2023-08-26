@@ -2,6 +2,9 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE OverloadedRecordDot #-}
+{-# LANGUAGE OverloadedLabels #-}
 
 module Main where
 
@@ -20,15 +23,18 @@ import Language.LSP.Protocol.Lens qualified as L
 import Language.LSP.Protocol.Message
 import Language.LSP.Protocol.Types
 import Language.LSP.Server
+import Language.LSP.Server.Progress
 import Language.LSP.Test qualified as Test
 import System.Exit
 import System.Process
 import Test.Hspec
 import UnliftIO
 import UnliftIO.Concurrent
+import JSONRPC.Typed.Server hiding (ServerDefinition)
+import Language.LSP.Server.WorkspaceFolders (getWorkspaceFolders)
 
 runSessionWithServer ::
-  LogAction IO (WithSeverity LspServerLog) ->
+  LogAction IO (WithSeverity LspLog) ->
   ServerDefinition config ->
   Test.SessionConfig ->
   ClientCapabilities ->
@@ -39,7 +45,7 @@ runSessionWithServer logger defn testConfig caps root session = do
   (hinRead, hinWrite) <- createPipe
   (houtRead, houtWrite) <- createPipe
 
-  server <- async $ void $ runServerWithHandles logger (L.hoistLogAction liftIO logger) hinRead houtWrite defn
+  server <- async $ void $ runLspServerWithHandles logger hinRead houtWrite defn
 
   res <- Test.runSessionWithHandles hinWrite houtRead testConfig caps root session
 
@@ -65,14 +71,12 @@ spec = do
               , onConfigChange = const $ pure ()
               , defaultConfig = ()
               , configSection = "demo"
-              , doInitialize = \env _req -> pure $ Right env
-              , staticHandlers = \_caps -> handlers
-              , interpretHandler = \env -> Iso (runLspT env) liftIO
+              , doInitialize = \env _req -> pure $ Right (handlers env)
               , options = defaultOptions
               }
 
-          handlers :: Handlers (LspM ())
-          handlers =
+          handlers :: LanguageServerHandle () -> LspServerHandlers
+          handlers h =
             requestHandler (SMethod_CustomMethod (Proxy @"something")) $ \_req resp -> void $ forkIO $ do
               withProgress "Doing something" Nothing NotCancellable $ \updater -> do
                 liftIO $ waitBarrier startBarrier
@@ -89,37 +93,37 @@ spec = do
         -- Wait until we have seen a begin messsage. This means that the token setup
         -- has happened and the server has been able to send us a begin message
         skipManyTill Test.anyMessage $ do
-          x <- Test.message SMethod_Progress
-          guard $ has (L.params . L.value . _workDoneProgressBegin) x
+          x <- Test.notification SMethod_Progress
+          guard $ has (#params . L.value . _workDoneProgressBegin) x
 
         -- allow the hander to send us updates
         liftIO $ signalBarrier startBarrier ()
 
         do
-          u <- Test.message SMethod_Progress
+          u <- Test.notification SMethod_Progress
           liftIO $ do
-            u ^? L.params . L.value . _workDoneProgressReport . L.message `shouldBe` Just (Just "step1")
-            u ^? L.params . L.value . _workDoneProgressReport . L.percentage `shouldBe` Just (Just 25)
+            u ^? #params . L.value . _workDoneProgressReport . L.message `shouldBe` Just (Just "step1")
+            u ^? #params . L.value . _workDoneProgressReport . L.percentage `shouldBe` Just (Just 25)
         liftIO $ signalBarrier b1 ()
 
         do
-          u <- Test.message SMethod_Progress
+          u <- Test.notification SMethod_Progress
           liftIO $ do
-            u ^? L.params . L.value . _workDoneProgressReport . L.message `shouldBe` Just (Just "step2")
-            u ^? L.params . L.value . _workDoneProgressReport . L.percentage `shouldBe` Just (Just 50)
+            u ^? #params . L.value . _workDoneProgressReport . L.message `shouldBe` Just (Just "step2")
+            u ^? #params . L.value . _workDoneProgressReport . L.percentage `shouldBe` Just (Just 50)
         liftIO $ signalBarrier b2 ()
 
         do
-          u <- Test.message SMethod_Progress
+          u <- Test.notification SMethod_Progress
           liftIO $ do
-            u ^? L.params . L.value . _workDoneProgressReport . L.message `shouldBe` Just (Just "step3")
-            u ^? L.params . L.value . _workDoneProgressReport . L.percentage `shouldBe` Just (Just 75)
+            u ^? #params . L.value . _workDoneProgressReport . L.message `shouldBe` Just (Just "step3")
+            u ^? #params . L.value . _workDoneProgressReport . L.percentage `shouldBe` Just (Just 75)
         liftIO $ signalBarrier b3 ()
 
         -- Then make sure we get a $/progress end notification
         skipManyTill Test.anyMessage $ do
-          x <- Test.message SMethod_Progress
-          guard $ has (L.params . L.value . _workDoneProgressEnd) x
+          x <- Test.notification SMethod_Progress
+          guard $ has (#params . L.value . _workDoneProgressEnd) x
 
     it "handles cancellation" $ do
       wasCancelled <- newMVar False
@@ -130,14 +134,12 @@ spec = do
               , onConfigChange = const $ pure ()
               , defaultConfig = ()
               , configSection = "demo"
-              , doInitialize = \env _req -> pure $ Right env
-              , staticHandlers = \_caps -> handlers
-              , interpretHandler = \env -> Iso (runLspT env) liftIO
+              , doInitialize = \env _req -> pure $ Right $ handlers env
               , options = defaultOptions
               }
 
-          handlers :: Handlers (LspM ())
-          handlers =
+          handlers :: LanguageServerHandle () -> LspServerHandlers
+          handlers h =
             requestHandler (SMethod_CustomMethod (Proxy @"something")) $ \_req resp -> void $ forkIO $ do
               -- Doesn't matter what cancellability we set here!
               withProgress "Doing something" Nothing NotCancellable $ \updater -> do
@@ -149,20 +151,20 @@ spec = do
 
         -- Wait until we have created the progress so the updates will be sent individually
         token <- skipManyTill Test.anyMessage $ do
-          x <- Test.message SMethod_WindowWorkDoneProgressCreate
-          pure $ x ^. L.params . L.token
+          x <- Test.notification SMethod_WindowWorkDoneProgressCreate
+          pure $ x ^. #params . L.token
 
         -- First make sure that we get a $/progress begin notification
         skipManyTill Test.anyMessage $ do
-          x <- Test.message SMethod_Progress
-          guard $ has (L.params . L.value . _workDoneProgressBegin) x
+          x <- Test.notification SMethod_Progress
+          guard $ has (#params . L.value . _workDoneProgressBegin) x
 
         Test.sendNotification SMethod_WindowWorkDoneProgressCancel (WorkDoneProgressCancelParams token)
 
         -- Then make sure we still get a $/progress end notification
         skipManyTill Test.anyMessage $ do
-          x <- Test.message SMethod_Progress
-          guard $ has (L.params . L.value . _workDoneProgressEnd) x
+          x <- Test.notification SMethod_Progress
+          guard $ has (#params . L.value . _workDoneProgressEnd) x
 
       c <- readMVar wasCancelled
       c `shouldBe` True
@@ -176,14 +178,12 @@ spec = do
               , onConfigChange = const $ pure ()
               , defaultConfig = ()
               , configSection = "demo"
-              , doInitialize = \env _req -> pure $ Right env
-              , staticHandlers = \_caps -> handlers killVar
-              , interpretHandler = \env -> Iso (runLspT env) liftIO
+              , doInitialize = \env _req -> pure $ Right $ handlers killVar env
               , options = defaultOptions
               }
 
-          handlers :: MVar () -> Handlers (LspM ())
-          handlers killVar =
+          handlers :: MVar () -> LanguageServerHandle () -> LspServerHandlers
+          handlers killVar h =
             notificationHandler SMethod_Initialized $ \noti -> void $
               forkIO $
                 withProgress "Doing something" Nothing NotCancellable $ \updater -> liftIO $ do
@@ -193,16 +193,16 @@ spec = do
       runSessionWithServer logger definition Test.defaultConfig Test.fullLatestClientCaps "." $ do
         -- First make sure that we get a $/progress begin notification
         skipManyTill Test.anyMessage $ do
-          x <- Test.message SMethod_Progress
-          guard $ has (L.params . L.value . _workDoneProgressBegin) x
+          x <- Test.notification SMethod_Progress
+          guard $ has (#params . L.value . _workDoneProgressBegin) x
 
         -- Then kill the thread
         liftIO $ putMVar killVar ()
 
         -- Then make sure we still get a $/progress end notification
         skipManyTill Test.anyMessage $ do
-          x <- Test.message SMethod_Progress
-          guard $ has (L.params . L.value . _workDoneProgressEnd) x
+          x <- Test.notification SMethod_Progress
+          guard $ has (#params . L.value . _workDoneProgressEnd) x
 
   describe "client-initiated progress reporting" $ do
     it "sends updates" $ do
@@ -217,16 +217,14 @@ spec = do
               , onConfigChange = const $ pure ()
               , defaultConfig = ()
               , configSection = "demo"
-              , doInitialize = \env _req -> pure $ Right env
-              , staticHandlers = \_caps -> handlers
-              , interpretHandler = \env -> Iso (runLspT env) liftIO
+              , doInitialize = \env _req -> pure $ Right $ handlers env
               , options = defaultOptions{optSupportClientInitiatedProgress = True}
               }
 
-          handlers :: Handlers (LspM ())
-          handlers =
+          handlers :: LanguageServerHandle () -> LspServerHandlers
+          handlers h =
             requestHandler SMethod_TextDocumentCodeLens $ \req resp -> void $ forkIO $ do
-              withProgress "Doing something" (req ^. L.params . L.workDoneToken) NotCancellable $ \updater -> do
+              withProgress "Doing something" (req ^. #params . L.workDoneToken) NotCancellable $ \updater -> do
                 liftIO $ waitBarrier startBarrier
                 updater $ ProgressAmount (Just 25) (Just "step1")
                 liftIO $ waitBarrier b1
@@ -240,36 +238,36 @@ spec = do
 
         -- First make sure that we get a $/progress begin notification
         skipManyTill Test.anyMessage $ do
-          x <- Test.message SMethod_Progress
-          guard $ has (L.params . L.value . _workDoneProgressBegin) x
+          x <- Test.notification SMethod_Progress
+          guard $ has (#params . L.value . _workDoneProgressBegin) x
 
         liftIO $ signalBarrier startBarrier ()
 
         do
-          u <- Test.message SMethod_Progress
+          u <- Test.notification SMethod_Progress
           liftIO $ do
-            u ^? L.params . L.value . _workDoneProgressReport . L.message `shouldBe` Just (Just "step1")
-            u ^? L.params . L.value . _workDoneProgressReport . L.percentage `shouldBe` Just (Just 25)
+            u ^? #params . L.value . _workDoneProgressReport . L.message `shouldBe` Just (Just "step1")
+            u ^? #params . L.value . _workDoneProgressReport . L.percentage `shouldBe` Just (Just 25)
         liftIO $ signalBarrier b1 ()
 
         do
-          u <- Test.message SMethod_Progress
+          u <- Test.notification SMethod_Progress
           liftIO $ do
-            u ^? L.params . L.value . _workDoneProgressReport . L.message `shouldBe` Just (Just "step2")
-            u ^? L.params . L.value . _workDoneProgressReport . L.percentage `shouldBe` Just (Just 50)
+            u ^? #params . L.value . _workDoneProgressReport . L.message `shouldBe` Just (Just "step2")
+            u ^? #params . L.value . _workDoneProgressReport . L.percentage `shouldBe` Just (Just 50)
         liftIO $ signalBarrier b2 ()
 
         do
-          u <- Test.message SMethod_Progress
+          u <- Test.notification SMethod_Progress
           liftIO $ do
-            u ^? L.params . L.value . _workDoneProgressReport . L.message `shouldBe` Just (Just "step3")
-            u ^? L.params . L.value . _workDoneProgressReport . L.percentage `shouldBe` Just (Just 75)
+            u ^? #params . L.value . _workDoneProgressReport . L.message `shouldBe` Just (Just "step3")
+            u ^? #params . L.value . _workDoneProgressReport . L.percentage `shouldBe` Just (Just 75)
         liftIO $ signalBarrier b3 ()
 
         -- Then make sure we get a $/progress end notification
         skipManyTill Test.anyMessage $ do
-          x <- Test.message SMethod_Progress
-          guard $ has (L.params . L.value . _workDoneProgressEnd) x
+          x <- Test.notification SMethod_Progress
+          guard $ has (#params . L.value . _workDoneProgressEnd) x
 
   describe "workspace folders" $
     it "keeps track of open workspace folders" $ do
@@ -285,21 +283,19 @@ spec = do
               , onConfigChange = const $ pure ()
               , defaultConfig = ()
               , configSection = "demo"
-              , doInitialize = \env _req -> pure $ Right env
-              , staticHandlers = \_caps -> handlers
-              , interpretHandler = \env -> Iso (runLspT env) liftIO
+              , doInitialize = \env _req -> pure $ Right $ handlers env
               , options = defaultOptions
               }
 
-          handlers :: Handlers (LspM ())
-          handlers =
+          handlers :: LanguageServerHandle () -> LspServerHandlers
+          handlers handle =
             mconcat
-              [ notificationHandler SMethod_Initialized $ \noti -> do
-                  wfs <- fromJust <$> getWorkspaceFolders
+              [ notificationHandler SMethod_Initialized $ mkNotificationHandler $ \noti -> do
+                  wfs <- fromJust <$> getWorkspaceFolders handle.workspaceFoldersHandle
                   liftIO $ wfs `shouldContain` [wf0]
-              , notificationHandler SMethod_WorkspaceDidChangeWorkspaceFolders $ \noti -> do
+              , notificationHandler SMethod_WorkspaceDidChangeWorkspaceFolders $ mkNotificationHandler $ \noti -> do
                   i <- liftIO $ modifyMVar countVar (\i -> pure (i + 1, i))
-                  wfs <- fromJust <$> getWorkspaceFolders
+                  wfs <- fromJust <$> getWorkspaceFolders handle.workspaceFoldersHandle
                   liftIO $ case i of
                     0 -> do
                       wfs `shouldContain` [wf1]

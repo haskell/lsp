@@ -2,16 +2,19 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedRecordDot #-}
 
 module Language.LSP.Test.Parsing (
   -- $receiving
   satisfy,
   satisfyMaybe,
   message,
+  request,
+  notification,
   response,
   responseForId,
-  customRequest,
-  customNotification,
+  --customRequest,
+  --customNotification,
   anyRequest,
   anyResponse,
   anyNotification,
@@ -31,9 +34,12 @@ import Data.Conduit.Parser qualified (named)
 import Data.GADT.Compare
 import Data.Text qualified as T
 import Data.Typeable
-import GHC.TypeLits (KnownSymbol, symbolVal)
 import Language.LSP.Protocol.Message
 import Language.LSP.Test.Session
+import JSONRPC.Typed.Method (Role (..))
+import qualified Language.LSP.Protocol.Message as LSP
+import JSONRPC.Typed.Message hiding (message)
+import JSONRPC.Id
 
 {- $receiving
  To receive a message, specify the method of the message to expect:
@@ -68,17 +74,17 @@ import Language.LSP.Test.Session
 
  @since 0.5.2.0
 -}
-satisfy :: (FromServerMessage -> Bool) -> Session FromServerMessage
+satisfy :: (SomeMessage Server LSP.Method -> Bool) -> Session (SomeMessage Server LSP.Method)
 satisfy pred = satisfyMaybe (\msg -> if pred msg then Just msg else Nothing)
 
 {- | Consumes and returns the result of the specified predicate if it returns `Just`.
 
  @since 0.6.1.0
 -}
-satisfyMaybe :: (FromServerMessage -> Maybe a) -> Session a
+satisfyMaybe :: (SomeMessage Server LSP.Method -> Maybe a) -> Session a
 satisfyMaybe pred = satisfyMaybeM (pure . pred)
 
-satisfyMaybeM :: (FromServerMessage -> Session (Maybe a)) -> Session a
+satisfyMaybeM :: (SomeMessage Server LSP.Method -> Session (Maybe a)) -> Session a
 satisfyMaybeM pred = do
   skipTimeout <- overridingTimeout <$> get
   timeoutId <- getCurTimeoutId
@@ -115,16 +121,16 @@ named s (Session x) = Session (Data.Conduit.Parser.named s x)
 {- | Matches a request or a notification coming from the server.
  Doesn't match Custom Messages
 -}
-message :: SServerMethod m -> Session (TMessage m)
-message (SMethod_CustomMethod _) = error "message can't be used with CustomMethod, use customRequest or customNotification instead"
+message :: forall (m :: LSP.Method) . SMethod m -> Session (Message Server LSP.Method m)
 message m1 = named (T.pack $ "Request for: " <> show m1) $ satisfyMaybe $ \case
-  FromServerMess m2 msg -> do
-    res <- mEqServer m1 m2
-    case res of
-      Right HRefl -> pure msg
-      Left _f -> Nothing
+  SomeMessage msg@(Req m _) | Just Refl <- geq m m1 -> Just msg
+  SomeMessage msg@(Not m _) | Just Refl <- geq m m1 -> Just msg
+  SomeMessage msg@(Rsp m _) | Just Refl <- geq m m1 -> Just msg
   _ -> Nothing
 
+-- TODO: resurrect?
+
+{-
 customRequest :: KnownSymbol s => Proxy s -> Session (TMessage (Method_CustomMethod s :: Method ServerToClient Request))
 customRequest p =
   let m = T.pack $ symbolVal p
@@ -150,80 +156,83 @@ customNotification p =
             _ -> Nothing
           _ -> Nothing
         _ -> Nothing
+-}
 
 -- | Matches if the message is a notification.
-anyNotification :: Session FromServerMessage
+anyNotification :: Session (SomeMessage Server LSP.Method)
 anyNotification = named "Any notification" $ satisfy $ \case
-  FromServerMess m msg -> case splitServerMethod m of
-    IsServerNot -> True
-    IsServerEither -> case msg of
-      NotMess _ -> True
-      _ -> False
-    _ -> False
-  FromServerRsp _ _ -> False
+  SomeMessage (Not _ _) -> True
+  _ -> False
 
 -- | Matches if the message is a request.
-anyRequest :: Session FromServerMessage
+anyRequest :: Session (SomeMessage Server LSP.Method)
 anyRequest = named "Any request" $ satisfy $ \case
-  FromServerMess m _ -> case splitServerMethod m of
-    IsServerReq -> True
-    _ -> False
-  FromServerRsp _ _ -> False
+  SomeMessage (Req _ _) -> True
+  _ -> False
 
 -- | Matches if the message is a response.
-anyResponse :: Session FromServerMessage
+anyResponse :: Session (SomeMessage Server LSP.Method)
 anyResponse = named "Any response" $ satisfy $ \case
-  FromServerMess _ _ -> False
-  FromServerRsp _ _ -> True
+  SomeMessage (Rsp _ _) -> True
+  _ -> False
 
--- | Matches a response coming from the server.
-response :: SMethod (m :: Method ClientToServer Request) -> Session (TResponseMessage m)
-response m1 = named (T.pack $ "Response for: " <> show m1) $ satisfyMaybe $ \case
-  FromServerRsp m2 msg -> do
-    HRefl <- runEq mEqClient m1 m2
-    pure msg
+-- | Matches a request coming from the server.
+request :: SMethod m -> Session (RequestMessage m)
+request m1 = named (T.pack $ "Response for: " <> show m1) $ satisfyMaybe $ \case
+  SomeMessage (Req m msg) | Just Refl <- geq m m1 -> Just msg
   _ -> Nothing
 
+-- | Matches a notification coming from the server.
+notification :: SMethod m -> Session (NotificationMessage m)
+notification m1 = named (T.pack $ "Response for: " <> show m1) $ satisfyMaybe $ \case
+  SomeMessage (Not m msg) | Just Refl <- geq m m1 -> Just msg
+  _ -> Nothing
+
+-- | Matches a response coming from the server.
+response :: SMethod m -> Session (ResponseMessage m)
+response m1 = named (T.pack $ "Response for: " <> show m1) $ satisfyMaybe $ \case
+  SomeMessage (Rsp m msg) | Just Refl <- geq m m1 -> Just msg
+  _ -> Nothing
+
+
 -- | Like 'response', but matches a response for a specific id.
-responseForId :: SMethod (m :: Method ClientToServer Request) -> LspId m -> Session (TResponseMessage m)
-responseForId m lid = named (T.pack $ "Response for id: " ++ show lid) $ do
-  satisfyMaybe $ \msg -> do
-    case msg of
-      FromServerMess _ _ -> Nothing
-      FromServerRsp m' rspMsg@(TResponseMessage _ lid' _) -> do
-        HRefl <- runEq mEqClient m m'
-        guard (Just lid == lid')
-        pure rspMsg
+responseForId :: SMethod m -> Id -> Session (ResponseMessage m)
+responseForId m1 lid = named (T.pack $ "Response for id: " ++ show lid) $ satisfyMaybe $ \case
+  SomeMessage (Rsp m msg) | Just Refl <- geq m m1, msg.id == lid -> Just msg
+  _ -> Nothing
 
 -- | Matches any type of message.
-anyMessage :: Session FromServerMessage
+anyMessage :: Session (SomeMessage Server LSP.Method)
 anyMessage = satisfy (const True)
 
 -- | Matches if the message is a log message notification or a show message notification/request.
-loggingNotification :: Session FromServerMessage
+loggingNotification :: Session (SomeMessage Server LSP.Method)
 loggingNotification = named "Logging notification" $ satisfy shouldSkip
  where
-  shouldSkip (FromServerMess SMethod_WindowLogMessage _) = True
-  shouldSkip (FromServerMess SMethod_WindowShowMessage _) = True
-  shouldSkip (FromServerMess SMethod_WindowShowMessageRequest _) = True
-  shouldSkip (FromServerMess SMethod_WindowShowDocument _) = True
-  shouldSkip _ = False
+   shouldSkip :: SomeMessage Server LSP.Method -> Bool
+   shouldSkip (SomeMessage (Not SMethod_WindowLogMessage _)) = True
+   shouldSkip (SomeMessage (Not SMethod_WindowShowMessage _)) = True
+   shouldSkip (SomeMessage (Req SMethod_WindowShowMessageRequest _)) = True
+   shouldSkip (SomeMessage (Req SMethod_WindowShowDocument _)) = True
+   shouldSkip _ = False
+
 
 -- | Matches if the message is a configuration request from the server.
-configurationRequest :: Session FromServerMessage
+configurationRequest :: Session (SomeMessage Server LSP.Method)
 configurationRequest = named "Configuration request" $ satisfy shouldSkip
  where
-  shouldSkip (FromServerMess SMethod_WorkspaceConfiguration _) = True
-  shouldSkip _ = False
+   shouldSkip :: SomeMessage Server LSP.Method -> Bool
+   shouldSkip (SomeMessage (Req SMethod_WorkspaceConfiguration _)) = True
+   shouldSkip _ = False
 
-loggingOrConfiguration :: Session FromServerMessage
+loggingOrConfiguration :: Session (SomeMessage Server LSP.Method)
 loggingOrConfiguration = loggingNotification <|> configurationRequest
 
 {- | Matches a 'Language.LSP.Types.TextDocumentPublishDiagnostics'
  (textDocument/publishDiagnostics) notification.
 -}
-publishDiagnosticsNotification :: Session (TMessage Method_TextDocumentPublishDiagnostics)
+publishDiagnosticsNotification :: Session (NotificationMessage Method_TextDocumentPublishDiagnostics)
 publishDiagnosticsNotification = named "Publish diagnostics notification" $
-  satisfyMaybe $ \msg -> case msg of
-    FromServerMess SMethod_TextDocumentPublishDiagnostics diags -> Just diags
+  satisfyMaybe $ \case
+    SomeMessage (Not SMethod_TextDocumentPublishDiagnostics diags) -> Just diags
     _ -> Nothing

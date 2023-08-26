@@ -1,9 +1,4 @@
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE MultiWayIf #-}
-{-# LANGUAGE OverloadedLabels #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE ViewPatterns #-}
 
@@ -16,14 +11,11 @@ files in the client workspace by operating on the "VFS" in "LspFuncs".
 -}
 module Language.LSP.VFS (
   VFS (..),
-  vfsMap,
   VirtualFile (..),
-  lsp_version,
-  file_version,
-  file_text,
   virtualFileText,
   virtualFileVersion,
   VfsLog (..),
+  VfsHandle (..),
 
   -- * Managing the VFS
   emptyVFS,
@@ -32,6 +24,9 @@ module Language.LSP.VFS (
   changeFromServerVFS,
   persistFileVFS,
   closeVFS,
+  getVirtualFile,
+  getVirtualFiles,
+  getVersionedTextDoc,
 
   -- * Positions and transformations
   CodePointPosition (..),
@@ -48,17 +43,25 @@ module Language.LSP.VFS (
   -- * manipulating the file contents
   rangeLinesFromVfs,
 
+  -- * handlers
+  vfsServerHandlers,
+  vfsClientHandlers,
+  new,
+
   -- * for tests
   applyChanges,
   applyChange,
   changeChars,
 ) where
 
-import Colog.Core (LogAction (..), Severity (..), WithSeverity (..), (<&))
+import Colog.Core (LogAction (..), Severity (..), WithSeverity (..), separate, (<&))
+import Control.Concurrent.STM
 import Control.Lens hiding (parts, (<.>))
 import Control.Monad
 import Control.Monad.State
+import Control.Monad.Writer
 import Data.Foldable (traverse_)
+import Data.Generics.Labels ()
 import Data.Hashable
 import Data.Int (Int32)
 import Data.List
@@ -70,8 +73,13 @@ import Data.Text.IO qualified as T
 import Data.Text.Utf16.Lines as Utf16 (Position (..))
 import Data.Text.Utf16.Rope.Mixed (Rope)
 import Data.Text.Utf16.Rope.Mixed qualified as Rope
+import GHC.Generics
+import JSONRPC.Typed.Method (Role (..))
+import JSONRPC.Typed.Server
+import Language.LSP.MethodInstance ()
 import Language.LSP.Protocol.Lens qualified as J
-import Language.LSP.Protocol.Message qualified as J
+import Language.LSP.Protocol.Message qualified as LSP
+import Language.LSP.Protocol.Types (NormalizedUri, TextDocumentIdentifier, VersionedTextDocumentIdentifier (..), toNormalizedUri)
 import Language.LSP.Protocol.Types qualified as J
 import Prettyprinter hiding (line)
 import System.Directory
@@ -85,20 +93,26 @@ import System.IO
 -- ---------------------------------------------------------------------
 
 data VirtualFile = VirtualFile
-  { _lsp_version :: !Int32
+  { lspVersion :: !Int32
   -- ^ The LSP version of the document
-  , _file_version :: !Int
+  , fileVersion :: !Int
   -- ^ This number is only incremented whilst the file
   -- remains in the map.
-  , _file_text :: !Rope
+  , fileText :: !Rope
   -- ^ The full contents of the document
   }
-  deriving (Show)
+  deriving stock (Show, Generic)
 
 data VFS = VFS
-  { _vfsMap :: !(Map.Map J.NormalizedUri VirtualFile)
+  { vfsMap :: !(Map.Map J.NormalizedUri VirtualFile)
   }
-  deriving (Show)
+  deriving stock (Show, Generic)
+
+data VfsHandle = VfsHandle
+  { vfs :: TVar VFS
+  , vfsLogger :: LogAction IO (WithSeverity VfsLog)
+  }
+  deriving stock (Generic)
 
 data VfsLog
   = SplitInsideCodePoint Utf16.Position Rope
@@ -108,29 +122,26 @@ data VfsLog
   | PersistingFile J.NormalizedUri FilePath
   | CantRecursiveDelete J.NormalizedUri
   | DeleteNonExistent J.NormalizedUri
-  deriving (Show)
+  deriving stock (Show)
 
 instance Pretty VfsLog where
   pretty (SplitInsideCodePoint pos r) =
-    "VFS: asked to make change inside code point. Position" <+> viaShow pos <+> "in" <+> viaShow r
-  pretty (URINotFound uri) = "VFS: don't know about URI" <+> pretty uri
-  pretty (Opening uri) = "VFS: opening" <+> pretty uri
-  pretty (Closing uri) = "VFS: closing" <+> pretty uri
-  pretty (PersistingFile uri fp) = "VFS: Writing virtual file for" <+> pretty uri <+> "to" <+> viaShow fp
+    "Asked to make change inside code point. Position" <+> viaShow pos <+> "in" <+> viaShow r
+  pretty (URINotFound uri) = "Don't know about URI" <+> pretty uri
+  pretty (Opening uri) = "Opening" <+> pretty uri
+  pretty (Closing uri) = "Closing" <+> pretty uri
+  pretty (PersistingFile uri fp) = "Writing virtual file for" <+> pretty uri <+> "to" <+> viaShow fp
   pretty (CantRecursiveDelete uri) =
-    "VFS: can't recursively delete" <+> pretty uri <+> "because we don't track directory status"
-  pretty (DeleteNonExistent uri) = "VFS: asked to delete non-existent file" <+> pretty uri
-
-makeFieldsNoPrefix ''VirtualFile
-makeFieldsNoPrefix ''VFS
+    "Can't recursively delete" <+> pretty uri <+> "because we don't track directory status"
+  pretty (DeleteNonExistent uri) = "Asked to delete non-existent file" <+> pretty uri
 
 ---
 
 virtualFileText :: VirtualFile -> Text
-virtualFileText vf = Rope.toText (_file_text vf)
+virtualFileText vf = Rope.toText (fileText vf)
 
 virtualFileVersion :: VirtualFile -> Int32
-virtualFileVersion vf = _lsp_version vf
+virtualFileVersion vf = lspVersion vf
 
 ---
 
@@ -140,34 +151,34 @@ emptyVFS = VFS mempty
 -- ---------------------------------------------------------------------
 
 -- | Applies the changes from a 'J.DidOpenTextDocument' to the 'VFS'
-openVFS :: (MonadState VFS m) => LogAction m (WithSeverity VfsLog) -> J.TMessage 'J.Method_TextDocumentDidOpen -> m ()
-openVFS logger msg = do
-  let J.TextDocumentItem (J.toNormalizedUri -> uri) _ version text = msg ^. J.params . J.textDocument
+openVFS :: (MonadState VFS m) => LogAction m (WithSeverity VfsLog) -> J.DidOpenTextDocumentParams -> m ()
+openVFS logger params = do
+  let J.TextDocumentItem (J.toNormalizedUri -> uri) _ version text = params ^. J.textDocument
       vfile = VirtualFile version 0 (Rope.fromText text)
   logger <& Opening uri `WithSeverity` Debug
-  vfsMap . at uri .= Just vfile
+  #vfsMap . at uri .= Just vfile
 
 -- ---------------------------------------------------------------------
 
 -- | Applies a 'DidChangeTextDocumentNotification' to the 'VFS'
-changeFromClientVFS :: (MonadState VFS m) => LogAction m (WithSeverity VfsLog) -> J.TMessage 'J.Method_TextDocumentDidChange -> m ()
-changeFromClientVFS logger msg = do
+changeFromClientVFS :: (MonadState VFS m) => LogAction m (WithSeverity VfsLog) -> J.DidChangeTextDocumentParams -> m ()
+changeFromClientVFS logger params = do
   let
-    J.DidChangeTextDocumentParams vid changes = msg ^. J.params
+    J.DidChangeTextDocumentParams vid changes = params
     -- the client shouldn't be sending over a null version, only the server, but we just use 0 if that happens
     J.VersionedTextDocumentIdentifier (J.toNormalizedUri -> uri) version = vid
   vfs <- get
-  case vfs ^. vfsMap . at uri of
+  case vfs ^. #vfsMap . at uri of
     Just (VirtualFile _ file_ver contents) -> do
       contents' <- applyChanges logger contents changes
-      vfsMap . at uri .= Just (VirtualFile version (file_ver + 1) contents')
+      #vfsMap . at uri .= Just (VirtualFile version (file_ver + 1) contents')
     Nothing -> logger <& URINotFound uri `WithSeverity` Warning
 
 -- ---------------------------------------------------------------------
 
 applyCreateFile :: (MonadState VFS m) => J.CreateFile -> m ()
 applyCreateFile (J.CreateFile _ann _kind (J.toNormalizedUri -> uri) options) =
-  vfsMap
+  #vfsMap
     %= Map.insertWith
       (\new old -> if shouldOverwrite then new else old)
       uri
@@ -189,17 +200,17 @@ applyCreateFile (J.CreateFile _ann _kind (J.toNormalizedUri -> uri) options) =
 applyRenameFile :: (MonadState VFS m) => J.RenameFile -> m ()
 applyRenameFile (J.RenameFile _ann _kind (J.toNormalizedUri -> oldUri) (J.toNormalizedUri -> newUri) options) = do
   vfs <- get
-  case vfs ^. vfsMap . at oldUri of
+  case vfs ^. #vfsMap . at oldUri of
     -- nothing to rename
     Nothing -> pure ()
-    Just file -> case vfs ^. vfsMap . at newUri of
+    Just file -> case vfs ^. #vfsMap . at newUri of
       -- the target does not exist, just move over
       Nothing -> do
-        vfsMap . at oldUri .= Nothing
-        vfsMap . at newUri .= Just file
+        #vfsMap . at oldUri .= Nothing
+        #vfsMap . at newUri .= Just file
       Just _ -> when shouldOverwrite $ do
-        vfsMap . at oldUri .= Nothing
-        vfsMap . at newUri .= Just file
+        #vfsMap . at oldUri .= Nothing
+        #vfsMap . at newUri .= Just file
  where
   shouldOverwrite :: Bool
   shouldOverwrite = case options of
@@ -220,7 +231,7 @@ applyDeleteFile logger (J.DeleteFile _ann _kind (J.toNormalizedUri -> uri) optio
   when (options ^? _Just . J.recursive . _Just == Just True) $
     logger <& CantRecursiveDelete uri `WithSeverity` Warning
   -- Remove and get the old value so we can check if it was missing
-  old <- vfsMap . at uri <.= Nothing
+  old <- #vfsMap . at uri <.= Nothing
   case old of
     -- It's not entirely clear what the semantics of 'ignoreIfNotExists' are, but if it
     -- doesn't exist and we're not ignoring it, let's at least log it.
@@ -238,8 +249,7 @@ applyTextDocumentEdit logger (J.TextDocumentEdit vid edits) = do
       -- TODO: is this right?
       vid' = J.VersionedTextDocumentIdentifier (vid ^. J.uri) (case vid ^. J.version of J.InL v -> v; J.InR _ -> 0)
       ps = J.DidChangeTextDocumentParams vid' changeEvents
-      notif = J.TNotificationMessage "" J.SMethod_TextDocumentDidChange ps
-  changeFromClientVFS logger notif
+  changeFromClientVFS logger ps
  where
   editRange :: J.TextEdit J.|? J.AnnotatedTextEdit -> J.Range
   editRange (J.InR e) = e ^. J.range
@@ -256,9 +266,9 @@ applyDocumentChange _ (J.InR (J.InR (J.InL change))) = applyRenameFile change
 applyDocumentChange logger (J.InR (J.InR (J.InR change))) = applyDeleteFile logger change
 
 -- | Applies the changes from a 'ApplyWorkspaceEditRequest' to the 'VFS'
-changeFromServerVFS :: forall m. MonadState VFS m => LogAction m (WithSeverity VfsLog) -> J.TMessage 'J.Method_WorkspaceApplyEdit -> m ()
-changeFromServerVFS logger msg = do
-  let J.ApplyWorkspaceEditParams _label edit = msg ^. J.params
+changeFromServerVFS :: forall m. MonadState VFS m => LogAction m (WithSeverity VfsLog) -> J.ApplyWorkspaceEditParams -> m ()
+changeFromServerVFS logger params = do
+  let J.ApplyWorkspaceEditParams _label edit = params
       J.WorkspaceEdit mChanges mDocChanges _anns = edit
   case mDocChanges of
     Just docChanges -> applyDocumentChanges docChanges
@@ -296,14 +306,14 @@ virtualFileName prefix uri (VirtualFile _ file_ver _) =
 -- | Write a virtual file to a file in the given directory if it exists in the VFS.
 persistFileVFS :: (MonadIO m) => LogAction m (WithSeverity VfsLog) -> FilePath -> VFS -> J.NormalizedUri -> Maybe (FilePath, m ())
 persistFileVFS logger dir vfs uri =
-  case vfs ^. vfsMap . at uri of
+  case vfs ^. #vfsMap . at uri of
     Nothing -> Nothing
     Just vf ->
       let tfn = virtualFileName dir uri vf
           action = do
             exists <- liftIO $ doesFileExist tfn
             unless exists $ do
-              let contents = Rope.toText (_file_text vf)
+              let contents = Rope.toText (fileText vf)
                   writeRaw h = do
                     -- We honour original file line endings
                     hSetNewlineMode h noNewlineTranslation
@@ -315,11 +325,11 @@ persistFileVFS logger dir vfs uri =
 
 -- ---------------------------------------------------------------------
 
-closeVFS :: (MonadState VFS m) => LogAction m (WithSeverity VfsLog) -> J.TMessage 'J.Method_TextDocumentDidClose -> m ()
-closeVFS logger msg = do
-  let J.DidCloseTextDocumentParams (J.TextDocumentIdentifier (J.toNormalizedUri -> uri)) = msg ^. J.params
+closeVFS :: (MonadState VFS m) => LogAction m (WithSeverity VfsLog) -> J.DidCloseTextDocumentParams -> m ()
+closeVFS logger params = do
+  let J.DidCloseTextDocumentParams (J.TextDocumentIdentifier (J.toNormalizedUri -> uri)) = params
   logger <& Closing uri `WithSeverity` Debug
-  vfsMap . at uri .= Nothing
+  #vfsMap . at uri .= Nothing
 
 -- ---------------------------------------------------------------------
 
@@ -365,7 +375,7 @@ data CodePointPosition = CodePointPosition
   , _character :: J.UInt
   -- ^ Character offset on a line in a document in *code points* (zero-based).
   }
-  deriving (Show, Read, Eq, Ord)
+  deriving stock (Show, Read, Eq, Ord)
 
 {- | A range, like a 'J.Range', but where the offsets in the line are measured in
  Unicode code points instead of UTF-16 code units.
@@ -376,7 +386,7 @@ data CodePointRange = CodePointRange
   , _end :: CodePointPosition
   -- ^ The range's end position.
   }
-  deriving (Show, Read, Eq, Ord)
+  deriving stock (Show, Read, Eq, Ord)
 
 makeFieldsNoPrefix ''CodePointPosition
 makeFieldsNoPrefix ''CodePointRange
@@ -420,7 +430,7 @@ extractLine rope l = do
 codePointPositionToPosition :: VirtualFile -> CodePointPosition -> Maybe J.Position
 codePointPositionToPosition vFile (CodePointPosition l c) = do
   -- See Note [Converting between code points and code units]
-  let text = _file_text vFile
+  let text = fileText vFile
   lineRope <- extractLine text $ fromIntegral l
   guard $ c <= fromIntegral (Rope.charLength lineRope)
   return $ J.Position l (fromIntegral $ Rope.utf16Length $ fst $ Rope.charSplitAt (fromIntegral c) lineRope)
@@ -446,7 +456,7 @@ codePointRangeToRange vFile (CodePointRange b e) =
 positionToCodePointPosition :: VirtualFile -> J.Position -> Maybe CodePointPosition
 positionToCodePointPosition vFile (J.Position l c) = do
   -- See Note [Converting between code points and code units]
-  let text = _file_text vFile
+  let text = fileText vFile
   lineRope <- extractLine text $ fromIntegral l
   guard $ c <= fromIntegral (Rope.utf16Length lineRope)
   CodePointPosition l . fromIntegral . Rope.charLength . fst <$> Rope.utf16SplitAt (fromIntegral c) lineRope
@@ -468,3 +478,67 @@ rangeLinesFromVfs (VirtualFile _ _ ropetext) (J.Range (J.Position lf _cf) (J.Pos
   (_, s1) = Rope.splitAtLine (fromIntegral lf) ropetext
   (s2, _) = Rope.splitAtLine (fromIntegral (lt - lf)) s1
   r = Rope.toText s2
+
+-----
+---- HANDLERS
+----
+
+vfsFunc ::
+  forall n a.
+  (n ~ WriterT [WithSeverity VfsLog] (State VFS)) =>
+  VfsHandle ->
+  (LogAction n (WithSeverity VfsLog) -> a -> n ()) ->
+  a ->
+  IO ()
+vfsFunc (VfsHandle vfsVar logger) modifyVfs req = do
+  -- This is an intricate dance. We want to run the VFS functions essentially in STM.
+  -- But we also want them to log. We accomplish this by returning the logs
+  -- via 'Writer' and then re-logging them.
+  logs <- liftIO $ atomically $ do
+    vfs <- readTVar vfsVar
+    let (ls, vfs') = flip runState vfs $ execWriterT $ modifyVfs innerLogger req
+    writeTVar vfsVar vfs'
+    pure ls
+  separate logger <& logs
+ where
+  innerLogger :: LogAction n (WithSeverity VfsLog)
+  innerLogger = LogAction $ \m -> tell [m]
+
+-- | Produce a set of notification handlers which respond to the LSP file notification methods by updating the given VFS.
+vfsServerHandlers :: VfsHandle -> Handlers Server LSP.Method
+vfsServerHandlers vfs =
+  (notificationHandler LSP.SMethod_TextDocumentDidOpen $ mkNotificationHandler $ \p -> vfsFunc vfs openVFS p)
+    <> (notificationHandler LSP.SMethod_TextDocumentDidClose $ mkNotificationHandler $ \p -> vfsFunc vfs closeVFS p)
+    <> (notificationHandler LSP.SMethod_TextDocumentDidChange $ mkNotificationHandler $ \p -> vfsFunc vfs changeFromClientVFS p)
+
+vfsClientHandlers :: VfsHandle -> Handlers Client LSP.Method
+vfsClientHandlers vfs =
+  requestHandler LSP.SMethod_WorkspaceApplyEdit $ mkRequestHandler $ \p -> do
+    vfsFunc vfs changeFromServerVFS p
+    pure $ Right $ J.ApplyWorkspaceEditResult True Nothing Nothing
+
+new :: LogAction IO (WithSeverity VfsLog) -> IO VfsHandle
+new logger = do
+  vfsVar <- newTVarIO emptyVFS
+  pure $ VfsHandle vfsVar logger
+
+--- Misc functions
+
+-- | Return the 'VirtualFile' associated with a given 'NormalizedUri', if there is one.
+getVirtualFile :: VfsHandle -> NormalizedUri -> STM (Maybe VirtualFile)
+getVirtualFile handle uri = do
+  vfs <- readTVar handle.vfs
+  pure $ vfs ^. #vfsMap . at uri
+
+getVirtualFiles :: VfsHandle -> STM VFS
+getVirtualFiles handle = readTVar handle.vfs
+
+-- | Given a text document identifier, annotate it with the latest version.
+getVersionedTextDoc :: VfsHandle -> TextDocumentIdentifier -> STM VersionedTextDocumentIdentifier
+getVersionedTextDoc handle doc = do
+  let uri = doc ^. J.uri
+  mvf <- getVirtualFile handle (toNormalizedUri uri)
+  let ver = case mvf of
+        Just (VirtualFile lspver _ _) -> lspver
+        Nothing -> 0
+  return (VersionedTextDocumentIdentifier uri ver)

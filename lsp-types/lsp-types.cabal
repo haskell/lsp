@@ -80,6 +80,7 @@ library
     , prettyprinter                  ^>=1.7
     , row-types                      ^>=1.0
     , safe                           ^>=0.3
+    , singletons
     , some                           ^>=1.0
     , template-haskell               >=2.7   && <2.23
     , text                           >=1     && <2.2
@@ -110,16 +111,12 @@ library
     Language.LSP.Protocol.Types
     Language.LSP.Protocol.Meta
     Language.LSP.Protocol.Utils.Misc
-    Language.LSP.Protocol.Utils.SMethodMap
 
   other-modules:
     Language.LSP.Protocol.Message.Lens
-    Language.LSP.Protocol.Message.LspId
     Language.LSP.Protocol.Message.Meta
     Language.LSP.Protocol.Message.Method
-    Language.LSP.Protocol.Message.Parsing
     Language.LSP.Protocol.Message.Registration
-    Language.LSP.Protocol.Message.Types
     Language.LSP.Protocol.Types.CodeAction
     Language.LSP.Protocol.Types.Common
     Language.LSP.Protocol.Types.Edit

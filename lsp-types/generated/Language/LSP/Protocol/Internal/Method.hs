@@ -7,13 +7,12 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Language.LSP.Protocol.Internal.Method where
 
+import GHC.Generics
 import qualified Data.Aeson
-import qualified Data.Aeson as Aeson
 import qualified Data.Kind as Kind
-import qualified Data.Proxy
 import qualified Data.Row as Row
+import qualified Data.Singletons as S
 import qualified Data.Void
-import qualified GHC.TypeLits
 import qualified Language.LSP.Protocol.Internal.Types.ApplyWorkspaceEditParams
 import qualified Language.LSP.Protocol.Internal.Types.ApplyWorkspaceEditResult
 import qualified Language.LSP.Protocol.Internal.Types.CallHierarchyIncomingCall
@@ -170,103 +169,102 @@ import qualified Language.LSP.Protocol.Message.Meta as MM
 import qualified Language.LSP.Protocol.Types.Common
 
 -- | A type representing a LSP method (or class of methods), intended to be used mostly at the type level.
-type Method :: MM.MessageDirection -> MM.MessageKind -> Kind.Type
-data Method f t where 
-  Method_TextDocumentImplementation :: Method MM.ClientToServer MM.Request
-  Method_TextDocumentTypeDefinition :: Method MM.ClientToServer MM.Request
-  Method_WorkspaceWorkspaceFolders :: Method MM.ServerToClient MM.Request
-  Method_WorkspaceConfiguration :: Method MM.ServerToClient MM.Request
-  Method_TextDocumentDocumentColor :: Method MM.ClientToServer MM.Request
-  Method_TextDocumentColorPresentation :: Method MM.ClientToServer MM.Request
-  Method_TextDocumentFoldingRange :: Method MM.ClientToServer MM.Request
-  Method_TextDocumentDeclaration :: Method MM.ClientToServer MM.Request
-  Method_TextDocumentSelectionRange :: Method MM.ClientToServer MM.Request
-  Method_WindowWorkDoneProgressCreate :: Method MM.ServerToClient MM.Request
-  Method_TextDocumentPrepareCallHierarchy :: Method MM.ClientToServer MM.Request
-  Method_CallHierarchyIncomingCalls :: Method MM.ClientToServer MM.Request
-  Method_CallHierarchyOutgoingCalls :: Method MM.ClientToServer MM.Request
-  Method_TextDocumentSemanticTokensFull :: Method MM.ClientToServer MM.Request
-  Method_TextDocumentSemanticTokensFullDelta :: Method MM.ClientToServer MM.Request
-  Method_TextDocumentSemanticTokensRange :: Method MM.ClientToServer MM.Request
-  Method_WorkspaceSemanticTokensRefresh :: Method MM.ServerToClient MM.Request
-  Method_WindowShowDocument :: Method MM.ServerToClient MM.Request
-  Method_TextDocumentLinkedEditingRange :: Method MM.ClientToServer MM.Request
-  Method_WorkspaceWillCreateFiles :: Method MM.ClientToServer MM.Request
-  Method_WorkspaceWillRenameFiles :: Method MM.ClientToServer MM.Request
-  Method_WorkspaceWillDeleteFiles :: Method MM.ClientToServer MM.Request
-  Method_TextDocumentMoniker :: Method MM.ClientToServer MM.Request
-  Method_TextDocumentPrepareTypeHierarchy :: Method MM.ClientToServer MM.Request
-  Method_TypeHierarchySupertypes :: Method MM.ClientToServer MM.Request
-  Method_TypeHierarchySubtypes :: Method MM.ClientToServer MM.Request
-  Method_TextDocumentInlineValue :: Method MM.ClientToServer MM.Request
-  Method_WorkspaceInlineValueRefresh :: Method MM.ServerToClient MM.Request
-  Method_TextDocumentInlayHint :: Method MM.ClientToServer MM.Request
-  Method_InlayHintResolve :: Method MM.ClientToServer MM.Request
-  Method_WorkspaceInlayHintRefresh :: Method MM.ServerToClient MM.Request
-  Method_TextDocumentDiagnostic :: Method MM.ClientToServer MM.Request
-  Method_WorkspaceDiagnostic :: Method MM.ClientToServer MM.Request
-  Method_WorkspaceDiagnosticRefresh :: Method MM.ServerToClient MM.Request
-  Method_ClientRegisterCapability :: Method MM.ServerToClient MM.Request
-  Method_ClientUnregisterCapability :: Method MM.ServerToClient MM.Request
-  Method_Initialize :: Method MM.ClientToServer MM.Request
-  Method_Shutdown :: Method MM.ClientToServer MM.Request
-  Method_WindowShowMessageRequest :: Method MM.ServerToClient MM.Request
-  Method_TextDocumentWillSaveWaitUntil :: Method MM.ClientToServer MM.Request
-  Method_TextDocumentCompletion :: Method MM.ClientToServer MM.Request
-  Method_CompletionItemResolve :: Method MM.ClientToServer MM.Request
-  Method_TextDocumentHover :: Method MM.ClientToServer MM.Request
-  Method_TextDocumentSignatureHelp :: Method MM.ClientToServer MM.Request
-  Method_TextDocumentDefinition :: Method MM.ClientToServer MM.Request
-  Method_TextDocumentReferences :: Method MM.ClientToServer MM.Request
-  Method_TextDocumentDocumentHighlight :: Method MM.ClientToServer MM.Request
-  Method_TextDocumentDocumentSymbol :: Method MM.ClientToServer MM.Request
-  Method_TextDocumentCodeAction :: Method MM.ClientToServer MM.Request
-  Method_CodeActionResolve :: Method MM.ClientToServer MM.Request
-  Method_WorkspaceSymbol :: Method MM.ClientToServer MM.Request
-  Method_WorkspaceSymbolResolve :: Method MM.ClientToServer MM.Request
-  Method_TextDocumentCodeLens :: Method MM.ClientToServer MM.Request
-  Method_CodeLensResolve :: Method MM.ClientToServer MM.Request
-  Method_WorkspaceCodeLensRefresh :: Method MM.ServerToClient MM.Request
-  Method_TextDocumentDocumentLink :: Method MM.ClientToServer MM.Request
-  Method_DocumentLinkResolve :: Method MM.ClientToServer MM.Request
-  Method_TextDocumentFormatting :: Method MM.ClientToServer MM.Request
-  Method_TextDocumentRangeFormatting :: Method MM.ClientToServer MM.Request
-  Method_TextDocumentOnTypeFormatting :: Method MM.ClientToServer MM.Request
-  Method_TextDocumentRename :: Method MM.ClientToServer MM.Request
-  Method_TextDocumentPrepareRename :: Method MM.ClientToServer MM.Request
-  Method_WorkspaceExecuteCommand :: Method MM.ClientToServer MM.Request
-  Method_WorkspaceApplyEdit :: Method MM.ServerToClient MM.Request
-  Method_WorkspaceDidChangeWorkspaceFolders :: Method MM.ClientToServer MM.Notification
-  Method_WindowWorkDoneProgressCancel :: Method MM.ClientToServer MM.Notification
-  Method_WorkspaceDidCreateFiles :: Method MM.ClientToServer MM.Notification
-  Method_WorkspaceDidRenameFiles :: Method MM.ClientToServer MM.Notification
-  Method_WorkspaceDidDeleteFiles :: Method MM.ClientToServer MM.Notification
-  Method_NotebookDocumentDidOpen :: Method MM.ClientToServer MM.Notification
-  Method_NotebookDocumentDidChange :: Method MM.ClientToServer MM.Notification
-  Method_NotebookDocumentDidSave :: Method MM.ClientToServer MM.Notification
-  Method_NotebookDocumentDidClose :: Method MM.ClientToServer MM.Notification
-  Method_Initialized :: Method MM.ClientToServer MM.Notification
-  Method_Exit :: Method MM.ClientToServer MM.Notification
-  Method_WorkspaceDidChangeConfiguration :: Method MM.ClientToServer MM.Notification
-  Method_WindowShowMessage :: Method MM.ServerToClient MM.Notification
-  Method_WindowLogMessage :: Method MM.ServerToClient MM.Notification
-  Method_TelemetryEvent :: Method MM.ServerToClient MM.Notification
-  Method_TextDocumentDidOpen :: Method MM.ClientToServer MM.Notification
-  Method_TextDocumentDidChange :: Method MM.ClientToServer MM.Notification
-  Method_TextDocumentDidClose :: Method MM.ClientToServer MM.Notification
-  Method_TextDocumentDidSave :: Method MM.ClientToServer MM.Notification
-  Method_TextDocumentWillSave :: Method MM.ClientToServer MM.Notification
-  Method_WorkspaceDidChangeWatchedFiles :: Method MM.ClientToServer MM.Notification
-  Method_TextDocumentPublishDiagnostics :: Method MM.ServerToClient MM.Notification
-  Method_SetTrace :: Method MM.ClientToServer MM.Notification
-  Method_LogTrace :: Method MM.ServerToClient MM.Notification
-  Method_CancelRequest :: Method f MM.Notification
-  Method_Progress :: Method f MM.Notification
-  Method_CustomMethod :: GHC.TypeLits.Symbol -> Method f t
+data Method where 
+  Method_TextDocumentImplementation :: Method
+  Method_TextDocumentTypeDefinition :: Method
+  Method_WorkspaceWorkspaceFolders :: Method
+  Method_WorkspaceConfiguration :: Method
+  Method_TextDocumentDocumentColor :: Method
+  Method_TextDocumentColorPresentation :: Method
+  Method_TextDocumentFoldingRange :: Method
+  Method_TextDocumentDeclaration :: Method
+  Method_TextDocumentSelectionRange :: Method
+  Method_WindowWorkDoneProgressCreate :: Method
+  Method_TextDocumentPrepareCallHierarchy :: Method
+  Method_CallHierarchyIncomingCalls :: Method
+  Method_CallHierarchyOutgoingCalls :: Method
+  Method_TextDocumentSemanticTokensFull :: Method
+  Method_TextDocumentSemanticTokensFullDelta :: Method
+  Method_TextDocumentSemanticTokensRange :: Method
+  Method_WorkspaceSemanticTokensRefresh :: Method
+  Method_WindowShowDocument :: Method
+  Method_TextDocumentLinkedEditingRange :: Method
+  Method_WorkspaceWillCreateFiles :: Method
+  Method_WorkspaceWillRenameFiles :: Method
+  Method_WorkspaceWillDeleteFiles :: Method
+  Method_TextDocumentMoniker :: Method
+  Method_TextDocumentPrepareTypeHierarchy :: Method
+  Method_TypeHierarchySupertypes :: Method
+  Method_TypeHierarchySubtypes :: Method
+  Method_TextDocumentInlineValue :: Method
+  Method_WorkspaceInlineValueRefresh :: Method
+  Method_TextDocumentInlayHint :: Method
+  Method_InlayHintResolve :: Method
+  Method_WorkspaceInlayHintRefresh :: Method
+  Method_TextDocumentDiagnostic :: Method
+  Method_WorkspaceDiagnostic :: Method
+  Method_WorkspaceDiagnosticRefresh :: Method
+  Method_ClientRegisterCapability :: Method
+  Method_ClientUnregisterCapability :: Method
+  Method_Initialize :: Method
+  Method_Shutdown :: Method
+  Method_WindowShowMessageRequest :: Method
+  Method_TextDocumentWillSaveWaitUntil :: Method
+  Method_TextDocumentCompletion :: Method
+  Method_CompletionItemResolve :: Method
+  Method_TextDocumentHover :: Method
+  Method_TextDocumentSignatureHelp :: Method
+  Method_TextDocumentDefinition :: Method
+  Method_TextDocumentReferences :: Method
+  Method_TextDocumentDocumentHighlight :: Method
+  Method_TextDocumentDocumentSymbol :: Method
+  Method_TextDocumentCodeAction :: Method
+  Method_CodeActionResolve :: Method
+  Method_WorkspaceSymbol :: Method
+  Method_WorkspaceSymbolResolve :: Method
+  Method_TextDocumentCodeLens :: Method
+  Method_CodeLensResolve :: Method
+  Method_WorkspaceCodeLensRefresh :: Method
+  Method_TextDocumentDocumentLink :: Method
+  Method_DocumentLinkResolve :: Method
+  Method_TextDocumentFormatting :: Method
+  Method_TextDocumentRangeFormatting :: Method
+  Method_TextDocumentOnTypeFormatting :: Method
+  Method_TextDocumentRename :: Method
+  Method_TextDocumentPrepareRename :: Method
+  Method_WorkspaceExecuteCommand :: Method
+  Method_WorkspaceApplyEdit :: Method
+  Method_WorkspaceDidChangeWorkspaceFolders :: Method
+  Method_WindowWorkDoneProgressCancel :: Method
+  Method_WorkspaceDidCreateFiles :: Method
+  Method_WorkspaceDidRenameFiles :: Method
+  Method_WorkspaceDidDeleteFiles :: Method
+  Method_NotebookDocumentDidOpen :: Method
+  Method_NotebookDocumentDidChange :: Method
+  Method_NotebookDocumentDidSave :: Method
+  Method_NotebookDocumentDidClose :: Method
+  Method_Initialized :: Method
+  Method_Exit :: Method
+  Method_WorkspaceDidChangeConfiguration :: Method
+  Method_WindowShowMessage :: Method
+  Method_WindowLogMessage :: Method
+  Method_TelemetryEvent :: Method
+  Method_TextDocumentDidOpen :: Method
+  Method_TextDocumentDidChange :: Method
+  Method_TextDocumentDidClose :: Method
+  Method_TextDocumentDidSave :: Method
+  Method_TextDocumentWillSave :: Method
+  Method_WorkspaceDidChangeWatchedFiles :: Method
+  Method_TextDocumentPublishDiagnostics :: Method
+  Method_SetTrace :: Method
+  Method_LogTrace :: Method
+  Method_CancelRequest :: Method
+  Method_Progress :: Method
+  deriving stock (Show, Eq, Ord, Generic)
 
 -- | Maps a LSP method to its parameter type.
-type MessageParams :: forall f t . Method f t -> Kind.Type
-type family MessageParams (m ::  Method f t) where 
+type MessageParams :: Method -> Kind.Type
+type family MessageParams (m ::  Method) where 
   MessageParams Method_TextDocumentImplementation = Language.LSP.Protocol.Internal.Types.ImplementationParams.ImplementationParams
   MessageParams Method_TextDocumentTypeDefinition = Language.LSP.Protocol.Internal.Types.TypeDefinitionParams.TypeDefinitionParams
   MessageParams Method_WorkspaceWorkspaceFolders = Maybe Data.Void.Void
@@ -357,11 +355,10 @@ type family MessageParams (m ::  Method f t) where
   MessageParams Method_LogTrace = Language.LSP.Protocol.Internal.Types.LogTraceParams.LogTraceParams
   MessageParams Method_CancelRequest = Language.LSP.Protocol.Internal.Types.CancelParams.CancelParams
   MessageParams Method_Progress = Language.LSP.Protocol.Internal.Types.ProgressParams.ProgressParams
-  MessageParams (Method_CustomMethod s) = Aeson.Value
 
 -- | Maps a LSP method to its result type.
-type MessageResult :: forall f t . Method f t -> Kind.Type
-type family MessageResult (m ::  Method f t) where 
+type MessageResult :: Method -> Kind.Type
+type family MessageResult (m ::  Method) where 
   MessageResult Method_TextDocumentImplementation = (Language.LSP.Protocol.Internal.Types.Definition.Definition Language.LSP.Protocol.Types.Common.|? ([Language.LSP.Protocol.Internal.Types.DefinitionLink.DefinitionLink] Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Types.Common.Null))
   MessageResult Method_TextDocumentTypeDefinition = (Language.LSP.Protocol.Internal.Types.Definition.Definition Language.LSP.Protocol.Types.Common.|? ([Language.LSP.Protocol.Internal.Types.DefinitionLink.DefinitionLink] Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Types.Common.Null))
   MessageResult Method_WorkspaceWorkspaceFolders = ([Language.LSP.Protocol.Internal.Types.WorkspaceFolder.WorkspaceFolder] Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Types.Common.Null)
@@ -426,11 +423,36 @@ type family MessageResult (m ::  Method f t) where
   MessageResult Method_TextDocumentPrepareRename = (Language.LSP.Protocol.Internal.Types.PrepareRenameResult.PrepareRenameResult Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Types.Common.Null)
   MessageResult Method_WorkspaceExecuteCommand = (Data.Aeson.Value Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Types.Common.Null)
   MessageResult Method_WorkspaceApplyEdit = Language.LSP.Protocol.Internal.Types.ApplyWorkspaceEditResult.ApplyWorkspaceEditResult
-  MessageResult (Method_CustomMethod s) = Aeson.Value
+  MessageResult Method_WorkspaceDidChangeWorkspaceFolders = Maybe Data.Void.Void
+  MessageResult Method_WindowWorkDoneProgressCancel = Maybe Data.Void.Void
+  MessageResult Method_WorkspaceDidCreateFiles = Maybe Data.Void.Void
+  MessageResult Method_WorkspaceDidRenameFiles = Maybe Data.Void.Void
+  MessageResult Method_WorkspaceDidDeleteFiles = Maybe Data.Void.Void
+  MessageResult Method_NotebookDocumentDidOpen = Maybe Data.Void.Void
+  MessageResult Method_NotebookDocumentDidChange = Maybe Data.Void.Void
+  MessageResult Method_NotebookDocumentDidSave = Maybe Data.Void.Void
+  MessageResult Method_NotebookDocumentDidClose = Maybe Data.Void.Void
+  MessageResult Method_Initialized = Maybe Data.Void.Void
+  MessageResult Method_Exit = Maybe Data.Void.Void
+  MessageResult Method_WorkspaceDidChangeConfiguration = Maybe Data.Void.Void
+  MessageResult Method_WindowShowMessage = Maybe Data.Void.Void
+  MessageResult Method_WindowLogMessage = Maybe Data.Void.Void
+  MessageResult Method_TelemetryEvent = Maybe Data.Void.Void
+  MessageResult Method_TextDocumentDidOpen = Maybe Data.Void.Void
+  MessageResult Method_TextDocumentDidChange = Maybe Data.Void.Void
+  MessageResult Method_TextDocumentDidClose = Maybe Data.Void.Void
+  MessageResult Method_TextDocumentDidSave = Maybe Data.Void.Void
+  MessageResult Method_TextDocumentWillSave = Maybe Data.Void.Void
+  MessageResult Method_WorkspaceDidChangeWatchedFiles = Maybe Data.Void.Void
+  MessageResult Method_TextDocumentPublishDiagnostics = Maybe Data.Void.Void
+  MessageResult Method_SetTrace = Maybe Data.Void.Void
+  MessageResult Method_LogTrace = Maybe Data.Void.Void
+  MessageResult Method_CancelRequest = Maybe Data.Void.Void
+  MessageResult Method_Progress = Maybe Data.Void.Void
 
 -- | Maps a LSP method to its error data type.
-type ErrorData :: forall f t . Method f t -> Kind.Type
-type family ErrorData (m ::  Method f t) where 
+type ErrorData :: Method -> Kind.Type
+type family ErrorData (m ::  Method) where 
   ErrorData Method_TextDocumentImplementation = Maybe Data.Void.Void
   ErrorData Method_TextDocumentTypeDefinition = Maybe Data.Void.Void
   ErrorData Method_WorkspaceWorkspaceFolders = Maybe Data.Void.Void
@@ -495,11 +517,36 @@ type family ErrorData (m ::  Method f t) where
   ErrorData Method_TextDocumentPrepareRename = Maybe Data.Void.Void
   ErrorData Method_WorkspaceExecuteCommand = Maybe Data.Void.Void
   ErrorData Method_WorkspaceApplyEdit = Maybe Data.Void.Void
-  ErrorData (Method_CustomMethod s) = Aeson.Value
+  ErrorData Method_WorkspaceDidChangeWorkspaceFolders = Maybe Data.Void.Void
+  ErrorData Method_WindowWorkDoneProgressCancel = Maybe Data.Void.Void
+  ErrorData Method_WorkspaceDidCreateFiles = Maybe Data.Void.Void
+  ErrorData Method_WorkspaceDidRenameFiles = Maybe Data.Void.Void
+  ErrorData Method_WorkspaceDidDeleteFiles = Maybe Data.Void.Void
+  ErrorData Method_NotebookDocumentDidOpen = Maybe Data.Void.Void
+  ErrorData Method_NotebookDocumentDidChange = Maybe Data.Void.Void
+  ErrorData Method_NotebookDocumentDidSave = Maybe Data.Void.Void
+  ErrorData Method_NotebookDocumentDidClose = Maybe Data.Void.Void
+  ErrorData Method_Initialized = Maybe Data.Void.Void
+  ErrorData Method_Exit = Maybe Data.Void.Void
+  ErrorData Method_WorkspaceDidChangeConfiguration = Maybe Data.Void.Void
+  ErrorData Method_WindowShowMessage = Maybe Data.Void.Void
+  ErrorData Method_WindowLogMessage = Maybe Data.Void.Void
+  ErrorData Method_TelemetryEvent = Maybe Data.Void.Void
+  ErrorData Method_TextDocumentDidOpen = Maybe Data.Void.Void
+  ErrorData Method_TextDocumentDidChange = Maybe Data.Void.Void
+  ErrorData Method_TextDocumentDidClose = Maybe Data.Void.Void
+  ErrorData Method_TextDocumentDidSave = Maybe Data.Void.Void
+  ErrorData Method_TextDocumentWillSave = Maybe Data.Void.Void
+  ErrorData Method_WorkspaceDidChangeWatchedFiles = Maybe Data.Void.Void
+  ErrorData Method_TextDocumentPublishDiagnostics = Maybe Data.Void.Void
+  ErrorData Method_SetTrace = Maybe Data.Void.Void
+  ErrorData Method_LogTrace = Maybe Data.Void.Void
+  ErrorData Method_CancelRequest = Maybe Data.Void.Void
+  ErrorData Method_Progress = Maybe Data.Void.Void
 
 -- | Maps a LSP method to its registration options type.
-type RegistrationOptions :: forall f t . Method f t -> Kind.Type
-type family RegistrationOptions (m ::  Method f t) where 
+type RegistrationOptions :: Method -> Kind.Type
+type family RegistrationOptions (m ::  Method) where 
   RegistrationOptions Method_TextDocumentImplementation = Language.LSP.Protocol.Internal.Types.ImplementationRegistrationOptions.ImplementationRegistrationOptions
   RegistrationOptions Method_TextDocumentTypeDefinition = Language.LSP.Protocol.Internal.Types.TypeDefinitionRegistrationOptions.TypeDefinitionRegistrationOptions
   RegistrationOptions Method_WorkspaceWorkspaceFolders = Maybe Data.Void.Void
@@ -590,10 +637,9 @@ type family RegistrationOptions (m ::  Method f t) where
   RegistrationOptions Method_LogTrace = Maybe Data.Void.Void
   RegistrationOptions Method_CancelRequest = Maybe Data.Void.Void
   RegistrationOptions Method_Progress = Maybe Data.Void.Void
-  RegistrationOptions (Method_CustomMethod s) = Data.Void.Void
 
 -- | A singleton type for 'Method'.
-type SMethod :: forall f t . Method f t -> Kind.Type
+type SMethod :: Method -> Kind.Type
 data SMethod m where 
   SMethod_TextDocumentImplementation :: SMethod Method_TextDocumentImplementation
   SMethod_TextDocumentTypeDefinition :: SMethod Method_TextDocumentTypeDefinition
@@ -685,384 +731,748 @@ data SMethod m where
   SMethod_LogTrace :: SMethod Method_LogTrace
   SMethod_CancelRequest :: SMethod Method_CancelRequest
   SMethod_Progress :: SMethod Method_Progress
-  SMethod_CustomMethod :: forall s . GHC.TypeLits.KnownSymbol s => Data.Proxy.Proxy s -> SMethod (Method_CustomMethod s)
 
--- | A method which isn't statically known.
-data SomeMethod where 
-  SomeMethod :: forall m . SMethod m -> SomeMethod
-
--- | Turn a 'SomeMethod' into its LSP method string.
-someMethodToMethodString :: SomeMethod -> String
-someMethodToMethodString (SomeMethod SMethod_TextDocumentImplementation) = "textDocument/implementation"
-someMethodToMethodString (SomeMethod SMethod_TextDocumentTypeDefinition) = "textDocument/typeDefinition"
-someMethodToMethodString (SomeMethod SMethod_WorkspaceWorkspaceFolders) = "workspace/workspaceFolders"
-someMethodToMethodString (SomeMethod SMethod_WorkspaceConfiguration) = "workspace/configuration"
-someMethodToMethodString (SomeMethod SMethod_TextDocumentDocumentColor) = "textDocument/documentColor"
-someMethodToMethodString (SomeMethod SMethod_TextDocumentColorPresentation) = "textDocument/colorPresentation"
-someMethodToMethodString (SomeMethod SMethod_TextDocumentFoldingRange) = "textDocument/foldingRange"
-someMethodToMethodString (SomeMethod SMethod_TextDocumentDeclaration) = "textDocument/declaration"
-someMethodToMethodString (SomeMethod SMethod_TextDocumentSelectionRange) = "textDocument/selectionRange"
-someMethodToMethodString (SomeMethod SMethod_WindowWorkDoneProgressCreate) = "window/workDoneProgress/create"
-someMethodToMethodString (SomeMethod SMethod_TextDocumentPrepareCallHierarchy) = "textDocument/prepareCallHierarchy"
-someMethodToMethodString (SomeMethod SMethod_CallHierarchyIncomingCalls) = "callHierarchy/incomingCalls"
-someMethodToMethodString (SomeMethod SMethod_CallHierarchyOutgoingCalls) = "callHierarchy/outgoingCalls"
-someMethodToMethodString (SomeMethod SMethod_TextDocumentSemanticTokensFull) = "textDocument/semanticTokens/full"
-someMethodToMethodString (SomeMethod SMethod_TextDocumentSemanticTokensFullDelta) = "textDocument/semanticTokens/full/delta"
-someMethodToMethodString (SomeMethod SMethod_TextDocumentSemanticTokensRange) = "textDocument/semanticTokens/range"
-someMethodToMethodString (SomeMethod SMethod_WorkspaceSemanticTokensRefresh) = "workspace/semanticTokens/refresh"
-someMethodToMethodString (SomeMethod SMethod_WindowShowDocument) = "window/showDocument"
-someMethodToMethodString (SomeMethod SMethod_TextDocumentLinkedEditingRange) = "textDocument/linkedEditingRange"
-someMethodToMethodString (SomeMethod SMethod_WorkspaceWillCreateFiles) = "workspace/willCreateFiles"
-someMethodToMethodString (SomeMethod SMethod_WorkspaceWillRenameFiles) = "workspace/willRenameFiles"
-someMethodToMethodString (SomeMethod SMethod_WorkspaceWillDeleteFiles) = "workspace/willDeleteFiles"
-someMethodToMethodString (SomeMethod SMethod_TextDocumentMoniker) = "textDocument/moniker"
-someMethodToMethodString (SomeMethod SMethod_TextDocumentPrepareTypeHierarchy) = "textDocument/prepareTypeHierarchy"
-someMethodToMethodString (SomeMethod SMethod_TypeHierarchySupertypes) = "typeHierarchy/supertypes"
-someMethodToMethodString (SomeMethod SMethod_TypeHierarchySubtypes) = "typeHierarchy/subtypes"
-someMethodToMethodString (SomeMethod SMethod_TextDocumentInlineValue) = "textDocument/inlineValue"
-someMethodToMethodString (SomeMethod SMethod_WorkspaceInlineValueRefresh) = "workspace/inlineValue/refresh"
-someMethodToMethodString (SomeMethod SMethod_TextDocumentInlayHint) = "textDocument/inlayHint"
-someMethodToMethodString (SomeMethod SMethod_InlayHintResolve) = "inlayHint/resolve"
-someMethodToMethodString (SomeMethod SMethod_WorkspaceInlayHintRefresh) = "workspace/inlayHint/refresh"
-someMethodToMethodString (SomeMethod SMethod_TextDocumentDiagnostic) = "textDocument/diagnostic"
-someMethodToMethodString (SomeMethod SMethod_WorkspaceDiagnostic) = "workspace/diagnostic"
-someMethodToMethodString (SomeMethod SMethod_WorkspaceDiagnosticRefresh) = "workspace/diagnostic/refresh"
-someMethodToMethodString (SomeMethod SMethod_ClientRegisterCapability) = "client/registerCapability"
-someMethodToMethodString (SomeMethod SMethod_ClientUnregisterCapability) = "client/unregisterCapability"
-someMethodToMethodString (SomeMethod SMethod_Initialize) = "initialize"
-someMethodToMethodString (SomeMethod SMethod_Shutdown) = "shutdown"
-someMethodToMethodString (SomeMethod SMethod_WindowShowMessageRequest) = "window/showMessageRequest"
-someMethodToMethodString (SomeMethod SMethod_TextDocumentWillSaveWaitUntil) = "textDocument/willSaveWaitUntil"
-someMethodToMethodString (SomeMethod SMethod_TextDocumentCompletion) = "textDocument/completion"
-someMethodToMethodString (SomeMethod SMethod_CompletionItemResolve) = "completionItem/resolve"
-someMethodToMethodString (SomeMethod SMethod_TextDocumentHover) = "textDocument/hover"
-someMethodToMethodString (SomeMethod SMethod_TextDocumentSignatureHelp) = "textDocument/signatureHelp"
-someMethodToMethodString (SomeMethod SMethod_TextDocumentDefinition) = "textDocument/definition"
-someMethodToMethodString (SomeMethod SMethod_TextDocumentReferences) = "textDocument/references"
-someMethodToMethodString (SomeMethod SMethod_TextDocumentDocumentHighlight) = "textDocument/documentHighlight"
-someMethodToMethodString (SomeMethod SMethod_TextDocumentDocumentSymbol) = "textDocument/documentSymbol"
-someMethodToMethodString (SomeMethod SMethod_TextDocumentCodeAction) = "textDocument/codeAction"
-someMethodToMethodString (SomeMethod SMethod_CodeActionResolve) = "codeAction/resolve"
-someMethodToMethodString (SomeMethod SMethod_WorkspaceSymbol) = "workspace/symbol"
-someMethodToMethodString (SomeMethod SMethod_WorkspaceSymbolResolve) = "workspaceSymbol/resolve"
-someMethodToMethodString (SomeMethod SMethod_TextDocumentCodeLens) = "textDocument/codeLens"
-someMethodToMethodString (SomeMethod SMethod_CodeLensResolve) = "codeLens/resolve"
-someMethodToMethodString (SomeMethod SMethod_WorkspaceCodeLensRefresh) = "workspace/codeLens/refresh"
-someMethodToMethodString (SomeMethod SMethod_TextDocumentDocumentLink) = "textDocument/documentLink"
-someMethodToMethodString (SomeMethod SMethod_DocumentLinkResolve) = "documentLink/resolve"
-someMethodToMethodString (SomeMethod SMethod_TextDocumentFormatting) = "textDocument/formatting"
-someMethodToMethodString (SomeMethod SMethod_TextDocumentRangeFormatting) = "textDocument/rangeFormatting"
-someMethodToMethodString (SomeMethod SMethod_TextDocumentOnTypeFormatting) = "textDocument/onTypeFormatting"
-someMethodToMethodString (SomeMethod SMethod_TextDocumentRename) = "textDocument/rename"
-someMethodToMethodString (SomeMethod SMethod_TextDocumentPrepareRename) = "textDocument/prepareRename"
-someMethodToMethodString (SomeMethod SMethod_WorkspaceExecuteCommand) = "workspace/executeCommand"
-someMethodToMethodString (SomeMethod SMethod_WorkspaceApplyEdit) = "workspace/applyEdit"
-someMethodToMethodString (SomeMethod SMethod_WorkspaceDidChangeWorkspaceFolders) = "workspace/didChangeWorkspaceFolders"
-someMethodToMethodString (SomeMethod SMethod_WindowWorkDoneProgressCancel) = "window/workDoneProgress/cancel"
-someMethodToMethodString (SomeMethod SMethod_WorkspaceDidCreateFiles) = "workspace/didCreateFiles"
-someMethodToMethodString (SomeMethod SMethod_WorkspaceDidRenameFiles) = "workspace/didRenameFiles"
-someMethodToMethodString (SomeMethod SMethod_WorkspaceDidDeleteFiles) = "workspace/didDeleteFiles"
-someMethodToMethodString (SomeMethod SMethod_NotebookDocumentDidOpen) = "notebookDocument/didOpen"
-someMethodToMethodString (SomeMethod SMethod_NotebookDocumentDidChange) = "notebookDocument/didChange"
-someMethodToMethodString (SomeMethod SMethod_NotebookDocumentDidSave) = "notebookDocument/didSave"
-someMethodToMethodString (SomeMethod SMethod_NotebookDocumentDidClose) = "notebookDocument/didClose"
-someMethodToMethodString (SomeMethod SMethod_Initialized) = "initialized"
-someMethodToMethodString (SomeMethod SMethod_Exit) = "exit"
-someMethodToMethodString (SomeMethod SMethod_WorkspaceDidChangeConfiguration) = "workspace/didChangeConfiguration"
-someMethodToMethodString (SomeMethod SMethod_WindowShowMessage) = "window/showMessage"
-someMethodToMethodString (SomeMethod SMethod_WindowLogMessage) = "window/logMessage"
-someMethodToMethodString (SomeMethod SMethod_TelemetryEvent) = "telemetry/event"
-someMethodToMethodString (SomeMethod SMethod_TextDocumentDidOpen) = "textDocument/didOpen"
-someMethodToMethodString (SomeMethod SMethod_TextDocumentDidChange) = "textDocument/didChange"
-someMethodToMethodString (SomeMethod SMethod_TextDocumentDidClose) = "textDocument/didClose"
-someMethodToMethodString (SomeMethod SMethod_TextDocumentDidSave) = "textDocument/didSave"
-someMethodToMethodString (SomeMethod SMethod_TextDocumentWillSave) = "textDocument/willSave"
-someMethodToMethodString (SomeMethod SMethod_WorkspaceDidChangeWatchedFiles) = "workspace/didChangeWatchedFiles"
-someMethodToMethodString (SomeMethod SMethod_TextDocumentPublishDiagnostics) = "textDocument/publishDiagnostics"
-someMethodToMethodString (SomeMethod SMethod_SetTrace) = "$/setTrace"
-someMethodToMethodString (SomeMethod SMethod_LogTrace) = "$/logTrace"
-someMethodToMethodString (SomeMethod SMethod_CancelRequest) = "$/cancelRequest"
-someMethodToMethodString (SomeMethod SMethod_Progress) = "$/progress"
-someMethodToMethodString (SomeMethod (SMethod_CustomMethod v)) = GHC.TypeLits.symbolVal v
+-- | Turn a 'Method' into its LSP method string.
+methodToMethodString :: Method -> String
+methodToMethodString Method_TextDocumentImplementation = "textDocument/implementation"
+methodToMethodString Method_TextDocumentTypeDefinition = "textDocument/typeDefinition"
+methodToMethodString Method_WorkspaceWorkspaceFolders = "workspace/workspaceFolders"
+methodToMethodString Method_WorkspaceConfiguration = "workspace/configuration"
+methodToMethodString Method_TextDocumentDocumentColor = "textDocument/documentColor"
+methodToMethodString Method_TextDocumentColorPresentation = "textDocument/colorPresentation"
+methodToMethodString Method_TextDocumentFoldingRange = "textDocument/foldingRange"
+methodToMethodString Method_TextDocumentDeclaration = "textDocument/declaration"
+methodToMethodString Method_TextDocumentSelectionRange = "textDocument/selectionRange"
+methodToMethodString Method_WindowWorkDoneProgressCreate = "window/workDoneProgress/create"
+methodToMethodString Method_TextDocumentPrepareCallHierarchy = "textDocument/prepareCallHierarchy"
+methodToMethodString Method_CallHierarchyIncomingCalls = "callHierarchy/incomingCalls"
+methodToMethodString Method_CallHierarchyOutgoingCalls = "callHierarchy/outgoingCalls"
+methodToMethodString Method_TextDocumentSemanticTokensFull = "textDocument/semanticTokens/full"
+methodToMethodString Method_TextDocumentSemanticTokensFullDelta = "textDocument/semanticTokens/full/delta"
+methodToMethodString Method_TextDocumentSemanticTokensRange = "textDocument/semanticTokens/range"
+methodToMethodString Method_WorkspaceSemanticTokensRefresh = "workspace/semanticTokens/refresh"
+methodToMethodString Method_WindowShowDocument = "window/showDocument"
+methodToMethodString Method_TextDocumentLinkedEditingRange = "textDocument/linkedEditingRange"
+methodToMethodString Method_WorkspaceWillCreateFiles = "workspace/willCreateFiles"
+methodToMethodString Method_WorkspaceWillRenameFiles = "workspace/willRenameFiles"
+methodToMethodString Method_WorkspaceWillDeleteFiles = "workspace/willDeleteFiles"
+methodToMethodString Method_TextDocumentMoniker = "textDocument/moniker"
+methodToMethodString Method_TextDocumentPrepareTypeHierarchy = "textDocument/prepareTypeHierarchy"
+methodToMethodString Method_TypeHierarchySupertypes = "typeHierarchy/supertypes"
+methodToMethodString Method_TypeHierarchySubtypes = "typeHierarchy/subtypes"
+methodToMethodString Method_TextDocumentInlineValue = "textDocument/inlineValue"
+methodToMethodString Method_WorkspaceInlineValueRefresh = "workspace/inlineValue/refresh"
+methodToMethodString Method_TextDocumentInlayHint = "textDocument/inlayHint"
+methodToMethodString Method_InlayHintResolve = "inlayHint/resolve"
+methodToMethodString Method_WorkspaceInlayHintRefresh = "workspace/inlayHint/refresh"
+methodToMethodString Method_TextDocumentDiagnostic = "textDocument/diagnostic"
+methodToMethodString Method_WorkspaceDiagnostic = "workspace/diagnostic"
+methodToMethodString Method_WorkspaceDiagnosticRefresh = "workspace/diagnostic/refresh"
+methodToMethodString Method_ClientRegisterCapability = "client/registerCapability"
+methodToMethodString Method_ClientUnregisterCapability = "client/unregisterCapability"
+methodToMethodString Method_Initialize = "initialize"
+methodToMethodString Method_Shutdown = "shutdown"
+methodToMethodString Method_WindowShowMessageRequest = "window/showMessageRequest"
+methodToMethodString Method_TextDocumentWillSaveWaitUntil = "textDocument/willSaveWaitUntil"
+methodToMethodString Method_TextDocumentCompletion = "textDocument/completion"
+methodToMethodString Method_CompletionItemResolve = "completionItem/resolve"
+methodToMethodString Method_TextDocumentHover = "textDocument/hover"
+methodToMethodString Method_TextDocumentSignatureHelp = "textDocument/signatureHelp"
+methodToMethodString Method_TextDocumentDefinition = "textDocument/definition"
+methodToMethodString Method_TextDocumentReferences = "textDocument/references"
+methodToMethodString Method_TextDocumentDocumentHighlight = "textDocument/documentHighlight"
+methodToMethodString Method_TextDocumentDocumentSymbol = "textDocument/documentSymbol"
+methodToMethodString Method_TextDocumentCodeAction = "textDocument/codeAction"
+methodToMethodString Method_CodeActionResolve = "codeAction/resolve"
+methodToMethodString Method_WorkspaceSymbol = "workspace/symbol"
+methodToMethodString Method_WorkspaceSymbolResolve = "workspaceSymbol/resolve"
+methodToMethodString Method_TextDocumentCodeLens = "textDocument/codeLens"
+methodToMethodString Method_CodeLensResolve = "codeLens/resolve"
+methodToMethodString Method_WorkspaceCodeLensRefresh = "workspace/codeLens/refresh"
+methodToMethodString Method_TextDocumentDocumentLink = "textDocument/documentLink"
+methodToMethodString Method_DocumentLinkResolve = "documentLink/resolve"
+methodToMethodString Method_TextDocumentFormatting = "textDocument/formatting"
+methodToMethodString Method_TextDocumentRangeFormatting = "textDocument/rangeFormatting"
+methodToMethodString Method_TextDocumentOnTypeFormatting = "textDocument/onTypeFormatting"
+methodToMethodString Method_TextDocumentRename = "textDocument/rename"
+methodToMethodString Method_TextDocumentPrepareRename = "textDocument/prepareRename"
+methodToMethodString Method_WorkspaceExecuteCommand = "workspace/executeCommand"
+methodToMethodString Method_WorkspaceApplyEdit = "workspace/applyEdit"
+methodToMethodString Method_WorkspaceDidChangeWorkspaceFolders = "workspace/didChangeWorkspaceFolders"
+methodToMethodString Method_WindowWorkDoneProgressCancel = "window/workDoneProgress/cancel"
+methodToMethodString Method_WorkspaceDidCreateFiles = "workspace/didCreateFiles"
+methodToMethodString Method_WorkspaceDidRenameFiles = "workspace/didRenameFiles"
+methodToMethodString Method_WorkspaceDidDeleteFiles = "workspace/didDeleteFiles"
+methodToMethodString Method_NotebookDocumentDidOpen = "notebookDocument/didOpen"
+methodToMethodString Method_NotebookDocumentDidChange = "notebookDocument/didChange"
+methodToMethodString Method_NotebookDocumentDidSave = "notebookDocument/didSave"
+methodToMethodString Method_NotebookDocumentDidClose = "notebookDocument/didClose"
+methodToMethodString Method_Initialized = "initialized"
+methodToMethodString Method_Exit = "exit"
+methodToMethodString Method_WorkspaceDidChangeConfiguration = "workspace/didChangeConfiguration"
+methodToMethodString Method_WindowShowMessage = "window/showMessage"
+methodToMethodString Method_WindowLogMessage = "window/logMessage"
+methodToMethodString Method_TelemetryEvent = "telemetry/event"
+methodToMethodString Method_TextDocumentDidOpen = "textDocument/didOpen"
+methodToMethodString Method_TextDocumentDidChange = "textDocument/didChange"
+methodToMethodString Method_TextDocumentDidClose = "textDocument/didClose"
+methodToMethodString Method_TextDocumentDidSave = "textDocument/didSave"
+methodToMethodString Method_TextDocumentWillSave = "textDocument/willSave"
+methodToMethodString Method_WorkspaceDidChangeWatchedFiles = "workspace/didChangeWatchedFiles"
+methodToMethodString Method_TextDocumentPublishDiagnostics = "textDocument/publishDiagnostics"
+methodToMethodString Method_SetTrace = "$/setTrace"
+methodToMethodString Method_LogTrace = "$/logTrace"
+methodToMethodString Method_CancelRequest = "$/cancelRequest"
+methodToMethodString Method_Progress = "$/progress"
 
 -- | Turn a LSP method string into a 'SomeMethod'.
-methodStringToSomeMethod :: String -> SomeMethod
-methodStringToSomeMethod "textDocument/implementation" = SomeMethod SMethod_TextDocumentImplementation
-methodStringToSomeMethod "textDocument/typeDefinition" = SomeMethod SMethod_TextDocumentTypeDefinition
-methodStringToSomeMethod "workspace/workspaceFolders" = SomeMethod SMethod_WorkspaceWorkspaceFolders
-methodStringToSomeMethod "workspace/configuration" = SomeMethod SMethod_WorkspaceConfiguration
-methodStringToSomeMethod "textDocument/documentColor" = SomeMethod SMethod_TextDocumentDocumentColor
-methodStringToSomeMethod "textDocument/colorPresentation" = SomeMethod SMethod_TextDocumentColorPresentation
-methodStringToSomeMethod "textDocument/foldingRange" = SomeMethod SMethod_TextDocumentFoldingRange
-methodStringToSomeMethod "textDocument/declaration" = SomeMethod SMethod_TextDocumentDeclaration
-methodStringToSomeMethod "textDocument/selectionRange" = SomeMethod SMethod_TextDocumentSelectionRange
-methodStringToSomeMethod "window/workDoneProgress/create" = SomeMethod SMethod_WindowWorkDoneProgressCreate
-methodStringToSomeMethod "textDocument/prepareCallHierarchy" = SomeMethod SMethod_TextDocumentPrepareCallHierarchy
-methodStringToSomeMethod "callHierarchy/incomingCalls" = SomeMethod SMethod_CallHierarchyIncomingCalls
-methodStringToSomeMethod "callHierarchy/outgoingCalls" = SomeMethod SMethod_CallHierarchyOutgoingCalls
-methodStringToSomeMethod "textDocument/semanticTokens/full" = SomeMethod SMethod_TextDocumentSemanticTokensFull
-methodStringToSomeMethod "textDocument/semanticTokens/full/delta" = SomeMethod SMethod_TextDocumentSemanticTokensFullDelta
-methodStringToSomeMethod "textDocument/semanticTokens/range" = SomeMethod SMethod_TextDocumentSemanticTokensRange
-methodStringToSomeMethod "workspace/semanticTokens/refresh" = SomeMethod SMethod_WorkspaceSemanticTokensRefresh
-methodStringToSomeMethod "window/showDocument" = SomeMethod SMethod_WindowShowDocument
-methodStringToSomeMethod "textDocument/linkedEditingRange" = SomeMethod SMethod_TextDocumentLinkedEditingRange
-methodStringToSomeMethod "workspace/willCreateFiles" = SomeMethod SMethod_WorkspaceWillCreateFiles
-methodStringToSomeMethod "workspace/willRenameFiles" = SomeMethod SMethod_WorkspaceWillRenameFiles
-methodStringToSomeMethod "workspace/willDeleteFiles" = SomeMethod SMethod_WorkspaceWillDeleteFiles
-methodStringToSomeMethod "textDocument/moniker" = SomeMethod SMethod_TextDocumentMoniker
-methodStringToSomeMethod "textDocument/prepareTypeHierarchy" = SomeMethod SMethod_TextDocumentPrepareTypeHierarchy
-methodStringToSomeMethod "typeHierarchy/supertypes" = SomeMethod SMethod_TypeHierarchySupertypes
-methodStringToSomeMethod "typeHierarchy/subtypes" = SomeMethod SMethod_TypeHierarchySubtypes
-methodStringToSomeMethod "textDocument/inlineValue" = SomeMethod SMethod_TextDocumentInlineValue
-methodStringToSomeMethod "workspace/inlineValue/refresh" = SomeMethod SMethod_WorkspaceInlineValueRefresh
-methodStringToSomeMethod "textDocument/inlayHint" = SomeMethod SMethod_TextDocumentInlayHint
-methodStringToSomeMethod "inlayHint/resolve" = SomeMethod SMethod_InlayHintResolve
-methodStringToSomeMethod "workspace/inlayHint/refresh" = SomeMethod SMethod_WorkspaceInlayHintRefresh
-methodStringToSomeMethod "textDocument/diagnostic" = SomeMethod SMethod_TextDocumentDiagnostic
-methodStringToSomeMethod "workspace/diagnostic" = SomeMethod SMethod_WorkspaceDiagnostic
-methodStringToSomeMethod "workspace/diagnostic/refresh" = SomeMethod SMethod_WorkspaceDiagnosticRefresh
-methodStringToSomeMethod "client/registerCapability" = SomeMethod SMethod_ClientRegisterCapability
-methodStringToSomeMethod "client/unregisterCapability" = SomeMethod SMethod_ClientUnregisterCapability
-methodStringToSomeMethod "initialize" = SomeMethod SMethod_Initialize
-methodStringToSomeMethod "shutdown" = SomeMethod SMethod_Shutdown
-methodStringToSomeMethod "window/showMessageRequest" = SomeMethod SMethod_WindowShowMessageRequest
-methodStringToSomeMethod "textDocument/willSaveWaitUntil" = SomeMethod SMethod_TextDocumentWillSaveWaitUntil
-methodStringToSomeMethod "textDocument/completion" = SomeMethod SMethod_TextDocumentCompletion
-methodStringToSomeMethod "completionItem/resolve" = SomeMethod SMethod_CompletionItemResolve
-methodStringToSomeMethod "textDocument/hover" = SomeMethod SMethod_TextDocumentHover
-methodStringToSomeMethod "textDocument/signatureHelp" = SomeMethod SMethod_TextDocumentSignatureHelp
-methodStringToSomeMethod "textDocument/definition" = SomeMethod SMethod_TextDocumentDefinition
-methodStringToSomeMethod "textDocument/references" = SomeMethod SMethod_TextDocumentReferences
-methodStringToSomeMethod "textDocument/documentHighlight" = SomeMethod SMethod_TextDocumentDocumentHighlight
-methodStringToSomeMethod "textDocument/documentSymbol" = SomeMethod SMethod_TextDocumentDocumentSymbol
-methodStringToSomeMethod "textDocument/codeAction" = SomeMethod SMethod_TextDocumentCodeAction
-methodStringToSomeMethod "codeAction/resolve" = SomeMethod SMethod_CodeActionResolve
-methodStringToSomeMethod "workspace/symbol" = SomeMethod SMethod_WorkspaceSymbol
-methodStringToSomeMethod "workspaceSymbol/resolve" = SomeMethod SMethod_WorkspaceSymbolResolve
-methodStringToSomeMethod "textDocument/codeLens" = SomeMethod SMethod_TextDocumentCodeLens
-methodStringToSomeMethod "codeLens/resolve" = SomeMethod SMethod_CodeLensResolve
-methodStringToSomeMethod "workspace/codeLens/refresh" = SomeMethod SMethod_WorkspaceCodeLensRefresh
-methodStringToSomeMethod "textDocument/documentLink" = SomeMethod SMethod_TextDocumentDocumentLink
-methodStringToSomeMethod "documentLink/resolve" = SomeMethod SMethod_DocumentLinkResolve
-methodStringToSomeMethod "textDocument/formatting" = SomeMethod SMethod_TextDocumentFormatting
-methodStringToSomeMethod "textDocument/rangeFormatting" = SomeMethod SMethod_TextDocumentRangeFormatting
-methodStringToSomeMethod "textDocument/onTypeFormatting" = SomeMethod SMethod_TextDocumentOnTypeFormatting
-methodStringToSomeMethod "textDocument/rename" = SomeMethod SMethod_TextDocumentRename
-methodStringToSomeMethod "textDocument/prepareRename" = SomeMethod SMethod_TextDocumentPrepareRename
-methodStringToSomeMethod "workspace/executeCommand" = SomeMethod SMethod_WorkspaceExecuteCommand
-methodStringToSomeMethod "workspace/applyEdit" = SomeMethod SMethod_WorkspaceApplyEdit
-methodStringToSomeMethod "workspace/didChangeWorkspaceFolders" = SomeMethod SMethod_WorkspaceDidChangeWorkspaceFolders
-methodStringToSomeMethod "window/workDoneProgress/cancel" = SomeMethod SMethod_WindowWorkDoneProgressCancel
-methodStringToSomeMethod "workspace/didCreateFiles" = SomeMethod SMethod_WorkspaceDidCreateFiles
-methodStringToSomeMethod "workspace/didRenameFiles" = SomeMethod SMethod_WorkspaceDidRenameFiles
-methodStringToSomeMethod "workspace/didDeleteFiles" = SomeMethod SMethod_WorkspaceDidDeleteFiles
-methodStringToSomeMethod "notebookDocument/didOpen" = SomeMethod SMethod_NotebookDocumentDidOpen
-methodStringToSomeMethod "notebookDocument/didChange" = SomeMethod SMethod_NotebookDocumentDidChange
-methodStringToSomeMethod "notebookDocument/didSave" = SomeMethod SMethod_NotebookDocumentDidSave
-methodStringToSomeMethod "notebookDocument/didClose" = SomeMethod SMethod_NotebookDocumentDidClose
-methodStringToSomeMethod "initialized" = SomeMethod SMethod_Initialized
-methodStringToSomeMethod "exit" = SomeMethod SMethod_Exit
-methodStringToSomeMethod "workspace/didChangeConfiguration" = SomeMethod SMethod_WorkspaceDidChangeConfiguration
-methodStringToSomeMethod "window/showMessage" = SomeMethod SMethod_WindowShowMessage
-methodStringToSomeMethod "window/logMessage" = SomeMethod SMethod_WindowLogMessage
-methodStringToSomeMethod "telemetry/event" = SomeMethod SMethod_TelemetryEvent
-methodStringToSomeMethod "textDocument/didOpen" = SomeMethod SMethod_TextDocumentDidOpen
-methodStringToSomeMethod "textDocument/didChange" = SomeMethod SMethod_TextDocumentDidChange
-methodStringToSomeMethod "textDocument/didClose" = SomeMethod SMethod_TextDocumentDidClose
-methodStringToSomeMethod "textDocument/didSave" = SomeMethod SMethod_TextDocumentDidSave
-methodStringToSomeMethod "textDocument/willSave" = SomeMethod SMethod_TextDocumentWillSave
-methodStringToSomeMethod "workspace/didChangeWatchedFiles" = SomeMethod SMethod_WorkspaceDidChangeWatchedFiles
-methodStringToSomeMethod "textDocument/publishDiagnostics" = SomeMethod SMethod_TextDocumentPublishDiagnostics
-methodStringToSomeMethod "$/setTrace" = SomeMethod SMethod_SetTrace
-methodStringToSomeMethod "$/logTrace" = SomeMethod SMethod_LogTrace
-methodStringToSomeMethod "$/cancelRequest" = SomeMethod SMethod_CancelRequest
-methodStringToSomeMethod "$/progress" = SomeMethod SMethod_Progress
-methodStringToSomeMethod v = case GHC.TypeLits.someSymbolVal v of { GHC.TypeLits.SomeSymbol p -> SomeMethod (SMethod_CustomMethod p) ; }
+methodStringToMethod :: String -> Maybe Method
+methodStringToMethod "textDocument/implementation" = Just Method_TextDocumentImplementation
+methodStringToMethod "textDocument/typeDefinition" = Just Method_TextDocumentTypeDefinition
+methodStringToMethod "workspace/workspaceFolders" = Just Method_WorkspaceWorkspaceFolders
+methodStringToMethod "workspace/configuration" = Just Method_WorkspaceConfiguration
+methodStringToMethod "textDocument/documentColor" = Just Method_TextDocumentDocumentColor
+methodStringToMethod "textDocument/colorPresentation" = Just Method_TextDocumentColorPresentation
+methodStringToMethod "textDocument/foldingRange" = Just Method_TextDocumentFoldingRange
+methodStringToMethod "textDocument/declaration" = Just Method_TextDocumentDeclaration
+methodStringToMethod "textDocument/selectionRange" = Just Method_TextDocumentSelectionRange
+methodStringToMethod "window/workDoneProgress/create" = Just Method_WindowWorkDoneProgressCreate
+methodStringToMethod "textDocument/prepareCallHierarchy" = Just Method_TextDocumentPrepareCallHierarchy
+methodStringToMethod "callHierarchy/incomingCalls" = Just Method_CallHierarchyIncomingCalls
+methodStringToMethod "callHierarchy/outgoingCalls" = Just Method_CallHierarchyOutgoingCalls
+methodStringToMethod "textDocument/semanticTokens/full" = Just Method_TextDocumentSemanticTokensFull
+methodStringToMethod "textDocument/semanticTokens/full/delta" = Just Method_TextDocumentSemanticTokensFullDelta
+methodStringToMethod "textDocument/semanticTokens/range" = Just Method_TextDocumentSemanticTokensRange
+methodStringToMethod "workspace/semanticTokens/refresh" = Just Method_WorkspaceSemanticTokensRefresh
+methodStringToMethod "window/showDocument" = Just Method_WindowShowDocument
+methodStringToMethod "textDocument/linkedEditingRange" = Just Method_TextDocumentLinkedEditingRange
+methodStringToMethod "workspace/willCreateFiles" = Just Method_WorkspaceWillCreateFiles
+methodStringToMethod "workspace/willRenameFiles" = Just Method_WorkspaceWillRenameFiles
+methodStringToMethod "workspace/willDeleteFiles" = Just Method_WorkspaceWillDeleteFiles
+methodStringToMethod "textDocument/moniker" = Just Method_TextDocumentMoniker
+methodStringToMethod "textDocument/prepareTypeHierarchy" = Just Method_TextDocumentPrepareTypeHierarchy
+methodStringToMethod "typeHierarchy/supertypes" = Just Method_TypeHierarchySupertypes
+methodStringToMethod "typeHierarchy/subtypes" = Just Method_TypeHierarchySubtypes
+methodStringToMethod "textDocument/inlineValue" = Just Method_TextDocumentInlineValue
+methodStringToMethod "workspace/inlineValue/refresh" = Just Method_WorkspaceInlineValueRefresh
+methodStringToMethod "textDocument/inlayHint" = Just Method_TextDocumentInlayHint
+methodStringToMethod "inlayHint/resolve" = Just Method_InlayHintResolve
+methodStringToMethod "workspace/inlayHint/refresh" = Just Method_WorkspaceInlayHintRefresh
+methodStringToMethod "textDocument/diagnostic" = Just Method_TextDocumentDiagnostic
+methodStringToMethod "workspace/diagnostic" = Just Method_WorkspaceDiagnostic
+methodStringToMethod "workspace/diagnostic/refresh" = Just Method_WorkspaceDiagnosticRefresh
+methodStringToMethod "client/registerCapability" = Just Method_ClientRegisterCapability
+methodStringToMethod "client/unregisterCapability" = Just Method_ClientUnregisterCapability
+methodStringToMethod "initialize" = Just Method_Initialize
+methodStringToMethod "shutdown" = Just Method_Shutdown
+methodStringToMethod "window/showMessageRequest" = Just Method_WindowShowMessageRequest
+methodStringToMethod "textDocument/willSaveWaitUntil" = Just Method_TextDocumentWillSaveWaitUntil
+methodStringToMethod "textDocument/completion" = Just Method_TextDocumentCompletion
+methodStringToMethod "completionItem/resolve" = Just Method_CompletionItemResolve
+methodStringToMethod "textDocument/hover" = Just Method_TextDocumentHover
+methodStringToMethod "textDocument/signatureHelp" = Just Method_TextDocumentSignatureHelp
+methodStringToMethod "textDocument/definition" = Just Method_TextDocumentDefinition
+methodStringToMethod "textDocument/references" = Just Method_TextDocumentReferences
+methodStringToMethod "textDocument/documentHighlight" = Just Method_TextDocumentDocumentHighlight
+methodStringToMethod "textDocument/documentSymbol" = Just Method_TextDocumentDocumentSymbol
+methodStringToMethod "textDocument/codeAction" = Just Method_TextDocumentCodeAction
+methodStringToMethod "codeAction/resolve" = Just Method_CodeActionResolve
+methodStringToMethod "workspace/symbol" = Just Method_WorkspaceSymbol
+methodStringToMethod "workspaceSymbol/resolve" = Just Method_WorkspaceSymbolResolve
+methodStringToMethod "textDocument/codeLens" = Just Method_TextDocumentCodeLens
+methodStringToMethod "codeLens/resolve" = Just Method_CodeLensResolve
+methodStringToMethod "workspace/codeLens/refresh" = Just Method_WorkspaceCodeLensRefresh
+methodStringToMethod "textDocument/documentLink" = Just Method_TextDocumentDocumentLink
+methodStringToMethod "documentLink/resolve" = Just Method_DocumentLinkResolve
+methodStringToMethod "textDocument/formatting" = Just Method_TextDocumentFormatting
+methodStringToMethod "textDocument/rangeFormatting" = Just Method_TextDocumentRangeFormatting
+methodStringToMethod "textDocument/onTypeFormatting" = Just Method_TextDocumentOnTypeFormatting
+methodStringToMethod "textDocument/rename" = Just Method_TextDocumentRename
+methodStringToMethod "textDocument/prepareRename" = Just Method_TextDocumentPrepareRename
+methodStringToMethod "workspace/executeCommand" = Just Method_WorkspaceExecuteCommand
+methodStringToMethod "workspace/applyEdit" = Just Method_WorkspaceApplyEdit
+methodStringToMethod "workspace/didChangeWorkspaceFolders" = Just Method_WorkspaceDidChangeWorkspaceFolders
+methodStringToMethod "window/workDoneProgress/cancel" = Just Method_WindowWorkDoneProgressCancel
+methodStringToMethod "workspace/didCreateFiles" = Just Method_WorkspaceDidCreateFiles
+methodStringToMethod "workspace/didRenameFiles" = Just Method_WorkspaceDidRenameFiles
+methodStringToMethod "workspace/didDeleteFiles" = Just Method_WorkspaceDidDeleteFiles
+methodStringToMethod "notebookDocument/didOpen" = Just Method_NotebookDocumentDidOpen
+methodStringToMethod "notebookDocument/didChange" = Just Method_NotebookDocumentDidChange
+methodStringToMethod "notebookDocument/didSave" = Just Method_NotebookDocumentDidSave
+methodStringToMethod "notebookDocument/didClose" = Just Method_NotebookDocumentDidClose
+methodStringToMethod "initialized" = Just Method_Initialized
+methodStringToMethod "exit" = Just Method_Exit
+methodStringToMethod "workspace/didChangeConfiguration" = Just Method_WorkspaceDidChangeConfiguration
+methodStringToMethod "window/showMessage" = Just Method_WindowShowMessage
+methodStringToMethod "window/logMessage" = Just Method_WindowLogMessage
+methodStringToMethod "telemetry/event" = Just Method_TelemetryEvent
+methodStringToMethod "textDocument/didOpen" = Just Method_TextDocumentDidOpen
+methodStringToMethod "textDocument/didChange" = Just Method_TextDocumentDidChange
+methodStringToMethod "textDocument/didClose" = Just Method_TextDocumentDidClose
+methodStringToMethod "textDocument/didSave" = Just Method_TextDocumentDidSave
+methodStringToMethod "textDocument/willSave" = Just Method_TextDocumentWillSave
+methodStringToMethod "workspace/didChangeWatchedFiles" = Just Method_WorkspaceDidChangeWatchedFiles
+methodStringToMethod "textDocument/publishDiagnostics" = Just Method_TextDocumentPublishDiagnostics
+methodStringToMethod "$/setTrace" = Just Method_SetTrace
+methodStringToMethod "$/logTrace" = Just Method_LogTrace
+methodStringToMethod "$/cancelRequest" = Just Method_CancelRequest
+methodStringToMethod "$/progress" = Just Method_Progress
+methodStringToMethod _ = Nothing
+
+-- | Maps a LSP method to its message direction.
+type MethodDirection :: Method -> MM.Initiator
+type family MethodDirection (m ::  Method) where 
+  MethodDirection Method_TextDocumentImplementation = MM.ClientInitiates
+  MethodDirection Method_TextDocumentTypeDefinition = MM.ClientInitiates
+  MethodDirection Method_WorkspaceWorkspaceFolders = MM.ServerInitiates
+  MethodDirection Method_WorkspaceConfiguration = MM.ServerInitiates
+  MethodDirection Method_TextDocumentDocumentColor = MM.ClientInitiates
+  MethodDirection Method_TextDocumentColorPresentation = MM.ClientInitiates
+  MethodDirection Method_TextDocumentFoldingRange = MM.ClientInitiates
+  MethodDirection Method_TextDocumentDeclaration = MM.ClientInitiates
+  MethodDirection Method_TextDocumentSelectionRange = MM.ClientInitiates
+  MethodDirection Method_WindowWorkDoneProgressCreate = MM.ServerInitiates
+  MethodDirection Method_TextDocumentPrepareCallHierarchy = MM.ClientInitiates
+  MethodDirection Method_CallHierarchyIncomingCalls = MM.ClientInitiates
+  MethodDirection Method_CallHierarchyOutgoingCalls = MM.ClientInitiates
+  MethodDirection Method_TextDocumentSemanticTokensFull = MM.ClientInitiates
+  MethodDirection Method_TextDocumentSemanticTokensFullDelta = MM.ClientInitiates
+  MethodDirection Method_TextDocumentSemanticTokensRange = MM.ClientInitiates
+  MethodDirection Method_WorkspaceSemanticTokensRefresh = MM.ServerInitiates
+  MethodDirection Method_WindowShowDocument = MM.ServerInitiates
+  MethodDirection Method_TextDocumentLinkedEditingRange = MM.ClientInitiates
+  MethodDirection Method_WorkspaceWillCreateFiles = MM.ClientInitiates
+  MethodDirection Method_WorkspaceWillRenameFiles = MM.ClientInitiates
+  MethodDirection Method_WorkspaceWillDeleteFiles = MM.ClientInitiates
+  MethodDirection Method_TextDocumentMoniker = MM.ClientInitiates
+  MethodDirection Method_TextDocumentPrepareTypeHierarchy = MM.ClientInitiates
+  MethodDirection Method_TypeHierarchySupertypes = MM.ClientInitiates
+  MethodDirection Method_TypeHierarchySubtypes = MM.ClientInitiates
+  MethodDirection Method_TextDocumentInlineValue = MM.ClientInitiates
+  MethodDirection Method_WorkspaceInlineValueRefresh = MM.ServerInitiates
+  MethodDirection Method_TextDocumentInlayHint = MM.ClientInitiates
+  MethodDirection Method_InlayHintResolve = MM.ClientInitiates
+  MethodDirection Method_WorkspaceInlayHintRefresh = MM.ServerInitiates
+  MethodDirection Method_TextDocumentDiagnostic = MM.ClientInitiates
+  MethodDirection Method_WorkspaceDiagnostic = MM.ClientInitiates
+  MethodDirection Method_WorkspaceDiagnosticRefresh = MM.ServerInitiates
+  MethodDirection Method_ClientRegisterCapability = MM.ServerInitiates
+  MethodDirection Method_ClientUnregisterCapability = MM.ServerInitiates
+  MethodDirection Method_Initialize = MM.ClientInitiates
+  MethodDirection Method_Shutdown = MM.ClientInitiates
+  MethodDirection Method_WindowShowMessageRequest = MM.ServerInitiates
+  MethodDirection Method_TextDocumentWillSaveWaitUntil = MM.ClientInitiates
+  MethodDirection Method_TextDocumentCompletion = MM.ClientInitiates
+  MethodDirection Method_CompletionItemResolve = MM.ClientInitiates
+  MethodDirection Method_TextDocumentHover = MM.ClientInitiates
+  MethodDirection Method_TextDocumentSignatureHelp = MM.ClientInitiates
+  MethodDirection Method_TextDocumentDefinition = MM.ClientInitiates
+  MethodDirection Method_TextDocumentReferences = MM.ClientInitiates
+  MethodDirection Method_TextDocumentDocumentHighlight = MM.ClientInitiates
+  MethodDirection Method_TextDocumentDocumentSymbol = MM.ClientInitiates
+  MethodDirection Method_TextDocumentCodeAction = MM.ClientInitiates
+  MethodDirection Method_CodeActionResolve = MM.ClientInitiates
+  MethodDirection Method_WorkspaceSymbol = MM.ClientInitiates
+  MethodDirection Method_WorkspaceSymbolResolve = MM.ClientInitiates
+  MethodDirection Method_TextDocumentCodeLens = MM.ClientInitiates
+  MethodDirection Method_CodeLensResolve = MM.ClientInitiates
+  MethodDirection Method_WorkspaceCodeLensRefresh = MM.ServerInitiates
+  MethodDirection Method_TextDocumentDocumentLink = MM.ClientInitiates
+  MethodDirection Method_DocumentLinkResolve = MM.ClientInitiates
+  MethodDirection Method_TextDocumentFormatting = MM.ClientInitiates
+  MethodDirection Method_TextDocumentRangeFormatting = MM.ClientInitiates
+  MethodDirection Method_TextDocumentOnTypeFormatting = MM.ClientInitiates
+  MethodDirection Method_TextDocumentRename = MM.ClientInitiates
+  MethodDirection Method_TextDocumentPrepareRename = MM.ClientInitiates
+  MethodDirection Method_WorkspaceExecuteCommand = MM.ClientInitiates
+  MethodDirection Method_WorkspaceApplyEdit = MM.ServerInitiates
+  MethodDirection Method_WorkspaceDidChangeWorkspaceFolders = MM.ClientInitiates
+  MethodDirection Method_WindowWorkDoneProgressCancel = MM.ClientInitiates
+  MethodDirection Method_WorkspaceDidCreateFiles = MM.ClientInitiates
+  MethodDirection Method_WorkspaceDidRenameFiles = MM.ClientInitiates
+  MethodDirection Method_WorkspaceDidDeleteFiles = MM.ClientInitiates
+  MethodDirection Method_NotebookDocumentDidOpen = MM.ClientInitiates
+  MethodDirection Method_NotebookDocumentDidChange = MM.ClientInitiates
+  MethodDirection Method_NotebookDocumentDidSave = MM.ClientInitiates
+  MethodDirection Method_NotebookDocumentDidClose = MM.ClientInitiates
+  MethodDirection Method_Initialized = MM.ClientInitiates
+  MethodDirection Method_Exit = MM.ClientInitiates
+  MethodDirection Method_WorkspaceDidChangeConfiguration = MM.ClientInitiates
+  MethodDirection Method_WindowShowMessage = MM.ServerInitiates
+  MethodDirection Method_WindowLogMessage = MM.ServerInitiates
+  MethodDirection Method_TelemetryEvent = MM.ServerInitiates
+  MethodDirection Method_TextDocumentDidOpen = MM.ClientInitiates
+  MethodDirection Method_TextDocumentDidChange = MM.ClientInitiates
+  MethodDirection Method_TextDocumentDidClose = MM.ClientInitiates
+  MethodDirection Method_TextDocumentDidSave = MM.ClientInitiates
+  MethodDirection Method_TextDocumentWillSave = MM.ClientInitiates
+  MethodDirection Method_WorkspaceDidChangeWatchedFiles = MM.ClientInitiates
+  MethodDirection Method_TextDocumentPublishDiagnostics = MM.ServerInitiates
+  MethodDirection Method_SetTrace = MM.ClientInitiates
+  MethodDirection Method_LogTrace = MM.ServerInitiates
+  MethodDirection Method_CancelRequest = MM.EitherInitiates
+  MethodDirection Method_Progress = MM.EitherInitiates
 
 -- | Get a singleton witness for the message direction of a 'SMethod'.
-messageDirection :: forall f t (m :: Method f t) . SMethod m -> MM.SMessageDirection f
-messageDirection SMethod_TextDocumentImplementation = MM.SClientToServer
-messageDirection SMethod_TextDocumentTypeDefinition = MM.SClientToServer
-messageDirection SMethod_WorkspaceWorkspaceFolders = MM.SServerToClient
-messageDirection SMethod_WorkspaceConfiguration = MM.SServerToClient
-messageDirection SMethod_TextDocumentDocumentColor = MM.SClientToServer
-messageDirection SMethod_TextDocumentColorPresentation = MM.SClientToServer
-messageDirection SMethod_TextDocumentFoldingRange = MM.SClientToServer
-messageDirection SMethod_TextDocumentDeclaration = MM.SClientToServer
-messageDirection SMethod_TextDocumentSelectionRange = MM.SClientToServer
-messageDirection SMethod_WindowWorkDoneProgressCreate = MM.SServerToClient
-messageDirection SMethod_TextDocumentPrepareCallHierarchy = MM.SClientToServer
-messageDirection SMethod_CallHierarchyIncomingCalls = MM.SClientToServer
-messageDirection SMethod_CallHierarchyOutgoingCalls = MM.SClientToServer
-messageDirection SMethod_TextDocumentSemanticTokensFull = MM.SClientToServer
-messageDirection SMethod_TextDocumentSemanticTokensFullDelta = MM.SClientToServer
-messageDirection SMethod_TextDocumentSemanticTokensRange = MM.SClientToServer
-messageDirection SMethod_WorkspaceSemanticTokensRefresh = MM.SServerToClient
-messageDirection SMethod_WindowShowDocument = MM.SServerToClient
-messageDirection SMethod_TextDocumentLinkedEditingRange = MM.SClientToServer
-messageDirection SMethod_WorkspaceWillCreateFiles = MM.SClientToServer
-messageDirection SMethod_WorkspaceWillRenameFiles = MM.SClientToServer
-messageDirection SMethod_WorkspaceWillDeleteFiles = MM.SClientToServer
-messageDirection SMethod_TextDocumentMoniker = MM.SClientToServer
-messageDirection SMethod_TextDocumentPrepareTypeHierarchy = MM.SClientToServer
-messageDirection SMethod_TypeHierarchySupertypes = MM.SClientToServer
-messageDirection SMethod_TypeHierarchySubtypes = MM.SClientToServer
-messageDirection SMethod_TextDocumentInlineValue = MM.SClientToServer
-messageDirection SMethod_WorkspaceInlineValueRefresh = MM.SServerToClient
-messageDirection SMethod_TextDocumentInlayHint = MM.SClientToServer
-messageDirection SMethod_InlayHintResolve = MM.SClientToServer
-messageDirection SMethod_WorkspaceInlayHintRefresh = MM.SServerToClient
-messageDirection SMethod_TextDocumentDiagnostic = MM.SClientToServer
-messageDirection SMethod_WorkspaceDiagnostic = MM.SClientToServer
-messageDirection SMethod_WorkspaceDiagnosticRefresh = MM.SServerToClient
-messageDirection SMethod_ClientRegisterCapability = MM.SServerToClient
-messageDirection SMethod_ClientUnregisterCapability = MM.SServerToClient
-messageDirection SMethod_Initialize = MM.SClientToServer
-messageDirection SMethod_Shutdown = MM.SClientToServer
-messageDirection SMethod_WindowShowMessageRequest = MM.SServerToClient
-messageDirection SMethod_TextDocumentWillSaveWaitUntil = MM.SClientToServer
-messageDirection SMethod_TextDocumentCompletion = MM.SClientToServer
-messageDirection SMethod_CompletionItemResolve = MM.SClientToServer
-messageDirection SMethod_TextDocumentHover = MM.SClientToServer
-messageDirection SMethod_TextDocumentSignatureHelp = MM.SClientToServer
-messageDirection SMethod_TextDocumentDefinition = MM.SClientToServer
-messageDirection SMethod_TextDocumentReferences = MM.SClientToServer
-messageDirection SMethod_TextDocumentDocumentHighlight = MM.SClientToServer
-messageDirection SMethod_TextDocumentDocumentSymbol = MM.SClientToServer
-messageDirection SMethod_TextDocumentCodeAction = MM.SClientToServer
-messageDirection SMethod_CodeActionResolve = MM.SClientToServer
-messageDirection SMethod_WorkspaceSymbol = MM.SClientToServer
-messageDirection SMethod_WorkspaceSymbolResolve = MM.SClientToServer
-messageDirection SMethod_TextDocumentCodeLens = MM.SClientToServer
-messageDirection SMethod_CodeLensResolve = MM.SClientToServer
-messageDirection SMethod_WorkspaceCodeLensRefresh = MM.SServerToClient
-messageDirection SMethod_TextDocumentDocumentLink = MM.SClientToServer
-messageDirection SMethod_DocumentLinkResolve = MM.SClientToServer
-messageDirection SMethod_TextDocumentFormatting = MM.SClientToServer
-messageDirection SMethod_TextDocumentRangeFormatting = MM.SClientToServer
-messageDirection SMethod_TextDocumentOnTypeFormatting = MM.SClientToServer
-messageDirection SMethod_TextDocumentRename = MM.SClientToServer
-messageDirection SMethod_TextDocumentPrepareRename = MM.SClientToServer
-messageDirection SMethod_WorkspaceExecuteCommand = MM.SClientToServer
-messageDirection SMethod_WorkspaceApplyEdit = MM.SServerToClient
-messageDirection SMethod_WorkspaceDidChangeWorkspaceFolders = MM.SClientToServer
-messageDirection SMethod_WindowWorkDoneProgressCancel = MM.SClientToServer
-messageDirection SMethod_WorkspaceDidCreateFiles = MM.SClientToServer
-messageDirection SMethod_WorkspaceDidRenameFiles = MM.SClientToServer
-messageDirection SMethod_WorkspaceDidDeleteFiles = MM.SClientToServer
-messageDirection SMethod_NotebookDocumentDidOpen = MM.SClientToServer
-messageDirection SMethod_NotebookDocumentDidChange = MM.SClientToServer
-messageDirection SMethod_NotebookDocumentDidSave = MM.SClientToServer
-messageDirection SMethod_NotebookDocumentDidClose = MM.SClientToServer
-messageDirection SMethod_Initialized = MM.SClientToServer
-messageDirection SMethod_Exit = MM.SClientToServer
-messageDirection SMethod_WorkspaceDidChangeConfiguration = MM.SClientToServer
-messageDirection SMethod_WindowShowMessage = MM.SServerToClient
-messageDirection SMethod_WindowLogMessage = MM.SServerToClient
-messageDirection SMethod_TelemetryEvent = MM.SServerToClient
-messageDirection SMethod_TextDocumentDidOpen = MM.SClientToServer
-messageDirection SMethod_TextDocumentDidChange = MM.SClientToServer
-messageDirection SMethod_TextDocumentDidClose = MM.SClientToServer
-messageDirection SMethod_TextDocumentDidSave = MM.SClientToServer
-messageDirection SMethod_TextDocumentWillSave = MM.SClientToServer
-messageDirection SMethod_WorkspaceDidChangeWatchedFiles = MM.SClientToServer
-messageDirection SMethod_TextDocumentPublishDiagnostics = MM.SServerToClient
-messageDirection SMethod_SetTrace = MM.SClientToServer
-messageDirection SMethod_LogTrace = MM.SServerToClient
-messageDirection SMethod_CancelRequest = MM.SBothDirections
-messageDirection SMethod_Progress = MM.SBothDirections
-messageDirection (SMethod_CustomMethod _) = MM.SBothDirections
+methodDirection :: forall m . SMethod m -> MM.SInitiator (MethodDirection m)
+methodDirection SMethod_TextDocumentImplementation = MM.SClientInitiates
+methodDirection SMethod_TextDocumentTypeDefinition = MM.SClientInitiates
+methodDirection SMethod_WorkspaceWorkspaceFolders = MM.SServerInitiates
+methodDirection SMethod_WorkspaceConfiguration = MM.SServerInitiates
+methodDirection SMethod_TextDocumentDocumentColor = MM.SClientInitiates
+methodDirection SMethod_TextDocumentColorPresentation = MM.SClientInitiates
+methodDirection SMethod_TextDocumentFoldingRange = MM.SClientInitiates
+methodDirection SMethod_TextDocumentDeclaration = MM.SClientInitiates
+methodDirection SMethod_TextDocumentSelectionRange = MM.SClientInitiates
+methodDirection SMethod_WindowWorkDoneProgressCreate = MM.SServerInitiates
+methodDirection SMethod_TextDocumentPrepareCallHierarchy = MM.SClientInitiates
+methodDirection SMethod_CallHierarchyIncomingCalls = MM.SClientInitiates
+methodDirection SMethod_CallHierarchyOutgoingCalls = MM.SClientInitiates
+methodDirection SMethod_TextDocumentSemanticTokensFull = MM.SClientInitiates
+methodDirection SMethod_TextDocumentSemanticTokensFullDelta = MM.SClientInitiates
+methodDirection SMethod_TextDocumentSemanticTokensRange = MM.SClientInitiates
+methodDirection SMethod_WorkspaceSemanticTokensRefresh = MM.SServerInitiates
+methodDirection SMethod_WindowShowDocument = MM.SServerInitiates
+methodDirection SMethod_TextDocumentLinkedEditingRange = MM.SClientInitiates
+methodDirection SMethod_WorkspaceWillCreateFiles = MM.SClientInitiates
+methodDirection SMethod_WorkspaceWillRenameFiles = MM.SClientInitiates
+methodDirection SMethod_WorkspaceWillDeleteFiles = MM.SClientInitiates
+methodDirection SMethod_TextDocumentMoniker = MM.SClientInitiates
+methodDirection SMethod_TextDocumentPrepareTypeHierarchy = MM.SClientInitiates
+methodDirection SMethod_TypeHierarchySupertypes = MM.SClientInitiates
+methodDirection SMethod_TypeHierarchySubtypes = MM.SClientInitiates
+methodDirection SMethod_TextDocumentInlineValue = MM.SClientInitiates
+methodDirection SMethod_WorkspaceInlineValueRefresh = MM.SServerInitiates
+methodDirection SMethod_TextDocumentInlayHint = MM.SClientInitiates
+methodDirection SMethod_InlayHintResolve = MM.SClientInitiates
+methodDirection SMethod_WorkspaceInlayHintRefresh = MM.SServerInitiates
+methodDirection SMethod_TextDocumentDiagnostic = MM.SClientInitiates
+methodDirection SMethod_WorkspaceDiagnostic = MM.SClientInitiates
+methodDirection SMethod_WorkspaceDiagnosticRefresh = MM.SServerInitiates
+methodDirection SMethod_ClientRegisterCapability = MM.SServerInitiates
+methodDirection SMethod_ClientUnregisterCapability = MM.SServerInitiates
+methodDirection SMethod_Initialize = MM.SClientInitiates
+methodDirection SMethod_Shutdown = MM.SClientInitiates
+methodDirection SMethod_WindowShowMessageRequest = MM.SServerInitiates
+methodDirection SMethod_TextDocumentWillSaveWaitUntil = MM.SClientInitiates
+methodDirection SMethod_TextDocumentCompletion = MM.SClientInitiates
+methodDirection SMethod_CompletionItemResolve = MM.SClientInitiates
+methodDirection SMethod_TextDocumentHover = MM.SClientInitiates
+methodDirection SMethod_TextDocumentSignatureHelp = MM.SClientInitiates
+methodDirection SMethod_TextDocumentDefinition = MM.SClientInitiates
+methodDirection SMethod_TextDocumentReferences = MM.SClientInitiates
+methodDirection SMethod_TextDocumentDocumentHighlight = MM.SClientInitiates
+methodDirection SMethod_TextDocumentDocumentSymbol = MM.SClientInitiates
+methodDirection SMethod_TextDocumentCodeAction = MM.SClientInitiates
+methodDirection SMethod_CodeActionResolve = MM.SClientInitiates
+methodDirection SMethod_WorkspaceSymbol = MM.SClientInitiates
+methodDirection SMethod_WorkspaceSymbolResolve = MM.SClientInitiates
+methodDirection SMethod_TextDocumentCodeLens = MM.SClientInitiates
+methodDirection SMethod_CodeLensResolve = MM.SClientInitiates
+methodDirection SMethod_WorkspaceCodeLensRefresh = MM.SServerInitiates
+methodDirection SMethod_TextDocumentDocumentLink = MM.SClientInitiates
+methodDirection SMethod_DocumentLinkResolve = MM.SClientInitiates
+methodDirection SMethod_TextDocumentFormatting = MM.SClientInitiates
+methodDirection SMethod_TextDocumentRangeFormatting = MM.SClientInitiates
+methodDirection SMethod_TextDocumentOnTypeFormatting = MM.SClientInitiates
+methodDirection SMethod_TextDocumentRename = MM.SClientInitiates
+methodDirection SMethod_TextDocumentPrepareRename = MM.SClientInitiates
+methodDirection SMethod_WorkspaceExecuteCommand = MM.SClientInitiates
+methodDirection SMethod_WorkspaceApplyEdit = MM.SServerInitiates
+methodDirection SMethod_WorkspaceDidChangeWorkspaceFolders = MM.SClientInitiates
+methodDirection SMethod_WindowWorkDoneProgressCancel = MM.SClientInitiates
+methodDirection SMethod_WorkspaceDidCreateFiles = MM.SClientInitiates
+methodDirection SMethod_WorkspaceDidRenameFiles = MM.SClientInitiates
+methodDirection SMethod_WorkspaceDidDeleteFiles = MM.SClientInitiates
+methodDirection SMethod_NotebookDocumentDidOpen = MM.SClientInitiates
+methodDirection SMethod_NotebookDocumentDidChange = MM.SClientInitiates
+methodDirection SMethod_NotebookDocumentDidSave = MM.SClientInitiates
+methodDirection SMethod_NotebookDocumentDidClose = MM.SClientInitiates
+methodDirection SMethod_Initialized = MM.SClientInitiates
+methodDirection SMethod_Exit = MM.SClientInitiates
+methodDirection SMethod_WorkspaceDidChangeConfiguration = MM.SClientInitiates
+methodDirection SMethod_WindowShowMessage = MM.SServerInitiates
+methodDirection SMethod_WindowLogMessage = MM.SServerInitiates
+methodDirection SMethod_TelemetryEvent = MM.SServerInitiates
+methodDirection SMethod_TextDocumentDidOpen = MM.SClientInitiates
+methodDirection SMethod_TextDocumentDidChange = MM.SClientInitiates
+methodDirection SMethod_TextDocumentDidClose = MM.SClientInitiates
+methodDirection SMethod_TextDocumentDidSave = MM.SClientInitiates
+methodDirection SMethod_TextDocumentWillSave = MM.SClientInitiates
+methodDirection SMethod_WorkspaceDidChangeWatchedFiles = MM.SClientInitiates
+methodDirection SMethod_TextDocumentPublishDiagnostics = MM.SServerInitiates
+methodDirection SMethod_SetTrace = MM.SClientInitiates
+methodDirection SMethod_LogTrace = MM.SServerInitiates
+methodDirection SMethod_CancelRequest = MM.SEitherInitiates
+methodDirection SMethod_Progress = MM.SEitherInitiates
+
+-- | Maps a LSP method to its message direction.
+type MethodType :: Method -> MM.RequestOrNotification
+type family MethodType (m ::  Method) where 
+  MethodType Method_TextDocumentImplementation = MM.Request
+  MethodType Method_TextDocumentTypeDefinition = MM.Request
+  MethodType Method_WorkspaceWorkspaceFolders = MM.Request
+  MethodType Method_WorkspaceConfiguration = MM.Request
+  MethodType Method_TextDocumentDocumentColor = MM.Request
+  MethodType Method_TextDocumentColorPresentation = MM.Request
+  MethodType Method_TextDocumentFoldingRange = MM.Request
+  MethodType Method_TextDocumentDeclaration = MM.Request
+  MethodType Method_TextDocumentSelectionRange = MM.Request
+  MethodType Method_WindowWorkDoneProgressCreate = MM.Request
+  MethodType Method_TextDocumentPrepareCallHierarchy = MM.Request
+  MethodType Method_CallHierarchyIncomingCalls = MM.Request
+  MethodType Method_CallHierarchyOutgoingCalls = MM.Request
+  MethodType Method_TextDocumentSemanticTokensFull = MM.Request
+  MethodType Method_TextDocumentSemanticTokensFullDelta = MM.Request
+  MethodType Method_TextDocumentSemanticTokensRange = MM.Request
+  MethodType Method_WorkspaceSemanticTokensRefresh = MM.Request
+  MethodType Method_WindowShowDocument = MM.Request
+  MethodType Method_TextDocumentLinkedEditingRange = MM.Request
+  MethodType Method_WorkspaceWillCreateFiles = MM.Request
+  MethodType Method_WorkspaceWillRenameFiles = MM.Request
+  MethodType Method_WorkspaceWillDeleteFiles = MM.Request
+  MethodType Method_TextDocumentMoniker = MM.Request
+  MethodType Method_TextDocumentPrepareTypeHierarchy = MM.Request
+  MethodType Method_TypeHierarchySupertypes = MM.Request
+  MethodType Method_TypeHierarchySubtypes = MM.Request
+  MethodType Method_TextDocumentInlineValue = MM.Request
+  MethodType Method_WorkspaceInlineValueRefresh = MM.Request
+  MethodType Method_TextDocumentInlayHint = MM.Request
+  MethodType Method_InlayHintResolve = MM.Request
+  MethodType Method_WorkspaceInlayHintRefresh = MM.Request
+  MethodType Method_TextDocumentDiagnostic = MM.Request
+  MethodType Method_WorkspaceDiagnostic = MM.Request
+  MethodType Method_WorkspaceDiagnosticRefresh = MM.Request
+  MethodType Method_ClientRegisterCapability = MM.Request
+  MethodType Method_ClientUnregisterCapability = MM.Request
+  MethodType Method_Initialize = MM.Request
+  MethodType Method_Shutdown = MM.Request
+  MethodType Method_WindowShowMessageRequest = MM.Request
+  MethodType Method_TextDocumentWillSaveWaitUntil = MM.Request
+  MethodType Method_TextDocumentCompletion = MM.Request
+  MethodType Method_CompletionItemResolve = MM.Request
+  MethodType Method_TextDocumentHover = MM.Request
+  MethodType Method_TextDocumentSignatureHelp = MM.Request
+  MethodType Method_TextDocumentDefinition = MM.Request
+  MethodType Method_TextDocumentReferences = MM.Request
+  MethodType Method_TextDocumentDocumentHighlight = MM.Request
+  MethodType Method_TextDocumentDocumentSymbol = MM.Request
+  MethodType Method_TextDocumentCodeAction = MM.Request
+  MethodType Method_CodeActionResolve = MM.Request
+  MethodType Method_WorkspaceSymbol = MM.Request
+  MethodType Method_WorkspaceSymbolResolve = MM.Request
+  MethodType Method_TextDocumentCodeLens = MM.Request
+  MethodType Method_CodeLensResolve = MM.Request
+  MethodType Method_WorkspaceCodeLensRefresh = MM.Request
+  MethodType Method_TextDocumentDocumentLink = MM.Request
+  MethodType Method_DocumentLinkResolve = MM.Request
+  MethodType Method_TextDocumentFormatting = MM.Request
+  MethodType Method_TextDocumentRangeFormatting = MM.Request
+  MethodType Method_TextDocumentOnTypeFormatting = MM.Request
+  MethodType Method_TextDocumentRename = MM.Request
+  MethodType Method_TextDocumentPrepareRename = MM.Request
+  MethodType Method_WorkspaceExecuteCommand = MM.Request
+  MethodType Method_WorkspaceApplyEdit = MM.Request
+  MethodType Method_WorkspaceDidChangeWorkspaceFolders = MM.Notification
+  MethodType Method_WindowWorkDoneProgressCancel = MM.Notification
+  MethodType Method_WorkspaceDidCreateFiles = MM.Notification
+  MethodType Method_WorkspaceDidRenameFiles = MM.Notification
+  MethodType Method_WorkspaceDidDeleteFiles = MM.Notification
+  MethodType Method_NotebookDocumentDidOpen = MM.Notification
+  MethodType Method_NotebookDocumentDidChange = MM.Notification
+  MethodType Method_NotebookDocumentDidSave = MM.Notification
+  MethodType Method_NotebookDocumentDidClose = MM.Notification
+  MethodType Method_Initialized = MM.Notification
+  MethodType Method_Exit = MM.Notification
+  MethodType Method_WorkspaceDidChangeConfiguration = MM.Notification
+  MethodType Method_WindowShowMessage = MM.Notification
+  MethodType Method_WindowLogMessage = MM.Notification
+  MethodType Method_TelemetryEvent = MM.Notification
+  MethodType Method_TextDocumentDidOpen = MM.Notification
+  MethodType Method_TextDocumentDidChange = MM.Notification
+  MethodType Method_TextDocumentDidClose = MM.Notification
+  MethodType Method_TextDocumentDidSave = MM.Notification
+  MethodType Method_TextDocumentWillSave = MM.Notification
+  MethodType Method_WorkspaceDidChangeWatchedFiles = MM.Notification
+  MethodType Method_TextDocumentPublishDiagnostics = MM.Notification
+  MethodType Method_SetTrace = MM.Notification
+  MethodType Method_LogTrace = MM.Notification
+  MethodType Method_CancelRequest = MM.Notification
+  MethodType Method_Progress = MM.Notification
 
 -- | Get a singleton witness for the message kind of a 'SMethod'.
-messageKind :: forall f t (m :: Method f t) . SMethod m -> MM.SMessageKind t
-messageKind SMethod_TextDocumentImplementation = MM.SRequest
-messageKind SMethod_TextDocumentTypeDefinition = MM.SRequest
-messageKind SMethod_WorkspaceWorkspaceFolders = MM.SRequest
-messageKind SMethod_WorkspaceConfiguration = MM.SRequest
-messageKind SMethod_TextDocumentDocumentColor = MM.SRequest
-messageKind SMethod_TextDocumentColorPresentation = MM.SRequest
-messageKind SMethod_TextDocumentFoldingRange = MM.SRequest
-messageKind SMethod_TextDocumentDeclaration = MM.SRequest
-messageKind SMethod_TextDocumentSelectionRange = MM.SRequest
-messageKind SMethod_WindowWorkDoneProgressCreate = MM.SRequest
-messageKind SMethod_TextDocumentPrepareCallHierarchy = MM.SRequest
-messageKind SMethod_CallHierarchyIncomingCalls = MM.SRequest
-messageKind SMethod_CallHierarchyOutgoingCalls = MM.SRequest
-messageKind SMethod_TextDocumentSemanticTokensFull = MM.SRequest
-messageKind SMethod_TextDocumentSemanticTokensFullDelta = MM.SRequest
-messageKind SMethod_TextDocumentSemanticTokensRange = MM.SRequest
-messageKind SMethod_WorkspaceSemanticTokensRefresh = MM.SRequest
-messageKind SMethod_WindowShowDocument = MM.SRequest
-messageKind SMethod_TextDocumentLinkedEditingRange = MM.SRequest
-messageKind SMethod_WorkspaceWillCreateFiles = MM.SRequest
-messageKind SMethod_WorkspaceWillRenameFiles = MM.SRequest
-messageKind SMethod_WorkspaceWillDeleteFiles = MM.SRequest
-messageKind SMethod_TextDocumentMoniker = MM.SRequest
-messageKind SMethod_TextDocumentPrepareTypeHierarchy = MM.SRequest
-messageKind SMethod_TypeHierarchySupertypes = MM.SRequest
-messageKind SMethod_TypeHierarchySubtypes = MM.SRequest
-messageKind SMethod_TextDocumentInlineValue = MM.SRequest
-messageKind SMethod_WorkspaceInlineValueRefresh = MM.SRequest
-messageKind SMethod_TextDocumentInlayHint = MM.SRequest
-messageKind SMethod_InlayHintResolve = MM.SRequest
-messageKind SMethod_WorkspaceInlayHintRefresh = MM.SRequest
-messageKind SMethod_TextDocumentDiagnostic = MM.SRequest
-messageKind SMethod_WorkspaceDiagnostic = MM.SRequest
-messageKind SMethod_WorkspaceDiagnosticRefresh = MM.SRequest
-messageKind SMethod_ClientRegisterCapability = MM.SRequest
-messageKind SMethod_ClientUnregisterCapability = MM.SRequest
-messageKind SMethod_Initialize = MM.SRequest
-messageKind SMethod_Shutdown = MM.SRequest
-messageKind SMethod_WindowShowMessageRequest = MM.SRequest
-messageKind SMethod_TextDocumentWillSaveWaitUntil = MM.SRequest
-messageKind SMethod_TextDocumentCompletion = MM.SRequest
-messageKind SMethod_CompletionItemResolve = MM.SRequest
-messageKind SMethod_TextDocumentHover = MM.SRequest
-messageKind SMethod_TextDocumentSignatureHelp = MM.SRequest
-messageKind SMethod_TextDocumentDefinition = MM.SRequest
-messageKind SMethod_TextDocumentReferences = MM.SRequest
-messageKind SMethod_TextDocumentDocumentHighlight = MM.SRequest
-messageKind SMethod_TextDocumentDocumentSymbol = MM.SRequest
-messageKind SMethod_TextDocumentCodeAction = MM.SRequest
-messageKind SMethod_CodeActionResolve = MM.SRequest
-messageKind SMethod_WorkspaceSymbol = MM.SRequest
-messageKind SMethod_WorkspaceSymbolResolve = MM.SRequest
-messageKind SMethod_TextDocumentCodeLens = MM.SRequest
-messageKind SMethod_CodeLensResolve = MM.SRequest
-messageKind SMethod_WorkspaceCodeLensRefresh = MM.SRequest
-messageKind SMethod_TextDocumentDocumentLink = MM.SRequest
-messageKind SMethod_DocumentLinkResolve = MM.SRequest
-messageKind SMethod_TextDocumentFormatting = MM.SRequest
-messageKind SMethod_TextDocumentRangeFormatting = MM.SRequest
-messageKind SMethod_TextDocumentOnTypeFormatting = MM.SRequest
-messageKind SMethod_TextDocumentRename = MM.SRequest
-messageKind SMethod_TextDocumentPrepareRename = MM.SRequest
-messageKind SMethod_WorkspaceExecuteCommand = MM.SRequest
-messageKind SMethod_WorkspaceApplyEdit = MM.SRequest
-messageKind SMethod_WorkspaceDidChangeWorkspaceFolders = MM.SNotification
-messageKind SMethod_WindowWorkDoneProgressCancel = MM.SNotification
-messageKind SMethod_WorkspaceDidCreateFiles = MM.SNotification
-messageKind SMethod_WorkspaceDidRenameFiles = MM.SNotification
-messageKind SMethod_WorkspaceDidDeleteFiles = MM.SNotification
-messageKind SMethod_NotebookDocumentDidOpen = MM.SNotification
-messageKind SMethod_NotebookDocumentDidChange = MM.SNotification
-messageKind SMethod_NotebookDocumentDidSave = MM.SNotification
-messageKind SMethod_NotebookDocumentDidClose = MM.SNotification
-messageKind SMethod_Initialized = MM.SNotification
-messageKind SMethod_Exit = MM.SNotification
-messageKind SMethod_WorkspaceDidChangeConfiguration = MM.SNotification
-messageKind SMethod_WindowShowMessage = MM.SNotification
-messageKind SMethod_WindowLogMessage = MM.SNotification
-messageKind SMethod_TelemetryEvent = MM.SNotification
-messageKind SMethod_TextDocumentDidOpen = MM.SNotification
-messageKind SMethod_TextDocumentDidChange = MM.SNotification
-messageKind SMethod_TextDocumentDidClose = MM.SNotification
-messageKind SMethod_TextDocumentDidSave = MM.SNotification
-messageKind SMethod_TextDocumentWillSave = MM.SNotification
-messageKind SMethod_WorkspaceDidChangeWatchedFiles = MM.SNotification
-messageKind SMethod_TextDocumentPublishDiagnostics = MM.SNotification
-messageKind SMethod_SetTrace = MM.SNotification
-messageKind SMethod_LogTrace = MM.SNotification
-messageKind SMethod_CancelRequest = MM.SNotification
-messageKind SMethod_Progress = MM.SNotification
-messageKind (SMethod_CustomMethod _) = MM.SBothTypes
+methodType :: forall m . SMethod m -> MM.SRequestOrNotification (MethodType m)
+methodType SMethod_TextDocumentImplementation = MM.SRequest
+methodType SMethod_TextDocumentTypeDefinition = MM.SRequest
+methodType SMethod_WorkspaceWorkspaceFolders = MM.SRequest
+methodType SMethod_WorkspaceConfiguration = MM.SRequest
+methodType SMethod_TextDocumentDocumentColor = MM.SRequest
+methodType SMethod_TextDocumentColorPresentation = MM.SRequest
+methodType SMethod_TextDocumentFoldingRange = MM.SRequest
+methodType SMethod_TextDocumentDeclaration = MM.SRequest
+methodType SMethod_TextDocumentSelectionRange = MM.SRequest
+methodType SMethod_WindowWorkDoneProgressCreate = MM.SRequest
+methodType SMethod_TextDocumentPrepareCallHierarchy = MM.SRequest
+methodType SMethod_CallHierarchyIncomingCalls = MM.SRequest
+methodType SMethod_CallHierarchyOutgoingCalls = MM.SRequest
+methodType SMethod_TextDocumentSemanticTokensFull = MM.SRequest
+methodType SMethod_TextDocumentSemanticTokensFullDelta = MM.SRequest
+methodType SMethod_TextDocumentSemanticTokensRange = MM.SRequest
+methodType SMethod_WorkspaceSemanticTokensRefresh = MM.SRequest
+methodType SMethod_WindowShowDocument = MM.SRequest
+methodType SMethod_TextDocumentLinkedEditingRange = MM.SRequest
+methodType SMethod_WorkspaceWillCreateFiles = MM.SRequest
+methodType SMethod_WorkspaceWillRenameFiles = MM.SRequest
+methodType SMethod_WorkspaceWillDeleteFiles = MM.SRequest
+methodType SMethod_TextDocumentMoniker = MM.SRequest
+methodType SMethod_TextDocumentPrepareTypeHierarchy = MM.SRequest
+methodType SMethod_TypeHierarchySupertypes = MM.SRequest
+methodType SMethod_TypeHierarchySubtypes = MM.SRequest
+methodType SMethod_TextDocumentInlineValue = MM.SRequest
+methodType SMethod_WorkspaceInlineValueRefresh = MM.SRequest
+methodType SMethod_TextDocumentInlayHint = MM.SRequest
+methodType SMethod_InlayHintResolve = MM.SRequest
+methodType SMethod_WorkspaceInlayHintRefresh = MM.SRequest
+methodType SMethod_TextDocumentDiagnostic = MM.SRequest
+methodType SMethod_WorkspaceDiagnostic = MM.SRequest
+methodType SMethod_WorkspaceDiagnosticRefresh = MM.SRequest
+methodType SMethod_ClientRegisterCapability = MM.SRequest
+methodType SMethod_ClientUnregisterCapability = MM.SRequest
+methodType SMethod_Initialize = MM.SRequest
+methodType SMethod_Shutdown = MM.SRequest
+methodType SMethod_WindowShowMessageRequest = MM.SRequest
+methodType SMethod_TextDocumentWillSaveWaitUntil = MM.SRequest
+methodType SMethod_TextDocumentCompletion = MM.SRequest
+methodType SMethod_CompletionItemResolve = MM.SRequest
+methodType SMethod_TextDocumentHover = MM.SRequest
+methodType SMethod_TextDocumentSignatureHelp = MM.SRequest
+methodType SMethod_TextDocumentDefinition = MM.SRequest
+methodType SMethod_TextDocumentReferences = MM.SRequest
+methodType SMethod_TextDocumentDocumentHighlight = MM.SRequest
+methodType SMethod_TextDocumentDocumentSymbol = MM.SRequest
+methodType SMethod_TextDocumentCodeAction = MM.SRequest
+methodType SMethod_CodeActionResolve = MM.SRequest
+methodType SMethod_WorkspaceSymbol = MM.SRequest
+methodType SMethod_WorkspaceSymbolResolve = MM.SRequest
+methodType SMethod_TextDocumentCodeLens = MM.SRequest
+methodType SMethod_CodeLensResolve = MM.SRequest
+methodType SMethod_WorkspaceCodeLensRefresh = MM.SRequest
+methodType SMethod_TextDocumentDocumentLink = MM.SRequest
+methodType SMethod_DocumentLinkResolve = MM.SRequest
+methodType SMethod_TextDocumentFormatting = MM.SRequest
+methodType SMethod_TextDocumentRangeFormatting = MM.SRequest
+methodType SMethod_TextDocumentOnTypeFormatting = MM.SRequest
+methodType SMethod_TextDocumentRename = MM.SRequest
+methodType SMethod_TextDocumentPrepareRename = MM.SRequest
+methodType SMethod_WorkspaceExecuteCommand = MM.SRequest
+methodType SMethod_WorkspaceApplyEdit = MM.SRequest
+methodType SMethod_WorkspaceDidChangeWorkspaceFolders = MM.SNotification
+methodType SMethod_WindowWorkDoneProgressCancel = MM.SNotification
+methodType SMethod_WorkspaceDidCreateFiles = MM.SNotification
+methodType SMethod_WorkspaceDidRenameFiles = MM.SNotification
+methodType SMethod_WorkspaceDidDeleteFiles = MM.SNotification
+methodType SMethod_NotebookDocumentDidOpen = MM.SNotification
+methodType SMethod_NotebookDocumentDidChange = MM.SNotification
+methodType SMethod_NotebookDocumentDidSave = MM.SNotification
+methodType SMethod_NotebookDocumentDidClose = MM.SNotification
+methodType SMethod_Initialized = MM.SNotification
+methodType SMethod_Exit = MM.SNotification
+methodType SMethod_WorkspaceDidChangeConfiguration = MM.SNotification
+methodType SMethod_WindowShowMessage = MM.SNotification
+methodType SMethod_WindowLogMessage = MM.SNotification
+methodType SMethod_TelemetryEvent = MM.SNotification
+methodType SMethod_TextDocumentDidOpen = MM.SNotification
+methodType SMethod_TextDocumentDidChange = MM.SNotification
+methodType SMethod_TextDocumentDidClose = MM.SNotification
+methodType SMethod_TextDocumentDidSave = MM.SNotification
+methodType SMethod_TextDocumentWillSave = MM.SNotification
+methodType SMethod_WorkspaceDidChangeWatchedFiles = MM.SNotification
+methodType SMethod_TextDocumentPublishDiagnostics = MM.SNotification
+methodType SMethod_SetTrace = MM.SNotification
+methodType SMethod_LogTrace = MM.SNotification
+methodType SMethod_CancelRequest = MM.SNotification
+methodType SMethod_Progress = MM.SNotification
+
+type instance S.Sing = SMethod
+instance S.SingKind Method where
+  type Demote Method = Method
+  fromSing SMethod_TextDocumentImplementation = Method_TextDocumentImplementation
+  fromSing SMethod_TextDocumentTypeDefinition = Method_TextDocumentTypeDefinition
+  fromSing SMethod_WorkspaceWorkspaceFolders = Method_WorkspaceWorkspaceFolders
+  fromSing SMethod_WorkspaceConfiguration = Method_WorkspaceConfiguration
+  fromSing SMethod_TextDocumentDocumentColor = Method_TextDocumentDocumentColor
+  fromSing SMethod_TextDocumentColorPresentation = Method_TextDocumentColorPresentation
+  fromSing SMethod_TextDocumentFoldingRange = Method_TextDocumentFoldingRange
+  fromSing SMethod_TextDocumentDeclaration = Method_TextDocumentDeclaration
+  fromSing SMethod_TextDocumentSelectionRange = Method_TextDocumentSelectionRange
+  fromSing SMethod_WindowWorkDoneProgressCreate = Method_WindowWorkDoneProgressCreate
+  fromSing SMethod_TextDocumentPrepareCallHierarchy = Method_TextDocumentPrepareCallHierarchy
+  fromSing SMethod_CallHierarchyIncomingCalls = Method_CallHierarchyIncomingCalls
+  fromSing SMethod_CallHierarchyOutgoingCalls = Method_CallHierarchyOutgoingCalls
+  fromSing SMethod_TextDocumentSemanticTokensFull = Method_TextDocumentSemanticTokensFull
+  fromSing SMethod_TextDocumentSemanticTokensFullDelta = Method_TextDocumentSemanticTokensFullDelta
+  fromSing SMethod_TextDocumentSemanticTokensRange = Method_TextDocumentSemanticTokensRange
+  fromSing SMethod_WorkspaceSemanticTokensRefresh = Method_WorkspaceSemanticTokensRefresh
+  fromSing SMethod_WindowShowDocument = Method_WindowShowDocument
+  fromSing SMethod_TextDocumentLinkedEditingRange = Method_TextDocumentLinkedEditingRange
+  fromSing SMethod_WorkspaceWillCreateFiles = Method_WorkspaceWillCreateFiles
+  fromSing SMethod_WorkspaceWillRenameFiles = Method_WorkspaceWillRenameFiles
+  fromSing SMethod_WorkspaceWillDeleteFiles = Method_WorkspaceWillDeleteFiles
+  fromSing SMethod_TextDocumentMoniker = Method_TextDocumentMoniker
+  fromSing SMethod_TextDocumentPrepareTypeHierarchy = Method_TextDocumentPrepareTypeHierarchy
+  fromSing SMethod_TypeHierarchySupertypes = Method_TypeHierarchySupertypes
+  fromSing SMethod_TypeHierarchySubtypes = Method_TypeHierarchySubtypes
+  fromSing SMethod_TextDocumentInlineValue = Method_TextDocumentInlineValue
+  fromSing SMethod_WorkspaceInlineValueRefresh = Method_WorkspaceInlineValueRefresh
+  fromSing SMethod_TextDocumentInlayHint = Method_TextDocumentInlayHint
+  fromSing SMethod_InlayHintResolve = Method_InlayHintResolve
+  fromSing SMethod_WorkspaceInlayHintRefresh = Method_WorkspaceInlayHintRefresh
+  fromSing SMethod_TextDocumentDiagnostic = Method_TextDocumentDiagnostic
+  fromSing SMethod_WorkspaceDiagnostic = Method_WorkspaceDiagnostic
+  fromSing SMethod_WorkspaceDiagnosticRefresh = Method_WorkspaceDiagnosticRefresh
+  fromSing SMethod_ClientRegisterCapability = Method_ClientRegisterCapability
+  fromSing SMethod_ClientUnregisterCapability = Method_ClientUnregisterCapability
+  fromSing SMethod_Initialize = Method_Initialize
+  fromSing SMethod_Shutdown = Method_Shutdown
+  fromSing SMethod_WindowShowMessageRequest = Method_WindowShowMessageRequest
+  fromSing SMethod_TextDocumentWillSaveWaitUntil = Method_TextDocumentWillSaveWaitUntil
+  fromSing SMethod_TextDocumentCompletion = Method_TextDocumentCompletion
+  fromSing SMethod_CompletionItemResolve = Method_CompletionItemResolve
+  fromSing SMethod_TextDocumentHover = Method_TextDocumentHover
+  fromSing SMethod_TextDocumentSignatureHelp = Method_TextDocumentSignatureHelp
+  fromSing SMethod_TextDocumentDefinition = Method_TextDocumentDefinition
+  fromSing SMethod_TextDocumentReferences = Method_TextDocumentReferences
+  fromSing SMethod_TextDocumentDocumentHighlight = Method_TextDocumentDocumentHighlight
+  fromSing SMethod_TextDocumentDocumentSymbol = Method_TextDocumentDocumentSymbol
+  fromSing SMethod_TextDocumentCodeAction = Method_TextDocumentCodeAction
+  fromSing SMethod_CodeActionResolve = Method_CodeActionResolve
+  fromSing SMethod_WorkspaceSymbol = Method_WorkspaceSymbol
+  fromSing SMethod_WorkspaceSymbolResolve = Method_WorkspaceSymbolResolve
+  fromSing SMethod_TextDocumentCodeLens = Method_TextDocumentCodeLens
+  fromSing SMethod_CodeLensResolve = Method_CodeLensResolve
+  fromSing SMethod_WorkspaceCodeLensRefresh = Method_WorkspaceCodeLensRefresh
+  fromSing SMethod_TextDocumentDocumentLink = Method_TextDocumentDocumentLink
+  fromSing SMethod_DocumentLinkResolve = Method_DocumentLinkResolve
+  fromSing SMethod_TextDocumentFormatting = Method_TextDocumentFormatting
+  fromSing SMethod_TextDocumentRangeFormatting = Method_TextDocumentRangeFormatting
+  fromSing SMethod_TextDocumentOnTypeFormatting = Method_TextDocumentOnTypeFormatting
+  fromSing SMethod_TextDocumentRename = Method_TextDocumentRename
+  fromSing SMethod_TextDocumentPrepareRename = Method_TextDocumentPrepareRename
+  fromSing SMethod_WorkspaceExecuteCommand = Method_WorkspaceExecuteCommand
+  fromSing SMethod_WorkspaceApplyEdit = Method_WorkspaceApplyEdit
+  fromSing SMethod_WorkspaceDidChangeWorkspaceFolders = Method_WorkspaceDidChangeWorkspaceFolders
+  fromSing SMethod_WindowWorkDoneProgressCancel = Method_WindowWorkDoneProgressCancel
+  fromSing SMethod_WorkspaceDidCreateFiles = Method_WorkspaceDidCreateFiles
+  fromSing SMethod_WorkspaceDidRenameFiles = Method_WorkspaceDidRenameFiles
+  fromSing SMethod_WorkspaceDidDeleteFiles = Method_WorkspaceDidDeleteFiles
+  fromSing SMethod_NotebookDocumentDidOpen = Method_NotebookDocumentDidOpen
+  fromSing SMethod_NotebookDocumentDidChange = Method_NotebookDocumentDidChange
+  fromSing SMethod_NotebookDocumentDidSave = Method_NotebookDocumentDidSave
+  fromSing SMethod_NotebookDocumentDidClose = Method_NotebookDocumentDidClose
+  fromSing SMethod_Initialized = Method_Initialized
+  fromSing SMethod_Exit = Method_Exit
+  fromSing SMethod_WorkspaceDidChangeConfiguration = Method_WorkspaceDidChangeConfiguration
+  fromSing SMethod_WindowShowMessage = Method_WindowShowMessage
+  fromSing SMethod_WindowLogMessage = Method_WindowLogMessage
+  fromSing SMethod_TelemetryEvent = Method_TelemetryEvent
+  fromSing SMethod_TextDocumentDidOpen = Method_TextDocumentDidOpen
+  fromSing SMethod_TextDocumentDidChange = Method_TextDocumentDidChange
+  fromSing SMethod_TextDocumentDidClose = Method_TextDocumentDidClose
+  fromSing SMethod_TextDocumentDidSave = Method_TextDocumentDidSave
+  fromSing SMethod_TextDocumentWillSave = Method_TextDocumentWillSave
+  fromSing SMethod_WorkspaceDidChangeWatchedFiles = Method_WorkspaceDidChangeWatchedFiles
+  fromSing SMethod_TextDocumentPublishDiagnostics = Method_TextDocumentPublishDiagnostics
+  fromSing SMethod_SetTrace = Method_SetTrace
+  fromSing SMethod_LogTrace = Method_LogTrace
+  fromSing SMethod_CancelRequest = Method_CancelRequest
+  fromSing SMethod_Progress = Method_Progress
+  toSing Method_TextDocumentImplementation = S.SomeSing SMethod_TextDocumentImplementation
+  toSing Method_TextDocumentTypeDefinition = S.SomeSing SMethod_TextDocumentTypeDefinition
+  toSing Method_WorkspaceWorkspaceFolders = S.SomeSing SMethod_WorkspaceWorkspaceFolders
+  toSing Method_WorkspaceConfiguration = S.SomeSing SMethod_WorkspaceConfiguration
+  toSing Method_TextDocumentDocumentColor = S.SomeSing SMethod_TextDocumentDocumentColor
+  toSing Method_TextDocumentColorPresentation = S.SomeSing SMethod_TextDocumentColorPresentation
+  toSing Method_TextDocumentFoldingRange = S.SomeSing SMethod_TextDocumentFoldingRange
+  toSing Method_TextDocumentDeclaration = S.SomeSing SMethod_TextDocumentDeclaration
+  toSing Method_TextDocumentSelectionRange = S.SomeSing SMethod_TextDocumentSelectionRange
+  toSing Method_WindowWorkDoneProgressCreate = S.SomeSing SMethod_WindowWorkDoneProgressCreate
+  toSing Method_TextDocumentPrepareCallHierarchy = S.SomeSing SMethod_TextDocumentPrepareCallHierarchy
+  toSing Method_CallHierarchyIncomingCalls = S.SomeSing SMethod_CallHierarchyIncomingCalls
+  toSing Method_CallHierarchyOutgoingCalls = S.SomeSing SMethod_CallHierarchyOutgoingCalls
+  toSing Method_TextDocumentSemanticTokensFull = S.SomeSing SMethod_TextDocumentSemanticTokensFull
+  toSing Method_TextDocumentSemanticTokensFullDelta = S.SomeSing SMethod_TextDocumentSemanticTokensFullDelta
+  toSing Method_TextDocumentSemanticTokensRange = S.SomeSing SMethod_TextDocumentSemanticTokensRange
+  toSing Method_WorkspaceSemanticTokensRefresh = S.SomeSing SMethod_WorkspaceSemanticTokensRefresh
+  toSing Method_WindowShowDocument = S.SomeSing SMethod_WindowShowDocument
+  toSing Method_TextDocumentLinkedEditingRange = S.SomeSing SMethod_TextDocumentLinkedEditingRange
+  toSing Method_WorkspaceWillCreateFiles = S.SomeSing SMethod_WorkspaceWillCreateFiles
+  toSing Method_WorkspaceWillRenameFiles = S.SomeSing SMethod_WorkspaceWillRenameFiles
+  toSing Method_WorkspaceWillDeleteFiles = S.SomeSing SMethod_WorkspaceWillDeleteFiles
+  toSing Method_TextDocumentMoniker = S.SomeSing SMethod_TextDocumentMoniker
+  toSing Method_TextDocumentPrepareTypeHierarchy = S.SomeSing SMethod_TextDocumentPrepareTypeHierarchy
+  toSing Method_TypeHierarchySupertypes = S.SomeSing SMethod_TypeHierarchySupertypes
+  toSing Method_TypeHierarchySubtypes = S.SomeSing SMethod_TypeHierarchySubtypes
+  toSing Method_TextDocumentInlineValue = S.SomeSing SMethod_TextDocumentInlineValue
+  toSing Method_WorkspaceInlineValueRefresh = S.SomeSing SMethod_WorkspaceInlineValueRefresh
+  toSing Method_TextDocumentInlayHint = S.SomeSing SMethod_TextDocumentInlayHint
+  toSing Method_InlayHintResolve = S.SomeSing SMethod_InlayHintResolve
+  toSing Method_WorkspaceInlayHintRefresh = S.SomeSing SMethod_WorkspaceInlayHintRefresh
+  toSing Method_TextDocumentDiagnostic = S.SomeSing SMethod_TextDocumentDiagnostic
+  toSing Method_WorkspaceDiagnostic = S.SomeSing SMethod_WorkspaceDiagnostic
+  toSing Method_WorkspaceDiagnosticRefresh = S.SomeSing SMethod_WorkspaceDiagnosticRefresh
+  toSing Method_ClientRegisterCapability = S.SomeSing SMethod_ClientRegisterCapability
+  toSing Method_ClientUnregisterCapability = S.SomeSing SMethod_ClientUnregisterCapability
+  toSing Method_Initialize = S.SomeSing SMethod_Initialize
+  toSing Method_Shutdown = S.SomeSing SMethod_Shutdown
+  toSing Method_WindowShowMessageRequest = S.SomeSing SMethod_WindowShowMessageRequest
+  toSing Method_TextDocumentWillSaveWaitUntil = S.SomeSing SMethod_TextDocumentWillSaveWaitUntil
+  toSing Method_TextDocumentCompletion = S.SomeSing SMethod_TextDocumentCompletion
+  toSing Method_CompletionItemResolve = S.SomeSing SMethod_CompletionItemResolve
+  toSing Method_TextDocumentHover = S.SomeSing SMethod_TextDocumentHover
+  toSing Method_TextDocumentSignatureHelp = S.SomeSing SMethod_TextDocumentSignatureHelp
+  toSing Method_TextDocumentDefinition = S.SomeSing SMethod_TextDocumentDefinition
+  toSing Method_TextDocumentReferences = S.SomeSing SMethod_TextDocumentReferences
+  toSing Method_TextDocumentDocumentHighlight = S.SomeSing SMethod_TextDocumentDocumentHighlight
+  toSing Method_TextDocumentDocumentSymbol = S.SomeSing SMethod_TextDocumentDocumentSymbol
+  toSing Method_TextDocumentCodeAction = S.SomeSing SMethod_TextDocumentCodeAction
+  toSing Method_CodeActionResolve = S.SomeSing SMethod_CodeActionResolve
+  toSing Method_WorkspaceSymbol = S.SomeSing SMethod_WorkspaceSymbol
+  toSing Method_WorkspaceSymbolResolve = S.SomeSing SMethod_WorkspaceSymbolResolve
+  toSing Method_TextDocumentCodeLens = S.SomeSing SMethod_TextDocumentCodeLens
+  toSing Method_CodeLensResolve = S.SomeSing SMethod_CodeLensResolve
+  toSing Method_WorkspaceCodeLensRefresh = S.SomeSing SMethod_WorkspaceCodeLensRefresh
+  toSing Method_TextDocumentDocumentLink = S.SomeSing SMethod_TextDocumentDocumentLink
+  toSing Method_DocumentLinkResolve = S.SomeSing SMethod_DocumentLinkResolve
+  toSing Method_TextDocumentFormatting = S.SomeSing SMethod_TextDocumentFormatting
+  toSing Method_TextDocumentRangeFormatting = S.SomeSing SMethod_TextDocumentRangeFormatting
+  toSing Method_TextDocumentOnTypeFormatting = S.SomeSing SMethod_TextDocumentOnTypeFormatting
+  toSing Method_TextDocumentRename = S.SomeSing SMethod_TextDocumentRename
+  toSing Method_TextDocumentPrepareRename = S.SomeSing SMethod_TextDocumentPrepareRename
+  toSing Method_WorkspaceExecuteCommand = S.SomeSing SMethod_WorkspaceExecuteCommand
+  toSing Method_WorkspaceApplyEdit = S.SomeSing SMethod_WorkspaceApplyEdit
+  toSing Method_WorkspaceDidChangeWorkspaceFolders = S.SomeSing SMethod_WorkspaceDidChangeWorkspaceFolders
+  toSing Method_WindowWorkDoneProgressCancel = S.SomeSing SMethod_WindowWorkDoneProgressCancel
+  toSing Method_WorkspaceDidCreateFiles = S.SomeSing SMethod_WorkspaceDidCreateFiles
+  toSing Method_WorkspaceDidRenameFiles = S.SomeSing SMethod_WorkspaceDidRenameFiles
+  toSing Method_WorkspaceDidDeleteFiles = S.SomeSing SMethod_WorkspaceDidDeleteFiles
+  toSing Method_NotebookDocumentDidOpen = S.SomeSing SMethod_NotebookDocumentDidOpen
+  toSing Method_NotebookDocumentDidChange = S.SomeSing SMethod_NotebookDocumentDidChange
+  toSing Method_NotebookDocumentDidSave = S.SomeSing SMethod_NotebookDocumentDidSave
+  toSing Method_NotebookDocumentDidClose = S.SomeSing SMethod_NotebookDocumentDidClose
+  toSing Method_Initialized = S.SomeSing SMethod_Initialized
+  toSing Method_Exit = S.SomeSing SMethod_Exit
+  toSing Method_WorkspaceDidChangeConfiguration = S.SomeSing SMethod_WorkspaceDidChangeConfiguration
+  toSing Method_WindowShowMessage = S.SomeSing SMethod_WindowShowMessage
+  toSing Method_WindowLogMessage = S.SomeSing SMethod_WindowLogMessage
+  toSing Method_TelemetryEvent = S.SomeSing SMethod_TelemetryEvent
+  toSing Method_TextDocumentDidOpen = S.SomeSing SMethod_TextDocumentDidOpen
+  toSing Method_TextDocumentDidChange = S.SomeSing SMethod_TextDocumentDidChange
+  toSing Method_TextDocumentDidClose = S.SomeSing SMethod_TextDocumentDidClose
+  toSing Method_TextDocumentDidSave = S.SomeSing SMethod_TextDocumentDidSave
+  toSing Method_TextDocumentWillSave = S.SomeSing SMethod_TextDocumentWillSave
+  toSing Method_WorkspaceDidChangeWatchedFiles = S.SomeSing SMethod_WorkspaceDidChangeWatchedFiles
+  toSing Method_TextDocumentPublishDiagnostics = S.SomeSing SMethod_TextDocumentPublishDiagnostics
+  toSing Method_SetTrace = S.SomeSing SMethod_SetTrace
+  toSing Method_LogTrace = S.SomeSing SMethod_LogTrace
+  toSing Method_CancelRequest = S.SomeSing SMethod_CancelRequest
+  toSing Method_Progress = S.SomeSing SMethod_Progress

@@ -1,5 +1,6 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -621,21 +622,14 @@ data RequestData ann = RequestData
   , toStringClause :: Doc ann
   , fromStringClause :: Doc ann
   , messageDirectionClause :: Doc ann
+  , messageDirectionEq :: Doc ann
   , messageKindClause :: Doc ann
+  , messageKindEq :: Doc ann
+  , toSingClause :: Doc ann
+  , fromSingClause :: Doc ann
   }
 
 data NotificationData ann = NotificationData
-  { methCon :: Doc ann
-  , singCon :: Doc ann
-  , paramsEq :: Doc ann
-  , registrationOptionsEq :: Doc ann
-  , toStringClause :: Doc ann
-  , fromStringClause :: Doc ann
-  , messageDirectionClause :: Doc ann
-  , messageKindClause :: Doc ann
-  }
-
-data CustomData ann = CustomData
   { methCon :: Doc ann
   , singCon :: Doc ann
   , paramsEq :: Doc ann
@@ -645,7 +639,11 @@ data CustomData ann = CustomData
   , toStringClause :: Doc ann
   , fromStringClause :: Doc ann
   , messageDirectionClause :: Doc ann
+  , messageDirectionEq :: Doc ann
   , messageKindClause :: Doc ann
+  , messageKindEq :: Doc ann
+  , toSingClause :: Doc ann
+  , fromSingClause :: Doc ann
   }
 
 -- See Note [Generating code for methods]
@@ -654,16 +652,19 @@ printMethods :: [Request] -> [Notification] -> ModuleGenM (Doc ann)
 printMethods reqs nots = do
   let mtyN = "Method"
       styN = "SMethod"
-      sstyN = "SomeMethod"
-      smcn = "SomeMethod"
       mpN = "MessageParams"
       mrN = "MessageResult"
       edN = "ErrorData"
       roN = "RegistrationOptions"
-      toStringN = "someMethodToMethodString"
-      fromStringN = "methodStringToSomeMethod"
-      mdN = "messageDirection"
-      mkN = "messageKind"
+      toStringN = "methodToMethodString"
+      fromStringN = "methodStringToMethod"
+      mdN = "methodDirection"
+      mdfN = "MethodDirection"
+      mkN = "methodType"
+      mkfN = "MethodType"
+
+      tsN = "toSing"
+      fsN = "fromSing"
 
   let methodName context fullName =
         let pieces = T.splitOn "/" fullName
@@ -682,13 +683,8 @@ printMethods reqs nots = do
     Request{proposed = Just True} -> pure Nothing
     Request{method, params, result, errorData, registrationOptions, messageDirection} ->
       Just <$> do
-        -- <constructor name> :: Method <direction> <method type>
         let mcn = methodName (Just mtyN) method
-            direction = case messageDirection of
-              MM.ClientToServer -> "MM.ClientToServer"
-              MM.ServerToClient -> "MM.ServerToClient"
-              MM.Both -> "f"
-            methCon = mcn <+> "::" <+> pretty mtyN <+> direction <+> "MM.Request"
+            methCon = mcn <+> "::" <+> pretty mtyN
             scn = methodName (Just styN) method
             singCon = scn <+> "::" <+> pretty styN <+> mcn
 
@@ -703,15 +699,24 @@ printMethods reqs nots = do
         regOptsTy <- messagePartType registrationOptions
         let registrationOptionsEq = roN <+> mcn <+> "=" <+> regOptsTy
 
-        let toStringClause = toStringN <+> parens (smcn <+> scn) <+> "=" <+> dquotes (pretty method)
-            fromStringClause = fromStringN <+> dquotes (pretty method) <+> "=" <+> smcn <+> scn
+        let toStringClause = toStringN <+> mcn <+> "=" <+> dquotes (pretty method)
+            fromStringClause = fromStringN <+> dquotes (pretty method) <+> "=" <+> "Just" <+> mcn
             messageDirectionClause =
               let d = case messageDirection of
-                    MM.ClientToServer -> "MM.SClientToServer"
-                    MM.ServerToClient -> "MM.SServerToClient"
-                    MM.Both -> "MM.SBothDirections"
+                    MM.ClientToServer -> "MM.SClientInitiates"
+                    MM.ServerToClient -> "MM.SServerInitiates"
+                    MM.Both -> "MM.SEitherInitiates"
                in mdN <+> scn <+> "=" <+> d
-            messageKindClause = "messageKind" <+> scn <+> "=" <+> "MM.SRequest"
+            messageDirectionEq =
+              let d = case messageDirection of
+                    MM.ClientToServer -> "MM.ClientInitiates"
+                    MM.ServerToClient -> "MM.ServerInitiates"
+                    MM.Both -> "MM.EitherInitiates"
+               in mdfN <+> mcn <+> "=" <+> d
+            messageKindClause = mkN <+> scn <+> "=" <+> "MM.SRequest"
+            messageKindEq = mkfN <+> mcn <+> "=" <+> "MM.Request"
+            toSingClause = tsN <+> mcn <+> "=" <+> "S.SomeSing" <+> scn
+            fromSingClause = fsN <+> scn <+> "=" <+> mcn
         pure $ RequestData{..}
 
   notData <- forMaybe nots $ \case
@@ -719,140 +724,141 @@ printMethods reqs nots = do
     Notification{method, params, registrationOptions, messageDirection} ->
       Just <$> do
         let mcn = methodName (Just mtyN) method
-            direction = case messageDirection of
-              MM.ClientToServer -> "MM.ClientToServer"
-              MM.ServerToClient -> "MM.ServerToClient"
-              MM.Both -> "f"
-            methCon = mcn <+> "::" <+> pretty mtyN <+> direction <+> "MM.Notification"
+            methCon = mcn <+> "::" <+> pretty mtyN
             scn = methodName (Just styN) method
             singCon = scn <+> "::" <+> pretty styN <+> mcn
 
         -- MessageParams <constructor name> = <param type>
         paramTy <- messagePartType params
         let paramsEq = mpN <+> mcn <+> "=" <+> paramTy
+        let resultEq = mrN <+> mcn <+> "=" <+> "Maybe Data.Void.Void"
+        let errorDataEq = edN <+> mcn <+> "=" <+> "Maybe Data.Void.Void"
         regOptsTy <- messagePartType registrationOptions
         let registrationOptionsEq = roN <+> mcn <+> "=" <+> regOptsTy
 
-        let toStringClause = toStringN <+> parens (smcn <+> scn) <+> "=" <+> dquotes (pretty method)
-            fromStringClause = fromStringN <+> dquotes (pretty method) <+> "=" <+> smcn <+> scn
+        let toStringClause = toStringN <+> mcn <+> "=" <+> dquotes (pretty method)
+            fromStringClause = fromStringN <+> dquotes (pretty method) <+> "=" <+> "Just" <+> mcn
             messageDirectionClause =
               let d = case messageDirection of
-                    MM.ClientToServer -> "MM.SClientToServer"
-                    MM.ServerToClient -> "MM.SServerToClient"
-                    MM.Both -> "MM.SBothDirections"
-               in "messageDirection" <+> scn <+> "=" <+> d
-            messageKindClause = "messageKind" <+> scn <+> "=" <+> "MM.SNotification"
+                    MM.ClientToServer -> "MM.SClientInitiates"
+                    MM.ServerToClient -> "MM.SServerInitiates"
+                    MM.Both -> "MM.SEitherInitiates"
+               in mdN <+> scn <+> "=" <+> d
+            messageDirectionEq =
+              let d = case messageDirection of
+                    MM.ClientToServer -> "MM.ClientInitiates"
+                    MM.ServerToClient -> "MM.ServerInitiates"
+                    MM.Both -> "MM.EitherInitiates"
+               in mdfN <+> mcn <+> "=" <+> d
+            messageKindClause = mkN <+> scn <+> "=" <+> "MM.SNotification"
+            messageKindEq = mkfN <+> mcn <+> "=" <+> "MM.Notification"
+            toSingClause = tsN <+> mcn <+> "=" <+> "S.SomeSing" <+> scn
+            fromSingClause = fsN <+> scn <+> "=" <+> mcn
 
         pure $ NotificationData{..}
 
-  -- Add the custom method case, which isn't in the metamodel
-  customDat <- do
-    let mcn = methodName (Just mtyN) "CustomMethod"
-        -- Method_CustomMethod :: Symbol -> Method f t
-        methCon = mcn <+> "::" <+> "GHC.TypeLits.Symbol" <+> "->" <+> pretty mtyN <+> "f" <+> "t"
-        -- SMethod_CustomMethod :: KnownSymbol s => SMethod Method_CustomMethod
-        scn = methodName (Just styN) "CustomMethod"
-    ensureImport "Data.Proxy" Qual
-    ensureImport "GHC.TypeLits" Qual
-    let singCon = scn <+> "::" <+> "forall s . GHC.TypeLits.KnownSymbol s =>" <+> "Data.Proxy.Proxy s" <+> "->" <+> pretty styN <+> parens (mcn <+> "s")
-    -- MessageParams (Method_CustomMethod s) = Value
-    ensureImport "Data.Aeson" (QualAs "Aeson")
-    let paramsEq = mpN <+> parens (mcn <+> "s") <+> "=" <+> "Aeson.Value"
-        -- MessageResult (Method_CustomMethod s) = Value
-        resultEq = mrN <+> parens (mcn <+> "s") <+> "=" <+> "Aeson.Value"
-        -- Can shove whatever you want in the error data for custom methods?
-        -- ErrorData (Method_CustomMethod s) = Value
-        errorDataEq = edN <+> parens (mcn <+> "s") <+> "=" <+> "Aeson.Value"
-    -- Can't register custom methods
-    -- RegistrationOptions (Method_CustomMethod s) = Void
-    ensureImport "Data.Void" Qual
-    let registrationOptionsEq = roN <+> parens (mcn <+> "s") <+> "=" <+> "Data.Void.Void"
-
-    let toStringClause = toStringN <+> parens (smcn <+> parens (scn <+> "v")) <+> "=" <+> "GHC.TypeLits.symbolVal v"
-        fromStringClause = fromStringN <+> "v = case GHC.TypeLits.someSymbolVal v of { GHC.TypeLits.SomeSymbol p ->" <+> smcn <+> parens (scn <+> "p") <+> "; }"
-        messageDirectionClause = mdN <+> parens (scn <+> "_") <+> "=" <+> "MM.SBothDirections"
-        messageKindClause = mkN <+> parens (scn <+> "_") <+> "=" <+> "MM.SBothTypes"
-
-    pure $ CustomData{..}
-
+  ensureImport "GHC.Generics" Unqual
   ensureImport "Data.Kind" (QualAs "Kind")
+  ensureImport "Data.Singletons" (QualAs "S")
   let dataD =
-        let sigD = "type" <+> pretty mtyN <+> ":: MM.MessageDirection -> MM.MessageKind -> Kind.Type"
-            docD = "-- | A type representing a LSP method (or class of methods), intended to be used mostly at the type level."
-            ctors = fmap (\RequestData{..} -> methCon) reqData ++ fmap (\NotificationData{..} -> methCon) notData ++ [(\CustomData{..} -> methCon) customDat]
-            dataD = nest indentSize $ "data" <+> pretty mtyN <+> "f t" <+> "where" <+> (hardline <> hardvcat ctors)
+        let docD = "-- | A type representing a LSP method (or class of methods), intended to be used mostly at the type level."
+            ctors = fmap (.methCon) reqData ++ fmap (.methCon) notData
+            dataD = nest indentSize $ "data" <+> pretty mtyN <+> "where" <+> (hardline <> hardvcat ctors)
+            stockDeriv = "deriving stock" <+> tupled (fmap pretty toStockDerive)
+            derivD = indent indentSize $ hardvcat [stockDeriv]
          in -- This only really exists on the type level so we don't really want instances anyway
-            hardvcat [docD, sigD, dataD]
+            hardvcat [docD, dataD, derivD]
 
   let mpD =
-        let sigD = "type" <+> mpN <+> ":: forall f t ." <+> pretty mtyN <+> "f t" <+> "->" <+> "Kind.Type"
+        let sigD = "type" <+> mpN <+> "::" <+> pretty mtyN <+> "->" <+> "Kind.Type"
             docD = "-- | Maps a LSP method to its parameter type."
-            eqns = fmap (\RequestData{..} -> paramsEq) reqData ++ fmap (\NotificationData{..} -> paramsEq) notData ++ [(\CustomData{..} -> paramsEq) customDat]
-            declD = nest indentSize $ "type family" <+> mpN <+> parens ("m :: " <+> pretty mtyN <+> "f t") <+> "where" <+> (hardline <> hardvcat eqns)
+            eqns = fmap (.paramsEq) reqData ++ fmap (.paramsEq) notData
+            declD = nest indentSize $ "type family" <+> mpN <+> parens ("m :: " <+> pretty mtyN) <+> "where" <+> (hardline <> hardvcat eqns)
          in hardvcat [docD, sigD, declD]
 
   let mrD =
-        let sigD = "type" <+> mrN <+> ":: forall f t ." <+> pretty mtyN <+> "f t" <+> "->" <+> "Kind.Type"
+        let sigD = "type" <+> mrN <+> "::" <+> pretty mtyN <+> "->" <+> "Kind.Type"
             docD = "-- | Maps a LSP method to its result type."
-            -- TODO: should we give notifiations ()?
-            eqns = fmap (\RequestData{..} -> resultEq) reqData ++ [(\CustomData{..} -> resultEq) customDat]
-            declD = nest indentSize $ "type family" <+> mrN <+> parens ("m :: " <+> pretty mtyN <+> "f t") <+> "where" <+> (hardline <> hardvcat eqns)
+            eqns = fmap (.resultEq) reqData ++ fmap (.resultEq) notData
+            declD = nest indentSize $ "type family" <+> mrN <+> parens ("m :: " <+> pretty mtyN) <+> "where" <+> (hardline <> hardvcat eqns)
          in hardvcat [docD, sigD, declD]
 
   let edD =
-        let sigD = "type" <+> edN <+> ":: forall f t ." <+> pretty mtyN <+> "f t" <+> "->" <+> "Kind.Type"
+        let sigD = "type" <+> edN <+> "::" <+> pretty mtyN <+> "->" <+> "Kind.Type"
             docD = "-- | Maps a LSP method to its error data type."
-            -- TODO: should we give notifiations ()?
-            eqns = fmap (\RequestData{..} -> errorDataEq) reqData ++ [(\CustomData{..} -> errorDataEq) customDat]
-            declD = nest indentSize $ "type family" <+> edN <+> parens ("m :: " <+> pretty mtyN <+> "f t") <+> "where" <+> (hardline <> hardvcat eqns)
+            eqns = fmap (.errorDataEq) reqData ++ fmap (.errorDataEq) notData
+            declD = nest indentSize $ "type family" <+> edN <+> parens ("m :: " <+> pretty mtyN) <+> "where" <+> (hardline <> hardvcat eqns)
          in hardvcat [docD, sigD, declD]
 
   let roD =
-        let sigD = "type" <+> roN <+> ":: forall f t ." <+> pretty mtyN <+> "f t" <+> "->" <+> "Kind.Type"
+        let sigD = "type" <+> roN <+> "::" <+> pretty mtyN <+> "->" <+> "Kind.Type"
             docD = "-- | Maps a LSP method to its registration options type."
-            eqns = fmap (\RequestData{..} -> registrationOptionsEq) reqData ++ fmap (\NotificationData{..} -> registrationOptionsEq) notData ++ [(\CustomData{..} -> registrationOptionsEq) customDat]
-            declD = nest indentSize $ "type family" <+> roN <+> parens ("m :: " <+> pretty mtyN <+> "f t") <+> "where" <+> (hardline <> hardvcat eqns)
+            eqns = fmap (.registrationOptionsEq) reqData ++ fmap (.registrationOptionsEq) notData
+            declD = nest indentSize $ "type family" <+> roN <+> parens ("m :: " <+> pretty mtyN) <+> "where" <+> (hardline <> hardvcat eqns)
          in hardvcat [docD, sigD, declD]
 
   let singD =
-        let sigD = "type" <+> pretty styN <+> ":: forall f t ." <+> pretty mtyN <+> "f t" <+> "->" <+> "Kind.Type"
+        let sigD = "type" <+> pretty styN <+> "::" <+> pretty mtyN <+> "->" <+> "Kind.Type"
             docD = "-- | A singleton type for 'Method'."
-            ctors = fmap (\RequestData{..} -> singCon) reqData ++ fmap (\NotificationData{..} -> singCon) notData ++ [(\CustomData{..} -> singCon) customDat]
+            ctors = fmap (.singCon) reqData ++ fmap (.singCon) notData
             -- Can't derive instances, it's a GADT, will do them later
             dataD = nest indentSize $ "data" <+> pretty styN <+> "m" <+> "where" <+> (hardline <> hardvcat ctors)
          in hardvcat [docD, sigD, dataD]
 
-  let ssmD =
-        let ctor = smcn <+> "::" <+> "forall m ." <+> pretty styN <+> "m" <+> "->" <+> sstyN
-            docD = "-- | A method which isn't statically known."
-            -- Can't derive instances because it's a GADT and we're not doing the instances for SMethod here either
-            dataD = nest indentSize $ "data" <+> sstyN <+> "where" <+> (hardline <> ctor)
-         in hardvcat [docD, dataD]
-
-  -- methodToString :: SomeMethod -> String
+  -- methodToString :: Method -> String
   let toStringD =
-        let docD = "-- | Turn a 'SomeMethod' into its LSP method string."
-            sigD = toStringN <+> "::" <+> sstyN <+> "->" <+> "String"
-            clauses = fmap (\RequestData{..} -> toStringClause) reqData ++ fmap (\NotificationData{..} -> toStringClause) notData ++ [(\CustomData{..} -> toStringClause) customDat]
+        let docD = "-- | Turn a 'Method' into its LSP method string."
+            sigD = toStringN <+> "::" <+> pretty mtyN <+> "->" <+> "String"
+            clauses = fmap (.toStringClause) reqData ++ fmap (.toStringClause) notData
          in hardvcat [docD, sigD, hardvcat clauses]
-  -- stringToMethod :: String -> SomeMethod
+  -- stringToMethod :: String -> Method
   let fromStringD =
         let docD = "-- | Turn a LSP method string into a 'SomeMethod'."
-            sigD = fromStringN <+> "::" <+> "String" <+> "->" <+> sstyN
-            clauses = fmap (\RequestData{..} -> fromStringClause) reqData ++ fmap (\NotificationData{..} -> fromStringClause) notData ++ [(\CustomData{..} -> fromStringClause) customDat]
+            sigD = fromStringN <+> "::" <+> "String" <+> "->" <+> "Maybe" <+> pretty mtyN
+            fallThrough = fromStringN <+> "_" <+> "=" <+> "Nothing"
+            clauses = fmap (.fromStringClause) reqData ++ fmap (.fromStringClause) notData ++ [fallThrough]
          in hardvcat [docD, sigD, hardvcat clauses]
+
+  let messageDirectionF =
+        let sigD = "type" <+> mdfN <+> "::" <+> pretty mtyN <+> "->" <+> "MM.Initiator"
+            docD = "-- | Maps a LSP method to its message direction."
+            eqns = fmap (.messageDirectionEq) reqData ++ fmap (.messageDirectionEq) notData
+            declD = nest indentSize $ "type family" <+> mdfN <+> parens ("m :: " <+> pretty mtyN) <+> "where" <+> (hardline <> hardvcat eqns)
+         in hardvcat [docD, sigD, declD]
 
   let messageDirectionD =
         let docD = "-- | Get a singleton witness for the message direction of a 'SMethod'."
-            sigD = mdN <+> ":: forall f t (m :: Method f t) ." <+> pretty styN <+> "m" <+> "->" <+> "MM.SMessageDirection f"
-            clauses = fmap (\RequestData{..} -> messageDirectionClause) reqData ++ fmap (\NotificationData{..} -> messageDirectionClause) notData ++ [(\CustomData{..} -> messageDirectionClause) customDat]
+            sigD = mdN <+> ":: forall m ." <+> pretty styN <+> "m" <+> "->" <+> "MM.SInitiator" <+> parens (mdfN <+> "m")
+            clauses = fmap (.messageDirectionClause) reqData ++ fmap (.messageDirectionClause) notData
          in hardvcat [docD, sigD, hardvcat clauses]
+
+  let messageKindF =
+        let sigD = "type" <+> mkfN <+> "::" <+> pretty mtyN <+> "->" <+> "MM.RequestOrNotification"
+            docD = "-- | Maps a LSP method to its message direction."
+            eqns = fmap (.messageKindEq) reqData ++ fmap (.messageKindEq) notData
+            declD = nest indentSize $ "type family" <+> mkfN <+> parens ("m :: " <+> pretty mtyN) <+> "where" <+> (hardline <> hardvcat eqns)
+         in hardvcat [docD, sigD, declD]
 
   let messageKindD =
         let docD = "-- | Get a singleton witness for the message kind of a 'SMethod'."
-            sigD = mkN <+> ":: forall f t (m :: Method f t) ." <+> pretty styN <+> "m" <+> "->" <+> "MM.SMessageKind t"
-            clauses = fmap (\RequestData{..} -> messageKindClause) reqData ++ fmap (\NotificationData{..} -> messageKindClause) notData ++ [(\CustomData{..} -> messageKindClause) customDat]
+            sigD = mkN <+> ":: forall m ." <+> pretty styN <+> "m" <+> "->" <+> "MM.SRequestOrNotification" <+> parens (mkfN <+> "m")
+            clauses = fmap (.messageKindClause) reqData ++ fmap (.messageKindClause) notData
          in hardvcat [docD, sigD, hardvcat clauses]
+
+  let singKindD =
+        let
+          tyInstD = "type instance S.Sing =" <+> pretty styN
+          demoteD = "type Demote" <+> pretty mtyN <+> "=" <+> pretty mtyN
+          fromSingD =
+            let clauses = fmap (.fromSingClause) reqData ++ fmap (.fromSingClause) notData
+             in hardvcat clauses
+          toSingD =
+            let clauses = fmap (.toSingClause) reqData ++ fmap (.toSingClause) notData
+             in hardvcat clauses
+          decls = [demoteD, fromSingD, toSingD]
+          instanceD = "instance" <+> "S.SingKind" <+> pretty mtyN <+> "where" <> nest indentSize (hardline <> vcat decls)
+         in
+          hardvcat [tyInstD, instanceD]
 
   pure $
     dataD
@@ -873,19 +879,25 @@ printMethods reqs nots = do
       <> singD
       <> hardline
       <> hardline
-      <> ssmD
-      <> hardline
-      <> hardline
       <> toStringD
       <> hardline
       <> hardline
       <> fromStringD
       <> hardline
       <> hardline
+      <> messageDirectionF
+      <> hardline
+      <> hardline
       <> messageDirectionD
       <> hardline
       <> hardline
+      <> messageKindF
+      <> hardline
+      <> hardline
       <> messageKindD
+      <> hardline
+      <> hardline
+      <> singKindD
 
 genMethods :: [Request] -> [Notification] -> CodeGenM T.Text
 genMethods reqs nots = do
