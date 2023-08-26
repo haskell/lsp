@@ -609,6 +609,7 @@ registerCapability method regOpts f = do
       SMethod_TextDocumentFoldingRange         -> capDyn $ clientCaps ^? L.textDocument . _Just . L.foldingRange . _Just
       SMethod_TextDocumentSelectionRange       -> capDyn $ clientCaps ^? L.textDocument . _Just . L.selectionRange . _Just
       SMethod_TextDocumentPrepareCallHierarchy -> capDyn $ clientCaps ^? L.textDocument . _Just . L.callHierarchy . _Just
+      SMethod_TextDocumentInlayHint            -> capDyn $ clientCaps ^? L.textDocument . _Just . L.inlayHint . _Just
       --SMethod_TextDocumentSemanticTokens       -> capDyn $ clientCaps ^? L.textDocument . _Just . L.semanticTokens . _Just
       _                                        -> False
 

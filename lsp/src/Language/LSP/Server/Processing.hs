@@ -192,6 +192,7 @@ inferServerCapabilities clientCaps o h =
     { _textDocumentSync                 = sync
     , _hoverProvider                    = supportedBool SMethod_TextDocumentHover
     , _completionProvider               = completionProvider
+    , _inlayHintProvider                = inlayProvider
     , _declarationProvider              = supportedBool SMethod_TextDocumentDeclaration
     , _signatureHelpProvider            = signatureHelpProvider
     , _definitionProvider               = supportedBool SMethod_TextDocumentDefinition
@@ -228,7 +229,6 @@ inferServerCapabilities clientCaps o h =
     , _monikerProvider  = Nothing
     , _typeHierarchyProvider  = Nothing
     , _inlineValueProvider  = Nothing
-    , _inlayHintProvider  = Nothing
     , _diagnosticProvider  = Nothing
     }
   where
@@ -262,6 +262,14 @@ inferServerCapabilities clientCaps o h =
             , _completionItem=Nothing
             , _workDoneProgress=Nothing
             }
+      | otherwise = Nothing
+    
+    inlayProvider
+      | supported_b SMethod_TextDocumentInlayHint = Just $
+          InR $ InL InlayHintOptions {
+            _workDoneProgress = Nothing,
+            _resolveProvider = supported SMethod_InlayHintResolve
+          }
       | otherwise = Nothing
 
     clientSupportsCodeActionKinds = isJust $
