@@ -1,44 +1,46 @@
 {-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE ViewPatterns #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE QuasiQuotes #-}
+
 {- | The main module for generating code from the metamodel
 
 See Note [Code generation approach] for why we do it this way.
 -}
 module CodeGen where
 
-import qualified Data.Text as T
-import qualified Data.Map as Map
-import qualified Data.Set as Set
-import qualified Text.RE.Replace as RE
-import qualified Text.RE.TDFA.Text as RE
-import Language.LSP.MetaModel as MM
 import Control.Monad.Reader
 import Control.Monad.Writer
-import Prettyprinter
-import Data.Traversable
 import Data.Foldable
-import System.FilePath
-import System.Directory
-import qualified Data.Text.IO as T
-import Data.List (sort, intersperse)
-import Data.Maybe (maybeToList, fromMaybe, catMaybes, mapMaybe)
 import Data.Function
+import Data.List (intersperse, sort)
+import Data.Map qualified as Map
+import Data.Maybe (catMaybes, fromMaybe, mapMaybe, maybeToList)
+import Data.Set qualified as Set
+import Data.Text qualified as T
+import Data.Text.IO qualified as T
+import Data.Traversable
+import Language.LSP.MetaModel as MM
+import Prettyprinter
+import System.Directory
+import System.FilePath
+import Text.RE.Replace qualified as RE
+import Text.RE.TDFA.Text qualified as RE
 
 -- | A mapping from names in the metamodel to their names in the generated Haskell.
 type SymbolTable = Map.Map T.Text T.Text
 
--- | A mapping from names in the metamodel to their structure definition, used for chasing
--- supertypes.
+{- | A mapping from names in the metamodel to their structure definition, used for chasing
+ supertypes.
+-}
 type StructTable = Map.Map T.Text Structure
 
-data CodeGenEnv = CodeGenEnv {
-  symbolTable :: SymbolTable
+data CodeGenEnv = CodeGenEnv
+  { symbolTable :: SymbolTable
   , structTable :: StructTable
   , modulePrefix :: T.Text
   , outputDir :: FilePath
@@ -46,6 +48,7 @@ data CodeGenEnv = CodeGenEnv {
 
 -- | Monad for running overall code generation in, has access to the environment and settings.
 type CodeGenM = ReaderT CodeGenEnv IO
+
 -- | Monad for running module generation in, the same as 'CodeGenM' with the ability to record imports.
 type ModuleGenM = WriterT (Set.Set T.Text) CodeGenM
 
@@ -86,39 +89,48 @@ fixupDocumentation t = do
   pure t''
 
 multilineHaddock :: Doc ann -> Doc ann
-multilineHaddock doc = vsep [ "{-|", doc , "-}" ]
+multilineHaddock doc = vsep ["{-|", doc, "-}"]
 
-genModule :: forall ann . T.Text -> [T.Text] -> Maybe [T.Text] -> ModuleGenM (Doc ann) -> CodeGenM T.Text
+genModule :: forall ann. T.Text -> [T.Text] -> Maybe [T.Text] -> ModuleGenM (Doc ann) -> CodeGenM T.Text
 genModule name pragmas mexports action = do
   (doc, imports) <- runWriterT action
   mp <- asks modulePrefix
   dir <- asks outputDir
   let
-      -- these are both common in the generated code
-      ghcOptions :: [T.Text] = ["-Wno-unused-imports", "-Wno-unused-matches", "-Wno-deprecations"]
-      fullModName = mp <> "." <> name
-      ignoreComments = ["{- ORMOLU_DISABLE -}", "{- HLINT ignore -}"]
-      warning = "-- THIS IS A GENERATED FILE, DO NOT EDIT"
-      pragmaSection = hardvcat (fmap (\p -> "{-#" <+> "LANGUAGE" <+> pretty p <+> "#-}") pragmas)
-      optionsSection = hardvcat (fmap (\p -> "{-#" <+> "OPTIONS_GHC" <+> pretty p <+> "#-}") ghcOptions)
-      header = case mexports of
-        Just exports -> "module" <+> pretty fullModName <+> parens (cat $ punctuate "," (fmap pretty exports)) <+> "where"
-        Nothing -> "module" <+> pretty fullModName <+> "where"
-      -- TODO: replace with regex
-      isSelfImport imp = (" " <> fullModName <> " ") `T.isInfixOf` imp || (" " <> fullModName) `T.isSuffixOf` imp
-      importSection = hardvcat (fmap pretty $ filter (not . isSelfImport) $ toList imports)
-      mod = hardvcat ignoreComments <> hardline
-          <> warning <> hardline
-          <> pragmaSection <> hardline
-          <> optionsSection <> hardline
-          <> header <> hardline <> hardline
-          <> importSection 
-          <> hardline <> hardline 
-          <> doc <> hardline
-      printed = T.pack $ show mod
+    -- these are both common in the generated code
+    ghcOptions :: [T.Text] = ["-Wno-unused-imports", "-Wno-unused-matches", "-Wno-deprecations"]
+    fullModName = mp <> "." <> name
+    ignoreComments = ["{- ORMOLU_DISABLE -}", "{- HLINT ignore -}"]
+    warning = "-- THIS IS A GENERATED FILE, DO NOT EDIT"
+    pragmaSection = hardvcat (fmap (\p -> "{-#" <+> "LANGUAGE" <+> pretty p <+> "#-}") pragmas)
+    optionsSection = hardvcat (fmap (\p -> "{-#" <+> "OPTIONS_GHC" <+> pretty p <+> "#-}") ghcOptions)
+    header = case mexports of
+      Just exports -> "module" <+> pretty fullModName <+> parens (cat $ punctuate "," (fmap pretty exports)) <+> "where"
+      Nothing -> "module" <+> pretty fullModName <+> "where"
+    -- TODO: replace with regex
+    isSelfImport imp = (" " <> fullModName <> " ") `T.isInfixOf` imp || (" " <> fullModName) `T.isSuffixOf` imp
+    importSection = hardvcat (fmap pretty $ filter (not . isSelfImport) $ toList imports)
+    mod =
+      hardvcat ignoreComments
+        <> hardline
+        <> warning
+        <> hardline
+        <> pragmaSection
+        <> hardline
+        <> optionsSection
+        <> hardline
+        <> header
+        <> hardline
+        <> hardline
+        <> importSection
+        <> hardline
+        <> hardline
+        <> doc
+        <> hardline
+    printed = T.pack $ show mod
 
-      modSegments = T.unpack <$> T.splitOn "." fullModName
-      modulePath = foldl (</>) dir modSegments <.> "hs"
+    modSegments = T.unpack <$> T.splitOn "." fullModName
+    modulePath = foldl (</>) dir modSegments <.> "hs"
 
   lift $ createDirectoryIfMissing True $ takeDirectory modulePath
   lift $ T.writeFile modulePath printed
@@ -164,9 +176,10 @@ genFromMetaModel prefix dir mm = do
     genLensModule structNames
     pure ()
   pure ()
+
 -- | Names we can't put in Haskell code.
 reservedNames :: Set.Set T.Text
-reservedNames = Set.fromList [ "data", "type" ]
+reservedNames = Set.fromList ["data", "type"]
 
 -- | Sanitize a name so we can use it in Haskell.
 sanitizeName :: T.Text -> T.Text
@@ -174,13 +187,13 @@ sanitizeName n =
   -- Names can't start with underscores! Replace that with a 'U' for lack
   -- of a better idea
   let n' = if "_" `T.isPrefixOf` n then T.cons 'U' $ T.tail n else n
-  -- Names can't have '$'s! Just throw them away.
+      -- Names can't have '$'s! Just throw them away.
       n'' = T.filter (\c -> c /= '$') n'
-  -- If we end up with a reserved name, suffix with an underscore. This
-  -- relibly gets us something recognizable, rather than trying to systematize
-  -- the conversion of 'type' into 'tpe' or similar.
+      -- If we end up with a reserved name, suffix with an underscore. This
+      -- relibly gets us something recognizable, rather than trying to systematize
+      -- the conversion of 'type' into 'tpe' or similar.
       n''' = if n'' `Set.member` reservedNames then n'' <> "_" else n''
-  in n'''
+   in n'''
 
 -- | Make a name to be used at the top-level (i.e. not as a member of anything).
 makeToplevelName :: T.Text -> T.Text
@@ -191,8 +204,9 @@ makeConstrName :: Maybe T.Text -> T.Text -> T.Text
 makeConstrName context n =
   let
     cap = capitalize n
-    disambiguated = case context of { Just t -> t <> "_" <> cap; Nothing -> cap }
-  in sanitizeName disambiguated
+    disambiguated = case context of Just t -> t <> "_" <> cap; Nothing -> cap
+   in
+    sanitizeName disambiguated
 
 -- | Make a name for a field.
 makeFieldName :: T.Text -> T.Text
@@ -210,23 +224,23 @@ buildTables (MetaModel{structures, enumerations, typeAliases}) =
       symbolTable = Map.fromList $ entries <> entries' <> entries''
 
       structTable = Map.fromList sentries
-  in (symbolTable, structTable)
+   in (symbolTable, structTable)
 
--- | Translate a type in the metamodel into the corresponding Haskell type.
--- See Note [Translating metamodel types]
+{- | Translate a type in the metamodel into the corresponding Haskell type.
+ See Note [Translating metamodel types]
+-}
 convertType :: Type -> ModuleGenM (Doc ann)
 convertType = \case
   BaseType n -> case n of
-    URI         -> pretty <$> entityName "Language.LSP.Protocol.Types.Uri" "Uri"
+    URI -> pretty <$> entityName "Language.LSP.Protocol.Types.Uri" "Uri"
     DocumentUri -> pretty <$> entityName "Language.LSP.Protocol.Types.Uri" "Uri"
-    Integer     -> pretty <$> entityName "Language.LSP.Protocol.Types.Common" "Int32"
-    UInteger    -> pretty <$> entityName "Language.LSP.Protocol.Types.Common" "UInt"
-    Decimal     -> pure "Float"
-    RegExp      -> pretty <$> entityName "Data.Text" "Text"
-    String      -> pretty <$> entityName "Data.Text" "Text"
-    Boolean     -> pure "Bool"
-    Null        -> pretty <$> entityName "Language.LSP.Protocol.Types.Common" "Null"
-
+    Integer -> pretty <$> entityName "Language.LSP.Protocol.Types.Common" "Int32"
+    UInteger -> pretty <$> entityName "Language.LSP.Protocol.Types.Common" "UInt"
+    Decimal -> pure "Float"
+    RegExp -> pretty <$> entityName "Data.Text" "Text"
+    String -> pretty <$> entityName "Data.Text" "Text"
+    Boolean -> pure "Bool"
+    Null -> pretty <$> entityName "Language.LSP.Protocol.Types.Common" "Null"
   -- Special cases: these are in fact defined in the meta model, but
   -- we have way better types for them
 
@@ -237,12 +251,11 @@ convertType = \case
   ReferenceType "LSPObject" -> pretty <$> entityName "Data.Aeson" "Object"
   -- 'LSPArray' is a list of 'LSPAny'... better to just say it's an aeson 'Array'!
   ReferenceType "LSPArray" -> pretty <$> entityName "Data.Aeson" "Array"
-
   ReferenceType n -> do
     st <- asks symbolTable
     case Map.lookup n st of
       Just thn -> pretty <$> lspEntityName (typesModSegment <> "." <> thn) thn
-      Nothing  -> fail $ "Reference to unknown type: " <> show n
+      Nothing -> fail $ "Reference to unknown type: " <> show n
   ArrayType e -> do
     innerType <- convertType e
     pure $ brackets innerType
@@ -261,7 +274,7 @@ convertType = \case
       ReferenceType t | Just e <- Map.lookup t st -> getStructProperties e
       t -> fail $ "element of 'and' type was not a reference to a structure: " ++ show t
     genAnonymousStruct $ concat props
-  StructureLiteralType (StructureLiteral {properties}) -> genAnonymousStruct properties
+  StructureLiteralType (StructureLiteral{properties}) -> genAnonymousStruct properties
   TupleType es -> do
     est <- traverse convertType es
     pure $ tupled est
@@ -280,7 +293,7 @@ genStruct s@Structure{name} = do
   st <- asks symbolTable
   hsName <- case Map.lookup name st of
     Just hsn -> pure hsn
-    Nothing  -> fail $ "Unknown type: " <> show name
+    Nothing -> fail $ "Unknown type: " <> show name
   genModule (typesModSegment <> "." <> hsName) [] Nothing (printStruct hsName s)
 
 printStruct :: T.Text -> Structure -> ModuleGenM (Doc ann)
@@ -289,13 +302,13 @@ printStruct tn s@Structure{name, documentation, since, proposed, deprecated} = d
 
   props <- getStructProperties s
   args <- for props $ \Property{name, type_, optional, documentation, since, proposed, deprecated} -> do
-      pty <- convertType type_
-      let mty = case optional of
-            Just True -> parens ("Maybe" <+> pty)
-            _         -> pty
-      let n = makeFieldName name
-      propDoc <- multilineHaddock . pretty <$> mkDocumentation documentation since proposed
-      pure $ hardvcat [propDoc, pretty n <+> "::" <+> mty]
+    pty <- convertType type_
+    let mty = case optional of
+          Just True -> parens ("Maybe" <+> pty)
+          _ -> pty
+    let n = makeFieldName name
+    propDoc <- multilineHaddock . pretty <$> mkDocumentation documentation since proposed
+    pure $ hardvcat [propDoc, pretty n <+> "::" <+> mty]
 
   -- We do *not* deprecate fields. We can't really represent this properly: typically a deprecated field
   -- is optional, and the "correct" thing to do is to omit it. But in our representaiton that means passing
@@ -313,7 +326,7 @@ printStruct tn s@Structure{name, documentation, since, proposed, deprecated} = d
         let stockDeriv = "deriving stock" <+> tupled (fmap pretty toStockDerive)
             anyclassDeriv = "deriving anyclass" <+> tupled (fmap pretty toAnyclassDerive)
             viaDeriv = "deriving" <+> "Pretty" <+> "via" <+> parens ("ViaJSON" <+> pretty tn)
-        in indent indentSize $ hardvcat [stockDeriv, anyclassDeriv, viaDeriv]
+         in indent indentSize $ hardvcat [stockDeriv, anyclassDeriv, viaDeriv]
   dataDoc <- multilineHaddock . pretty <$> mkDocumentation documentation since proposed
   let dataDecl = "data" <+> pretty tn <+> "=" <+> pretty tn <+> nest indentSize (encloseSep (line <> "{ ") (line <> "}") ", " args)
       datad = hardvcat (deprecations ++ [dataDoc, dataDecl, derivDoc])
@@ -323,23 +336,23 @@ printStruct tn s@Structure{name, documentation, since, proposed, deprecated} = d
   ensureImport "Data.Row.Hashable" (QualAs "Hashable")
   matcherName <- entityName "Language.LSP.Protocol.Types.Common" ".=?"
   let toJsonD =
-        let (unzip -> (args, pairEs)) = flip fmap (zip props [0..]) $ \(Property{name, optional}, i) ->
+        let (unzip -> (args, pairEs)) = flip fmap (zip props [0 ..]) $ \(Property{name, optional}, i) ->
               let n :: T.Text = "arg" <> (T.pack $ show i)
                   pairE = case optional of
                     Just True -> dquotes (pretty name) <+> pretty matcherName <+> pretty n
                     _ -> brackets (dquotes (pretty name) <+> "Aeson..=" <+> pretty n)
-              in (pretty n, pairE)
+               in (pretty n, pairE)
             body = "Aeson.object $ concat $ " <+> encloseSep "[" "]" "," pairEs
             toJsonDoc = "toJSON" <+> parens (pretty tn <+> hsep args) <+> "=" <+> nest indentSize body
             instanceDoc = "instance Aeson.ToJSON" <+> pretty tn <+> "where" <> nest indentSize (hardline <> toJsonDoc)
-        in instanceDoc
+         in instanceDoc
 
   fromJsonD <- do
     let vn :: T.Text = "arg"
     let exprs = flip fmap props $ \Property{name, optional} ->
           case optional of
             Just True -> pretty vn <+> "Aeson..:!" <+> dquotes (pretty name)
-            _         -> pretty vn <+> "Aeson..:" <+> dquotes (pretty name)
+            _ -> pretty vn <+> "Aeson..:" <+> dquotes (pretty name)
     let lamBody = mkIterApplicativeApp (pretty tn) exprs
     let body = "Aeson.withObject" <+> dquotes (pretty structName) <+> "$" <+> "\\" <> pretty vn <+> "->" <+> nest indentSize lamBody
     let fromJsonDoc = "parseJSON" <+> "=" <+> nest indentSize body
@@ -347,11 +360,13 @@ printStruct tn s@Structure{name, documentation, since, proposed, deprecated} = d
     pure instanceDoc
 
   pure $
-    datad <>
-    hardline <> hardline <>
-    toJsonD <>
-    hardline <> hardline <>
-    fromJsonD
+    datad
+      <> hardline
+      <> hardline
+      <> toJsonD
+      <> hardline
+      <> hardline
+      <> fromJsonD
 
 -- | Get the list of properties of a struct, including inherited ones.
 getStructProperties :: Structure -> ModuleGenM [Property]
@@ -377,7 +392,7 @@ genAnonymousStruct properties = do
     pty <- convertType type_
     let mty = case optional of
           Just True -> parens ("Maybe" <+> pty)
-          _         -> pty
+          _ -> pty
     ensureImport "Data.Row" (QualAs "Row")
     pure $ dquotes (pretty name) <+> "Row..==" <+> mty
   let tyList = foldr (\ty l -> parens $ ty <+> "Row..+" <+> l) "Row.Empty" row
@@ -388,7 +403,7 @@ genEnum e@Enumeration{name} = do
   st <- asks symbolTable
   hsName <- case Map.lookup name st of
     Just hsn -> pure hsn
-    Nothing  -> fail $ "Unknown type: " <> show name
+    Nothing -> fail $ "Unknown type: " <> show name
   genModule (typesModSegment <> "." <> hsName) [] Nothing (printEnum hsName e)
 
 printEnum :: T.Text -> Enumeration -> ModuleGenM (Doc ann)
@@ -404,10 +419,10 @@ printEnum tn Enumeration{name, type_, values, supportsCustomValues, documentatio
   -- The (Haskell) type of the elements of this enum. Useful, so we can generate various
   -- code (e.g. for parsing JSON) generically but use this type to pin down what we want to do.
   ty <- case type_ of
-    BaseType Integer  -> pretty <$> entityName "Language.LSP.Protocol.Types.Common" "Int32"
+    BaseType Integer -> pretty <$> entityName "Language.LSP.Protocol.Types.Common" "Int32"
     BaseType UInteger -> pretty <$> entityName "Language.LSP.Protocol.Types.Common" "UInt"
-    BaseType String   -> pretty <$> entityName "Data.Text" "Text"
-    _                 -> fail $ "enumeration of unexpected type " ++ show type_
+    BaseType String -> pretty <$> entityName "Data.Text" "Text"
+    _ -> fail $ "enumeration of unexpected type " ++ show type_
 
   let isString = case type_ of
         BaseType String -> True
@@ -418,19 +433,19 @@ printEnum tn Enumeration{name, type_, values, supportsCustomValues, documentatio
       values' = filter (\EnumerationEntry{name} -> name `notElem` badEnumValues) values
   -- The associations between constructor names and their literals
   assocs <- for values' $ \EnumerationEntry{name, value, documentation, since, proposed} -> do
-        let cn = makeConstrName (Just enumName) name
-          -- The literal for the actual enum value in this case
-            lit = case value of
-                T t -> pretty $ show $ T.unpack t
-                I i -> pretty $ show i
-        doc <- mkDocumentation documentation since proposed
-        pure (cn, lit, doc)
+    let cn = makeConstrName (Just enumName) name
+        -- The literal for the actual enum value in this case
+        lit = case value of
+          T t -> pretty $ show $ T.unpack t
+          I i -> pretty $ show i
+    doc <- mkDocumentation documentation since proposed
+    pure (cn, lit, doc)
 
   let normalCons = flip fmap assocs $ \(cn, _, doc) ->
-        hardvcat [ multilineHaddock $ pretty doc,  pretty cn ]
+        hardvcat [multilineHaddock $ pretty doc, pretty cn]
   let customCon =
         let cn = makeConstrName (Just enumName) "Custom"
-        in if custom then Just (cn, pretty cn <+> ty) else Nothing
+         in if custom then Just (cn, pretty cn <+> ty) else Nothing
   let cons = normalCons ++ (fmap snd $ maybeToList customCon)
 
   ensureImport "Data.Aeson" (QualAs "Aeson")
@@ -461,68 +476,72 @@ printEnum tn Enumeration{name, type_, values, supportsCustomValues, documentatio
           anyclassDeriv = "deriving anyclass" <+> tupled (fmap pretty toAnyclassDerive)
           viaDeriv1 = "deriving" <+> tupled toDeriveViaLspEnum <+> "via" <+> parens (asLspEnumN <+> pretty tn <+> ty)
           viaDeriv2 = "deriving" <+> "Pretty" <+> "via" <+> parens ("ViaJSON" <+> pretty tn)
-        in indent indentSize $ hardvcat [stockDeriv, anyclassDeriv, viaDeriv1, viaDeriv2]
+         in
+          indent indentSize $ hardvcat [stockDeriv, anyclassDeriv, viaDeriv1, viaDeriv2]
   let dataDecl = "data" <+> pretty tn <+> "=" <+> nest indentSize (encloseSep (line <> "  ") mempty "| " cons)
       dataD = hardvcat (deprecations ++ [dataDoc, dataDecl, derivDoc])
 
   setFromListN <- pretty <$> entityName "Data.Set" "fromList"
   let knownValuesD =
         let valuesList = nest indentSize $ encloseSep "[" "]" "," $ flip fmap assocs $ \(n, _, _) -> pretty n
-        in knownValuesN <+> "=" <+> setFromListN <+> valuesList
+         in knownValuesN <+> "=" <+> setFromListN <+> valuesList
 
   let toBaseTypeD =
         -- xToValue X1 = <X1 value>
         let normalClauses = flip fmap assocs $ \(n, v, _) -> toBaseTypeN <+> pretty n <+> "=" <+> v
-        -- xToValue (CustomX c) = c
+            -- xToValue (CustomX c) = c
             customClause = case customCon of
               Just (cn, _) ->
                 let vn :: T.Text = "arg"
-                in Just $ toBaseTypeN <+> parens (pretty cn <+> pretty vn) <+> "=" <+> pretty vn
+                 in Just $ toBaseTypeN <+> parens (pretty cn <+> pretty vn) <+> "=" <+> pretty vn
               Nothing -> Nothing
             clauses = normalClauses ++ maybeToList customClause
-        in hardvcat clauses
+         in hardvcat clauses
 
   let fromBaseTypeD =
         let fn = if custom then fromOpenBaseTypeN else fromBaseTypeN
-        -- valueToX <X1 value> = X
-        -- or
-        -- valueToX <X1 value> = Just X
+            -- valueToX <X1 value> = X
+            -- or
+            -- valueToX <X1 value> = Just X
             normalClauses = flip fmap assocs $ \(n, v, _) -> fn <+> v <+> "=" <+> if custom then pretty n else "pure" <+> pretty n
-        -- valueToX c = CustomX c
-        -- or
-        -- valueToX _ = Nothing
+            -- valueToX c = CustomX c
+            -- or
+            -- valueToX _ = Nothing
             fallThroughClause = case customCon of
               Just (cn, _) ->
                 let vn :: T.Text = "arg"
-                in fn <+> pretty vn <+> "=" <+> pretty cn <+> pretty vn
-              Nothing ->  fn <+> "_ = Nothing"
+                 in fn <+> pretty vn <+> "=" <+> pretty cn <+> pretty vn
+              Nothing -> fn <+> "_ = Nothing"
             clauses = normalClauses ++ [fallThroughClause]
-        in hardvcat clauses
+         in hardvcat clauses
 
   let lspEnumD =
         let
           baseTypeD = "type EnumBaseType" <+> pretty tn <+> "=" <+> ty
           decls = [knownValuesD, baseTypeD, toBaseTypeD] ++ if custom then [] else [fromBaseTypeD]
           instanceDoc = "instance" <+> lspEnumN <+> pretty tn <+> "where" <> nest indentSize (hardline <> vcat decls)
-        in instanceDoc
+         in
+          instanceDoc
   let lspOpenEnumD = "instance" <+> lspOpenEnumN <+> pretty tn <+> "where" <> nest indentSize (hardline <> fromBaseTypeD)
 
   pure $
-    dataD <>
-    hardline <> hardline <>
-    lspEnumD <>
-    hardline <> hardline <>
-    (if custom then lspOpenEnumD <> hardline <> hardline else "")
+    dataD
+      <> hardline
+      <> hardline
+      <> lspEnumD
+      <> hardline
+      <> hardline
+      <> (if custom then lspOpenEnumD <> hardline <> hardline else "")
 
 genAlias :: TypeAlias -> CodeGenM T.Text
 genAlias a@TypeAlias{name} = do
   st <- asks symbolTable
   hsName <- case Map.lookup name st of
     Just hsn -> pure hsn
-    Nothing  -> fail $ "Unknown type: " <> show name
+    Nothing -> fail $ "Unknown type: " <> show name
   genModule (typesModSegment <> "." <> hsName) [] Nothing (printAlias hsName a)
 
-printAlias :: forall ann . T.Text -> TypeAlias -> ModuleGenM (Doc ann)
+printAlias :: forall ann. T.Text -> TypeAlias -> ModuleGenM (Doc ann)
 printAlias hsName TypeAlias{name, type_, documentation, since, proposed, deprecated} = do
   st <- asks symbolTable
   rhs <- convertType type_
@@ -538,12 +557,12 @@ printAlias hsName TypeAlias{name, type_, documentation, since, proposed, depreca
   -- In practice, it seems that only base types and aliases to base types get used as map keys, so deriving
   -- To/FromJSONKey for them seems to be enough
   let derivDoc =
-        let aesonDeriving :: [Doc ann] = ["Aeson.ToJSON", "Aeson.FromJSON"] ++ case type_ of { BaseType _ -> ["Aeson.ToJSONKey", "Aeson.FromJSONKey"]; _ -> [] }
+        let aesonDeriving :: [Doc ann] = ["Aeson.ToJSON", "Aeson.FromJSON"] ++ case type_ of BaseType _ -> ["Aeson.ToJSONKey", "Aeson.FromJSONKey"]; _ -> []
             newtypeDeriv = "deriving newtype" <+> tupled aesonDeriving
             stockDeriv = "deriving stock" <+> tupled (fmap pretty toStockDerive)
             anyclassDeriv = "deriving anyclass" <+> tupled (fmap pretty toAnyclassDerive)
             viaDeriv = "deriving" <+> "Pretty" <+> "via" <+> parens ("ViaJSON" <+> pretty hsName)
-        in indent indentSize $ hardvcat [newtypeDeriv, stockDeriv, anyclassDeriv, viaDeriv]
+         in indent indentSize $ hardvcat [newtypeDeriv, stockDeriv, anyclassDeriv, viaDeriv]
   dataDoc <- multilineHaddock . pretty <$> mkDocumentation documentation since proposed
   let dataDecl = "newtype" <+> pretty hsName <+> "=" <+> pretty hsName <+> rhs
       datad = hardvcat (optDeprecated hsName deprecated ++ [dataDoc, dataDecl, derivDoc])
@@ -552,40 +571,40 @@ printAlias hsName TypeAlias{name, type_, documentation, since, proposed, depreca
 ---------------
 
 data RequestData ann = RequestData
-  { methCon                :: Doc ann
-  , singCon                :: Doc ann
-  , paramsEq               :: Doc ann
-  , resultEq               :: Doc ann
-  , errorDataEq            :: Doc ann
-  , registrationOptionsEq  :: Doc ann
-  , toStringClause         :: Doc ann
-  , fromStringClause       :: Doc ann
+  { methCon :: Doc ann
+  , singCon :: Doc ann
+  , paramsEq :: Doc ann
+  , resultEq :: Doc ann
+  , errorDataEq :: Doc ann
+  , registrationOptionsEq :: Doc ann
+  , toStringClause :: Doc ann
+  , fromStringClause :: Doc ann
   , messageDirectionClause :: Doc ann
-  , messageKindClause      :: Doc ann
+  , messageKindClause :: Doc ann
   }
 
 data NotificationData ann = NotificationData
-  { methCon                :: Doc ann
-  , singCon                :: Doc ann
-  , paramsEq               :: Doc ann
-  , registrationOptionsEq  :: Doc ann
-  , toStringClause         :: Doc ann
-  , fromStringClause       :: Doc ann
+  { methCon :: Doc ann
+  , singCon :: Doc ann
+  , paramsEq :: Doc ann
+  , registrationOptionsEq :: Doc ann
+  , toStringClause :: Doc ann
+  , fromStringClause :: Doc ann
   , messageDirectionClause :: Doc ann
-  , messageKindClause      :: Doc ann
+  , messageKindClause :: Doc ann
   }
 
 data CustomData ann = CustomData
-  { methCon                :: Doc ann
-  , singCon                :: Doc ann
-  , paramsEq               :: Doc ann
-  , resultEq               :: Doc ann
-  , errorDataEq            :: Doc ann
-  , registrationOptionsEq  :: Doc ann
-  , toStringClause         :: Doc ann
-  , fromStringClause       :: Doc ann
+  { methCon :: Doc ann
+  , singCon :: Doc ann
+  , paramsEq :: Doc ann
+  , resultEq :: Doc ann
+  , errorDataEq :: Doc ann
+  , registrationOptionsEq :: Doc ann
+  , toStringClause :: Doc ann
+  , fromStringClause :: Doc ann
   , messageDirectionClause :: Doc ann
-  , messageKindClause      :: Doc ann
+  , messageKindClause :: Doc ann
   }
 
 -- See Note [Generating code for methods]
@@ -607,7 +626,7 @@ printMethods reqs nots = do
 
   let methodName context fullName =
         let pieces = T.splitOn "/" fullName
-        in pretty $ makeConstrName context $ foldMap capitalize pieces
+         in pretty $ makeConstrName context $ foldMap capitalize pieces
   let messagePartType t = case t of
         Just ty -> convertType ty
         -- See Note [Absent parameters/results/errors]
@@ -622,9 +641,9 @@ printMethods reqs nots = do
     -- <constructor name> :: Method <direction> <method type>
     let mcn = methodName (Just mtyN) method
         direction = case messageDirection of
-            MM.ClientToServer -> "MM.ClientToServer"
-            MM.ServerToClient -> "MM.ServerToClient"
-            MM.Both           -> "f"
+          MM.ClientToServer -> "MM.ClientToServer"
+          MM.ServerToClient -> "MM.ServerToClient"
+          MM.Both -> "f"
         methCon = mcn <+> "::" <+> pretty mtyN <+> direction <+> "MM.Request"
         scn = methodName (Just styN) method
         singCon = scn <+> "::" <+> pretty styN <+> mcn
@@ -646,17 +665,17 @@ printMethods reqs nots = do
           let d = case messageDirection of
                 MM.ClientToServer -> "MM.SClientToServer"
                 MM.ServerToClient -> "MM.SServerToClient"
-                MM.Both           -> "MM.SBothDirections"
-          in mdN <+> scn <+> "=" <+> d
+                MM.Both -> "MM.SBothDirections"
+           in mdN <+> scn <+> "=" <+> d
         messageKindClause = "messageKind" <+> scn <+> "=" <+> "MM.SRequest"
-    pure $ RequestData {..}
+    pure $ RequestData{..}
 
   notData <- for nots $ \Notification{method, params, registrationOptions, messageDirection} -> do
     let mcn = methodName (Just mtyN) method
         direction = case messageDirection of
-            MM.ClientToServer -> "MM.ClientToServer"
-            MM.ServerToClient -> "MM.ServerToClient"
-            MM.Both           -> "f"
+          MM.ClientToServer -> "MM.ClientToServer"
+          MM.ServerToClient -> "MM.ServerToClient"
+          MM.Both -> "f"
         methCon = mcn <+> "::" <+> pretty mtyN <+> direction <+> "MM.Notification"
         scn = methodName (Just styN) method
         singCon = scn <+> "::" <+> pretty styN <+> mcn
@@ -673,11 +692,11 @@ printMethods reqs nots = do
           let d = case messageDirection of
                 MM.ClientToServer -> "MM.SClientToServer"
                 MM.ServerToClient -> "MM.SServerToClient"
-                MM.Both           -> "MM.SBothDirections"
-          in "messageDirection" <+> scn <+> "=" <+> d
+                MM.Both -> "MM.SBothDirections"
+           in "messageDirection" <+> scn <+> "=" <+> d
         messageKindClause = "messageKind" <+> scn <+> "=" <+> "MM.SNotification"
 
-    pure $ NotificationData {..}
+    pure $ NotificationData{..}
 
   -- Add the custom method case, which isn't in the metamodel
   customDat <- do
@@ -692,10 +711,10 @@ printMethods reqs nots = do
     -- MessageParams (Method_CustomMethod s) = Value
     ensureImport "Data.Aeson" (QualAs "Aeson")
     let paramsEq = mpN <+> parens (mcn <+> "s") <+> "=" <+> "Aeson.Value"
-    -- MessageResult (Method_CustomMethod s) = Value
+        -- MessageResult (Method_CustomMethod s) = Value
         resultEq = mrN <+> parens (mcn <+> "s") <+> "=" <+> "Aeson.Value"
-    -- Can shove whatever you want in the error data for custom methods?
-    -- ErrorData (Method_CustomMethod s) = Value
+        -- Can shove whatever you want in the error data for custom methods?
+        -- ErrorData (Method_CustomMethod s) = Value
         errorDataEq = edN <+> parens (mcn <+> "s") <+> "=" <+> "Aeson.Value"
     -- Can't register custom methods
     -- RegistrationOptions (Method_CustomMethod s) = Void
@@ -707,7 +726,7 @@ printMethods reqs nots = do
         messageDirectionClause = mdN <+> parens (scn <+> "_") <+> "=" <+> "MM.SBothDirections"
         messageKindClause = mkN <+> parens (scn <+> "_") <+> "=" <+> "MM.SBothTypes"
 
-    pure $ CustomData {..}
+    pure $ CustomData{..}
 
   ensureImport "Data.Kind" (QualAs "Kind")
   let dataD =
@@ -715,101 +734,111 @@ printMethods reqs nots = do
             docD = "-- | A type representing a LSP method (or class of methods), intended to be used mostly at the type level."
             ctors = fmap (\RequestData{..} -> methCon) reqData ++ fmap (\NotificationData{..} -> methCon) notData ++ [(\CustomData{..} -> methCon) customDat]
             dataD = nest indentSize $ "data" <+> pretty mtyN <+> "f t" <+> "where" <+> (hardline <> hardvcat ctors)
-        -- This only really exists on the type level so we don't really want instances anyway
-        in hardvcat [docD, sigD, dataD]
+         in -- This only really exists on the type level so we don't really want instances anyway
+            hardvcat [docD, sigD, dataD]
 
   let mpD =
         let sigD = "type" <+> mpN <+> ":: forall f t ." <+> pretty mtyN <+> "f t" <+> "->" <+> "Kind.Type"
             docD = "-- | Maps a LSP method to its parameter type."
             eqns = fmap (\RequestData{..} -> paramsEq) reqData ++ fmap (\NotificationData{..} -> paramsEq) notData ++ [(\CustomData{..} -> paramsEq) customDat]
             declD = nest indentSize $ "type family" <+> mpN <+> parens ("m :: " <+> pretty mtyN <+> "f t") <+> "where" <+> (hardline <> hardvcat eqns)
-        in hardvcat [docD, sigD, declD]
+         in hardvcat [docD, sigD, declD]
 
   let mrD =
         let sigD = "type" <+> mrN <+> ":: forall f t ." <+> pretty mtyN <+> "f t" <+> "->" <+> "Kind.Type"
             docD = "-- | Maps a LSP method to its result type."
-        -- TODO: should we give notifiations ()?
+            -- TODO: should we give notifiations ()?
             eqns = fmap (\RequestData{..} -> resultEq) reqData ++ [(\CustomData{..} -> resultEq) customDat]
             declD = nest indentSize $ "type family" <+> mrN <+> parens ("m :: " <+> pretty mtyN <+> "f t") <+> "where" <+> (hardline <> hardvcat eqns)
-        in hardvcat [docD, sigD, declD]
+         in hardvcat [docD, sigD, declD]
 
   let edD =
         let sigD = "type" <+> edN <+> ":: forall f t ." <+> pretty mtyN <+> "f t" <+> "->" <+> "Kind.Type"
             docD = "-- | Maps a LSP method to its error data type."
-        -- TODO: should we give notifiations ()?
+            -- TODO: should we give notifiations ()?
             eqns = fmap (\RequestData{..} -> errorDataEq) reqData ++ [(\CustomData{..} -> errorDataEq) customDat]
             declD = nest indentSize $ "type family" <+> edN <+> parens ("m :: " <+> pretty mtyN <+> "f t") <+> "where" <+> (hardline <> hardvcat eqns)
-        in hardvcat [docD, sigD, declD]
+         in hardvcat [docD, sigD, declD]
 
   let roD =
         let sigD = "type" <+> roN <+> ":: forall f t ." <+> pretty mtyN <+> "f t" <+> "->" <+> "Kind.Type"
             docD = "-- | Maps a LSP method to its registration options type."
             eqns = fmap (\RequestData{..} -> registrationOptionsEq) reqData ++ fmap (\NotificationData{..} -> registrationOptionsEq) notData ++ [(\CustomData{..} -> registrationOptionsEq) customDat]
             declD = nest indentSize $ "type family" <+> roN <+> parens ("m :: " <+> pretty mtyN <+> "f t") <+> "where" <+> (hardline <> hardvcat eqns)
-        in hardvcat [docD, sigD, declD]
+         in hardvcat [docD, sigD, declD]
 
   let singD =
         let sigD = "type" <+> pretty styN <+> ":: forall f t ." <+> pretty mtyN <+> "f t" <+> "->" <+> "Kind.Type"
             docD = "-- | A singleton type for 'Method'."
             ctors = fmap (\RequestData{..} -> singCon) reqData ++ fmap (\NotificationData{..} -> singCon) notData ++ [(\CustomData{..} -> singCon) customDat]
-        -- Can't derive instances, it's a GADT, will do them later
+            -- Can't derive instances, it's a GADT, will do them later
             dataD = nest indentSize $ "data" <+> pretty styN <+> "m" <+> "where" <+> (hardline <> hardvcat ctors)
-        in hardvcat [docD, sigD, dataD]
+         in hardvcat [docD, sigD, dataD]
 
   let ssmD =
         let ctor = smcn <+> "::" <+> "forall m ." <+> pretty styN <+> "m" <+> "->" <+> sstyN
             docD = "-- | A method which isn't statically known."
-        -- Can't derive instances because it's a GADT and we're not doing the instances for SMethod here either
+            -- Can't derive instances because it's a GADT and we're not doing the instances for SMethod here either
             dataD = nest indentSize $ "data" <+> sstyN <+> "where" <+> (hardline <> ctor)
-        in hardvcat [docD, dataD]
+         in hardvcat [docD, dataD]
 
   -- methodToString :: SomeMethod -> String
   let toStringD =
         let docD = "-- | Turn a 'SomeMethod' into its LSP method string."
             sigD = toStringN <+> "::" <+> sstyN <+> "->" <+> "String"
             clauses = fmap (\RequestData{..} -> toStringClause) reqData ++ fmap (\NotificationData{..} -> toStringClause) notData ++ [(\CustomData{..} -> toStringClause) customDat]
-        in hardvcat [docD, sigD, hardvcat clauses]
+         in hardvcat [docD, sigD, hardvcat clauses]
   -- stringToMethod :: String -> SomeMethod
   let fromStringD =
         let docD = "-- | Turn a LSP method string into a 'SomeMethod'."
             sigD = fromStringN <+> "::" <+> "String" <+> "->" <+> sstyN
             clauses = fmap (\RequestData{..} -> fromStringClause) reqData ++ fmap (\NotificationData{..} -> fromStringClause) notData ++ [(\CustomData{..} -> fromStringClause) customDat]
-        in hardvcat [docD, sigD, hardvcat clauses]
+         in hardvcat [docD, sigD, hardvcat clauses]
 
   let messageDirectionD =
         let docD = "-- | Get a singleton witness for the message direction of a 'SMethod'."
             sigD = mdN <+> ":: forall f t (m :: Method f t) ." <+> pretty styN <+> "m" <+> "->" <+> "MM.SMessageDirection f"
             clauses = fmap (\RequestData{..} -> messageDirectionClause) reqData ++ fmap (\NotificationData{..} -> messageDirectionClause) notData ++ [(\CustomData{..} -> messageDirectionClause) customDat]
-        in hardvcat [docD, sigD, hardvcat clauses]
+         in hardvcat [docD, sigD, hardvcat clauses]
 
   let messageKindD =
         let docD = "-- | Get a singleton witness for the message kind of a 'SMethod'."
             sigD = mkN <+> ":: forall f t (m :: Method f t) ." <+> pretty styN <+> "m" <+> "->" <+> "MM.SMessageKind t"
             clauses = fmap (\RequestData{..} -> messageKindClause) reqData ++ fmap (\NotificationData{..} -> messageKindClause) notData ++ [(\CustomData{..} -> messageKindClause) customDat]
-        in hardvcat [docD, sigD, hardvcat clauses]
+         in hardvcat [docD, sigD, hardvcat clauses]
 
   pure $
-    dataD <>
-    hardline <> hardline <>
-    mpD <>
-    hardline <> hardline <>
-    mrD <>
-    hardline <> hardline <>
-    edD <>
-    hardline <> hardline <>
-    roD <>
-    hardline <> hardline <>
-    singD <>
-    hardline <> hardline <>
-    ssmD <>
-    hardline <> hardline <>
-    toStringD <>
-    hardline <> hardline <>
-    fromStringD <>
-    hardline <> hardline <>
-    messageDirectionD <>
-    hardline <> hardline <>
-    messageKindD
+    dataD
+      <> hardline
+      <> hardline
+      <> mpD
+      <> hardline
+      <> hardline
+      <> mrD
+      <> hardline
+      <> hardline
+      <> edD
+      <> hardline
+      <> hardline
+      <> roD
+      <> hardline
+      <> hardline
+      <> singD
+      <> hardline
+      <> hardline
+      <> ssmD
+      <> hardline
+      <> hardline
+      <> toStringD
+      <> hardline
+      <> hardline
+      <> fromStringD
+      <> hardline
+      <> hardline
+      <> messageDirectionD
+      <> hardline
+      <> hardline
+      <> messageKindD
 
 genMethods :: [Request] -> [Notification] -> CodeGenM T.Text
 genMethods reqs nots = do
@@ -851,9 +880,9 @@ hardvcat = concatWith (\x y -> x <> hardline <> y)
 
 mkIterApplicativeApp :: Doc a -> [Doc a] -> Doc a
 mkIterApplicativeApp hd [] = "pure" <+> hd
-mkIterApplicativeApp hd (a:rest) =
+mkIterApplicativeApp hd (a : rest) =
   let acc = hd <+> "<$>" <+> a
-  in foldl' (\acc a -> acc <+> "<*>" <+> a) acc rest
+   in foldl' (\acc a -> acc <+> "<*>" <+> a) acc rest
 
 {- Note [Code generation approach]
 The approach we take here is quite primitive: we just print out Haskell modules

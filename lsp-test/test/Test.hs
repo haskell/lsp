@@ -1,46 +1,44 @@
-{-# LANGUAGE TypeInType #-}
-{-# LANGUAGE GADTs #-}
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeInType #-}
 
+import Control.Applicative.Combinators
+import Control.Concurrent
+import Control.Lens hiding (Iso, List)
+import Control.Monad
+import Control.Monad.IO.Class
+import Data.Aeson
+import Data.Aeson qualified as J
+import Data.Default
+import Data.Either
+import Data.Map.Strict qualified as M
+import Data.Maybe
+import Data.Proxy
+import Data.Text qualified as T
+import Data.Type.Equality
 import DummyServer
-import           Test.Hspec
-import           Data.Aeson
-import qualified Data.Aeson as J
-import           Data.Default
-import qualified Data.Map.Strict as M
-import           Data.Either
-import           Data.Maybe
-import qualified Data.Text as T
-import           Data.Type.Equality
-import           Data.Proxy
-import           Control.Applicative.Combinators
-import           Control.Concurrent
-import           Control.Monad.IO.Class
-import           Control.Monad
-import           Control.Lens hiding (List, Iso)
-import           Language.LSP.Test
-import           Language.LSP.Protocol.Message
-import           Language.LSP.Protocol.Types
-import qualified Language.LSP.Protocol.Lens as L
-import           System.Directory
-import           System.FilePath
-import           System.Timeout
-
+import Language.LSP.Protocol.Lens qualified as L
+import Language.LSP.Protocol.Message
+import Language.LSP.Protocol.Types
+import Language.LSP.Test
+import System.Directory
+import System.FilePath
+import System.Timeout
+import Test.Hspec
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
 {-# ANN module ("HLint: ignore Unnecessary hiding" :: String) #-}
-
 
 main = hspec $ around withDummyServer $ do
   describe "Session" $ do
     it "fails a test" $ \(hin, hout) ->
       let session = runSessionWithHandles hin hout def fullCaps "." $ do
-                      openDoc "test/data/renamePass/Desktop/simple.hs" "haskell"
-                      anyRequest
-        in session `shouldThrow` anySessionException
+            openDoc "test/data/renamePass/Desktop/simple.hs" "haskell"
+            anyRequest
+       in session `shouldThrow` anySessionException
     it "initializeResponse" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "." $ do
       rsp <- initializeResponse
       liftIO $ rsp ^. L.result `shouldSatisfy` isRight
@@ -51,20 +49,20 @@ main = hspec $ around withDummyServer $ do
     describe "withTimeout" $ do
       it "times out" $ \(hin, hout) ->
         let sesh = runSessionWithHandles hin hout def fullCaps "." $ do
-                    openDoc "test/data/renamePass/Desktop/simple.hs" "haskell"
-                    -- won't receive a request - will timeout
-                    -- incoming logging requests shouldn't increase the
-                    -- timeout
-                    withTimeout 5 $ skipManyTill anyMessage (message SMethod_WorkspaceApplyEdit)
-          -- wait just a bit longer than 5 seconds so we have time
-          -- to open the document
-          in timeout 6000000 sesh `shouldThrow` anySessionException
+              openDoc "test/data/renamePass/Desktop/simple.hs" "haskell"
+              -- won't receive a request - will timeout
+              -- incoming logging requests shouldn't increase the
+              -- timeout
+              withTimeout 5 $ skipManyTill anyMessage (message SMethod_WorkspaceApplyEdit)
+         in -- wait just a bit longer than 5 seconds so we have time
+            -- to open the document
+            timeout 6000000 sesh `shouldThrow` anySessionException
 
       it "doesn't time out" $ \(hin, hout) ->
         let sesh = runSessionWithHandles hin hout def fullCaps "." $ do
-                    openDoc "test/data/renamePass/Desktop/simple.hs" "haskell"
-                    withTimeout 5 $ skipManyTill anyMessage publishDiagnosticsNotification
-          in void $ timeout 6000000 sesh
+              openDoc "test/data/renamePass/Desktop/simple.hs" "haskell"
+              withTimeout 5 $ skipManyTill anyMessage publishDiagnosticsNotification
+         in void $ timeout 6000000 sesh
 
       it "further timeout messages are ignored" $ \(hin, hout) ->
         runSessionWithHandles hin hout def fullCaps "." $ do
@@ -72,24 +70,24 @@ main = hspec $ around withDummyServer $ do
           -- shouldn't timeout
           withTimeout 3 $ getDocumentSymbols doc
           -- longer than the original timeout
-          liftIO $ threadDelay (5 * 10^6)
+          liftIO $ threadDelay (5 * 10 ^ 6)
           -- shouldn't throw an exception
           getDocumentSymbols doc
           return ()
 
       it "overrides global message timeout" $ \(hin, hout) ->
         let sesh =
-              runSessionWithHandles hin hout (def { messageTimeout = 5 }) fullCaps "." $ do
+              runSessionWithHandles hin hout (def{messageTimeout = 5}) fullCaps "." $ do
                 doc <- openDoc "test/data/renamePass/Desktop/simple.hs" "haskell"
                 -- shouldn't time out in here since we are overriding it
                 withTimeout 10 $ liftIO $ threadDelay 7000000
                 getDocumentSymbols doc
                 return True
-        in sesh `shouldReturn` True
+         in sesh `shouldReturn` True
 
       it "unoverrides global message timeout" $ \(hin, hout) ->
         let sesh =
-              runSessionWithHandles hin hout (def { messageTimeout = 5 }) fullCaps "." $ do
+              runSessionWithHandles hin hout (def{messageTimeout = 5}) fullCaps "." $ do
                 doc <- openDoc "test/data/renamePass/Desktop/simple.hs" "haskell"
                 -- shouldn't time out in here since we are overriding it
                 withTimeout 10 $ liftIO $ threadDelay 7000000
@@ -98,18 +96,17 @@ main = hspec $ around withDummyServer $ do
                 skipManyTill anyMessage (message SMethod_WorkspaceApplyEdit)
             isTimeout (Timeout _) = True
             isTimeout _ = False
-        in sesh `shouldThrow` isTimeout
-
+         in sesh `shouldThrow` isTimeout
 
     describe "SessionException" $ do
       it "throw on time out" $ \(hin, hout) ->
-        let sesh = runSessionWithHandles hin hout (def {messageTimeout = 10}) fullCaps "." $ do
-                _ <- message SMethod_WorkspaceApplyEdit
-                return ()
-        in sesh `shouldThrow` anySessionException
+        let sesh = runSessionWithHandles hin hout (def{messageTimeout = 10}) fullCaps "." $ do
+              _ <- message SMethod_WorkspaceApplyEdit
+              return ()
+         in sesh `shouldThrow` anySessionException
 
       it "don't throw when no time out" $ \(hin, hout) ->
-        runSessionWithHandles hin hout (def {messageTimeout = 5}) fullCaps "." $ do
+        runSessionWithHandles hin hout (def{messageTimeout = 5}) fullCaps "." $ do
           liftIO $ threadDelay $ 6 * 1000000
           _ <- openDoc "test/data/renamePass/Desktop/simple.hs" "haskell"
           return ()
@@ -118,7 +115,7 @@ main = hspec $ around withDummyServer $ do
         it "throws when there's an unexpected message" $ \(hin, hout) ->
           let selector (UnexpectedMessage "Publish diagnostics notification" (FromServerMess SMethod_WindowLogMessage _)) = True
               selector _ = False
-            in runSessionWithHandles hin hout (def {ignoreLogNotifications=False}) fullCaps "." publishDiagnosticsNotification `shouldThrow` selector
+           in runSessionWithHandles hin hout (def{ignoreLogNotifications = False}) fullCaps "." publishDiagnosticsNotification `shouldThrow` selector
         it "provides the correct types that were expected and received" $ \(hin, hout) ->
           let selector (UnexpectedMessage "Response for: SMethod_TextDocumentRename" (FromServerRsp SMethod_TextDocumentDocumentSymbol _)) = True
               selector _ = False
@@ -127,12 +124,12 @@ main = hspec $ around withDummyServer $ do
                 sendRequest SMethod_TextDocumentDocumentSymbol (DocumentSymbolParams Nothing Nothing doc)
                 skipMany anyNotification
                 response SMethod_TextDocumentRename -- the wrong type
-            in runSessionWithHandles hin hout def fullCaps "." sesh
-              `shouldThrow` selector
+           in runSessionWithHandles hin hout def fullCaps "." sesh
+                `shouldThrow` selector
 
   describe "config" $ do
     it "updates config correctly" $ \(hin, hout) ->
-      runSessionWithHandles hin hout (def { ignoreConfigurationRequests = False }) fullCaps "." $ do
+      runSessionWithHandles hin hout (def{ignoreConfigurationRequests = False}) fullCaps "." $ do
         configurationRequest -- initialized configuration request
         let requestConfig = do
               resp <- request (SMethod_CustomMethod (Proxy @"getConfig")) J.Null
@@ -166,13 +163,13 @@ main = hspec $ around withDummyServer $ do
 
         editReq <- message SMethod_WorkspaceApplyEdit
         liftIO $ do
-          let Just [InL(TextDocumentEdit vdoc [InL edit_])] =
+          let Just [InL (TextDocumentEdit vdoc [InL edit_])] =
                 editReq ^. L.params . L.edit . L.documentChanges
-          vdoc `shouldBe` OptionalVersionedTextDocumentIdentifier  (doc ^. L.uri) (InL beforeVersion)
+          vdoc `shouldBe` OptionalVersionedTextDocumentIdentifier (doc ^. L.uri) (InL beforeVersion)
           edit_ `shouldBe` TextEdit (Range (Position 0 0) (Position 0 5)) "howdy"
 
         change <- customNotification (Proxy @"custom/textDocument/didChange")
-        let NotMess (TNotificationMessage _ _ (c::Value)) = change
+        let NotMess (TNotificationMessage _ _ (c :: Value)) = change
             Success (DidChangeTextDocumentParams reportedVDoc _edit) = fromJSON c
             VersionedTextDocumentIdentifier _ reportedVersion = reportedVDoc
 
@@ -229,13 +226,13 @@ main = hspec $ around withDummyServer $ do
       liftIO $ do
         let [InR action] = actions
         action ^. L.title `shouldBe` "Delete this"
-        action ^. L.command . _Just . L.command  `shouldBe` "deleteThis"
+        action ^. L.command . _Just . L.command `shouldBe` "deleteThis"
 
   describe "getDocumentSymbols" $
     it "works" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "." $ do
       doc <- openDoc "test/data/renamePass/Desktop/simple.hs" "haskell"
 
-      Right (mainSymbol:_) <- getDocumentSymbols doc
+      Right (mainSymbol : _) <- getDocumentSymbols doc
 
       liftIO $ do
         mainSymbol ^. L.name `shouldBe` "foo"
@@ -341,24 +338,24 @@ main = hspec $ around withDummyServer $ do
               closeDoc doc
               -- need to evaluate to throw
               documentContents doc >>= liftIO . print
-      in sesh `shouldThrow` anyException
+       in sesh `shouldThrow` anyException
 
   describe "satisfy" $
-    it "works" $ \(hin, hout) -> runSessionWithHandles hin hout (def {ignoreLogNotifications=False}) fullCaps "." $ do
+    it "works" $ \(hin, hout) -> runSessionWithHandles hin hout (def{ignoreLogNotifications = False}) fullCaps "." $ do
       openDoc "test/data/Format.hs" "haskell"
       let pred (FromServerMess SMethod_WindowLogMessage _) = True
           pred _ = False
       void $ satisfy pred
 
   describe "satisfyMaybe" $ do
-    it "returns matched data on match" $ \(hin, hout) -> runSessionWithHandles hin hout (def {ignoreLogNotifications=False}) fullCaps "." $ do
+    it "returns matched data on match" $ \(hin, hout) -> runSessionWithHandles hin hout (def{ignoreLogNotifications = False}) fullCaps "." $ do
       -- Wait for window/logMessage "initialized" from the server.
       let pred (FromServerMess SMethod_WindowLogMessage _) = Just "match" :: Maybe String
           pred _ = Nothing :: Maybe String
       result <- satisfyMaybe pred
       liftIO $ result `shouldBe` "match"
 
-    it "doesn't return if no match" $ \(hin, hout) -> runSessionWithHandles hin hout (def {ignoreLogNotifications=False}) fullCaps "." $ do
+    it "doesn't return if no match" $ \(hin, hout) -> runSessionWithHandles hin hout (def{ignoreLogNotifications = False}) fullCaps "." $ do
       let pred (FromServerMess SMethod_TextDocumentPublishDiagnostics _) = Just "matched" :: Maybe String
           pred _ = Nothing :: Maybe String
       -- We expect a window/logMessage from the server, but
@@ -368,13 +365,12 @@ main = hspec $ around withDummyServer $ do
 
   describe "ignoreLogNotifications" $
     it "works" $ \(hin, hout) ->
-      runSessionWithHandles hin hout (def { ignoreLogNotifications = True }) fullCaps "." $ do
+      runSessionWithHandles hin hout (def{ignoreLogNotifications = True}) fullCaps "." $ do
         openDoc "test/data/Format.hs" "haskell"
         void publishDiagnosticsNotification
 
   describe "dynamic capabilities" $ do
-
-    it "keeps track" $ \(hin, hout) -> runSessionWithHandles hin hout (def {ignoreLogNotifications=False}) fullCaps "." $ do
+    it "keeps track" $ \(hin, hout) -> runSessionWithHandles hin hout (def{ignoreLogNotifications = False}) fullCaps "." $ do
       loggingNotification -- initialized log message
       createDoc ".register" "haskell" ""
       message SMethod_ClientRegisterCapability
@@ -387,8 +383,11 @@ main = hspec $ around withDummyServer $ do
       liftIO $ do
         case regMethod `mEqClient` SMethod_WorkspaceDidChangeWatchedFiles of
           Just (Right HRefl) ->
-            regOpts `shouldBe` (Just $ DidChangeWatchedFilesRegistrationOptions
-                                [ FileSystemWatcher (GlobPattern $ InL $ Pattern "*.watch") (Just WatchKind_Create) ])
+            regOpts
+              `shouldBe` ( Just $
+                            DidChangeWatchedFilesRegistrationOptions
+                              [FileSystemWatcher (GlobPattern $ InL $ Pattern "*.watch") (Just WatchKind_Create)]
+                         )
           _ -> expectationFailure "Registration wasn't on workspace/didChangeWatchedFiles"
 
       -- now unregister it by sending a specific createDoc
@@ -399,7 +398,7 @@ main = hspec $ around withDummyServer $ do
       void $ sendRequest SMethod_TextDocumentHover $ HoverParams doc (Position 0 0) Nothing
       void $ anyResponse
 
-    it "handles absolute patterns" $ \(hin, hout) -> runSessionWithHandles hin hout (def {ignoreLogNotifications=False}) fullCaps "" $ do
+    it "handles absolute patterns" $ \(hin, hout) -> runSessionWithHandles hin hout (def{ignoreLogNotifications = False}) fullCaps "" $ do
       loggingNotification -- initialized log message
       curDir <- liftIO $ getCurrentDirectory
 
@@ -422,10 +421,16 @@ main = hspec $ around withDummyServer $ do
     let workPos = Position 1 0
         notWorkPos = Position 0 0
         params pos = CallHierarchyPrepareParams (TextDocumentIdentifier (Uri "")) pos Nothing
-        item = CallHierarchyItem "foo" SymbolKind_Function Nothing Nothing (Uri "")
-                                 (Range (Position 1 2) (Position 3 4))
-                                 (Range (Position 1 2) (Position 3 4))
-                                 Nothing
+        item =
+          CallHierarchyItem
+            "foo"
+            SymbolKind_Function
+            Nothing
+            Nothing
+            (Uri "")
+            (Range (Position 1 2) (Position 3 4))
+            (Range (Position 1 2) (Position 3 4))
+            Nothing
     it "prepare works" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "." $ do
       rsp <- prepareCallHierarchy (params workPos)
       liftIO $ head rsp ^. L.range `shouldBe` Range (Position 2 3) (Position 4 5)
@@ -443,4 +448,4 @@ main = hspec $ around withDummyServer $ do
     it "full works" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "." $ do
       let doc = TextDocumentIdentifier (Uri "")
       InL toks <- getSemanticTokens doc
-      liftIO $ toks ^. L.data_ `shouldBe` [0,1,2,1,0]
+      liftIO $ toks ^. L.data_ `shouldBe` [0, 1, 2, 1, 0]

@@ -1,8 +1,8 @@
 module Language.LSP.Protocol.Types.WatchKinds where
 
-import           Language.LSP.Protocol.Internal.Types (WatchKind(..))
-import           Language.LSP.Protocol.Types.LspEnum (toEnumBaseType, fromOpenEnumBaseType)
-import           Data.Set (toList, Set)
+import Data.Set (Set, toList)
+import Language.LSP.Protocol.Internal.Types (WatchKind (..))
+import Language.LSP.Protocol.Types.LspEnum (fromOpenEnumBaseType, toEnumBaseType)
 
 -- WatchKind is better represented as a Set than as enum. As the lsp spec
 -- defines them as an enum, these helper functions help bridge the difference.
@@ -31,7 +31,8 @@ containsDelete (WatchKind_Custom 6) = True
 containsDelete (WatchKind_Custom 7) = True
 containsDelete _ = False
 
--- |Combine a set of WatchKind types into a new WatchKind type that accurately
--- represents the set
+{- |Combine a set of WatchKind types into a new WatchKind type that accurately
+ represents the set
+-}
 combineWatchKinds :: Set WatchKind -> WatchKind
 combineWatchKinds s = fromOpenEnumBaseType $ sum $ toEnumBaseType <$> toList s

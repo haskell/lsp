@@ -2,8 +2,8 @@
 
 module LocationSpec where
 
-import           Language.LSP.Protocol.Types
-import           Test.Hspec
+import Language.LSP.Protocol.Types
+import Test.Hspec
 
 main :: IO ()
 main = hspec spec

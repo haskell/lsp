@@ -1,40 +1,39 @@
-{-# LANGUAGE DeriveAnyClass            #-}
-{-# LANGUAGE DeriveGeneric             #-}
-{-# LANGUAGE DuplicateRecordFields     #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE ExistentialQuantification #-}
-{-# LANGUAGE FlexibleContexts          #-}
-{-# LANGUAGE FlexibleInstances         #-}
-{-# LANGUAGE RankNTypes                #-}
-{-# LANGUAGE TemplateHaskell           #-}
-{-# LANGUAGE TypeInType                #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeInType #-}
 
 module Language.LSP.Protocol.Message.Registration where
 
-import           Language.LSP.Protocol.Types
-import           Language.LSP.Protocol.Internal.Method
-import           Language.LSP.Protocol.Message.Meta
-import           Language.LSP.Protocol.Message.Method
-import           Language.LSP.Protocol.Utils.Misc
+import Language.LSP.Protocol.Internal.Method
+import Language.LSP.Protocol.Message.Meta
+import Language.LSP.Protocol.Message.Method
+import Language.LSP.Protocol.Types
+import Language.LSP.Protocol.Utils.Misc
 
-import           Data.Aeson
-import           Data.Text                         (Text)
-import qualified Data.Text                         as T
-import           GHC.Generics
-import           Prettyprinter
+import Data.Aeson
+import Data.Text (Text)
+import Data.Text qualified as T
+import GHC.Generics
+import Prettyprinter
 
 -- | Typed registration type, with correct options.
-data TRegistration (m :: Method ClientToServer t) =
-  TRegistration
-    { -- | The id used to register the request. The id can be used to deregister
-      -- the request again.
-      _id              :: Text
-      -- | The method / capability to register for.
-    , _method          :: SClientMethod m
-      -- | Options necessary for the registration.
-      -- Make this strict to aid the pattern matching exhaustiveness checker
-    , _registerOptions :: !(Maybe (RegistrationOptions m))
-    }
-  deriving stock Generic
+data TRegistration (m :: Method ClientToServer t) = TRegistration
+  { _id :: Text
+  -- ^ The id used to register the request. The id can be used to deregister
+  -- the request again.
+  , _method :: SClientMethod m
+  -- ^ The method / capability to register for.
+  , _registerOptions :: !(Maybe (RegistrationOptions m))
+  -- ^ Options necessary for the registration.
+  -- Make this strict to aid the pattern matching exhaustiveness checker
+  }
+  deriving stock (Generic)
 
 deriving stock instance Eq (RegistrationOptions m) => Eq (TRegistration m)
 deriving stock instance Show (RegistrationOptions m) => Show (TRegistration m)
@@ -76,21 +75,21 @@ toUntypedRegistration (TRegistration i meth opts) = Registration i (T.pack $ som
 toSomeRegistration :: Registration -> Maybe SomeRegistration
 toSomeRegistration r =
   let v = toJSON r
-  in case fromJSON v of
-    Success r' -> Just r'
-    _          -> Nothing
+   in case fromJSON v of
+        Success r' -> Just r'
+        _ -> Nothing
 
 -- ---------------------------------------------------------------------
 
 -- | Typed unregistration type.
-data TUnregistration (m :: Method ClientToServer t) =
-  TUnregistration
-    { -- | The id used to unregister the request or notification. Usually an id
-      -- provided during the register request.
-      _id     :: Text
-      -- | The method / capability to unregister for.
-    , _method :: SMethod m
-    } deriving stock Generic
+data TUnregistration (m :: Method ClientToServer t) = TUnregistration
+  { _id :: Text
+  -- ^ The id used to unregister the request or notification. Usually an id
+  -- provided during the register request.
+  , _method :: SMethod m
+  -- ^ The method / capability to unregister for.
+  }
+  deriving stock (Generic)
 
 deriving stock instance Eq (TUnregistration m)
 deriving stock instance Show (TUnregistration m)
@@ -119,7 +118,6 @@ toUntypedUnregistration (TUnregistration i meth) = Unregistration i (T.pack $ so
 toSomeUnregistration :: Unregistration -> Maybe SomeUnregistration
 toSomeUnregistration r =
   let v = toJSON r
-  in case fromJSON v of
-    Success r' -> Just r'
-    _          -> Nothing
-
+   in case fromJSON v of
+        Success r' -> Just r'
+        _ -> Nothing

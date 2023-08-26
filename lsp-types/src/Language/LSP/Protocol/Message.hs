@@ -1,19 +1,25 @@
 module Language.LSP.Protocol.Message (
   -- * Messages
+
   -- ** LSP protocol message types and metadata
-  module Message
-  , module LspId
-  , module Meta
+  module Message,
+  module LspId,
+  module Meta,
+
   -- ** Parsing LSP messages
-  , module Parsing
+  module Parsing,
+
   -- * Methods
+
   -- ** Main LSP method types and functions
-  , module Generated
+  module Generated,
+
   -- ** Helpers for working with methods
-  , module Method
+  module Method,
+
   -- * LSP registrations
-  , module Registration
-  ) where
+  module Registration,
+) where
 
 import Language.LSP.Protocol.Internal.Method as Generated
 import Language.LSP.Protocol.Message.LspId as LspId

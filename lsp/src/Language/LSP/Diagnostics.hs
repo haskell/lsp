@@ -7,28 +7,28 @@
 Manage the "textDocument/publishDiagnostics" notifications to keep a local copy of the
 diagnostics for a particular file and version, partitioned by source.
 -}
-module Language.LSP.Diagnostics
-  (
-    DiagnosticStore
-  , DiagnosticsBySource
-  , StoreItem(..)
-  , partitionBySource
-  , flushBySource
-  , updateDiagnostics
-  , getDiagnosticParamsFor
+module Language.LSP.Diagnostics (
+  DiagnosticStore,
+  DiagnosticsBySource,
+  StoreItem (..),
+  partitionBySource,
+  flushBySource,
+  updateDiagnostics,
+  getDiagnosticParamsFor,
 
   -- * for tests
-  ) where
+) where
 
-import qualified Data.SortedList as SL
-import qualified Data.Map.Strict as Map
-import qualified Data.HashMap.Strict as HM
+import Data.HashMap.Strict qualified as HM
+import Data.Map.Strict qualified as Map
+import Data.SortedList qualified as SL
 import Data.Text (Text)
-import qualified Language.LSP.Protocol.Types      as J
+import Language.LSP.Protocol.Types qualified as J
 
 -- ---------------------------------------------------------------------
 {-# ANN module ("hlint: ignore Eta reduce" :: String) #-}
 {-# ANN module ("hlint: ignore Redundant do" :: String) #-}
+
 -- ---------------------------------------------------------------------
 
 {-
@@ -45,7 +45,7 @@ type DiagnosticStore = HM.HashMap J.NormalizedUri StoreItem
 
 data StoreItem
   = StoreItem (Maybe J.Int32) DiagnosticsBySource
-  deriving (Show,Eq)
+  deriving (Show, Eq)
 
 type DiagnosticsBySource = Map.Map (Maybe Text) (SL.SortedList J.Diagnostic)
 
@@ -57,34 +57,37 @@ partitionBySource diags = Map.fromListWith mappend $ map (\d -> (J._source d, (S
 -- ---------------------------------------------------------------------
 
 flushBySource :: DiagnosticStore -> Maybe Text -> DiagnosticStore
-flushBySource store Nothing       = store
+flushBySource store Nothing = store
 flushBySource store (Just source) = HM.map remove store
-  where
-    remove (StoreItem mv diags) = StoreItem mv (Map.delete (Just source) diags)
+ where
+  remove (StoreItem mv diags) = StoreItem mv (Map.delete (Just source) diags)
 
 -- ---------------------------------------------------------------------
 
-updateDiagnostics :: DiagnosticStore
-                  -> J.NormalizedUri -> Maybe J.Int32 -> DiagnosticsBySource
-                  -> DiagnosticStore
+updateDiagnostics ::
+  DiagnosticStore ->
+  J.NormalizedUri ->
+  Maybe J.Int32 ->
+  DiagnosticsBySource ->
+  DiagnosticStore
 updateDiagnostics store uri mv newDiagsBySource = r
-  where
-    newStore :: DiagnosticStore
-    newStore = HM.insert uri (StoreItem mv newDiagsBySource) store
+ where
+  newStore :: DiagnosticStore
+  newStore = HM.insert uri (StoreItem mv newDiagsBySource) store
 
-    updateDbs dbs = HM.insert uri new store
-      where
-        new = StoreItem mv newDbs
-        -- note: Map.union is left-biased, so for identical keys the first
-        -- argument is used
-        newDbs = Map.union newDiagsBySource dbs
+  updateDbs dbs = HM.insert uri new store
+   where
+    new = StoreItem mv newDbs
+    -- note: Map.union is left-biased, so for identical keys the first
+    -- argument is used
+    newDbs = Map.union newDiagsBySource dbs
 
-    r = case HM.lookup uri store of
-      Nothing -> newStore
-      Just (StoreItem mvs dbs) ->
-        if mvs /= mv
-          then newStore
-          else updateDbs dbs
+  r = case HM.lookup uri store of
+    Nothing -> newStore
+    Just (StoreItem mvs dbs) ->
+      if mvs /= mv
+        then newStore
+        else updateDbs dbs
 
 -- ---------------------------------------------------------------------
 

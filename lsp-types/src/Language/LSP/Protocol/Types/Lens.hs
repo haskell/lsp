@@ -1,11 +1,11 @@
-{-#LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Language.LSP.Protocol.Types.Lens where
 
+import Control.Lens.TH
 import Language.LSP.Protocol.Internal.Lens
 import Language.LSP.Protocol.Types.SemanticTokens
-import           Control.Lens.TH
 
 makeFieldsNoPrefix ''SemanticTokenAbsolute
 makeFieldsNoPrefix ''SemanticTokenRelative

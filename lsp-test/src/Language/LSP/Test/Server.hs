@@ -10,8 +10,8 @@ withServer :: String -> Bool -> (CreateProcess -> CreateProcess) -> (Handle -> H
 withServer serverExe logStdErr modifyCreateProcess f = do
   -- TODO Probably should just change runServer to accept
   -- separate command and arguments
-  let cmd:args = words serverExe
-      createProc = (proc cmd args) { std_in = CreatePipe, std_out = CreatePipe, std_err = CreatePipe }
+  let cmd : args = words serverExe
+      createProc = (proc cmd args){std_in = CreatePipe, std_out = CreatePipe, std_err = CreatePipe}
   withCreateProcess (modifyCreateProcess createProc) $ \(Just serverIn) (Just serverOut) (Just serverErr) serverProc -> do
     -- Need to continuously consume to stderr else it gets blocked
     -- Can't pass NoStream either to std_err

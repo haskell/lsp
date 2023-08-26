@@ -2,6 +2,7 @@ module Language.LSP.Protocol.Message.Meta where
 
 -- | Which direction messages are sent in.
 data MessageDirection = ServerToClient | ClientToServer
+
 -- | What kind of message is sent.
 data MessageKind = Notification | Request
 

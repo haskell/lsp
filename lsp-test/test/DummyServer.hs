@@ -1,27 +1,28 @@
-{-# LANGUAGE TypeInType #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeInType #-}
+
 module DummyServer where
 
 import Control.Monad
 import Control.Monad.Reader
-import Data.Aeson hiding (defaultOptions, Null)
-import qualified Data.Aeson as J
-import qualified Data.Map.Strict as M
+import Data.Aeson hiding (Null, defaultOptions)
+import Data.Aeson qualified as J
 import Data.List (isSuffixOf)
-import qualified Data.Text as T
+import Data.Map.Strict qualified as M
+import Data.Proxy
 import Data.String
-import UnliftIO.Concurrent
+import Data.Text qualified as T
+import Language.LSP.Protocol.Message
+import Language.LSP.Protocol.Types
 import Language.LSP.Server
-import System.IO
-import UnliftIO
 import System.Directory
 import System.FilePath
+import System.IO
 import System.Process
-import Language.LSP.Protocol.Types
-import Language.LSP.Protocol.Message
-import Data.Proxy
+import UnliftIO
+import UnliftIO.Concurrent
 
 withDummyServer :: ((Handle, Handle) -> IO ()) -> IO ()
 withDummyServer f = do
@@ -30,7 +31,8 @@ withDummyServer f = do
 
   handlerEnv <- HandlerEnv <$> newEmptyMVar <*> newEmptyMVar
   let
-    definition = ServerDefinition
+    definition =
+      ServerDefinition
         { doInitialize = \env _req -> pure $ Right env
         , defaultConfig = 1 :: Int
         , configSection = "dummy"
@@ -41,14 +43,13 @@ withDummyServer f = do
         , staticHandlers = \_caps -> handlers
         , interpretHandler = \env ->
             Iso (\m -> runLspT env (runReaderT m handlerEnv)) liftIO
-        , options = defaultOptions {optExecuteCommandCommands = Just ["doAnEdit"]}
+        , options = defaultOptions{optExecuteCommandCommands = Just ["doAnEdit"]}
         }
 
   bracket
     (forkIO $ void $ runServerWithHandles mempty mempty hinRead houtWrite definition)
     killThread
     (const $ f (hinWrite, houtRead))
-
 
 data HandlerEnv = HandlerEnv
   { relRegToken :: MVar (RegistrationToken Method_WorkspaceDidChangeWatchedFiles)
@@ -62,11 +63,9 @@ handlers =
         \_noti ->
           sendNotification SMethod_WindowLogMessage $
             LogMessageParams MessageType_Log "initialized"
-
     , requestHandler (SMethod_CustomMethod (Proxy @"getConfig")) $ \_req resp -> do
         config <- getConfig
         resp $ Right $ toJSON config
-
     , requestHandler SMethod_TextDocumentHover $
         \_req responder ->
           responder $
@@ -77,18 +76,19 @@ handlers =
         \_req responder ->
           responder $
             Right $
-              InR $ InL
-                [ DocumentSymbol
-                    "foo"
-                    Nothing
-                    SymbolKind_Object
-                    Nothing
-                    Nothing
-                    (mkRange 0 0 3 6)
-                    (mkRange 0 0 3 6)
-                    Nothing
-                ]
-     , notificationHandler SMethod_TextDocumentDidOpen $
+              InR $
+                InL
+                  [ DocumentSymbol
+                      "foo"
+                      Nothing
+                      SymbolKind_Object
+                      Nothing
+                      Nothing
+                      (mkRange 0 0 3 6)
+                      (mkRange 0 0 3 6)
+                      Nothing
+                  ]
+    , notificationHandler SMethod_TextDocumentDidOpen $
         \noti -> do
           let TNotificationMessage _ _ (DidOpenTextDocumentParams doc) = noti
               TextDocumentItem uri _ _ _ = doc
@@ -153,37 +153,35 @@ handlers =
                 do
                   Just token <- runInIO $ asks absRegToken >>= tryReadMVar
                   runInIO $ unregisterCapability token
-
-      -- this handler is used by the
+    , -- this handler is used by the
       -- "text document VFS / sends back didChange notifications (documentChanges)" test
-    , notificationHandler SMethod_TextDocumentDidChange $ \noti -> do
+      notificationHandler SMethod_TextDocumentDidChange $ \noti -> do
         let TNotificationMessage _ _ params = noti
         void $ sendNotification (SMethod_CustomMethod (Proxy @"custom/textDocument/didChange")) (toJSON params)
-
-     , requestHandler SMethod_WorkspaceExecuteCommand $ \req resp -> do
-       case req of
-        TRequestMessage _ _ _ (ExecuteCommandParams Nothing "doAnEdit" (Just [val])) -> do
-          let
-            Success docUri = fromJSON val
-            edit = [TextEdit (mkRange 0 0 0 5) "howdy"]
-            params =
-              ApplyWorkspaceEditParams (Just "Howdy edit") $
-                WorkspaceEdit (Just (M.singleton docUri edit)) Nothing Nothing
-          resp $ Right $ InR $ Null
-          void $ sendRequest SMethod_WorkspaceApplyEdit params (const (pure ()))
-        TRequestMessage _ _ _ (ExecuteCommandParams Nothing "doAVersionedEdit" (Just [val])) -> do
-          let
-            Success versionedDocUri = fromJSON val
-            edit = [InL (TextEdit (mkRange 0 0 0 5) "howdy")]
-            documentEdit = TextDocumentEdit versionedDocUri edit
-            params =
-              ApplyWorkspaceEditParams (Just "Howdy edit") $
-                WorkspaceEdit Nothing (Just [InL documentEdit]) Nothing
-          resp $ Right $ InR Null
-          void $ sendRequest SMethod_WorkspaceApplyEdit params (const (pure ()))
-        TRequestMessage _ _ _ (ExecuteCommandParams _ name _) ->
-          error $ "unsupported command: " <> show name
-     , requestHandler SMethod_TextDocumentCodeAction $ \req resp -> do
+    , requestHandler SMethod_WorkspaceExecuteCommand $ \req resp -> do
+        case req of
+          TRequestMessage _ _ _ (ExecuteCommandParams Nothing "doAnEdit" (Just [val])) -> do
+            let
+              Success docUri = fromJSON val
+              edit = [TextEdit (mkRange 0 0 0 5) "howdy"]
+              params =
+                ApplyWorkspaceEditParams (Just "Howdy edit") $
+                  WorkspaceEdit (Just (M.singleton docUri edit)) Nothing Nothing
+            resp $ Right $ InR $ Null
+            void $ sendRequest SMethod_WorkspaceApplyEdit params (const (pure ()))
+          TRequestMessage _ _ _ (ExecuteCommandParams Nothing "doAVersionedEdit" (Just [val])) -> do
+            let
+              Success versionedDocUri = fromJSON val
+              edit = [InL (TextEdit (mkRange 0 0 0 5) "howdy")]
+              documentEdit = TextDocumentEdit versionedDocUri edit
+              params =
+                ApplyWorkspaceEditParams (Just "Howdy edit") $
+                  WorkspaceEdit Nothing (Just [InL documentEdit]) Nothing
+            resp $ Right $ InR Null
+            void $ sendRequest SMethod_WorkspaceApplyEdit params (const (pure ()))
+          TRequestMessage _ _ _ (ExecuteCommandParams _ name _) ->
+            error $ "unsupported command: " <> show name
+    , requestHandler SMethod_TextDocumentCodeAction $ \req resp -> do
         let TRequestMessage _ _ _ params = req
             CodeActionParams _ _ _ _ cactx = params
             CodeActionContext diags _ _ = cactx
@@ -199,7 +197,7 @@ handlers =
                 (Just (Command "" "deleteThis" Nothing))
                 Nothing
         resp $ Right $ InL $ InR <$> codeActions
-     , requestHandler SMethod_TextDocumentCompletion $ \_req resp -> do
+    , requestHandler SMethod_TextDocumentCompletion $ \_req resp -> do
         let res = CompletionList True Nothing [item]
             item =
               CompletionItem
@@ -223,7 +221,7 @@ handlers =
                 Nothing
                 Nothing
         resp $ Right $ InR $ InL res
-     , requestHandler SMethod_TextDocumentPrepareCallHierarchy $ \req resp -> do
+    , requestHandler SMethod_TextDocumentPrepareCallHierarchy $ \req resp -> do
         let TRequestMessage _ _ _ params = req
             CallHierarchyPrepareParams _ pos _ = params
             Position x y = pos
@@ -240,17 +238,21 @@ handlers =
         if x == 0 && y == 0
           then resp $ Right $ InR Null
           else resp $ Right $ InL [item]
-     , requestHandler SMethod_CallHierarchyIncomingCalls $ \req resp -> do
+    , requestHandler SMethod_CallHierarchyIncomingCalls $ \req resp -> do
         let TRequestMessage _ _ _ params = req
             CallHierarchyIncomingCallsParams _ _ item = params
-        resp $ Right $ InL
-          [CallHierarchyIncomingCall item [Range (Position 2 3) (Position 4 5)]]
-     , requestHandler SMethod_CallHierarchyOutgoingCalls $ \req resp -> do
+        resp $
+          Right $
+            InL
+              [CallHierarchyIncomingCall item [Range (Position 2 3) (Position 4 5)]]
+    , requestHandler SMethod_CallHierarchyOutgoingCalls $ \req resp -> do
         let TRequestMessage _ _ _ params = req
             CallHierarchyOutgoingCallsParams _ _ item = params
-        resp $ Right $ InL
-          [CallHierarchyOutgoingCall item [Range (Position 4 5) (Position 2 3)]]
-     , requestHandler SMethod_TextDocumentSemanticTokensFull $ \_req resp -> do
+        resp $
+          Right $
+            InL
+              [CallHierarchyOutgoingCall item [Range (Position 4 5) (Position 2 3)]]
+    , requestHandler SMethod_TextDocumentSemanticTokensFull $ \_req resp -> do
         let tokens = makeSemanticTokens defaultSemanticTokensLegend [SemanticTokenAbsolute 0 1 2 SemanticTokenTypes_Type []]
         case tokens of
           Left t -> resp $ Left $ ResponseError (InR ErrorCodes_InternalError) t Nothing
