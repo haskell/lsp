@@ -1,3 +1,5 @@
+{- ORMOLU_DISABLE -}
+
 {-# LANGUAGE CPP               #-}
 {-# LANGUAGE GADTs             #-}
 {-# LANGUAGE OverloadedStrings #-}
