@@ -220,16 +220,20 @@ inferServerCapabilities clientCaps o h =
     , _semanticTokensProvider           = semanticTokensProvider
     , _workspaceSymbolProvider          = supportedBool SMethod_WorkspaceSymbol
     , _workspace                        = Just workspace
-    -- TODO: Add something for experimental
     , _experimental                     = Nothing :: Maybe Value
-    -- TODO
-    , _positionEncoding  = Nothing
-    , _notebookDocumentSync  = Nothing
-    , _linkedEditingRangeProvider  = Nothing
-    , _monikerProvider  = Nothing
-    , _typeHierarchyProvider  = Nothing
-    , _inlineValueProvider  = Nothing
-    , _diagnosticProvider  = Nothing
+    -- The only encoding the VFS supports is the legacy UTF16 option at the moment
+    , _positionEncoding                 = Just PositionEncodingKind_UTF16
+    , _linkedEditingRangeProvider       = supported' SMethod_TextDocumentLinkedEditingRange $
+                                              InR $ InL $ LinkedEditingRangeOptions { _workDoneProgress=Nothing }
+    , _monikerProvider                  = supported' SMethod_TextDocumentMoniker $
+                                              InR $ InL $ MonikerOptions { _workDoneProgress=Nothing }
+    , _typeHierarchyProvider            = supported' SMethod_TextDocumentPrepareTypeHierarchy $
+                                              InR $ InL $ TypeHierarchyOptions { _workDoneProgress=Nothing }
+    , _inlineValueProvider              = supported' SMethod_TextDocumentInlineValue $
+                                              InR $ InL $ InlineValueOptions { _workDoneProgress=Nothing }
+    , _diagnosticProvider               = diagnosticProvider
+    -- TODO: super unclear what to do about notebooks in general
+    , _notebookDocumentSync             = Nothing
     }
   where
 
@@ -342,6 +346,14 @@ inferServerCapabilities clientCaps o h =
     workspaceFolder = supported' SMethod_WorkspaceDidChangeWorkspaceFolders $
         -- sign up to receive notifications
         WorkspaceFoldersServerCapabilities (Just True) (Just (InR True))
+
+    diagnosticProvider = supported' SMethod_TextDocumentDiagnostic $ InL $ DiagnosticOptions
+      { _workDoneProgress=Nothing
+      , _identifier=Nothing
+      -- TODO: this is a conservative but maybe inaccurate, unclear how much it matters
+      , _interFileDependencies=True
+      , _workspaceDiagnostics=supported_b SMethod_WorkspaceDiagnostic
+      }
 
 -- | Invokes the registered dynamic or static handlers for the given message and
 -- method, as well as doing some bookkeeping.
