@@ -20,6 +20,7 @@ import qualified Colog.Core as L
 import           Colog.Core (LogAction (..), WithSeverity (..), Severity (..), (<&))
 import           Control.Concurrent
 import           Control.Concurrent.STM.TChan
+import           Control.Applicative((<|>))
 import           Control.Monad
 import           Control.Monad.STM
 import           Control.Monad.IO.Class
@@ -187,10 +188,23 @@ ioLoop ioLogger logger clientIn serverDefinition vfs sendMsg = do
               go (parse parser remainder)
 
     parser = do
+      try contentType <|> (return ())
+      len <- contentLength
+      try contentType <|> (return ())
+      _ <- string _ONE_CRLF
+      Attoparsec.take len
+
+    contentLength = do
       _ <- string "Content-Length: "
       len <- decimal
-      _ <- string _TWO_CRLF
-      Attoparsec.take len
+      _ <- string _ONE_CRLF
+      return len
+
+    contentType = do 
+      _ <- string "Content-Type: "
+      skipWhile (/='\r')
+      _ <- string _ONE_CRLF
+      return ()
 
 parseOne ::
   MonadIO m
@@ -241,6 +255,8 @@ sendServer _logger msgChan clientOut = do
 -- |
 --
 --
+_ONE_CRLF :: BS.ByteString
+_ONE_CRLF = "\r\n"
 _TWO_CRLF :: BS.ByteString
 _TWO_CRLF = "\r\n\r\n"
 
