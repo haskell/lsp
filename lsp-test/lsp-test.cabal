@@ -93,8 +93,7 @@ test-suite tests
   hs-source-dirs:   test
   main-is:          Test.hs
   default-language: Haskell2010
-  default-extensions: ImportQualifiedPost
-  ghc-options:      -W
+  ghc-options:      -W -threaded -rtsopts -with-rtsopts=-N
   other-modules:    DummyServer
   build-depends:
     , aeson
@@ -120,6 +119,7 @@ test-suite func-test
   default-language: Haskell2010
   default-extensions: ImportQualifiedPost
   main-is:          FuncTest.hs
+  ghc-options:      -threaded -rtsopts -with-rtsopts=-N
   build-depends:
     , base
     , co-log-core
@@ -138,6 +138,7 @@ test-suite example
   default-language:   Haskell2010
   default-extensions: ImportQualifiedPost
   main-is:            Test.hs
+  ghc-options:        -threaded -rtsopts -with-rtsopts=-N
   build-depends:
     , base
     , lsp-test
@@ -150,7 +151,7 @@ benchmark simple-bench
   default-language: Haskell2010
   default-extensions: ImportQualifiedPost
   main-is:          SimpleBench.hs
-  ghc-options:      -Wall -O2 -eventlog -rtsopts
+  ghc-options:      -Wall -O2 -eventlog -threaded -rtsopts -with-rtsopts=-N
   build-depends:
     , base
     , extra
