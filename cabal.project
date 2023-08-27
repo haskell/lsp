@@ -10,5 +10,7 @@ index-state: 2023-07-09T00:00:00Z
 
 tests: True
 benchmarks: True
+documentation: True
+
 test-show-details: direct
 haddock-quickjump: True
