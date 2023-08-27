@@ -7,41 +7,60 @@ on:
   pull_request:
 
 jobs:
+  # Broadly copied from https://github.com/haskell/actions/tree/main/setup
   build:
 
     runs-on: ${{ matrix.os }}
-
     strategy:
       fail-fast: false
       matrix:
-        ghc: ['9.6', '9.4', '9.2', '9.0', '8.10']
+        ghc-version: ['9.6', '9.4', '9.2', '9.0', '8.10']
         # Unlikely that we'll succeed on windows and fail on macos,
         # including it is just burning CI time. But windows could have
         # path or IO issues, so worth including
         os: [ubuntu-latest, windows-latest]
 
     steps:
-    - uses: actions/checkout@v3
-    - uses: haskell/actions/setup@v2
-      with:
-        ghc-version: ${{ matrix.ghc }}
+      - uses: actions/checkout@v3
 
-    - name: Cabal cache
-      uses: actions/cache@v3
-      env:
-        cache-name: cache-cabal
-      with:
-        path: ~/.cabal
-        key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/*.cabal') }}-${{ hashFiles('**/cabal.project') }}
-        restore-keys: |
-          ${{ runner.os }}-build-${{ env.cache-name }}-
+      - name: Set up Haskell toolchain
+        uses: haskell/actions/setup@v2
+        id: setup
+        with:
+          ghc-version: ${{ matrix.ghc-version }}
 
-    - name: Cabal update
-      run: cabal update
-    - name: Build using cabal
-      run: cabal build all
-    - name: Test
-      run: cabal test all
+      - name: Configure the build
+        run: |
+          cabal build all --dry-run
+        # The last step generates dist-newstyle/cache/plan.json for the cache key.
+
+      - name: Restore cached dependencies
+        uses: actions/cache/restore@v3
+        id: cache
+        env:
+          key: ${{ runner.os }}-ghc-${{ steps.setup.outputs.ghc-version }}-cabal-${{ steps.setup.outputs.cabal-version }}
+        with:
+          path: ${{ steps.setup.outputs.cabal-store }}
+          key: ${{ env.key }}-plan-${{ hashFiles('**/plan.json') }}
+          restore-keys: ${{ env.key }}-
+
+      - name: Install dependencies
+        run: cabal build all --only-dependencies
+
+      # Cache dependencies already here, so that we do not have to rebuild them should the subsequent steps fail.
+      - name: Save cached dependencies
+        uses: actions/cache/save@v3
+        # Caches are immutable, trying to save with the same key would error.
+        if: ${{ steps.cache.outputs.cache-primary-key != steps.cache.outputs.cache-matched-key }}
+        with:
+          path: ${{ steps.setup.outputs.cabal-store }}
+          key: ${{ steps.cache.outputs.cache-primary-key }}
+
+      - name: Build
+        run: cabal build all
+
+      - name: Run tests
+        run: cabal test all
 
   haskell_post_job:
     runs-on: ubuntu-latest
