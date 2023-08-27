@@ -1,14 +1,20 @@
+index-state: 2023-07-09T00:00:00Z
+
 packages:
          ./lsp
          ./lsp-types/
          ./lsp-test/
 
+tests: True
+test-show-details: direct
+
+benchmarks: True
+
 package lsp
   flags: +demo
 
-index-state: 2023-07-09T00:00:00Z
+package lsp-types
+  -- This makes a big difference here as lsp-types
+  -- has very many independent modules 
+  ghc-options: -j4
 
-tests: True
-benchmarks: True
-
-test-show-details: direct
