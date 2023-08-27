@@ -2,6 +2,7 @@
 
 module Language.LSP.Server (
   module Language.LSP.Server.Control,
+  module Language.LSP.Server.IO,
   VFSData (..),
   ServerDefinition (..),
 
@@ -63,3 +64,4 @@ module Language.LSP.Server (
 
 import Language.LSP.Server.Control
 import Language.LSP.Server.Core
+import Language.LSP.Server.IO

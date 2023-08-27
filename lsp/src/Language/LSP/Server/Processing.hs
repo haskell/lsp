@@ -43,6 +43,7 @@ import Data.Aeson hiding (
   Null,
   Options,
  )
+import Data.Aeson qualified as J
 import Data.Aeson.Lens ()
 import Data.Aeson.Types hiding (
   Error,
@@ -75,7 +76,8 @@ import System.Exit
 data LspProcessingLog
   = VfsLog VfsLog
   | LspCore LspCoreLog
-  | MessageProcessingError BSL.ByteString String
+  | DecodeInitializeError String
+  | MessageProcessingError Value String
   | forall m. MissingHandler Bool (SClientMethod m)
   | ProgressCancel ProgressToken
   | Exiting
@@ -85,22 +87,46 @@ deriving instance Show LspProcessingLog
 instance Pretty LspProcessingLog where
   pretty (VfsLog l) = pretty l
   pretty (LspCore l) = pretty l
-  pretty (MessageProcessingError bs err) =
+  pretty (DecodeInitializeError err) =
+    vsep
+      [ "Got error while decoding initialize:"
+      , pretty err
+      ]
+  pretty (MessageProcessingError val err) =
     vsep
       [ "LSP: incoming message parse error:"
       , pretty err
       , "when processing"
-      , pretty (TL.decodeUtf8 bs)
+      , viaShow val
       ]
   pretty (MissingHandler _ m) = "LSP: no handler for:" <+> pretty m
   pretty (ProgressCancel tid) = "LSP: cancelling action for token:" <+> pretty tid
   pretty Exiting = "LSP: Got exit, exiting"
 
-processMessage :: (m ~ LspM config) => LogAction m (WithSeverity LspProcessingLog) -> BSL.ByteString -> m ()
-processMessage logger jsonStr = do
+processingLoop ::
+  LogAction IO (WithSeverity LspProcessingLog) ->
+  LogAction (LspM config) (WithSeverity LspProcessingLog) ->
+  VFS ->
+  ServerDefinition config ->
+  (Value -> IO ()) ->
+  IO Value ->
+  IO ()
+processingLoop ioLogger logger vfs serverDefinition sendMsg recvMsg = do
+  initMsg <- recvMsg
+  case fromJSON initMsg of
+    J.Error err -> ioLogger <& DecodeInitializeError err `WithSeverity` Error
+    Success initialize -> do
+      mInitResp <- initializeRequestHandler ioLogger serverDefinition vfs (sendMsg . J.toJSON) initialize
+      case mInitResp of
+        Nothing -> pure ()
+        Just env -> runLspT env $ forever $ do
+          msg <- liftIO recvMsg
+          processMessage logger msg
+
+processMessage :: (m ~ LspM config) => LogAction m (WithSeverity LspProcessingLog) -> Value -> m ()
+processMessage logger val = do
   pendingResponsesVar <- LspT $ asks $ resPendingResponses . resState
   join $ liftIO $ atomically $ fmap handleErrors $ runExceptT $ do
-    val <- except $ eitherDecode jsonStr
     pending <- lift $ readTVar pendingResponsesVar
     msg <- except $ parseEither (parser pending) val
     lift $ case msg of
@@ -115,7 +141,7 @@ processMessage logger jsonStr = do
     let (mhandler, newMap) = pickFromIxMap i rm
      in (\(P.Pair m handler) -> (m, P.Pair handler (Const newMap))) <$> mhandler
 
-  handleErrors = either (\e -> logger <& MessageProcessingError jsonStr e `WithSeverity` Error) id
+  handleErrors = either (\e -> logger <& MessageProcessingError val e `WithSeverity` Error) id
 
 -- | Call this to initialize the session
 initializeRequestHandler ::
