@@ -6,5 +6,5 @@ shellFor {
   doBenchmark = true;
   doTest = true;
   packages = p: with builtins; map (name: p.${name}) (attrNames ourSources);
-  buildInputs = [ cabal-install nixpkgs.haskellPackages.haskell-language-server ];
+  buildInputs = [ cabal-install nixpkgs.haskellPackages.haskell-language-server nixpkgs.haskellPackages.fourmolu ];
 }

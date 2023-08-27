@@ -1,16 +1,17 @@
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE OverloadedStrings #-}
+
 module VspSpec where
 
-import           Data.Row
-import           Data.String
-import qualified Data.Text.Utf16.Rope as Rope
-import           Language.LSP.VFS
-import qualified Language.LSP.Protocol.Types as J
-import qualified Data.Text as T
+import Data.Row
+import Data.String
+import Data.Text qualified as T
+import Data.Text.Utf16.Rope qualified as Rope
+import Language.LSP.Protocol.Types qualified as J
+import Language.LSP.VFS
 
-import           Test.Hspec
 import Data.Functor.Identity
+import Test.Hspec
 
 -- ---------------------------------------------------------------------
 
@@ -50,27 +51,28 @@ vspSpec = do
     it "handles vscode style redos" $ do
       let orig = ""
           changes =
-            [
-              mkChangeEvent (J.mkRange 0 1 0 1) "a"
+            [ mkChangeEvent (J.mkRange 0 1 0 1) "a"
             , mkChangeEvent (J.mkRange 0 2 0 2) "b"
             , mkChangeEvent (J.mkRange 0 3 0 3) "c"
             ]
       applyChanges mempty orig changes `shouldBe` Identity "abc"
 
-    -- ---------------------------------
+  -- ---------------------------------
 
   describe "deletes characters" $ do
     it "deletes characters within a line" $ do
       -- based on vscode log
       let
-        orig = unlines
-          [ "abcdg"
-          , "module Foo where"
-          , "-- fooo"
-          , "foo :: Int"
-          ]
+        orig =
+          unlines
+            [ "abcdg"
+            , "module Foo where"
+            , "-- fooo"
+            , "foo :: Int"
+            ]
         new = applyChange mempty (fromString orig) $ mkChangeEvent (J.mkRange 2 1 2 5) ""
-      Rope.lines <$> new `shouldBe` Identity
+      Rope.lines <$> new
+        `shouldBe` Identity
           [ "abcdg"
           , "module Foo where"
           , "-oo"
@@ -82,14 +84,16 @@ vspSpec = do
     it "deletes one line" $ do
       -- based on vscode log
       let
-        orig = unlines
-          [ "abcdg"
-          , "module Foo where"
-          , "-- fooo"
-          , "foo :: Int"
-          ]
+        orig =
+          unlines
+            [ "abcdg"
+            , "module Foo where"
+            , "-- fooo"
+            , "foo :: Int"
+            ]
         new = applyChange mempty (fromString orig) $ mkChangeEvent (J.mkRange 2 0 3 0) ""
-      Rope.lines <$> new `shouldBe` Identity
+      Rope.lines <$> new
+        `shouldBe` Identity
           [ "abcdg"
           , "module Foo where"
           , "foo :: Int"
@@ -100,31 +104,35 @@ vspSpec = do
     it "deletes two lines" $ do
       -- based on vscode log
       let
-        orig = unlines
-          [ "module Foo where"
-          , "-- fooo"
-          , "foo :: Int"
-          , "foo = bb"
-          ]
+        orig =
+          unlines
+            [ "module Foo where"
+            , "-- fooo"
+            , "foo :: Int"
+            , "foo = bb"
+            ]
         new = applyChange mempty (fromString orig) $ mkChangeEvent (J.mkRange 1 0 3 0) ""
-      Rope.lines <$> new `shouldBe` Identity
+      Rope.lines <$> new
+        `shouldBe` Identity
           [ "module Foo where"
           , "foo = bb"
           ]
 
-    -- ---------------------------------
+  -- ---------------------------------
 
   describe "adds characters" $ do
     it "adds one line" $ do
       -- based on vscode log
       let
-        orig = unlines
-          [ "abcdg"
-          , "module Foo where"
-          , "foo :: Int"
-          ]
+        orig =
+          unlines
+            [ "abcdg"
+            , "module Foo where"
+            , "foo :: Int"
+            ]
         new = applyChange mempty (fromString orig) $ mkChangeEvent (J.mkRange 1 16 1 16) "\n-- fooo"
-      Rope.lines <$> new `shouldBe` Identity
+      Rope.lines <$> new
+        `shouldBe` Identity
           [ "abcdg"
           , "module Foo where"
           , "-- fooo"
@@ -136,38 +144,42 @@ vspSpec = do
     it "adds two lines" $ do
       -- based on vscode log
       let
-        orig = unlines
-          [ "module Foo where"
-          , "foo = bb"
-          ]
+        orig =
+          unlines
+            [ "module Foo where"
+            , "foo = bb"
+            ]
         new = applyChange mempty (fromString orig) $ mkChangeEvent (J.mkRange 1 8 1 8) "\n-- fooo\nfoo :: Int"
-      Rope.lines <$> new `shouldBe` Identity
+      Rope.lines <$> new
+        `shouldBe` Identity
           [ "module Foo where"
           , "foo = bb"
           , "-- fooo"
           , "foo :: Int"
           ]
 
-    -- ---------------------------------
+  -- ---------------------------------
 
   describe "changes characters" $ do
     it "removes end of a line" $ do
       -- based on vscode log
       let
-        orig = unlines
-          [ "module Foo where"
-          , "-- fooo"
-          , "foo :: Int"
-          , "foo = bb"
-          , ""
-          , "bb = 5"
-          , ""
-          , "baz = do"
-          , "  putStrLn \"hello world\""
-          ]
+        orig =
+          unlines
+            [ "module Foo where"
+            , "-- fooo"
+            , "foo :: Int"
+            , "foo = bb"
+            , ""
+            , "bb = 5"
+            , ""
+            , "baz = do"
+            , "  putStrLn \"hello world\""
+            ]
         -- new = changeChars (fromString orig) (J.Position 7 0) (J.Position 7 8) "baz ="
         new = applyChange mempty (fromString orig) $ mkChangeEvent (J.mkRange 7 0 7 8) "baz ="
-      Rope.lines <$> new `shouldBe` Identity
+      Rope.lines <$> new
+        `shouldBe` Identity
           [ "module Foo where"
           , "-- fooo"
           , "foo :: Int"
@@ -180,54 +192,58 @@ vspSpec = do
           ]
     it "indexes using utf-16 code units" $ do
       let
-        orig = unlines
-          [ "a𐐀b"
-          , "a𐐀b"
-          ]
+        orig =
+          unlines
+            [ "a𐐀b"
+            , "a𐐀b"
+            ]
         new = applyChange mempty (fromString orig) $ mkChangeEvent (J.mkRange 1 0 1 3) "𐐀𐐀"
-      Rope.lines <$> new `shouldBe` Identity
+      Rope.lines <$> new
+        `shouldBe` Identity
           [ "a𐐀b"
           , "𐐀𐐀b"
           ]
 
-    -- ---------------------------------
+  -- ---------------------------------
 
   describe "LSP utilities" $ do
     it "splits at a line" $ do
       let
-        orig = unlines
-          [ "module Foo where"
-          , "-- fooo"
-          , "foo :: Int"
-          , "foo = bb"
-          , ""
-          , "bb = 5"
-          , ""
-          , "baz = do"
-          , "  putStrLn \"hello world\""
-          ]
-        (left,right) = Rope.splitAtLine 4 (fromString orig)
+        orig =
+          unlines
+            [ "module Foo where"
+            , "-- fooo"
+            , "foo :: Int"
+            , "foo = bb"
+            , ""
+            , "bb = 5"
+            , ""
+            , "baz = do"
+            , "  putStrLn \"hello world\""
+            ]
+        (left, right) = Rope.splitAtLine 4 (fromString orig)
 
-      Rope.lines left `shouldBe`
-          [ "module Foo where"
-          , "-- fooo"
-          , "foo :: Int"
-          , "foo = bb"
-          ]
-      Rope.lines right `shouldBe`
-          [ ""
-          , "bb = 5"
-          , ""
-          , "baz = do"
-          , "  putStrLn \"hello world\""
-          ]
+      Rope.lines left
+        `shouldBe` [ "module Foo where"
+                   , "-- fooo"
+                   , "foo :: Int"
+                   , "foo = bb"
+                   ]
+      Rope.lines right
+        `shouldBe` [ ""
+                   , "bb = 5"
+                   , ""
+                   , "baz = do"
+                   , "  putStrLn \"hello world\""
+                   ]
 
     it "converts code units to code points" $ do
       let
-        orig = unlines
-          [ "a𐐀b"
-          , "a𐐀b"
-          ]
+        orig =
+          unlines
+            [ "a𐐀b"
+            , "a𐐀b"
+            ]
         vfile = VirtualFile 0 0 (fromString orig)
 
       positionToCodePointPosition vfile (J.Position 1 0) `shouldBe` Just (CodePointPosition 1 0)
@@ -245,10 +261,11 @@ vspSpec = do
 
     it "converts code points to code units" $ do
       let
-        orig = unlines
-          [ "a𐐀b"
-          , "a𐐀b"
-          ]
+        orig =
+          unlines
+            [ "a𐐀b"
+            , "a𐐀b"
+            ]
         vfile = VirtualFile 0 0 (fromString orig)
 
       codePointPositionToPosition vfile (CodePointPosition 1 0) `shouldBe` Just (J.Position 1 0)
@@ -266,10 +283,11 @@ vspSpec = do
 
     it "getCompletionPrefix" $ do
       let
-        orig = T.unlines
-          [ "{-# ings #-}"
-          , "import Data.List"
-          ]
+        orig =
+          T.unlines
+            [ "{-# ings #-}"
+            , "import Data.List"
+            ]
       pp4 <- getCompletionPrefix (J.Position 0 4) (vfsFromText orig)
       pp4 `shouldBe` Just (PosPrefixInfo "{-# ings #-}" "" "" (J.Position 0 4))
 

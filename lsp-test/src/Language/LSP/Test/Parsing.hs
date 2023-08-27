@@ -1,97 +1,100 @@
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeInType #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeInType #-}
 
-module Language.LSP.Test.Parsing
-  ( -- $receiving
-    satisfy
-  , satisfyMaybe
-  , message
-  , response
-  , responseForId
-  , customRequest
-  , customNotification
-  , anyRequest
-  , anyResponse
-  , anyNotification
-  , anyMessage
-  , loggingNotification
-  , configurationRequest
-  , loggingOrConfiguration
-  , publishDiagnosticsNotification
-  ) where
+module Language.LSP.Test.Parsing (
+  -- $receiving
+  satisfy,
+  satisfyMaybe,
+  message,
+  response,
+  responseForId,
+  customRequest,
+  customNotification,
+  anyRequest,
+  anyResponse,
+  anyNotification,
+  anyMessage,
+  loggingNotification,
+  configurationRequest,
+  loggingOrConfiguration,
+  publishDiagnosticsNotification,
+) where
 
 import Control.Applicative
 import Control.Concurrent
-import Control.Monad.IO.Class
 import Control.Monad
+import Control.Monad.IO.Class
 import Data.Conduit.Parser hiding (named)
-import qualified Data.Conduit.Parser (named)
-import qualified Data.Text as T
+import Data.Conduit.Parser qualified (named)
+import Data.GADT.Compare
+import Data.Text qualified as T
 import Data.Typeable
+import GHC.TypeLits (KnownSymbol, symbolVal)
 import Language.LSP.Protocol.Message
 import Language.LSP.Test.Session
-import GHC.TypeLits (KnownSymbol, symbolVal)
-import Data.GADT.Compare
 
--- $receiving
--- To receive a message, specify the method of the message to expect:
---
--- @
--- msg1 <- message SWorkspaceApplyEdit
--- msg2 <- message STextDocumentHover
--- @
---
--- 'Language.LSP.Test.Session' is actually just a parser
--- that operates on messages under the hood. This means that you
--- can create and combine parsers to match specific sequences of
--- messages that you expect.
---
--- For example, if you wanted to match either a definition or
--- references request:
---
--- > defOrImpl = message STextDocumentDefinition
--- >          <|> message STextDocumentReferences
---
--- If you wanted to match any number of telemetry
--- notifications immediately followed by a response:
---
--- @
--- logThenDiags =
---  skipManyTill (message STelemetryEvent)
---               anyResponse
--- @
+{- $receiving
+ To receive a message, specify the method of the message to expect:
 
--- | Consumes and returns the next message, if it satisfies the specified predicate.
---
--- @since 0.5.2.0
+ @
+ msg1 <- message SWorkspaceApplyEdit
+ msg2 <- message STextDocumentHover
+ @
+
+ 'Language.LSP.Test.Session' is actually just a parser
+ that operates on messages under the hood. This means that you
+ can create and combine parsers to match specific sequences of
+ messages that you expect.
+
+ For example, if you wanted to match either a definition or
+ references request:
+
+ > defOrImpl = message STextDocumentDefinition
+ >          <|> message STextDocumentReferences
+
+ If you wanted to match any number of telemetry
+ notifications immediately followed by a response:
+
+ @
+ logThenDiags =
+  skipManyTill (message STelemetryEvent)
+               anyResponse
+ @
+-}
+
+{- | Consumes and returns the next message, if it satisfies the specified predicate.
+
+ @since 0.5.2.0
+-}
 satisfy :: (FromServerMessage -> Bool) -> Session FromServerMessage
 satisfy pred = satisfyMaybe (\msg -> if pred msg then Just msg else Nothing)
 
--- | Consumes and returns the result of the specified predicate if it returns `Just`.
---
--- @since 0.6.1.0
+{- | Consumes and returns the result of the specified predicate if it returns `Just`.
+
+ @since 0.6.1.0
+-}
 satisfyMaybe :: (FromServerMessage -> Maybe a) -> Session a
 satisfyMaybe pred = satisfyMaybeM (pure . pred)
 
 satisfyMaybeM :: (FromServerMessage -> Session (Maybe a)) -> Session a
-satisfyMaybeM pred = do 
-  
+satisfyMaybeM pred = do
   skipTimeout <- overridingTimeout <$> get
   timeoutId <- getCurTimeoutId
   mtid <-
     if skipTimeout
-    then pure Nothing
-    else Just <$> do
-      chan <- asks messageChan
-      timeout <- asks (messageTimeout . config)
-      liftIO $ forkIO $ do
-        threadDelay (timeout * 1000000)
-        writeChan chan (TimeoutMessage timeoutId)
+      then pure Nothing
+      else
+        Just <$> do
+          chan <- asks messageChan
+          timeout <- asks (messageTimeout . config)
+          liftIO $ forkIO $ do
+            threadDelay (timeout * 1000000)
+            writeChan chan (TimeoutMessage timeoutId)
 
   x <- Session await
 
@@ -99,7 +102,7 @@ satisfyMaybeM pred = do
     bumpTimeoutId timeoutId
     liftIO $ killThread tid
 
-  modify $ \s -> s { lastReceivedMessage = Just x }
+  modify $ \s -> s{lastReceivedMessage = Just x}
 
   res <- pred x
 
@@ -112,9 +115,9 @@ satisfyMaybeM pred = do
 named :: T.Text -> Session a -> Session a
 named s (Session x) = Session (Data.Conduit.Parser.named s x)
 
-
--- | Matches a request or a notification coming from the server.
--- Doesn't match Custom Messages
+{- | Matches a request or a notification coming from the server.
+ Doesn't match Custom Messages
+-}
 message :: SServerMethod m -> Session (TMessage m)
 message (SMethod_CustomMethod _) = error "message can't be used with CustomMethod, use customRequest or customNotification instead"
 message m1 = named (T.pack $ "Request for: " <> show m1) $ satisfyMaybe $ \case
@@ -128,28 +131,28 @@ message m1 = named (T.pack $ "Request for: " <> show m1) $ satisfyMaybe $ \case
 customRequest :: KnownSymbol s => Proxy s -> Session (TMessage (Method_CustomMethod s :: Method ServerToClient Request))
 customRequest p =
   let m = T.pack $ symbolVal p
-  in named m $ satisfyMaybe $ \case
-    FromServerMess m1 msg -> case splitServerMethod m1 of
-      IsServerEither -> case msg of
-        ReqMess _ -> case m1 `geq` SMethod_CustomMethod p of
-          Just Refl -> Just msg
+   in named m $ satisfyMaybe $ \case
+        FromServerMess m1 msg -> case splitServerMethod m1 of
+          IsServerEither -> case msg of
+            ReqMess _ -> case m1 `geq` SMethod_CustomMethod p of
+              Just Refl -> Just msg
+              _ -> Nothing
+            _ -> Nothing
           _ -> Nothing
         _ -> Nothing
-      _ -> Nothing
-    _ -> Nothing
 
 customNotification :: KnownSymbol s => Proxy s -> Session (TMessage (Method_CustomMethod s :: Method ServerToClient Notification))
 customNotification p =
   let m = T.pack $ symbolVal p
-  in named m $ satisfyMaybe $ \case
-    FromServerMess m1 msg -> case splitServerMethod m1 of
-      IsServerEither -> case msg of
-        NotMess _ -> case m1 `geq` SMethod_CustomMethod p of
-          Just Refl -> Just msg
+   in named m $ satisfyMaybe $ \case
+        FromServerMess m1 msg -> case splitServerMethod m1 of
+          IsServerEither -> case msg of
+            NotMess _ -> case m1 `geq` SMethod_CustomMethod p of
+              Just Refl -> Just msg
+              _ -> Nothing
+            _ -> Nothing
           _ -> Nothing
         _ -> Nothing
-      _ -> Nothing
-    _ -> Nothing
 
 -- | Matches if the message is a notification.
 anyNotification :: Session FromServerMessage
@@ -202,25 +205,26 @@ anyMessage = satisfy (const True)
 -- | Matches if the message is a log message notification or a show message notification/request.
 loggingNotification :: Session FromServerMessage
 loggingNotification = named "Logging notification" $ satisfy shouldSkip
-  where
-    shouldSkip (FromServerMess SMethod_WindowLogMessage _) = True
-    shouldSkip (FromServerMess SMethod_WindowShowMessage _) = True
-    shouldSkip (FromServerMess SMethod_WindowShowMessageRequest _) = True
-    shouldSkip (FromServerMess SMethod_WindowShowDocument _) = True
-    shouldSkip _ = False
+ where
+  shouldSkip (FromServerMess SMethod_WindowLogMessage _) = True
+  shouldSkip (FromServerMess SMethod_WindowShowMessage _) = True
+  shouldSkip (FromServerMess SMethod_WindowShowMessageRequest _) = True
+  shouldSkip (FromServerMess SMethod_WindowShowDocument _) = True
+  shouldSkip _ = False
 
 -- | Matches if the message is a configuration request from the server.
 configurationRequest :: Session FromServerMessage
 configurationRequest = named "Configuration request" $ satisfy shouldSkip
-  where
-    shouldSkip (FromServerMess SMethod_WorkspaceConfiguration _) = True
-    shouldSkip _ = False
+ where
+  shouldSkip (FromServerMess SMethod_WorkspaceConfiguration _) = True
+  shouldSkip _ = False
 
 loggingOrConfiguration :: Session FromServerMessage
 loggingOrConfiguration = loggingNotification <|> configurationRequest
 
--- | Matches a 'Language.LSP.Types.TextDocumentPublishDiagnostics'
--- (textDocument/publishDiagnostics) notification.
+{- | Matches a 'Language.LSP.Types.TextDocumentPublishDiagnostics'
+ (textDocument/publishDiagnostics) notification.
+-}
 publishDiagnosticsNotification :: Session (TMessage Method_TextDocumentPublishDiagnostics)
 publishDiagnosticsNotification = named "Publish diagnostics notification" $
   satisfyMaybe $ \msg -> case msg of

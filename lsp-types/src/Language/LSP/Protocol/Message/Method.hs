@@ -1,31 +1,34 @@
-{-# LANGUAGE ConstraintKinds         #-}
-{-# LANGUAGE FlexibleContexts        #-}
-{-# LANGUAGE LambdaCase              #-}
-{-# LANGUAGE MagicHash               #-}
-{-# LANGUAGE QuantifiedConstraints   #-}
-{-# LANGUAGE RankNTypes              #-}
-{-# LANGUAGE TemplateHaskell         #-}
-{-# LANGUAGE TypeInType              #-}
-{-# LANGUAGE TypeOperators           #-}
+{-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MagicHash #-}
+{-# LANGUAGE QuantifiedConstraints #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeInType #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
-
 {-# OPTIONS_GHC -Wno-orphans #-}
+
 module Language.LSP.Protocol.Message.Method where
 
-import           Data.Aeson.Types
-import           Data.Function                      (on)
-import           Data.List                          (isPrefixOf)
-import           Data.GADT.Compare
-import           Data.Proxy
-import           Data.Type.Equality
-import           GHC.Exts                           (Int (..), dataToTag#)
-import           GHC.TypeLits                       (KnownSymbol, sameSymbol,
-                                                     symbolVal)
-import           Language.LSP.Protocol.Internal.Method
-import           Language.LSP.Protocol.Message.Meta
-import           Language.LSP.Protocol.Utils.Misc
-import           Prettyprinter
-import           Unsafe.Coerce
+import Data.Aeson.Types
+import Data.Function (on)
+import Data.GADT.Compare
+import Data.List (isPrefixOf)
+import Data.Proxy
+import Data.Type.Equality
+import GHC.Exts (Int (..), dataToTag#)
+import GHC.TypeLits (
+  KnownSymbol,
+  sameSymbol,
+  symbolVal,
+ )
+import Language.LSP.Protocol.Internal.Method
+import Language.LSP.Protocol.Message.Meta
+import Language.LSP.Protocol.Utils.Misc
+import Prettyprinter
+import Unsafe.Coerce
 
 ---------------
 -- SomeMethod
@@ -99,7 +102,7 @@ instance KnownSymbol s => FromJSON (SMethod ('Method_CustomMethod s :: Method f 
     case sm of
       SomeMethod (SMethod_CustomMethod x) -> case sameSymbol x (Proxy :: Proxy s) of
         Just Refl -> pure $ SMethod_CustomMethod x
-        Nothing   -> mempty
+        Nothing -> mempty
       _ -> mempty
 
 -- TODO: generate these with everything else?
@@ -125,24 +128,24 @@ deriving stock instance Show SomeServerMethod
 
 someClientMethod :: SMethod m -> Maybe SomeClientMethod
 someClientMethod s = case messageDirection s of
-    SClientToServer -> Just $ SomeClientMethod s
-    SServerToClient -> Nothing
-    -- See Note [Parsing methods that go both ways]
-    SBothDirections -> Just $ SomeClientMethod $ unsafeCoerce s
+  SClientToServer -> Just $ SomeClientMethod s
+  SServerToClient -> Nothing
+  -- See Note [Parsing methods that go both ways]
+  SBothDirections -> Just $ SomeClientMethod $ unsafeCoerce s
 
 someServerMethod :: SMethod m -> Maybe SomeServerMethod
 someServerMethod s = case messageDirection s of
-    SServerToClient-> Just $ SomeServerMethod s
-    SClientToServer -> Nothing
-    -- See Note [Parsing methods that go both ways]
-    SBothDirections -> Just $ SomeServerMethod $ unsafeCoerce s
+  SServerToClient -> Just $ SomeServerMethod s
+  SClientToServer -> Nothing
+  -- See Note [Parsing methods that go both ways]
+  SBothDirections -> Just $ SomeServerMethod $ unsafeCoerce s
 
 instance FromJSON SomeClientMethod where
   parseJSON v = do
     (SomeMethod sm) <- parseJSON v
     case someClientMethod sm of
       Just scm -> pure scm
-      Nothing  -> mempty
+      Nothing -> mempty
 
 instance ToJSON SomeClientMethod where
   toJSON (SomeClientMethod sm) = toJSON $ someMethodToMethodString $ SomeMethod sm
@@ -154,7 +157,7 @@ instance FromJSON SomeServerMethod where
     (SomeMethod sm) <- parseJSON v
     case someServerMethod sm of
       Just scm -> pure scm
-      Nothing  -> mempty
+      Nothing -> mempty
 
 instance ToJSON SomeServerMethod where
   toJSON (SomeServerMethod sm) = toJSON $ someMethodToMethodString $ SomeMethod sm

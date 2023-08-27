@@ -1,39 +1,39 @@
-{-# LANGUAGE FlexibleContexts           #-}
-{-# LANGUAGE FlexibleInstances          #-}
-{-# LANGUAGE OverloadedStrings          #-}
-{-# LANGUAGE ScopedTypeVariables        #-}
-{-# LANGUAGE TypeApplications           #-}
-{-# LANGUAGE TypeInType                 #-}
-{-# LANGUAGE TypeFamilies               #-}
-{-# LANGUAGE UndecidableInstances       #-}
-{-# LANGUAGE DerivingStrategies         #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE StandaloneDeriving         #-}
-{-# LANGUAGE TypeOperators              #-}
-
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeInType #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableInstances #-}
 -- we're using some deprecated stuff from the LSP spec, that's fine
 {-# OPTIONS_GHC -fno-warn-deprecations #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
+
 -- | Test for JSON serialization
 module JsonSpec where
 
-import           Language.LSP.Protocol.Types
-import           Language.LSP.Protocol.Message
+import Language.LSP.Protocol.Message
+import Language.LSP.Protocol.Types
 
-import qualified Data.Aeson                as J
-import           Data.List                 (isPrefixOf)
-import qualified Data.Row                  as R
-import qualified Data.Row.Records          as R
-import           Data.Void
-import           Test.Hspec
-import           Test.Hspec.QuickCheck
-import           Test.QuickCheck           hiding (Success)
-import           Test.QuickCheck.Instances ()
+import Data.Aeson qualified as J
+import Data.List (isPrefixOf)
+import Data.Row qualified as R
+import Data.Row.Records qualified as R
+import Data.Void
+import Test.Hspec
+import Test.Hspec.QuickCheck
+import Test.QuickCheck hiding (Success)
+import Test.QuickCheck.Instances ()
 
 -- import Debug.Trace
 -- ---------------------------------------------------------------------
 
-{-# ANN module ("HLint: ignore Redundant do"       :: String) #-}
+{-# ANN module ("HLint: ignore Redundant do" :: String) #-}
 
 main :: IO ()
 main = hspec spec
@@ -50,18 +50,18 @@ spec = do
 jsonSpec :: Spec
 jsonSpec = do
   describe "General JSON instances round trip" $ do
-  -- DataTypesJSON
-    prop "MarkedString"   (propertyJsonRoundtrip :: MarkedString -> Property)
-    prop "MarkupContent"  (propertyJsonRoundtrip :: MarkupContent -> Property)
-    prop "TextDocumentContentChangeEvent"  (propertyJsonRoundtrip :: TextDocumentContentChangeEvent -> Property)
-    prop "WatchedFiles"   (propertyJsonRoundtrip :: DidChangeWatchedFilesRegistrationOptions -> Property)
-    prop "ResponseMessage Hover"
-         (propertyJsonRoundtrip :: TResponseMessage 'Method_TextDocumentHover -> Property)
+    -- DataTypesJSON
+    prop "MarkedString" (propertyJsonRoundtrip :: MarkedString -> Property)
+    prop "MarkupContent" (propertyJsonRoundtrip :: MarkupContent -> Property)
+    prop "TextDocumentContentChangeEvent" (propertyJsonRoundtrip :: TextDocumentContentChangeEvent -> Property)
+    prop "WatchedFiles" (propertyJsonRoundtrip :: DidChangeWatchedFilesRegistrationOptions -> Property)
+    prop
+      "ResponseMessage Hover"
+      (propertyJsonRoundtrip :: TResponseMessage 'Method_TextDocumentHover -> Property)
   describe "JSON decoding regressions" $
     it "CompletionItem" $
       (J.decode "{\"jsonrpc\":\"2.0\",\"result\":[{\"label\":\"raisebox\"}],\"id\":1}" :: Maybe (TResponseMessage 'Method_TextDocumentCompletion))
         `shouldNotBe` Nothing
-
 
 requestMessageSpec :: Spec
 requestMessageSpec = do
@@ -75,18 +75,19 @@ responseMessageSpec = do
   describe "edge cases" $ do
     it "decodes result = null" $ do
       let input = "{\"jsonrpc\": \"2.0\", \"id\": 123, \"result\": null}"
-        in  J.decode input `shouldBe` Just
+       in J.decode input
+            `shouldBe` Just
               ((TResponseMessage "2.0" (Just (IdInt 123)) (Right $ InL J.Null)) :: TResponseMessage 'Method_WorkspaceExecuteCommand)
   describe "invalid JSON" $ do
     it "throws if neither result nor error is present" $ do
       (J.eitherDecode "{\"jsonrpc\":\"2.0\",\"id\":1}" :: Either String (TResponseMessage 'Method_Initialize))
         `shouldBe` Left ("Error in $: both error and result cannot be Nothing")
     it "throws if both result and error are present" $ do
-      (J.eitherDecode
-        "{\"jsonrpc\":\"2.0\",\"id\": 1,\"result\":{\"capabilities\": {}},\"error\":{\"code\":-32700,\"message\":\"\",\"data\":{ \"retry\":false}}}"
-        :: Either String (TResponseMessage 'Method_Initialize))
-        `shouldSatisfy`
-          (either (\err -> "Error in $: both error and result cannot be present" `isPrefixOf` err) (\_ -> False))
+      ( J.eitherDecode
+          "{\"jsonrpc\":\"2.0\",\"id\": 1,\"result\":{\"capabilities\": {}},\"error\":{\"code\":-32700,\"message\":\"\",\"data\":{ \"retry\":false}}}" ::
+          Either String (TResponseMessage 'Method_Initialize)
+        )
+        `shouldSatisfy` (either (\err -> "Error in $: both error and result cannot be present" `isPrefixOf` err) (\_ -> False))
 
 notificationMessageSpec :: Spec
 notificationMessageSpec = do
@@ -120,7 +121,7 @@ instance Arbitrary MarkupContent where
   shrink = genericShrink
 
 instance Arbitrary MarkupKind where
-  arbitrary = oneof [pure MarkupKind_PlainText,pure MarkupKind_Markdown]
+  arbitrary = oneof [pure MarkupKind_PlainText, pure MarkupKind_Markdown]
   shrink = genericShrink
 
 instance Arbitrary UInt where
@@ -130,7 +131,7 @@ instance Arbitrary Uri where
   arbitrary = Uri <$> arbitrary
   shrink = genericShrink
 
---deriving newtype instance Arbitrary URI
+-- deriving newtype instance Arbitrary URI
 
 instance Arbitrary WorkspaceFolder where
   arbitrary = WorkspaceFolder <$> arbitrary <*> arbitrary
@@ -200,6 +201,7 @@ instance Arbitrary LSPErrorCodes where
       , LSPErrorCodes_RequestCancelled
       ]
   shrink = genericShrink
+
 -- ---------------------------------------------------------------------
 
 instance Arbitrary DidChangeWatchedFilesRegistrationOptions where

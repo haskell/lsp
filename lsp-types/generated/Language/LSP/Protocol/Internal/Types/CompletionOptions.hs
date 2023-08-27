@@ -1,3 +1,5 @@
+{- ORMOLU_DISABLE -}
+{- HLINT ignore -}
 -- THIS IS A GENERATED FILE, DO NOT EDIT
 
 {-# OPTIONS_GHC -Wno-unused-imports #-}

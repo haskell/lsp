@@ -1,3 +1,5 @@
+{- ORMOLU_DISABLE -}
+{- HLINT ignore -}
 -- THIS IS A GENERATED FILE, DO NOT EDIT
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}

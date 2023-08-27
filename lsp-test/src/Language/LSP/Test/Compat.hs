@@ -1,17 +1,18 @@
 {-# LANGUAGE CPP #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE OverloadedLabels #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeOperators #-}
 -- For some reason ghc warns about not using
 -- Control.Monad.IO.Class but it's needed for
 -- MonadIO
 {-# OPTIONS_GHC -Wunused-imports #-}
+
 module Language.LSP.Test.Compat where
 
-import Data.Row
 import Data.Maybe
-import qualified Data.Text as T
+import Data.Row
+import Data.Text qualified as T
 import System.IO
 
 #if MIN_VERSION_process(1,6,3)
@@ -44,7 +45,6 @@ import qualified System.Win32.Process
 import qualified System.Posix.Process
 #endif
 
-
 getCurrentProcessID :: IO Int
 #ifdef mingw32_HOST_OS
 getCurrentProcessID = fromIntegral <$> System.Win32.Process.getCurrentProcessId
@@ -54,7 +54,7 @@ getCurrentProcessID = fromIntegral <$> System.Posix.Process.getProcessID
 
 getProcessID :: ProcessHandle -> IO Int
 getProcessID p = fromIntegral . fromJust <$> getProcessID' p
-  where
+ where
 #if MIN_VERSION_process(1,6,3)
   getProcessID' = System.Process.getPid
 #else
@@ -75,13 +75,12 @@ getProcessID p = fromIntegral . fromJust <$> getProcessID' p
       _ -> return Nothing
 #endif
 
-cleanupProcess
-  :: (Maybe Handle, Maybe Handle, Maybe Handle, ProcessHandle) -> IO ()
-
-withCreateProcess
-  :: CreateProcess
-  -> (Maybe Handle -> Maybe Handle -> Maybe Handle -> ProcessHandle -> IO a)
-  -> IO a
+cleanupProcess ::
+  (Maybe Handle, Maybe Handle, Maybe Handle, ProcessHandle) -> IO ()
+withCreateProcess ::
+  CreateProcess ->
+  (Maybe Handle -> Maybe Handle -> Maybe Handle -> ProcessHandle -> IO a) ->
+  IO a
 
 #if MIN_VERSION_process(1,6,4)
 

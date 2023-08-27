@@ -1,31 +1,33 @@
--- | A testing tool for replaying captured client logs back to a server,
--- and validating that the server output matches up with another log.
-module Language.LSP.Test.Replay
-  ( -- replaySession
+{- | A testing tool for replaying captured client logs back to a server,
+ and validating that the server output matches up with another log.
+-}
+module Language.LSP.Test.Replay (
   )
 where
 
-import           Prelude hiding (id)
-import           Control.Concurrent
-import           Control.Monad.IO.Class
-import qualified Data.ByteString.Lazy.Char8    as B
-import qualified Data.Text                     as T
-import           Language.LSP.Types
-import           Language.LSP.Types.Lens as LSP
-import           Data.Aeson
-import           Data.Default
-import           Data.List
-import           Data.Maybe
-import           Control.Lens hiding (List)
-import           Control.Monad
-import           System.FilePath
-import           System.IO
-import           Language.LSP.Test
-import           Language.LSP.Test.Compat
-import           Language.LSP.Test.Files
-import           Language.LSP.Test.Decoding
-import           Language.LSP.Test.Server
-import           Language.LSP.Test.Session
+-- replaySession
+
+import Control.Concurrent
+import Control.Lens hiding (List)
+import Control.Monad
+import Control.Monad.IO.Class
+import Data.Aeson
+import qualified Data.ByteString.Lazy.Char8 as B
+import Data.Default
+import Data.List
+import Data.Maybe
+import qualified Data.Text as T
+import Language.LSP.Test
+import Language.LSP.Test.Compat
+import Language.LSP.Test.Decoding
+import Language.LSP.Test.Files
+import Language.LSP.Test.Server
+import Language.LSP.Test.Session
+import Language.LSP.Types
+import Language.LSP.Types.Lens as LSP
+import System.FilePath
+import System.IO
+import Prelude hiding (id)
 
 {-
 -- | Replays a captured client output and
@@ -128,7 +130,6 @@ sendRequestMessage req = do
 
   sendMessage req
 
-
 isNotification :: FromServerMessage -> Bool
 isNotification (NotPublishDiagnostics      _) = True
 isNotification (NotLogMessage              _) = True
@@ -181,8 +182,6 @@ listenServer expectedMsgs reqMap reqSema rspSema passSema mainThreadId serverOut
 
   notification :: NotificationMessage ServerMethod a -> IO ()
   notification n = putStrLn $ "Got notification " ++ show (n ^. method)
-
-
 
 -- TODO: QuickCheck tests?
 -- | Checks wether or not the message appears in the right order

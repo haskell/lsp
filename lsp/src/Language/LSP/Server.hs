@@ -1,68 +1,65 @@
 {-# LANGUAGE TypeOperators #-}
-module Language.LSP.Server
-  ( module Language.LSP.Server.Control
-  , VFSData(..)
-  , ServerDefinition(..)
+
+module Language.LSP.Server (
+  module Language.LSP.Server.Control,
+  VFSData (..),
+  ServerDefinition (..),
 
   -- * Handlers
-  , Handlers(..)
-  , Handler
-  , transmuteHandlers
-  , mapHandlers
-  , notificationHandler
-  , requestHandler
-  , ClientMessageHandler(..)
-
-  , Options(..)
-  , defaultOptions
+  Handlers (..),
+  Handler,
+  transmuteHandlers,
+  mapHandlers,
+  notificationHandler,
+  requestHandler,
+  ClientMessageHandler (..),
+  Options (..),
+  defaultOptions,
 
   -- * LspT and LspM
-  , LspT(..)
-  , LspM
-  , MonadLsp(..)
-  , runLspT
-  , LanguageContextEnv(..)
-  , type (<~>)(..)
-
-  , getClientCapabilities
-  , getConfig
-  , setConfig
-  , getRootPath
-  , getWorkspaceFolders
-
-  , sendRequest
-  , sendNotification
+  LspT (..),
+  LspM,
+  MonadLsp (..),
+  runLspT,
+  LanguageContextEnv (..),
+  type (<~>) (..),
+  getClientCapabilities,
+  getConfig,
+  setConfig,
+  getRootPath,
+  getWorkspaceFolders,
+  sendRequest,
+  sendNotification,
 
   -- * Config
-  , requestConfigUpdate
-  , tryChangeConfig
+  requestConfigUpdate,
+  tryChangeConfig,
 
   -- * VFS
-  , getVirtualFile
-  , getVirtualFiles
-  , persistVirtualFile
-  , getVersionedTextDoc
-  , reverseFileMap
-  , snapshotVirtualFiles
+  getVirtualFile,
+  getVirtualFiles,
+  persistVirtualFile,
+  getVersionedTextDoc,
+  reverseFileMap,
+  snapshotVirtualFiles,
 
   -- * Diagnostics
-  , publishDiagnostics
-  , flushDiagnosticsBySource
+  publishDiagnostics,
+  flushDiagnosticsBySource,
 
   -- * Progress
-  , withProgress
-  , withIndefiniteProgress
-  , ProgressAmount(..)
-  , ProgressCancellable(..)
-  , ProgressCancelledException
+  withProgress,
+  withIndefiniteProgress,
+  ProgressAmount (..),
+  ProgressCancellable (..),
+  ProgressCancelledException,
 
   -- * Dynamic registration
-  , registerCapability
-  , unregisterCapability
-  , RegistrationToken
-
-  , reverseSortEdit
-  ) where
+  registerCapability,
+  unregisterCapability,
+  RegistrationToken,
+  reverseSortEdit,
+) where
 
 import Language.LSP.Server.Control
 import Language.LSP.Server.Core

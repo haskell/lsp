@@ -1,12 +1,13 @@
 -- | Additional and utilities for 'Position' and 'Range'.
 module Language.LSP.Protocol.Types.Location where
 
-import           Language.LSP.Protocol.Types.Common
-import           Language.LSP.Protocol.Internal.Types.Position
-import           Language.LSP.Protocol.Internal.Types.Range
+import Language.LSP.Protocol.Internal.Types.Position
+import Language.LSP.Protocol.Internal.Types.Range
+import Language.LSP.Protocol.Types.Common
 
--- | A helper function for creating ranges.
--- prop> mkRange l c l' c' = Range (Position l c) (Position l' c')
+{- | A helper function for creating ranges.
+ prop> mkRange l c l' c' = Range (Position l c) (Position l' c')
+-}
 mkRange :: UInt -> UInt -> UInt -> UInt -> Range
 mkRange l c l' c' = Range (Position l c) (Position l' c')
 

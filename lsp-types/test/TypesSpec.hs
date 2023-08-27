@@ -1,8 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
+
 module TypesSpec where
 
-import qualified Language.LSP.Protocol.Types as J
-import           Test.Hspec
+import Language.LSP.Protocol.Types qualified as J
+import Test.Hspec
 
 spec :: Spec
 spec = do
@@ -14,5 +15,5 @@ spec = do
       J.mkMarkdownCodeBlock "haskell" "foo :: Int" <> J.mkPlainText "string2\nstring3\n"
         `shouldBe` J.MarkupContent J.MarkupKind_Markdown "\n```haskell\nfoo :: Int\n```\nstring2  \nstring3  \n"
     it "appends a plain string and a marked up string" $ do
-       J.mkPlainText "string2\n" <> J.mkMarkdownCodeBlock "haskell" "foo :: Int"
+      J.mkPlainText "string2\n" <> J.mkMarkdownCodeBlock "haskell" "foo :: Int"
         `shouldBe` J.MarkupContent J.MarkupKind_Markdown "string2  \n\n```haskell\nfoo :: Int\n```\n"

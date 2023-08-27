@@ -1,11 +1,11 @@
-
 module Language.LSP.Protocol.Lens (
   -- * Generated lens classes
-    module Lens
+  module Lens,
   -- Custom lets classes for Type
-  , module TypesLens
+  module TypesLens,
   -- Custom lens classes for Message
-  , module MessageLens) where
+  module MessageLens,
+) where
 
 import Language.LSP.Protocol.Internal.Lens as Lens
 import Language.LSP.Protocol.Message.Lens as MessageLens

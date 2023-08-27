@@ -1,52 +1,53 @@
-{-# LANGUAGE CPP                  #-}
-{-# LANGUAGE DataKinds                  #-}
-{-# LANGUAGE DeriveAnyClass             #-}
-{-# LANGUAGE DeriveGeneric              #-}
-{-# LANGUAGE DeriveTraversable          #-}
-{-# LANGUAGE DerivingStrategies         #-}
+{-# LANGUAGE CPP #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveTraversable #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase                 #-}
-{-# LANGUAGE TypeOperators              #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE TypeOperators #-}
 
 -- | Common types that aren't in the specification
 module Language.LSP.Protocol.Types.Common (
-    type (|?) (..)
-  , toEither
-  , _L
-  , _R
-  , Int32
-  , UInt
-  , Null (..)
-  , absorbNull
-  , nullToMaybe
-  , maybeToNull
-  , (.=?)
+  type (|?) (..),
+  toEither,
+  _L,
+  _R,
+  Int32,
+  UInt,
+  Null (..),
+  absorbNull,
+  nullToMaybe,
+  maybeToNull,
+  (.=?),
 ) where
 
-import           Control.DeepSeq
-import           Control.Lens
-import           Data.Aeson          hiding (Null)
-import qualified Data.Aeson          as J
+import Control.DeepSeq
+import Control.Lens
+import Data.Aeson hiding (Null)
+import Data.Aeson qualified as J
 #if MIN_VERSION_aeson(2,0,0)
 import qualified Data.Aeson.KeyMap   as KM
 #else
 import qualified Data.HashMap.Strict   as KM
 #endif
-import           Data.Hashable
-import           Data.Set            as Set
-import           Data.String         (fromString)
-import           Data.Int            (Int32)
-import           Data.Mod.Word
-import           Language.LSP.Protocol.Utils.Misc
-import           GHC.Generics        hiding (UInt)
-import           GHC.TypeNats        hiding (Mod)
-import           Text.Read           (Read (readPrec))
-import           Prettyprinter
+import Data.Hashable
+import Data.Int (Int32)
+import Data.Mod.Word
+import Data.Set as Set
+import Data.String (fromString)
+import GHC.Generics hiding (UInt)
+import GHC.TypeNats hiding (Mod)
+import Language.LSP.Protocol.Utils.Misc
+import Prettyprinter
+import Text.Read (Read (readPrec))
 
--- | The "uinteger" type in the LSP spec.
---
--- Unusually, this is a **31**-bit unsigned integer, not a 32-bit one.
-newtype UInt = UInt (Mod (2^31))
+{- | The "uinteger" type in the LSP spec.
+
+ Unusually, this is a **31**-bit unsigned integer, not a 32-bit one.
+-}
+newtype UInt = UInt (Mod (2 ^ 31))
   deriving newtype (Num, Bounded, Enum, Eq, Ord)
   deriving stock (Generic)
   deriving anyclass (NFData)
@@ -75,16 +76,19 @@ instance ToJSON UInt where
 instance FromJSON UInt where
   parseJSON v = fromInteger <$> parseJSON v
 
--- | An alternative type (isomorphic to 'Either'), but which
--- is encoded into JSON without a tag for the alternative.
---
--- This corresponds to @a | b@ types in the LSP specification.
-data a |? b = InL a
-            | InR b
+{- | An alternative type (isomorphic to 'Either'), but which
+ is encoded into JSON without a tag for the alternative.
+
+ This corresponds to @a | b@ types in the LSP specification.
+-}
+data a |? b
+  = InL a
+  | InR b
   deriving stock (Read, Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
-  deriving Pretty via (ViaJSON (a |? b))
-infixr |?
+  deriving (Pretty) via (ViaJSON (a |? b))
+
+infixr 9 |?
 
 -- | Prism for the left-hand side of an '(|?)'.
 _L :: Prism' (a |? b) a
@@ -126,32 +130,35 @@ instance (FromJSON a, ToJSON a, FromJSON b, ToJSON b) => FromJSON (a |? b) where
       (Success a, Success b) -> case (toJSON a, toJSON b) of
         -- Both sides encode to the same thing, just pick one arbitrarily
         (l, r) | l == r -> pure $ InL a
-        (Object oa, Object ob) -> 
+        (Object oa, Object ob) ->
           let ka = Set.fromList $ KM.keys oa
               kb = Set.fromList $ KM.keys ob
-          in if kb `Set.isSubsetOf` ka
-          then pure $ InL a
-          else if ka `Set.isSubsetOf` kb
-          then pure $ InR b
-          else fail $ "Could not decide which type of value to produce, left encodes to an object with keys: " ++ show ka ++ "; right has keys " ++ show kb
+           in if kb `Set.isSubsetOf` ka
+                then pure $ InL a
+                else
+                  if ka `Set.isSubsetOf` kb
+                    then pure $ InR b
+                    else fail $ "Could not decide which type of value to produce, left encodes to an object with keys: " ++ show ka ++ "; right has keys " ++ show kb
         (l, r) -> fail $ "Could not decide which type of value to produce, left encodes to: " ++ show l ++ "; right encodes to: " ++ show r
 
 -- We could use 'Proxy' for this, as aeson also serializes it to/from null,
 -- but this is more explicit.
--- | A type for that is precisely null and nothing else.
---
--- This is useful since the LSP specification often includes types like @a | null@
--- as distinct from an optional value of type @a@.
+
+{- | A type for that is precisely null and nothing else.
+
+ This is useful since the LSP specification often includes types like @a | null@
+ as distinct from an optional value of type @a@.
+-}
 data Null = Null
   deriving stock (Eq, Ord, Show, Generic)
   deriving anyclass (NFData, Hashable)
-  deriving Pretty via (ViaJSON Null)
+  deriving (Pretty) via (ViaJSON Null)
 
 instance ToJSON Null where
   toJSON Null = J.Null
 instance FromJSON Null where
   parseJSON J.Null = pure Null
-  parseJSON _      = fail "expected 'null'"
+  parseJSON _ = fail "expected 'null'"
 
 absorbNull :: Monoid a => a |? Null -> a
 absorbNull (InL a) = a
@@ -163,7 +170,7 @@ nullToMaybe (InR _) = Nothing
 
 maybeToNull :: Maybe a -> a |? Null
 maybeToNull (Just x) = InL x
-maybeToNull Nothing  = InR Null
+maybeToNull Nothing = InR Null
 
 -- This is equivalent to the instance for 'Maybe s'
 instance Semigroup s => Semigroup (s |? Null) where
@@ -172,8 +179,9 @@ instance Semigroup s => Semigroup (s |? Null) where
   InR _ <> InL x = InL x
   InR _ <> InR y = InR y
 
-  -- We use String so we can use fromString on it to get a key that works
-  -- in both aeson-1 and aeson-2
+-- We use String so we can use fromString on it to get a key that works
+-- in both aeson-1 and aeson-2
+
 -- | Include a value in an JSON object optionally, omitting it if it is 'Nothing'.
 (.=?) :: (J.KeyValue kv, J.ToJSON v) => String -> Maybe v -> [kv]
 k .=? v = case v of
