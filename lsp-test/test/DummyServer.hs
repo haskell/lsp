@@ -5,6 +5,7 @@
 
 module DummyServer where
 
+import Colog.Core qualified as L
 import Control.Monad
 import Control.Monad.Reader
 import Data.Aeson hiding (Null, defaultOptions)
@@ -26,6 +27,7 @@ import UnliftIO.Concurrent
 
 withDummyServer :: ((Handle, Handle) -> IO ()) -> IO ()
 withDummyServer f = do
+  let logger = L.cmap show L.logStringStderr
   (hinRead, hinWrite) <- createPipe
   (houtRead, houtWrite) <- createPipe
 
@@ -47,7 +49,7 @@ withDummyServer f = do
         }
 
   bracket
-    (forkIO $ void $ runServerWithHandles mempty mempty hinRead houtWrite definition)
+    (forkIO $ void $ runServerWithHandles logger (L.hoistLogAction liftIO logger) hinRead houtWrite definition)
     killThread
     (const $ f (hinWrite, houtRead))
 
