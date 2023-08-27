@@ -93,6 +93,7 @@ test-suite tests
   hs-source-dirs:   test
   main-is:          Test.hs
   default-language: Haskell2010
+  default-extensions: ImportQualifiedPost
   ghc-options:      -W -threaded -rtsopts -with-rtsopts=-N
   other-modules:    DummyServer
   build-depends:
