@@ -10,8 +10,9 @@ test-show-details: direct
 
 benchmarks: True
 
-package lsp
-  flags: +demo
+if impl(ghc>9.0)
+  package lsp
+    flags: +demo
 
 package lsp-types
   -- This makes a big difference here as lsp-types
