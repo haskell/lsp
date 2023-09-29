@@ -19,3 +19,5 @@ package lsp-types
   -- has very many independent modules 
   ghc-options: -j4
 
+pacakge lsp
+  flags: -demo
