@@ -142,8 +142,7 @@ runServerWith ioLogger logger clientIn clientOut serverDefinition = do
 
   let sendMsg msg = atomically $ writeTChan cout $ J.toJSON msg
 
-  initVFS $ \vfs -> do
-    ioLoop ioLogger logger clientIn serverDefinition vfs sendMsg
+  ioLoop ioLogger logger clientIn serverDefinition emptyVFS sendMsg
 
   return 1
 

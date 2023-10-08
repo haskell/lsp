@@ -26,7 +26,6 @@ files in the client workspace by operating on the "VFS" in "LspFuncs".
 module Language.LSP.VFS (
   VFS (..),
   vfsMap,
-  vfsTempDir,
   VirtualFile (..),
   lsp_version,
   file_version,
@@ -36,7 +35,7 @@ module Language.LSP.VFS (
   VfsLog (..),
 
   -- * Managing the VFS
-  initVFS,
+  emptyVFS,
   openVFS,
   changeFromClientVFS,
   changeFromServerVFS,
@@ -92,7 +91,6 @@ import Language.LSP.Protocol.Types qualified as J
 import System.Directory
 import System.FilePath
 import System.IO
-import System.IO.Temp
 
 -- ---------------------------------------------------------------------
 {-# ANN module ("hlint: ignore Eta reduce" :: String) #-}
@@ -113,8 +111,6 @@ data VirtualFile = VirtualFile
 
 data VFS = VFS
   { _vfsMap :: !(Map.Map J.NormalizedUri VirtualFile)
-  , _vfsTempDir :: !FilePath
-  -- ^ This is where all the temporary files will be written to
   }
   deriving (Show)
 
@@ -152,8 +148,8 @@ virtualFileVersion vf = _lsp_version vf
 
 ---
 
-initVFS :: (VFS -> IO r) -> IO r
-initVFS k = withSystemTempDirectory "haskell-lsp" $ \temp_dir -> k (VFS mempty temp_dir)
+emptyVFS :: VFS
+emptyVFS = VFS mempty
 
 -- ---------------------------------------------------------------------
 
@@ -311,13 +307,13 @@ virtualFileName prefix uri (VirtualFile _ file_ver _) =
          in replicate (n - length numString) '0' ++ numString
    in prefix </> basename ++ "-" ++ padLeft 5 file_ver ++ "-" ++ show (hash uri_raw) <.> takeExtensions basename
 
--- | Write a virtual file to a temporary file if it exists in the VFS.
-persistFileVFS :: (MonadIO m) => LogAction m (WithSeverity VfsLog) -> VFS -> J.NormalizedUri -> Maybe (FilePath, m ())
-persistFileVFS logger vfs uri =
+-- | Write a virtual file to a file in the given directory if it exists in the VFS.
+persistFileVFS :: (MonadIO m) => LogAction m (WithSeverity VfsLog) -> FilePath -> VFS -> J.NormalizedUri -> Maybe (FilePath, m ())
+persistFileVFS logger dir vfs uri =
   case vfs ^. vfsMap . at uri of
     Nothing -> Nothing
     Just vf ->
-      let tfn = virtualFileName (vfs ^. vfsTempDir) uri vf
+      let tfn = virtualFileName dir uri vf
           action = do
             exists <- liftIO $ doesFileExist tfn
             unless exists $ do
