@@ -282,8 +282,8 @@ runSession' serverIn serverOut mServerProc serverHandler config caps rootDir exi
   mainThreadId <- myThreadId
 
   let context = SessionContext serverIn absRootDir messageChan timeoutIdVar reqMap initRsp config caps
-      initState vfs = SessionState 0 vfs mempty False Nothing mempty (lspConfig config) mempty (ignoreLogNotifications config) (ignoreConfigurationRequests config)
-      runSession' ses = initVFS $ \vfs -> runSessionMonad context (initState vfs) ses
+      initState = SessionState 0 emptyVFS mempty False Nothing mempty (lspConfig config) mempty (ignoreLogNotifications config) (ignoreConfigurationRequests config)
+      runSession' = runSessionMonad context initState
 
       errorHandler = throwTo mainThreadId :: SessionException -> IO ()
       serverListenerLauncher =
@@ -306,7 +306,7 @@ runSession' serverIn serverOut mServerProc serverHandler config caps rootDir exi
 
   (result, _) <- bracket serverListenerLauncher
                          serverAndListenerFinalizer
-                         (const $ initVFS $ \vfs -> runSessionMonad context (initState vfs) session)
+                         (const $ runSessionMonad context initState session)
   return result
 
 updateStateC :: ConduitM FromServerMessage FromServerMessage (StateT SessionState (ReaderT SessionContext IO)) ()
