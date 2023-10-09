@@ -3,6 +3,8 @@
 ## Unreleased
 
 - Fix inference of server capabilities for newer methods (except notebook methods).
+- VFS no longer requires IO to initialize, functions that wrote to a temporary directory
+  now take the directory as an argument.
 
 ## 2.2.0.0
 

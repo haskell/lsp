@@ -453,13 +453,13 @@ snapshotVirtualFiles :: LanguageContextEnv c -> STM VFS
 snapshotVirtualFiles env = vfsData <$> readTVar (resVFS $ resState env)
 {-# INLINE snapshotVirtualFiles #-}
 
-{- | Dump the current text for a given VFS file to a temporary file,
- and return the path to the file.
+{- | Dump the current text for a given VFS file to a file
+ in the given directory and return the path to the file.
 -}
-persistVirtualFile :: MonadLsp config m => LogAction m (WithSeverity VfsLog) -> NormalizedUri -> m (Maybe FilePath)
-persistVirtualFile logger uri = do
+persistVirtualFile :: MonadLsp config m => LogAction m (WithSeverity VfsLog) -> FilePath -> NormalizedUri -> m (Maybe FilePath)
+persistVirtualFile logger dir uri = do
   join $ stateState resVFS $ \vfs ->
-    case persistFileVFS logger (vfsData vfs) uri of
+    case persistFileVFS logger dir (vfsData vfs) uri of
       Nothing -> (return Nothing, vfs)
       Just (fn, write) ->
         let !revMap = case uriToFilePath (fromNormalizedUri uri) of
