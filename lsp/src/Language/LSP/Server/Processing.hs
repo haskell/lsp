@@ -151,7 +151,9 @@ initializeRequestHandler logger ServerDefinition{..} vfs sendFunc req = do
 
     initialConfig <- case configObject of
       Just o -> case parseConfig defaultConfig o of
-        Right newConfig -> pure newConfig
+        Right newConfig -> do
+          liftIO $ logger <& (LspCore $ NewConfig o) `WithSeverity` Debug
+          pure newConfig
         Left err -> do
           -- Warn not error here, since initializationOptions is pretty unspecified
           liftIO $ logger <& (LspCore $ ConfigurationParseError o err) `WithSeverity` Warning
