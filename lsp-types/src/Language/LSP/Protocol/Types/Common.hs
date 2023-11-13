@@ -27,11 +27,7 @@ import Control.DeepSeq
 import Control.Lens
 import Data.Aeson hiding (Null)
 import Data.Aeson qualified as J
-#if MIN_VERSION_aeson(2,0,0)
-import qualified Data.Aeson.KeyMap   as KM
-#else
-import qualified Data.HashMap.Strict   as KM
-#endif
+import Data.Aeson.KeyMap qualified as KM
 import Data.Hashable
 import Data.Int (Int32)
 import Data.Mod.Word

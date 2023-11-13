@@ -69,7 +69,7 @@ library
     UndecidableInstances
 
   build-depends:
-    , aeson             >=1.2.2.0 && <2.3
+    , aeson             >=2       && <2.3
     , base              >=4.11    && <5
     , binary
     , containers
@@ -92,8 +92,6 @@ library
     , some
     , template-haskell
     , text
-    -- needed for aeson < 1
-    , unordered-containers
 
   if flag(force-ospath)
     build-depends: filepath ^>=1.4.100.0
@@ -528,7 +526,7 @@ library metamodel
     Language.LSP.MetaModel.Types
 
   build-depends:
-    , aeson             >=1.2.2.0
+    , aeson             >=2
     , base              >=4.11    && <5
     , file-embed
     , lens              >=4.15.2

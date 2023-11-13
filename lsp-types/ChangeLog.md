@@ -1,5 +1,9 @@
 # Revision history for lsp-types
 
+## Unreleased
+
+- Require aeson 2
+
 ## 2.1.0.0
 
 - Add `dynamicRegistrationSupported` to `Capabilities`.
