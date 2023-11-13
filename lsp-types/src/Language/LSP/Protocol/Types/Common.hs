@@ -183,7 +183,11 @@ instance Semigroup s => Semigroup (s |? Null) where
 -- in both aeson-1 and aeson-2
 
 -- | Include a value in an JSON object optionally, omitting it if it is 'Nothing'.
+#if MIN_VERSION_aeson(2,2,0)
+(.=?) :: (J.KeyValue e kv, J.ToJSON v) => String -> Maybe v -> [kv]
+#else
 (.=?) :: (J.KeyValue kv, J.ToJSON v) => String -> Maybe v -> [kv]
+#endif
 k .=? v = case v of
   Just v' -> [fromString k J..= v']
   Nothing -> mempty
