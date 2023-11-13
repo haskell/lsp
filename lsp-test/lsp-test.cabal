@@ -1,6 +1,6 @@
 cabal-version:      2.4
 name:               lsp-test
-version:            0.16.0.0
+version:            0.16.0.1
 synopsis:           Functional test framework for LSP servers.
 description:
   A test framework for writing tests against
@@ -61,8 +61,8 @@ library
     , Glob                  >=0.9   && <0.11
     , lens
     , lens-aeson
-    , lsp                   ^>=2.2
-    , lsp-types             ^>=2.0
+    , lsp                   ^>=2.3
+    , lsp-types             ^>=2.1
     , mtl                   <2.4
     , parser-combinators    >=1.2
     , process               >=1.6
@@ -105,7 +105,7 @@ test-suite tests
     , filepath
     , hspec
     , lens
-    , lsp           ^>=2.2
+    , lsp           ^>=2.3
     , lsp-test
     , mtl           <2.4
     , parser-combinators

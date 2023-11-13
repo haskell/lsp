@@ -1,9 +1,10 @@
 # Revision history for lsp-types
 
-## Unreleased
+## 2.1.0.0
 
 - Add `dynamicRegistrationSupported` to `Capabilities`.
 - Fully update `fullCaps` for recent spec versions.
+- Support GHC 9.8, drop checked support for GHC 8.10
 
 ## 2.0.2.0
 

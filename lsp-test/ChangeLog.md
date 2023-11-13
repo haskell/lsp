@@ -1,5 +1,9 @@
 # Revision history for lsp-test
 
+## 0.16.0.1
+
+- Support newer versions of dependencies.
+
 ## 0.16.0.0
 
 - The client configuration is now _mandatory_ and is an `Object` rather than a `Value`.
