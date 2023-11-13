@@ -133,7 +133,7 @@ test-suite lsp-test
     , hspec
     , lsp
     , row-types
-    , sorted-list           >=0.2.1 && <0.2.2
+    , sorted-list           >=0.2.1 && <0.2.3
     , text
     , text-rope
     , unordered-containers
