@@ -51,7 +51,7 @@ library
 
   ghc-options:        -Wall
   build-depends:
-    , aeson                 >=1.0.0.0
+    , aeson                 >=2
     , async                 >=2.0
     , attoparsec
     , base                  >=4.11    && <5
