@@ -1,6 +1,6 @@
 # Revision history for lsp
 
-## Unreleased
+## 2.3.0.0
 
 - Fix inference of server capabilities for newer methods (except notebook methods).
 - VFS no longer requires IO to initialize, functions that wrote to a temporary directory
