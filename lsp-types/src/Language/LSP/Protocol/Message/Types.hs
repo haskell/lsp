@@ -12,7 +12,6 @@ import Language.LSP.Protocol.Message.LspId
 import Language.LSP.Protocol.Message.Meta
 import Language.LSP.Protocol.Message.Method ()
 import Language.LSP.Protocol.Types
-import Language.LSP.Protocol.Types.Common
 import Language.LSP.Protocol.Utils.Misc
 
 import Data.Aeson hiding (Null)
