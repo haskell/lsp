@@ -14,6 +14,8 @@ module URIFilePathSpec where
 
 #ifdef OS_PATH
 import qualified System.OsPath           as OsPath
+import Control.Exception (throwIO)
+import Data.Maybe (fromJust)
 #endif
 
 import Control.Monad (when)
