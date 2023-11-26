@@ -1,8 +1,8 @@
 { nixpkgs ? import ./nix { } }:
 with nixpkgs;
 let 
-  hsPkgs = haskell.packages.ghc946;
-  ghc = haskell.compiler.ghc946;
+  hsPkgs = haskellPackages;
+  ghc = haskellPackages.ghc;
 in mkShell {
   nativeBuildInputs = [ 
     hsPkgs.ghc 
