@@ -76,7 +76,7 @@ library
     , containers                     ^>=0.6
     , data-default                   ^>=0.7
     , deepseq                        >=1.4   && <1.6
-    , Diff                           ^>=0.5
+    , Diff                           >= 0.4 && < 0.6
     , dlist                          ^>=1.0
     , exceptions                     ^>=0.10
     , hashable                       ^>=1.4
