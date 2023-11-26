@@ -45,7 +45,7 @@ library
   build-depends:
     , aeson               >=2     && <2.3
     , aeson-pretty        ^>=0.8
-    , ansi-terminal       ^>=1.0
+    , ansi-terminal       >= 0.10 && < 1.1
     , async               ^>=2.2
     , base                >=4.10  && <5
     , bytestring          >=0.10  && <0.13
