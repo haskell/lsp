@@ -78,12 +78,12 @@ library
     , deepseq                        >=1.4   && <1.6
     , Diff                           ^>=0.5
     , dlist                          ^>=1.0
-    --, exceptions                     ^>=0.10
+    , exceptions                     ^>=0.10
     , hashable                       ^>=1.4
     , indexed-traversable            ^>=0.1
     , indexed-traversable-instances  ^>=0.1
     , lens                           >=5.1   && <5.3
-    --, lens-aeson                     ^>=1.2
+    , lens-aeson                     ^>=1.2
     , mod                            ^>=0.2
     , mtl                            ^>=2.3
     , network-uri                    ^>=2.6
