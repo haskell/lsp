@@ -2,7 +2,8 @@
  and validating that the server output matches up with another log.
 -}
 module Language.LSP.Test.Replay (
-  )
+
+)
 where
 
 -- replaySession

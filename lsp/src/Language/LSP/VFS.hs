@@ -538,9 +538,9 @@ getCompletionPrefix pos@(J.Position l c) (VirtualFile _ _ ropetext) =
     beforePos <- Rope.toText . fst <$> Rope.splitAt (fromIntegral c) curRope
     curWord <-
       if
-          | T.null beforePos -> Just ""
-          | T.last beforePos == ' ' -> Just "" -- don't count abc as the curword in 'abc '
-          | otherwise -> lastMaybe (T.words beforePos)
+        | T.null beforePos -> Just ""
+        | T.last beforePos == ' ' -> Just "" -- don't count abc as the curword in 'abc '
+        | otherwise -> lastMaybe (T.words beforePos)
 
     let parts =
           T.split (== '.') $

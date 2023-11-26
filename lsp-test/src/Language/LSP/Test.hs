@@ -753,7 +753,7 @@ executeCodeAction action = do
     let req = TRequestMessage "" (IdInt 0) SMethod_WorkspaceApplyEdit (ApplyWorkspaceEditParams Nothing e)
      in updateState (FromServerMess SMethod_WorkspaceApplyEdit req)
 
--- |Resolves the provided code action.
+-- | Resolves the provided code action.
 resolveCodeAction :: CodeAction -> Session CodeAction
 resolveCodeAction ca = do
   rsp <- request SMethod_CodeActionResolve ca
@@ -761,7 +761,7 @@ resolveCodeAction ca = do
     Right ca -> return ca
     Left er -> throw (UnexpectedResponseError (SomeLspId $ fromJust $ rsp ^. L.id) er)
 
-{- |If a code action contains a _data_ field: resolves the code action, then
+{- | If a code action contains a _data_ field: resolves the code action, then
  executes it. Otherwise, just executes it.
 -}
 resolveAndExecuteCodeAction :: CodeAction -> Session ()
@@ -821,7 +821,7 @@ getAndResolveCompletions doc pos = do
   items <- getCompletions doc pos
   for items $ \item -> if isJust (item ^. L.data_) then resolveCompletion item else pure item
 
--- |Resolves the provided completion item.
+-- | Resolves the provided completion item.
 resolveCompletion :: CompletionItem -> Session CompletionItem
 resolveCompletion ci = do
   rsp <- request SMethod_CompletionItemResolve ci
@@ -956,7 +956,7 @@ getAndResolveCodeLenses tId = do
   codeLenses <- getCodeLenses tId
   for codeLenses $ \codeLens -> if isJust (codeLens ^. L.data_) then resolveCodeLens codeLens else pure codeLens
 
--- |Resolves the provided code lens.
+-- | Resolves the provided code lens.
 resolveCodeLens :: CodeLens -> Session CodeLens
 resolveCodeLens cl = do
   rsp <- request SMethod_CodeLensResolve cl
