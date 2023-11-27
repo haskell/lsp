@@ -31,7 +31,6 @@ library
   default-language:   Haskell2010
   default-extensions: ImportQualifiedPost
   ghc-options:        -Wall -fprint-explicit-kinds
-
   reexported-modules:
     , Language.LSP.Protocol.Types
     , Language.LSP.Protocol.Lens
@@ -51,40 +50,40 @@ library
 
   ghc-options:        -Wall
   build-depends:
-    , aeson                 >=2
-    , async                 >=2.0
-    , attoparsec
-    , base                  >=4.11    && <5
-    , bytestring
-    , co-log-core           >=0.3.1.0
-    , containers
-    , data-default
-    , directory
-    , exceptions
-    , filepath
-    , hashable
-    , lens-aeson
-    , lens                  >=4.15.2
+    , aeson                 >=2      && <2.3
+    , async                 ^>=2.2
+    , attoparsec            ^>=0.14
+    , base                  >=4.11   && <5
+    , bytestring            >=0.10   && <0.13
+    , co-log-core           ^>=0.3
+    , containers            ^>=0.6
+    , data-default          ^>=0.7
+    , directory             ^>=1.3
+    , exceptions            ^>=0.10
+    , filepath              ^>=1.4
+    , hashable              ^>=1.4
+    , lens                  >=5.1    && <5.3
+    , lens-aeson            ^>=1.2
     , lsp-types             ^>=2.1
-    , mtl                   <2.4
-    , prettyprinter
-    , random
-    , row-types
+    , mtl                   >= 2.2 && < 2.4
+    , prettyprinter         ^>=1.7
+    , random                ^>=1.2
+    , row-types             ^>=1.0
     , sorted-list           ^>=0.2.1
     , stm                   ^>=2.5
-    , text
-    , text-rope
-    , transformers          >=0.5.6   && <0.7
-    , unliftio-core         >=0.2.0.0
-    , unordered-containers
+    , text                  >=1      && <2.2
+    , text-rope             ^>=0.2
+    , transformers          >=0.5    && <0.7
+    , unliftio-core         ^>=0.2
+    , unordered-containers  ^>=0.2
     , uuid                  >=1.3
 
 executable lsp-demo-reactor-server
-  main-is:          Reactor.hs
-  hs-source-dirs:   example
-  default-language: Haskell2010
+  main-is:            Reactor.hs
+  hs-source-dirs:     example
+  default-language:   Haskell2010
   default-extensions: ImportQualifiedPost
-  ghc-options:      -Wall -Wno-unticked-promoted-constructors
+  ghc-options:        -Wall -Wno-unticked-promoted-constructors
   build-depends:
     , aeson
     , base
@@ -100,11 +99,11 @@ executable lsp-demo-reactor-server
     buildable: False
 
 executable lsp-demo-simple-server
-  main-is:          Simple.hs
-  hs-source-dirs:   example
-  default-language: Haskell2010
+  main-is:            Simple.hs
+  hs-source-dirs:     example
+  default-language:   Haskell2010
   default-extensions: ImportQualifiedPost
-  ghc-options:      -Wall -Wno-unticked-promoted-constructors
+  ghc-options:        -Wall -Wno-unticked-promoted-constructors
   build-depends:
     , base
     , lsp
