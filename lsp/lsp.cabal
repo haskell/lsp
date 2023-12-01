@@ -65,7 +65,7 @@ library
     , lens                  >=5.1    && <5.3
     , lens-aeson            ^>=1.2
     , lsp-types             ^>=2.1
-    , mtl                   >= 2.2 && < 2.4
+    , mtl                   >=2.2    && <2.4
     , prettyprinter         ^>=1.7
     , random                ^>=1.2
     , row-types             ^>=1.0
@@ -88,7 +88,7 @@ executable lsp-demo-reactor-server
     , aeson
     , base
     , co-log-core
-    , lens           >=4.15.2
+    , lens
     , lsp
     , prettyprinter
     , stm
@@ -132,7 +132,7 @@ test-suite lsp-test
     , hspec
     , lsp
     , row-types
-    , sorted-list           >=0.2.1 && <0.2.3
+    , sorted-list
     , text
     , text-rope
     , unordered-containers

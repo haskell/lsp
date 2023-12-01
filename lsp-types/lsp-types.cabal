@@ -76,7 +76,7 @@ library
     , containers                     ^>=0.6
     , data-default                   ^>=0.7
     , deepseq                        >=1.4   && <1.6
-    , Diff                           >= 0.4 && < 0.6
+    , Diff                           >=0.4   && <0.6
     , dlist                          ^>=1.0
     , exceptions                     ^>=0.10
     , hashable                       ^>=1.4
@@ -85,7 +85,7 @@ library
     , lens                           >=5.1   && <5.3
     , lens-aeson                     ^>=1.2
     , mod                            ^>=0.2
-    , mtl                            >= 2.2 && < 2.4
+    , mtl                            >=2.2   && <2.4
     , network-uri                    ^>=2.6
     , prettyprinter                  ^>=1.7
     , row-types                      ^>=1.0
@@ -94,11 +94,14 @@ library
     , template-haskell               >=2.7   && <2.22
     , text                           >=1     && <2.2
 
+  -- This version of filepath comes with GHC 9.6, so
+  -- we should be able to drop this flag once we only
+  -- support 9.6 or higher
   if flag(force-ospath)
     build-depends: filepath ^>=1.4.100.0
 
   else
-    build-depends: filepath
+    build-depends: filepath ^>=1.4
 
   ghc-options:
     -Wall -Wmissing-deriving-strategies
@@ -532,11 +535,11 @@ library metamodel
 
   build-depends:
     , aeson             >=2
-    , base              >=4.11   && <5
-    , file-embed
-    , lens              >=4.15.2
-    , template-haskell
-    , text
+    , base              >=4.11    && <5
+    , file-embed        ^>=0.0.15
+    , lens              >=5.1     && <5.3
+    , template-haskell  >=2.7     && <2.22
+    , text              >=1       && <2.2
 
 executable generator
   hs-source-dirs:     generator
@@ -578,11 +581,11 @@ test-suite lsp-types-test
 
   ghc-options:        -threaded -rtsopts -with-rtsopts=-N -Wall
   build-depends:
-    , aeson                 >=2.0.3.0
+    , aeson
     , base
     , filepath
     , hspec
-    , lens                  >=4.15.2
+    , lens
     , lsp-types
     , network-uri
     , QuickCheck
