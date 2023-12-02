@@ -4,32 +4,32 @@
 
 - Require aeson 2
 
-## 2.1.0.0
+## 2.1.0.0 -- 2023-11-13
 
 - Add `dynamicRegistrationSupported` to `Capabilities`.
 - Fully update `fullCaps` for recent spec versions.
 - Support GHC 9.8, drop checked support for GHC 8.10
 
-## 2.0.2.0
+## 2.0.2.0 -- 2023-08-24
 
 - Add `Language.LSP.Protocol.Utils.Misc.prettyJSON :: Value -> Doc ann` for prettyprinting JSON,
   and `ViaJSON` as a deriving-via newtype wrapper for it.
 - Generate `Pretty` instances for all LSP types using `ViaJSON`.
 
-## 2.0.1.1
+## 2.0.1.1 -- 2023-08-08
 
 * Fix parsing of notifications with missing params
 
-## 2.0.1.0
+## 2.0.1.0 -- 2023-07-14
 
 * Removed deprecation pragmas from fields, as these cannot currently be avoided.
 * Added `isOptionalMethod`, that checks whether a method is optional according to the spec.
 
-## 2.0.0.1
+## 2.0.0.1 -- 2023-06-16
 
 * Fixed missing `extra-source-files` for `metamodel.json`.
 
-## 2.0.0.0
+## 2.0.0.0 -- 2023-06-14
 
 * Breaking change: major restructure to generate types and methods from the LSP metamodel.
     * Full support for version 3.17 of the LSP specification, many accuracy fixes
