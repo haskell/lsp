@@ -12,7 +12,7 @@
 
 ## 2.0.2.0
 
-- Add `Language.LSP.Protocol.Utils.Misc.prettyJSON :: Value -> Doc ann` for prettyprinting JSON, 
+- Add `Language.LSP.Protocol.Utils.Misc.prettyJSON :: Value -> Doc ann` for prettyprinting JSON,
   and `ViaJSON` as a deriving-via newtype wrapper for it.
 - Generate `Pretty` instances for all LSP types using `ViaJSON`.
 
@@ -40,23 +40,27 @@
     * Three top level modules: `Types` (main protocol types), `Message` (messages and methods), `Capabilities` (capabilities)
 * New typeclasses for handling LSP enumerations: `LspEnum` and `LspOpenEnum`
 
-## 1.6.0.0
+## 1.6.0.1 -- 2023-12-02
+
+* Add `LANGUAGE DuplicateRecordFields` to facilitate building with GHC 9.8
+
+## 1.6.0.0 -- 2022-09-13
 
 * Add `isSubRangeOf` and `positionInRange` helper functions
 * Add `ServerCancelled`, `RequestFailed` and `ErrorCodeCustom` server error types
 * Fix "workspace/semanticTokens/refresh" to be a server method instead of a client method
 * Use a packed representation for `NormalizedFilePath`
 * Add conversions from `OsPath` to `NormalizedFilePath` in `Language.LSP.Types.Uri.OsPath` when using new enough `filepath`
- 
-## 1.5.0.0
+
+## 1.5.0.0 -- 2022-06-20
 
 * VFS module moved from `lsp-types` to `lsp`, as it relates to the actual implementation of a LSP server.
 
-## 1.4.0.1
+## 1.4.0.1 -- 2022-01-20
 
 * Fix result type of selection range requests.
 
-## 1.4.0.0
+## 1.4.0.0 -- 2021-12-28
 
 * Aeson 2 compatibility (#360) (@michaelpj)
 * Reduced dependency footprint (#383, #384) (@Bodigrim)
@@ -66,15 +70,15 @@
 * Fix the Semigroup instance for MarkupContent (#361) (@michaelpj)
 * Various improvements to spec conformance (@michaelpj)
 
-## 1.3.0.1
+## 1.3.0.1 -- 2021-08-06
 
 * Rollback NFP interning (#344) (@pepeiborra)
 
-## 1.3.0.0
+## 1.3.0.0 -- 2021-07-31
 
 * Intern NormalizedFilePaths (#340) (@pepeiborra)
 
-## 1.2.0.1
+## 1.2.0.1 -- unpublished
 
 * Add compatibility with GHC 9.2 (#345) (@fendor)
 * Fix missing lenses (@michaelpj)
@@ -84,7 +88,7 @@
 * Do not crash on workspace/didChangeConfiguration (#321) (@strager)
 * Improve error messages on JSON decode failures (#320) (@strager)
 
-## 1.2.0.0
+## 1.2.0.0 -- 2021-03-28
 
 * Prevent crashing when optional fields are missing (@anka-213)
 * Use StrictData (@wz1000)
@@ -101,7 +105,7 @@
 * Support change annotations (#302) (@michaelpj)
 * Add some more missing lenses (#307) (@michaelpj)
 
-## 1.1.0.0
+## 1.1.0.0 -- 2021-02-14
 
 * Fix prepareRename reponse and prepareProvider (@kirelagin)
 * Fix deriving instance of MonadUnliftIO (@banacorn)
@@ -134,7 +138,7 @@ type DocumentChange = TextDocumentEdit |? CreateFile |? RenameFile |? DeleteFile
 * Use Text over String in more places (@wz1000)
 * Add missing lenses (@wz1000, @bubba)
 
-## 1.0.0.0
+## 1.0.0.0 -- 2020-10-15
 
 1.0.0.0 is a major rework with both internal and external facing changes, and
 will require manual migration.
@@ -233,10 +237,10 @@ can use the result returned from `doInitialize` to pass along the
 `LanguageContextEnv` needed to run an `LspT`, as well as anything else your
 monad needs.
 ```haskell
-type 
+type
 ServerDefinition { ...
 , doInitialize = \env _req -> pure $ Right env
-, interpretHandler = \env -> Iso 
+, interpretHandler = \env -> Iso
    (runLspT env) -- how to convert from IO ~> m
    liftIO        -- how to convert from m ~> IO
 }
@@ -252,7 +256,7 @@ ServerDefinition { ...
 5. Remove any storage/use of `LspFuncs` and instead call the corresponding
    functions directly from your monad instead of `IO`
 
-## 0.23.0.0
+## 0.23.0.0 -- 2020-10-05
 
 * Add runWith for transporots other than stdio (@paulyoung)
 * Fix race condition in event captures (@bgamari)
@@ -263,12 +267,12 @@ ServerDefinition { ...
   NormalizedFilePath (@cocreature)
 * Fix ordering of TH splices (@fendor)
 
-## 0.22.0.0
+## 0.22.0.0 -- 2020-05-04
 
 * ResponseMessage results are now an Either type (@greenhat)
 * Support for GHC 8.10.1
 
-## 0.21.0.0
+## 0.21.0.0 -- 2020-03-21
 
 * Stop getCompletionPrefix from crashing if beforePos is empty
 * Add DidChangeWatchedFilesRegistrationOptions
@@ -278,7 +282,7 @@ ServerDefinition { ...
 * Correctly fix the problem with '$/' notifications
 * Add azure ci
 
-## 0.20.0.0
+## 0.20.0.0 -- 2020-02-04T
 
 * Force utf8 encoding when writing vfs temp files
 * Don't log errors for '$/' notifications (@jinwoo)
@@ -338,7 +342,7 @@ ServerDefinition { ...
 
 * Add types for `window/progress` notifications.
 
-## 0.8.3.0
+## 0.8.3.0 -- unpublished
 
 * Add `MarkupContent` to `HoverResponse`, and (some) json roundtrip tests.
 
@@ -391,11 +395,11 @@ ServerDefinition { ...
 * CodeAction support as per v3.8 of the specification, by @Bubba
 * Update VersionedTextDocumentIdentifier to match specification, by @Bubba.
 
-## 0.3.0.0
+## 0.3.0.0 -- unpublished
 
 * Handle TextDocumentSync fallbacks with new TDS type.
 
-## 0.2.3.0
+## 0.2.3.0 -- unpublished
 
 * GHC 8.4.3 support
 * Introduce additional error codes as per the LSP spec. By @Bubba
