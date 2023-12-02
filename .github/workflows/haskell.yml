@@ -1,6 +1,6 @@
 name: Haskell CI
 
-on: 
+on:
   push:
     branches:
       - master
@@ -21,10 +21,10 @@ jobs:
         os: [ubuntu-latest, windows-latest]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up Haskell toolchain
-        uses: haskell/actions/setup@v2
+        uses: haskell-actions/setup@v2
         id: setup
         with:
           ghc-version: ${{ matrix.ghc-version }}
