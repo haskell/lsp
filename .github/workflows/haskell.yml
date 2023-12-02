@@ -9,47 +9,60 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ghc: ['9.2.4', '9.0.2', '8.10.7', '8.8.4', '8.6.5']
-        os: [ubuntu-latest, macOS-latest, windows-latest]
+        ghc: ['9.8', '9.6', '9.4', '9.2', '9.0.2', '8.10.7', '8.8.4', '8.6.5']
+        os: [ubuntu-latest]
         ospath: [true, false]
         exclude:
           # newer 'entropy' doesn't work with old 'unix', and it doesn't have a correct version bound.
           - ospath: true
-            ghc: 8.6.5
+            ghc: '8.6.5'
           # "cabal build" always timeout
           - ospath: true
-            ghc: 8.8.4
+            ghc: '8.8.4'
             os: windows-latest
+        include:
+          - os: macOS-latest
+            ghc: '9.8'
+            ospath: true
+          - os: macOS-latest
+            ghc: '9.8'
+            ospath: false
+          - os: windows-latest
+            ghc: '9.8'
+            ospath: true
+          - os: windows-latest
+            ghc: '9.8'
+            ospath: false
 
     steps:
-    - uses: actions/checkout@v2
-    - uses: haskell/actions/setup@v1
+    - uses: actions/checkout@v4
+
+    - uses: haskell-actions/setup@v2
+      id:   setup
       with:
         ghc-version: ${{ matrix.ghc }}
-        cabal-version: '3.6'
+        cabal-update: true
 
     - name: Cabal cache
-      uses: actions/cache@v1
+      uses: actions/cache@v3
       env:
-        cache-name: cache-cabal
+        cache-name: cabal
       with:
         path: ~/.cabal
-        key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/*.cabal') }}-${{ hashFiles('**/cabal.project') }}
+        key: ${{ runner.os }}-build-${{ env.cache-name }}-ghc-${{ steps.setup.outputs.ghc-version}}-${{ hashFiles('**/*.cabal') }}-${{ hashFiles('**/cabal.project') }}
         restore-keys: |
-          ${{ runner.os }}-build-${{ env.cache-name }}-
+          ${{ runner.os }}-build-${{ env.cache-name }}-ghc-${{ steps.setup.outputs.ghc-version}}-
 
     - name: Stack cache
-      uses: actions/cache@v1
+      uses: actions/cache@v3
       env:
-        cache-name: cache-stack
+        cache-name: stack
       with:
         path: ~/.stack
-        key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/*.cabal') }}-${{ hashFiles('**/stack.yaml') }}
+        key: ${{ runner.os }}-build-${{ env.cache-name }}-ghc-${{ steps.setup.outputs.ghc-version}}-${{ hashFiles('**/*.cabal') }}-${{ hashFiles('**/stack.yaml') }}
         restore-keys: |
-          ${{ runner.os }}-build-${{ env.cache-name }}-
+          ${{ runner.os }}-build-${{ env.cache-name }}-ghc-${{ steps.setup.outputs.ghc-version}}-
 
-    - name: Cabal update
-      run: cabal update
     - name: Cabal configure
       shell: bash
       run: |
