@@ -48,7 +48,7 @@ library
                      , lens >= 4.15.2
                      , mtl < 2.4
                      , prettyprinter
-                     , sorted-list == 0.2.1.*
+                     , sorted-list ^>= 0.2.1
                      , stm == 2.5.*
                      , temporary
                      , text
@@ -69,10 +69,10 @@ executable lsp-demo-reactor-server
   default-language:    Haskell2010
   ghc-options:         -Wall -Wno-unticked-promoted-constructors
 
-  build-depends:       base 
+  build-depends:       base
                      , aeson
                      , co-log-core
-                     , lens >= 4.15.2
+                     , lens
                      , stm
                      , prettyprinter
                      , text
@@ -86,7 +86,7 @@ executable lsp-demo-simple-server
   hs-source-dirs:      example
   default-language:    Haskell2010
   ghc-options:         -Wall -Wno-unticked-promoted-constructors
-  build-depends:       base 
+  build-depends:       base
                     -- the package library. Comment this out if you want repl changes to propagate
                      , lsp
                      , text
@@ -109,7 +109,7 @@ test-suite lsp-test
                      , containers
                      , lsp
                      , hspec
-                     , sorted-list == 0.2.1.*
+                     , sorted-list
                      , text
                      , text-rope
                      , unordered-containers
