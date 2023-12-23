@@ -551,7 +551,7 @@ executable generator
   main-is:            Main.hs
   other-modules:      CodeGen
   build-depends:
-    , base                 >=4.11 && <5
+    , base
     , containers
     , directory
     , filepath

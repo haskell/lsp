@@ -99,7 +99,7 @@ test-suite tests
   other-modules:      DummyServer
   build-depends:
     , aeson
-    , base                >=4.10 && <5
+    , base
     , containers
     , data-default
     , directory
