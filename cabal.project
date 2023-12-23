@@ -1,4 +1,4 @@
-index-state: 2023-11-13T00:00:00Z
+index-state: 2023-12-23T00:00:00Z
 
 packages:
          ./lsp
@@ -17,9 +17,3 @@ package lsp-types
   -- This makes a big difference here as lsp-types
   -- has very many independent modules 
   ghc-options: -j4
-
-if impl(ghc >= 9.7)
-  -- https://github.com/kcsongor/generic-lens/issues/158
-  allow-newer: 
-    generic-lens:text,
-    generic-lens-core:text,
