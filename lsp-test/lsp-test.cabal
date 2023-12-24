@@ -45,7 +45,7 @@ library
   build-depends:
     , aeson               >=2     && <2.3
     , aeson-pretty        ^>=0.8
-    , ansi-terminal       >= 0.10 && < 1.1
+    , ansi-terminal       >=0.10  && <1.1
     , async               ^>=2.2
     , base                >=4.10  && <5
     , bytestring          >=0.10  && <0.13
@@ -54,16 +54,16 @@ library
     , conduit-parse       ^>=0.2
     , containers          ^>=0.6
     , data-default        ^>=0.7
-    , Diff                >= 0.4 && < 0.6
+    , Diff                >=0.4   && <0.6
     , directory           ^>=1.3
     , exceptions          ^>=0.10
-    , filepath            ^>=1.4
+    , filepath            >=1.4 && < 1.6
     , Glob                >=0.9   && <0.11
     , lens                >=5.1   && <5.3
     , lens-aeson          ^>=1.2
     , lsp                 ^>=2.3
     , lsp-types           ^>=2.1
-    , mtl                 >= 2.2 && < 2.4
+    , mtl                 >=2.2   && <2.4
     , parser-combinators  ^>=1.3
     , process             ^>=1.6
     , row-types           ^>=1.0
@@ -99,16 +99,16 @@ test-suite tests
   other-modules:      DummyServer
   build-depends:
     , aeson
-    , base                >=4.10 && <5
+    , base
     , containers
     , data-default
     , directory
     , filepath
     , hspec
     , lens
-    , lsp                 ^>=2.3
+    , lsp
     , lsp-test
-    , mtl                 <2.4
+    , mtl
     , parser-combinators
     , process
     , text
