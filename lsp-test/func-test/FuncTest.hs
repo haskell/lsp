@@ -51,7 +51,8 @@ main = hspec $ do
               tid <- withRunInIO $ \runInIO ->
                 forkIO $
                   runInIO $
-                    withProgress "Doing something" NotCancellable $ \updater ->
+                    withProgress "Doing something" Nothing NotCancellable $ \updater -> do
+                      -- Wait around to be killed
                       liftIO $ threadDelay (1 * 1000000)
               liftIO $ void $ forkIO $ do
                 takeMVar killVar

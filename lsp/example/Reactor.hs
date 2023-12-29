@@ -314,7 +314,7 @@ handle logger =
 
         logger <& ("The arguments are: " <> T.pack (show margs)) `WithSeverity` Debug
         responder (Right $ LSP.InL (J.Object mempty)) -- respond to the request
-        void $ withProgress "Executing some long running command" Cancellable $ \update ->
+        void $ withProgress "Executing some long running command" (req ^. LSP.params . LSP.workDoneToken) Cancellable $ \update ->
           forM [(0 :: LSP.UInt) .. 10] $ \i -> do
             update (ProgressAmount (Just (i * 10)) (Just "Doing stuff"))
             liftIO $ threadDelay (1 * 1000000)

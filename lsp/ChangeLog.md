@@ -1,5 +1,14 @@
 # Revision history for lsp
 
+## Unreleased
+
+- Server-created progress now will not send reports until and unless the client 
+  confirms the progress token creation.
+- Progress helper functions now can take a progress token provided by the client, 
+  so client-initiated progress can now be supported properly.
+- The server options now allow the user to say whether the server should advertise
+  support for client-initiated progress or not.
+
 ## 2.3.0.0
 
 - Fix inference of server capabilities for newer methods (except notebook methods).
