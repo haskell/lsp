@@ -301,7 +301,7 @@ instance Default Options where
       Nothing
       Nothing
       Nothing
-      True
+      False
 
 defaultOptions :: Options
 defaultOptions = def
