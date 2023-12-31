@@ -985,7 +985,7 @@ resolveRequestWithListResp method params = do
   rsp <- request method params
   pure $ absorbNull $ getResponseResult rsp
 
--- | Pass a param and return the response from `prepareCallHierarchy`
+-- | Pass a param and return the response from `semanticTokensFull`
 getSemanticTokens :: TextDocumentIdentifier -> Session (SemanticTokens |? Null)
 getSemanticTokens doc = do
   let params = SemanticTokensParams Nothing Nothing doc
