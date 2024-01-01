@@ -457,6 +457,7 @@ codePointRangeToRange vFile (CodePointRange b e) =
 -}
 positionToCodePointPosition :: VirtualFile -> J.Position -> Maybe CodePointPosition
 positionToCodePointPosition vFile (J.Position l c) = do
+  -- See Note [Converting between code points and code units]
   let text = _file_text vFile
   lineRope <- extractLine text $ fromIntegral l
   kLine <- case compare c (fromIntegral $ Rope.utf16Length lineRope) of
