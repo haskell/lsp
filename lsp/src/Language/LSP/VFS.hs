@@ -82,9 +82,10 @@ import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.IO qualified as T
 import Data.Text.Prettyprint.Doc hiding (line)
-import Data.Text.Rope qualified as URope
-import Data.Text.Utf16.Rope (Rope)
-import Data.Text.Utf16.Rope qualified as Rope
+import Data.Text.Lines as Char ( Position(..) )
+import Data.Text.Utf16.Lines as Utf16 ( Position(..) )
+import Data.Text.Utf16.Rope.Mixed ( Rope )
+import Data.Text.Utf16.Rope.Mixed qualified  as Rope
 import Language.LSP.Protocol.Lens qualified as J
 import Language.LSP.Protocol.Message qualified as J
 import Language.LSP.Protocol.Types qualified as J
@@ -114,8 +115,8 @@ data VFS = VFS
   }
   deriving (Show)
 
-data VfsLog
-  = SplitInsideCodePoint Rope.Position Rope
+data VfsLog =
+  SplitInsideCodePoint Utf16.Position Rope
   | URINotFound J.NormalizedUri
   | Opening J.NormalizedUri
   | Closing J.NormalizedUri
@@ -350,7 +351,7 @@ applyChange :: (Monad m) => LogAction m (WithSeverity VfsLog) -> Rope -> J.TextD
 applyChange logger str (J.TextDocumentContentChangeEvent (J.InL e))
   | J.Range (J.Position sl sc) (J.Position fl fc) <- e .! #range
   , txt <- e .! #text =
-      changeChars logger str (Rope.Position (fromIntegral sl) (fromIntegral sc)) (Rope.Position (fromIntegral fl) (fromIntegral fc)) txt
+      changeChars logger str (Utf16.Position (fromIntegral sl) (fromIntegral sc)) (Utf16.Position (fromIntegral fl) (fromIntegral fc)) txt
 applyChange _ _ (J.TextDocumentContentChangeEvent (J.InR e)) =
   pure $ Rope.fromText $ e .! #text
 
@@ -360,11 +361,11 @@ applyChange _ _ (J.TextDocumentContentChangeEvent (J.InR e)) =
  the given range with the new text. If the given positions lie within
  a code point then this does nothing (returns the original 'Rope') and logs.
 -}
-changeChars :: (Monad m) => LogAction m (WithSeverity VfsLog) -> Rope -> Rope.Position -> Rope.Position -> Text -> m Rope
+changeChars :: (Monad m) => LogAction m (WithSeverity VfsLog) -> Rope -> Utf16.Position -> Utf16.Position -> Text -> m Rope
 changeChars logger str start finish new = do
-  case Rope.splitAtPosition finish str of
+  case Rope.utf16SplitAtPosition finish str of
     Nothing -> logger <& SplitInsideCodePoint finish str `WithSeverity` Warning >> pure str
-    Just (before, after) -> case Rope.splitAtPosition start before of
+    Just (before, after) -> case Rope.utf16SplitAtPosition start before of
       Nothing -> logger <& SplitInsideCodePoint start before `WithSeverity` Warning >> pure str
       Just (before', _) -> pure $ mconcat [before', Rope.fromText new, after]
 
@@ -398,57 +399,13 @@ makeFieldsNoPrefix ''CodePointRange
 {- Note [Converting between code points and code units]
 This is inherently a somewhat expensive operation, but we take some care to minimize the cost.
 In particular, we use the good asymptotics of 'Rope' to our advantage:
-- We extract the single line that we are interested in in time logarithmic in the number of lines.
-- We then split the line at the given position, and check how long the prefix is, which takes
-linear time in the length of the (single) line.
+- utf16SplitAtPosition is logarithmic in the number of lines and linear in the length of the line
+- charSplitAtPosition is logarithmic in the number of lines and linear in the length of the line
 
-We also may need to convert the line back and forth between ropes with different indexing. Again
-this is linear time in the length of the line.
 
 So the overall process is logarithmic in the number of lines, and linear in the length of the specific
 line. Which is okay-ish, so long as we don't have very long lines.
 -}
-
-{- | Extracts a specific line from a 'Rope.Rope'.
- Logarithmic in the number of lines.
--}
-extractLine :: Rope.Rope -> Word -> Maybe Rope.Rope
-extractLine rope l = do
-  -- Check for the line being out of bounds
-  let lastLine = Rope.posLine $ Rope.lengthAsPosition rope
-  guard $ l <= lastLine
-
-  let (_, suffix) = Rope.splitAtLine l rope
-      (prefix, _) = Rope.splitAtLine 1 suffix
-  pure prefix
-
-{- | Translate a code-point offset into a code-unit offset.
- Linear in the length of the rope.
--}
-codePointOffsetToCodeUnitOffset :: URope.Rope -> Word -> Maybe Word
-codePointOffsetToCodeUnitOffset rope offset = do
-  -- Check for the position being out of bounds
-  guard $ offset <= URope.length rope
-  -- Split at the given position in *code points*
-  let (prefix, _) = URope.splitAt offset rope
-      -- Convert the prefix to a rope using *code units*
-      utf16Prefix = Rope.fromText $ URope.toText prefix
-  -- Get the length of the prefix in *code units*
-  pure $ Rope.length utf16Prefix
-
-{- | Translate a UTF-16 code-unit offset into a code-point offset.
- Linear in the length of the rope.
--}
-codeUnitOffsetToCodePointOffset :: Rope.Rope -> Word -> Maybe Word
-codeUnitOffsetToCodePointOffset rope offset = do
-  -- Check for the position being out of bounds
-  guard $ offset <= Rope.length rope
-  -- Split at the given position in *code units*
-  (prefix, _) <- Rope.splitAt offset rope
-  -- Convert the prefix to a rope using *code points*
-  let utfPrefix = URope.fromText $ Rope.toText prefix
-  -- Get the length of the prefix in *code points*
-  pure $ URope.length utfPrefix
 
 {- | Given a virtual file, translate a 'CodePointPosition' in that file into a 'J.Position' in that file.
 
@@ -461,12 +418,11 @@ codePointPositionToPosition :: VirtualFile -> CodePointPosition -> Maybe J.Posit
 codePointPositionToPosition vFile (CodePointPosition l cpc) = do
   -- See Note [Converting between code points and code units]
   let text = _file_text vFile
-  utf16Line <- extractLine text (fromIntegral l)
-  -- Convert the line a rope using *code points*
-  let utfLine = URope.fromText $ Rope.toText utf16Line
-
-  cuc <- codePointOffsetToCodeUnitOffset utfLine (fromIntegral cpc)
-  pure $ J.Position l (fromIntegral cuc)
+  let pos = Char.Position (fromIntegral l) (fromIntegral cpc)
+  let (prefix, _) = Rope.charSplitAtPosition pos text
+  guard $ pos == Rope.charLengthAsPosition prefix
+  let Utf16.Position cpl pc = Rope.utf16LengthAsPosition prefix
+  pure (J.Position (fromIntegral cpl) (fromIntegral pc))
 
 {- | Given a virtual file, translate a 'CodePointRange' in that file into a 'J.Range' in that file.
 
@@ -487,13 +443,13 @@ codePointRangeToRange vFile (CodePointRange b e) =
  the position.
 -}
 positionToCodePointPosition :: VirtualFile -> J.Position -> Maybe CodePointPosition
-positionToCodePointPosition vFile (J.Position l cuc) = do
-  -- See Note [Converting between code points and code units]
+positionToCodePointPosition vFile (J.Position cul cuc) = do
   let text = _file_text vFile
-  utf16Line <- extractLine text (fromIntegral l)
-
-  cpc <- codeUnitOffsetToCodePointOffset utf16Line (fromIntegral cuc)
-  pure $ CodePointPosition l (fromIntegral cpc)
+  let pos = Utf16.Position (fromIntegral cul) (fromIntegral cuc)
+  (prefix, _) <- Rope.utf16SplitAtPosition pos text
+  guard $ pos == Rope.utf16LengthAsPosition prefix
+  let Char.Position cpl cpc = Rope.charLengthAsPosition prefix
+  pure $ CodePointPosition (fromIntegral cpl) (fromIntegral cpc)
 
 {- | Given a virtual file, translate a 'J.Range' in that file into a 'CodePointRange' in that file.
 
@@ -535,7 +491,7 @@ getCompletionPrefix pos@(J.Position l c) (VirtualFile _ _ ropetext) =
         lastMaybe xs = Just $ last xs
 
     let curRope = fst $ Rope.splitAtLine 1 $ snd $ Rope.splitAtLine (fromIntegral l) ropetext
-    beforePos <- Rope.toText . fst <$> Rope.splitAt (fromIntegral c) curRope
+    beforePos <- Rope.toText . fst <$> Rope.utf16SplitAt (fromIntegral c) curRope
     curWord <-
       if
         | T.null beforePos -> Just ""
