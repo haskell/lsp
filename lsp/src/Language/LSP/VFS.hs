@@ -431,11 +431,8 @@ codePointPositionToPosition vFile (CodePointPosition l c) = do
   -- See Note [Converting between code points and code units]
   let text = _file_text vFile
   lineRope <- extractLine text $ fromIntegral l
-  kLine <- case compare c (fromIntegral $ Rope.charLength lineRope) of
-    LT -> return $ fst $ Rope.charSplitAt (fromIntegral c) lineRope
-    EQ -> return lineRope
-    GT -> Nothing
-  return $ J.Position l (fromIntegral $ Rope.utf16Length kLine)
+  guard $ c <= fromIntegral (Rope.charLength lineRope)
+  return $ J.Position l (fromIntegral $ Rope.utf16Length $ fst $ Rope.charSplitAt (fromIntegral c) lineRope)
 
 {- | Given a virtual file, translate a 'CodePointRange' in that file into a 'J.Range' in that file.
 
@@ -460,11 +457,8 @@ positionToCodePointPosition vFile (J.Position l c) = do
   -- See Note [Converting between code points and code units]
   let text = _file_text vFile
   lineRope <- extractLine text $ fromIntegral l
-  kLine <- case compare c (fromIntegral $ Rope.utf16Length lineRope) of
-    LT -> fst <$> Rope.utf16SplitAt (fromIntegral c) lineRope
-    EQ -> return lineRope
-    GT -> Nothing
-  return $ CodePointPosition l (fromIntegral $ Rope.charLength kLine)
+  guard $ c <= fromIntegral (Rope.utf16Length lineRope)
+  CodePointPosition l . fromIntegral . Rope.charLength . fst <$> Rope.utf16SplitAt (fromIntegral c) lineRope
 
 {- | Given a virtual file, translate a 'J.Range' in that file into a 'CodePointRange' in that file.
 
