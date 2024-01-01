@@ -413,7 +413,7 @@ line. Which is okay-ish, so long as we don't have very long lines.
 extractLine :: Rope.Rope -> Word -> Maybe Rope.Rope
 extractLine rope l = do
   -- Check for the line being out of bounds
-  let lastLine = Rope.lengthInLines rope
+  let lastLine = Utf16.posLine $ Rope.utf16LengthAsPosition rope
   guard $ l <= lastLine
   let (_, suffix) = Rope.splitAtLine l rope
       (prefix, _) = Rope.splitAtLine 1 suffix
