@@ -81,11 +81,11 @@ import Data.Row
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.IO qualified as T
+import Data.Text.Lines as Char (Position (..))
 import Data.Text.Prettyprint.Doc hiding (line)
-import Data.Text.Lines as Char ( Position(..) )
-import Data.Text.Utf16.Lines as Utf16 ( Position(..) )
-import Data.Text.Utf16.Rope.Mixed ( Rope )
-import Data.Text.Utf16.Rope.Mixed qualified  as Rope
+import Data.Text.Utf16.Lines as Utf16 (Position (..))
+import Data.Text.Utf16.Rope.Mixed (Rope)
+import Data.Text.Utf16.Rope.Mixed qualified as Rope
 import Language.LSP.Protocol.Lens qualified as J
 import Language.LSP.Protocol.Message qualified as J
 import Language.LSP.Protocol.Types qualified as J
@@ -115,8 +115,8 @@ data VFS = VFS
   }
   deriving (Show)
 
-data VfsLog =
-  SplitInsideCodePoint Utf16.Position Rope
+data VfsLog
+  = SplitInsideCodePoint Utf16.Position Rope
   | URINotFound J.NormalizedUri
   | Opening J.NormalizedUri
   | Closing J.NormalizedUri
@@ -436,7 +436,6 @@ codePointPositionToPosition vFile (CodePointPosition l c) = do
     EQ -> return lineRope
     GT -> Nothing
   return $ J.Position l (fromIntegral $ Rope.utf16Length kLine)
-  
 
 {- | Given a virtual file, translate a 'CodePointRange' in that file into a 'J.Range' in that file.
 
@@ -465,7 +464,6 @@ positionToCodePointPosition vFile (J.Position l c) = do
     EQ -> return lineRope
     GT -> Nothing
   return $ CodePointPosition l (fromIntegral $ Rope.charLength kLine)
-  
 
 {- | Given a virtual file, translate a 'J.Range' in that file into a 'CodePointRange' in that file.
 
