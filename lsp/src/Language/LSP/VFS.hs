@@ -399,9 +399,9 @@ makeFieldsNoPrefix ''CodePointRange
 {- Note [Converting between code points and code units]
 This is inherently a somewhat expensive operation, but we take some care to minimize the cost.
 In particular, we use the good asymptotics of 'Rope' to our advantage:
-- utf16SplitAtPosition is logarithmic in the number of lines and linear in the length of the line
-- charSplitAtPosition is logarithmic in the number of lines and linear in the length of the line
-
+- We extract the single line that we are interested in in time logarithmic in the number of lines.
+- We then split the line at the given position, and check how long the prefix is, which takes
+linear time in the length of the (single) line.
 
 So the overall process is logarithmic in the number of lines, and linear in the length of the specific
 line. Which is okay-ish, so long as we don't have very long lines.
