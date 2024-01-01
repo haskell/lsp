@@ -407,6 +407,18 @@ So the overall process is logarithmic in the number of lines, and linear in the 
 line. Which is okay-ish, so long as we don't have very long lines.
 -}
 
+{- | Extracts a specific line from a 'Rope.Rope'.
+ Logarithmic in the number of lines.
+-}
+extractLine :: Rope.Rope -> Word -> Maybe Rope.Rope
+extractLine rope l = do
+  -- Check for the line being out of bounds
+  let lastLine = Rope.lengthInLines rope
+  guard $ l <= lastLine
+  let (_, suffix) = Rope.splitAtLine l rope
+      (prefix, _) = Rope.splitAtLine 1 suffix
+  pure prefix
+
 {- | Given a virtual file, translate a 'CodePointPosition' in that file into a 'J.Position' in that file.
 
  Will return 'Nothing' if the requested position is out of bounds of the document.
@@ -415,14 +427,16 @@ line. Which is okay-ish, so long as we don't have very long lines.
  the position.
 -}
 codePointPositionToPosition :: VirtualFile -> CodePointPosition -> Maybe J.Position
-codePointPositionToPosition vFile (CodePointPosition l cpc) = do
+codePointPositionToPosition vFile (CodePointPosition l c) = do
   -- See Note [Converting between code points and code units]
   let text = _file_text vFile
-  let pos = Char.Position (fromIntegral l) (fromIntegral cpc)
-  let (prefix, _) = Rope.charSplitAtPosition pos text
-  guard $ pos == Rope.charLengthAsPosition prefix
-  let Utf16.Position cpl pc = Rope.utf16LengthAsPosition prefix
-  pure (J.Position (fromIntegral cpl) (fromIntegral pc))
+  lineRope <- extractLine text $ fromIntegral l
+  kLine <- case compare c (fromIntegral $ Rope.charLength lineRope) of
+    LT -> return $ fst $ Rope.charSplitAt (fromIntegral c) lineRope
+    EQ -> return lineRope
+    GT -> Nothing
+  return $ J.Position l (fromIntegral $ Rope.utf16Length kLine)
+  
 
 {- | Given a virtual file, translate a 'CodePointRange' in that file into a 'J.Range' in that file.
 
@@ -443,13 +457,15 @@ codePointRangeToRange vFile (CodePointRange b e) =
  the position.
 -}
 positionToCodePointPosition :: VirtualFile -> J.Position -> Maybe CodePointPosition
-positionToCodePointPosition vFile (J.Position cul cuc) = do
+positionToCodePointPosition vFile (J.Position l c) = do
   let text = _file_text vFile
-  let pos = Utf16.Position (fromIntegral cul) (fromIntegral cuc)
-  (prefix, _) <- Rope.utf16SplitAtPosition pos text
-  guard $ pos == Rope.utf16LengthAsPosition prefix
-  let Char.Position cpl cpc = Rope.charLengthAsPosition prefix
-  pure $ CodePointPosition (fromIntegral cpl) (fromIntegral cpc)
+  lineRope <- extractLine text $ fromIntegral l
+  kLine <- case compare c (fromIntegral $ Rope.utf16Length lineRope) of
+    LT -> fst <$> Rope.utf16SplitAt (fromIntegral c) lineRope
+    EQ -> return lineRope
+    GT -> Nothing
+  return $ CodePointPosition l (fromIntegral $ Rope.charLength kLine)
+  
 
 {- | Given a virtual file, translate a 'J.Range' in that file into a 'CodePointRange' in that file.
 

@@ -252,7 +252,7 @@ vspSpec = do
       positionToCodePointPosition vfile (J.Position 1 2) `shouldBe` Nothing
       positionToCodePointPosition vfile (J.Position 1 3) `shouldBe` Just (CodePointPosition 1 2)
       positionToCodePointPosition vfile (J.Position 1 4) `shouldBe` Just (CodePointPosition 1 3)
-      positionToCodePointPosition vfile (J.Position 1 5) `shouldBe` Nothing
+      positionToCodePointPosition vfile (J.Position 1 5) `shouldBe` Just (CodePointPosition 1 4)
       -- Greater column than max column
       positionToCodePointPosition vfile (J.Position 1 6) `shouldBe` Nothing
       positionToCodePointPosition vfile (J.Position 2 1) `shouldBe` Nothing
@@ -272,7 +272,7 @@ vspSpec = do
       codePointPositionToPosition vfile (CodePointPosition 1 1) `shouldBe` Just (J.Position 1 1)
       codePointPositionToPosition vfile (CodePointPosition 1 2) `shouldBe` Just (J.Position 1 3)
       codePointPositionToPosition vfile (CodePointPosition 1 3) `shouldBe` Just (J.Position 1 4)
-      codePointPositionToPosition vfile (CodePointPosition 1 4) `shouldBe` Nothing
+      codePointPositionToPosition vfile (CodePointPosition 1 4) `shouldBe` Just (J.Position 1 5)
       -- Greater column than max column
       codePointPositionToPosition vfile (CodePointPosition 1 5) `shouldBe` Nothing
       codePointPositionToPosition vfile (CodePointPosition 2 1) `shouldBe` Nothing
