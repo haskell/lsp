@@ -405,6 +405,12 @@ linear time in the length of the (single) line.
 
 So the overall process is logarithmic in the number of lines, and linear in the length of the specific
 line. Which is okay-ish, so long as we don't have very long lines.
+
+We are not able to use the `Rope.splitAtPosition`
+Because the when column index out of range or when the column indexing at the newline char.
+The prefix result would wrap over the line and having the same result (nextLineNum, 0).
+We would not be able to distinguish them. When the first case should return `Nothing`,
+other should return a `Just (CurrentLineNum, columnNumberConverted)`.
 -}
 
 {- | Extracts a specific line from a 'Rope.Rope'.
