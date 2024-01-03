@@ -6,7 +6,7 @@ module VspSpec where
 import Data.Row
 import Data.String
 import Data.Text qualified as T
-import Data.Text.Utf16.Rope qualified as Rope
+import Data.Text.Utf16.Rope.Mixed qualified as Rope
 import Language.LSP.Protocol.Types qualified as J
 import Language.LSP.VFS
 
