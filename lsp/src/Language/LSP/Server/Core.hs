@@ -26,6 +26,7 @@ import Colog.Core (
   WithSeverity (..),
   (<&),
  )
+import Control.Applicative
 import Control.Concurrent.Async
 import Control.Concurrent.MVar
 import Control.Concurrent.STM
@@ -646,6 +647,11 @@ withProgressBase ::
 withProgressBase indefinite title clientToken cancellable f = do
   progressState <- liftIO $ newMVar ProgressInitial
 
+  -- Until we start the progress reporting, track the current latest progress in an MVar, so when
+  -- we do start we can start at the right point. 
+  let initialPercentage = if indefinite then Nothing else Just 0
+  initialProgress <- liftIO $ newMVar (ProgressAmount initialPercentage Nothing)
+
   let
     sendProgressReport :: (J.ToJSON r) => ProgressToken -> r -> m ()
     sendProgressReport token report = sendNotification SMethod_Progress $ ProgressParams token $ J.toJSON report
@@ -654,19 +660,26 @@ withProgressBase indefinite title clientToken cancellable f = do
     tryStart :: ProgressToken -> m ()
     tryStart t = withRunInIO $ \runInBase -> modifyMVar_ progressState $ \case
       -- Can start if we are in the initial state, otherwise not
-      ProgressInitial -> do
+      ProgressInitial -> withMVar initialProgress $ \(ProgressAmount pct msg) -> do
         let
-          initialPercentage = if indefinite then Nothing else Just 0
           cancellable' = case cancellable of
             Cancellable -> Just True
             NotCancellable -> Just False
-        runInBase $ sendProgressReport t $ WorkDoneProgressBegin L.AString title cancellable' Nothing initialPercentage
+        runInBase $ sendProgressReport t $ WorkDoneProgressBegin L.AString title cancellable' msg pct
         pure (ProgressStarted t)
       s -> pure s
     -- See Note [Progress states]
     tryUpdate :: ProgressAmount -> m ()
     tryUpdate (ProgressAmount pct msg) = withRunInIO $ \runInBase -> withMVar progressState $ \case
-      -- We can only send updates in ProgressStarted
+      -- If the progress has not started yet, then record the latest progress percentage
+      ProgressInitial -> modifyMVar_ initialProgress $ \(ProgressAmount oldPct oldMsg) -> do
+        let
+          -- Update the percentage if the new one is not nothing
+          newPct = pct <|> oldPct
+          -- Update the message if the new one is not nothing
+          newMsg = msg <|> oldMsg
+        pure $ ProgressAmount newPct newMsg
+      -- Just send the update, we don't need to worry about updating initialProgress any more
       ProgressStarted t -> runInBase $ sendProgressReport t $ WorkDoneProgressReport L.AString Nothing msg pct
       _ -> pure ()
     -- See Note [Progress states]
