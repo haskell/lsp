@@ -122,7 +122,9 @@ test-suite func-test
   main-is:            FuncTest.hs
   build-depends:
     , base
+    , aeson
     , co-log-core
+    , containers
     , hspec
     , lens
     , lsp

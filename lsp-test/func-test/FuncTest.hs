@@ -2,6 +2,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE DataKinds #-}
 
 module Main where
 
@@ -12,6 +15,8 @@ import Control.Lens hiding (Iso, List)
 import Control.Monad
 import Control.Monad.IO.Class
 import Data.Maybe
+import Data.Aeson qualified as J
+import Data.Set qualified as Set
 import Language.LSP.Protocol.Lens qualified as L
 import Language.LSP.Protocol.Message
 import Language.LSP.Protocol.Types
@@ -24,6 +29,8 @@ import Test.Hspec
 import UnliftIO
 import UnliftIO.Concurrent
 import Colog.Core
+import Data.Proxy
+import Debug.Trace
 
 runSessionWithServer
   :: LogAction IO (WithSeverity LspServerLog)
@@ -50,7 +57,50 @@ runSessionWithServer logger defn testConfig caps root session = do
 spec :: Spec
 spec = do
   let logger = L.cmap show L.logStringStderr
-  describe "progress reporting" $
+  describe "progress reporting" $ do
+    it "handles cancellation" $ do
+      wasCancelled <- newMVar False
+
+      let definition =
+            ServerDefinition
+              { parseConfig = const $ const $ Right ()
+              , onConfigChange = const $ pure ()
+              , defaultConfig = ()
+              , configSection = "demo"
+              , doInitialize = \env _req -> pure $ Right env
+              , staticHandlers = \_caps -> handlers
+              , interpretHandler = \env -> Iso (runLspT env) liftIO
+              , options = defaultOptions
+              }
+
+          handlers :: Handlers (LspM ())
+          handlers =
+           requestHandler (SMethod_CustomMethod (Proxy @"something")) $ \_req resp -> void $ forkIO $ do
+              -- Doesn't matter what cancellability we set here!
+              withProgress "Doing something" Nothing NotCancellable $ \updater -> do
+                -- Wait around to be cancelled, set the MVar only if we are
+                liftIO $ threadDelay (1 * 1000000) `Control.Exception.catch` (\(e :: ProgressCancelledException) -> modifyMVar_ wasCancelled (\_ -> pure True))
+
+      runSessionWithServer logger definition Test.defaultConfig Test.fullCaps "." $ do
+        Test.sendRequest (SMethod_CustomMethod (Proxy @"something")) J.Null
+        -- First make sure that we get a $/progress begin notification
+        skipManyTill Test.anyMessage $ do
+          x <- Test.message SMethod_Progress
+          guard $ has (L.params . L.value . _workDoneProgressBegin) x
+
+        -- Cancel the operation
+        s <- Test.getIncompleteProgressSessions
+        let sessionToken = Set.findMin s
+        Test.sendNotification SMethod_WindowWorkDoneProgressCancel (WorkDoneProgressCancelParams sessionToken)
+
+        -- Then make sure we still get a $/progress end notification
+        skipManyTill Test.anyMessage $ do
+          x <- Test.message SMethod_Progress
+          guard $ has (L.params . L.value . _workDoneProgressEnd) x
+
+      c <- readMVar wasCancelled
+      c `shouldBe` True
+
     it "sends end notification if thread is killed" $ do
       killVar <- newEmptyMVar
 
