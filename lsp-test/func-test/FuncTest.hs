@@ -1,6 +1,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module Main where
 
@@ -22,15 +23,35 @@ import System.Process
 import Test.Hspec
 import UnliftIO
 import UnliftIO.Concurrent
+import Colog.Core
 
-main :: IO ()
-main = hspec $ do
+runSessionWithServer
+  :: LogAction IO (WithSeverity LspServerLog)
+  -> ServerDefinition config
+  -> Test.SessionConfig
+  -> ClientCapabilities
+  -> FilePath
+  -> Test.Session a
+  -> IO a
+runSessionWithServer logger defn testConfig caps root session = do
+  (hinRead, hinWrite) <- createPipe
+  (houtRead, houtWrite) <- createPipe
+
+  server <- async $ void $ runServerWithHandles logger (L.hoistLogAction liftIO logger) hinRead houtWrite defn
+
+  res <- Test.runSessionWithHandles hinWrite houtRead testConfig caps root session
+
+  timeout 3000000 $ do
+    Left (fromException -> Just ExitSuccess) <- waitCatch server
+    pure ()
+
+  pure res
+
+spec :: Spec
+spec = do
   let logger = L.cmap show L.logStringStderr
   describe "progress reporting" $
     it "sends end notification if thread is killed" $ do
-      (hinRead, hinWrite) <- createPipe
-      (houtRead, houtWrite) <- createPipe
-
       killVar <- newEmptyMVar
 
       let definition =
@@ -58,9 +79,7 @@ main = hspec $ do
                 takeMVar killVar
                 killThread tid
 
-      forkIO $ void $ runServerWithHandles logger (L.hoistLogAction liftIO logger) hinRead houtWrite definition
-
-      Test.runSessionWithHandles hinWrite houtRead Test.defaultConfig Test.fullCaps "." $ do
+      runSessionWithServer logger definition Test.defaultConfig Test.fullCaps "." $ do
         -- First make sure that we get a $/progress begin notification
         skipManyTill Test.anyMessage $ do
           x <- Test.message SMethod_Progress
@@ -74,11 +93,9 @@ main = hspec $ do
           x <- Test.message SMethod_Progress
           guard $ has (L.params . L.value . _workDoneProgressEnd) x
 
+
   describe "workspace folders" $
     it "keeps track of open workspace folders" $ do
-      (hinRead, hinWrite) <- createPipe
-      (houtRead, houtWrite) <- createPipe
-
       countVar <- newMVar 0
 
       let wf0 = WorkspaceFolder (filePathToUri "one") "Starter workspace"
@@ -117,21 +134,16 @@ main = hspec $ do
                     _ -> error "Shouldn't be here"
               ]
 
-      server <- async $ void $ runServerWithHandles logger (L.hoistLogAction liftIO logger) hinRead houtWrite definition
-
-      let config =
-            Test.defaultConfig
-              { Test.initialWorkspaceFolders = Just [wf0]
-              }
+      let config = Test.defaultConfig { Test.initialWorkspaceFolders = Just [wf0] }
 
           changeFolders add rmv =
             let ev = WorkspaceFoldersChangeEvent add rmv
                 ps = DidChangeWorkspaceFoldersParams ev
              in Test.sendNotification SMethod_WorkspaceDidChangeWorkspaceFolders ps
 
-      Test.runSessionWithHandles hinWrite houtRead config Test.fullCaps "." $ do
+      runSessionWithServer logger definition config Test.fullCaps "." $ do
         changeFolders [wf1] []
         changeFolders [wf2] [wf1]
 
-      Left e <- waitCatch server
-      fromException e `shouldBe` Just ExitSuccess
+main :: IO ()
+main = hspec spec
