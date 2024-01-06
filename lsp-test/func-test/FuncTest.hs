@@ -57,7 +57,72 @@ runSessionWithServer logger defn testConfig caps root session = do
 spec :: Spec
 spec = do
   let logger = L.cmap show L.logStringStderr
-  describe "progress reporting" $ do
+  describe "server-initiated progress reporting" $ do
+    it "sends updates" $ do
+      startBarrier <- newEmptyMVar
+
+      let definition =
+            ServerDefinition
+              { parseConfig = const $ const $ Right ()
+              , onConfigChange = const $ pure ()
+              , defaultConfig = ()
+              , configSection = "demo"
+              , doInitialize = \env _req -> pure $ Right env
+              , staticHandlers = \_caps -> handlers
+              , interpretHandler = \env -> Iso (runLspT env) liftIO
+              , options = defaultOptions
+              }
+
+          handlers :: Handlers (LspM ())
+          handlers =
+           requestHandler (SMethod_CustomMethod (Proxy @"something")) $ \_req resp -> void $ forkIO $ do
+              withProgress "Doing something" Nothing NotCancellable $ \updater -> do
+                takeMVar startBarrier
+                traceM "Starting"
+                updater $ ProgressAmount (Just 25) (Just "step1")
+                traceM "Sent step1"
+                updater $ ProgressAmount (Just 50) (Just "step2")
+                traceM "Sent step2"
+                updater $ ProgressAmount (Just 75) (Just "step3")
+                traceM "Sent step3"
+
+      runSessionWithServer logger definition Test.defaultConfig Test.fullCaps "." $ do
+        Test.sendRequest (SMethod_CustomMethod (Proxy @"something")) J.Null
+
+        -- Wait until we have created the progress so the updates will be sent individually
+        skipManyTill Test.anyMessage $ Test.message SMethod_WindowWorkDoneProgressCreate
+
+        putMVar startBarrier ()
+
+        -- First make sure that we get a $/progress begin notification
+        skipManyTill Test.anyMessage $ do
+          x <- Test.message SMethod_Progress
+          guard $ has (L.params . L.value . _workDoneProgressBegin) x
+
+        do
+          u <- Test.message SMethod_Progress
+          liftIO $ do
+            traceM $ show $ u ^? L.params . L.value
+            u ^? L.params . L.value . _workDoneProgressReport . L.message `shouldBe` Just (Just "step1")
+            u ^? L.params . L.value . _workDoneProgressReport . L.percentage `shouldBe` Just (Just 25)
+
+        do
+          u <- Test.message SMethod_Progress
+          liftIO $ do
+            u ^? L.params . L.value . _workDoneProgressReport . L.message `shouldBe` Just (Just "step2")
+            u ^? L.params . L.value . _workDoneProgressReport . L.percentage `shouldBe` Just (Just 50)
+
+        do
+          u <- Test.message SMethod_Progress
+          liftIO $ do
+            u ^? L.params . L.value . _workDoneProgressReport . L.message `shouldBe` Just (Just "step3")
+            u ^? L.params . L.value . _workDoneProgressReport . L.percentage `shouldBe` Just (Just 75)
+
+        -- Then make sure we get a $/progress end notification
+        skipManyTill Test.anyMessage $ do
+          x <- Test.message SMethod_Progress
+          guard $ has (L.params . L.value . _workDoneProgressEnd) x
+
     it "handles cancellation" $ do
       wasCancelled <- newMVar False
 
@@ -83,15 +148,18 @@ spec = do
 
       runSessionWithServer logger definition Test.defaultConfig Test.fullCaps "." $ do
         Test.sendRequest (SMethod_CustomMethod (Proxy @"something")) J.Null
+
+        -- Wait until we have created the progress so the updates will be sent individually
+        token <- skipManyTill Test.anyMessage $ do
+          x <- Test.message SMethod_WindowWorkDoneProgressCreate
+          pure $ x ^. L.params . L.token
+
         -- First make sure that we get a $/progress begin notification
         skipManyTill Test.anyMessage $ do
           x <- Test.message SMethod_Progress
           guard $ has (L.params . L.value . _workDoneProgressBegin) x
 
-        -- Cancel the operation
-        s <- Test.getIncompleteProgressSessions
-        let sessionToken = Set.findMin s
-        Test.sendNotification SMethod_WindowWorkDoneProgressCancel (WorkDoneProgressCancelParams sessionToken)
+        Test.sendNotification SMethod_WindowWorkDoneProgressCancel (WorkDoneProgressCancelParams token)
 
         -- Then make sure we still get a $/progress end notification
         skipManyTill Test.anyMessage $ do
@@ -118,16 +186,10 @@ spec = do
 
           handlers :: MVar () -> Handlers (LspM ())
           handlers killVar =
-            notificationHandler SMethod_Initialized $ \noti -> do
-              tid <- withRunInIO $ \runInIO ->
-                forkIO $
-                  runInIO $
-                    withProgress "Doing something" Nothing NotCancellable $ \updater -> do
-                      -- Wait around to be killed
-                      liftIO $ threadDelay (1 * 1000000)
-              liftIO $ void $ forkIO $ do
-                takeMVar killVar
-                killThread tid
+            notificationHandler SMethod_Initialized $ \noti -> void $ forkIO $
+                withProgress "Doing something" Nothing NotCancellable $ \updater -> liftIO $ do
+                  takeMVar killVar
+                  Control.Exception.throwIO AsyncCancelled
 
       runSessionWithServer logger definition Test.defaultConfig Test.fullCaps "." $ do
         -- First make sure that we get a $/progress begin notification
@@ -139,6 +201,64 @@ spec = do
         liftIO $ putMVar killVar ()
 
         -- Then make sure we still get a $/progress end notification
+        skipManyTill Test.anyMessage $ do
+          x <- Test.message SMethod_Progress
+          guard $ has (L.params . L.value . _workDoneProgressEnd) x
+
+  describe "client-initiated progress reporting" $ do
+    it "sends updates" $ do
+      let definition =
+            ServerDefinition
+              { parseConfig = const $ const $ Right ()
+              , onConfigChange = const $ pure ()
+              , defaultConfig = ()
+              , configSection = "demo"
+              , doInitialize = \env _req -> pure $ Right env
+              , staticHandlers = \_caps -> handlers
+              , interpretHandler = \env -> Iso (runLspT env) liftIO
+              , options = defaultOptions { optSupportClientInitiatedProgress = True }
+              }
+
+          handlers :: Handlers (LspM ())
+          handlers =
+            requestHandler SMethod_TextDocumentCodeLens $ \req resp -> void $ forkIO $ do
+              withProgress "Doing something" (req ^. L.params . L.workDoneToken) NotCancellable $ \updater -> do
+                traceM "Starting"
+                updater $ ProgressAmount (Just 25) (Just "step1")
+                traceM "Sent step1"
+                updater $ ProgressAmount (Just 50) (Just "step2")
+                traceM "Sent step2"
+                updater $ ProgressAmount (Just 75) (Just "step3")
+                traceM "Sent step3"
+
+      runSessionWithServer logger definition Test.defaultConfig Test.fullCaps "." $ do
+        Test.sendRequest SMethod_TextDocumentCodeLens (CodeLensParams (Just $ ProgressToken $ InR "hello") Nothing (TextDocumentIdentifier $ Uri "."))
+
+        -- First make sure that we get a $/progress begin notification
+        skipManyTill Test.anyMessage $ do
+          x <- Test.message SMethod_Progress
+          guard $ has (L.params . L.value . _workDoneProgressBegin) x
+
+        do
+          u <- Test.message SMethod_Progress
+          liftIO $ do
+            traceM $ show $ u ^? L.params . L.value
+            u ^? L.params . L.value . _workDoneProgressReport . L.message `shouldBe` Just (Just "step1")
+            u ^? L.params . L.value . _workDoneProgressReport . L.percentage `shouldBe` Just (Just 25)
+
+        do
+          u <- Test.message SMethod_Progress
+          liftIO $ do
+            u ^? L.params . L.value . _workDoneProgressReport . L.message `shouldBe` Just (Just "step2")
+            u ^? L.params . L.value . _workDoneProgressReport . L.percentage `shouldBe` Just (Just 50)
+
+        do
+          u <- Test.message SMethod_Progress
+          liftIO $ do
+            u ^? L.params . L.value . _workDoneProgressReport . L.message `shouldBe` Just (Just "step3")
+            u ^? L.params . L.value . _workDoneProgressReport . L.percentage `shouldBe` Just (Just 75)
+
+        -- Then make sure we get a $/progress end notification
         skipManyTill Test.anyMessage $ do
           x <- Test.message SMethod_Progress
           guard $ has (L.params . L.value . _workDoneProgressEnd) x
