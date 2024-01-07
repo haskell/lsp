@@ -330,10 +330,10 @@ updateStateC = awaitForever $ \msg -> do
       let (errs, configs) = partitionEithers configsOrErrs
 
       -- we have to return exactly the number of sections requested, so if we can't find all of them then that's an error
-      if null errs
-      then sendMessage $ TResponseMessage "2.0" (Just $ r ^. L.id) (Right configs)
-      else sendMessage @_ @(TResponseError Method_WorkspaceConfiguration) $
-        TResponseError (InL LSPErrorCodes_RequestFailed) ("No configuration for requested sections: " <> (T.pack $ show errs)) Nothing
+      sendMessage $ TResponseMessage "2.0" (Just $ r ^. L.id) $
+        if null errs 
+        then (Right configs)
+        else Left $ ResponseError (InL LSPErrorCodes_RequestFailed) ("No configuration for requested sections: " <> (T.pack $ show errs)) Nothing
     _ -> pure ()
   unless ((ignoringLogNotifications state && isLogNotification msg) || (ignoringConfigurationRequests state && isConfigRequest msg)) $
     yield msg

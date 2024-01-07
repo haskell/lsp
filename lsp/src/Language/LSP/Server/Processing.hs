@@ -1,7 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -57,7 +56,6 @@ import Data.IxMap
 import Data.List
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Map.Strict qualified as Map
-import Data.Maybe
 import Data.Monoid
 import Data.Row
 import Data.String (fromString)
@@ -202,42 +200,93 @@ initializeRequestHandler logger ServerDefinition{..} vfs sendFunc req = do
  static option.
 -}
 inferServerCapabilities :: ClientCapabilities -> Options -> Handlers m -> ServerCapabilities
-inferServerCapabilities clientCaps o h =
+inferServerCapabilities _clientCaps o h =
   ServerCapabilities
     { _textDocumentSync = sync
-    , _hoverProvider = supportedBool SMethod_TextDocumentHover
+    , _hoverProvider =
+        supported' SMethod_TextDocumentHover $
+          InR $
+            HoverOptions clientInitiatedProgress
     , _completionProvider = completionProvider
     , _inlayHintProvider = inlayProvider
-    , _declarationProvider = supportedBool SMethod_TextDocumentDeclaration
+    , _declarationProvider =
+        supported' SMethod_TextDocumentDeclaration $
+          InR $
+            InL $
+              DeclarationOptions clientInitiatedProgress
     , _signatureHelpProvider = signatureHelpProvider
-    , _definitionProvider = supportedBool SMethod_TextDocumentDefinition
-    , _typeDefinitionProvider = supportedBool SMethod_TextDocumentTypeDefinition
-    , _implementationProvider = supportedBool SMethod_TextDocumentImplementation
-    , _referencesProvider = supportedBool SMethod_TextDocumentReferences
-    , _documentHighlightProvider = supportedBool SMethod_TextDocumentDocumentHighlight
-    , _documentSymbolProvider = supportedBool SMethod_TextDocumentDocumentSymbol
+    , _definitionProvider =
+        supported' SMethod_TextDocumentDefinition $
+          InR $
+            DefinitionOptions clientInitiatedProgress
+    , _typeDefinitionProvider =
+        supported' SMethod_TextDocumentTypeDefinition $
+          InR $
+            InL $
+              TypeDefinitionOptions clientInitiatedProgress
+    , _implementationProvider =
+        supported' SMethod_TextDocumentImplementation $
+          InR $
+            InL $
+              ImplementationOptions clientInitiatedProgress
+    , _referencesProvider =
+        supported' SMethod_TextDocumentReferences $
+          InR $
+            ReferenceOptions clientInitiatedProgress
+    , _documentHighlightProvider =
+        supported' SMethod_TextDocumentDocumentHighlight $
+          InR $
+            DocumentHighlightOptions clientInitiatedProgress
+    , _documentSymbolProvider =
+        supported' SMethod_TextDocumentDocumentSymbol $
+          InR $
+            DocumentSymbolOptions clientInitiatedProgress Nothing
     , _codeActionProvider = codeActionProvider
     , _codeLensProvider =
         supported' SMethod_TextDocumentCodeLens $
-          CodeLensOptions
-            (Just False)
-            (supported SMethod_CodeLensResolve)
-    , _documentFormattingProvider = supportedBool SMethod_TextDocumentFormatting
-    , _documentRangeFormattingProvider = supportedBool SMethod_TextDocumentRangeFormatting
+          CodeLensOptions clientInitiatedProgress (supported SMethod_CodeLensResolve)
+    , _documentFormattingProvider =
+        supported' SMethod_TextDocumentFormatting $
+          InR $
+            DocumentFormattingOptions clientInitiatedProgress
+    , _documentRangeFormattingProvider =
+        supported' SMethod_TextDocumentRangeFormatting $
+          InR $
+            DocumentRangeFormattingOptions clientInitiatedProgress
     , _documentOnTypeFormattingProvider = documentOnTypeFormattingProvider
-    , _renameProvider = renameProvider
+    , _renameProvider =
+        supported' SMethod_TextDocumentRename $
+          InR $
+            RenameOptions clientInitiatedProgress (supported SMethod_TextDocumentPrepareRename)
     , _documentLinkProvider =
         supported' SMethod_TextDocumentDocumentLink $
-          DocumentLinkOptions
-            (Just False)
-            (supported SMethod_DocumentLinkResolve)
-    , _colorProvider = supportedBool SMethod_TextDocumentDocumentColor
-    , _foldingRangeProvider = supportedBool SMethod_TextDocumentFoldingRange
+          DocumentLinkOptions clientInitiatedProgress (supported SMethod_DocumentLinkResolve)
+    , _colorProvider =
+        supported' SMethod_TextDocumentDocumentColor $
+          InR $
+            InL $
+              DocumentColorOptions clientInitiatedProgress
+    , _foldingRangeProvider =
+        supported' SMethod_TextDocumentFoldingRange $
+          InR $
+            InL $
+              FoldingRangeOptions clientInitiatedProgress
     , _executeCommandProvider = executeCommandProvider
-    , _selectionRangeProvider = supportedBool SMethod_TextDocumentSelectionRange
-    , _callHierarchyProvider = supportedBool SMethod_TextDocumentPrepareCallHierarchy
+    , _selectionRangeProvider =
+        supported' SMethod_TextDocumentSelectionRange $
+          InR $
+            InL $
+              SelectionRangeOptions clientInitiatedProgress
+    , _callHierarchyProvider =
+        supported' SMethod_TextDocumentPrepareCallHierarchy $
+          InR $
+            InL $
+              CallHierarchyOptions clientInitiatedProgress
     , _semanticTokensProvider = semanticTokensProvider
-    , _workspaceSymbolProvider = supportedBool SMethod_WorkspaceSymbol
+    , _workspaceSymbolProvider =
+        supported' SMethod_WorkspaceSymbol $
+          InR $
+            WorkspaceSymbolOptions clientInitiatedProgress (supported SMethod_WorkspaceSymbolResolve)
     , _workspace = Just workspace
     , _experimental = Nothing :: Maybe Value
     , -- The only encoding the VFS supports is the legacy UTF16 option at the moment
@@ -246,30 +295,28 @@ inferServerCapabilities clientCaps o h =
         supported' SMethod_TextDocumentLinkedEditingRange $
           InR $
             InL $
-              LinkedEditingRangeOptions{_workDoneProgress = Nothing}
+              LinkedEditingRangeOptions clientInitiatedProgress
     , _monikerProvider =
         supported' SMethod_TextDocumentMoniker $
           InR $
             InL $
-              MonikerOptions{_workDoneProgress = Nothing}
+              MonikerOptions clientInitiatedProgress
     , _typeHierarchyProvider =
         supported' SMethod_TextDocumentPrepareTypeHierarchy $
           InR $
             InL $
-              TypeHierarchyOptions{_workDoneProgress = Nothing}
+              TypeHierarchyOptions clientInitiatedProgress
     , _inlineValueProvider =
         supported' SMethod_TextDocumentInlineValue $
           InR $
             InL $
-              InlineValueOptions{_workDoneProgress = Nothing}
+              InlineValueOptions clientInitiatedProgress
     , _diagnosticProvider = diagnosticProvider
     , -- TODO: super unclear what to do about notebooks in general
       _notebookDocumentSync = Nothing
     }
  where
-  -- \| For when we just return a simple @true@/@false@ to indicate if we
-  -- support the capability
-  supportedBool = Just . InL . supported_b
+  clientInitiatedProgress = Just (optSupportClientInitiatedProgress o)
 
   supported' m b
     | supported_b m = Just b
@@ -287,56 +334,40 @@ inferServerCapabilities clientCaps o h =
   singleton :: a -> [a]
   singleton x = [x]
 
-  completionProvider
-    | supported_b SMethod_TextDocumentCompletion =
-        Just $
-          CompletionOptions
-            { _triggerCharacters = map T.singleton <$> optCompletionTriggerCharacters o
-            , _allCommitCharacters = map T.singleton <$> optCompletionAllCommitCharacters o
-            , _resolveProvider = supported SMethod_CompletionItemResolve
-            , _completionItem = Nothing
-            , _workDoneProgress = Nothing
+  completionProvider =
+    supported' SMethod_TextDocumentCompletion $
+      CompletionOptions
+        { _triggerCharacters = map T.singleton <$> optCompletionTriggerCharacters o
+        , _allCommitCharacters = map T.singleton <$> optCompletionAllCommitCharacters o
+        , _resolveProvider = supported SMethod_CompletionItemResolve
+        , _completionItem = Nothing
+        , _workDoneProgress = clientInitiatedProgress
+        }
+
+  inlayProvider =
+    supported' SMethod_TextDocumentInlayHint $
+      InR $
+        InL
+          InlayHintOptions
+            { _workDoneProgress = clientInitiatedProgress
+            , _resolveProvider = supported SMethod_InlayHintResolve
             }
-    | otherwise = Nothing
 
-  inlayProvider
-    | supported_b SMethod_TextDocumentInlayHint =
-        Just $
-          InR $
-            InL
-              InlayHintOptions
-                { _workDoneProgress = Nothing
-                , _resolveProvider = supported SMethod_InlayHintResolve
-                }
-    | otherwise = Nothing
+  codeActionProvider =
+    supported' SMethod_TextDocumentCodeAction $
+      InR $
+        CodeActionOptions
+          { _workDoneProgress = clientInitiatedProgress
+          , _codeActionKinds = optCodeActionKinds o
+          , _resolveProvider = supported SMethod_CodeActionResolve
+          }
 
-  clientSupportsCodeActionKinds =
-    isJust $
-      clientCaps ^? L.textDocument . _Just . L.codeAction . _Just . L.codeActionLiteralSupport . _Just
-
-  codeActionProvider
-    | supported_b SMethod_TextDocumentCodeAction =
-        Just $
-          InR $
-            CodeActionOptions
-              { _workDoneProgress = Nothing
-              , _codeActionKinds = codeActionKinds (optCodeActionKinds o)
-              , _resolveProvider = supported SMethod_CodeActionResolve
-              }
-    | otherwise = Just (InL False)
-
-  codeActionKinds (Just ks)
-    | clientSupportsCodeActionKinds = Just ks
-  codeActionKinds _ = Nothing
-
-  signatureHelpProvider
-    | supported_b SMethod_TextDocumentSignatureHelp =
-        Just $
-          SignatureHelpOptions
-            Nothing
-            (map T.singleton <$> optSignatureHelpTriggerCharacters o)
-            (map T.singleton <$> optSignatureHelpRetriggerCharacters o)
-    | otherwise = Nothing
+  signatureHelpProvider =
+    supported' SMethod_TextDocumentSignatureHelp $
+      SignatureHelpOptions
+        clientInitiatedProgress
+        (map T.singleton <$> optSignatureHelpTriggerCharacters o)
+        (map T.singleton <$> optSignatureHelpRetriggerCharacters o)
 
   documentOnTypeFormattingProvider
     | supported_b SMethod_TextDocumentOnTypeFormatting
@@ -348,32 +379,18 @@ inferServerCapabilities clientCaps o h =
         error "documentOnTypeFormattingTriggerCharacters needs to be set if a documentOnTypeFormattingHandler is set"
     | otherwise = Nothing
 
-  executeCommandProvider
-    | supported_b SMethod_WorkspaceExecuteCommand
-    , Just cmds <- optExecuteCommandCommands o =
-        Just (ExecuteCommandOptions Nothing cmds)
-    | supported_b SMethod_WorkspaceExecuteCommand
-    , Nothing <- optExecuteCommandCommands o =
-        error "executeCommandCommands needs to be set if a executeCommandHandler is set"
-    | otherwise = Nothing
-
-  clientSupportsPrepareRename =
-    fromMaybe False $
-      clientCaps ^? L.textDocument . _Just . L.rename . _Just . L.prepareSupport . _Just
-
-  renameProvider
-    | clientSupportsPrepareRename
-    , supported_b SMethod_TextDocumentRename
-    , supported_b SMethod_TextDocumentPrepareRename =
-        Just $
-          InR . RenameOptions Nothing . Just $
-            True
-    | supported_b SMethod_TextDocumentRename = Just (InL True)
-    | otherwise = Just (InL False)
+  executeCommandProvider =
+    supported' SMethod_WorkspaceExecuteCommand $
+      case optExecuteCommandCommands o of
+        Just cmds -> ExecuteCommandOptions clientInitiatedProgress cmds
+        Nothing -> error "executeCommandCommands needs to be set if a executeCommandHandler is set"
 
   -- Always provide the default legend
   -- TODO: allow user-provided legend via 'Options', or at least user-provided types
-  semanticTokensProvider = Just $ InL $ SemanticTokensOptions Nothing defaultSemanticTokensLegend semanticTokenRangeProvider semanticTokenFullProvider
+  semanticTokensProvider =
+    Just $
+      InL $
+        SemanticTokensOptions clientInitiatedProgress defaultSemanticTokensLegend semanticTokenRangeProvider semanticTokenFullProvider
   semanticTokenRangeProvider
     | supported_b SMethod_TextDocumentSemanticTokensRange = Just $ InL True
     | otherwise = Nothing
@@ -395,7 +412,7 @@ inferServerCapabilities clientCaps o h =
     supported' SMethod_TextDocumentDiagnostic $
       InL $
         DiagnosticOptions
-          { _workDoneProgress = Nothing
+          { _workDoneProgress = clientInitiatedProgress
           , _identifier = Nothing
           , -- TODO: this is a conservative but maybe inaccurate, unclear how much it matters
             _interFileDependencies = True
