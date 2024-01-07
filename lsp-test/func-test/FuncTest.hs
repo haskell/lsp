@@ -19,7 +19,6 @@ import Data.Aeson qualified as J
 import Data.Maybe
 import Data.Proxy
 import Data.Set qualified as Set
-import Debug.Trace
 import Language.LSP.Protocol.Lens qualified as L
 import Language.LSP.Protocol.Message
 import Language.LSP.Protocol.Types
@@ -78,31 +77,25 @@ spec = do
             requestHandler (SMethod_CustomMethod (Proxy @"something")) $ \_req resp -> void $ forkIO $ do
               withProgress "Doing something" Nothing NotCancellable $ \updater -> do
                 takeMVar startBarrier
-                traceM "Starting"
                 updater $ ProgressAmount (Just 25) (Just "step1")
-                traceM "Sent step1"
                 updater $ ProgressAmount (Just 50) (Just "step2")
-                traceM "Sent step2"
                 updater $ ProgressAmount (Just 75) (Just "step3")
-                traceM "Sent step3"
 
       runSessionWithServer logger definition Test.defaultConfig Test.fullCaps "." $ do
         Test.sendRequest (SMethod_CustomMethod (Proxy @"something")) J.Null
 
-        -- Wait until we have created the progress so the updates will be sent individually
-        skipManyTill Test.anyMessage $ Test.message SMethod_WindowWorkDoneProgressCreate
-
-        -- First make sure that we get a $/progress begin notification
+        -- Wait until we have seen a begin messsage. This means that the token setup
+        -- has happened and the server has been able to send us a begin message
         skipManyTill Test.anyMessage $ do
           x <- Test.message SMethod_Progress
           guard $ has (L.params . L.value . _workDoneProgressBegin) x
 
+        -- allow the hander to send us updates
         putMVar startBarrier ()
 
         do
           u <- Test.message SMethod_Progress
           liftIO $ do
-            traceM $ show $ u ^? L.params . L.value
             u ^? L.params . L.value . _workDoneProgressReport . L.message `shouldBe` Just (Just "step1")
             u ^? L.params . L.value . _workDoneProgressReport . L.percentage `shouldBe` Just (Just 25)
 
@@ -224,13 +217,9 @@ spec = do
           handlers =
             requestHandler SMethod_TextDocumentCodeLens $ \req resp -> void $ forkIO $ do
               withProgress "Doing something" (req ^. L.params . L.workDoneToken) NotCancellable $ \updater -> do
-                traceM "Starting"
                 updater $ ProgressAmount (Just 25) (Just "step1")
-                traceM "Sent step1"
                 updater $ ProgressAmount (Just 50) (Just "step2")
-                traceM "Sent step2"
                 updater $ ProgressAmount (Just 75) (Just "step3")
-                traceM "Sent step3"
 
       runSessionWithServer logger definition Test.defaultConfig Test.fullCaps "." $ do
         Test.sendRequest SMethod_TextDocumentCodeLens (CodeLensParams (Just $ ProgressToken $ InR "hello") Nothing (TextDocumentIdentifier $ Uri "."))
@@ -243,7 +232,6 @@ spec = do
         do
           u <- Test.message SMethod_Progress
           liftIO $ do
-            traceM $ show $ u ^? L.params . L.value
             u ^? L.params . L.value . _workDoneProgressReport . L.message `shouldBe` Just (Just "step1")
             u ^? L.params . L.value . _workDoneProgressReport . L.percentage `shouldBe` Just (Just 25)
 
