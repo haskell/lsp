@@ -648,7 +648,7 @@ withProgressBase indefinite title clientToken cancellable f = do
   progressState <- liftIO $ newMVar ProgressInitial
 
   -- Until we start the progress reporting, track the current latest progress in an MVar, so when
-  -- we do start we can start at the right point. 
+  -- we do start we can start at the right point.
   let initialPercentage = if indefinite then Nothing else Just 0
   initialProgress <- liftIO $ newMVar (ProgressAmount initialPercentage Nothing)
 

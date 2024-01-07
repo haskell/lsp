@@ -1,22 +1,25 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module Main where
 
+import Colog.Core
 import Colog.Core qualified as L
 import Control.Applicative.Combinators
 import Control.Exception
 import Control.Lens hiding (Iso, List)
 import Control.Monad
 import Control.Monad.IO.Class
-import Data.Maybe
 import Data.Aeson qualified as J
+import Data.Maybe
+import Data.Proxy
 import Data.Set qualified as Set
+import Debug.Trace
 import Language.LSP.Protocol.Lens qualified as L
 import Language.LSP.Protocol.Message
 import Language.LSP.Protocol.Types
@@ -28,18 +31,15 @@ import System.Process
 import Test.Hspec
 import UnliftIO
 import UnliftIO.Concurrent
-import Colog.Core
-import Data.Proxy
-import Debug.Trace
 
-runSessionWithServer
-  :: LogAction IO (WithSeverity LspServerLog)
-  -> ServerDefinition config
-  -> Test.SessionConfig
-  -> ClientCapabilities
-  -> FilePath
-  -> Test.Session a
-  -> IO a
+runSessionWithServer ::
+  LogAction IO (WithSeverity LspServerLog) ->
+  ServerDefinition config ->
+  Test.SessionConfig ->
+  ClientCapabilities ->
+  FilePath ->
+  Test.Session a ->
+  IO a
 runSessionWithServer logger defn testConfig caps root session = do
   (hinRead, hinWrite) <- createPipe
   (houtRead, houtWrite) <- createPipe
@@ -75,7 +75,7 @@ spec = do
 
           handlers :: Handlers (LspM ())
           handlers =
-           requestHandler (SMethod_CustomMethod (Proxy @"something")) $ \_req resp -> void $ forkIO $ do
+            requestHandler (SMethod_CustomMethod (Proxy @"something")) $ \_req resp -> void $ forkIO $ do
               withProgress "Doing something" Nothing NotCancellable $ \updater -> do
                 takeMVar startBarrier
                 traceM "Starting"
@@ -140,7 +140,7 @@ spec = do
 
           handlers :: Handlers (LspM ())
           handlers =
-           requestHandler (SMethod_CustomMethod (Proxy @"something")) $ \_req resp -> void $ forkIO $ do
+            requestHandler (SMethod_CustomMethod (Proxy @"something")) $ \_req resp -> void $ forkIO $ do
               -- Doesn't matter what cancellability we set here!
               withProgress "Doing something" Nothing NotCancellable $ \updater -> do
                 -- Wait around to be cancelled, set the MVar only if we are
@@ -186,7 +186,8 @@ spec = do
 
           handlers :: MVar () -> Handlers (LspM ())
           handlers killVar =
-            notificationHandler SMethod_Initialized $ \noti -> void $ forkIO $
+            notificationHandler SMethod_Initialized $ \noti -> void $
+              forkIO $
                 withProgress "Doing something" Nothing NotCancellable $ \updater -> liftIO $ do
                   takeMVar killVar
                   Control.Exception.throwIO AsyncCancelled
@@ -216,7 +217,7 @@ spec = do
               , doInitialize = \env _req -> pure $ Right env
               , staticHandlers = \_caps -> handlers
               , interpretHandler = \env -> Iso (runLspT env) liftIO
-              , options = defaultOptions { optSupportClientInitiatedProgress = True }
+              , options = defaultOptions{optSupportClientInitiatedProgress = True}
               }
 
           handlers :: Handlers (LspM ())
@@ -263,7 +264,6 @@ spec = do
           x <- Test.message SMethod_Progress
           guard $ has (L.params . L.value . _workDoneProgressEnd) x
 
-
   describe "workspace folders" $
     it "keeps track of open workspace folders" $ do
       countVar <- newMVar 0
@@ -304,7 +304,7 @@ spec = do
                     _ -> error "Shouldn't be here"
               ]
 
-      let config = Test.defaultConfig { Test.initialWorkspaceFolders = Just [wf0] }
+      let config = Test.defaultConfig{Test.initialWorkspaceFolders = Just [wf0]}
 
           changeFolders add rmv =
             let ev = WorkspaceFoldersChangeEvent add rmv
