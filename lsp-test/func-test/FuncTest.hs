@@ -92,12 +92,12 @@ spec = do
         -- Wait until we have created the progress so the updates will be sent individually
         skipManyTill Test.anyMessage $ Test.message SMethod_WindowWorkDoneProgressCreate
 
-        putMVar startBarrier ()
-
         -- First make sure that we get a $/progress begin notification
         skipManyTill Test.anyMessage $ do
           x <- Test.message SMethod_Progress
           guard $ has (L.params . L.value . _workDoneProgressBegin) x
+
+        putMVar startBarrier ()
 
         do
           u <- Test.message SMethod_Progress
