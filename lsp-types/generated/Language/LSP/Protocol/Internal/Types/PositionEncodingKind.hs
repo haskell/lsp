@@ -50,7 +50,7 @@ data PositionEncodingKind =
   deriving anyclass (NFData, Hashable)
   deriving ( Aeson.ToJSON
   , Aeson.FromJSON
-  , Data.String.IsString ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum PositionEncodingKind Data.Text.Text)
+  , Data.String.IsString ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum PositionEncodingKind)
   deriving Pretty via (ViaJSON PositionEncodingKind)
 
 instance Language.LSP.Protocol.Types.LspEnum.LspEnum PositionEncodingKind where

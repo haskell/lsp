@@ -73,7 +73,7 @@ data SemanticTokenModifiers =
   deriving anyclass (NFData, Hashable)
   deriving ( Aeson.ToJSON
   , Aeson.FromJSON
-  , Data.String.IsString ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum SemanticTokenModifiers Data.Text.Text)
+  , Data.String.IsString ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum SemanticTokenModifiers)
   deriving Pretty via (ViaJSON SemanticTokenModifiers)
 
 instance Language.LSP.Protocol.Types.LspEnum.LspEnum SemanticTokenModifiers where

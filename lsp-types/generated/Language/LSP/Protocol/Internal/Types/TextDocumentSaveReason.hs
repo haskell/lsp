@@ -40,7 +40,7 @@ data TextDocumentSaveReason =
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
   deriving ( Aeson.ToJSON
-  , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum TextDocumentSaveReason Language.LSP.Protocol.Types.Common.UInt)
+  , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum TextDocumentSaveReason)
   deriving Pretty via (ViaJSON TextDocumentSaveReason)
 
 instance Language.LSP.Protocol.Types.LspEnum.LspEnum TextDocumentSaveReason where

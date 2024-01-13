@@ -37,7 +37,7 @@ data NotebookCellKind =
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
   deriving ( Aeson.ToJSON
-  , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum NotebookCellKind Language.LSP.Protocol.Types.Common.UInt)
+  , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum NotebookCellKind)
   deriving Pretty via (ViaJSON NotebookCellKind)
 
 instance Language.LSP.Protocol.Types.LspEnum.LspEnum NotebookCellKind where

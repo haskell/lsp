@@ -41,7 +41,7 @@ data FoldingRangeKind =
   deriving anyclass (NFData, Hashable)
   deriving ( Aeson.ToJSON
   , Aeson.FromJSON
-  , Data.String.IsString ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum FoldingRangeKind Data.Text.Text)
+  , Data.String.IsString ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum FoldingRangeKind)
   deriving Pretty via (ViaJSON FoldingRangeKind)
 
 instance Language.LSP.Protocol.Types.LspEnum.LspEnum FoldingRangeKind where

@@ -39,7 +39,7 @@ data TraceValues =
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
   deriving ( Aeson.ToJSON
-  , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum TraceValues Data.Text.Text)
+  , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum TraceValues)
   deriving Pretty via (ViaJSON TraceValues)
 
 instance Language.LSP.Protocol.Types.LspEnum.LspEnum TraceValues where

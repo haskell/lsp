@@ -1,19 +1,15 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeInType #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 -- we're using some deprecated stuff from the LSP spec, that's fine
 {-# OPTIONS_GHC -fno-warn-deprecations #-}
-{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 -- | Test for JSON serialization
 module JsonSpec where
@@ -21,12 +17,11 @@ module JsonSpec where
 import Language.LSP.Protocol.Message
 import Language.LSP.Protocol.Types
 
+import Language.LSP.Protocol.QuickCheck ()
+
 import Data.Aeson qualified as J
 import Data.List (isPrefixOf)
 import Data.Row
-import Data.Row qualified as R
-import Data.Row.Records qualified as R
-import Data.Void
 import Test.Hspec
 import Test.Hspec.QuickCheck
 import Test.QuickCheck hiding (Success)
@@ -114,129 +109,3 @@ spec = do
 
 propertyJsonRoundtrip :: (Eq a, Show a, J.ToJSON a, J.FromJSON a) => a -> Property
 propertyJsonRoundtrip a = J.Success a === J.fromJSON (J.toJSON a)
-
--- ---------------------------------------------------------------------
-
-instance (Arbitrary a, Arbitrary b) => Arbitrary (a |? b) where
-  arbitrary = oneof [InL <$> arbitrary, InR <$> arbitrary]
-  shrink = genericShrink
-
-instance Arbitrary Null where
-  arbitrary = pure Null
-
-instance (R.AllUniqueLabels r, R.Forall r Arbitrary) => Arbitrary (R.Rec r) where
-  arbitrary = R.fromLabelsA @Arbitrary $ \_l -> arbitrary
-  shrink record = R.traverse @Arbitrary @[] shrink record
-
-deriving newtype instance Arbitrary MarkedString
-
-instance Arbitrary MarkupContent where
-  arbitrary = MarkupContent <$> arbitrary <*> arbitrary
-  shrink = genericShrink
-
-instance Arbitrary MarkupKind where
-  arbitrary = oneof [pure MarkupKind_PlainText, pure MarkupKind_Markdown]
-  shrink = genericShrink
-
-instance Arbitrary UInt where
-  arbitrary = fromInteger <$> arbitrary
-
-instance Arbitrary Uri where
-  arbitrary = Uri <$> arbitrary
-  shrink = genericShrink
-
--- deriving newtype instance Arbitrary URI
-
-instance Arbitrary WorkspaceFolder where
-  arbitrary = WorkspaceFolder <$> arbitrary <*> arbitrary
-  shrink = genericShrink
-
-instance Arbitrary RelativePattern where
-  arbitrary = RelativePattern <$> arbitrary <*> arbitrary
-  shrink = genericShrink
-
-deriving newtype instance Arbitrary Pattern
-deriving newtype instance Arbitrary GlobPattern
-
-instance Arbitrary Position where
-  arbitrary = Position <$> arbitrary <*> arbitrary
-  shrink = genericShrink
-
-instance Arbitrary Location where
-  arbitrary = Location <$> arbitrary <*> arbitrary
-  shrink = genericShrink
-
-instance Arbitrary Range where
-  arbitrary = Range <$> arbitrary <*> arbitrary
-  shrink = genericShrink
-
-instance Arbitrary Hover where
-  arbitrary = Hover <$> arbitrary <*> arbitrary
-  shrink = genericShrink
-
-instance {-# OVERLAPPING #-} Arbitrary (Maybe Void) where
-  arbitrary = pure Nothing
-
-instance (ErrorData m ~ Maybe Void) => Arbitrary (TResponseError m) where
-  arbitrary = TResponseError <$> arbitrary <*> arbitrary <*> pure Nothing
-  shrink = genericShrink
-
-instance Arbitrary ResponseError where
-  arbitrary = ResponseError <$> arbitrary <*> arbitrary <*> pure Nothing
-  shrink = genericShrink
-
-instance (Arbitrary (MessageResult m), ErrorData m ~ Maybe Void) => Arbitrary (TResponseMessage m) where
-  arbitrary = TResponseMessage <$> arbitrary <*> arbitrary <*> arbitrary
-  shrink = genericShrink
-
-instance Arbitrary (LspId m) where
-  arbitrary = oneof [IdInt <$> arbitrary, IdString <$> arbitrary]
-  shrink = genericShrink
-
-instance Arbitrary ErrorCodes where
-  arbitrary =
-    elements
-      [ ErrorCodes_ParseError
-      , ErrorCodes_InvalidRequest
-      , ErrorCodes_MethodNotFound
-      , ErrorCodes_InvalidParams
-      , ErrorCodes_InternalError
-      , ErrorCodes_ServerNotInitialized
-      , ErrorCodes_UnknownErrorCode
-      ]
-  shrink = genericShrink
-
-instance Arbitrary LSPErrorCodes where
-  arbitrary =
-    elements
-      [ LSPErrorCodes_RequestFailed
-      , LSPErrorCodes_ServerCancelled
-      , LSPErrorCodes_ContentModified
-      , LSPErrorCodes_RequestCancelled
-      ]
-  shrink = genericShrink
-
--- ---------------------------------------------------------------------
-
-instance Arbitrary Registration where
-  arbitrary = Registration <$> arbitrary <*> arbitrary <*> arbitrary
-  shrink = genericShrink
-
-instance Arbitrary DidChangeWatchedFilesRegistrationOptions where
-  arbitrary = DidChangeWatchedFilesRegistrationOptions <$> arbitrary
-  shrink = genericShrink
-
-instance Arbitrary FileSystemWatcher where
-  arbitrary = FileSystemWatcher <$> arbitrary <*> arbitrary
-  shrink = genericShrink
-
--- TODO: watchKind is weird
-instance Arbitrary WatchKind where
-  arbitrary = oneof [pure WatchKind_Change, pure WatchKind_Create, pure WatchKind_Delete]
-  shrink = genericShrink
-
--- ---------------------------------------------------------------------
---
-instance Arbitrary TextDocumentContentChangeEvent where
-  arbitrary = TextDocumentContentChangeEvent <$> arbitrary
-  shrink = genericShrink

@@ -96,7 +96,7 @@ data CodeActionKind =
   deriving anyclass (NFData, Hashable)
   deriving ( Aeson.ToJSON
   , Aeson.FromJSON
-  , Data.String.IsString ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum CodeActionKind Data.Text.Text)
+  , Data.String.IsString ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum CodeActionKind)
   deriving Pretty via (ViaJSON CodeActionKind)
 
 instance Language.LSP.Protocol.Types.LspEnum.LspEnum CodeActionKind where

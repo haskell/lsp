@@ -39,7 +39,7 @@ data DocumentDiagnosticReportKind =
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
   deriving ( Aeson.ToJSON
-  , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum DocumentDiagnosticReportKind Data.Text.Text)
+  , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum DocumentDiagnosticReportKind)
   deriving Pretty via (ViaJSON DocumentDiagnosticReportKind)
 
 instance Language.LSP.Protocol.Types.LspEnum.LspEnum DocumentDiagnosticReportKind where

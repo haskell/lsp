@@ -39,7 +39,7 @@ data ResourceOperationKind =
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
   deriving ( Aeson.ToJSON
-  , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum ResourceOperationKind Data.Text.Text)
+  , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum ResourceOperationKind)
   deriving Pretty via (ViaJSON ResourceOperationKind)
 
 instance Language.LSP.Protocol.Types.LspEnum.LspEnum ResourceOperationKind where

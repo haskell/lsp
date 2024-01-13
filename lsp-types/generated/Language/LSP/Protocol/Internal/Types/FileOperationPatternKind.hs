@@ -38,7 +38,7 @@ data FileOperationPatternKind =
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
   deriving ( Aeson.ToJSON
-  , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum FileOperationPatternKind Data.Text.Text)
+  , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum FileOperationPatternKind)
   deriving Pretty via (ViaJSON FileOperationPatternKind)
 
 instance Language.LSP.Protocol.Types.LspEnum.LspEnum FileOperationPatternKind where

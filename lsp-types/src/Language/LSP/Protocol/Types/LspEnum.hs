@@ -42,17 +42,17 @@ class LspEnum a => LspOpenEnum a where
 {- | Newtype for @deriving via@ to get standard JSON and 'IsString' instances in terms of the 'LspEnum'
  class methods.
 -}
-newtype AsLspEnum a b = AsLspEnum a
+newtype AsLspEnum a = AsLspEnum a
 
-instance (LspEnum a, EnumBaseType a ~ b, Aeson.ToJSON b) => Aeson.ToJSON (AsLspEnum a b) where
+instance (LspEnum a, EnumBaseType a ~ b, Aeson.ToJSON b) => Aeson.ToJSON (AsLspEnum a) where
   toJSON (AsLspEnum e) = Aeson.toJSON (toEnumBaseType e)
 
-instance (LspEnum a, EnumBaseType a ~ b, Aeson.FromJSON b, Show b) => Aeson.FromJSON (AsLspEnum a b) where
+instance (LspEnum a, EnumBaseType a ~ b, Aeson.FromJSON b, Show b) => Aeson.FromJSON (AsLspEnum a) where
   parseJSON val = do
     v <- Aeson.parseJSON val
     case fromEnumBaseType v of
       Just x -> pure $ AsLspEnum x
       Nothing -> fail $ "unrecognized enum value " ++ show v
 
-instance (LspOpenEnum a, EnumBaseType a ~ b, b ~ Text.Text) => IsString (AsLspEnum a b) where
+instance (LspOpenEnum a, EnumBaseType a ~ b, b ~ Text.Text) => IsString (AsLspEnum a) where
   fromString s = AsLspEnum $ fromOpenEnumBaseType (Text.pack s)

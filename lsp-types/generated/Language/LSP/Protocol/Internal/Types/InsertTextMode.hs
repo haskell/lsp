@@ -48,7 +48,7 @@ data InsertTextMode =
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
   deriving ( Aeson.ToJSON
-  , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum InsertTextMode Language.LSP.Protocol.Types.Common.UInt)
+  , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum InsertTextMode)
   deriving Pretty via (ViaJSON InsertTextMode)
 
 instance Language.LSP.Protocol.Types.LspEnum.LspEnum InsertTextMode where

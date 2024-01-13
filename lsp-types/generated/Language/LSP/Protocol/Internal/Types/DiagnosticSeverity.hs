@@ -43,7 +43,7 @@ data DiagnosticSeverity =
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
   deriving ( Aeson.ToJSON
-  , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum DiagnosticSeverity Language.LSP.Protocol.Types.Common.UInt)
+  , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum DiagnosticSeverity)
   deriving Pretty via (ViaJSON DiagnosticSeverity)
 
 instance Language.LSP.Protocol.Types.LspEnum.LspEnum DiagnosticSeverity where

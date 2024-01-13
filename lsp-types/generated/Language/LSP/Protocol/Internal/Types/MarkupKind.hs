@@ -39,7 +39,7 @@ data MarkupKind =
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
   deriving ( Aeson.ToJSON
-  , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum MarkupKind Data.Text.Text)
+  , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum MarkupKind)
   deriving Pretty via (ViaJSON MarkupKind)
 
 instance Language.LSP.Protocol.Types.LspEnum.LspEnum MarkupKind where
