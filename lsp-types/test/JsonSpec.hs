@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -22,6 +23,7 @@ import Language.LSP.Protocol.Types
 
 import Data.Aeson qualified as J
 import Data.List (isPrefixOf)
+import Data.Row
 import Data.Row qualified as R
 import Data.Row.Records qualified as R
 import Data.Void
@@ -34,9 +36,6 @@ import Test.QuickCheck.Instances ()
 -- ---------------------------------------------------------------------
 
 {-# ANN module ("HLint: ignore Redundant do" :: String) #-}
-
-main :: IO ()
-main = hspec spec
 
 spec :: Spec
 spec = do
@@ -60,10 +59,18 @@ jsonSpec = do
     prop
       "ResponseMessage Hover"
       (propertyJsonRoundtrip :: TResponseMessage 'Method_TextDocumentHover -> Property)
-  describe "JSON decoding regressions" $
+  describe "JSON decoding regressions" $ do
     it "CompletionItem" $
       (J.decode "{\"jsonrpc\":\"2.0\",\"result\":[{\"label\":\"raisebox\"}],\"id\":1}" :: Maybe (TResponseMessage 'Method_TextDocumentCompletion))
         `shouldNotBe` Nothing
+    it "handles optional field set to null in record" $ do
+      J.eitherDecode "{ \"isIncomplete\" : true, \"itemDefaults\" : { \"data\" : null }, \"items\": [] }"
+        `shouldBe` Right
+          ( CompletionList
+              True
+              (Just (#commitCharacters .== Nothing .+ #editRange .== Nothing .+ #insertTextFormat .== Nothing .+ #insertTextMode .== Nothing .+ #data .== Just J.Null))
+              mempty
+          )
 
 requestMessageSpec :: Spec
 requestMessageSpec = do
@@ -89,8 +96,9 @@ responseMessageSpec = do
       let input = "{\"jsonrpc\": \"2.0\", \"id\": 123, \"error\": { \"code\": -32700, \"message\": \"oh no\", \"data\": null }}"
        in J.decode input
             `shouldBe` Just
-              ((TResponseMessage "2.0" (Just (IdInt 123)) (Left $ ResponseError (InR ErrorCodes_ParseError) "oh no" (Just J.Null)))
-                 :: TResponseMessage ('Method_CustomMethod "hello"))
+              ( (TResponseMessage "2.0" (Just (IdInt 123)) (Left $ ResponseError (InR ErrorCodes_ParseError) "oh no" (Just J.Null))) ::
+                  TResponseMessage ('Method_CustomMethod "hello")
+              )
   describe "invalid JSON" $ do
     it "throws if neither result nor error is present" $ do
       (J.eitherDecode "{\"jsonrpc\":\"2.0\",\"id\":1}" :: Either String (TResponseMessage 'Method_Initialize))
