@@ -69,4 +69,4 @@ instance Aeson.ToJSON ClientCapabilities where
     ,"experimental" Language.LSP.Protocol.Types.Common..=? arg5]
 
 instance Aeson.FromJSON ClientCapabilities where
-  parseJSON = Aeson.withObject "ClientCapabilities" $ \arg -> ClientCapabilities <$> arg Aeson..:! "workspace" <*> arg Aeson..:! "textDocument" <*> arg Aeson..:! "notebookDocument" <*> arg Aeson..:! "window" <*> arg Aeson..:! "general" <*> arg Aeson..:! "experimental"
+  parseJSON = Aeson.withObject "ClientCapabilities" $ \arg -> ClientCapabilities <$> arg Language.LSP.Protocol.Types.Common..:!? "workspace" <*> arg Language.LSP.Protocol.Types.Common..:!? "textDocument" <*> arg Language.LSP.Protocol.Types.Common..:!? "notebookDocument" <*> arg Language.LSP.Protocol.Types.Common..:!? "window" <*> arg Language.LSP.Protocol.Types.Common..:!? "general" <*> arg Language.LSP.Protocol.Types.Common..:!? "experimental"

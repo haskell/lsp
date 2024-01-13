@@ -39,4 +39,4 @@ instance Aeson.ToJSON CodeLensOptions where
     ,"resolveProvider" Language.LSP.Protocol.Types.Common..=? arg1]
 
 instance Aeson.FromJSON CodeLensOptions where
-  parseJSON = Aeson.withObject "CodeLensOptions" $ \arg -> CodeLensOptions <$> arg Aeson..:! "workDoneProgress" <*> arg Aeson..:! "resolveProvider"
+  parseJSON = Aeson.withObject "CodeLensOptions" $ \arg -> CodeLensOptions <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneProgress" <*> arg Language.LSP.Protocol.Types.Common..:!? "resolveProvider"

@@ -51,4 +51,4 @@ instance Aeson.ToJSON CodeActionOptions where
     ,"resolveProvider" Language.LSP.Protocol.Types.Common..=? arg2]
 
 instance Aeson.FromJSON CodeActionOptions where
-  parseJSON = Aeson.withObject "CodeActionOptions" $ \arg -> CodeActionOptions <$> arg Aeson..:! "workDoneProgress" <*> arg Aeson..:! "codeActionKinds" <*> arg Aeson..:! "resolveProvider"
+  parseJSON = Aeson.withObject "CodeActionOptions" $ \arg -> CodeActionOptions <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneProgress" <*> arg Language.LSP.Protocol.Types.Common..:!? "codeActionKinds" <*> arg Language.LSP.Protocol.Types.Common..:!? "resolveProvider"

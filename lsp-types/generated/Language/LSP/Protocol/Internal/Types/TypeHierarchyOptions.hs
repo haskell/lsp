@@ -36,4 +36,4 @@ instance Aeson.ToJSON TypeHierarchyOptions where
   toJSON (TypeHierarchyOptions arg0) = Aeson.object $ concat $  ["workDoneProgress" Language.LSP.Protocol.Types.Common..=? arg0]
 
 instance Aeson.FromJSON TypeHierarchyOptions where
-  parseJSON = Aeson.withObject "TypeHierarchyOptions" $ \arg -> TypeHierarchyOptions <$> arg Aeson..:! "workDoneProgress"
+  parseJSON = Aeson.withObject "TypeHierarchyOptions" $ \arg -> TypeHierarchyOptions <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneProgress"

@@ -50,4 +50,4 @@ instance Aeson.ToJSON NotebookCellTextDocumentFilter where
     ,"language" Language.LSP.Protocol.Types.Common..=? arg1]
 
 instance Aeson.FromJSON NotebookCellTextDocumentFilter where
-  parseJSON = Aeson.withObject "NotebookCellTextDocumentFilter" $ \arg -> NotebookCellTextDocumentFilter <$> arg Aeson..: "notebook" <*> arg Aeson..:! "language"
+  parseJSON = Aeson.withObject "NotebookCellTextDocumentFilter" $ \arg -> NotebookCellTextDocumentFilter <$> arg Aeson..: "notebook" <*> arg Language.LSP.Protocol.Types.Common..:!? "language"

@@ -43,4 +43,4 @@ instance Aeson.ToJSON DiagnosticClientCapabilities where
     ,"relatedDocumentSupport" Language.LSP.Protocol.Types.Common..=? arg1]
 
 instance Aeson.FromJSON DiagnosticClientCapabilities where
-  parseJSON = Aeson.withObject "DiagnosticClientCapabilities" $ \arg -> DiagnosticClientCapabilities <$> arg Aeson..:! "dynamicRegistration" <*> arg Aeson..:! "relatedDocumentSupport"
+  parseJSON = Aeson.withObject "DiagnosticClientCapabilities" $ \arg -> DiagnosticClientCapabilities <$> arg Language.LSP.Protocol.Types.Common..:!? "dynamicRegistration" <*> arg Language.LSP.Protocol.Types.Common..:!? "relatedDocumentSupport"

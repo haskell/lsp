@@ -34,4 +34,4 @@ instance Aeson.ToJSON CodeLensClientCapabilities where
   toJSON (CodeLensClientCapabilities arg0) = Aeson.object $ concat $  ["dynamicRegistration" Language.LSP.Protocol.Types.Common..=? arg0]
 
 instance Aeson.FromJSON CodeLensClientCapabilities where
-  parseJSON = Aeson.withObject "CodeLensClientCapabilities" $ \arg -> CodeLensClientCapabilities <$> arg Aeson..:! "dynamicRegistration"
+  parseJSON = Aeson.withObject "CodeLensClientCapabilities" $ \arg -> CodeLensClientCapabilities <$> arg Language.LSP.Protocol.Types.Common..:!? "dynamicRegistration"

@@ -37,4 +37,4 @@ instance Aeson.ToJSON StaticRegistrationOptions where
   toJSON (StaticRegistrationOptions arg0) = Aeson.object $ concat $  ["id" Language.LSP.Protocol.Types.Common..=? arg0]
 
 instance Aeson.FromJSON StaticRegistrationOptions where
-  parseJSON = Aeson.withObject "StaticRegistrationOptions" $ \arg -> StaticRegistrationOptions <$> arg Aeson..:! "id"
+  parseJSON = Aeson.withObject "StaticRegistrationOptions" $ \arg -> StaticRegistrationOptions <$> arg Language.LSP.Protocol.Types.Common..:!? "id"

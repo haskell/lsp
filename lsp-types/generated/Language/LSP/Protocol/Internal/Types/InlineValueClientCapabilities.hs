@@ -36,4 +36,4 @@ instance Aeson.ToJSON InlineValueClientCapabilities where
   toJSON (InlineValueClientCapabilities arg0) = Aeson.object $ concat $  ["dynamicRegistration" Language.LSP.Protocol.Types.Common..=? arg0]
 
 instance Aeson.FromJSON InlineValueClientCapabilities where
-  parseJSON = Aeson.withObject "InlineValueClientCapabilities" $ \arg -> InlineValueClientCapabilities <$> arg Aeson..:! "dynamicRegistration"
+  parseJSON = Aeson.withObject "InlineValueClientCapabilities" $ \arg -> InlineValueClientCapabilities <$> arg Language.LSP.Protocol.Types.Common..:!? "dynamicRegistration"

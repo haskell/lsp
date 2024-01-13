@@ -42,4 +42,4 @@ instance Aeson.ToJSON InlineValueWorkspaceClientCapabilities where
   toJSON (InlineValueWorkspaceClientCapabilities arg0) = Aeson.object $ concat $  ["refreshSupport" Language.LSP.Protocol.Types.Common..=? arg0]
 
 instance Aeson.FromJSON InlineValueWorkspaceClientCapabilities where
-  parseJSON = Aeson.withObject "InlineValueWorkspaceClientCapabilities" $ \arg -> InlineValueWorkspaceClientCapabilities <$> arg Aeson..:! "refreshSupport"
+  parseJSON = Aeson.withObject "InlineValueWorkspaceClientCapabilities" $ \arg -> InlineValueWorkspaceClientCapabilities <$> arg Language.LSP.Protocol.Types.Common..:!? "refreshSupport"

@@ -34,4 +34,4 @@ instance Aeson.ToJSON DocumentHighlightClientCapabilities where
   toJSON (DocumentHighlightClientCapabilities arg0) = Aeson.object $ concat $  ["dynamicRegistration" Language.LSP.Protocol.Types.Common..=? arg0]
 
 instance Aeson.FromJSON DocumentHighlightClientCapabilities where
-  parseJSON = Aeson.withObject "DocumentHighlightClientCapabilities" $ \arg -> DocumentHighlightClientCapabilities <$> arg Aeson..:! "dynamicRegistration"
+  parseJSON = Aeson.withObject "DocumentHighlightClientCapabilities" $ \arg -> DocumentHighlightClientCapabilities <$> arg Language.LSP.Protocol.Types.Common..:!? "dynamicRegistration"

@@ -48,4 +48,4 @@ instance Aeson.ToJSON RenameRegistrationOptions where
     ,"prepareProvider" Language.LSP.Protocol.Types.Common..=? arg2]
 
 instance Aeson.FromJSON RenameRegistrationOptions where
-  parseJSON = Aeson.withObject "RenameRegistrationOptions" $ \arg -> RenameRegistrationOptions <$> arg Aeson..: "documentSelector" <*> arg Aeson..:! "workDoneProgress" <*> arg Aeson..:! "prepareProvider"
+  parseJSON = Aeson.withObject "RenameRegistrationOptions" $ \arg -> RenameRegistrationOptions <$> arg Aeson..: "documentSelector" <*> arg Language.LSP.Protocol.Types.Common..:!? "workDoneProgress" <*> arg Language.LSP.Protocol.Types.Common..:!? "prepareProvider"

@@ -62,4 +62,4 @@ instance Aeson.ToJSON SignatureHelpContext where
     ,"activeSignatureHelp" Language.LSP.Protocol.Types.Common..=? arg3]
 
 instance Aeson.FromJSON SignatureHelpContext where
-  parseJSON = Aeson.withObject "SignatureHelpContext" $ \arg -> SignatureHelpContext <$> arg Aeson..: "triggerKind" <*> arg Aeson..:! "triggerCharacter" <*> arg Aeson..: "isRetrigger" <*> arg Aeson..:! "activeSignatureHelp"
+  parseJSON = Aeson.withObject "SignatureHelpContext" $ \arg -> SignatureHelpContext <$> arg Aeson..: "triggerKind" <*> arg Language.LSP.Protocol.Types.Common..:!? "triggerCharacter" <*> arg Aeson..: "isRetrigger" <*> arg Language.LSP.Protocol.Types.Common..:!? "activeSignatureHelp"

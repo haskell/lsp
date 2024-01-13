@@ -58,4 +58,4 @@ instance Aeson.ToJSON CodeActionRegistrationOptions where
     ,"resolveProvider" Language.LSP.Protocol.Types.Common..=? arg3]
 
 instance Aeson.FromJSON CodeActionRegistrationOptions where
-  parseJSON = Aeson.withObject "CodeActionRegistrationOptions" $ \arg -> CodeActionRegistrationOptions <$> arg Aeson..: "documentSelector" <*> arg Aeson..:! "workDoneProgress" <*> arg Aeson..:! "codeActionKinds" <*> arg Aeson..:! "resolveProvider"
+  parseJSON = Aeson.withObject "CodeActionRegistrationOptions" $ \arg -> CodeActionRegistrationOptions <$> arg Aeson..: "documentSelector" <*> arg Language.LSP.Protocol.Types.Common..:!? "workDoneProgress" <*> arg Language.LSP.Protocol.Types.Common..:!? "codeActionKinds" <*> arg Language.LSP.Protocol.Types.Common..:!? "resolveProvider"

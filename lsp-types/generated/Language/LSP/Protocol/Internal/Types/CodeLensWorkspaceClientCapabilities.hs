@@ -40,4 +40,4 @@ instance Aeson.ToJSON CodeLensWorkspaceClientCapabilities where
   toJSON (CodeLensWorkspaceClientCapabilities arg0) = Aeson.object $ concat $  ["refreshSupport" Language.LSP.Protocol.Types.Common..=? arg0]
 
 instance Aeson.FromJSON CodeLensWorkspaceClientCapabilities where
-  parseJSON = Aeson.withObject "CodeLensWorkspaceClientCapabilities" $ \arg -> CodeLensWorkspaceClientCapabilities <$> arg Aeson..:! "refreshSupport"
+  parseJSON = Aeson.withObject "CodeLensWorkspaceClientCapabilities" $ \arg -> CodeLensWorkspaceClientCapabilities <$> arg Language.LSP.Protocol.Types.Common..:!? "refreshSupport"

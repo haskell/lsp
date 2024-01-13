@@ -41,4 +41,4 @@ instance Aeson.ToJSON WorkspaceFoldersInitializeParams where
   toJSON (WorkspaceFoldersInitializeParams arg0) = Aeson.object $ concat $  ["workspaceFolders" Language.LSP.Protocol.Types.Common..=? arg0]
 
 instance Aeson.FromJSON WorkspaceFoldersInitializeParams where
-  parseJSON = Aeson.withObject "WorkspaceFoldersInitializeParams" $ \arg -> WorkspaceFoldersInitializeParams <$> arg Aeson..:! "workspaceFolders"
+  parseJSON = Aeson.withObject "WorkspaceFoldersInitializeParams" $ \arg -> WorkspaceFoldersInitializeParams <$> arg Language.LSP.Protocol.Types.Common..:!? "workspaceFolders"

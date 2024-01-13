@@ -36,4 +36,4 @@ instance Aeson.ToJSON FileOperationPatternOptions where
   toJSON (FileOperationPatternOptions arg0) = Aeson.object $ concat $  ["ignoreCase" Language.LSP.Protocol.Types.Common..=? arg0]
 
 instance Aeson.FromJSON FileOperationPatternOptions where
-  parseJSON = Aeson.withObject "FileOperationPatternOptions" $ \arg -> FileOperationPatternOptions <$> arg Aeson..:! "ignoreCase"
+  parseJSON = Aeson.withObject "FileOperationPatternOptions" $ \arg -> FileOperationPatternOptions <$> arg Language.LSP.Protocol.Types.Common..:!? "ignoreCase"

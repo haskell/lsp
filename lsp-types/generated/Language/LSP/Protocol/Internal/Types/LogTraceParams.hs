@@ -40,4 +40,4 @@ instance Aeson.ToJSON LogTraceParams where
     ,"verbose" Language.LSP.Protocol.Types.Common..=? arg1]
 
 instance Aeson.FromJSON LogTraceParams where
-  parseJSON = Aeson.withObject "LogTraceParams" $ \arg -> LogTraceParams <$> arg Aeson..: "message" <*> arg Aeson..:! "verbose"
+  parseJSON = Aeson.withObject "LogTraceParams" $ \arg -> LogTraceParams <$> arg Aeson..: "message" <*> arg Language.LSP.Protocol.Types.Common..:!? "verbose"

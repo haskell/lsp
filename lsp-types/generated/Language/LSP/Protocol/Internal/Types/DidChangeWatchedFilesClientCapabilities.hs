@@ -44,4 +44,4 @@ instance Aeson.ToJSON DidChangeWatchedFilesClientCapabilities where
     ,"relativePatternSupport" Language.LSP.Protocol.Types.Common..=? arg1]
 
 instance Aeson.FromJSON DidChangeWatchedFilesClientCapabilities where
-  parseJSON = Aeson.withObject "DidChangeWatchedFilesClientCapabilities" $ \arg -> DidChangeWatchedFilesClientCapabilities <$> arg Aeson..:! "dynamicRegistration" <*> arg Aeson..:! "relativePatternSupport"
+  parseJSON = Aeson.withObject "DidChangeWatchedFilesClientCapabilities" $ \arg -> DidChangeWatchedFilesClientCapabilities <$> arg Language.LSP.Protocol.Types.Common..:!? "dynamicRegistration" <*> arg Language.LSP.Protocol.Types.Common..:!? "relativePatternSupport"

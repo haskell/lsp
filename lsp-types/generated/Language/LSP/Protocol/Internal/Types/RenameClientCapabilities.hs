@@ -64,4 +64,4 @@ instance Aeson.ToJSON RenameClientCapabilities where
     ,"honorsChangeAnnotations" Language.LSP.Protocol.Types.Common..=? arg3]
 
 instance Aeson.FromJSON RenameClientCapabilities where
-  parseJSON = Aeson.withObject "RenameClientCapabilities" $ \arg -> RenameClientCapabilities <$> arg Aeson..:! "dynamicRegistration" <*> arg Aeson..:! "prepareSupport" <*> arg Aeson..:! "prepareSupportDefaultBehavior" <*> arg Aeson..:! "honorsChangeAnnotations"
+  parseJSON = Aeson.withObject "RenameClientCapabilities" $ \arg -> RenameClientCapabilities <$> arg Language.LSP.Protocol.Types.Common..:!? "dynamicRegistration" <*> arg Language.LSP.Protocol.Types.Common..:!? "prepareSupport" <*> arg Language.LSP.Protocol.Types.Common..:!? "prepareSupportDefaultBehavior" <*> arg Language.LSP.Protocol.Types.Common..:!? "honorsChangeAnnotations"

@@ -59,4 +59,4 @@ instance Aeson.ToJSON ReferenceParams where
     ,["context" Aeson..= arg4]]
 
 instance Aeson.FromJSON ReferenceParams where
-  parseJSON = Aeson.withObject "ReferenceParams" $ \arg -> ReferenceParams <$> arg Aeson..: "textDocument" <*> arg Aeson..: "position" <*> arg Aeson..:! "workDoneToken" <*> arg Aeson..:! "partialResultToken" <*> arg Aeson..: "context"
+  parseJSON = Aeson.withObject "ReferenceParams" $ \arg -> ReferenceParams <$> arg Aeson..: "textDocument" <*> arg Aeson..: "position" <*> arg Language.LSP.Protocol.Types.Common..:!? "workDoneToken" <*> arg Language.LSP.Protocol.Types.Common..:!? "partialResultToken" <*> arg Aeson..: "context"

@@ -34,4 +34,4 @@ instance Aeson.ToJSON ReferenceOptions where
   toJSON (ReferenceOptions arg0) = Aeson.object $ concat $  ["workDoneProgress" Language.LSP.Protocol.Types.Common..=? arg0]
 
 instance Aeson.FromJSON ReferenceOptions where
-  parseJSON = Aeson.withObject "ReferenceOptions" $ \arg -> ReferenceOptions <$> arg Aeson..:! "workDoneProgress"
+  parseJSON = Aeson.withObject "ReferenceOptions" $ \arg -> ReferenceOptions <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneProgress"

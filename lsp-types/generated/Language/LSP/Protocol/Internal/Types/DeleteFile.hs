@@ -55,4 +55,4 @@ instance Aeson.ToJSON DeleteFile where
     ,"options" Language.LSP.Protocol.Types.Common..=? arg3]
 
 instance Aeson.FromJSON DeleteFile where
-  parseJSON = Aeson.withObject "DeleteFile" $ \arg -> DeleteFile <$> arg Aeson..:! "annotationId" <*> arg Aeson..: "kind" <*> arg Aeson..: "uri" <*> arg Aeson..:! "options"
+  parseJSON = Aeson.withObject "DeleteFile" $ \arg -> DeleteFile <$> arg Language.LSP.Protocol.Types.Common..:!? "annotationId" <*> arg Aeson..: "kind" <*> arg Aeson..: "uri" <*> arg Language.LSP.Protocol.Types.Common..:!? "options"

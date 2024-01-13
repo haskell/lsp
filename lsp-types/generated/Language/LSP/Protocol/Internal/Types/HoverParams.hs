@@ -47,4 +47,4 @@ instance Aeson.ToJSON HoverParams where
     ,"workDoneToken" Language.LSP.Protocol.Types.Common..=? arg2]
 
 instance Aeson.FromJSON HoverParams where
-  parseJSON = Aeson.withObject "HoverParams" $ \arg -> HoverParams <$> arg Aeson..: "textDocument" <*> arg Aeson..: "position" <*> arg Aeson..:! "workDoneToken"
+  parseJSON = Aeson.withObject "HoverParams" $ \arg -> HoverParams <$> arg Aeson..: "textDocument" <*> arg Aeson..: "position" <*> arg Language.LSP.Protocol.Types.Common..:!? "workDoneToken"

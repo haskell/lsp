@@ -51,4 +51,4 @@ instance Aeson.ToJSON ParameterInformation where
     ,"documentation" Language.LSP.Protocol.Types.Common..=? arg1]
 
 instance Aeson.FromJSON ParameterInformation where
-  parseJSON = Aeson.withObject "ParameterInformation" $ \arg -> ParameterInformation <$> arg Aeson..: "label" <*> arg Aeson..:! "documentation"
+  parseJSON = Aeson.withObject "ParameterInformation" $ \arg -> ParameterInformation <$> arg Aeson..: "label" <*> arg Language.LSP.Protocol.Types.Common..:!? "documentation"

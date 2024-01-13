@@ -48,4 +48,4 @@ instance Aeson.ToJSON DocumentColorRegistrationOptions where
     ,"id" Language.LSP.Protocol.Types.Common..=? arg2]
 
 instance Aeson.FromJSON DocumentColorRegistrationOptions where
-  parseJSON = Aeson.withObject "DocumentColorRegistrationOptions" $ \arg -> DocumentColorRegistrationOptions <$> arg Aeson..: "documentSelector" <*> arg Aeson..:! "workDoneProgress" <*> arg Aeson..:! "id"
+  parseJSON = Aeson.withObject "DocumentColorRegistrationOptions" $ \arg -> DocumentColorRegistrationOptions <$> arg Aeson..: "documentSelector" <*> arg Language.LSP.Protocol.Types.Common..:!? "workDoneProgress" <*> arg Language.LSP.Protocol.Types.Common..:!? "id"

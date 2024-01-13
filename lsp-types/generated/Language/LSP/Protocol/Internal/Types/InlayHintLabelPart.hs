@@ -71,4 +71,4 @@ instance Aeson.ToJSON InlayHintLabelPart where
     ,"command" Language.LSP.Protocol.Types.Common..=? arg3]
 
 instance Aeson.FromJSON InlayHintLabelPart where
-  parseJSON = Aeson.withObject "InlayHintLabelPart" $ \arg -> InlayHintLabelPart <$> arg Aeson..: "value" <*> arg Aeson..:! "tooltip" <*> arg Aeson..:! "location" <*> arg Aeson..:! "command"
+  parseJSON = Aeson.withObject "InlayHintLabelPart" $ \arg -> InlayHintLabelPart <$> arg Aeson..: "value" <*> arg Language.LSP.Protocol.Types.Common..:!? "tooltip" <*> arg Language.LSP.Protocol.Types.Common..:!? "location" <*> arg Language.LSP.Protocol.Types.Common..:!? "command"

@@ -44,4 +44,4 @@ instance Aeson.ToJSON FileOperationFilter where
     ,["pattern" Aeson..= arg1]]
 
 instance Aeson.FromJSON FileOperationFilter where
-  parseJSON = Aeson.withObject "FileOperationFilter" $ \arg -> FileOperationFilter <$> arg Aeson..:! "scheme" <*> arg Aeson..: "pattern"
+  parseJSON = Aeson.withObject "FileOperationFilter" $ \arg -> FileOperationFilter <$> arg Language.LSP.Protocol.Types.Common..:!? "scheme" <*> arg Aeson..: "pattern"

@@ -70,4 +70,4 @@ instance Aeson.ToJSON FoldingRange where
     ,"collapsedText" Language.LSP.Protocol.Types.Common..=? arg5]
 
 instance Aeson.FromJSON FoldingRange where
-  parseJSON = Aeson.withObject "FoldingRange" $ \arg -> FoldingRange <$> arg Aeson..: "startLine" <*> arg Aeson..:! "startCharacter" <*> arg Aeson..: "endLine" <*> arg Aeson..:! "endCharacter" <*> arg Aeson..:! "kind" <*> arg Aeson..:! "collapsedText"
+  parseJSON = Aeson.withObject "FoldingRange" $ \arg -> FoldingRange <$> arg Aeson..: "startLine" <*> arg Language.LSP.Protocol.Types.Common..:!? "startCharacter" <*> arg Aeson..: "endLine" <*> arg Language.LSP.Protocol.Types.Common..:!? "endCharacter" <*> arg Language.LSP.Protocol.Types.Common..:!? "kind" <*> arg Language.LSP.Protocol.Types.Common..:!? "collapsedText"

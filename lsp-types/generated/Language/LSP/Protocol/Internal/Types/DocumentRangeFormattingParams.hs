@@ -53,4 +53,4 @@ instance Aeson.ToJSON DocumentRangeFormattingParams where
     ,["options" Aeson..= arg3]]
 
 instance Aeson.FromJSON DocumentRangeFormattingParams where
-  parseJSON = Aeson.withObject "DocumentRangeFormattingParams" $ \arg -> DocumentRangeFormattingParams <$> arg Aeson..:! "workDoneToken" <*> arg Aeson..: "textDocument" <*> arg Aeson..: "range" <*> arg Aeson..: "options"
+  parseJSON = Aeson.withObject "DocumentRangeFormattingParams" $ \arg -> DocumentRangeFormattingParams <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneToken" <*> arg Aeson..: "textDocument" <*> arg Aeson..: "range" <*> arg Aeson..: "options"

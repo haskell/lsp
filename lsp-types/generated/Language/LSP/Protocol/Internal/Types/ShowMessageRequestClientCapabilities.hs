@@ -35,4 +35,4 @@ instance Aeson.ToJSON ShowMessageRequestClientCapabilities where
   toJSON (ShowMessageRequestClientCapabilities arg0) = Aeson.object $ concat $  ["messageActionItem" Language.LSP.Protocol.Types.Common..=? arg0]
 
 instance Aeson.FromJSON ShowMessageRequestClientCapabilities where
-  parseJSON = Aeson.withObject "ShowMessageRequestClientCapabilities" $ \arg -> ShowMessageRequestClientCapabilities <$> arg Aeson..:! "messageActionItem"
+  parseJSON = Aeson.withObject "ShowMessageRequestClientCapabilities" $ \arg -> ShowMessageRequestClientCapabilities <$> arg Language.LSP.Protocol.Types.Common..:!? "messageActionItem"

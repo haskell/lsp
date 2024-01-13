@@ -70,4 +70,4 @@ instance Aeson.ToJSON WorkDoneProgressBegin where
     ,"percentage" Language.LSP.Protocol.Types.Common..=? arg4]
 
 instance Aeson.FromJSON WorkDoneProgressBegin where
-  parseJSON = Aeson.withObject "WorkDoneProgressBegin" $ \arg -> WorkDoneProgressBegin <$> arg Aeson..: "kind" <*> arg Aeson..: "title" <*> arg Aeson..:! "cancellable" <*> arg Aeson..:! "message" <*> arg Aeson..:! "percentage"
+  parseJSON = Aeson.withObject "WorkDoneProgressBegin" $ \arg -> WorkDoneProgressBegin <$> arg Aeson..: "kind" <*> arg Aeson..: "title" <*> arg Language.LSP.Protocol.Types.Common..:!? "cancellable" <*> arg Language.LSP.Protocol.Types.Common..:!? "message" <*> arg Language.LSP.Protocol.Types.Common..:!? "percentage"

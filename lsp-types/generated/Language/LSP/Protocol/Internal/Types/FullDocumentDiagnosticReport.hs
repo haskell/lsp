@@ -51,4 +51,4 @@ instance Aeson.ToJSON FullDocumentDiagnosticReport where
     ,["items" Aeson..= arg2]]
 
 instance Aeson.FromJSON FullDocumentDiagnosticReport where
-  parseJSON = Aeson.withObject "FullDocumentDiagnosticReport" $ \arg -> FullDocumentDiagnosticReport <$> arg Aeson..: "kind" <*> arg Aeson..:! "resultId" <*> arg Aeson..: "items"
+  parseJSON = Aeson.withObject "FullDocumentDiagnosticReport" $ \arg -> FullDocumentDiagnosticReport <$> arg Aeson..: "kind" <*> arg Language.LSP.Protocol.Types.Common..:!? "resultId" <*> arg Aeson..: "items"

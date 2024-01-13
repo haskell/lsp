@@ -34,4 +34,4 @@ instance Aeson.ToJSON ReferenceClientCapabilities where
   toJSON (ReferenceClientCapabilities arg0) = Aeson.object $ concat $  ["dynamicRegistration" Language.LSP.Protocol.Types.Common..=? arg0]
 
 instance Aeson.FromJSON ReferenceClientCapabilities where
-  parseJSON = Aeson.withObject "ReferenceClientCapabilities" $ \arg -> ReferenceClientCapabilities <$> arg Aeson..:! "dynamicRegistration"
+  parseJSON = Aeson.withObject "ReferenceClientCapabilities" $ \arg -> ReferenceClientCapabilities <$> arg Language.LSP.Protocol.Types.Common..:!? "dynamicRegistration"

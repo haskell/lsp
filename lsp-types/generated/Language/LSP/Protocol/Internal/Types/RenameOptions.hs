@@ -41,4 +41,4 @@ instance Aeson.ToJSON RenameOptions where
     ,"prepareProvider" Language.LSP.Protocol.Types.Common..=? arg1]
 
 instance Aeson.FromJSON RenameOptions where
-  parseJSON = Aeson.withObject "RenameOptions" $ \arg -> RenameOptions <$> arg Aeson..:! "workDoneProgress" <*> arg Aeson..:! "prepareProvider"
+  parseJSON = Aeson.withObject "RenameOptions" $ \arg -> RenameOptions <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneProgress" <*> arg Language.LSP.Protocol.Types.Common..:!? "prepareProvider"

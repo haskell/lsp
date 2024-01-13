@@ -72,4 +72,4 @@ instance Aeson.ToJSON WorkspaceEditClientCapabilities where
     ,"changeAnnotationSupport" Language.LSP.Protocol.Types.Common..=? arg4]
 
 instance Aeson.FromJSON WorkspaceEditClientCapabilities where
-  parseJSON = Aeson.withObject "WorkspaceEditClientCapabilities" $ \arg -> WorkspaceEditClientCapabilities <$> arg Aeson..:! "documentChanges" <*> arg Aeson..:! "resourceOperations" <*> arg Aeson..:! "failureHandling" <*> arg Aeson..:! "normalizesLineEndings" <*> arg Aeson..:! "changeAnnotationSupport"
+  parseJSON = Aeson.withObject "WorkspaceEditClientCapabilities" $ \arg -> WorkspaceEditClientCapabilities <$> arg Language.LSP.Protocol.Types.Common..:!? "documentChanges" <*> arg Language.LSP.Protocol.Types.Common..:!? "resourceOperations" <*> arg Language.LSP.Protocol.Types.Common..:!? "failureHandling" <*> arg Language.LSP.Protocol.Types.Common..:!? "normalizesLineEndings" <*> arg Language.LSP.Protocol.Types.Common..:!? "changeAnnotationSupport"

@@ -41,4 +41,4 @@ instance Aeson.ToJSON DeclarationClientCapabilities where
     ,"linkSupport" Language.LSP.Protocol.Types.Common..=? arg1]
 
 instance Aeson.FromJSON DeclarationClientCapabilities where
-  parseJSON = Aeson.withObject "DeclarationClientCapabilities" $ \arg -> DeclarationClientCapabilities <$> arg Aeson..:! "dynamicRegistration" <*> arg Aeson..:! "linkSupport"
+  parseJSON = Aeson.withObject "DeclarationClientCapabilities" $ \arg -> DeclarationClientCapabilities <$> arg Language.LSP.Protocol.Types.Common..:!? "dynamicRegistration" <*> arg Language.LSP.Protocol.Types.Common..:!? "linkSupport"

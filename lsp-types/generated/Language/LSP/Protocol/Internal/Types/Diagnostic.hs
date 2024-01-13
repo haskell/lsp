@@ -94,4 +94,4 @@ instance Aeson.ToJSON Diagnostic where
     ,"data" Language.LSP.Protocol.Types.Common..=? arg8]
 
 instance Aeson.FromJSON Diagnostic where
-  parseJSON = Aeson.withObject "Diagnostic" $ \arg -> Diagnostic <$> arg Aeson..: "range" <*> arg Aeson..:! "severity" <*> arg Aeson..:! "code" <*> arg Aeson..:! "codeDescription" <*> arg Aeson..:! "source" <*> arg Aeson..: "message" <*> arg Aeson..:! "tags" <*> arg Aeson..:! "relatedInformation" <*> arg Aeson..:! "data"
+  parseJSON = Aeson.withObject "Diagnostic" $ \arg -> Diagnostic <$> arg Aeson..: "range" <*> arg Language.LSP.Protocol.Types.Common..:!? "severity" <*> arg Language.LSP.Protocol.Types.Common..:!? "code" <*> arg Language.LSP.Protocol.Types.Common..:!? "codeDescription" <*> arg Language.LSP.Protocol.Types.Common..:!? "source" <*> arg Aeson..: "message" <*> arg Language.LSP.Protocol.Types.Common..:!? "tags" <*> arg Language.LSP.Protocol.Types.Common..:!? "relatedInformation" <*> arg Language.LSP.Protocol.Types.Common..:!? "data"

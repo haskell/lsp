@@ -83,7 +83,9 @@ instance FromJSON ResponseError where
           ResponseError
             <$> v .: "code"
             <*> v .: "message"
-            <*> v .:? "data"
+            -- It is important to use .:! so that "data = null"
+            -- (without error) gets decoded as Just Null
+            <*> v .:! "data"
      in fmap go . errorCode
    where
     go :: ResponseError -> ResponseError
@@ -175,7 +177,9 @@ instance (FromJSON (ErrorData m)) => FromJSON (TResponseError m) where
           TResponseError
             <$> v .: "code"
             <*> v .: "message"
-            <*> v .:? "data"
+            -- It is important to use .:! so that "data = null"
+            -- (without error) gets decoded as Just Null
+            <*> v .:! "data"
      in fmap go . errorCode
    where
     go :: TResponseError m -> TResponseError m

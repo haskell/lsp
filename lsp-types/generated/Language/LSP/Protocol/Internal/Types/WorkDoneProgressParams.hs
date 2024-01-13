@@ -35,4 +35,4 @@ instance Aeson.ToJSON WorkDoneProgressParams where
   toJSON (WorkDoneProgressParams arg0) = Aeson.object $ concat $  ["workDoneToken" Language.LSP.Protocol.Types.Common..=? arg0]
 
 instance Aeson.FromJSON WorkDoneProgressParams where
-  parseJSON = Aeson.withObject "WorkDoneProgressParams" $ \arg -> WorkDoneProgressParams <$> arg Aeson..:! "workDoneToken"
+  parseJSON = Aeson.withObject "WorkDoneProgressParams" $ \arg -> WorkDoneProgressParams <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneToken"

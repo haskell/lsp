@@ -47,4 +47,4 @@ instance Aeson.ToJSON DocumentColorParams where
     ,["textDocument" Aeson..= arg2]]
 
 instance Aeson.FromJSON DocumentColorParams where
-  parseJSON = Aeson.withObject "DocumentColorParams" $ \arg -> DocumentColorParams <$> arg Aeson..:! "workDoneToken" <*> arg Aeson..:! "partialResultToken" <*> arg Aeson..: "textDocument"
+  parseJSON = Aeson.withObject "DocumentColorParams" $ \arg -> DocumentColorParams <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneToken" <*> arg Language.LSP.Protocol.Types.Common..:!? "partialResultToken" <*> arg Aeson..: "textDocument"

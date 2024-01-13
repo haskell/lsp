@@ -62,4 +62,4 @@ instance Aeson.ToJSON RelatedUnchangedDocumentDiagnosticReport where
     ,"relatedDocuments" Language.LSP.Protocol.Types.Common..=? arg2]
 
 instance Aeson.FromJSON RelatedUnchangedDocumentDiagnosticReport where
-  parseJSON = Aeson.withObject "RelatedUnchangedDocumentDiagnosticReport" $ \arg -> RelatedUnchangedDocumentDiagnosticReport <$> arg Aeson..: "kind" <*> arg Aeson..: "resultId" <*> arg Aeson..:! "relatedDocuments"
+  parseJSON = Aeson.withObject "RelatedUnchangedDocumentDiagnosticReport" $ \arg -> RelatedUnchangedDocumentDiagnosticReport <$> arg Aeson..: "kind" <*> arg Aeson..: "resultId" <*> arg Language.LSP.Protocol.Types.Common..:!? "relatedDocuments"

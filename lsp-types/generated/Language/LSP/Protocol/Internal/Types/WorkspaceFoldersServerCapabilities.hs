@@ -46,4 +46,4 @@ instance Aeson.ToJSON WorkspaceFoldersServerCapabilities where
     ,"changeNotifications" Language.LSP.Protocol.Types.Common..=? arg1]
 
 instance Aeson.FromJSON WorkspaceFoldersServerCapabilities where
-  parseJSON = Aeson.withObject "WorkspaceFoldersServerCapabilities" $ \arg -> WorkspaceFoldersServerCapabilities <$> arg Aeson..:! "supported" <*> arg Aeson..:! "changeNotifications"
+  parseJSON = Aeson.withObject "WorkspaceFoldersServerCapabilities" $ \arg -> WorkspaceFoldersServerCapabilities <$> arg Language.LSP.Protocol.Types.Common..:!? "supported" <*> arg Language.LSP.Protocol.Types.Common..:!? "changeNotifications"

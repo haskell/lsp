@@ -68,4 +68,4 @@ instance Aeson.ToJSON PublishDiagnosticsClientCapabilities where
     ,"dataSupport" Language.LSP.Protocol.Types.Common..=? arg4]
 
 instance Aeson.FromJSON PublishDiagnosticsClientCapabilities where
-  parseJSON = Aeson.withObject "PublishDiagnosticsClientCapabilities" $ \arg -> PublishDiagnosticsClientCapabilities <$> arg Aeson..:! "relatedInformation" <*> arg Aeson..:! "tagSupport" <*> arg Aeson..:! "versionSupport" <*> arg Aeson..:! "codeDescriptionSupport" <*> arg Aeson..:! "dataSupport"
+  parseJSON = Aeson.withObject "PublishDiagnosticsClientCapabilities" $ \arg -> PublishDiagnosticsClientCapabilities <$> arg Language.LSP.Protocol.Types.Common..:!? "relatedInformation" <*> arg Language.LSP.Protocol.Types.Common..:!? "tagSupport" <*> arg Language.LSP.Protocol.Types.Common..:!? "versionSupport" <*> arg Language.LSP.Protocol.Types.Common..:!? "codeDescriptionSupport" <*> arg Language.LSP.Protocol.Types.Common..:!? "dataSupport"

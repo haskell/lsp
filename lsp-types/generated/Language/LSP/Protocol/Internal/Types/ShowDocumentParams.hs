@@ -61,4 +61,4 @@ instance Aeson.ToJSON ShowDocumentParams where
     ,"selection" Language.LSP.Protocol.Types.Common..=? arg3]
 
 instance Aeson.FromJSON ShowDocumentParams where
-  parseJSON = Aeson.withObject "ShowDocumentParams" $ \arg -> ShowDocumentParams <$> arg Aeson..: "uri" <*> arg Aeson..:! "external" <*> arg Aeson..:! "takeFocus" <*> arg Aeson..:! "selection"
+  parseJSON = Aeson.withObject "ShowDocumentParams" $ \arg -> ShowDocumentParams <$> arg Aeson..: "uri" <*> arg Language.LSP.Protocol.Types.Common..:!? "external" <*> arg Language.LSP.Protocol.Types.Common..:!? "takeFocus" <*> arg Language.LSP.Protocol.Types.Common..:!? "selection"

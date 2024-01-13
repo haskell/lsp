@@ -42,4 +42,4 @@ instance Aeson.ToJSON RegularExpressionsClientCapabilities where
     ,"version" Language.LSP.Protocol.Types.Common..=? arg1]
 
 instance Aeson.FromJSON RegularExpressionsClientCapabilities where
-  parseJSON = Aeson.withObject "RegularExpressionsClientCapabilities" $ \arg -> RegularExpressionsClientCapabilities <$> arg Aeson..: "engine" <*> arg Aeson..:! "version"
+  parseJSON = Aeson.withObject "RegularExpressionsClientCapabilities" $ \arg -> RegularExpressionsClientCapabilities <$> arg Aeson..: "engine" <*> arg Language.LSP.Protocol.Types.Common..:!? "version"

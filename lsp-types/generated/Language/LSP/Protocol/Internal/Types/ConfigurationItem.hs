@@ -40,4 +40,4 @@ instance Aeson.ToJSON ConfigurationItem where
     ,"section" Language.LSP.Protocol.Types.Common..=? arg1]
 
 instance Aeson.FromJSON ConfigurationItem where
-  parseJSON = Aeson.withObject "ConfigurationItem" $ \arg -> ConfigurationItem <$> arg Aeson..:! "scopeUri" <*> arg Aeson..:! "section"
+  parseJSON = Aeson.withObject "ConfigurationItem" $ \arg -> ConfigurationItem <$> arg Language.LSP.Protocol.Types.Common..:!? "scopeUri" <*> arg Language.LSP.Protocol.Types.Common..:!? "section"

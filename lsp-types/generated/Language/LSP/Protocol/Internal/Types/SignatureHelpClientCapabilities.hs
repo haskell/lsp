@@ -52,4 +52,4 @@ instance Aeson.ToJSON SignatureHelpClientCapabilities where
     ,"contextSupport" Language.LSP.Protocol.Types.Common..=? arg2]
 
 instance Aeson.FromJSON SignatureHelpClientCapabilities where
-  parseJSON = Aeson.withObject "SignatureHelpClientCapabilities" $ \arg -> SignatureHelpClientCapabilities <$> arg Aeson..:! "dynamicRegistration" <*> arg Aeson..:! "signatureInformation" <*> arg Aeson..:! "contextSupport"
+  parseJSON = Aeson.withObject "SignatureHelpClientCapabilities" $ \arg -> SignatureHelpClientCapabilities <$> arg Language.LSP.Protocol.Types.Common..:!? "dynamicRegistration" <*> arg Language.LSP.Protocol.Types.Common..:!? "signatureInformation" <*> arg Language.LSP.Protocol.Types.Common..:!? "contextSupport"

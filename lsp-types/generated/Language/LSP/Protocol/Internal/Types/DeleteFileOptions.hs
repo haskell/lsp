@@ -39,4 +39,4 @@ instance Aeson.ToJSON DeleteFileOptions where
     ,"ignoreIfNotExists" Language.LSP.Protocol.Types.Common..=? arg1]
 
 instance Aeson.FromJSON DeleteFileOptions where
-  parseJSON = Aeson.withObject "DeleteFileOptions" $ \arg -> DeleteFileOptions <$> arg Aeson..:! "recursive" <*> arg Aeson..:! "ignoreIfNotExists"
+  parseJSON = Aeson.withObject "DeleteFileOptions" $ \arg -> DeleteFileOptions <$> arg Language.LSP.Protocol.Types.Common..:!? "recursive" <*> arg Language.LSP.Protocol.Types.Common..:!? "ignoreIfNotExists"

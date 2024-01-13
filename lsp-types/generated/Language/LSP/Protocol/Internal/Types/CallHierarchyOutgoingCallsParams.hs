@@ -49,4 +49,4 @@ instance Aeson.ToJSON CallHierarchyOutgoingCallsParams where
     ,["item" Aeson..= arg2]]
 
 instance Aeson.FromJSON CallHierarchyOutgoingCallsParams where
-  parseJSON = Aeson.withObject "CallHierarchyOutgoingCallsParams" $ \arg -> CallHierarchyOutgoingCallsParams <$> arg Aeson..:! "workDoneToken" <*> arg Aeson..:! "partialResultToken" <*> arg Aeson..: "item"
+  parseJSON = Aeson.withObject "CallHierarchyOutgoingCallsParams" $ \arg -> CallHierarchyOutgoingCallsParams <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneToken" <*> arg Language.LSP.Protocol.Types.Common..:!? "partialResultToken" <*> arg Aeson..: "item"

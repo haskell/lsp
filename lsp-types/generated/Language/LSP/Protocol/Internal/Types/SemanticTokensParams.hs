@@ -47,4 +47,4 @@ instance Aeson.ToJSON SemanticTokensParams where
     ,["textDocument" Aeson..= arg2]]
 
 instance Aeson.FromJSON SemanticTokensParams where
-  parseJSON = Aeson.withObject "SemanticTokensParams" $ \arg -> SemanticTokensParams <$> arg Aeson..:! "workDoneToken" <*> arg Aeson..:! "partialResultToken" <*> arg Aeson..: "textDocument"
+  parseJSON = Aeson.withObject "SemanticTokensParams" $ \arg -> SemanticTokensParams <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneToken" <*> arg Language.LSP.Protocol.Types.Common..:!? "partialResultToken" <*> arg Aeson..: "textDocument"

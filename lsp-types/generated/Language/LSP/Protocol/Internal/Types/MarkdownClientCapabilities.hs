@@ -50,4 +50,4 @@ instance Aeson.ToJSON MarkdownClientCapabilities where
     ,"allowedTags" Language.LSP.Protocol.Types.Common..=? arg2]
 
 instance Aeson.FromJSON MarkdownClientCapabilities where
-  parseJSON = Aeson.withObject "MarkdownClientCapabilities" $ \arg -> MarkdownClientCapabilities <$> arg Aeson..: "parser" <*> arg Aeson..:! "version" <*> arg Aeson..:! "allowedTags"
+  parseJSON = Aeson.withObject "MarkdownClientCapabilities" $ \arg -> MarkdownClientCapabilities <$> arg Aeson..: "parser" <*> arg Language.LSP.Protocol.Types.Common..:!? "version" <*> arg Language.LSP.Protocol.Types.Common..:!? "allowedTags"

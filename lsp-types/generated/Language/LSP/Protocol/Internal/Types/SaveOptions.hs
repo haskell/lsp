@@ -34,4 +34,4 @@ instance Aeson.ToJSON SaveOptions where
   toJSON (SaveOptions arg0) = Aeson.object $ concat $  ["includeText" Language.LSP.Protocol.Types.Common..=? arg0]
 
 instance Aeson.FromJSON SaveOptions where
-  parseJSON = Aeson.withObject "SaveOptions" $ \arg -> SaveOptions <$> arg Aeson..:! "includeText"
+  parseJSON = Aeson.withObject "SaveOptions" $ \arg -> SaveOptions <$> arg Language.LSP.Protocol.Types.Common..:!? "includeText"

@@ -106,4 +106,4 @@ instance Aeson.ToJSON CodeAction where
     ,"data" Language.LSP.Protocol.Types.Common..=? arg7]
 
 instance Aeson.FromJSON CodeAction where
-  parseJSON = Aeson.withObject "CodeAction" $ \arg -> CodeAction <$> arg Aeson..: "title" <*> arg Aeson..:! "kind" <*> arg Aeson..:! "diagnostics" <*> arg Aeson..:! "isPreferred" <*> arg Aeson..:! "disabled" <*> arg Aeson..:! "edit" <*> arg Aeson..:! "command" <*> arg Aeson..:! "data"
+  parseJSON = Aeson.withObject "CodeAction" $ \arg -> CodeAction <$> arg Aeson..: "title" <*> arg Language.LSP.Protocol.Types.Common..:!? "kind" <*> arg Language.LSP.Protocol.Types.Common..:!? "diagnostics" <*> arg Language.LSP.Protocol.Types.Common..:!? "isPreferred" <*> arg Language.LSP.Protocol.Types.Common..:!? "disabled" <*> arg Language.LSP.Protocol.Types.Common..:!? "edit" <*> arg Language.LSP.Protocol.Types.Common..:!? "command" <*> arg Language.LSP.Protocol.Types.Common..:!? "data"

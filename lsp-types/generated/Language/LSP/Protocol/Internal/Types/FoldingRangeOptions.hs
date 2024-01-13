@@ -34,4 +34,4 @@ instance Aeson.ToJSON FoldingRangeOptions where
   toJSON (FoldingRangeOptions arg0) = Aeson.object $ concat $  ["workDoneProgress" Language.LSP.Protocol.Types.Common..=? arg0]
 
 instance Aeson.FromJSON FoldingRangeOptions where
-  parseJSON = Aeson.withObject "FoldingRangeOptions" $ \arg -> FoldingRangeOptions <$> arg Aeson..:! "workDoneProgress"
+  parseJSON = Aeson.withObject "FoldingRangeOptions" $ \arg -> FoldingRangeOptions <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneProgress"

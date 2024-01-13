@@ -69,4 +69,4 @@ instance Aeson.ToJSON FileOperationClientCapabilities where
     ,"willDelete" Language.LSP.Protocol.Types.Common..=? arg6]
 
 instance Aeson.FromJSON FileOperationClientCapabilities where
-  parseJSON = Aeson.withObject "FileOperationClientCapabilities" $ \arg -> FileOperationClientCapabilities <$> arg Aeson..:! "dynamicRegistration" <*> arg Aeson..:! "didCreate" <*> arg Aeson..:! "willCreate" <*> arg Aeson..:! "didRename" <*> arg Aeson..:! "willRename" <*> arg Aeson..:! "didDelete" <*> arg Aeson..:! "willDelete"
+  parseJSON = Aeson.withObject "FileOperationClientCapabilities" $ \arg -> FileOperationClientCapabilities <$> arg Language.LSP.Protocol.Types.Common..:!? "dynamicRegistration" <*> arg Language.LSP.Protocol.Types.Common..:!? "didCreate" <*> arg Language.LSP.Protocol.Types.Common..:!? "willCreate" <*> arg Language.LSP.Protocol.Types.Common..:!? "didRename" <*> arg Language.LSP.Protocol.Types.Common..:!? "willRename" <*> arg Language.LSP.Protocol.Types.Common..:!? "didDelete" <*> arg Language.LSP.Protocol.Types.Common..:!? "willDelete"

@@ -46,4 +46,4 @@ instance Aeson.ToJSON LinkedEditingRanges where
     ,"wordPattern" Language.LSP.Protocol.Types.Common..=? arg1]
 
 instance Aeson.FromJSON LinkedEditingRanges where
-  parseJSON = Aeson.withObject "LinkedEditingRanges" $ \arg -> LinkedEditingRanges <$> arg Aeson..: "ranges" <*> arg Aeson..:! "wordPattern"
+  parseJSON = Aeson.withObject "LinkedEditingRanges" $ \arg -> LinkedEditingRanges <$> arg Aeson..: "ranges" <*> arg Language.LSP.Protocol.Types.Common..:!? "wordPattern"

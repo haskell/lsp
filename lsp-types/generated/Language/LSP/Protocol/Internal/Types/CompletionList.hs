@@ -67,4 +67,4 @@ instance Aeson.ToJSON CompletionList where
     ,["items" Aeson..= arg2]]
 
 instance Aeson.FromJSON CompletionList where
-  parseJSON = Aeson.withObject "CompletionList" $ \arg -> CompletionList <$> arg Aeson..: "isIncomplete" <*> arg Aeson..:! "itemDefaults" <*> arg Aeson..: "items"
+  parseJSON = Aeson.withObject "CompletionList" $ \arg -> CompletionList <$> arg Aeson..: "isIncomplete" <*> arg Language.LSP.Protocol.Types.Common..:!? "itemDefaults" <*> arg Aeson..: "items"

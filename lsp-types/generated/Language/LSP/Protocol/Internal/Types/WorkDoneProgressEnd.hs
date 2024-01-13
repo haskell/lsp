@@ -42,4 +42,4 @@ instance Aeson.ToJSON WorkDoneProgressEnd where
     ,"message" Language.LSP.Protocol.Types.Common..=? arg1]
 
 instance Aeson.FromJSON WorkDoneProgressEnd where
-  parseJSON = Aeson.withObject "WorkDoneProgressEnd" $ \arg -> WorkDoneProgressEnd <$> arg Aeson..: "kind" <*> arg Aeson..:! "message"
+  parseJSON = Aeson.withObject "WorkDoneProgressEnd" $ \arg -> WorkDoneProgressEnd <$> arg Aeson..: "kind" <*> arg Language.LSP.Protocol.Types.Common..:!? "message"

@@ -44,4 +44,4 @@ instance Aeson.ToJSON NotebookDocumentSyncClientCapabilities where
     ,"executionSummarySupport" Language.LSP.Protocol.Types.Common..=? arg1]
 
 instance Aeson.FromJSON NotebookDocumentSyncClientCapabilities where
-  parseJSON = Aeson.withObject "NotebookDocumentSyncClientCapabilities" $ \arg -> NotebookDocumentSyncClientCapabilities <$> arg Aeson..:! "dynamicRegistration" <*> arg Aeson..:! "executionSummarySupport"
+  parseJSON = Aeson.withObject "NotebookDocumentSyncClientCapabilities" $ \arg -> NotebookDocumentSyncClientCapabilities <$> arg Language.LSP.Protocol.Types.Common..:!? "dynamicRegistration" <*> arg Language.LSP.Protocol.Types.Common..:!? "executionSummarySupport"

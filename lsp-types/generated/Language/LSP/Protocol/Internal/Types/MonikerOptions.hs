@@ -34,4 +34,4 @@ instance Aeson.ToJSON MonikerOptions where
   toJSON (MonikerOptions arg0) = Aeson.object $ concat $  ["workDoneProgress" Language.LSP.Protocol.Types.Common..=? arg0]
 
 instance Aeson.FromJSON MonikerOptions where
-  parseJSON = Aeson.withObject "MonikerOptions" $ \arg -> MonikerOptions <$> arg Aeson..:! "workDoneProgress"
+  parseJSON = Aeson.withObject "MonikerOptions" $ \arg -> MonikerOptions <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneProgress"

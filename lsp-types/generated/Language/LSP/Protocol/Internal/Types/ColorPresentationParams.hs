@@ -59,4 +59,4 @@ instance Aeson.ToJSON ColorPresentationParams where
     ,["range" Aeson..= arg4]]
 
 instance Aeson.FromJSON ColorPresentationParams where
-  parseJSON = Aeson.withObject "ColorPresentationParams" $ \arg -> ColorPresentationParams <$> arg Aeson..:! "workDoneToken" <*> arg Aeson..:! "partialResultToken" <*> arg Aeson..: "textDocument" <*> arg Aeson..: "color" <*> arg Aeson..: "range"
+  parseJSON = Aeson.withObject "ColorPresentationParams" $ \arg -> ColorPresentationParams <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneToken" <*> arg Language.LSP.Protocol.Types.Common..:!? "partialResultToken" <*> arg Aeson..: "textDocument" <*> arg Aeson..: "color" <*> arg Aeson..: "range"

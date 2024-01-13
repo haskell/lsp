@@ -74,4 +74,4 @@ instance Aeson.ToJSON CompletionOptions where
     ,"completionItem" Language.LSP.Protocol.Types.Common..=? arg4]
 
 instance Aeson.FromJSON CompletionOptions where
-  parseJSON = Aeson.withObject "CompletionOptions" $ \arg -> CompletionOptions <$> arg Aeson..:! "workDoneProgress" <*> arg Aeson..:! "triggerCharacters" <*> arg Aeson..:! "allCommitCharacters" <*> arg Aeson..:! "resolveProvider" <*> arg Aeson..:! "completionItem"
+  parseJSON = Aeson.withObject "CompletionOptions" $ \arg -> CompletionOptions <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneProgress" <*> arg Language.LSP.Protocol.Types.Common..:!? "triggerCharacters" <*> arg Language.LSP.Protocol.Types.Common..:!? "allCommitCharacters" <*> arg Language.LSP.Protocol.Types.Common..:!? "resolveProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "completionItem"

@@ -82,4 +82,4 @@ instance Aeson.ToJSON GeneralClientCapabilities where
     ,"positionEncodings" Language.LSP.Protocol.Types.Common..=? arg3]
 
 instance Aeson.FromJSON GeneralClientCapabilities where
-  parseJSON = Aeson.withObject "GeneralClientCapabilities" $ \arg -> GeneralClientCapabilities <$> arg Aeson..:! "staleRequestSupport" <*> arg Aeson..:! "regularExpressions" <*> arg Aeson..:! "markdown" <*> arg Aeson..:! "positionEncodings"
+  parseJSON = Aeson.withObject "GeneralClientCapabilities" $ \arg -> GeneralClientCapabilities <$> arg Language.LSP.Protocol.Types.Common..:!? "staleRequestSupport" <*> arg Language.LSP.Protocol.Types.Common..:!? "regularExpressions" <*> arg Language.LSP.Protocol.Types.Common..:!? "markdown" <*> arg Language.LSP.Protocol.Types.Common..:!? "positionEncodings"

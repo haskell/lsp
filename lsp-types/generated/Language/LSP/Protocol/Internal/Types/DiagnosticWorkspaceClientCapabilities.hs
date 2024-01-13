@@ -42,4 +42,4 @@ instance Aeson.ToJSON DiagnosticWorkspaceClientCapabilities where
   toJSON (DiagnosticWorkspaceClientCapabilities arg0) = Aeson.object $ concat $  ["refreshSupport" Language.LSP.Protocol.Types.Common..=? arg0]
 
 instance Aeson.FromJSON DiagnosticWorkspaceClientCapabilities where
-  parseJSON = Aeson.withObject "DiagnosticWorkspaceClientCapabilities" $ \arg -> DiagnosticWorkspaceClientCapabilities <$> arg Aeson..:! "refreshSupport"
+  parseJSON = Aeson.withObject "DiagnosticWorkspaceClientCapabilities" $ \arg -> DiagnosticWorkspaceClientCapabilities <$> arg Language.LSP.Protocol.Types.Common..:!? "refreshSupport"

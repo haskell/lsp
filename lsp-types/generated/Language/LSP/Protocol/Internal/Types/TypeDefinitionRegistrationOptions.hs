@@ -48,4 +48,4 @@ instance Aeson.ToJSON TypeDefinitionRegistrationOptions where
     ,"id" Language.LSP.Protocol.Types.Common..=? arg2]
 
 instance Aeson.FromJSON TypeDefinitionRegistrationOptions where
-  parseJSON = Aeson.withObject "TypeDefinitionRegistrationOptions" $ \arg -> TypeDefinitionRegistrationOptions <$> arg Aeson..: "documentSelector" <*> arg Aeson..:! "workDoneProgress" <*> arg Aeson..:! "id"
+  parseJSON = Aeson.withObject "TypeDefinitionRegistrationOptions" $ \arg -> TypeDefinitionRegistrationOptions <$> arg Aeson..: "documentSelector" <*> arg Language.LSP.Protocol.Types.Common..:!? "workDoneProgress" <*> arg Language.LSP.Protocol.Types.Common..:!? "id"

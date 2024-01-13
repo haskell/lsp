@@ -60,4 +60,4 @@ instance Aeson.ToJSON WorkspaceSymbolClientCapabilities where
     ,"resolveSupport" Language.LSP.Protocol.Types.Common..=? arg3]
 
 instance Aeson.FromJSON WorkspaceSymbolClientCapabilities where
-  parseJSON = Aeson.withObject "WorkspaceSymbolClientCapabilities" $ \arg -> WorkspaceSymbolClientCapabilities <$> arg Aeson..:! "dynamicRegistration" <*> arg Aeson..:! "symbolKind" <*> arg Aeson..:! "tagSupport" <*> arg Aeson..:! "resolveSupport"
+  parseJSON = Aeson.withObject "WorkspaceSymbolClientCapabilities" $ \arg -> WorkspaceSymbolClientCapabilities <$> arg Language.LSP.Protocol.Types.Common..:!? "dynamicRegistration" <*> arg Language.LSP.Protocol.Types.Common..:!? "symbolKind" <*> arg Language.LSP.Protocol.Types.Common..:!? "tagSupport" <*> arg Language.LSP.Protocol.Types.Common..:!? "resolveSupport"

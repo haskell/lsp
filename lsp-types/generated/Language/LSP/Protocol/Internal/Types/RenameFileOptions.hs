@@ -39,4 +39,4 @@ instance Aeson.ToJSON RenameFileOptions where
     ,"ignoreIfExists" Language.LSP.Protocol.Types.Common..=? arg1]
 
 instance Aeson.FromJSON RenameFileOptions where
-  parseJSON = Aeson.withObject "RenameFileOptions" $ \arg -> RenameFileOptions <$> arg Aeson..:! "overwrite" <*> arg Aeson..:! "ignoreIfExists"
+  parseJSON = Aeson.withObject "RenameFileOptions" $ \arg -> RenameFileOptions <$> arg Language.LSP.Protocol.Types.Common..:!? "overwrite" <*> arg Language.LSP.Protocol.Types.Common..:!? "ignoreIfExists"

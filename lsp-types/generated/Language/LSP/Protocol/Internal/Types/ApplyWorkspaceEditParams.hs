@@ -43,4 +43,4 @@ instance Aeson.ToJSON ApplyWorkspaceEditParams where
     ,["edit" Aeson..= arg1]]
 
 instance Aeson.FromJSON ApplyWorkspaceEditParams where
-  parseJSON = Aeson.withObject "ApplyWorkspaceEditParams" $ \arg -> ApplyWorkspaceEditParams <$> arg Aeson..:! "label" <*> arg Aeson..: "edit"
+  parseJSON = Aeson.withObject "ApplyWorkspaceEditParams" $ \arg -> ApplyWorkspaceEditParams <$> arg Language.LSP.Protocol.Types.Common..:!? "label" <*> arg Aeson..: "edit"

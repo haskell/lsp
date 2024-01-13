@@ -47,4 +47,4 @@ instance Aeson.ToJSON ShowMessageRequestParams where
     ,"actions" Language.LSP.Protocol.Types.Common..=? arg2]
 
 instance Aeson.FromJSON ShowMessageRequestParams where
-  parseJSON = Aeson.withObject "ShowMessageRequestParams" $ \arg -> ShowMessageRequestParams <$> arg Aeson..: "type" <*> arg Aeson..: "message" <*> arg Aeson..:! "actions"
+  parseJSON = Aeson.withObject "ShowMessageRequestParams" $ \arg -> ShowMessageRequestParams <$> arg Aeson..: "type" <*> arg Aeson..: "message" <*> arg Language.LSP.Protocol.Types.Common..:!? "actions"

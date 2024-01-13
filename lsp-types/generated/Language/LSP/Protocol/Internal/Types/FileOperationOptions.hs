@@ -62,4 +62,4 @@ instance Aeson.ToJSON FileOperationOptions where
     ,"willDelete" Language.LSP.Protocol.Types.Common..=? arg5]
 
 instance Aeson.FromJSON FileOperationOptions where
-  parseJSON = Aeson.withObject "FileOperationOptions" $ \arg -> FileOperationOptions <$> arg Aeson..:! "didCreate" <*> arg Aeson..:! "willCreate" <*> arg Aeson..:! "didRename" <*> arg Aeson..:! "willRename" <*> arg Aeson..:! "didDelete" <*> arg Aeson..:! "willDelete"
+  parseJSON = Aeson.withObject "FileOperationOptions" $ \arg -> FileOperationOptions <$> arg Language.LSP.Protocol.Types.Common..:!? "didCreate" <*> arg Language.LSP.Protocol.Types.Common..:!? "willCreate" <*> arg Language.LSP.Protocol.Types.Common..:!? "didRename" <*> arg Language.LSP.Protocol.Types.Common..:!? "willRename" <*> arg Language.LSP.Protocol.Types.Common..:!? "didDelete" <*> arg Language.LSP.Protocol.Types.Common..:!? "willDelete"

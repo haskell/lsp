@@ -40,4 +40,4 @@ instance Aeson.ToJSON SemanticTokensWorkspaceClientCapabilities where
   toJSON (SemanticTokensWorkspaceClientCapabilities arg0) = Aeson.object $ concat $  ["refreshSupport" Language.LSP.Protocol.Types.Common..=? arg0]
 
 instance Aeson.FromJSON SemanticTokensWorkspaceClientCapabilities where
-  parseJSON = Aeson.withObject "SemanticTokensWorkspaceClientCapabilities" $ \arg -> SemanticTokensWorkspaceClientCapabilities <$> arg Aeson..:! "refreshSupport"
+  parseJSON = Aeson.withObject "SemanticTokensWorkspaceClientCapabilities" $ \arg -> SemanticTokensWorkspaceClientCapabilities <$> arg Language.LSP.Protocol.Types.Common..:!? "refreshSupport"

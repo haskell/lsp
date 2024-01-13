@@ -56,4 +56,4 @@ instance Aeson.ToJSON WorkspaceDiagnosticParams where
     ,["previousResultIds" Aeson..= arg3]]
 
 instance Aeson.FromJSON WorkspaceDiagnosticParams where
-  parseJSON = Aeson.withObject "WorkspaceDiagnosticParams" $ \arg -> WorkspaceDiagnosticParams <$> arg Aeson..:! "workDoneToken" <*> arg Aeson..:! "partialResultToken" <*> arg Aeson..:! "identifier" <*> arg Aeson..: "previousResultIds"
+  parseJSON = Aeson.withObject "WorkspaceDiagnosticParams" $ \arg -> WorkspaceDiagnosticParams <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneToken" <*> arg Language.LSP.Protocol.Types.Common..:!? "partialResultToken" <*> arg Language.LSP.Protocol.Types.Common..:!? "identifier" <*> arg Aeson..: "previousResultIds"

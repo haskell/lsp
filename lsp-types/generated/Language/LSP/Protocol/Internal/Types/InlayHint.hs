@@ -95,4 +95,4 @@ instance Aeson.ToJSON InlayHint where
     ,"data" Language.LSP.Protocol.Types.Common..=? arg7]
 
 instance Aeson.FromJSON InlayHint where
-  parseJSON = Aeson.withObject "InlayHint" $ \arg -> InlayHint <$> arg Aeson..: "position" <*> arg Aeson..: "label" <*> arg Aeson..:! "kind" <*> arg Aeson..:! "textEdits" <*> arg Aeson..:! "tooltip" <*> arg Aeson..:! "paddingLeft" <*> arg Aeson..:! "paddingRight" <*> arg Aeson..:! "data"
+  parseJSON = Aeson.withObject "InlayHint" $ \arg -> InlayHint <$> arg Aeson..: "position" <*> arg Aeson..: "label" <*> arg Language.LSP.Protocol.Types.Common..:!? "kind" <*> arg Language.LSP.Protocol.Types.Common..:!? "textEdits" <*> arg Language.LSP.Protocol.Types.Common..:!? "tooltip" <*> arg Language.LSP.Protocol.Types.Common..:!? "paddingLeft" <*> arg Language.LSP.Protocol.Types.Common..:!? "paddingRight" <*> arg Language.LSP.Protocol.Types.Common..:!? "data"

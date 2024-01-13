@@ -57,4 +57,4 @@ instance Aeson.ToJSON CodeActionContext where
     ,"triggerKind" Language.LSP.Protocol.Types.Common..=? arg2]
 
 instance Aeson.FromJSON CodeActionContext where
-  parseJSON = Aeson.withObject "CodeActionContext" $ \arg -> CodeActionContext <$> arg Aeson..: "diagnostics" <*> arg Aeson..:! "only" <*> arg Aeson..:! "triggerKind"
+  parseJSON = Aeson.withObject "CodeActionContext" $ \arg -> CodeActionContext <$> arg Aeson..: "diagnostics" <*> arg Language.LSP.Protocol.Types.Common..:!? "only" <*> arg Language.LSP.Protocol.Types.Common..:!? "triggerKind"

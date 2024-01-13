@@ -101,4 +101,4 @@ instance Aeson.ToJSON UInitializeParams where
     ,"trace" Language.LSP.Protocol.Types.Common..=? arg8]
 
 instance Aeson.FromJSON UInitializeParams where
-  parseJSON = Aeson.withObject "_InitializeParams" $ \arg -> UInitializeParams <$> arg Aeson..:! "workDoneToken" <*> arg Aeson..: "processId" <*> arg Aeson..:! "clientInfo" <*> arg Aeson..:! "locale" <*> arg Aeson..:! "rootPath" <*> arg Aeson..: "rootUri" <*> arg Aeson..: "capabilities" <*> arg Aeson..:! "initializationOptions" <*> arg Aeson..:! "trace"
+  parseJSON = Aeson.withObject "_InitializeParams" $ \arg -> UInitializeParams <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneToken" <*> arg Aeson..: "processId" <*> arg Language.LSP.Protocol.Types.Common..:!? "clientInfo" <*> arg Language.LSP.Protocol.Types.Common..:!? "locale" <*> arg Language.LSP.Protocol.Types.Common..:!? "rootPath" <*> arg Aeson..: "rootUri" <*> arg Aeson..: "capabilities" <*> arg Language.LSP.Protocol.Types.Common..:!? "initializationOptions" <*> arg Language.LSP.Protocol.Types.Common..:!? "trace"

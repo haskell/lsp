@@ -41,4 +41,4 @@ instance Aeson.ToJSON DefinitionRegistrationOptions where
     ,"workDoneProgress" Language.LSP.Protocol.Types.Common..=? arg1]
 
 instance Aeson.FromJSON DefinitionRegistrationOptions where
-  parseJSON = Aeson.withObject "DefinitionRegistrationOptions" $ \arg -> DefinitionRegistrationOptions <$> arg Aeson..: "documentSelector" <*> arg Aeson..:! "workDoneProgress"
+  parseJSON = Aeson.withObject "DefinitionRegistrationOptions" $ \arg -> DefinitionRegistrationOptions <$> arg Aeson..: "documentSelector" <*> arg Language.LSP.Protocol.Types.Common..:!? "workDoneProgress"

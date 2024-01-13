@@ -55,4 +55,4 @@ instance Aeson.ToJSON CreateFile where
     ,"options" Language.LSP.Protocol.Types.Common..=? arg3]
 
 instance Aeson.FromJSON CreateFile where
-  parseJSON = Aeson.withObject "CreateFile" $ \arg -> CreateFile <$> arg Aeson..:! "annotationId" <*> arg Aeson..: "kind" <*> arg Aeson..: "uri" <*> arg Aeson..:! "options"
+  parseJSON = Aeson.withObject "CreateFile" $ \arg -> CreateFile <$> arg Language.LSP.Protocol.Types.Common..:!? "annotationId" <*> arg Aeson..: "kind" <*> arg Aeson..: "uri" <*> arg Language.LSP.Protocol.Types.Common..:!? "options"

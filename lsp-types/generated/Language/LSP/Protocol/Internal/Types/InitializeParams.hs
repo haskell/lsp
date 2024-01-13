@@ -113,4 +113,4 @@ instance Aeson.ToJSON InitializeParams where
     ,"workspaceFolders" Language.LSP.Protocol.Types.Common..=? arg9]
 
 instance Aeson.FromJSON InitializeParams where
-  parseJSON = Aeson.withObject "InitializeParams" $ \arg -> InitializeParams <$> arg Aeson..:! "workDoneToken" <*> arg Aeson..: "processId" <*> arg Aeson..:! "clientInfo" <*> arg Aeson..:! "locale" <*> arg Aeson..:! "rootPath" <*> arg Aeson..: "rootUri" <*> arg Aeson..: "capabilities" <*> arg Aeson..:! "initializationOptions" <*> arg Aeson..:! "trace" <*> arg Aeson..:! "workspaceFolders"
+  parseJSON = Aeson.withObject "InitializeParams" $ \arg -> InitializeParams <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneToken" <*> arg Aeson..: "processId" <*> arg Language.LSP.Protocol.Types.Common..:!? "clientInfo" <*> arg Language.LSP.Protocol.Types.Common..:!? "locale" <*> arg Language.LSP.Protocol.Types.Common..:!? "rootPath" <*> arg Aeson..: "rootUri" <*> arg Aeson..: "capabilities" <*> arg Language.LSP.Protocol.Types.Common..:!? "initializationOptions" <*> arg Language.LSP.Protocol.Types.Common..:!? "trace" <*> arg Language.LSP.Protocol.Types.Common..:!? "workspaceFolders"

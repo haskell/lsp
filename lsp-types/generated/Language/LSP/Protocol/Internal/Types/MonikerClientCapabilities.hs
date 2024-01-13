@@ -38,4 +38,4 @@ instance Aeson.ToJSON MonikerClientCapabilities where
   toJSON (MonikerClientCapabilities arg0) = Aeson.object $ concat $  ["dynamicRegistration" Language.LSP.Protocol.Types.Common..=? arg0]
 
 instance Aeson.FromJSON MonikerClientCapabilities where
-  parseJSON = Aeson.withObject "MonikerClientCapabilities" $ \arg -> MonikerClientCapabilities <$> arg Aeson..:! "dynamicRegistration"
+  parseJSON = Aeson.withObject "MonikerClientCapabilities" $ \arg -> MonikerClientCapabilities <$> arg Language.LSP.Protocol.Types.Common..:!? "dynamicRegistration"

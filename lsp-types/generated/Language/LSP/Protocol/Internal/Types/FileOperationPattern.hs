@@ -58,4 +58,4 @@ instance Aeson.ToJSON FileOperationPattern where
     ,"options" Language.LSP.Protocol.Types.Common..=? arg2]
 
 instance Aeson.FromJSON FileOperationPattern where
-  parseJSON = Aeson.withObject "FileOperationPattern" $ \arg -> FileOperationPattern <$> arg Aeson..: "glob" <*> arg Aeson..:! "matches" <*> arg Aeson..:! "options"
+  parseJSON = Aeson.withObject "FileOperationPattern" $ \arg -> FileOperationPattern <$> arg Aeson..: "glob" <*> arg Language.LSP.Protocol.Types.Common..:!? "matches" <*> arg Language.LSP.Protocol.Types.Common..:!? "options"

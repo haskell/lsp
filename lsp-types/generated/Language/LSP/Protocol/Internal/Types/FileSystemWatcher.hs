@@ -45,4 +45,4 @@ instance Aeson.ToJSON FileSystemWatcher where
     ,"kind" Language.LSP.Protocol.Types.Common..=? arg1]
 
 instance Aeson.FromJSON FileSystemWatcher where
-  parseJSON = Aeson.withObject "FileSystemWatcher" $ \arg -> FileSystemWatcher <$> arg Aeson..: "globPattern" <*> arg Aeson..:! "kind"
+  parseJSON = Aeson.withObject "FileSystemWatcher" $ \arg -> FileSystemWatcher <$> arg Aeson..: "globPattern" <*> arg Language.LSP.Protocol.Types.Common..:!? "kind"

@@ -58,4 +58,4 @@ instance Aeson.ToJSON WindowClientCapabilities where
     ,"showDocument" Language.LSP.Protocol.Types.Common..=? arg2]
 
 instance Aeson.FromJSON WindowClientCapabilities where
-  parseJSON = Aeson.withObject "WindowClientCapabilities" $ \arg -> WindowClientCapabilities <$> arg Aeson..:! "workDoneProgress" <*> arg Aeson..:! "showMessage" <*> arg Aeson..:! "showDocument"
+  parseJSON = Aeson.withObject "WindowClientCapabilities" $ \arg -> WindowClientCapabilities <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneProgress" <*> arg Language.LSP.Protocol.Types.Common..:!? "showMessage" <*> arg Language.LSP.Protocol.Types.Common..:!? "showDocument"

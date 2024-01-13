@@ -51,4 +51,4 @@ instance Aeson.ToJSON NotebookDocumentChangeEvent where
     ,"cells" Language.LSP.Protocol.Types.Common..=? arg1]
 
 instance Aeson.FromJSON NotebookDocumentChangeEvent where
-  parseJSON = Aeson.withObject "NotebookDocumentChangeEvent" $ \arg -> NotebookDocumentChangeEvent <$> arg Aeson..:! "metadata" <*> arg Aeson..:! "cells"
+  parseJSON = Aeson.withObject "NotebookDocumentChangeEvent" $ \arg -> NotebookDocumentChangeEvent <$> arg Language.LSP.Protocol.Types.Common..:!? "metadata" <*> arg Language.LSP.Protocol.Types.Common..:!? "cells"

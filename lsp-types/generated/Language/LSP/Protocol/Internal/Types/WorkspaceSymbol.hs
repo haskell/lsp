@@ -80,4 +80,4 @@ instance Aeson.ToJSON WorkspaceSymbol where
     ,"data" Language.LSP.Protocol.Types.Common..=? arg5]
 
 instance Aeson.FromJSON WorkspaceSymbol where
-  parseJSON = Aeson.withObject "WorkspaceSymbol" $ \arg -> WorkspaceSymbol <$> arg Aeson..: "name" <*> arg Aeson..: "kind" <*> arg Aeson..:! "tags" <*> arg Aeson..:! "containerName" <*> arg Aeson..: "location" <*> arg Aeson..:! "data"
+  parseJSON = Aeson.withObject "WorkspaceSymbol" $ \arg -> WorkspaceSymbol <$> arg Aeson..: "name" <*> arg Aeson..: "kind" <*> arg Language.LSP.Protocol.Types.Common..:!? "tags" <*> arg Language.LSP.Protocol.Types.Common..:!? "containerName" <*> arg Aeson..: "location" <*> arg Language.LSP.Protocol.Types.Common..:!? "data"

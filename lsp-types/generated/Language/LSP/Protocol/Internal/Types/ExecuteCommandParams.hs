@@ -47,4 +47,4 @@ instance Aeson.ToJSON ExecuteCommandParams where
     ,"arguments" Language.LSP.Protocol.Types.Common..=? arg2]
 
 instance Aeson.FromJSON ExecuteCommandParams where
-  parseJSON = Aeson.withObject "ExecuteCommandParams" $ \arg -> ExecuteCommandParams <$> arg Aeson..:! "workDoneToken" <*> arg Aeson..: "command" <*> arg Aeson..:! "arguments"
+  parseJSON = Aeson.withObject "ExecuteCommandParams" $ \arg -> ExecuteCommandParams <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneToken" <*> arg Aeson..: "command" <*> arg Language.LSP.Protocol.Types.Common..:!? "arguments"

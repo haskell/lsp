@@ -47,4 +47,4 @@ instance Aeson.ToJSON FoldingRangeParams where
     ,["textDocument" Aeson..= arg2]]
 
 instance Aeson.FromJSON FoldingRangeParams where
-  parseJSON = Aeson.withObject "FoldingRangeParams" $ \arg -> FoldingRangeParams <$> arg Aeson..:! "workDoneToken" <*> arg Aeson..:! "partialResultToken" <*> arg Aeson..: "textDocument"
+  parseJSON = Aeson.withObject "FoldingRangeParams" $ \arg -> FoldingRangeParams <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneToken" <*> arg Language.LSP.Protocol.Types.Common..:!? "partialResultToken" <*> arg Aeson..: "textDocument"

@@ -34,4 +34,4 @@ instance Aeson.ToJSON DocumentFormattingOptions where
   toJSON (DocumentFormattingOptions arg0) = Aeson.object $ concat $  ["workDoneProgress" Language.LSP.Protocol.Types.Common..=? arg0]
 
 instance Aeson.FromJSON DocumentFormattingOptions where
-  parseJSON = Aeson.withObject "DocumentFormattingOptions" $ \arg -> DocumentFormattingOptions <$> arg Aeson..:! "workDoneProgress"
+  parseJSON = Aeson.withObject "DocumentFormattingOptions" $ \arg -> DocumentFormattingOptions <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneProgress"

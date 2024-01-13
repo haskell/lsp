@@ -43,4 +43,4 @@ instance Aeson.ToJSON Hover where
     ,"range" Language.LSP.Protocol.Types.Common..=? arg1]
 
 instance Aeson.FromJSON Hover where
-  parseJSON = Aeson.withObject "Hover" $ \arg -> Hover <$> arg Aeson..: "contents" <*> arg Aeson..:! "range"
+  parseJSON = Aeson.withObject "Hover" $ \arg -> Hover <$> arg Aeson..: "contents" <*> arg Language.LSP.Protocol.Types.Common..:!? "range"

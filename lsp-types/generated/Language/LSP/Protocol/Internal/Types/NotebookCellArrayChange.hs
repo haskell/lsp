@@ -48,4 +48,4 @@ instance Aeson.ToJSON NotebookCellArrayChange where
     ,"cells" Language.LSP.Protocol.Types.Common..=? arg2]
 
 instance Aeson.FromJSON NotebookCellArrayChange where
-  parseJSON = Aeson.withObject "NotebookCellArrayChange" $ \arg -> NotebookCellArrayChange <$> arg Aeson..: "start" <*> arg Aeson..: "deleteCount" <*> arg Aeson..:! "cells"
+  parseJSON = Aeson.withObject "NotebookCellArrayChange" $ \arg -> NotebookCellArrayChange <$> arg Aeson..: "start" <*> arg Aeson..: "deleteCount" <*> arg Language.LSP.Protocol.Types.Common..:!? "cells"

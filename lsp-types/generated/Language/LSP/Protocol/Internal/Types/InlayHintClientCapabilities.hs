@@ -44,4 +44,4 @@ instance Aeson.ToJSON InlayHintClientCapabilities where
     ,"resolveSupport" Language.LSP.Protocol.Types.Common..=? arg1]
 
 instance Aeson.FromJSON InlayHintClientCapabilities where
-  parseJSON = Aeson.withObject "InlayHintClientCapabilities" $ \arg -> InlayHintClientCapabilities <$> arg Aeson..:! "dynamicRegistration" <*> arg Aeson..:! "resolveSupport"
+  parseJSON = Aeson.withObject "InlayHintClientCapabilities" $ \arg -> InlayHintClientCapabilities <$> arg Language.LSP.Protocol.Types.Common..:!? "dynamicRegistration" <*> arg Language.LSP.Protocol.Types.Common..:!? "resolveSupport"

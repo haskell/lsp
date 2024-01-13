@@ -43,4 +43,4 @@ instance Aeson.ToJSON DocumentHighlight where
     ,"kind" Language.LSP.Protocol.Types.Common..=? arg1]
 
 instance Aeson.FromJSON DocumentHighlight where
-  parseJSON = Aeson.withObject "DocumentHighlight" $ \arg -> DocumentHighlight <$> arg Aeson..: "range" <*> arg Aeson..:! "kind"
+  parseJSON = Aeson.withObject "DocumentHighlight" $ \arg -> DocumentHighlight <$> arg Aeson..: "range" <*> arg Language.LSP.Protocol.Types.Common..:!? "kind"

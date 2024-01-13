@@ -53,4 +53,4 @@ instance Aeson.ToJSON SemanticTokensRangeParams where
     ,["range" Aeson..= arg3]]
 
 instance Aeson.FromJSON SemanticTokensRangeParams where
-  parseJSON = Aeson.withObject "SemanticTokensRangeParams" $ \arg -> SemanticTokensRangeParams <$> arg Aeson..:! "workDoneToken" <*> arg Aeson..:! "partialResultToken" <*> arg Aeson..: "textDocument" <*> arg Aeson..: "range"
+  parseJSON = Aeson.withObject "SemanticTokensRangeParams" $ \arg -> SemanticTokensRangeParams <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneToken" <*> arg Language.LSP.Protocol.Types.Common..:!? "partialResultToken" <*> arg Aeson..: "textDocument" <*> arg Aeson..: "range"

@@ -41,4 +41,4 @@ instance Aeson.ToJSON MonikerRegistrationOptions where
     ,"workDoneProgress" Language.LSP.Protocol.Types.Common..=? arg1]
 
 instance Aeson.FromJSON MonikerRegistrationOptions where
-  parseJSON = Aeson.withObject "MonikerRegistrationOptions" $ \arg -> MonikerRegistrationOptions <$> arg Aeson..: "documentSelector" <*> arg Aeson..:! "workDoneProgress"
+  parseJSON = Aeson.withObject "MonikerRegistrationOptions" $ \arg -> MonikerRegistrationOptions <$> arg Aeson..: "documentSelector" <*> arg Language.LSP.Protocol.Types.Common..:!? "workDoneProgress"

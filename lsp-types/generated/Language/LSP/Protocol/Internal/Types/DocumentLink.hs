@@ -60,4 +60,4 @@ instance Aeson.ToJSON DocumentLink where
     ,"data" Language.LSP.Protocol.Types.Common..=? arg3]
 
 instance Aeson.FromJSON DocumentLink where
-  parseJSON = Aeson.withObject "DocumentLink" $ \arg -> DocumentLink <$> arg Aeson..: "range" <*> arg Aeson..:! "target" <*> arg Aeson..:! "tooltip" <*> arg Aeson..:! "data"
+  parseJSON = Aeson.withObject "DocumentLink" $ \arg -> DocumentLink <$> arg Aeson..: "range" <*> arg Language.LSP.Protocol.Types.Common..:!? "target" <*> arg Language.LSP.Protocol.Types.Common..:!? "tooltip" <*> arg Language.LSP.Protocol.Types.Common..:!? "data"

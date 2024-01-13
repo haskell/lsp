@@ -47,4 +47,4 @@ instance Aeson.ToJSON LinkedEditingRangeParams where
     ,"workDoneToken" Language.LSP.Protocol.Types.Common..=? arg2]
 
 instance Aeson.FromJSON LinkedEditingRangeParams where
-  parseJSON = Aeson.withObject "LinkedEditingRangeParams" $ \arg -> LinkedEditingRangeParams <$> arg Aeson..: "textDocument" <*> arg Aeson..: "position" <*> arg Aeson..:! "workDoneToken"
+  parseJSON = Aeson.withObject "LinkedEditingRangeParams" $ \arg -> LinkedEditingRangeParams <$> arg Aeson..: "textDocument" <*> arg Aeson..: "position" <*> arg Language.LSP.Protocol.Types.Common..:!? "workDoneToken"
