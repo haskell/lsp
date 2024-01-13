@@ -352,7 +352,7 @@ printStruct tn s@Structure{name, documentation, since, proposed, deprecated} = d
     let vn :: T.Text = "arg"
     let exprs = flip fmap props $ \Property{name, optional} ->
           case optional of
-            -- Accept null in place of Nothin
+            -- Accept null in place of Nothing
             -- Note [Principle of robustness for parsing LSP types]
             Just True -> pretty vn <+> pretty optionalMatcherName <+> dquotes (pretty name)
             _ -> pretty vn <+> "Aeson..:" <+> dquotes (pretty name)
