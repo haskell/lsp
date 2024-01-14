@@ -192,21 +192,27 @@ k .=? v = case v of
   Nothing -> mempty
 
 {- |
-Parse a value optionally, with lenient but careful handling of 'Null':
+Parse a value optionally. This behaves similarly to 'J..:!' and
+'J..:?', but differs in how it handles 'Null':
 
-    * If 'Null' can be converted to the desired type then the result is 'Just Null'
-    * If 'Null' cannot be converted to the desired type then the result is 'Nothing'
+    * If 'Null' can be converted to the desired type...
+        * 'J.:?': the result is success with 'Nothing'
+        * 'J.:!': the result is success with 'Just <value>'
+        * '.:!?': the result is success with 'Just <value>'
+    * If 'Null' cannot be converted to the desired type...
+        * 'J.:?': the result is success with 'Nothing'
+        * 'J.:!': the result is failure
+        * '.:!?': the result is success with 'Nothing'
 
-This differs from 'J..:!' because it allows 'Null' to parse as 'Nothing'.
-This differs from 'J..:?' because it converts 'Null' to the desired type
-in preference to parsing it as 'Nothing'.
+That is, we allow 'Null' to mean either 'Nothing' or 'Just <value>',
+with the latter taking priority.
 -}
 (.:!?) :: (J.FromJSON v) => Object -> Key -> J.Parser (Maybe v)
 o .:!? k =
-  -- Cases for 'Null'
   -- If 'Null' can be converted to the desired type this succeeds
   -- with Just the converted value
   o J..:! k
+    -- otherwise...
     <|>
     -- If 'Null' cannot be converted to the desired type this succeeds
     -- with Nothing
