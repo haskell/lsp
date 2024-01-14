@@ -47,4 +47,4 @@ instance Aeson.ToJSON Registration where
     ,"registerOptions" Language.LSP.Protocol.Types.Common..=? arg2]
 
 instance Aeson.FromJSON Registration where
-  parseJSON = Aeson.withObject "Registration" $ \arg -> Registration <$> arg Aeson..: "id" <*> arg Aeson..: "method" <*> arg Aeson..:! "registerOptions"
+  parseJSON = Aeson.withObject "Registration" $ \arg -> Registration <$> arg Aeson..: "id" <*> arg Aeson..: "method" <*> arg Language.LSP.Protocol.Types.Common..:!? "registerOptions"

@@ -60,4 +60,4 @@ instance Aeson.ToJSON DocumentDiagnosticParams where
     ,"previousResultId" Language.LSP.Protocol.Types.Common..=? arg4]
 
 instance Aeson.FromJSON DocumentDiagnosticParams where
-  parseJSON = Aeson.withObject "DocumentDiagnosticParams" $ \arg -> DocumentDiagnosticParams <$> arg Aeson..:! "workDoneToken" <*> arg Aeson..:! "partialResultToken" <*> arg Aeson..: "textDocument" <*> arg Aeson..:! "identifier" <*> arg Aeson..:! "previousResultId"
+  parseJSON = Aeson.withObject "DocumentDiagnosticParams" $ \arg -> DocumentDiagnosticParams <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneToken" <*> arg Language.LSP.Protocol.Types.Common..:!? "partialResultToken" <*> arg Aeson..: "textDocument" <*> arg Language.LSP.Protocol.Types.Common..:!? "identifier" <*> arg Language.LSP.Protocol.Types.Common..:!? "previousResultId"

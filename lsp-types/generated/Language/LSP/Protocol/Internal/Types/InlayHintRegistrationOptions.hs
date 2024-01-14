@@ -56,4 +56,4 @@ instance Aeson.ToJSON InlayHintRegistrationOptions where
     ,"id" Language.LSP.Protocol.Types.Common..=? arg3]
 
 instance Aeson.FromJSON InlayHintRegistrationOptions where
-  parseJSON = Aeson.withObject "InlayHintRegistrationOptions" $ \arg -> InlayHintRegistrationOptions <$> arg Aeson..:! "workDoneProgress" <*> arg Aeson..:! "resolveProvider" <*> arg Aeson..: "documentSelector" <*> arg Aeson..:! "id"
+  parseJSON = Aeson.withObject "InlayHintRegistrationOptions" $ \arg -> InlayHintRegistrationOptions <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneProgress" <*> arg Language.LSP.Protocol.Types.Common..:!? "resolveProvider" <*> arg Aeson..: "documentSelector" <*> arg Language.LSP.Protocol.Types.Common..:!? "id"

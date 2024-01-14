@@ -34,4 +34,4 @@ instance Aeson.ToJSON HoverOptions where
   toJSON (HoverOptions arg0) = Aeson.object $ concat $  ["workDoneProgress" Language.LSP.Protocol.Types.Common..=? arg0]
 
 instance Aeson.FromJSON HoverOptions where
-  parseJSON = Aeson.withObject "HoverOptions" $ \arg -> HoverOptions <$> arg Aeson..:! "workDoneProgress"
+  parseJSON = Aeson.withObject "HoverOptions" $ \arg -> HoverOptions <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneProgress"

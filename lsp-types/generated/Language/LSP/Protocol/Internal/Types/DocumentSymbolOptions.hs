@@ -43,4 +43,4 @@ instance Aeson.ToJSON DocumentSymbolOptions where
     ,"label" Language.LSP.Protocol.Types.Common..=? arg1]
 
 instance Aeson.FromJSON DocumentSymbolOptions where
-  parseJSON = Aeson.withObject "DocumentSymbolOptions" $ \arg -> DocumentSymbolOptions <$> arg Aeson..:! "workDoneProgress" <*> arg Aeson..:! "label"
+  parseJSON = Aeson.withObject "DocumentSymbolOptions" $ \arg -> DocumentSymbolOptions <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneProgress" <*> arg Language.LSP.Protocol.Types.Common..:!? "label"

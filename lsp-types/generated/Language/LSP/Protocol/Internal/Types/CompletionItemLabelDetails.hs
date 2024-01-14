@@ -44,4 +44,4 @@ instance Aeson.ToJSON CompletionItemLabelDetails where
     ,"description" Language.LSP.Protocol.Types.Common..=? arg1]
 
 instance Aeson.FromJSON CompletionItemLabelDetails where
-  parseJSON = Aeson.withObject "CompletionItemLabelDetails" $ \arg -> CompletionItemLabelDetails <$> arg Aeson..:! "detail" <*> arg Aeson..:! "description"
+  parseJSON = Aeson.withObject "CompletionItemLabelDetails" $ \arg -> CompletionItemLabelDetails <$> arg Language.LSP.Protocol.Types.Common..:!? "detail" <*> arg Language.LSP.Protocol.Types.Common..:!? "description"

@@ -69,4 +69,4 @@ instance Aeson.ToJSON DiagnosticRegistrationOptions where
     ,"id" Language.LSP.Protocol.Types.Common..=? arg5]
 
 instance Aeson.FromJSON DiagnosticRegistrationOptions where
-  parseJSON = Aeson.withObject "DiagnosticRegistrationOptions" $ \arg -> DiagnosticRegistrationOptions <$> arg Aeson..: "documentSelector" <*> arg Aeson..:! "workDoneProgress" <*> arg Aeson..:! "identifier" <*> arg Aeson..: "interFileDependencies" <*> arg Aeson..: "workspaceDiagnostics" <*> arg Aeson..:! "id"
+  parseJSON = Aeson.withObject "DiagnosticRegistrationOptions" $ \arg -> DiagnosticRegistrationOptions <$> arg Aeson..: "documentSelector" <*> arg Language.LSP.Protocol.Types.Common..:!? "workDoneProgress" <*> arg Language.LSP.Protocol.Types.Common..:!? "identifier" <*> arg Aeson..: "interFileDependencies" <*> arg Aeson..: "workspaceDiagnostics" <*> arg Language.LSP.Protocol.Types.Common..:!? "id"

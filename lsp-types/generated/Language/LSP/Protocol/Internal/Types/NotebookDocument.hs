@@ -64,4 +64,4 @@ instance Aeson.ToJSON NotebookDocument where
     ,["cells" Aeson..= arg4]]
 
 instance Aeson.FromJSON NotebookDocument where
-  parseJSON = Aeson.withObject "NotebookDocument" $ \arg -> NotebookDocument <$> arg Aeson..: "uri" <*> arg Aeson..: "notebookType" <*> arg Aeson..: "version" <*> arg Aeson..:! "metadata" <*> arg Aeson..: "cells"
+  parseJSON = Aeson.withObject "NotebookDocument" $ \arg -> NotebookDocument <$> arg Aeson..: "uri" <*> arg Aeson..: "notebookType" <*> arg Aeson..: "version" <*> arg Language.LSP.Protocol.Types.Common..:!? "metadata" <*> arg Aeson..: "cells"

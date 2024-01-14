@@ -51,4 +51,4 @@ instance Aeson.ToJSON ApplyWorkspaceEditResult where
     ,"failedChange" Language.LSP.Protocol.Types.Common..=? arg2]
 
 instance Aeson.FromJSON ApplyWorkspaceEditResult where
-  parseJSON = Aeson.withObject "ApplyWorkspaceEditResult" $ \arg -> ApplyWorkspaceEditResult <$> arg Aeson..: "applied" <*> arg Aeson..:! "failureReason" <*> arg Aeson..:! "failedChange"
+  parseJSON = Aeson.withObject "ApplyWorkspaceEditResult" $ \arg -> ApplyWorkspaceEditResult <$> arg Aeson..: "applied" <*> arg Language.LSP.Protocol.Types.Common..:!? "failureReason" <*> arg Language.LSP.Protocol.Types.Common..:!? "failedChange"

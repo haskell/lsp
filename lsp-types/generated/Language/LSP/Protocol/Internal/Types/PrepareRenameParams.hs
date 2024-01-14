@@ -47,4 +47,4 @@ instance Aeson.ToJSON PrepareRenameParams where
     ,"workDoneToken" Language.LSP.Protocol.Types.Common..=? arg2]
 
 instance Aeson.FromJSON PrepareRenameParams where
-  parseJSON = Aeson.withObject "PrepareRenameParams" $ \arg -> PrepareRenameParams <$> arg Aeson..: "textDocument" <*> arg Aeson..: "position" <*> arg Aeson..:! "workDoneToken"
+  parseJSON = Aeson.withObject "PrepareRenameParams" $ \arg -> PrepareRenameParams <$> arg Aeson..: "textDocument" <*> arg Aeson..: "position" <*> arg Language.LSP.Protocol.Types.Common..:!? "workDoneToken"

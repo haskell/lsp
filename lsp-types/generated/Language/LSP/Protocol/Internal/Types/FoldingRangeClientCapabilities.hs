@@ -67,4 +67,4 @@ instance Aeson.ToJSON FoldingRangeClientCapabilities where
     ,"foldingRange" Language.LSP.Protocol.Types.Common..=? arg4]
 
 instance Aeson.FromJSON FoldingRangeClientCapabilities where
-  parseJSON = Aeson.withObject "FoldingRangeClientCapabilities" $ \arg -> FoldingRangeClientCapabilities <$> arg Aeson..:! "dynamicRegistration" <*> arg Aeson..:! "rangeLimit" <*> arg Aeson..:! "lineFoldingOnly" <*> arg Aeson..:! "foldingRangeKind" <*> arg Aeson..:! "foldingRange"
+  parseJSON = Aeson.withObject "FoldingRangeClientCapabilities" $ \arg -> FoldingRangeClientCapabilities <$> arg Language.LSP.Protocol.Types.Common..:!? "dynamicRegistration" <*> arg Language.LSP.Protocol.Types.Common..:!? "rangeLimit" <*> arg Language.LSP.Protocol.Types.Common..:!? "lineFoldingOnly" <*> arg Language.LSP.Protocol.Types.Common..:!? "foldingRangeKind" <*> arg Language.LSP.Protocol.Types.Common..:!? "foldingRange"

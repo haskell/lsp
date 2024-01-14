@@ -49,4 +49,4 @@ instance Aeson.ToJSON TypeHierarchySupertypesParams where
     ,["item" Aeson..= arg2]]
 
 instance Aeson.FromJSON TypeHierarchySupertypesParams where
-  parseJSON = Aeson.withObject "TypeHierarchySupertypesParams" $ \arg -> TypeHierarchySupertypesParams <$> arg Aeson..:! "workDoneToken" <*> arg Aeson..:! "partialResultToken" <*> arg Aeson..: "item"
+  parseJSON = Aeson.withObject "TypeHierarchySupertypesParams" $ \arg -> TypeHierarchySupertypesParams <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneToken" <*> arg Language.LSP.Protocol.Types.Common..:!? "partialResultToken" <*> arg Aeson..: "item"

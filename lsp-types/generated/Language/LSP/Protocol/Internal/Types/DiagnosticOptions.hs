@@ -56,4 +56,4 @@ instance Aeson.ToJSON DiagnosticOptions where
     ,["workspaceDiagnostics" Aeson..= arg3]]
 
 instance Aeson.FromJSON DiagnosticOptions where
-  parseJSON = Aeson.withObject "DiagnosticOptions" $ \arg -> DiagnosticOptions <$> arg Aeson..:! "workDoneProgress" <*> arg Aeson..:! "identifier" <*> arg Aeson..: "interFileDependencies" <*> arg Aeson..: "workspaceDiagnostics"
+  parseJSON = Aeson.withObject "DiagnosticOptions" $ \arg -> DiagnosticOptions <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneProgress" <*> arg Language.LSP.Protocol.Types.Common..:!? "identifier" <*> arg Aeson..: "interFileDependencies" <*> arg Aeson..: "workspaceDiagnostics"

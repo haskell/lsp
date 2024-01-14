@@ -47,4 +47,4 @@ instance Aeson.ToJSON DocumentFormattingParams where
     ,["options" Aeson..= arg2]]
 
 instance Aeson.FromJSON DocumentFormattingParams where
-  parseJSON = Aeson.withObject "DocumentFormattingParams" $ \arg -> DocumentFormattingParams <$> arg Aeson..:! "workDoneToken" <*> arg Aeson..: "textDocument" <*> arg Aeson..: "options"
+  parseJSON = Aeson.withObject "DocumentFormattingParams" $ \arg -> DocumentFormattingParams <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneToken" <*> arg Aeson..: "textDocument" <*> arg Aeson..: "options"

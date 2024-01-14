@@ -56,4 +56,4 @@ instance Aeson.ToJSON InlineValueParams where
     ,["context" Aeson..= arg3]]
 
 instance Aeson.FromJSON InlineValueParams where
-  parseJSON = Aeson.withObject "InlineValueParams" $ \arg -> InlineValueParams <$> arg Aeson..:! "workDoneToken" <*> arg Aeson..: "textDocument" <*> arg Aeson..: "range" <*> arg Aeson..: "context"
+  parseJSON = Aeson.withObject "InlineValueParams" $ \arg -> InlineValueParams <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneToken" <*> arg Aeson..: "textDocument" <*> arg Aeson..: "range" <*> arg Aeson..: "context"

@@ -88,4 +88,4 @@ instance Aeson.ToJSON CodeActionClientCapabilities where
     ,"honorsChangeAnnotations" Language.LSP.Protocol.Types.Common..=? arg6]
 
 instance Aeson.FromJSON CodeActionClientCapabilities where
-  parseJSON = Aeson.withObject "CodeActionClientCapabilities" $ \arg -> CodeActionClientCapabilities <$> arg Aeson..:! "dynamicRegistration" <*> arg Aeson..:! "codeActionLiteralSupport" <*> arg Aeson..:! "isPreferredSupport" <*> arg Aeson..:! "disabledSupport" <*> arg Aeson..:! "dataSupport" <*> arg Aeson..:! "resolveSupport" <*> arg Aeson..:! "honorsChangeAnnotations"
+  parseJSON = Aeson.withObject "CodeActionClientCapabilities" $ \arg -> CodeActionClientCapabilities <$> arg Language.LSP.Protocol.Types.Common..:!? "dynamicRegistration" <*> arg Language.LSP.Protocol.Types.Common..:!? "codeActionLiteralSupport" <*> arg Language.LSP.Protocol.Types.Common..:!? "isPreferredSupport" <*> arg Language.LSP.Protocol.Types.Common..:!? "disabledSupport" <*> arg Language.LSP.Protocol.Types.Common..:!? "dataSupport" <*> arg Language.LSP.Protocol.Types.Common..:!? "resolveSupport" <*> arg Language.LSP.Protocol.Types.Common..:!? "honorsChangeAnnotations"

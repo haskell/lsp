@@ -78,4 +78,4 @@ instance Aeson.ToJSON WorkspaceEdit where
     ,"changeAnnotations" Language.LSP.Protocol.Types.Common..=? arg2]
 
 instance Aeson.FromJSON WorkspaceEdit where
-  parseJSON = Aeson.withObject "WorkspaceEdit" $ \arg -> WorkspaceEdit <$> arg Aeson..:! "changes" <*> arg Aeson..:! "documentChanges" <*> arg Aeson..:! "changeAnnotations"
+  parseJSON = Aeson.withObject "WorkspaceEdit" $ \arg -> WorkspaceEdit <$> arg Language.LSP.Protocol.Types.Common..:!? "changes" <*> arg Language.LSP.Protocol.Types.Common..:!? "documentChanges" <*> arg Language.LSP.Protocol.Types.Common..:!? "changeAnnotations"

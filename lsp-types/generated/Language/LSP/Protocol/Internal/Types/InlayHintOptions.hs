@@ -42,4 +42,4 @@ instance Aeson.ToJSON InlayHintOptions where
     ,"resolveProvider" Language.LSP.Protocol.Types.Common..=? arg1]
 
 instance Aeson.FromJSON InlayHintOptions where
-  parseJSON = Aeson.withObject "InlayHintOptions" $ \arg -> InlayHintOptions <$> arg Aeson..:! "workDoneProgress" <*> arg Aeson..:! "resolveProvider"
+  parseJSON = Aeson.withObject "InlayHintOptions" $ \arg -> InlayHintOptions <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneProgress" <*> arg Language.LSP.Protocol.Types.Common..:!? "resolveProvider"

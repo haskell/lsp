@@ -42,4 +42,4 @@ instance Aeson.ToJSON ExecutionSummary where
     ,"success" Language.LSP.Protocol.Types.Common..=? arg1]
 
 instance Aeson.FromJSON ExecutionSummary where
-  parseJSON = Aeson.withObject "ExecutionSummary" $ \arg -> ExecutionSummary <$> arg Aeson..: "executionOrder" <*> arg Aeson..:! "success"
+  parseJSON = Aeson.withObject "ExecutionSummary" $ \arg -> ExecutionSummary <$> arg Aeson..: "executionOrder" <*> arg Language.LSP.Protocol.Types.Common..:!? "success"

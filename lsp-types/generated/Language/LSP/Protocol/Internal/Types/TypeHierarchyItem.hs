@@ -81,4 +81,4 @@ instance Aeson.ToJSON TypeHierarchyItem where
     ,"data" Language.LSP.Protocol.Types.Common..=? arg7]
 
 instance Aeson.FromJSON TypeHierarchyItem where
-  parseJSON = Aeson.withObject "TypeHierarchyItem" $ \arg -> TypeHierarchyItem <$> arg Aeson..: "name" <*> arg Aeson..: "kind" <*> arg Aeson..:! "tags" <*> arg Aeson..:! "detail" <*> arg Aeson..: "uri" <*> arg Aeson..: "range" <*> arg Aeson..: "selectionRange" <*> arg Aeson..:! "data"
+  parseJSON = Aeson.withObject "TypeHierarchyItem" $ \arg -> TypeHierarchyItem <$> arg Aeson..: "name" <*> arg Aeson..: "kind" <*> arg Language.LSP.Protocol.Types.Common..:!? "tags" <*> arg Language.LSP.Protocol.Types.Common..:!? "detail" <*> arg Aeson..: "uri" <*> arg Aeson..: "range" <*> arg Aeson..: "selectionRange" <*> arg Language.LSP.Protocol.Types.Common..:!? "data"

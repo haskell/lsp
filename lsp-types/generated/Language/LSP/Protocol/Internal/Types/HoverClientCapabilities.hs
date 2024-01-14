@@ -41,4 +41,4 @@ instance Aeson.ToJSON HoverClientCapabilities where
     ,"contentFormat" Language.LSP.Protocol.Types.Common..=? arg1]
 
 instance Aeson.FromJSON HoverClientCapabilities where
-  parseJSON = Aeson.withObject "HoverClientCapabilities" $ \arg -> HoverClientCapabilities <$> arg Aeson..:! "dynamicRegistration" <*> arg Aeson..:! "contentFormat"
+  parseJSON = Aeson.withObject "HoverClientCapabilities" $ \arg -> HoverClientCapabilities <$> arg Language.LSP.Protocol.Types.Common..:!? "dynamicRegistration" <*> arg Language.LSP.Protocol.Types.Common..:!? "contentFormat"

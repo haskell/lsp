@@ -34,4 +34,4 @@ instance Aeson.ToJSON ExecuteCommandClientCapabilities where
   toJSON (ExecuteCommandClientCapabilities arg0) = Aeson.object $ concat $  ["dynamicRegistration" Language.LSP.Protocol.Types.Common..=? arg0]
 
 instance Aeson.FromJSON ExecuteCommandClientCapabilities where
-  parseJSON = Aeson.withObject "ExecuteCommandClientCapabilities" $ \arg -> ExecuteCommandClientCapabilities <$> arg Aeson..:! "dynamicRegistration"
+  parseJSON = Aeson.withObject "ExecuteCommandClientCapabilities" $ \arg -> ExecuteCommandClientCapabilities <$> arg Language.LSP.Protocol.Types.Common..:!? "dynamicRegistration"

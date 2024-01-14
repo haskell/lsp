@@ -40,4 +40,4 @@ instance Aeson.ToJSON DocumentOnTypeFormattingOptions where
     ,"moreTriggerCharacter" Language.LSP.Protocol.Types.Common..=? arg1]
 
 instance Aeson.FromJSON DocumentOnTypeFormattingOptions where
-  parseJSON = Aeson.withObject "DocumentOnTypeFormattingOptions" $ \arg -> DocumentOnTypeFormattingOptions <$> arg Aeson..: "firstTriggerCharacter" <*> arg Aeson..:! "moreTriggerCharacter"
+  parseJSON = Aeson.withObject "DocumentOnTypeFormattingOptions" $ \arg -> DocumentOnTypeFormattingOptions <$> arg Aeson..: "firstTriggerCharacter" <*> arg Language.LSP.Protocol.Types.Common..:!? "moreTriggerCharacter"

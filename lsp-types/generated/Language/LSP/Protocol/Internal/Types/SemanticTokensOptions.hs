@@ -52,4 +52,4 @@ instance Aeson.ToJSON SemanticTokensOptions where
     ,"full" Language.LSP.Protocol.Types.Common..=? arg3]
 
 instance Aeson.FromJSON SemanticTokensOptions where
-  parseJSON = Aeson.withObject "SemanticTokensOptions" $ \arg -> SemanticTokensOptions <$> arg Aeson..:! "workDoneProgress" <*> arg Aeson..: "legend" <*> arg Aeson..:! "range" <*> arg Aeson..:! "full"
+  parseJSON = Aeson.withObject "SemanticTokensOptions" $ \arg -> SemanticTokensOptions <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneProgress" <*> arg Aeson..: "legend" <*> arg Language.LSP.Protocol.Types.Common..:!? "range" <*> arg Language.LSP.Protocol.Types.Common..:!? "full"

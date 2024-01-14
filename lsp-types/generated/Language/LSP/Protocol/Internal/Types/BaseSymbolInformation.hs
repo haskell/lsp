@@ -57,4 +57,4 @@ instance Aeson.ToJSON BaseSymbolInformation where
     ,"containerName" Language.LSP.Protocol.Types.Common..=? arg3]
 
 instance Aeson.FromJSON BaseSymbolInformation where
-  parseJSON = Aeson.withObject "BaseSymbolInformation" $ \arg -> BaseSymbolInformation <$> arg Aeson..: "name" <*> arg Aeson..: "kind" <*> arg Aeson..:! "tags" <*> arg Aeson..:! "containerName"
+  parseJSON = Aeson.withObject "BaseSymbolInformation" $ \arg -> BaseSymbolInformation <$> arg Aeson..: "name" <*> arg Aeson..: "kind" <*> arg Language.LSP.Protocol.Types.Common..:!? "tags" <*> arg Language.LSP.Protocol.Types.Common..:!? "containerName"

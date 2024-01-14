@@ -50,4 +50,4 @@ instance Aeson.ToJSON SignatureHelpOptions where
     ,"retriggerCharacters" Language.LSP.Protocol.Types.Common..=? arg2]
 
 instance Aeson.FromJSON SignatureHelpOptions where
-  parseJSON = Aeson.withObject "SignatureHelpOptions" $ \arg -> SignatureHelpOptions <$> arg Aeson..:! "workDoneProgress" <*> arg Aeson..:! "triggerCharacters" <*> arg Aeson..:! "retriggerCharacters"
+  parseJSON = Aeson.withObject "SignatureHelpOptions" $ \arg -> SignatureHelpOptions <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneProgress" <*> arg Language.LSP.Protocol.Types.Common..:!? "triggerCharacters" <*> arg Language.LSP.Protocol.Types.Common..:!? "retriggerCharacters"

@@ -334,12 +334,13 @@ printStruct tn s@Structure{name, documentation, since, proposed, deprecated} = d
   ensureImport "Data.Aeson" (QualAs "Aeson")
   ensureImport "Data.Row.Aeson" (QualAs "Aeson")
   ensureImport "Data.Row.Hashable" (QualAs "Hashable")
-  matcherName <- entityName "Language.LSP.Protocol.Types.Common" ".=?"
+  optionalPairerName <- entityName "Language.LSP.Protocol.Types.Common" ".=?"
+  optionalMatcherName <- entityName "Language.LSP.Protocol.Types.Common" ".:!?"
   let toJsonD =
         let (unzip -> (args, pairEs)) = flip fmap (zip props [0 ..]) $ \(Property{name, optional}, i) ->
               let n :: T.Text = "arg" <> (T.pack $ show i)
                   pairE = case optional of
-                    Just True -> dquotes (pretty name) <+> pretty matcherName <+> pretty n
+                    Just True -> dquotes (pretty name) <+> pretty optionalPairerName <+> pretty n
                     _ -> brackets (dquotes (pretty name) <+> "Aeson..=" <+> pretty n)
                in (pretty n, pairE)
             body = "Aeson.object $ concat $ " <+> encloseSep "[" "]" "," pairEs
@@ -351,7 +352,9 @@ printStruct tn s@Structure{name, documentation, since, proposed, deprecated} = d
     let vn :: T.Text = "arg"
     let exprs = flip fmap props $ \Property{name, optional} ->
           case optional of
-            Just True -> pretty vn <+> "Aeson..:!" <+> dquotes (pretty name)
+            -- Accept null in place of Nothing
+            -- Note [Principle of robustness for parsing LSP types]
+            Just True -> pretty vn <+> pretty optionalMatcherName <+> dquotes (pretty name)
             _ -> pretty vn <+> "Aeson..:" <+> dquotes (pretty name)
     let lamBody = mkIterApplicativeApp (pretty tn) exprs
     let body = "Aeson.withObject" <+> dquotes (pretty structName) <+> "$" <+> "\\" <> pretty vn <+> "->" <+> nest indentSize lamBody
@@ -1021,4 +1024,25 @@ are associated, followed by an underscore. So the constructors of `X` will be
 
 We don't do this for fields, instead we rely on `DuplicateRecordFields` and
 use classy lenses.
+-}
+
+{- Note [Principle of robustness for parsing LSP types]
+The principle of robustness states:
+
+> Be conservative in what you do, liberal in what you accept from others
+
+We try to follow this when parsing LSP types, and where possible accept
+"slightly wrong" input. This is important because the LSP spec is very
+fiddly to implement correctly, and there are many clients we interact with,
+some of whom will therefore get it wrong. It's best if we can accept this
+(although in an ideal world we would also emit a warning, but it's not super
+easy to do that, so we just don't).
+
+Specific ways in which we try to be robust:
+- Accept 'null' to mean "missing". The LSP spec *sometimes* allows a value
+  to be 'null', but often it says a value can be missing but is not nullable.
+  A common mistake for clients is to still send 'null' to mean "missing"
+  (see e.g. https://github.com/haskell/haskell-language-server/issues/3842#issuecomment-1798217080).
+  This is complicated because if 'null' is an allowed value then we want to parse
+  it as a present 'null', not missing.
 -}

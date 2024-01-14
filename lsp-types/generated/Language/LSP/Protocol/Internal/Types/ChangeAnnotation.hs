@@ -50,4 +50,4 @@ instance Aeson.ToJSON ChangeAnnotation where
     ,"description" Language.LSP.Protocol.Types.Common..=? arg2]
 
 instance Aeson.FromJSON ChangeAnnotation where
-  parseJSON = Aeson.withObject "ChangeAnnotation" $ \arg -> ChangeAnnotation <$> arg Aeson..: "label" <*> arg Aeson..:! "needsConfirmation" <*> arg Aeson..:! "description"
+  parseJSON = Aeson.withObject "ChangeAnnotation" $ \arg -> ChangeAnnotation <$> arg Aeson..: "label" <*> arg Language.LSP.Protocol.Types.Common..:!? "needsConfirmation" <*> arg Language.LSP.Protocol.Types.Common..:!? "description"

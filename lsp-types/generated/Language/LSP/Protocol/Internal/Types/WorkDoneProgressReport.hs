@@ -63,4 +63,4 @@ instance Aeson.ToJSON WorkDoneProgressReport where
     ,"percentage" Language.LSP.Protocol.Types.Common..=? arg3]
 
 instance Aeson.FromJSON WorkDoneProgressReport where
-  parseJSON = Aeson.withObject "WorkDoneProgressReport" $ \arg -> WorkDoneProgressReport <$> arg Aeson..: "kind" <*> arg Aeson..:! "cancellable" <*> arg Aeson..:! "message" <*> arg Aeson..:! "percentage"
+  parseJSON = Aeson.withObject "WorkDoneProgressReport" $ \arg -> WorkDoneProgressReport <$> arg Aeson..: "kind" <*> arg Language.LSP.Protocol.Types.Common..:!? "cancellable" <*> arg Language.LSP.Protocol.Types.Common..:!? "message" <*> arg Language.LSP.Protocol.Types.Common..:!? "percentage"

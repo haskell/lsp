@@ -44,4 +44,4 @@ instance Aeson.ToJSON SemanticTokensEdit where
     ,"data" Language.LSP.Protocol.Types.Common..=? arg2]
 
 instance Aeson.FromJSON SemanticTokensEdit where
-  parseJSON = Aeson.withObject "SemanticTokensEdit" $ \arg -> SemanticTokensEdit <$> arg Aeson..: "start" <*> arg Aeson..: "deleteCount" <*> arg Aeson..:! "data"
+  parseJSON = Aeson.withObject "SemanticTokensEdit" $ \arg -> SemanticTokensEdit <$> arg Aeson..: "start" <*> arg Aeson..: "deleteCount" <*> arg Language.LSP.Protocol.Types.Common..:!? "data"

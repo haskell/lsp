@@ -54,4 +54,4 @@ instance Aeson.ToJSON SemanticTokensDeltaParams where
     ,["previousResultId" Aeson..= arg3]]
 
 instance Aeson.FromJSON SemanticTokensDeltaParams where
-  parseJSON = Aeson.withObject "SemanticTokensDeltaParams" $ \arg -> SemanticTokensDeltaParams <$> arg Aeson..:! "workDoneToken" <*> arg Aeson..:! "partialResultToken" <*> arg Aeson..: "textDocument" <*> arg Aeson..: "previousResultId"
+  parseJSON = Aeson.withObject "SemanticTokensDeltaParams" $ \arg -> SemanticTokensDeltaParams <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneToken" <*> arg Language.LSP.Protocol.Types.Common..:!? "partialResultToken" <*> arg Aeson..: "textDocument" <*> arg Aeson..: "previousResultId"

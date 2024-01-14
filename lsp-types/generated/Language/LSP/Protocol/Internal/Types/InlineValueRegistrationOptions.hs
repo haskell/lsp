@@ -50,4 +50,4 @@ instance Aeson.ToJSON InlineValueRegistrationOptions where
     ,"id" Language.LSP.Protocol.Types.Common..=? arg2]
 
 instance Aeson.FromJSON InlineValueRegistrationOptions where
-  parseJSON = Aeson.withObject "InlineValueRegistrationOptions" $ \arg -> InlineValueRegistrationOptions <$> arg Aeson..:! "workDoneProgress" <*> arg Aeson..: "documentSelector" <*> arg Aeson..:! "id"
+  parseJSON = Aeson.withObject "InlineValueRegistrationOptions" $ \arg -> InlineValueRegistrationOptions <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneProgress" <*> arg Aeson..: "documentSelector" <*> arg Language.LSP.Protocol.Types.Common..:!? "id"

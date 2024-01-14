@@ -47,4 +47,4 @@ instance Aeson.ToJSON DocumentSymbolParams where
     ,["textDocument" Aeson..= arg2]]
 
 instance Aeson.FromJSON DocumentSymbolParams where
-  parseJSON = Aeson.withObject "DocumentSymbolParams" $ \arg -> DocumentSymbolParams <$> arg Aeson..:! "workDoneToken" <*> arg Aeson..:! "partialResultToken" <*> arg Aeson..: "textDocument"
+  parseJSON = Aeson.withObject "DocumentSymbolParams" $ \arg -> DocumentSymbolParams <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneToken" <*> arg Language.LSP.Protocol.Types.Common..:!? "partialResultToken" <*> arg Aeson..: "textDocument"

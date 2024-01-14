@@ -42,4 +42,4 @@ instance Aeson.ToJSON DidSaveTextDocumentParams where
     ,"text" Language.LSP.Protocol.Types.Common..=? arg1]
 
 instance Aeson.FromJSON DidSaveTextDocumentParams where
-  parseJSON = Aeson.withObject "DidSaveTextDocumentParams" $ \arg -> DidSaveTextDocumentParams <$> arg Aeson..: "textDocument" <*> arg Aeson..:! "text"
+  parseJSON = Aeson.withObject "DidSaveTextDocumentParams" $ \arg -> DidSaveTextDocumentParams <$> arg Aeson..: "textDocument" <*> arg Language.LSP.Protocol.Types.Common..:!? "text"

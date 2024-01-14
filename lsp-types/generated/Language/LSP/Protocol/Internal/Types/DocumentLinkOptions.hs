@@ -39,4 +39,4 @@ instance Aeson.ToJSON DocumentLinkOptions where
     ,"resolveProvider" Language.LSP.Protocol.Types.Common..=? arg1]
 
 instance Aeson.FromJSON DocumentLinkOptions where
-  parseJSON = Aeson.withObject "DocumentLinkOptions" $ \arg -> DocumentLinkOptions <$> arg Aeson..:! "workDoneProgress" <*> arg Aeson..:! "resolveProvider"
+  parseJSON = Aeson.withObject "DocumentLinkOptions" $ \arg -> DocumentLinkOptions <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneProgress" <*> arg Language.LSP.Protocol.Types.Common..:!? "resolveProvider"

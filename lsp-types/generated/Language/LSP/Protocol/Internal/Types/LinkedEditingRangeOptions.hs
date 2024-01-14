@@ -34,4 +34,4 @@ instance Aeson.ToJSON LinkedEditingRangeOptions where
   toJSON (LinkedEditingRangeOptions arg0) = Aeson.object $ concat $  ["workDoneProgress" Language.LSP.Protocol.Types.Common..=? arg0]
 
 instance Aeson.FromJSON LinkedEditingRangeOptions where
-  parseJSON = Aeson.withObject "LinkedEditingRangeOptions" $ \arg -> LinkedEditingRangeOptions <$> arg Aeson..:! "workDoneProgress"
+  parseJSON = Aeson.withObject "LinkedEditingRangeOptions" $ \arg -> LinkedEditingRangeOptions <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneProgress"

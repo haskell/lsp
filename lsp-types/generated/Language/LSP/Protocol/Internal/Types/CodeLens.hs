@@ -52,4 +52,4 @@ instance Aeson.ToJSON CodeLens where
     ,"data" Language.LSP.Protocol.Types.Common..=? arg2]
 
 instance Aeson.FromJSON CodeLens where
-  parseJSON = Aeson.withObject "CodeLens" $ \arg -> CodeLens <$> arg Aeson..: "range" <*> arg Aeson..:! "command" <*> arg Aeson..:! "data"
+  parseJSON = Aeson.withObject "CodeLens" $ \arg -> CodeLens <$> arg Aeson..: "range" <*> arg Language.LSP.Protocol.Types.Common..:!? "command" <*> arg Language.LSP.Protocol.Types.Common..:!? "data"

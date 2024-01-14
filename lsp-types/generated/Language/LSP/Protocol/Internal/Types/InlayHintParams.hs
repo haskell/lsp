@@ -49,4 +49,4 @@ instance Aeson.ToJSON InlayHintParams where
     ,["range" Aeson..= arg2]]
 
 instance Aeson.FromJSON InlayHintParams where
-  parseJSON = Aeson.withObject "InlayHintParams" $ \arg -> InlayHintParams <$> arg Aeson..:! "workDoneToken" <*> arg Aeson..: "textDocument" <*> arg Aeson..: "range"
+  parseJSON = Aeson.withObject "InlayHintParams" $ \arg -> InlayHintParams <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneToken" <*> arg Aeson..: "textDocument" <*> arg Aeson..: "range"

@@ -63,4 +63,4 @@ instance Aeson.ToJSON NotebookCell where
     ,"executionSummary" Language.LSP.Protocol.Types.Common..=? arg3]
 
 instance Aeson.FromJSON NotebookCell where
-  parseJSON = Aeson.withObject "NotebookCell" $ \arg -> NotebookCell <$> arg Aeson..: "kind" <*> arg Aeson..: "document" <*> arg Aeson..:! "metadata" <*> arg Aeson..:! "executionSummary"
+  parseJSON = Aeson.withObject "NotebookCell" $ \arg -> NotebookCell <$> arg Aeson..: "kind" <*> arg Aeson..: "document" <*> arg Language.LSP.Protocol.Types.Common..:!? "metadata" <*> arg Language.LSP.Protocol.Types.Common..:!? "executionSummary"

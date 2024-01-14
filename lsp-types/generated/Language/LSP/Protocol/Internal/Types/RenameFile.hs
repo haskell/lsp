@@ -60,4 +60,4 @@ instance Aeson.ToJSON RenameFile where
     ,"options" Language.LSP.Protocol.Types.Common..=? arg4]
 
 instance Aeson.FromJSON RenameFile where
-  parseJSON = Aeson.withObject "RenameFile" $ \arg -> RenameFile <$> arg Aeson..:! "annotationId" <*> arg Aeson..: "kind" <*> arg Aeson..: "oldUri" <*> arg Aeson..: "newUri" <*> arg Aeson..:! "options"
+  parseJSON = Aeson.withObject "RenameFile" $ \arg -> RenameFile <$> arg Language.LSP.Protocol.Types.Common..:!? "annotationId" <*> arg Aeson..: "kind" <*> arg Aeson..: "oldUri" <*> arg Aeson..: "newUri" <*> arg Language.LSP.Protocol.Types.Common..:!? "options"

@@ -41,4 +41,4 @@ instance Aeson.ToJSON SemanticTokensDelta where
     ,["edits" Aeson..= arg1]]
 
 instance Aeson.FromJSON SemanticTokensDelta where
-  parseJSON = Aeson.withObject "SemanticTokensDelta" $ \arg -> SemanticTokensDelta <$> arg Aeson..:! "resultId" <*> arg Aeson..: "edits"
+  parseJSON = Aeson.withObject "SemanticTokensDelta" $ \arg -> SemanticTokensDelta <$> arg Language.LSP.Protocol.Types.Common..:!? "resultId" <*> arg Aeson..: "edits"

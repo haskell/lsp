@@ -34,4 +34,4 @@ instance Aeson.ToJSON DocumentFormattingClientCapabilities where
   toJSON (DocumentFormattingClientCapabilities arg0) = Aeson.object $ concat $  ["dynamicRegistration" Language.LSP.Protocol.Types.Common..=? arg0]
 
 instance Aeson.FromJSON DocumentFormattingClientCapabilities where
-  parseJSON = Aeson.withObject "DocumentFormattingClientCapabilities" $ \arg -> DocumentFormattingClientCapabilities <$> arg Aeson..:! "dynamicRegistration"
+  parseJSON = Aeson.withObject "DocumentFormattingClientCapabilities" $ \arg -> DocumentFormattingClientCapabilities <$> arg Language.LSP.Protocol.Types.Common..:!? "dynamicRegistration"

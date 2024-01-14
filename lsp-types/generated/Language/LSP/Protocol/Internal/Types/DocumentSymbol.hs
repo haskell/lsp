@@ -84,4 +84,4 @@ instance Aeson.ToJSON DocumentSymbol where
     ,"children" Language.LSP.Protocol.Types.Common..=? arg7]
 
 instance Aeson.FromJSON DocumentSymbol where
-  parseJSON = Aeson.withObject "DocumentSymbol" $ \arg -> DocumentSymbol <$> arg Aeson..: "name" <*> arg Aeson..:! "detail" <*> arg Aeson..: "kind" <*> arg Aeson..:! "tags" <*> arg Aeson..:! "deprecated" <*> arg Aeson..: "range" <*> arg Aeson..: "selectionRange" <*> arg Aeson..:! "children"
+  parseJSON = Aeson.withObject "DocumentSymbol" $ \arg -> DocumentSymbol <$> arg Aeson..: "name" <*> arg Language.LSP.Protocol.Types.Common..:!? "detail" <*> arg Aeson..: "kind" <*> arg Language.LSP.Protocol.Types.Common..:!? "tags" <*> arg Language.LSP.Protocol.Types.Common..:!? "deprecated" <*> arg Aeson..: "range" <*> arg Aeson..: "selectionRange" <*> arg Language.LSP.Protocol.Types.Common..:!? "children"

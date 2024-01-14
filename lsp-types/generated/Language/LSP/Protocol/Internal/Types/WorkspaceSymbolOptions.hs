@@ -42,4 +42,4 @@ instance Aeson.ToJSON WorkspaceSymbolOptions where
     ,"resolveProvider" Language.LSP.Protocol.Types.Common..=? arg1]
 
 instance Aeson.FromJSON WorkspaceSymbolOptions where
-  parseJSON = Aeson.withObject "WorkspaceSymbolOptions" $ \arg -> WorkspaceSymbolOptions <$> arg Aeson..:! "workDoneProgress" <*> arg Aeson..:! "resolveProvider"
+  parseJSON = Aeson.withObject "WorkspaceSymbolOptions" $ \arg -> WorkspaceSymbolOptions <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneProgress" <*> arg Language.LSP.Protocol.Types.Common..:!? "resolveProvider"

@@ -53,4 +53,4 @@ instance Aeson.ToJSON TypeDefinitionParams where
     ,"partialResultToken" Language.LSP.Protocol.Types.Common..=? arg3]
 
 instance Aeson.FromJSON TypeDefinitionParams where
-  parseJSON = Aeson.withObject "TypeDefinitionParams" $ \arg -> TypeDefinitionParams <$> arg Aeson..: "textDocument" <*> arg Aeson..: "position" <*> arg Aeson..:! "workDoneToken" <*> arg Aeson..:! "partialResultToken"
+  parseJSON = Aeson.withObject "TypeDefinitionParams" $ \arg -> TypeDefinitionParams <$> arg Aeson..: "textDocument" <*> arg Aeson..: "position" <*> arg Language.LSP.Protocol.Types.Common..:!? "workDoneToken" <*> arg Language.LSP.Protocol.Types.Common..:!? "partialResultToken"

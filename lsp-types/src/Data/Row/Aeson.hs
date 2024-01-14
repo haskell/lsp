@@ -31,6 +31,8 @@ import Data.Functor.Identity
 import Data.Proxy
 import Data.String
 
+import Language.LSP.Protocol.Types.Common ((.:!?))
+
 -- `aeson` does not need such a typeclass because it generates code per-instance
 -- that handles this, whereas we want to work generically.
 
@@ -54,8 +56,8 @@ class FromJSONEntry a where
   parseJSONEntry :: Object -> String -> Parser a
 
 instance {-# OVERLAPPING #-} FromJSON a => FromJSONEntry (Maybe a) where
-  -- Parse Nothing fields as optional
-  parseJSONEntry o k = o .:? (fromString k)
+  -- Parse Nothing fields as optional, accepting Null to mean "missing"
+  parseJSONEntry o k = o .:!? (fromString k)
 
 instance {-# OVERLAPPABLE #-} FromJSON a => FromJSONEntry a where
   parseJSONEntry o k = o .: (fromString k)

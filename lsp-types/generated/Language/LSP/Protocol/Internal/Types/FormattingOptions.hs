@@ -60,4 +60,4 @@ instance Aeson.ToJSON FormattingOptions where
     ,"trimFinalNewlines" Language.LSP.Protocol.Types.Common..=? arg4]
 
 instance Aeson.FromJSON FormattingOptions where
-  parseJSON = Aeson.withObject "FormattingOptions" $ \arg -> FormattingOptions <$> arg Aeson..: "tabSize" <*> arg Aeson..: "insertSpaces" <*> arg Aeson..:! "trimTrailingWhitespace" <*> arg Aeson..:! "insertFinalNewline" <*> arg Aeson..:! "trimFinalNewlines"
+  parseJSON = Aeson.withObject "FormattingOptions" $ \arg -> FormattingOptions <$> arg Aeson..: "tabSize" <*> arg Aeson..: "insertSpaces" <*> arg Language.LSP.Protocol.Types.Common..:!? "trimTrailingWhitespace" <*> arg Language.LSP.Protocol.Types.Common..:!? "insertFinalNewline" <*> arg Language.LSP.Protocol.Types.Common..:!? "trimFinalNewlines"

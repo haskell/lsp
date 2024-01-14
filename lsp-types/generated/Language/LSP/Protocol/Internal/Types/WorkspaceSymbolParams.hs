@@ -48,4 +48,4 @@ instance Aeson.ToJSON WorkspaceSymbolParams where
     ,["query" Aeson..= arg2]]
 
 instance Aeson.FromJSON WorkspaceSymbolParams where
-  parseJSON = Aeson.withObject "WorkspaceSymbolParams" $ \arg -> WorkspaceSymbolParams <$> arg Aeson..:! "workDoneToken" <*> arg Aeson..:! "partialResultToken" <*> arg Aeson..: "query"
+  parseJSON = Aeson.withObject "WorkspaceSymbolParams" $ \arg -> WorkspaceSymbolParams <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneToken" <*> arg Language.LSP.Protocol.Types.Common..:!? "partialResultToken" <*> arg Aeson..: "query"

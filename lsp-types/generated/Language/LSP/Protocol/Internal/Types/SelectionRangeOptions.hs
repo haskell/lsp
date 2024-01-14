@@ -34,4 +34,4 @@ instance Aeson.ToJSON SelectionRangeOptions where
   toJSON (SelectionRangeOptions arg0) = Aeson.object $ concat $  ["workDoneProgress" Language.LSP.Protocol.Types.Common..=? arg0]
 
 instance Aeson.FromJSON SelectionRangeOptions where
-  parseJSON = Aeson.withObject "SelectionRangeOptions" $ \arg -> SelectionRangeOptions <$> arg Aeson..:! "workDoneProgress"
+  parseJSON = Aeson.withObject "SelectionRangeOptions" $ \arg -> SelectionRangeOptions <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneProgress"

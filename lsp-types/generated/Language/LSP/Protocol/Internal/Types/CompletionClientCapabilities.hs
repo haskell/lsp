@@ -74,4 +74,4 @@ instance Aeson.ToJSON CompletionClientCapabilities where
     ,"completionList" Language.LSP.Protocol.Types.Common..=? arg5]
 
 instance Aeson.FromJSON CompletionClientCapabilities where
-  parseJSON = Aeson.withObject "CompletionClientCapabilities" $ \arg -> CompletionClientCapabilities <$> arg Aeson..:! "dynamicRegistration" <*> arg Aeson..:! "completionItem" <*> arg Aeson..:! "completionItemKind" <*> arg Aeson..:! "insertTextMode" <*> arg Aeson..:! "contextSupport" <*> arg Aeson..:! "completionList"
+  parseJSON = Aeson.withObject "CompletionClientCapabilities" $ \arg -> CompletionClientCapabilities <$> arg Language.LSP.Protocol.Types.Common..:!? "dynamicRegistration" <*> arg Language.LSP.Protocol.Types.Common..:!? "completionItem" <*> arg Language.LSP.Protocol.Types.Common..:!? "completionItemKind" <*> arg Language.LSP.Protocol.Types.Common..:!? "insertTextMode" <*> arg Language.LSP.Protocol.Types.Common..:!? "contextSupport" <*> arg Language.LSP.Protocol.Types.Common..:!? "completionList"

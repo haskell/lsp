@@ -36,4 +36,4 @@ instance Aeson.ToJSON CallHierarchyClientCapabilities where
   toJSON (CallHierarchyClientCapabilities arg0) = Aeson.object $ concat $  ["dynamicRegistration" Language.LSP.Protocol.Types.Common..=? arg0]
 
 instance Aeson.FromJSON CallHierarchyClientCapabilities where
-  parseJSON = Aeson.withObject "CallHierarchyClientCapabilities" $ \arg -> CallHierarchyClientCapabilities <$> arg Aeson..:! "dynamicRegistration"
+  parseJSON = Aeson.withObject "CallHierarchyClientCapabilities" $ \arg -> CallHierarchyClientCapabilities <$> arg Language.LSP.Protocol.Types.Common..:!? "dynamicRegistration"

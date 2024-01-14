@@ -34,4 +34,4 @@ instance Aeson.ToJSON DocumentHighlightOptions where
   toJSON (DocumentHighlightOptions arg0) = Aeson.object $ concat $  ["workDoneProgress" Language.LSP.Protocol.Types.Common..=? arg0]
 
 instance Aeson.FromJSON DocumentHighlightOptions where
-  parseJSON = Aeson.withObject "DocumentHighlightOptions" $ \arg -> DocumentHighlightOptions <$> arg Aeson..:! "workDoneProgress"
+  parseJSON = Aeson.withObject "DocumentHighlightOptions" $ \arg -> DocumentHighlightOptions <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneProgress"

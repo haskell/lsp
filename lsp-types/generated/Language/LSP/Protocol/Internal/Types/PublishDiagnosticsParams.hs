@@ -48,4 +48,4 @@ instance Aeson.ToJSON PublishDiagnosticsParams where
     ,["diagnostics" Aeson..= arg2]]
 
 instance Aeson.FromJSON PublishDiagnosticsParams where
-  parseJSON = Aeson.withObject "PublishDiagnosticsParams" $ \arg -> PublishDiagnosticsParams <$> arg Aeson..: "uri" <*> arg Aeson..:! "version" <*> arg Aeson..: "diagnostics"
+  parseJSON = Aeson.withObject "PublishDiagnosticsParams" $ \arg -> PublishDiagnosticsParams <$> arg Aeson..: "uri" <*> arg Language.LSP.Protocol.Types.Common..:!? "version" <*> arg Aeson..: "diagnostics"

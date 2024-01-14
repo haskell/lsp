@@ -49,4 +49,4 @@ instance Aeson.ToJSON TypeHierarchyPrepareParams where
     ,"workDoneToken" Language.LSP.Protocol.Types.Common..=? arg2]
 
 instance Aeson.FromJSON TypeHierarchyPrepareParams where
-  parseJSON = Aeson.withObject "TypeHierarchyPrepareParams" $ \arg -> TypeHierarchyPrepareParams <$> arg Aeson..: "textDocument" <*> arg Aeson..: "position" <*> arg Aeson..:! "workDoneToken"
+  parseJSON = Aeson.withObject "TypeHierarchyPrepareParams" $ \arg -> TypeHierarchyPrepareParams <$> arg Aeson..: "textDocument" <*> arg Aeson..: "position" <*> arg Language.LSP.Protocol.Types.Common..:!? "workDoneToken"

@@ -47,4 +47,4 @@ instance Aeson.ToJSON DocumentLinkParams where
     ,["textDocument" Aeson..= arg2]]
 
 instance Aeson.FromJSON DocumentLinkParams where
-  parseJSON = Aeson.withObject "DocumentLinkParams" $ \arg -> DocumentLinkParams <$> arg Aeson..:! "workDoneToken" <*> arg Aeson..:! "partialResultToken" <*> arg Aeson..: "textDocument"
+  parseJSON = Aeson.withObject "DocumentLinkParams" $ \arg -> DocumentLinkParams <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneToken" <*> arg Language.LSP.Protocol.Types.Common..:!? "partialResultToken" <*> arg Aeson..: "textDocument"

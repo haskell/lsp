@@ -79,4 +79,4 @@ instance Aeson.ToJSON SymbolInformation where
     ,["location" Aeson..= arg5]]
 
 instance Aeson.FromJSON SymbolInformation where
-  parseJSON = Aeson.withObject "SymbolInformation" $ \arg -> SymbolInformation <$> arg Aeson..: "name" <*> arg Aeson..: "kind" <*> arg Aeson..:! "tags" <*> arg Aeson..:! "containerName" <*> arg Aeson..:! "deprecated" <*> arg Aeson..: "location"
+  parseJSON = Aeson.withObject "SymbolInformation" $ \arg -> SymbolInformation <$> arg Aeson..: "name" <*> arg Aeson..: "kind" <*> arg Language.LSP.Protocol.Types.Common..:!? "tags" <*> arg Language.LSP.Protocol.Types.Common..:!? "containerName" <*> arg Language.LSP.Protocol.Types.Common..:!? "deprecated" <*> arg Aeson..: "location"

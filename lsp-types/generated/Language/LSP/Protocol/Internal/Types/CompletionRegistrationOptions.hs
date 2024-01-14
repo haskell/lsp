@@ -81,4 +81,4 @@ instance Aeson.ToJSON CompletionRegistrationOptions where
     ,"completionItem" Language.LSP.Protocol.Types.Common..=? arg5]
 
 instance Aeson.FromJSON CompletionRegistrationOptions where
-  parseJSON = Aeson.withObject "CompletionRegistrationOptions" $ \arg -> CompletionRegistrationOptions <$> arg Aeson..: "documentSelector" <*> arg Aeson..:! "workDoneProgress" <*> arg Aeson..:! "triggerCharacters" <*> arg Aeson..:! "allCommitCharacters" <*> arg Aeson..:! "resolveProvider" <*> arg Aeson..:! "completionItem"
+  parseJSON = Aeson.withObject "CompletionRegistrationOptions" $ \arg -> CompletionRegistrationOptions <$> arg Aeson..: "documentSelector" <*> arg Language.LSP.Protocol.Types.Common..:!? "workDoneProgress" <*> arg Language.LSP.Protocol.Types.Common..:!? "triggerCharacters" <*> arg Language.LSP.Protocol.Types.Common..:!? "allCommitCharacters" <*> arg Language.LSP.Protocol.Types.Common..:!? "resolveProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "completionItem"

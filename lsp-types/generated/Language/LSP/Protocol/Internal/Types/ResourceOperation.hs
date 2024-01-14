@@ -43,4 +43,4 @@ instance Aeson.ToJSON ResourceOperation where
     ,"annotationId" Language.LSP.Protocol.Types.Common..=? arg1]
 
 instance Aeson.FromJSON ResourceOperation where
-  parseJSON = Aeson.withObject "ResourceOperation" $ \arg -> ResourceOperation <$> arg Aeson..: "kind" <*> arg Aeson..:! "annotationId"
+  parseJSON = Aeson.withObject "ResourceOperation" $ \arg -> ResourceOperation <$> arg Aeson..: "kind" <*> arg Language.LSP.Protocol.Types.Common..:!? "annotationId"

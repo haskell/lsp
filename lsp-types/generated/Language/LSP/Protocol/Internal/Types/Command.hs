@@ -50,4 +50,4 @@ instance Aeson.ToJSON Command where
     ,"arguments" Language.LSP.Protocol.Types.Common..=? arg2]
 
 instance Aeson.FromJSON Command where
-  parseJSON = Aeson.withObject "Command" $ \arg -> Command <$> arg Aeson..: "title" <*> arg Aeson..: "command" <*> arg Aeson..:! "arguments"
+  parseJSON = Aeson.withObject "Command" $ \arg -> Command <$> arg Aeson..: "title" <*> arg Aeson..: "command" <*> arg Language.LSP.Protocol.Types.Common..:!? "arguments"

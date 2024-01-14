@@ -61,4 +61,4 @@ instance Aeson.ToJSON TextDocumentSyncOptions where
     ,"save" Language.LSP.Protocol.Types.Common..=? arg4]
 
 instance Aeson.FromJSON TextDocumentSyncOptions where
-  parseJSON = Aeson.withObject "TextDocumentSyncOptions" $ \arg -> TextDocumentSyncOptions <$> arg Aeson..:! "openClose" <*> arg Aeson..:! "change" <*> arg Aeson..:! "willSave" <*> arg Aeson..:! "willSaveWaitUntil" <*> arg Aeson..:! "save"
+  parseJSON = Aeson.withObject "TextDocumentSyncOptions" $ \arg -> TextDocumentSyncOptions <$> arg Language.LSP.Protocol.Types.Common..:!? "openClose" <*> arg Language.LSP.Protocol.Types.Common..:!? "change" <*> arg Language.LSP.Protocol.Types.Common..:!? "willSave" <*> arg Language.LSP.Protocol.Types.Common..:!? "willSaveWaitUntil" <*> arg Language.LSP.Protocol.Types.Common..:!? "save"

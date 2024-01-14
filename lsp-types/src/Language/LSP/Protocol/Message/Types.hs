@@ -83,7 +83,7 @@ instance FromJSON ResponseError where
           ResponseError
             <$> v .: "code"
             <*> v .: "message"
-            <*> v .:? "data"
+            <*> v .:!? "data"
      in fmap go . errorCode
    where
     go :: ResponseError -> ResponseError
@@ -175,7 +175,7 @@ instance (FromJSON (ErrorData m)) => FromJSON (TResponseError m) where
           TResponseError
             <$> v .: "code"
             <*> v .: "message"
-            <*> v .:? "data"
+            <*> v .:!? "data"
      in fmap go . errorCode
    where
     go :: TResponseError m -> TResponseError m
@@ -218,9 +218,8 @@ instance (FromJSON (MessageResult a), FromJSON (ErrorData a)) => FromJSON (TResp
   parseJSON = withObject "Response" $ \o -> do
     _jsonrpc <- o .: "jsonrpc"
     _id <- o .: "id"
-    -- It is important to use .:! so that "result = null" (without error) gets decoded as Just Null
-    _result <- o .:! "result"
-    _error <- o .:? "error"
+    _result <- o .:!? "result"
+    _error <- o .:!? "error"
     result <- case (_error, _result) of
       (Just err, Nothing) -> pure $ Left err
       (Nothing, Just res) -> pure $ Right res

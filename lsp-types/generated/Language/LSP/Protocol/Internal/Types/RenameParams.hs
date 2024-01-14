@@ -55,4 +55,4 @@ instance Aeson.ToJSON RenameParams where
     ,["newName" Aeson..= arg3]]
 
 instance Aeson.FromJSON RenameParams where
-  parseJSON = Aeson.withObject "RenameParams" $ \arg -> RenameParams <$> arg Aeson..:! "workDoneToken" <*> arg Aeson..: "textDocument" <*> arg Aeson..: "position" <*> arg Aeson..: "newName"
+  parseJSON = Aeson.withObject "RenameParams" $ \arg -> RenameParams <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneToken" <*> arg Aeson..: "textDocument" <*> arg Aeson..: "position" <*> arg Aeson..: "newName"

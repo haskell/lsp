@@ -50,4 +50,4 @@ instance Aeson.ToJSON TypeHierarchyRegistrationOptions where
     ,"id" Language.LSP.Protocol.Types.Common..=? arg2]
 
 instance Aeson.FromJSON TypeHierarchyRegistrationOptions where
-  parseJSON = Aeson.withObject "TypeHierarchyRegistrationOptions" $ \arg -> TypeHierarchyRegistrationOptions <$> arg Aeson..: "documentSelector" <*> arg Aeson..:! "workDoneProgress" <*> arg Aeson..:! "id"
+  parseJSON = Aeson.withObject "TypeHierarchyRegistrationOptions" $ \arg -> TypeHierarchyRegistrationOptions <$> arg Aeson..: "documentSelector" <*> arg Language.LSP.Protocol.Types.Common..:!? "workDoneProgress" <*> arg Language.LSP.Protocol.Types.Common..:!? "id"

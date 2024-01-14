@@ -35,4 +35,4 @@ instance Aeson.ToJSON DidChangeConfigurationRegistrationOptions where
   toJSON (DidChangeConfigurationRegistrationOptions arg0) = Aeson.object $ concat $  ["section" Language.LSP.Protocol.Types.Common..=? arg0]
 
 instance Aeson.FromJSON DidChangeConfigurationRegistrationOptions where
-  parseJSON = Aeson.withObject "DidChangeConfigurationRegistrationOptions" $ \arg -> DidChangeConfigurationRegistrationOptions <$> arg Aeson..:! "section"
+  parseJSON = Aeson.withObject "DidChangeConfigurationRegistrationOptions" $ \arg -> DidChangeConfigurationRegistrationOptions <$> arg Language.LSP.Protocol.Types.Common..:!? "section"

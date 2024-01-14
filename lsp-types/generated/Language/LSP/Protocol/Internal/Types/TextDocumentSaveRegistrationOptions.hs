@@ -41,4 +41,4 @@ instance Aeson.ToJSON TextDocumentSaveRegistrationOptions where
     ,"includeText" Language.LSP.Protocol.Types.Common..=? arg1]
 
 instance Aeson.FromJSON TextDocumentSaveRegistrationOptions where
-  parseJSON = Aeson.withObject "TextDocumentSaveRegistrationOptions" $ \arg -> TextDocumentSaveRegistrationOptions <$> arg Aeson..: "documentSelector" <*> arg Aeson..:! "includeText"
+  parseJSON = Aeson.withObject "TextDocumentSaveRegistrationOptions" $ \arg -> TextDocumentSaveRegistrationOptions <$> arg Aeson..: "documentSelector" <*> arg Language.LSP.Protocol.Types.Common..:!? "includeText"

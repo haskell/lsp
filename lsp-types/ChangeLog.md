@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Require aeson 2
+- Accept `null` in place of a missing field, a common mistake in spec compliance.
 
 ## 2.1.0.0 -- 2023-11-13
 

@@ -60,4 +60,4 @@ instance Aeson.ToJSON CompletionParams where
     ,"context" Language.LSP.Protocol.Types.Common..=? arg4]
 
 instance Aeson.FromJSON CompletionParams where
-  parseJSON = Aeson.withObject "CompletionParams" $ \arg -> CompletionParams <$> arg Aeson..: "textDocument" <*> arg Aeson..: "position" <*> arg Aeson..:! "workDoneToken" <*> arg Aeson..:! "partialResultToken" <*> arg Aeson..:! "context"
+  parseJSON = Aeson.withObject "CompletionParams" $ \arg -> CompletionParams <$> arg Aeson..: "textDocument" <*> arg Aeson..: "position" <*> arg Language.LSP.Protocol.Types.Common..:!? "workDoneToken" <*> arg Language.LSP.Protocol.Types.Common..:!? "partialResultToken" <*> arg Language.LSP.Protocol.Types.Common..:!? "context"

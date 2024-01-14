@@ -44,4 +44,4 @@ instance Aeson.ToJSON InitializeResult where
     ,"serverInfo" Language.LSP.Protocol.Types.Common..=? arg1]
 
 instance Aeson.FromJSON InitializeResult where
-  parseJSON = Aeson.withObject "InitializeResult" $ \arg -> InitializeResult <$> arg Aeson..: "capabilities" <*> arg Aeson..:! "serverInfo"
+  parseJSON = Aeson.withObject "InitializeResult" $ \arg -> InitializeResult <$> arg Aeson..: "capabilities" <*> arg Language.LSP.Protocol.Types.Common..:!? "serverInfo"

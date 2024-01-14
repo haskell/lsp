@@ -51,4 +51,4 @@ instance Aeson.ToJSON ColorPresentation where
     ,"additionalTextEdits" Language.LSP.Protocol.Types.Common..=? arg2]
 
 instance Aeson.FromJSON ColorPresentation where
-  parseJSON = Aeson.withObject "ColorPresentation" $ \arg -> ColorPresentation <$> arg Aeson..: "label" <*> arg Aeson..:! "textEdit" <*> arg Aeson..:! "additionalTextEdits"
+  parseJSON = Aeson.withObject "ColorPresentation" $ \arg -> ColorPresentation <$> arg Aeson..: "label" <*> arg Language.LSP.Protocol.Types.Common..:!? "textEdit" <*> arg Language.LSP.Protocol.Types.Common..:!? "additionalTextEdits"

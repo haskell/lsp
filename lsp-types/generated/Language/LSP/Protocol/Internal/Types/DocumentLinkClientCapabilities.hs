@@ -41,4 +41,4 @@ instance Aeson.ToJSON DocumentLinkClientCapabilities where
     ,"tooltipSupport" Language.LSP.Protocol.Types.Common..=? arg1]
 
 instance Aeson.FromJSON DocumentLinkClientCapabilities where
-  parseJSON = Aeson.withObject "DocumentLinkClientCapabilities" $ \arg -> DocumentLinkClientCapabilities <$> arg Aeson..:! "dynamicRegistration" <*> arg Aeson..:! "tooltipSupport"
+  parseJSON = Aeson.withObject "DocumentLinkClientCapabilities" $ \arg -> DocumentLinkClientCapabilities <$> arg Language.LSP.Protocol.Types.Common..:!? "dynamicRegistration" <*> arg Language.LSP.Protocol.Types.Common..:!? "tooltipSupport"

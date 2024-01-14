@@ -60,4 +60,4 @@ instance Aeson.ToJSON SignatureInformation where
     ,"activeParameter" Language.LSP.Protocol.Types.Common..=? arg3]
 
 instance Aeson.FromJSON SignatureInformation where
-  parseJSON = Aeson.withObject "SignatureInformation" $ \arg -> SignatureInformation <$> arg Aeson..: "label" <*> arg Aeson..:! "documentation" <*> arg Aeson..:! "parameters" <*> arg Aeson..:! "activeParameter"
+  parseJSON = Aeson.withObject "SignatureInformation" $ \arg -> SignatureInformation <$> arg Aeson..: "label" <*> arg Language.LSP.Protocol.Types.Common..:!? "documentation" <*> arg Language.LSP.Protocol.Types.Common..:!? "parameters" <*> arg Language.LSP.Protocol.Types.Common..:!? "activeParameter"

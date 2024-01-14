@@ -21,13 +21,16 @@ module Language.LSP.Protocol.Types.Common (
   nullToMaybe,
   maybeToNull,
   (.=?),
+  (.:!?),
 ) where
 
+import Control.Applicative
 import Control.DeepSeq
 import Control.Lens
 import Data.Aeson hiding (Null)
 import Data.Aeson qualified as J
 import Data.Aeson.KeyMap qualified as KM
+import Data.Aeson.Types qualified as J
 import Data.Hashable
 import Data.Int (Int32)
 import Data.Mod.Word
@@ -187,3 +190,30 @@ instance Semigroup s => Semigroup (s |? Null) where
 k .=? v = case v of
   Just v' -> [fromString k J..= v']
   Nothing -> mempty
+
+{- |
+Parse a value optionally. This behaves similarly to 'J..:!' and
+'J..:?', but differs in how it handles 'Null':
+
+    * If 'Null' can be converted to the desired type...
+        * 'J.:?': the result is success with 'Nothing'
+        * 'J.:!': the result is success with 'Just <value>'
+        * '.:!?': the result is success with 'Just <value>'
+    * If 'Null' cannot be converted to the desired type...
+        * 'J.:?': the result is success with 'Nothing'
+        * 'J.:!': the result is failure
+        * '.:!?': the result is success with 'Nothing'
+
+That is, we allow 'Null' to mean either 'Nothing' or 'Just <value>',
+with the latter taking priority.
+-}
+(.:!?) :: (J.FromJSON v) => Object -> Key -> J.Parser (Maybe v)
+o .:!? k =
+  -- If 'Null' can be converted to the desired type this succeeds
+  -- with Just the converted value
+  o J..:! k
+    -- otherwise...
+    <|>
+    -- If 'Null' cannot be converted to the desired type this succeeds
+    -- with Nothing
+    o J..:? k

@@ -51,4 +51,4 @@ instance Aeson.ToJSON InlineValueVariableLookup where
     ,["caseSensitiveLookup" Aeson..= arg2]]
 
 instance Aeson.FromJSON InlineValueVariableLookup where
-  parseJSON = Aeson.withObject "InlineValueVariableLookup" $ \arg -> InlineValueVariableLookup <$> arg Aeson..: "range" <*> arg Aeson..:! "variableName" <*> arg Aeson..: "caseSensitiveLookup"
+  parseJSON = Aeson.withObject "InlineValueVariableLookup" $ \arg -> InlineValueVariableLookup <$> arg Aeson..: "range" <*> arg Language.LSP.Protocol.Types.Common..:!? "variableName" <*> arg Aeson..: "caseSensitiveLookup"

@@ -55,4 +55,4 @@ instance Aeson.ToJSON NotebookDocumentSyncOptions where
     ,"save" Language.LSP.Protocol.Types.Common..=? arg1]
 
 instance Aeson.FromJSON NotebookDocumentSyncOptions where
-  parseJSON = Aeson.withObject "NotebookDocumentSyncOptions" $ \arg -> NotebookDocumentSyncOptions <$> arg Aeson..: "notebookSelector" <*> arg Aeson..:! "save"
+  parseJSON = Aeson.withObject "NotebookDocumentSyncOptions" $ \arg -> NotebookDocumentSyncOptions <$> arg Aeson..: "notebookSelector" <*> arg Language.LSP.Protocol.Types.Common..:!? "save"

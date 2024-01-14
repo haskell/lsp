@@ -42,4 +42,4 @@ instance Aeson.ToJSON CompletionContext where
     ,"triggerCharacter" Language.LSP.Protocol.Types.Common..=? arg1]
 
 instance Aeson.FromJSON CompletionContext where
-  parseJSON = Aeson.withObject "CompletionContext" $ \arg -> CompletionContext <$> arg Aeson..: "triggerKind" <*> arg Aeson..:! "triggerCharacter"
+  parseJSON = Aeson.withObject "CompletionContext" $ \arg -> CompletionContext <$> arg Aeson..: "triggerKind" <*> arg Language.LSP.Protocol.Types.Common..:!? "triggerCharacter"

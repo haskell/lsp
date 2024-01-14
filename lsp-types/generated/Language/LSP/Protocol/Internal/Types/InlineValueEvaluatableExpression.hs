@@ -46,4 +46,4 @@ instance Aeson.ToJSON InlineValueEvaluatableExpression where
     ,"expression" Language.LSP.Protocol.Types.Common..=? arg1]
 
 instance Aeson.FromJSON InlineValueEvaluatableExpression where
-  parseJSON = Aeson.withObject "InlineValueEvaluatableExpression" $ \arg -> InlineValueEvaluatableExpression <$> arg Aeson..: "range" <*> arg Aeson..:! "expression"
+  parseJSON = Aeson.withObject "InlineValueEvaluatableExpression" $ \arg -> InlineValueEvaluatableExpression <$> arg Aeson..: "range" <*> arg Language.LSP.Protocol.Types.Common..:!? "expression"

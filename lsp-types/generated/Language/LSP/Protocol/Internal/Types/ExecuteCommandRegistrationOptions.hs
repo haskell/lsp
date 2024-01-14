@@ -40,4 +40,4 @@ instance Aeson.ToJSON ExecuteCommandRegistrationOptions where
     ,["commands" Aeson..= arg1]]
 
 instance Aeson.FromJSON ExecuteCommandRegistrationOptions where
-  parseJSON = Aeson.withObject "ExecuteCommandRegistrationOptions" $ \arg -> ExecuteCommandRegistrationOptions <$> arg Aeson..:! "workDoneProgress" <*> arg Aeson..: "commands"
+  parseJSON = Aeson.withObject "ExecuteCommandRegistrationOptions" $ \arg -> ExecuteCommandRegistrationOptions <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneProgress" <*> arg Aeson..: "commands"

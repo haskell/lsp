@@ -41,4 +41,4 @@ instance Aeson.ToJSON DocumentHighlightRegistrationOptions where
     ,"workDoneProgress" Language.LSP.Protocol.Types.Common..=? arg1]
 
 instance Aeson.FromJSON DocumentHighlightRegistrationOptions where
-  parseJSON = Aeson.withObject "DocumentHighlightRegistrationOptions" $ \arg -> DocumentHighlightRegistrationOptions <$> arg Aeson..: "documentSelector" <*> arg Aeson..:! "workDoneProgress"
+  parseJSON = Aeson.withObject "DocumentHighlightRegistrationOptions" $ \arg -> DocumentHighlightRegistrationOptions <$> arg Aeson..: "documentSelector" <*> arg Language.LSP.Protocol.Types.Common..:!? "workDoneProgress"

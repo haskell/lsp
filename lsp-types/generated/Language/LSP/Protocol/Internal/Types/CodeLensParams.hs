@@ -47,4 +47,4 @@ instance Aeson.ToJSON CodeLensParams where
     ,["textDocument" Aeson..= arg2]]
 
 instance Aeson.FromJSON CodeLensParams where
-  parseJSON = Aeson.withObject "CodeLensParams" $ \arg -> CodeLensParams <$> arg Aeson..:! "workDoneToken" <*> arg Aeson..:! "partialResultToken" <*> arg Aeson..: "textDocument"
+  parseJSON = Aeson.withObject "CodeLensParams" $ \arg -> CodeLensParams <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneToken" <*> arg Language.LSP.Protocol.Types.Common..:!? "partialResultToken" <*> arg Aeson..: "textDocument"

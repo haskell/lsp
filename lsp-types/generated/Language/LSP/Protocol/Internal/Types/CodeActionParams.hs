@@ -59,4 +59,4 @@ instance Aeson.ToJSON CodeActionParams where
     ,["context" Aeson..= arg4]]
 
 instance Aeson.FromJSON CodeActionParams where
-  parseJSON = Aeson.withObject "CodeActionParams" $ \arg -> CodeActionParams <$> arg Aeson..:! "workDoneToken" <*> arg Aeson..:! "partialResultToken" <*> arg Aeson..: "textDocument" <*> arg Aeson..: "range" <*> arg Aeson..: "context"
+  parseJSON = Aeson.withObject "CodeActionParams" $ \arg -> CodeActionParams <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneToken" <*> arg Language.LSP.Protocol.Types.Common..:!? "partialResultToken" <*> arg Aeson..: "textDocument" <*> arg Aeson..: "range" <*> arg Aeson..: "context"

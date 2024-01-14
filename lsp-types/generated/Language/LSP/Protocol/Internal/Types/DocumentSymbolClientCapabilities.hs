@@ -65,4 +65,4 @@ instance Aeson.ToJSON DocumentSymbolClientCapabilities where
     ,"labelSupport" Language.LSP.Protocol.Types.Common..=? arg4]
 
 instance Aeson.FromJSON DocumentSymbolClientCapabilities where
-  parseJSON = Aeson.withObject "DocumentSymbolClientCapabilities" $ \arg -> DocumentSymbolClientCapabilities <$> arg Aeson..:! "dynamicRegistration" <*> arg Aeson..:! "symbolKind" <*> arg Aeson..:! "hierarchicalDocumentSymbolSupport" <*> arg Aeson..:! "tagSupport" <*> arg Aeson..:! "labelSupport"
+  parseJSON = Aeson.withObject "DocumentSymbolClientCapabilities" $ \arg -> DocumentSymbolClientCapabilities <$> arg Language.LSP.Protocol.Types.Common..:!? "dynamicRegistration" <*> arg Language.LSP.Protocol.Types.Common..:!? "symbolKind" <*> arg Language.LSP.Protocol.Types.Common..:!? "hierarchicalDocumentSymbolSupport" <*> arg Language.LSP.Protocol.Types.Common..:!? "tagSupport" <*> arg Language.LSP.Protocol.Types.Common..:!? "labelSupport"

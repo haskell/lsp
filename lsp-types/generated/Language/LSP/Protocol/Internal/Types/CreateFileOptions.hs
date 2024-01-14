@@ -39,4 +39,4 @@ instance Aeson.ToJSON CreateFileOptions where
     ,"ignoreIfExists" Language.LSP.Protocol.Types.Common..=? arg1]
 
 instance Aeson.FromJSON CreateFileOptions where
-  parseJSON = Aeson.withObject "CreateFileOptions" $ \arg -> CreateFileOptions <$> arg Aeson..:! "overwrite" <*> arg Aeson..:! "ignoreIfExists"
+  parseJSON = Aeson.withObject "CreateFileOptions" $ \arg -> CreateFileOptions <$> arg Language.LSP.Protocol.Types.Common..:!? "overwrite" <*> arg Language.LSP.Protocol.Types.Common..:!? "ignoreIfExists"

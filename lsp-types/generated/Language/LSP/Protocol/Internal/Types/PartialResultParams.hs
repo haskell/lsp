@@ -36,4 +36,4 @@ instance Aeson.ToJSON PartialResultParams where
   toJSON (PartialResultParams arg0) = Aeson.object $ concat $  ["partialResultToken" Language.LSP.Protocol.Types.Common..=? arg0]
 
 instance Aeson.FromJSON PartialResultParams where
-  parseJSON = Aeson.withObject "PartialResultParams" $ \arg -> PartialResultParams <$> arg Aeson..:! "partialResultToken"
+  parseJSON = Aeson.withObject "PartialResultParams" $ \arg -> PartialResultParams <$> arg Language.LSP.Protocol.Types.Common..:!? "partialResultToken"

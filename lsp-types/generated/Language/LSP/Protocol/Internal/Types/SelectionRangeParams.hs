@@ -53,4 +53,4 @@ instance Aeson.ToJSON SelectionRangeParams where
     ,["positions" Aeson..= arg3]]
 
 instance Aeson.FromJSON SelectionRangeParams where
-  parseJSON = Aeson.withObject "SelectionRangeParams" $ \arg -> SelectionRangeParams <$> arg Aeson..:! "workDoneToken" <*> arg Aeson..:! "partialResultToken" <*> arg Aeson..: "textDocument" <*> arg Aeson..: "positions"
+  parseJSON = Aeson.withObject "SelectionRangeParams" $ \arg -> SelectionRangeParams <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneToken" <*> arg Language.LSP.Protocol.Types.Common..:!? "partialResultToken" <*> arg Aeson..: "textDocument" <*> arg Aeson..: "positions"

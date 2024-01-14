@@ -51,4 +51,4 @@ instance Aeson.ToJSON TextDocumentSyncClientCapabilities where
     ,"didSave" Language.LSP.Protocol.Types.Common..=? arg3]
 
 instance Aeson.FromJSON TextDocumentSyncClientCapabilities where
-  parseJSON = Aeson.withObject "TextDocumentSyncClientCapabilities" $ \arg -> TextDocumentSyncClientCapabilities <$> arg Aeson..:! "dynamicRegistration" <*> arg Aeson..:! "willSave" <*> arg Aeson..:! "willSaveWaitUntil" <*> arg Aeson..:! "didSave"
+  parseJSON = Aeson.withObject "TextDocumentSyncClientCapabilities" $ \arg -> TextDocumentSyncClientCapabilities <$> arg Language.LSP.Protocol.Types.Common..:!? "dynamicRegistration" <*> arg Language.LSP.Protocol.Types.Common..:!? "willSave" <*> arg Language.LSP.Protocol.Types.Common..:!? "willSaveWaitUntil" <*> arg Language.LSP.Protocol.Types.Common..:!? "didSave"

@@ -55,4 +55,4 @@ instance Aeson.ToJSON Moniker where
     ,"kind" Language.LSP.Protocol.Types.Common..=? arg3]
 
 instance Aeson.FromJSON Moniker where
-  parseJSON = Aeson.withObject "Moniker" $ \arg -> Moniker <$> arg Aeson..: "scheme" <*> arg Aeson..: "identifier" <*> arg Aeson..: "unique" <*> arg Aeson..:! "kind"
+  parseJSON = Aeson.withObject "Moniker" $ \arg -> Moniker <$> arg Aeson..: "scheme" <*> arg Aeson..: "identifier" <*> arg Aeson..: "unique" <*> arg Language.LSP.Protocol.Types.Common..:!? "kind"

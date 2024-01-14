@@ -66,4 +66,4 @@ instance Aeson.ToJSON SemanticTokensRegistrationOptions where
     ,"id" Language.LSP.Protocol.Types.Common..=? arg5]
 
 instance Aeson.FromJSON SemanticTokensRegistrationOptions where
-  parseJSON = Aeson.withObject "SemanticTokensRegistrationOptions" $ \arg -> SemanticTokensRegistrationOptions <$> arg Aeson..: "documentSelector" <*> arg Aeson..:! "workDoneProgress" <*> arg Aeson..: "legend" <*> arg Aeson..:! "range" <*> arg Aeson..:! "full" <*> arg Aeson..:! "id"
+  parseJSON = Aeson.withObject "SemanticTokensRegistrationOptions" $ \arg -> SemanticTokensRegistrationOptions <$> arg Aeson..: "documentSelector" <*> arg Language.LSP.Protocol.Types.Common..:!? "workDoneProgress" <*> arg Aeson..: "legend" <*> arg Language.LSP.Protocol.Types.Common..:!? "range" <*> arg Language.LSP.Protocol.Types.Common..:!? "full" <*> arg Language.LSP.Protocol.Types.Common..:!? "id"

@@ -41,4 +41,4 @@ instance Aeson.ToJSON HoverRegistrationOptions where
     ,"workDoneProgress" Language.LSP.Protocol.Types.Common..=? arg1]
 
 instance Aeson.FromJSON HoverRegistrationOptions where
-  parseJSON = Aeson.withObject "HoverRegistrationOptions" $ \arg -> HoverRegistrationOptions <$> arg Aeson..: "documentSelector" <*> arg Aeson..:! "workDoneProgress"
+  parseJSON = Aeson.withObject "HoverRegistrationOptions" $ \arg -> HoverRegistrationOptions <$> arg Aeson..: "documentSelector" <*> arg Language.LSP.Protocol.Types.Common..:!? "workDoneProgress"

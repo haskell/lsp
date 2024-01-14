@@ -41,4 +41,4 @@ instance Aeson.ToJSON DocumentRangeFormattingRegistrationOptions where
     ,"workDoneProgress" Language.LSP.Protocol.Types.Common..=? arg1]
 
 instance Aeson.FromJSON DocumentRangeFormattingRegistrationOptions where
-  parseJSON = Aeson.withObject "DocumentRangeFormattingRegistrationOptions" $ \arg -> DocumentRangeFormattingRegistrationOptions <$> arg Aeson..: "documentSelector" <*> arg Aeson..:! "workDoneProgress"
+  parseJSON = Aeson.withObject "DocumentRangeFormattingRegistrationOptions" $ \arg -> DocumentRangeFormattingRegistrationOptions <$> arg Aeson..: "documentSelector" <*> arg Language.LSP.Protocol.Types.Common..:!? "workDoneProgress"

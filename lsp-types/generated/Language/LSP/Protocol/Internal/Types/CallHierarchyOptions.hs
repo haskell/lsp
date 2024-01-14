@@ -36,4 +36,4 @@ instance Aeson.ToJSON CallHierarchyOptions where
   toJSON (CallHierarchyOptions arg0) = Aeson.object $ concat $  ["workDoneProgress" Language.LSP.Protocol.Types.Common..=? arg0]
 
 instance Aeson.FromJSON CallHierarchyOptions where
-  parseJSON = Aeson.withObject "CallHierarchyOptions" $ \arg -> CallHierarchyOptions <$> arg Aeson..:! "workDoneProgress"
+  parseJSON = Aeson.withObject "CallHierarchyOptions" $ \arg -> CallHierarchyOptions <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneProgress"

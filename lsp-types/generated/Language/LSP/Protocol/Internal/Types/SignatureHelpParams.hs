@@ -56,4 +56,4 @@ instance Aeson.ToJSON SignatureHelpParams where
     ,"context" Language.LSP.Protocol.Types.Common..=? arg3]
 
 instance Aeson.FromJSON SignatureHelpParams where
-  parseJSON = Aeson.withObject "SignatureHelpParams" $ \arg -> SignatureHelpParams <$> arg Aeson..: "textDocument" <*> arg Aeson..: "position" <*> arg Aeson..:! "workDoneToken" <*> arg Aeson..:! "context"
+  parseJSON = Aeson.withObject "SignatureHelpParams" $ \arg -> SignatureHelpParams <$> arg Aeson..: "textDocument" <*> arg Aeson..: "position" <*> arg Language.LSP.Protocol.Types.Common..:!? "workDoneToken" <*> arg Language.LSP.Protocol.Types.Common..:!? "context"

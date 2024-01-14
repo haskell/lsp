@@ -48,4 +48,4 @@ instance Aeson.ToJSON SelectionRangeRegistrationOptions where
     ,"id" Language.LSP.Protocol.Types.Common..=? arg2]
 
 instance Aeson.FromJSON SelectionRangeRegistrationOptions where
-  parseJSON = Aeson.withObject "SelectionRangeRegistrationOptions" $ \arg -> SelectionRangeRegistrationOptions <$> arg Aeson..:! "workDoneProgress" <*> arg Aeson..: "documentSelector" <*> arg Aeson..:! "id"
+  parseJSON = Aeson.withObject "SelectionRangeRegistrationOptions" $ \arg -> SelectionRangeRegistrationOptions <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneProgress" <*> arg Aeson..: "documentSelector" <*> arg Language.LSP.Protocol.Types.Common..:!? "id"

@@ -34,4 +34,4 @@ instance Aeson.ToJSON ImplementationOptions where
   toJSON (ImplementationOptions arg0) = Aeson.object $ concat $  ["workDoneProgress" Language.LSP.Protocol.Types.Common..=? arg0]
 
 instance Aeson.FromJSON ImplementationOptions where
-  parseJSON = Aeson.withObject "ImplementationOptions" $ \arg -> ImplementationOptions <$> arg Aeson..:! "workDoneProgress"
+  parseJSON = Aeson.withObject "ImplementationOptions" $ \arg -> ImplementationOptions <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneProgress"

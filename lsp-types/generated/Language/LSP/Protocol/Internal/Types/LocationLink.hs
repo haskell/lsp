@@ -58,4 +58,4 @@ instance Aeson.ToJSON LocationLink where
     ,["targetSelectionRange" Aeson..= arg3]]
 
 instance Aeson.FromJSON LocationLink where
-  parseJSON = Aeson.withObject "LocationLink" $ \arg -> LocationLink <$> arg Aeson..:! "originSelectionRange" <*> arg Aeson..: "targetUri" <*> arg Aeson..: "targetRange" <*> arg Aeson..: "targetSelectionRange"
+  parseJSON = Aeson.withObject "LocationLink" $ \arg -> LocationLink <$> arg Language.LSP.Protocol.Types.Common..:!? "originSelectionRange" <*> arg Aeson..: "targetUri" <*> arg Aeson..: "targetRange" <*> arg Aeson..: "targetSelectionRange"

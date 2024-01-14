@@ -41,4 +41,4 @@ instance Aeson.ToJSON SelectionRange where
     ,"parent" Language.LSP.Protocol.Types.Common..=? arg1]
 
 instance Aeson.FromJSON SelectionRange where
-  parseJSON = Aeson.withObject "SelectionRange" $ \arg -> SelectionRange <$> arg Aeson..: "range" <*> arg Aeson..:! "parent"
+  parseJSON = Aeson.withObject "SelectionRange" $ \arg -> SelectionRange <$> arg Aeson..: "range" <*> arg Language.LSP.Protocol.Types.Common..:!? "parent"
