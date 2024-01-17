@@ -4,9 +4,9 @@
 module Language.LSP.Protocol.Message.Lens where
 
 import Control.Lens.TH
-import Language.LSP.Protocol.Internal.Lens
 import Language.LSP.Protocol.Message.Registration
 import Language.LSP.Protocol.Message.Types
+import Language.LSP.Protocol.Types.Lens
 
 makeFieldsNoPrefix ''TRegistration
 makeFieldsNoPrefix ''TUnregistration

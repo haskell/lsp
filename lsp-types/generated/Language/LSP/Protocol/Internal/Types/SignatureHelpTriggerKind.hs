@@ -41,7 +41,7 @@ data SignatureHelpTriggerKind =
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
   deriving ( Aeson.ToJSON
-  , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum SignatureHelpTriggerKind Language.LSP.Protocol.Types.Common.UInt)
+  , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum SignatureHelpTriggerKind)
   deriving Pretty via (ViaJSON SignatureHelpTriggerKind)
 
 instance Language.LSP.Protocol.Types.LspEnum.LspEnum SignatureHelpTriggerKind where

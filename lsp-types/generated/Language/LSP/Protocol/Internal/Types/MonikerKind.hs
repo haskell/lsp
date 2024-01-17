@@ -42,7 +42,7 @@ data MonikerKind =
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
   deriving ( Aeson.ToJSON
-  , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum MonikerKind Data.Text.Text)
+  , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum MonikerKind)
   deriving Pretty via (ViaJSON MonikerKind)
 
 instance Language.LSP.Protocol.Types.LspEnum.LspEnum MonikerKind where

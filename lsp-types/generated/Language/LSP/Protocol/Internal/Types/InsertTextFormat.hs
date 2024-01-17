@@ -43,7 +43,7 @@ data InsertTextFormat =
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
   deriving ( Aeson.ToJSON
-  , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum InsertTextFormat Language.LSP.Protocol.Types.Common.UInt)
+  , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum InsertTextFormat)
   deriving Pretty via (ViaJSON InsertTextFormat)
 
 instance Language.LSP.Protocol.Types.LspEnum.LspEnum InsertTextFormat where

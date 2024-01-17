@@ -37,7 +37,7 @@ data InlayHintKind =
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
   deriving ( Aeson.ToJSON
-  , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum InlayHintKind Language.LSP.Protocol.Types.Common.UInt)
+  , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum InlayHintKind)
   deriving Pretty via (ViaJSON InlayHintKind)
 
 instance Language.LSP.Protocol.Types.LspEnum.LspEnum InlayHintKind where

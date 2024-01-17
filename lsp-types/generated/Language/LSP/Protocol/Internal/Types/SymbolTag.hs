@@ -33,7 +33,7 @@ data SymbolTag =
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
   deriving ( Aeson.ToJSON
-  , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum SymbolTag Language.LSP.Protocol.Types.Common.UInt)
+  , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum SymbolTag)
   deriving Pretty via (ViaJSON SymbolTag)
 
 instance Language.LSP.Protocol.Types.LspEnum.LspEnum SymbolTag where

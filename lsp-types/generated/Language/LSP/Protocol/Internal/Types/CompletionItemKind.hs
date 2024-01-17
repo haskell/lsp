@@ -127,7 +127,7 @@ data CompletionItemKind =
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
   deriving ( Aeson.ToJSON
-  , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum CompletionItemKind Language.LSP.Protocol.Types.Common.UInt)
+  , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum CompletionItemKind)
   deriving Pretty via (ViaJSON CompletionItemKind)
 
 instance Language.LSP.Protocol.Types.LspEnum.LspEnum CompletionItemKind where

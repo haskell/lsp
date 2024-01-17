@@ -39,7 +39,7 @@ data FileChangeType =
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
   deriving ( Aeson.ToJSON
-  , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum FileChangeType Language.LSP.Protocol.Types.Common.UInt)
+  , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum FileChangeType)
   deriving Pretty via (ViaJSON FileChangeType)
 
 instance Language.LSP.Protocol.Types.LspEnum.LspEnum FileChangeType where

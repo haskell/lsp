@@ -39,7 +39,7 @@ data DocumentHighlightKind =
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
   deriving ( Aeson.ToJSON
-  , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum DocumentHighlightKind Language.LSP.Protocol.Types.Common.UInt)
+  , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum DocumentHighlightKind)
   deriving Pretty via (ViaJSON DocumentHighlightKind)
 
 instance Language.LSP.Protocol.Types.LspEnum.LspEnum DocumentHighlightKind where

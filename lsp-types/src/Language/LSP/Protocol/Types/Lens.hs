@@ -3,9 +3,8 @@
 
 module Language.LSP.Protocol.Types.Lens where
 
-import Control.Lens.TH
-import Language.LSP.Protocol.Internal.Lens
+import Language.LSP.Protocol.Internal.Meta
 import Language.LSP.Protocol.Types.SemanticTokens
+import Language.LSP.Protocol.Utils.Misc
 
-makeFieldsNoPrefix ''SemanticTokenAbsolute
-makeFieldsNoPrefix ''SemanticTokenRelative
+$(genLenses (structNames ++ [''SemanticTokenAbsolute, ''SemanticTokenRelative]))

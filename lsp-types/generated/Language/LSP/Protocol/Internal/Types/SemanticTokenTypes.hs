@@ -126,7 +126,7 @@ data SemanticTokenTypes =
   deriving anyclass (NFData, Hashable)
   deriving ( Aeson.ToJSON
   , Aeson.FromJSON
-  , Data.String.IsString ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum SemanticTokenTypes Data.Text.Text)
+  , Data.String.IsString ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum SemanticTokenTypes)
   deriving Pretty via (ViaJSON SemanticTokenTypes)
 
 instance Language.LSP.Protocol.Types.LspEnum.LspEnum SemanticTokenTypes where

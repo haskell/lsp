@@ -40,7 +40,7 @@ data CodeActionTriggerKind =
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
   deriving ( Aeson.ToJSON
-  , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum CodeActionTriggerKind Language.LSP.Protocol.Types.Common.UInt)
+  , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum CodeActionTriggerKind)
   deriving Pretty via (ViaJSON CodeActionTriggerKind)
 
 instance Language.LSP.Protocol.Types.LspEnum.LspEnum CodeActionTriggerKind where

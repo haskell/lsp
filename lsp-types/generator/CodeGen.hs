@@ -163,9 +163,10 @@ genFromMetaModel :: T.Text -> FilePath -> MetaModel -> IO ()
 genFromMetaModel prefix dir mm = do
   let (symbolTable, structTable) = buildTables mm
   flip runReaderT (CodeGenEnv symbolTable structTable prefix dir) $ do
-    structModuleNames <- traverse genStruct (structures mm)
     -- Don't even generate LSPAny, LSPObject, or LSPArry
-    aliasModuleNames <- traverse genAlias (filter (\TypeAlias{name} -> name `notElem` ["LSPAny", "LSPObject", "LSPArray"]) (typeAliases mm))
+    let filteredAliases = filter (\TypeAlias{name} -> name `notElem` ["LSPAny", "LSPObject", "LSPArray"]) (typeAliases mm)
+    structModuleNames <- traverse genStruct (structures mm)
+    aliasModuleNames <- traverse genAlias filteredAliases
     enumModuleNames <- traverse genEnum (enumerations mm)
     methodModuleName <- genMethods (requests mm) (notifications mm)
     -- not the methods, we export them separately!
@@ -173,7 +174,9 @@ genFromMetaModel prefix dir mm = do
     -- Have to use the string form of the generated Name
     -- since we might have mangled the original name
     let structNames = mapMaybe (\Structure{name} -> Map.lookup name symbolTable) (structures mm)
-    genLensModule structNames
+        aliasNames = mapMaybe (\TypeAlias{name} -> Map.lookup name symbolTable) filteredAliases
+        enumNames = mapMaybe (\Enumeration{name} -> Map.lookup name symbolTable) (enumerations mm)
+    genMetaModule structNames aliasNames enumNames
     pure ()
   pure ()
 
@@ -477,7 +480,7 @@ printEnum tn Enumeration{name, type_, values, supportsCustomValues, documentatio
           toDeriveViaLspEnum = ["Aeson.ToJSON", "Aeson.FromJSON"] ++ if custom && isString then [isStringN] else []
           stockDeriv = "deriving stock" <+> tupled (fmap pretty toStockDerive)
           anyclassDeriv = "deriving anyclass" <+> tupled (fmap pretty toAnyclassDerive)
-          viaDeriv1 = "deriving" <+> tupled toDeriveViaLspEnum <+> "via" <+> parens (asLspEnumN <+> pretty tn <+> ty)
+          viaDeriv1 = "deriving" <+> tupled toDeriveViaLspEnum <+> "via" <+> parens (asLspEnumN <+> pretty tn)
           viaDeriv2 = "deriving" <+> "Pretty" <+> "via" <+> parens ("ViaJSON" <+> pretty tn)
          in
           indent indentSize $ hardvcat [stockDeriv, anyclassDeriv, viaDeriv1, viaDeriv2]
@@ -847,17 +850,32 @@ genMethods :: [Request] -> [Notification] -> CodeGenM T.Text
 genMethods reqs nots = do
   genModule "Method" [] Nothing (printMethods reqs nots)
 
---------------
+---------------
 
-genLensModule :: [T.Text] -> CodeGenM T.Text
-genLensModule names = do
-  genModule "Lens" ["TemplateHaskell"] Nothing $ do
-    mkLensesN <- pretty <$> entityName "Control.Lens.TH" "makeFieldsNoPrefix"
-    decls <- for names $ \thn -> do
-      nm <- pretty <$> lspEntityName (typesModSegment <> "." <> thn) thn
-      let lensesD = mkLensesN <+> "''" <> nm
-      pure lensesD
-    pure $ hardvcat decls
+genMetaModule :: [T.Text] -> [T.Text] -> [T.Text] -> CodeGenM T.Text
+genMetaModule structNames aliasNames enumNames = do
+  genModule "Meta" ["TemplateHaskell"] Nothing $ do
+    ensureImport "Language.Haskell.TH" (QualAs "TH")
+    let tyn thn = pretty <$> entityName "Language.LSP.Protocol.Internal.Types" thn
+    sns <- traverse tyn structNames
+    ans <- traverse tyn aliasNames
+    ens <- traverse tyn enumNames
+    let
+      sig1 = "structNames" <+> "::" <+> brackets "TH.Name"
+      decl1 = "structNames =" <+> nest indentSize (encloseSep "[" "]" "," $ fmap (\n -> "''" <> n) sns)
+      sig2 = "aliasNames" <+> "::" <+> brackets "TH.Name"
+      decl2 = "aliasNames =" <+> nest indentSize (encloseSep "[" "]" "," $ fmap (\n -> "''" <> n) ans)
+      sig3 = "enumNames" <+> "::" <+> brackets "TH.Name"
+      decl3 = "enumNames =" <+> nest indentSize (encloseSep "[" "]" "," $ fmap (\n -> "''" <> n) ens)
+    pure $
+      hardvcat
+        [ sig1
+        , decl1
+        , sig2
+        , decl2
+        , sig3
+        , decl3
+        ]
 
 ---------------
 

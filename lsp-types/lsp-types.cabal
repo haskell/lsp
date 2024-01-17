@@ -115,6 +115,7 @@ library
     Language.LSP.Protocol.Lens
     Language.LSP.Protocol.Message
     Language.LSP.Protocol.Types
+    Language.LSP.Protocol.Meta
     Language.LSP.Protocol.Utils.Misc
     Language.LSP.Protocol.Utils.SMethodMap
 
@@ -141,6 +142,7 @@ library
     Language.LSP.Protocol.Types.Uri.OsPath
     Language.LSP.Protocol.Types.WatchKinds
 
+
   -- The generated modules
   -- In principle these could be in a separate component,
   -- but a) the generated modules depend on some of the common code
@@ -148,7 +150,7 @@ library
   -- It's simpler to just have everything in together, otherwise we'd
   -- actually need three layers!
   other-modules:
-    Language.LSP.Protocol.Internal.Lens
+    Language.LSP.Protocol.Internal.Meta
     Language.LSP.Protocol.Internal.Method
     Language.LSP.Protocol.Internal.Types
     Language.LSP.Protocol.Internal.Types.AnnotatedTextEdit
@@ -541,6 +543,37 @@ library metamodel
     , template-haskell  >=2.7     && <2.22
     , text              >=1       && <2.2
 
+library lsp-types-quickcheck
+  visibility:         public
+  hs-source-dirs:     quickcheck generated
+  default-language:   Haskell2010
+  default-extensions:
+    ImportQualifiedPost
+    StrictData
+    DerivingVia
+    DerivingStrategies
+    StandaloneDeriving
+    GeneralizedNewtypeDeriving
+
+  exposed-modules:
+    Language.LSP.Protocol.QuickCheck
+
+  other-modules:
+    Language.LSP.Protocol.QuickCheck.Common
+    Language.LSP.Protocol.QuickCheck.Message
+    Language.LSP.Protocol.QuickCheck.Types
+
+  build-depends:
+    , aeson             >=2
+    , base              >=4.11    && <5
+    , lsp-types
+    , row-types
+    , QuickCheck
+    , quickcheck-instances
+    , generic-arbitrary
+    , template-haskell
+    , text              >=1       && <2.2
+
 executable generator
   hs-source-dirs:     generator
   default-language:   Haskell2010
@@ -587,6 +620,7 @@ test-suite lsp-types-test
     , hspec
     , lens
     , lsp-types
+    , lsp-types-quickcheck
     , network-uri
     , QuickCheck
     , quickcheck-instances

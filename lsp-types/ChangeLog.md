@@ -4,6 +4,7 @@
 
 - Require aeson 2
 - Accept `null` in place of a missing field, a common mistake in spec compliance.
+- Arbitrary instances for everything now exist and are exported via the new `lsp-types-quickcheck` library
 
 ## 2.1.0.0 -- 2023-11-13
 

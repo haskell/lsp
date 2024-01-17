@@ -43,7 +43,7 @@ data MessageType =
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
   deriving ( Aeson.ToJSON
-  , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum MessageType Language.LSP.Protocol.Types.Common.UInt)
+  , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum MessageType)
   deriving Pretty via (ViaJSON MessageType)
 
 instance Language.LSP.Protocol.Types.LspEnum.LspEnum MessageType where

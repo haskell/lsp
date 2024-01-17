@@ -61,7 +61,7 @@ data LSPErrorCodes =
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
   deriving ( Aeson.ToJSON
-  , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum LSPErrorCodes Language.LSP.Protocol.Types.Common.Int32)
+  , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum LSPErrorCodes)
   deriving Pretty via (ViaJSON LSPErrorCodes)
 
 instance Language.LSP.Protocol.Types.LspEnum.LspEnum LSPErrorCodes where
