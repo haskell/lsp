@@ -421,7 +421,7 @@ sendRequest method params = do
   reqMap <- requestMap <$> ask
   liftIO $
     modifyMVar_ reqMap $
-      \r -> return $ fromJust $ updateRequestMap r id method
+      \r -> return $ fromMaybe r $ updateRequestMap r id method
 
   ~() <- case splitClientMethod method of
     IsClientReq -> sendMessage mess

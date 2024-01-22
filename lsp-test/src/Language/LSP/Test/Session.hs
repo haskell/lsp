@@ -187,9 +187,9 @@ data SessionState = SessionState
   , vfs :: !VFS
   , curDiagnostics :: !(Map.Map NormalizedUri [Diagnostic])
   , overridingTimeout :: !Bool
+  , lastReceivedMessage :: !(Maybe FromServerMessage)
   -- ^ The last received message from the server.
   -- Used for providing exception information
-  , lastReceivedMessage :: !(Maybe FromServerMessage)
   , curDynCaps :: !(Map.Map T.Text SomeRegistration)
   -- ^ The capabilities that the server has dynamically registered with us so
   -- far
@@ -250,7 +250,7 @@ runSessionMonad context state (Session session) = runReaderT (runStateT conduit 
       curId <- getCurTimeoutId
       case msg of
         ServerMessage sMsg -> yield sMsg
-        TimeoutMessage tId -> when (curId == tId) $ lastReceivedMessage <$> get >>= throw . Timeout
+        TimeoutMessage tId -> when (curId == tId) $ get >>= throw . Timeout . lastReceivedMessage
 
 -- | An internal version of 'runSession' that allows for a custom handler to listen to the server.
 -- It also does not automatically send initialize and exit messages.
@@ -468,11 +468,11 @@ updateState (FromServerMess SMethod_WorkspaceApplyEdit r) = do
 
         textDocumentEdits uri edits = do
           vers <- textDocumentVersions uri
-          pure $ map (\(v, e) -> TextDocumentEdit (review _versionedTextDocumentIdentifier v) [InL e]) $ zip vers edits
+          pure $ zipWith (\v e -> TextDocumentEdit (review _versionedTextDocumentIdentifier v) [InL e]) vers edits
 
         getChangeParams uri edits = do
           edits <- textDocumentEdits uri (reverse edits)
-          pure $ catMaybes $ map getParamsFromTextDocumentEdit edits
+          pure $ mapMaybe getParamsFromTextDocumentEdit edits
 
         mergeParams :: [DidChangeTextDocumentParams] -> DidChangeTextDocumentParams
         mergeParams params = let events = concat (toList (map (toList . (^. L.contentChanges)) params))
@@ -513,7 +513,7 @@ logMsg t msg = do
   shouldColor <- asks $ logColor . config
   liftIO $ when shouldLog $ do
     when shouldColor $ setSGR [SetColor Foreground Dull color]
-    putStrLn $ arrow ++ showPretty msg
+    B.putStrLn $ arrow <> encodePretty msg
     when shouldColor $ setSGR [Reset]
 
   where arrow
@@ -523,4 +523,3 @@ logMsg t msg = do
           | t == LogServer  = Magenta
           | otherwise       = Cyan
 
-        showPretty = B.unpack . encodePretty

@@ -22,6 +22,7 @@ import Prelude hiding (id)
 
 import Data.IxMap
 import Data.Kind
+import Text.Read (readMaybe)
 
 {- | Fetches the next message bytes based on
  the Content-Length header
@@ -29,7 +30,7 @@ import Data.Kind
 getNextMessage :: Handle -> IO B.ByteString
 getNextMessage h = do
   headers <- getHeaders h
-  case read . init <$> lookup "Content-Length" headers of
+  case readMaybe =<< lookup "Content-Length" headers of
     Nothing -> throw NoContentLengthHeader
     Just size -> B.hGet h size
 
@@ -68,11 +69,11 @@ getRequestMap = foldl' helper emptyIxMap
   helper acc msg = case msg of
     FromClientMess m mess -> case splitClientMethod m of
       IsClientNot -> acc
-      IsClientReq -> fromJust $ updateRequestMap acc (mess ^. L.id) m
+      IsClientReq -> fromMaybe acc $ updateRequestMap acc (mess ^. L.id) m
       IsClientEither -> case mess of
         NotMess _ -> acc
-        ReqMess msg -> fromJust $ updateRequestMap acc (msg ^. L.id) m
-    _ -> acc
+        ReqMess msg -> fromMaybe acc $ updateRequestMap acc (msg ^. L.id) m
+    FromClientRsp{} -> acc
 
 decodeFromServerMsg :: RequestMap -> B.ByteString -> (RequestMap, FromServerMessage)
 decodeFromServerMsg reqMap bytes = unP $ parse p obj
