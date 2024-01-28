@@ -13,10 +13,10 @@ import GHC.Generics
 import Language.LSP.Protocol.Utils.Misc
 import Prettyprinter
 import qualified Data.Aeson as Aeson
-import qualified Data.Row as Row
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
-import qualified Language.LSP.Protocol.Internal.Types.FoldingRangeKind
+import qualified Language.LSP.Protocol.Internal.Types.ClientFoldingRangeKindOptions
+import qualified Language.LSP.Protocol.Internal.Types.ClientFoldingRangeOptions
 import qualified Language.LSP.Protocol.Types.Common
 
 {-|
@@ -47,13 +47,13 @@ data FoldingRangeClientCapabilities = FoldingRangeClientCapabilities
 
   @since 3.17.0
   -}
-  _foldingRangeKind :: (Maybe (Row.Rec ("valueSet" Row..== (Maybe [Language.LSP.Protocol.Internal.Types.FoldingRangeKind.FoldingRangeKind]) Row..+ Row.Empty)))
+  _foldingRangeKind :: (Maybe Language.LSP.Protocol.Internal.Types.ClientFoldingRangeKindOptions.ClientFoldingRangeKindOptions)
   , {-|
   Specific options for the folding range.
 
   @since 3.17.0
   -}
-  _foldingRange :: (Maybe (Row.Rec ("collapsedText" Row..== (Maybe Bool) Row..+ Row.Empty)))
+  _foldingRange :: (Maybe Language.LSP.Protocol.Internal.Types.ClientFoldingRangeOptions.ClientFoldingRangeOptions)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

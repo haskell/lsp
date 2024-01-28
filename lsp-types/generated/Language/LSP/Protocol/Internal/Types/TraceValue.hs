@@ -5,7 +5,7 @@
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 {-# OPTIONS_GHC -Wno-unused-matches #-}
 {-# OPTIONS_GHC -Wno-deprecations #-}
-module Language.LSP.Protocol.Internal.Types.TraceValues where
+module Language.LSP.Protocol.Internal.Types.TraceValue where
 
 import Control.DeepSeq
 import Data.Hashable
@@ -23,36 +23,36 @@ import qualified Language.LSP.Protocol.Types.LspEnum
 {-|
 
 -}
-data TraceValues = 
+data TraceValue = 
     {-|
   Turn tracing off.
   -}
-  TraceValues_Off
+  TraceValue_Off
   | {-|
   Trace messages only.
   -}
-  TraceValues_Messages
+  TraceValue_Messages
   | {-|
   Verbose message tracing.
   -}
-  TraceValues_Verbose
+  TraceValue_Verbose
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
   deriving ( Aeson.ToJSON
-  , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum TraceValues)
-  deriving Pretty via (ViaJSON TraceValues)
+  , Aeson.FromJSON ) via (Language.LSP.Protocol.Types.LspEnum.AsLspEnum TraceValue)
+  deriving Pretty via (ViaJSON TraceValue)
 
-instance Language.LSP.Protocol.Types.LspEnum.LspEnum TraceValues where
-  knownValues = Data.Set.fromList [TraceValues_Off
-    ,TraceValues_Messages
-    ,TraceValues_Verbose]
-  type EnumBaseType TraceValues = Data.Text.Text
-  toEnumBaseType TraceValues_Off = "off"
-  toEnumBaseType TraceValues_Messages = "messages"
-  toEnumBaseType TraceValues_Verbose = "verbose"
-  fromEnumBaseType "off" = pure TraceValues_Off
-  fromEnumBaseType "messages" = pure TraceValues_Messages
-  fromEnumBaseType "verbose" = pure TraceValues_Verbose
+instance Language.LSP.Protocol.Types.LspEnum.LspEnum TraceValue where
+  knownValues = Data.Set.fromList [TraceValue_Off
+    ,TraceValue_Messages
+    ,TraceValue_Verbose]
+  type EnumBaseType TraceValue = Data.Text.Text
+  toEnumBaseType TraceValue_Off = "off"
+  toEnumBaseType TraceValue_Messages = "messages"
+  toEnumBaseType TraceValue_Verbose = "verbose"
+  fromEnumBaseType "off" = pure TraceValue_Off
+  fromEnumBaseType "messages" = pure TraceValue_Messages
+  fromEnumBaseType "verbose" = pure TraceValue_Verbose
   fromEnumBaseType _ = Nothing
 
 

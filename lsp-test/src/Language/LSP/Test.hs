@@ -289,7 +289,7 @@ runSessionWithHandles' serverProc serverIn serverOut config' caps rootDir sessio
           caps
           -- TODO: make this configurable?
           (Just $ Object $ lspConfig config')
-          (Just TraceValues_Off)
+          (Just TraceValue_Off)
           (fmap InL $ initialWorkspaceFolders config)
   runSession' serverIn serverOut serverProc listenServer config caps rootDir exitServer $ do
     -- Wrap the session around initialize and shutdown calls
@@ -546,7 +546,7 @@ createDoc ::
   -- | The path to the document to open, __relative to the root directory__.
   FilePath ->
   -- | The text document's language identifier, e.g. @"haskell"@.
-  T.Text ->
+  LanguageKind ->
   -- | The content of the text document to create.
   T.Text ->
   -- | The identifier of the document just created.
@@ -591,7 +591,7 @@ createDoc file languageId contents = do
 {- | Opens a text document that /exists on disk/, and sends a
  textDocument/didOpen notification to the server.
 -}
-openDoc :: FilePath -> T.Text -> Session TextDocumentIdentifier
+openDoc :: FilePath -> LanguageKind -> Session TextDocumentIdentifier
 openDoc file languageId = do
   context <- ask
   let fp = rootDir context </> file
@@ -601,7 +601,7 @@ openDoc file languageId = do
 {- | This is a variant of `openDoc` that takes the file content as an argument.
  Use this is the file exists /outside/ of the current workspace.
 -}
-openDoc' :: FilePath -> T.Text -> T.Text -> Session TextDocumentIdentifier
+openDoc' :: FilePath -> LanguageKind -> T.Text -> Session TextDocumentIdentifier
 openDoc' file languageId contents = do
   context <- ask
   let fp = rootDir context </> file

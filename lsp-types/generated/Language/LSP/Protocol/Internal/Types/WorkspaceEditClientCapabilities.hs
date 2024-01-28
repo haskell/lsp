@@ -13,9 +13,9 @@ import GHC.Generics
 import Language.LSP.Protocol.Utils.Misc
 import Prettyprinter
 import qualified Data.Aeson as Aeson
-import qualified Data.Row as Row
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
+import qualified Language.LSP.Protocol.Internal.Types.ChangeAnnotationsSupportOptions
 import qualified Language.LSP.Protocol.Internal.Types.FailureHandlingKind
 import qualified Language.LSP.Protocol.Internal.Types.ResourceOperationKind
 import qualified Language.LSP.Protocol.Types.Common
@@ -58,7 +58,7 @@ data WorkspaceEditClientCapabilities = WorkspaceEditClientCapabilities
 
   @since 3.16.0
   -}
-  _changeAnnotationSupport :: (Maybe (Row.Rec ("groupsOnLabel" Row..== (Maybe Bool) Row..+ Row.Empty)))
+  _changeAnnotationSupport :: (Maybe Language.LSP.Protocol.Internal.Types.ChangeAnnotationsSupportOptions.ChangeAnnotationsSupportOptions)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

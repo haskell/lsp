@@ -1,5 +1,4 @@
 {-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Language.LSP.Protocol.Capabilities (
@@ -11,7 +10,6 @@ module Language.LSP.Protocol.Capabilities (
 
 import Control.Lens
 import Data.Maybe
-import Data.Row
 import Data.Set qualified as Set
 import Language.LSP.Protocol.Lens qualified as L
 import Language.LSP.Protocol.Message
@@ -53,7 +51,7 @@ capsForVersion (LSPVersion maj min) = caps
                 (since 3 13 resourceOperations)
                 Nothing
                 (since 3 16 True)
-                (since 3 16 (#groupsOnLabel .== Just True))
+                (since 3 16 (ChangeAnnotationsSupportOptions{_groupsOnLabel = Just True}))
             )
       , _didChangeConfiguration = Just (DidChangeConfigurationClientCapabilities dynamicReg)
       , _didChangeWatchedFiles = Just (DidChangeWatchedFilesClientCapabilities dynamicReg (Just True))
@@ -88,9 +86,9 @@ capsForVersion (LSPVersion maj min) = caps
   symbolCapabilities =
     WorkspaceSymbolClientCapabilities
       dynamicReg
-      (since 3 4 (#valueSet .== Just sKs))
-      (since 3 16 (#valueSet .== [SymbolTag_Deprecated]))
-      (since 3 17 (#properties .== []))
+      (since 3 4 (ClientSymbolKindOptions{_valueSet = Just sKs}))
+      (since 3 16 (ClientSymbolTagOptions{_valueSet = [SymbolTag_Deprecated]}))
+      (since 3 17 (ClientSymbolResolveOptions{_properties = []}))
 
   sKs
     | maj >= 3 && min >= 4 = oldSKs ++ newSKs
@@ -134,7 +132,7 @@ capsForVersion (LSPVersion maj min) = caps
   semanticTokensCapabilities =
     SemanticTokensClientCapabilities
       { _dynamicRegistration = Just True
-      , _requests = #range .== Just (InL True) .+ #full .== Just (InR (#delta .== Just True))
+      , _requests = ClientSemanticTokensRequestOptions{_range = Just (InL True), _full = Just (InR (ClientSemanticTokensRequestFullDelta{_delta = Just True}))}
       , _tokenTypes = toEnumBaseType <$> Set.toList (knownValues @SemanticTokenTypes)
       , _tokenModifiers = toEnumBaseType <$> Set.toList (knownValues @SemanticTokenModifiers)
       , _formats = tfs
@@ -190,29 +188,31 @@ capsForVersion (LSPVersion maj min) = caps
     CompletionClientCapabilities
       { _dynamicRegistration = dynamicReg
       , _completionItem = Just completionItemCapabilities
-      , _completionItemKind = since 3 4 (#valueSet .== Just ciKs)
+      , _completionItemKind = since 3 4 (ClientCompletionItemOptionsKind{_valueSet = Just ciKs})
       , _insertTextMode = since 3 17 InsertTextMode_AsIs
       , _contextSupport = since 3 3 True
-      , _completionList = since 3 17 (#itemDefaults .== Just [])
+      , _completionList = since 3 17 (CompletionListCapabilities{_itemDefaults = Just []})
       }
 
   inlayHintCapabilities =
     InlayHintClientCapabilities
       { _dynamicRegistration = dynamicReg
-      , _resolveSupport = Just (#properties .== [])
+      , _resolveSupport = Just (ClientInlayHintResolveOptions{_properties = []})
       }
 
   completionItemCapabilities =
-    #snippetSupport .== Just True
-      .+ #commitCharactersSupport .== Just True
-      .+ #documentationFormat .== since 3 3 allMarkups
-      .+ #deprecatedSupport .== Just True
-      .+ #preselectSupport .== since 3 9 True
-      .+ #tagSupport .== since 3 15 (#valueSet .== [])
-      .+ #insertReplaceSupport .== since 3 16 True
-      .+ #resolveSupport .== since 3 16 (#properties .== ["documentation", "details"])
-      .+ #insertTextModeSupport .== since 3 16 (#valueSet .== [])
-      .+ #labelDetailsSupport .== since 3 17 True
+    ClientCompletionItemOptions
+      { _snippetSupport = Just True
+      , _commitCharactersSupport = Just True
+      , _documentationFormat = since 3 3 allMarkups
+      , _deprecatedSupport = Just True
+      , _preselectSupport = since 3 9 True
+      , _tagSupport = since 3 15 (CompletionItemTagOptions{_valueSet = []})
+      , _insertReplaceSupport = since 3 16 True
+      , _resolveSupport = since 3 16 (ClientCompletionItemResolveOptions{_properties = ["documentation", "details"]})
+      , _insertTextModeSupport = since 3 16 (ClientCompletionItemInsertTextModeOptions{_valueSet = []})
+      , _labelDetailsSupport = since 3 17 True
+      }
 
   ciKs
     | maj >= 3 && min >= 4 = oldCiKs ++ newCiKs
@@ -258,18 +258,24 @@ capsForVersion (LSPVersion maj min) = caps
   codeActionCapability =
     CodeActionClientCapabilities
       { _dynamicRegistration = dynamicReg
-      , _codeActionLiteralSupport = since 3 8 (#codeActionKind .== (#valueSet .== Set.toList knownValues))
+      , _codeActionLiteralSupport = since 3 8 (ClientCodeActionLiteralOptions{_codeActionKind = ClientCodeActionKindOptions{_valueSet = Set.toList knownValues}})
       , _isPreferredSupport = since 3 15 True
       , _disabledSupport = since 3 16 True
       , _dataSupport = since 3 16 True
-      , _resolveSupport = since 3 16 (#properties .== [])
+      , _resolveSupport = since 3 16 (ClientCodeActionResolveOptions{_properties = []})
       , _honorsChangeAnnotations = since 3 16 True
       }
 
   signatureHelpCapability =
     SignatureHelpClientCapabilities
       { _dynamicRegistration = dynamicReg
-      , _signatureInformation = Just (#documentationFormat .== Just allMarkups .+ #parameterInformation .== Just (#labelOffsetSupport .== Just True) .+ #activeParameterSupport .== Just True)
+      , _signatureInformation =
+          Just $
+            ClientSignatureInformationOptions
+              { _documentationFormat = Just allMarkups
+              , _parameterInformation = Just (ClientSignatureParameterInformationOptions{_labelOffsetSupport = Just True})
+              , _activeParameterSupport = Just True
+              }
       , _contextSupport = since 3 16 True
       }
 
@@ -277,9 +283,9 @@ capsForVersion (LSPVersion maj min) = caps
     DocumentSymbolClientCapabilities
       { _dynamicRegistration = dynamicReg
       , -- same as workspace symbol kinds
-        _symbolKind = Just (#valueSet .== Just sKs)
+        _symbolKind = Just (ClientSymbolKindOptions{_valueSet = Just sKs})
       , _hierarchicalDocumentSymbolSupport = since 3 10 True
-      , _tagSupport = since 3 16 (#valueSet .== [SymbolTag_Deprecated])
+      , _tagSupport = since 3 16 (ClientSymbolTagOptions{_valueSet = [SymbolTag_Deprecated]})
       , _labelSupport = since 3 16 True
       }
 
@@ -288,14 +294,14 @@ capsForVersion (LSPVersion maj min) = caps
       { _dynamicRegistration = dynamicReg
       , _rangeLimit = Nothing
       , _lineFoldingOnly = Nothing
-      , _foldingRangeKind = since 3 17 (#valueSet .== Just [])
-      , _foldingRange = since 3 16 (#collapsedText .== Just True)
+      , _foldingRangeKind = since 3 17 (ClientFoldingRangeKindOptions{_valueSet = Just []})
+      , _foldingRange = since 3 16 (ClientFoldingRangeOptions{_collapsedText = Just True})
       }
 
   publishDiagnosticsCapabilities =
     PublishDiagnosticsClientCapabilities
       { _relatedInformation = since 3 7 True
-      , _tagSupport = since 3 15 (#valueSet .== [DiagnosticTag_Unnecessary, DiagnosticTag_Deprecated])
+      , _tagSupport = since 3 15 (ClientDiagnosticsTagOptions{_valueSet = [DiagnosticTag_Unnecessary, DiagnosticTag_Deprecated]})
       , _versionSupport = since 3 15 True
       , _codeDescriptionSupport = since 3 16 True
       , _dataSupport = since 3 16 True
@@ -318,8 +324,8 @@ capsForVersion (LSPVersion maj min) = caps
 
   general =
     GeneralClientCapabilities
-      { _staleRequestSupport = since 3 16 (#cancel .== True .+ #retryOnContentModified .== [])
-      , _regularExpressions = since 3 16 $ RegularExpressionsClientCapabilities "" Nothing
+      { _staleRequestSupport = since 3 16 (StaleRequestSupportOptions{_cancel = True, _retryOnContentModified = []})
+      , _regularExpressions = since 3 16 $ RegularExpressionsClientCapabilities (RegularExpressionEngineKind "") Nothing
       , _markdown = since 3 16 $ MarkdownClientCapabilities "" Nothing (Just [])
       , _positionEncodings = since 3 17 [PositionEncodingKind_UTF16]
       }

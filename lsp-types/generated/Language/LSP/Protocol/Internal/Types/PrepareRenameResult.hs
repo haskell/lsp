@@ -13,17 +13,17 @@ import GHC.Generics
 import Language.LSP.Protocol.Utils.Misc
 import Prettyprinter
 import qualified Data.Aeson as Aeson
-import qualified Data.Row as Row
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
-import qualified Data.Text
+import qualified Language.LSP.Protocol.Internal.Types.PrepareRenameDefaultBehavior
+import qualified Language.LSP.Protocol.Internal.Types.PrepareRenamePlaceholder
 import qualified Language.LSP.Protocol.Internal.Types.Range
 import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 
 -}
-newtype PrepareRenameResult = PrepareRenameResult (Language.LSP.Protocol.Internal.Types.Range.Range Language.LSP.Protocol.Types.Common.|? ((Row.Rec ("range" Row..== Language.LSP.Protocol.Internal.Types.Range.Range Row..+ ("placeholder" Row..== Data.Text.Text Row..+ Row.Empty))) Language.LSP.Protocol.Types.Common.|? (Row.Rec ("defaultBehavior" Row..== Bool Row..+ Row.Empty))))
+newtype PrepareRenameResult = PrepareRenameResult (Language.LSP.Protocol.Internal.Types.Range.Range Language.LSP.Protocol.Types.Common.|? (Language.LSP.Protocol.Internal.Types.PrepareRenamePlaceholder.PrepareRenamePlaceholder Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.PrepareRenameDefaultBehavior.PrepareRenameDefaultBehavior))
   deriving newtype (Aeson.ToJSON, Aeson.FromJSON)
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

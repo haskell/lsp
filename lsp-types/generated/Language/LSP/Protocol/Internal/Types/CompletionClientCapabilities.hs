@@ -13,14 +13,12 @@ import GHC.Generics
 import Language.LSP.Protocol.Utils.Misc
 import Prettyprinter
 import qualified Data.Aeson as Aeson
-import qualified Data.Row as Row
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
-import qualified Data.Text
-import qualified Language.LSP.Protocol.Internal.Types.CompletionItemKind
-import qualified Language.LSP.Protocol.Internal.Types.CompletionItemTag
+import qualified Language.LSP.Protocol.Internal.Types.ClientCompletionItemOptions
+import qualified Language.LSP.Protocol.Internal.Types.ClientCompletionItemOptionsKind
+import qualified Language.LSP.Protocol.Internal.Types.CompletionListCapabilities
 import qualified Language.LSP.Protocol.Internal.Types.InsertTextMode
-import qualified Language.LSP.Protocol.Internal.Types.MarkupKind
 import qualified Language.LSP.Protocol.Types.Common
 
 {-|
@@ -35,11 +33,11 @@ data CompletionClientCapabilities = CompletionClientCapabilities
   The client supports the following `CompletionItem` specific
   capabilities.
   -}
-  _completionItem :: (Maybe (Row.Rec ("snippetSupport" Row..== (Maybe Bool) Row..+ ("commitCharactersSupport" Row..== (Maybe Bool) Row..+ ("documentationFormat" Row..== (Maybe [Language.LSP.Protocol.Internal.Types.MarkupKind.MarkupKind]) Row..+ ("deprecatedSupport" Row..== (Maybe Bool) Row..+ ("preselectSupport" Row..== (Maybe Bool) Row..+ ("tagSupport" Row..== (Maybe (Row.Rec ("valueSet" Row..== [Language.LSP.Protocol.Internal.Types.CompletionItemTag.CompletionItemTag] Row..+ Row.Empty))) Row..+ ("insertReplaceSupport" Row..== (Maybe Bool) Row..+ ("resolveSupport" Row..== (Maybe (Row.Rec ("properties" Row..== [Data.Text.Text] Row..+ Row.Empty))) Row..+ ("insertTextModeSupport" Row..== (Maybe (Row.Rec ("valueSet" Row..== [Language.LSP.Protocol.Internal.Types.InsertTextMode.InsertTextMode] Row..+ Row.Empty))) Row..+ ("labelDetailsSupport" Row..== (Maybe Bool) Row..+ Row.Empty))))))))))))
+  _completionItem :: (Maybe Language.LSP.Protocol.Internal.Types.ClientCompletionItemOptions.ClientCompletionItemOptions)
   , {-|
 
   -}
-  _completionItemKind :: (Maybe (Row.Rec ("valueSet" Row..== (Maybe [Language.LSP.Protocol.Internal.Types.CompletionItemKind.CompletionItemKind]) Row..+ Row.Empty)))
+  _completionItemKind :: (Maybe Language.LSP.Protocol.Internal.Types.ClientCompletionItemOptionsKind.ClientCompletionItemOptionsKind)
   , {-|
   Defines how the client handles whitespace and indentation
   when accepting a completion item that uses multi line
@@ -59,7 +57,7 @@ data CompletionClientCapabilities = CompletionClientCapabilities
 
   @since 3.17.0
   -}
-  _completionList :: (Maybe (Row.Rec ("itemDefaults" Row..== (Maybe [Data.Text.Text]) Row..+ Row.Empty)))
+  _completionList :: (Maybe Language.LSP.Protocol.Internal.Types.CompletionListCapabilities.CompletionListCapabilities)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

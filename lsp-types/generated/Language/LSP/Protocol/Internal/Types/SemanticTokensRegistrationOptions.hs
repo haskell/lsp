@@ -18,6 +18,7 @@ import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
 import qualified Data.Text
 import qualified Language.LSP.Protocol.Internal.Types.DocumentSelector
+import qualified Language.LSP.Protocol.Internal.Types.SemanticTokensFullDelta
 import qualified Language.LSP.Protocol.Internal.Types.SemanticTokensLegend
 import qualified Language.LSP.Protocol.Types.Common
 
@@ -46,7 +47,7 @@ data SemanticTokensRegistrationOptions = SemanticTokensRegistrationOptions
   , {-|
   Server supports providing semantic tokens for a full document.
   -}
-  _full :: (Maybe (Bool Language.LSP.Protocol.Types.Common.|? (Row.Rec ("delta" Row..== (Maybe Bool) Row..+ Row.Empty))))
+  _full :: (Maybe (Bool Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.SemanticTokensFullDelta.SemanticTokensFullDelta))
   , {-|
   The id used to register the request. The id can be used to deregister
   the request again. See also Registration#id.

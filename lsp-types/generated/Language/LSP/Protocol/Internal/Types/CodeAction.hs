@@ -14,10 +14,10 @@ import Language.LSP.Protocol.Utils.Misc
 import Prettyprinter
 import qualified Data.Aeson
 import qualified Data.Aeson as Aeson
-import qualified Data.Row as Row
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
 import qualified Data.Text
+import qualified Language.LSP.Protocol.Internal.Types.CodeActionDisabled
 import qualified Language.LSP.Protocol.Internal.Types.CodeActionKind
 import qualified Language.LSP.Protocol.Internal.Types.Command
 import qualified Language.LSP.Protocol.Internal.Types.Diagnostic
@@ -72,7 +72,7 @@ data CodeAction = CodeAction
 
   @since 3.16.0
   -}
-  _disabled :: (Maybe (Row.Rec ("reason" Row..== Data.Text.Text Row..+ Row.Empty)))
+  _disabled :: (Maybe Language.LSP.Protocol.Internal.Types.CodeActionDisabled.CodeActionDisabled)
   , {-|
   The workspace edit this code action performs.
   -}

@@ -13,12 +13,11 @@ import GHC.Generics
 import Language.LSP.Protocol.Utils.Misc
 import Prettyprinter
 import qualified Data.Aeson as Aeson
-import qualified Data.Row as Row
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
-import qualified Data.Text
-import qualified Language.LSP.Protocol.Internal.Types.SymbolKind
-import qualified Language.LSP.Protocol.Internal.Types.SymbolTag
+import qualified Language.LSP.Protocol.Internal.Types.ClientSymbolKindOptions
+import qualified Language.LSP.Protocol.Internal.Types.ClientSymbolResolveOptions
+import qualified Language.LSP.Protocol.Internal.Types.ClientSymbolTagOptions
 import qualified Language.LSP.Protocol.Types.Common
 
 {-|
@@ -32,14 +31,14 @@ data WorkspaceSymbolClientCapabilities = WorkspaceSymbolClientCapabilities
   , {-|
   Specific capabilities for the `SymbolKind` in the `workspace/symbol` request.
   -}
-  _symbolKind :: (Maybe (Row.Rec ("valueSet" Row..== (Maybe [Language.LSP.Protocol.Internal.Types.SymbolKind.SymbolKind]) Row..+ Row.Empty)))
+  _symbolKind :: (Maybe Language.LSP.Protocol.Internal.Types.ClientSymbolKindOptions.ClientSymbolKindOptions)
   , {-|
   The client supports tags on `SymbolInformation`.
   Clients supporting tags have to handle unknown tags gracefully.
 
   @since 3.16.0
   -}
-  _tagSupport :: (Maybe (Row.Rec ("valueSet" Row..== [Language.LSP.Protocol.Internal.Types.SymbolTag.SymbolTag] Row..+ Row.Empty)))
+  _tagSupport :: (Maybe Language.LSP.Protocol.Internal.Types.ClientSymbolTagOptions.ClientSymbolTagOptions)
   , {-|
   The client support partial workspace symbols. The client will send the
   request `workspaceSymbol/resolve` to the server to resolve additional
@@ -47,7 +46,7 @@ data WorkspaceSymbolClientCapabilities = WorkspaceSymbolClientCapabilities
 
   @since 3.17.0
   -}
-  _resolveSupport :: (Maybe (Row.Rec ("properties" Row..== [Data.Text.Text] Row..+ Row.Empty)))
+  _resolveSupport :: (Maybe Language.LSP.Protocol.Internal.Types.ClientSymbolResolveOptions.ClientSymbolResolveOptions)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

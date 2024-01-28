@@ -49,7 +49,6 @@ import Data.Map.Strict qualified as Map
 import Data.Maybe
 import Data.Monoid (Ap (..))
 import Data.Ord (Down (Down))
-import Data.Row
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.UUID qualified as UUID
@@ -280,7 +279,7 @@ data Options = Options
   , optExecuteCommandCommands :: Maybe [Text]
   -- ^ The commands to be executed on the server.
   -- If you set `executeCommandHandler`, you **must** set this.
-  , optServerInfo :: Maybe (Rec ("name" .== Text .+ "version" .== Maybe Text))
+  , optServerInfo :: Maybe ServerInfo
   -- ^ Information about the server that can be advertised to the client.
   , optSupportClientInitiatedProgress :: Bool
   -- ^ Whether or not to support client-initiated progress.

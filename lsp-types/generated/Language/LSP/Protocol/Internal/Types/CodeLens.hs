@@ -38,7 +38,7 @@ data CodeLens = CodeLens
   _command :: (Maybe Language.LSP.Protocol.Internal.Types.Command.Command)
   , {-|
   A data entry field that is preserved on a code lens item between
-  a `CodeLensRequest` and a `CodeLensResolveRequest`
+  a `CodeLensRequest`
   -}
   _data_ :: (Maybe Data.Aeson.Value)
   }

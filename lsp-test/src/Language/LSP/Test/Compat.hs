@@ -1,5 +1,6 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE OverloadedStrings #-}
 -- For some reason ghc warns about not using
@@ -10,8 +11,7 @@
 module Language.LSP.Test.Compat where
 
 import Data.Maybe
-import Data.Row
-import Data.Text qualified as T
+import Language.LSP.Protocol.Types qualified as L
 import System.IO
 
 #if MIN_VERSION_process(1,6,3)
@@ -118,5 +118,5 @@ withCreateProcess c action =
 
 #endif
 
-lspTestClientInfo :: Rec ("name" .== T.Text .+ "version" .== Maybe T.Text)
-lspTestClientInfo = #name .== "lsp-test" .+ #version .== (Just CURRENT_PACKAGE_VERSION)
+lspTestClientInfo :: L.ClientInfo
+lspTestClientInfo = L.ClientInfo{L._name = "lsp-test", L._version = Just CURRENT_PACKAGE_VERSION}

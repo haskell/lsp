@@ -13,10 +13,11 @@ import GHC.Generics
 import Language.LSP.Protocol.Utils.Misc
 import Prettyprinter
 import qualified Data.Aeson as Aeson
-import qualified Data.Row as Row
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
-import qualified Data.Text
+import qualified Language.LSP.Protocol.Internal.Types.NotebookDocumentFilterNotebookType
+import qualified Language.LSP.Protocol.Internal.Types.NotebookDocumentFilterPattern
+import qualified Language.LSP.Protocol.Internal.Types.NotebookDocumentFilterScheme
 import qualified Language.LSP.Protocol.Types.Common
 
 {-|
@@ -26,7 +27,7 @@ against the notebook's URI (same as with documents)
 
 @since 3.17.0
 -}
-newtype NotebookDocumentFilter = NotebookDocumentFilter ((Row.Rec ("notebookType" Row..== Data.Text.Text Row..+ ("scheme" Row..== (Maybe Data.Text.Text) Row..+ ("pattern" Row..== (Maybe Data.Text.Text) Row..+ Row.Empty)))) Language.LSP.Protocol.Types.Common.|? ((Row.Rec ("notebookType" Row..== (Maybe Data.Text.Text) Row..+ ("scheme" Row..== Data.Text.Text Row..+ ("pattern" Row..== (Maybe Data.Text.Text) Row..+ Row.Empty)))) Language.LSP.Protocol.Types.Common.|? (Row.Rec ("notebookType" Row..== (Maybe Data.Text.Text) Row..+ ("scheme" Row..== (Maybe Data.Text.Text) Row..+ ("pattern" Row..== Data.Text.Text Row..+ Row.Empty))))))
+newtype NotebookDocumentFilter = NotebookDocumentFilter (Language.LSP.Protocol.Internal.Types.NotebookDocumentFilterNotebookType.NotebookDocumentFilterNotebookType Language.LSP.Protocol.Types.Common.|? (Language.LSP.Protocol.Internal.Types.NotebookDocumentFilterScheme.NotebookDocumentFilterScheme Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.NotebookDocumentFilterPattern.NotebookDocumentFilterPattern))
   deriving newtype (Aeson.ToJSON, Aeson.FromJSON)
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

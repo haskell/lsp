@@ -13,10 +13,10 @@ import GHC.Generics
 import Language.LSP.Protocol.Utils.Misc
 import Prettyprinter
 import qualified Data.Aeson as Aeson
-import qualified Data.Row as Row
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
 import qualified Data.Text
+import qualified Language.LSP.Protocol.Internal.Types.ServerCompletionItemOptions
 import qualified Language.LSP.Protocol.Types.Common
 
 {-|
@@ -60,7 +60,7 @@ data CompletionOptions = CompletionOptions
 
   @since 3.17.0
   -}
-  _completionItem :: (Maybe (Row.Rec ("labelDetailsSupport" Row..== (Maybe Bool) Row..+ Row.Empty)))
+  _completionItem :: (Maybe Language.LSP.Protocol.Internal.Types.ServerCompletionItemOptions.ServerCompletionItemOptions)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

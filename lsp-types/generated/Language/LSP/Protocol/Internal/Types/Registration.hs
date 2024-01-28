@@ -20,7 +20,7 @@ import qualified Data.Text
 import qualified Language.LSP.Protocol.Types.Common
 
 {-|
-General parameters to to register for an notification or to register a provider.
+General parameters to register for a notification or to register a provider.
 -}
 data Registration = Registration 
   { {-|

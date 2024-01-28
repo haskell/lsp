@@ -13,10 +13,10 @@ import GHC.Generics
 import Language.LSP.Protocol.Utils.Misc
 import Prettyprinter
 import qualified Data.Aeson as Aeson
-import qualified Data.Row as Row
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
 import qualified Data.Text
+import qualified Language.LSP.Protocol.Internal.Types.ClientSemanticTokensRequestOptions
 import qualified Language.LSP.Protocol.Internal.Types.TokenFormat
 import qualified Language.LSP.Protocol.Types.Common
 
@@ -40,7 +40,7 @@ data SemanticTokensClientCapabilities = SemanticTokensClientCapabilities
   range provider the client might not render a minimap correctly or might
   even decide to not show any semantic tokens at all.
   -}
-  _requests :: (Row.Rec ("range" Row..== (Maybe (Bool Language.LSP.Protocol.Types.Common.|? (Row.Rec Row.Empty))) Row..+ ("full" Row..== (Maybe (Bool Language.LSP.Protocol.Types.Common.|? (Row.Rec ("delta" Row..== (Maybe Bool) Row..+ Row.Empty)))) Row..+ Row.Empty)))
+  _requests :: Language.LSP.Protocol.Internal.Types.ClientSemanticTokensRequestOptions.ClientSemanticTokensRequestOptions
   , {-|
   The token types that the client supports.
   -}

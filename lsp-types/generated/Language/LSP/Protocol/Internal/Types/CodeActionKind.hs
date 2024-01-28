@@ -91,6 +91,13 @@ data CodeActionKind =
   @since 3.15.0
   -}
   CodeActionKind_SourceFixAll
+  | {-|
+  Base kind for all code actions applying to the entire notebook's scope. CodeActionKinds using
+  this should always begin with `notebook.`
+
+  @since 3.18.0
+  -}
+  CodeActionKind_Notebook
   | CodeActionKind_Custom Data.Text.Text
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
@@ -108,7 +115,8 @@ instance Language.LSP.Protocol.Types.LspEnum.LspEnum CodeActionKind where
     ,CodeActionKind_RefactorRewrite
     ,CodeActionKind_Source
     ,CodeActionKind_SourceOrganizeImports
-    ,CodeActionKind_SourceFixAll]
+    ,CodeActionKind_SourceFixAll
+    ,CodeActionKind_Notebook]
   type EnumBaseType CodeActionKind = Data.Text.Text
   toEnumBaseType CodeActionKind_Empty = ""
   toEnumBaseType CodeActionKind_QuickFix = "quickfix"
@@ -119,6 +127,7 @@ instance Language.LSP.Protocol.Types.LspEnum.LspEnum CodeActionKind where
   toEnumBaseType CodeActionKind_Source = "source"
   toEnumBaseType CodeActionKind_SourceOrganizeImports = "source.organizeImports"
   toEnumBaseType CodeActionKind_SourceFixAll = "source.fixAll"
+  toEnumBaseType CodeActionKind_Notebook = "notebook"
   toEnumBaseType (CodeActionKind_Custom arg) = arg
 
 instance Language.LSP.Protocol.Types.LspEnum.LspOpenEnum CodeActionKind where
@@ -131,6 +140,7 @@ instance Language.LSP.Protocol.Types.LspEnum.LspOpenEnum CodeActionKind where
   fromOpenEnumBaseType "source" = CodeActionKind_Source
   fromOpenEnumBaseType "source.organizeImports" = CodeActionKind_SourceOrganizeImports
   fromOpenEnumBaseType "source.fixAll" = CodeActionKind_SourceFixAll
+  fromOpenEnumBaseType "notebook" = CodeActionKind_Notebook
   fromOpenEnumBaseType arg = CodeActionKind_Custom arg
 
 

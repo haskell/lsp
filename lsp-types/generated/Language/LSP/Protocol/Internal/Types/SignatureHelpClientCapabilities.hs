@@ -13,10 +13,9 @@ import GHC.Generics
 import Language.LSP.Protocol.Utils.Misc
 import Prettyprinter
 import qualified Data.Aeson as Aeson
-import qualified Data.Row as Row
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
-import qualified Language.LSP.Protocol.Internal.Types.MarkupKind
+import qualified Language.LSP.Protocol.Internal.Types.ClientSignatureInformationOptions
 import qualified Language.LSP.Protocol.Types.Common
 
 {-|
@@ -31,7 +30,7 @@ data SignatureHelpClientCapabilities = SignatureHelpClientCapabilities
   The client supports the following `SignatureInformation`
   specific properties.
   -}
-  _signatureInformation :: (Maybe (Row.Rec ("documentationFormat" Row..== (Maybe [Language.LSP.Protocol.Internal.Types.MarkupKind.MarkupKind]) Row..+ ("parameterInformation" Row..== (Maybe (Row.Rec ("labelOffsetSupport" Row..== (Maybe Bool) Row..+ Row.Empty))) Row..+ ("activeParameterSupport" Row..== (Maybe Bool) Row..+ Row.Empty)))))
+  _signatureInformation :: (Maybe Language.LSP.Protocol.Internal.Types.ClientSignatureInformationOptions.ClientSignatureInformationOptions)
   , {-|
   The client supports to send additional context information for a
   `textDocument/signatureHelp` request. A client that opts into

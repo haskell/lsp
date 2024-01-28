@@ -13,11 +13,10 @@ import GHC.Generics
 import Language.LSP.Protocol.Utils.Misc
 import Prettyprinter
 import qualified Data.Aeson as Aeson
-import qualified Data.Row as Row
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
-import qualified Data.Text
 import qualified Language.LSP.Protocol.Internal.Types.ServerCapabilities
+import qualified Language.LSP.Protocol.Internal.Types.ServerInfo
 import qualified Language.LSP.Protocol.Types.Common
 
 {-|
@@ -33,7 +32,7 @@ data InitializeResult = InitializeResult
 
   @since 3.15.0
   -}
-  _serverInfo :: (Maybe (Row.Rec ("name" Row..== Data.Text.Text Row..+ ("version" Row..== (Maybe Data.Text.Text) Row..+ Row.Empty))))
+  _serverInfo :: (Maybe Language.LSP.Protocol.Internal.Types.ServerInfo.ServerInfo)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

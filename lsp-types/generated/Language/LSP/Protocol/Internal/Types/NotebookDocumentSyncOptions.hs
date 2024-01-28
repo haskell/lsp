@@ -13,11 +13,10 @@ import GHC.Generics
 import Language.LSP.Protocol.Utils.Misc
 import Prettyprinter
 import qualified Data.Aeson as Aeson
-import qualified Data.Row as Row
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
-import qualified Data.Text
-import qualified Language.LSP.Protocol.Internal.Types.NotebookDocumentFilter
+import qualified Language.LSP.Protocol.Internal.Types.NotebookDocumentFilterWithCells
+import qualified Language.LSP.Protocol.Internal.Types.NotebookDocumentFilterWithNotebook
 import qualified Language.LSP.Protocol.Types.Common
 
 {-|
@@ -39,7 +38,7 @@ data NotebookDocumentSyncOptions = NotebookDocumentSyncOptions
   { {-|
   The notebooks to be synced
   -}
-  _notebookSelector :: [((Row.Rec ("notebook" Row..== (Data.Text.Text Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.NotebookDocumentFilter.NotebookDocumentFilter) Row..+ ("cells" Row..== (Maybe [(Row.Rec ("language" Row..== Data.Text.Text Row..+ Row.Empty))]) Row..+ Row.Empty))) Language.LSP.Protocol.Types.Common.|? (Row.Rec ("notebook" Row..== (Maybe (Data.Text.Text Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.NotebookDocumentFilter.NotebookDocumentFilter)) Row..+ ("cells" Row..== [(Row.Rec ("language" Row..== Data.Text.Text Row..+ Row.Empty))] Row..+ Row.Empty))))]
+  _notebookSelector :: [(Language.LSP.Protocol.Internal.Types.NotebookDocumentFilterWithNotebook.NotebookDocumentFilterWithNotebook Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.NotebookDocumentFilterWithCells.NotebookDocumentFilterWithCells)]
   , {-|
   Whether save notification should be forwarded to
   the server. Will only be honored if mode === `notebook`.

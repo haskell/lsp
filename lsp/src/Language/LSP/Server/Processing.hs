@@ -50,7 +50,6 @@ import Data.List
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Map.Strict qualified as Map
 import Data.Monoid
-import Data.Row
 import Data.String (fromString)
 import Data.Text qualified as T
 import Data.Text.Lazy.Encoding qualified as TL
@@ -388,14 +387,14 @@ inferServerCapabilities _clientCaps o h =
     | supported_b SMethod_TextDocumentSemanticTokensRange = Just $ InL True
     | otherwise = Nothing
   semanticTokenFullProvider
-    | supported_b SMethod_TextDocumentSemanticTokensFull = Just $ InR $ #delta .== supported SMethod_TextDocumentSemanticTokensFullDelta
+    | supported_b SMethod_TextDocumentSemanticTokensFull = Just $ InR $ SemanticTokensFullDelta{_delta = supported SMethod_TextDocumentSemanticTokensFullDelta}
     | otherwise = Nothing
 
   sync = case optTextDocumentSync o of
     Just x -> Just (InL x)
     Nothing -> Nothing
 
-  workspace = #workspaceFolders .== workspaceFolder .+ #fileOperations .== Nothing
+  workspace = WorkspaceOptions{_workspaceFolders = workspaceFolder, _fileOperations = Nothing}
   workspaceFolder =
     supported' SMethod_WorkspaceDidChangeWorkspaceFolders $
       -- sign up to receive notifications
