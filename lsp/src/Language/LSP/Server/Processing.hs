@@ -421,7 +421,7 @@ handle logger m msg =
     SMethod_WorkspaceDidChangeWorkspaceFolders -> handle' logger (Just updateWorkspaceFolders) m msg
     SMethod_WorkspaceDidChangeConfiguration -> handle' logger (Just $ handleDidChangeConfiguration logger) m msg
     -- See Note [LSP configuration]
-    SMethod_Initialized -> handle' logger (Just $ \_ -> requestConfigUpdate (cmap (fmap LspCore) logger)) m msg
+    SMethod_Initialized -> handle' logger (Just $ \_ -> initialDynamicRegistrations logger >> requestConfigUpdate (cmap (fmap LspCore) logger)) m msg
     SMethod_TextDocumentDidOpen -> handle' logger (Just $ vfsFunc logger openVFS) m msg
     SMethod_TextDocumentDidChange -> handle' logger (Just $ vfsFunc logger changeFromClientVFS) m msg
     SMethod_TextDocumentDidClose -> handle' logger (Just $ vfsFunc logger closeVFS) m msg
@@ -523,6 +523,19 @@ exitNotificationHandler logger _ = do
 shutdownRequestHandler :: Handler IO Method_Shutdown
 shutdownRequestHandler _req k = do
   k $ Right Null
+
+initialDynamicRegistrations :: (m ~ LspM config) => LogAction m (WithSeverity LspProcessingLog) -> m ()
+initialDynamicRegistrations logger = do
+  section <- LspT $ asks resConfigSection
+  -- We need to register for `workspace/didChangeConfiguration` dynamically in order to
+  -- ensure we receive notifications. See
+  -- https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#workspace_configuration
+  -- https://github.com/microsoft/language-server-protocol/issues/1888
+  void $
+    trySendRegistration
+      (cmap (fmap LspCore) logger)
+      SMethod_WorkspaceDidChangeConfiguration
+      (DidChangeConfigurationRegistrationOptions (Just $ InL section))
 
 {- | Try to find the configuration section in an object that might represent "all" the settings.
  The heuristic we use is to look for a property with the right name, and use that if we find

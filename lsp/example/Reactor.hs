@@ -218,11 +218,16 @@ handle logger =
 
               let regOpts = LSP.CodeLensRegistrationOptions (LSP.InR LSP.Null) Nothing (Just False)
 
-              void $ registerCapability LSP.SMethod_TextDocumentCodeLens regOpts $ \_req responder -> do
-                logger <& "Processing a textDocument/codeLens request" `WithSeverity` Info
-                let cmd = LSP.Command "Say hello" "lsp-hello-command" Nothing
-                    rsp = [LSP.CodeLens (LSP.mkRange 0 0 0 100) (Just cmd) Nothing]
-                responder (Right $ LSP.InL rsp)
+              void
+                $ registerCapability
+                  mempty
+                  LSP.SMethod_TextDocumentCodeLens
+                  regOpts
+                $ \_req responder -> do
+                  logger <& "Processing a textDocument/codeLens request" `WithSeverity` Info
+                  let cmd = LSP.Command "Say hello" "lsp-hello-command" Nothing
+                      rsp = [LSP.CodeLens (LSP.mkRange 0 0 0 100) (Just cmd) Nothing]
+                  responder (Right $ LSP.InL rsp)
     , notificationHandler LSP.SMethod_TextDocumentDidOpen $ \msg -> do
         let doc = msg ^. LSP.params . LSP.textDocument . LSP.uri
             fileName = LSP.uriToFilePath doc

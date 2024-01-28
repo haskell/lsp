@@ -82,7 +82,9 @@ data LspCoreLog
   | ConfigurationNotSupported
   | BadConfigurationResponse ResponseError
   | WrongConfigSections [J.Value]
-  deriving (Show)
+  | forall m. CantRegister (SMethod m)
+
+deriving instance (Show LspCoreLog)
 
 instance Pretty LspCoreLog where
   pretty (NewConfig config) = "LSP: set new config:" <+> prettyJSON config
@@ -96,6 +98,7 @@ instance Pretty LspCoreLog where
       ]
   pretty (BadConfigurationResponse err) = "LSP: error when requesting configuration: " <+> pretty err
   pretty (WrongConfigSections sections) = "LSP: expected only one configuration section, got: " <+> (prettyJSON $ J.toJSON sections)
+  pretty (CantRegister m) = "LSP: can't register dynamically for:" <+> pretty m
 
 newtype LspT config m a = LspT {unLspT :: ReaderT (LanguageContextEnv config) m a}
   deriving (Functor, Applicative, Monad, MonadCatch, MonadIO, MonadMask, MonadThrow, MonadTrans, MonadUnliftIO, MonadFix)
@@ -550,30 +553,27 @@ getWorkspaceFolders = do
 registerCapability ::
   forall f t (m :: Method ClientToServer t) config.
   MonadLsp config f =>
+  LogAction f (WithSeverity LspCoreLog) ->
   SClientMethod m ->
   RegistrationOptions m ->
   Handler f m ->
   f (Maybe (RegistrationToken m))
-registerCapability method regOpts f = do
-  clientCaps <- resClientCapabilities <$> getLspEnv
+registerCapability logger method regOpts f = do
   handlers <- resHandlers <$> getLspEnv
   let alreadyStaticallyRegistered = case splitClientMethod method of
         IsClientNot -> SMethodMap.member method $ notHandlers handlers
         IsClientReq -> SMethodMap.member method $ reqHandlers handlers
         IsClientEither -> error "Cannot register capability for custom methods"
-  go clientCaps alreadyStaticallyRegistered
+  go alreadyStaticallyRegistered
  where
   -- If the server has already registered statically, don't dynamically register
   -- as per the spec
-  go _clientCaps True = pure Nothing
-  go clientCaps False
-    -- First, check to see if the client supports dynamic registration on this method
-    | dynamicRegistrationSupported method clientCaps = do
-        uuid <- liftIO $ UUID.toText <$> getStdRandom random
-        let registration = L.TRegistration uuid method (Just regOpts)
-            params = L.RegistrationParams [toUntypedRegistration registration]
-            regId = RegistrationId uuid
-        rio <- askUnliftIO
+  go True = pure Nothing
+  go False = do
+    rio <- askUnliftIO
+    mtoken <- trySendRegistration logger method regOpts
+    case mtoken of
+      Just token@(RegistrationToken _ regId) -> do
         ~() <- case splitClientMethod method of
           IsClientNot -> modifyState resRegistrationsNot $ \oldRegs ->
             let pair = Pair regId (ClientMessageHandler (unliftIO rio . f))
@@ -583,11 +583,33 @@ registerCapability method regOpts f = do
              in SMethodMap.insert method pair oldRegs
           IsClientEither -> error "Cannot register capability for custom methods"
 
-        -- TODO: handle the scenario where this returns an error
-        _ <- sendRequest SMethod_ClientRegisterCapability params $ \_res -> pure ()
+        pure $ Just token
+      Nothing -> pure Nothing
 
-        pure (Just (RegistrationToken method regId))
-    | otherwise = pure Nothing
+trySendRegistration ::
+  forall f t (m :: Method ClientToServer t) config.
+  MonadLsp config f =>
+  LogAction f (WithSeverity LspCoreLog) ->
+  SClientMethod m ->
+  RegistrationOptions m ->
+  f (Maybe (RegistrationToken m))
+trySendRegistration logger method regOpts = do
+  clientCaps <- resClientCapabilities <$> getLspEnv
+  -- First, check to see if the client supports dynamic registration on this method
+  if dynamicRegistrationSupported method clientCaps
+    then do
+      uuid <- liftIO $ UUID.toText <$> getStdRandom random
+      let registration = L.TRegistration uuid method (Just regOpts)
+          params = L.RegistrationParams [toUntypedRegistration registration]
+          regId = RegistrationId uuid
+
+      -- TODO: handle the scenario where this returns an error
+      _ <- sendRequest SMethod_ClientRegisterCapability params $ \_res -> pure ()
+
+      pure (Just $ RegistrationToken method regId)
+    else do
+      logger <& (CantRegister SMethod_WorkspaceDidChangeConfiguration) `WithSeverity` Warning
+      pure Nothing
 
 {- | Sends a @client/unregisterCapability@ request and removes the handler
  for that associated registration.
