@@ -124,8 +124,8 @@ data SessionConfig = SessionConfig
   -- ^ Whether or not to ignore @workspace/configuration@ requests from the server,
   -- defaults to True.
   , ignoreRegistrationRequests :: Bool
-  -- ^ Whether or not to ignore @workspace/registerCapability@ requests from the server,
-  -- defaults to True.
+  -- ^ Whether or not to ignore @client/registerCapability@ and @client/unregisterCapability@ 
+  -- requests from the server, defaults to True.
   , initialWorkspaceFolders :: Maybe [WorkspaceFolder]
   -- ^ The initial workspace folders to send in the @initialize@ request.
   -- Defaults to Nothing.
