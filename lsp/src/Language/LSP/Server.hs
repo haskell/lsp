@@ -1,4 +1,5 @@
 {-# LANGUAGE ExplicitNamespaces #-}
+
 module Language.LSP.Server (
   module Language.LSP.Server.Control,
   VFSData (..),
