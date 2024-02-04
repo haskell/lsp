@@ -1,7 +1,4 @@
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeInType #-}
 
 module Language.LSP.Protocol.Message.Parsing where

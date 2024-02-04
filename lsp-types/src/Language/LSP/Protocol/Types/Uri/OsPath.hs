@@ -1,7 +1,6 @@
 {- ORMOLU_DISABLE -}
 
 {-# LANGUAGE CPP                 #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 
 #if MIN_VERSION_filepath(1,4,100)
 #define OS_PATH 1

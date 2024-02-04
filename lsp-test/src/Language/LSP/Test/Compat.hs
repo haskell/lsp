@@ -2,7 +2,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeOperators #-}
 -- For some reason ghc warns about not using
 -- Control.Monad.IO.Class but it's needed for
 -- MonadIO
