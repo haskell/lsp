@@ -1,6 +1,6 @@
 # Revision history for lsp-types
 
-## Unreleased
+## 2.1.1.0 -- 2024-02-24
 
 - Require aeson 2
 - Accept `null` in place of a missing field, a common mistake in spec compliance.

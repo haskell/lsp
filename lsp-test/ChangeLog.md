@@ -1,6 +1,6 @@
 # Revision history for lsp-test
 
-## Unreleased
+## 0.17.0.0
 
 - `ignoreRegistrationRequests` option to ignore `client/registerCapability` requests, on
   by default.
