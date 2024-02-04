@@ -123,7 +123,7 @@ handlers =
                               (Just WatchKind_Create)
                           ]
                   Just token <- runInIO $
-                    registerCapability SMethod_WorkspaceDidChangeWatchedFiles regOpts $
+                    registerCapability mempty SMethod_WorkspaceDidChangeWatchedFiles regOpts $
                       \_noti ->
                         sendNotification SMethod_WindowLogMessage $
                           LogMessageParams MessageType_Log "got workspace/didChangeWatchedFiles"
@@ -138,7 +138,7 @@ handlers =
                               (Just WatchKind_Create)
                           ]
                   Just token <- runInIO $
-                    registerCapability SMethod_WorkspaceDidChangeWatchedFiles regOpts $
+                    registerCapability mempty SMethod_WorkspaceDidChangeWatchedFiles regOpts $
                       \_noti ->
                         sendNotification SMethod_WindowLogMessage $
                           LogMessageParams MessageType_Log "got workspace/didChangeWatchedFiles"

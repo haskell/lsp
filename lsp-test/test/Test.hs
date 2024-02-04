@@ -12,11 +12,11 @@ import Data.Aeson
 import Data.Aeson qualified as J
 import Data.Default
 import Data.Either
+import Data.List.Extra
 import Data.Map.Strict qualified as M
 import Data.Maybe
 import Data.Proxy
 import Data.Text qualified as T
-import Data.Type.Equality
 import DummyServer
 import Language.LSP.Protocol.Lens qualified as L
 import Language.LSP.Protocol.Message
@@ -368,25 +368,31 @@ main = hspec $ around withDummyServer $ do
         void publishDiagnosticsNotification
 
   describe "dynamic capabilities" $ do
-    it "keeps track" $ \(hin, hout) -> runSessionWithHandles hin hout (def{ignoreLogNotifications = False}) fullCaps "." $ do
+    let config = def{ignoreLogNotifications = False}
+    it "keeps track" $ \(hin, hout) -> runSessionWithHandles hin hout config fullCaps "." $ do
       loggingNotification -- initialized log message
       createDoc ".register" "haskell" ""
+      setIgnoringRegistrationRequests False
       message SMethod_ClientRegisterCapability
 
       doc <- createDoc "Foo.watch" "haskell" ""
       msg <- message SMethod_WindowLogMessage
       liftIO $ msg ^. L.params . L.message `shouldBe` "got workspace/didChangeWatchedFiles"
 
-      [SomeRegistration (TRegistration _ regMethod regOpts)] <- getRegisteredCapabilities
-      liftIO $ do
-        case regMethod `mEqClient` SMethod_WorkspaceDidChangeWatchedFiles of
-          Just (Right HRefl) ->
-            regOpts
-              `shouldBe` ( Just $
-                            DidChangeWatchedFilesRegistrationOptions
-                              [FileSystemWatcher (GlobPattern $ InL $ Pattern "*.watch") (Just WatchKind_Create)]
-                         )
-          _ -> expectationFailure "Registration wasn't on workspace/didChangeWatchedFiles"
+      -- Look for the registration, we might have one for didChangeConfiguration in there too
+      registeredCaps <- getRegisteredCapabilities
+      let
+        regOpts :: Maybe DidChangeWatchedFilesRegistrationOptions
+        regOpts = flip firstJust registeredCaps $ \(SomeRegistration (TRegistration _ regMethod regOpts)) ->
+          case regMethod of
+            SMethod_WorkspaceDidChangeWatchedFiles -> regOpts
+            _ -> Nothing
+      liftIO $
+        regOpts
+          `shouldBe` ( Just $
+                        DidChangeWatchedFilesRegistrationOptions
+                          [FileSystemWatcher (GlobPattern $ InL $ Pattern "*.watch") (Just WatchKind_Create)]
+                     )
 
       -- now unregister it by sending a specific createDoc
       createDoc ".unregister" "haskell" ""
@@ -396,10 +402,11 @@ main = hspec $ around withDummyServer $ do
       void $ sendRequest SMethod_TextDocumentHover $ HoverParams doc (Position 0 0) Nothing
       void $ anyResponse
 
-    it "handles absolute patterns" $ \(hin, hout) -> runSessionWithHandles hin hout (def{ignoreLogNotifications = False}) fullCaps "" $ do
+    it "handles absolute patterns" $ \(hin, hout) -> runSessionWithHandles hin hout config fullCaps "" $ do
       loggingNotification -- initialized log message
       curDir <- liftIO $ getCurrentDirectory
 
+      setIgnoringRegistrationRequests False
       createDoc ".register.abs" "haskell" ""
       message SMethod_ClientRegisterCapability
 

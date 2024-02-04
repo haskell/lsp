@@ -25,6 +25,7 @@ module Language.LSP.Test (
   runSessionWithHandles',
   setIgnoringLogNotifications,
   setIgnoringConfigurationRequests,
+  setIgnoringRegistrationRequests,
 
   -- ** Config
   SessionConfig (..),
@@ -144,8 +145,10 @@ import Control.Monad.IO.Class
 import Control.Monad.State (execState)
 import Data.Aeson hiding (Null)
 import Data.Aeson qualified as J
+import Data.Aeson.KeyMap qualified as J
 import Data.Default
 import Data.List
+import Data.List.Extra (firstJust)
 import Data.Map.Strict qualified as Map
 import Data.Maybe
 import Data.Set qualified as Set
@@ -476,6 +479,10 @@ setIgnoringConfigurationRequests :: Bool -> Session ()
 setIgnoringConfigurationRequests value = do
   modify (\ss -> ss{ignoringConfigurationRequests = value})
 
+setIgnoringRegistrationRequests :: Bool -> Session ()
+setIgnoringRegistrationRequests value = do
+  modify (\ss -> ss{ignoringRegistrationRequests = value})
+
 {- | Modify the client config. This will send a notification to the server that the
  config has changed.
 -}
@@ -485,12 +492,26 @@ modifyConfig f = do
   let newConfig = f oldConfig
   modify (\ss -> ss{curLspConfig = newConfig})
 
-  caps <- asks sessionCapabilities
-  let supportsConfiguration = fromMaybe False $ caps ^? L.workspace . _Just . L.configuration . _Just
-      -- TODO: make this configurable?
-      -- if they support workspace/configuration then be annoying and don't send the full config so
-      -- they have to request it
-      configToSend = if supportsConfiguration then J.Null else Object newConfig
+  -- We're going to be difficult and follow the new direction of the spec as much
+  -- as possible. That means _not_ sending didChangeConfiguration notifications
+  -- unless the server has registered for them
+  registeredCaps <- getRegisteredCapabilities
+  let
+    requestedSections :: Maybe [T.Text]
+    requestedSections = flip firstJust registeredCaps $ \(SomeRegistration (TRegistration _ regMethod regOpts)) ->
+      case regMethod of
+        SMethod_WorkspaceDidChangeConfiguration -> case regOpts of
+          Just (DidChangeConfigurationRegistrationOptions{_section = section}) -> case section of
+            Just (InL s) -> Just [s]
+            Just (InR ss) -> Just ss
+            Nothing -> Nothing
+          _ -> Nothing
+        _ -> Nothing
+    requestedSectionKeys :: Maybe [J.Key]
+    requestedSectionKeys = (fmap . fmap) (fromString . T.unpack) requestedSections
+  let configToSend = case requestedSectionKeys of
+        Just ss -> Object $ J.filterWithKey (\k _ -> k `elem` ss) newConfig
+        Nothing -> Object newConfig
   sendNotification SMethod_WorkspaceDidChangeConfiguration $ DidChangeConfigurationParams configToSend
 
 {- | Set the client config. This will send a notification to the server that the

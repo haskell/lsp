@@ -21,7 +21,7 @@ handlers =
           Right (InL (MessageActionItem "Turn on")) -> do
             let regOpts = CodeLensRegistrationOptions (InR Null) Nothing (Just False)
 
-            _ <- registerCapability SMethod_TextDocumentCodeLens regOpts $ \_req responder -> do
+            _ <- registerCapability mempty SMethod_TextDocumentCodeLens regOpts $ \_req responder -> do
               let cmd = Command "Say hello" "lsp-hello-command" Nothing
                   rsp = [CodeLens (mkRange 0 0 0 100) (Just cmd) Nothing]
               responder $ Right $ InL rsp

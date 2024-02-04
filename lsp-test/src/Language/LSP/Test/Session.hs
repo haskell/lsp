@@ -123,6 +123,9 @@ data SessionConfig = SessionConfig
   , ignoreConfigurationRequests :: Bool
   -- ^ Whether or not to ignore @workspace/configuration@ requests from the server,
   -- defaults to True.
+  , ignoreRegistrationRequests :: Bool
+  -- ^ Whether or not to ignore @client/registerCapability@ and @client/unregisterCapability@ 
+  -- requests from the server, defaults to True.
   , initialWorkspaceFolders :: Maybe [WorkspaceFolder]
   -- ^ The initial workspace folders to send in the @initialize@ request.
   -- Defaults to Nothing.
@@ -130,7 +133,7 @@ data SessionConfig = SessionConfig
 
 -- | The configuration used in 'Language.LSP.Test.runSession'.
 defaultConfig :: SessionConfig
-defaultConfig = SessionConfig 60 False False True mempty True True Nothing
+defaultConfig = SessionConfig 60 False False True mempty True True True Nothing
 
 instance Default SessionConfig where
   def = defaultConfig
@@ -190,6 +193,7 @@ data SessionState = SessionState
   , curProgressSessions :: !(Set.Set ProgressToken)
   , ignoringLogNotifications :: Bool
   , ignoringConfigurationRequests :: Bool
+  , ignoringRegistrationRequests :: Bool
   }
 
 class Monad m => HasState s m where
@@ -274,8 +278,27 @@ runSession' serverIn serverOut mServerProc serverHandler config caps rootDir exi
 
   mainThreadId <- myThreadId
 
-  let context = SessionContext serverIn absRootDir messageChan timeoutIdVar reqMap initRsp config caps
-      initState = SessionState 0 emptyVFS mempty False Nothing mempty (lspConfig config) mempty (ignoreLogNotifications config) (ignoreConfigurationRequests config)
+  let context = SessionContext
+        serverIn
+        absRootDir
+        messageChan
+        timeoutIdVar
+        reqMap
+        initRsp
+        config
+        caps
+      initState = SessionState
+        0
+        emptyVFS
+        mempty
+        False
+        Nothing
+        mempty
+        (lspConfig config)
+        mempty
+        (ignoreLogNotifications config)
+        (ignoreConfigurationRequests config)
+        (ignoreRegistrationRequests config)
       runSession' = runSessionMonad context initState
 
       errorHandler = throwTo mainThreadId :: SessionException -> IO ()
@@ -328,7 +351,10 @@ updateStateC = awaitForever $ \msg -> do
         then (Right configs)
         else Left $ ResponseError (InL LSPErrorCodes_RequestFailed) ("No configuration for requested sections: " <> (T.pack $ show errs)) Nothing
     _ -> pure ()
-  unless ((ignoringLogNotifications state && isLogNotification msg) || (ignoringConfigurationRequests state && isConfigRequest msg)) $
+  unless (
+    (ignoringLogNotifications state && isLogNotification msg)
+    || (ignoringConfigurationRequests state && isConfigRequest msg)
+    || (ignoringRegistrationRequests state && isRegistrationRequest msg)) $
     yield msg
 
   where
@@ -340,6 +366,10 @@ updateStateC = awaitForever $ \msg -> do
 
     isConfigRequest (FromServerMess SMethod_WorkspaceConfiguration _) = True
     isConfigRequest _ = False
+
+    isRegistrationRequest (FromServerMess SMethod_ClientRegisterCapability _) = True
+    isRegistrationRequest (FromServerMess SMethod_ClientUnregisterCapability _) = True
+    isRegistrationRequest _ = False
 
 -- extract Uri out from DocumentChange
 -- didn't put this in `lsp-types` because TH was getting in the way

@@ -8,6 +8,8 @@
   so client-initiated progress can now be supported properly.
 - The server options now allow the user to say whether the server should advertise
   support for client-initiated progress or not.
+- The server now dynamically registers for `workspace/didChangeConfiguration` 
+  notifications, to ensure that newer clients continue to send them.
 
 ## 2.3.0.0
 

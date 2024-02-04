@@ -1,5 +1,14 @@
 # Revision history for lsp-test
 
+## Unreleased
+
+- `ignoreRegistrationRequests` option to ignore `client/registerCapability` requests, on
+  by default.
+- New functions `setIgnoringRegistrationRequests` to change whether such messages are 
+  ignored during a `Session` without having to change the `SessionConfig`.
+- `lsp-test` will no longer send `workspace/didChangConfiguration` notifications unless
+  the server dynamically registers for them.
+
 ## 0.16.0.1
 
 - Support newer versions of dependencies.
