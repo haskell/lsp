@@ -278,4 +278,3 @@ vspSpec = do
       codePointPositionToPosition vfile (CodePointPosition 2 1) `shouldBe` Nothing
       -- Greater line than max line
       codePointPositionToPosition vfile (CodePointPosition 3 0) `shouldBe` Nothing
-
