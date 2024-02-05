@@ -10,6 +10,9 @@
   support for client-initiated progress or not.
 - The server now dynamically registers for `workspace/didChangeConfiguration` 
   notifications, to ensure that newer clients continue to send them.
+- Removed `getCompletionPrefix` from the `VFS` module. This is specific to completing
+  Haskell identifiers and doesn't belong here. It has already been moved to `ghcide`
+  some time ago.
 
 ## 2.3.0.0
 

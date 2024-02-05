@@ -50,8 +50,6 @@ module Language.LSP.VFS (
 
   -- * manipulating the file contents
   rangeLinesFromVfs,
-  PosPrefixInfo (..),
-  getCompletionPrefix,
 
   -- * for tests
   applyChanges,
@@ -63,19 +61,16 @@ import Colog.Core (LogAction (..), Severity (..), WithSeverity (..), (<&))
 import Control.Lens hiding (parts, (<.>))
 import Control.Monad
 import Control.Monad.State
-import Data.Char (isAlphaNum, isUpper)
 import Data.Foldable (traverse_)
 import Data.Hashable
 import Data.Int (Int32)
 import Data.List
 import Data.Map.Strict qualified as Map
-import Data.Maybe
 import Data.Ord
 import Data.Row
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.IO qualified as T
-import Data.Text.Lines as Char (Position (..))
 import Data.Text.Prettyprint.Doc hiding (line)
 import Data.Text.Utf16.Lines as Utf16 (Position (..))
 import Data.Text.Utf16.Rope.Mixed (Rope)
@@ -471,64 +466,9 @@ rangeToCodePointRange :: VirtualFile -> J.Range -> Maybe CodePointRange
 rangeToCodePointRange vFile (J.Range b e) =
   CodePointRange <$> positionToCodePointPosition vFile b <*> positionToCodePointPosition vFile e
 
--- ---------------------------------------------------------------------
-
--- TODO:AZ:move this to somewhere sane
-
--- | Describes the line at the current cursor position
-data PosPrefixInfo = PosPrefixInfo
-  { fullLine :: !T.Text
-  -- ^ The full contents of the line the cursor is at
-  , prefixModule :: !T.Text
-  -- ^ If any, the module name that was typed right before the cursor position.
-  --  For example, if the user has typed "Data.Maybe.from", then this property
-  --  will be "Data.Maybe"
-  , prefixText :: !T.Text
-  -- ^ The word right before the cursor position, after removing the module part.
-  -- For example if the user has typed "Data.Maybe.from",
-  -- then this property will be "from"
-  , cursorPos :: !J.Position
-  -- ^ The cursor position
-  }
-  deriving (Show, Eq)
-
-getCompletionPrefix :: (Monad m) => J.Position -> VirtualFile -> m (Maybe PosPrefixInfo)
-getCompletionPrefix pos@(J.Position l c) (VirtualFile _ _ ropetext) =
-  return $ Just $ fromMaybe (PosPrefixInfo "" "" "" pos) $ do
-    -- Maybe monad
-    let lastMaybe [] = Nothing
-        lastMaybe xs = Just $ last xs
-
-    let curRope = fst $ Rope.splitAtLine 1 $ snd $ Rope.splitAtLine (fromIntegral l) ropetext
-    beforePos <- Rope.toText . fst <$> Rope.utf16SplitAt (fromIntegral c) curRope
-    curWord <-
-      if
-        | T.null beforePos -> Just ""
-        | T.last beforePos == ' ' -> Just "" -- don't count abc as the curword in 'abc '
-        | otherwise -> lastMaybe (T.words beforePos)
-
-    let parts =
-          T.split (== '.') $
-            T.takeWhileEnd (\x -> isAlphaNum x || x `elem` ("._'" :: String)) curWord
-    case reverse parts of
-      [] -> Nothing
-      (x : xs) -> do
-        let modParts =
-              dropWhile (not . isUpper . T.head) $
-                reverse $
-                  filter (not . T.null) xs
-            modName = T.intercalate "." modParts
-        -- curRope is already a single line, but it may include an enclosing '\n'
-        let curLine = T.dropWhileEnd (== '\n') $ Rope.toText curRope
-        return $ PosPrefixInfo curLine modName x pos
-
--- ---------------------------------------------------------------------
-
 rangeLinesFromVfs :: VirtualFile -> J.Range -> T.Text
 rangeLinesFromVfs (VirtualFile _ _ ropetext) (J.Range (J.Position lf _cf) (J.Position lt _ct)) = r
  where
   (_, s1) = Rope.splitAtLine (fromIntegral lf) ropetext
   (s2, _) = Rope.splitAtLine (fromIntegral (lt - lf)) s1
   r = Rope.toText s2
-
--- ---------------------------------------------------------------------

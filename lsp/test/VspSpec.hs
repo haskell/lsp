@@ -278,27 +278,3 @@ vspSpec = do
       codePointPositionToPosition vfile (CodePointPosition 2 1) `shouldBe` Nothing
       -- Greater line than max line
       codePointPositionToPosition vfile (CodePointPosition 3 0) `shouldBe` Nothing
-
-    -- ---------------------------------
-
-    it "getCompletionPrefix" $ do
-      let
-        orig =
-          T.unlines
-            [ "{-# ings #-}"
-            , "import Data.List"
-            ]
-      pp4 <- getCompletionPrefix (J.Position 0 4) (vfsFromText orig)
-      pp4 `shouldBe` Just (PosPrefixInfo "{-# ings #-}" "" "" (J.Position 0 4))
-
-      pp5 <- getCompletionPrefix (J.Position 0 5) (vfsFromText orig)
-      pp5 `shouldBe` Just (PosPrefixInfo "{-# ings #-}" "" "i" (J.Position 0 5))
-
-      pp6 <- getCompletionPrefix (J.Position 0 6) (vfsFromText orig)
-      pp6 `shouldBe` Just (PosPrefixInfo "{-# ings #-}" "" "in" (J.Position 0 6))
-
-      pp14 <- getCompletionPrefix (J.Position 1 14) (vfsFromText orig)
-      pp14 `shouldBe` Just (PosPrefixInfo "import Data.List" "Data" "Li" (J.Position 1 14))
-
-      pp00 <- getCompletionPrefix (J.Position 0 0) (vfsFromText orig)
-      pp00 `shouldBe` Just (PosPrefixInfo "{-# ings #-}" "" "" (J.Position 0 0))
