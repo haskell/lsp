@@ -1,6 +1,6 @@
 # Revision history for lsp
 
-## Unreleased
+## 2.4.0.0
 
 - Server-created progress now will not send reports until and unless the client 
   confirms the progress token creation.
