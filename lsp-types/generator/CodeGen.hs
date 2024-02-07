@@ -11,6 +11,7 @@ See Note [Code generation approach] for why we do it this way.
 -}
 module CodeGen where
 
+import Control.Monad
 import Control.Monad.Reader
 import Control.Monad.Writer
 import Data.Foldable
