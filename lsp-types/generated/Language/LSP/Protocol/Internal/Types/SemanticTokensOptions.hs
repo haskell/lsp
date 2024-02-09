@@ -16,6 +16,7 @@ import qualified Data.Aeson as Aeson
 import qualified Data.Row as Row
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
+import qualified Language.LSP.Protocol.Internal.Types.SemanticTokensFullDelta
 import qualified Language.LSP.Protocol.Internal.Types.SemanticTokensLegend
 import qualified Language.LSP.Protocol.Types.Common
 
@@ -39,7 +40,7 @@ data SemanticTokensOptions = SemanticTokensOptions
   , {-|
   Server supports providing semantic tokens for a full document.
   -}
-  _full :: (Maybe (Bool Language.LSP.Protocol.Types.Common.|? (Row.Rec ("delta" Row..== (Maybe Bool) Row..+ Row.Empty))))
+  _full :: (Maybe (Bool Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.SemanticTokensFullDelta.SemanticTokensFullDelta))
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

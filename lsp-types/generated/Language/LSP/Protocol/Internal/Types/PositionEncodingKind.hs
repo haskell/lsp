@@ -27,7 +27,7 @@ A set of predefined position encoding kinds.
 -}
 data PositionEncodingKind = 
     {-|
-  Character offsets count UTF-8 code units.
+  Character offsets count UTF-8 code units (e.g. bytes).
   -}
   PositionEncodingKind_UTF8
   | {-|
@@ -40,7 +40,7 @@ data PositionEncodingKind =
   | {-|
   Character offsets count UTF-32 code units.
 
-  Implementation note: these are the same as Unicode code points,
+  Implementation note: these are the same as Unicode codepoints,
   so this `PositionEncodingKind` may also be used for an
   encoding-agnostic representation of character offsets.
   -}

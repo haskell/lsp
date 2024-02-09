@@ -67,7 +67,6 @@ import Data.Int (Int32)
 import Data.List
 import Data.Map.Strict qualified as Map
 import Data.Ord
-import Data.Row
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.IO qualified as T
@@ -250,8 +249,8 @@ applyTextDocumentEdit logger (J.TextDocumentEdit vid edits) = do
   editRange (J.InL e) = e ^. J.range
 
   editToChangeEvent :: J.TextEdit J.|? J.AnnotatedTextEdit -> J.TextDocumentContentChangeEvent
-  editToChangeEvent (J.InR e) = J.TextDocumentContentChangeEvent $ J.InL $ #range .== e ^. J.range .+ #rangeLength .== Nothing .+ #text .== e ^. J.newText
-  editToChangeEvent (J.InL e) = J.TextDocumentContentChangeEvent $ J.InL $ #range .== e ^. J.range .+ #rangeLength .== Nothing .+ #text .== e ^. J.newText
+  editToChangeEvent (J.InR e) = J.TextDocumentContentChangeEvent $ J.InL $ J.TextDocumentContentChangePartial{_range = e ^. J.range, _rangeLength = Nothing, _text = e ^. J.newText}
+  editToChangeEvent (J.InL e) = J.TextDocumentContentChangeEvent $ J.InL $ J.TextDocumentContentChangePartial{_range = e ^. J.range, _rangeLength = Nothing, _text = e ^. J.newText}
 
 applyDocumentChange :: (MonadState VFS m) => LogAction m (WithSeverity VfsLog) -> J.DocumentChange -> m ()
 applyDocumentChange logger (J.InL change) = applyTextDocumentEdit logger change
@@ -338,11 +337,11 @@ applyChanges logger = foldM (applyChange logger)
 
 applyChange :: (Monad m) => LogAction m (WithSeverity VfsLog) -> Rope -> J.TextDocumentContentChangeEvent -> m Rope
 applyChange logger str (J.TextDocumentContentChangeEvent (J.InL e))
-  | J.Range (J.Position sl sc) (J.Position fl fc) <- e .! #range
-  , txt <- e .! #text =
+  | J.Range (J.Position sl sc) (J.Position fl fc) <- e ^. J.range
+  , txt <- e ^. J.text =
       changeChars logger str (Utf16.Position (fromIntegral sl) (fromIntegral sc)) (Utf16.Position (fromIntegral fl) (fromIntegral fc)) txt
 applyChange _ _ (J.TextDocumentContentChangeEvent (J.InR e)) =
-  pure $ Rope.fromText $ e .! #text
+  pure $ Rope.fromText $ e ^. J.text
 
 -- ---------------------------------------------------------------------
 

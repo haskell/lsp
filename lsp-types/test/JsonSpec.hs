@@ -1,5 +1,5 @@
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeInType #-}
@@ -17,7 +17,6 @@ import Language.LSP.Protocol.QuickCheck ()
 
 import Data.Aeson qualified as J
 import Data.List (isPrefixOf)
-import Data.Row
 import Test.Hspec
 import Test.Hspec.QuickCheck
 import Test.QuickCheck hiding (Success)
@@ -51,7 +50,7 @@ spec = do
         `shouldBe` Right
           ( CompletionList
               True
-              (Just (#commitCharacters .== Nothing .+ #editRange .== Nothing .+ #insertTextFormat .== Nothing .+ #insertTextMode .== Nothing .+ #data .== Just J.Null))
+              (Just (CompletionItemDefaults{_commitCharacters = Nothing, _editRange = Nothing, _insertTextFormat = Nothing, _insertTextMode = Nothing, _data_ = Just J.Null}))
               mempty
           )
 

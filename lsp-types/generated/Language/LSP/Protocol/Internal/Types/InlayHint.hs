@@ -32,6 +32,9 @@ Inlay hint information.
 data InlayHint = InlayHint 
   { {-|
   The position of this hint.
+
+  If multiple hints have the same position, they will be shown in the order
+  they appear in the response.
   -}
   _position :: Language.LSP.Protocol.Internal.Types.Position.Position
   , {-|

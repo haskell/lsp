@@ -13,13 +13,12 @@ import GHC.Generics
 import Language.LSP.Protocol.Utils.Misc
 import Prettyprinter
 import qualified Data.Aeson as Aeson
-import qualified Data.Row as Row
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
-import qualified Data.Text
 import qualified Language.LSP.Protocol.Internal.Types.MarkdownClientCapabilities
 import qualified Language.LSP.Protocol.Internal.Types.PositionEncodingKind
 import qualified Language.LSP.Protocol.Internal.Types.RegularExpressionsClientCapabilities
+import qualified Language.LSP.Protocol.Internal.Types.StaleRequestSupportOptions
 import qualified Language.LSP.Protocol.Types.Common
 
 {-|
@@ -36,7 +35,7 @@ data GeneralClientCapabilities = GeneralClientCapabilities
 
   @since 3.17.0
   -}
-  _staleRequestSupport :: (Maybe (Row.Rec ("cancel" Row..== Bool Row..+ ("retryOnContentModified" Row..== [Data.Text.Text] Row..+ Row.Empty))))
+  _staleRequestSupport :: (Maybe Language.LSP.Protocol.Internal.Types.StaleRequestSupportOptions.StaleRequestSupportOptions)
   , {-|
   Client capabilities specific to regular expressions.
 

@@ -20,18 +20,18 @@ import qualified Language.LSP.Protocol.Types.Common
 import qualified Language.LSP.Protocol.Types.Uri
 
 {-|
-Params to show a document.
+Params to show a resource in the UI.
 
 @since 3.16.0
 -}
 data ShowDocumentParams = ShowDocumentParams 
   { {-|
-  The document uri to show.
+  The uri to show.
   -}
   _uri :: Language.LSP.Protocol.Types.Uri.Uri
   , {-|
   Indicates to show the resource in an external program.
-  To show for example `https://code.visualstudio.com/`
+  To show, for example, `https://code.visualstudio.com/`
   in the default WEB browser set `external` to `true`.
   -}
   _external :: (Maybe Bool)

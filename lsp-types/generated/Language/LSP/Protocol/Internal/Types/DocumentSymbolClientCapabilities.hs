@@ -13,11 +13,10 @@ import GHC.Generics
 import Language.LSP.Protocol.Utils.Misc
 import Prettyprinter
 import qualified Data.Aeson as Aeson
-import qualified Data.Row as Row
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
-import qualified Language.LSP.Protocol.Internal.Types.SymbolKind
-import qualified Language.LSP.Protocol.Internal.Types.SymbolTag
+import qualified Language.LSP.Protocol.Internal.Types.ClientSymbolKindOptions
+import qualified Language.LSP.Protocol.Internal.Types.ClientSymbolTagOptions
 import qualified Language.LSP.Protocol.Types.Common
 
 {-|
@@ -32,7 +31,7 @@ data DocumentSymbolClientCapabilities = DocumentSymbolClientCapabilities
   Specific capabilities for the `SymbolKind` in the
   `textDocument/documentSymbol` request.
   -}
-  _symbolKind :: (Maybe (Row.Rec ("valueSet" Row..== (Maybe [Language.LSP.Protocol.Internal.Types.SymbolKind.SymbolKind]) Row..+ Row.Empty)))
+  _symbolKind :: (Maybe Language.LSP.Protocol.Internal.Types.ClientSymbolKindOptions.ClientSymbolKindOptions)
   , {-|
   The client supports hierarchical document symbols.
   -}
@@ -44,7 +43,7 @@ data DocumentSymbolClientCapabilities = DocumentSymbolClientCapabilities
 
   @since 3.16.0
   -}
-  _tagSupport :: (Maybe (Row.Rec ("valueSet" Row..== [Language.LSP.Protocol.Internal.Types.SymbolTag.SymbolTag] Row..+ Row.Empty)))
+  _tagSupport :: (Maybe Language.LSP.Protocol.Internal.Types.ClientSymbolTagOptions.ClientSymbolTagOptions)
   , {-|
   The client supports an additional label presented in the UI when
   registering a document symbol provider.

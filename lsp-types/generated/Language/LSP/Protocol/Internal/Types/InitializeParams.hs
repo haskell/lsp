@@ -14,13 +14,13 @@ import Language.LSP.Protocol.Utils.Misc
 import Prettyprinter
 import qualified Data.Aeson
 import qualified Data.Aeson as Aeson
-import qualified Data.Row as Row
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
 import qualified Data.Text
 import qualified Language.LSP.Protocol.Internal.Types.ClientCapabilities
+import qualified Language.LSP.Protocol.Internal.Types.ClientInfo
 import qualified Language.LSP.Protocol.Internal.Types.ProgressToken
-import qualified Language.LSP.Protocol.Internal.Types.TraceValues
+import qualified Language.LSP.Protocol.Internal.Types.TraceValue
 import qualified Language.LSP.Protocol.Internal.Types.WorkspaceFolder
 import qualified Language.LSP.Protocol.Types.Common
 import qualified Language.LSP.Protocol.Types.Uri
@@ -46,7 +46,7 @@ data InitializeParams = InitializeParams
 
   @since 3.15.0
   -}
-  _clientInfo :: (Maybe (Row.Rec ("name" Row..== Data.Text.Text Row..+ ("version" Row..== (Maybe Data.Text.Text) Row..+ Row.Empty))))
+  _clientInfo :: (Maybe Language.LSP.Protocol.Internal.Types.ClientInfo.ClientInfo)
   , {-|
   The locale the client is currently showing the user interface
   in. This must not necessarily be the locale of the operating
@@ -84,7 +84,7 @@ data InitializeParams = InitializeParams
   , {-|
   The initial trace setting. If omitted trace is disabled ('off').
   -}
-  _trace :: (Maybe Language.LSP.Protocol.Internal.Types.TraceValues.TraceValues)
+  _trace :: (Maybe Language.LSP.Protocol.Internal.Types.TraceValue.TraceValue)
   , {-|
   The workspace folders configured in the client when the server starts.
 

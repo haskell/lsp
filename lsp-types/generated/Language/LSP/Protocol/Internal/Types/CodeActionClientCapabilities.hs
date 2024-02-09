@@ -13,11 +13,10 @@ import GHC.Generics
 import Language.LSP.Protocol.Utils.Misc
 import Prettyprinter
 import qualified Data.Aeson as Aeson
-import qualified Data.Row as Row
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
-import qualified Data.Text
-import qualified Language.LSP.Protocol.Internal.Types.CodeActionKind
+import qualified Language.LSP.Protocol.Internal.Types.ClientCodeActionLiteralOptions
+import qualified Language.LSP.Protocol.Internal.Types.ClientCodeActionResolveOptions
 import qualified Language.LSP.Protocol.Types.Common
 
 {-|
@@ -35,7 +34,7 @@ data CodeActionClientCapabilities = CodeActionClientCapabilities
 
   @since 3.8.0
   -}
-  _codeActionLiteralSupport :: (Maybe (Row.Rec ("codeActionKind" Row..== (Row.Rec ("valueSet" Row..== [Language.LSP.Protocol.Internal.Types.CodeActionKind.CodeActionKind] Row..+ Row.Empty)) Row..+ Row.Empty)))
+  _codeActionLiteralSupport :: (Maybe Language.LSP.Protocol.Internal.Types.ClientCodeActionLiteralOptions.ClientCodeActionLiteralOptions)
   , {-|
   Whether code action supports the `isPreferred` property.
 
@@ -62,7 +61,7 @@ data CodeActionClientCapabilities = CodeActionClientCapabilities
 
   @since 3.16.0
   -}
-  _resolveSupport :: (Maybe (Row.Rec ("properties" Row..== [Data.Text.Text] Row..+ Row.Empty)))
+  _resolveSupport :: (Maybe Language.LSP.Protocol.Internal.Types.ClientCodeActionResolveOptions.ClientCodeActionResolveOptions)
   , {-|
   Whether the client honors the change annotations in
   text edits and resource operations returned via the

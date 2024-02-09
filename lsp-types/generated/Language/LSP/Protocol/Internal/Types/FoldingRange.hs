@@ -43,7 +43,7 @@ data FoldingRange = FoldingRange
   -}
   _endCharacter :: (Maybe Language.LSP.Protocol.Types.Common.UInt)
   , {-|
-  Describes the kind of the folding range such as `comment' or 'region'. The kind
+  Describes the kind of the folding range such as 'comment' or 'region'. The kind
   is used to categorize folding ranges and used by commands like 'Fold all comments'.
   See `FoldingRangeKind` for an enumeration of standardized kinds.
   -}

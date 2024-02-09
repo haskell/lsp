@@ -16,6 +16,7 @@ import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
 import qualified Data.Text
+import qualified Language.LSP.Protocol.Internal.Types.LanguageKind
 import qualified Language.LSP.Protocol.Types.Common
 import qualified Language.LSP.Protocol.Types.Uri
 
@@ -31,7 +32,7 @@ data TextDocumentItem = TextDocumentItem
   , {-|
   The text document's language identifier.
   -}
-  _languageId :: Data.Text.Text
+  _languageId :: Language.LSP.Protocol.Internal.Types.LanguageKind.LanguageKind
   , {-|
   The version number of this document (it will increase after each
   change, including undo/redo).

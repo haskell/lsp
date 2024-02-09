@@ -14,15 +14,14 @@ import Language.LSP.Protocol.Utils.Misc
 import Prettyprinter
 import qualified Data.Aeson
 import qualified Data.Aeson as Aeson
-import qualified Data.Row as Row
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
 import qualified Data.Text
 import qualified Language.LSP.Protocol.Internal.Types.Location
+import qualified Language.LSP.Protocol.Internal.Types.LocationUriOnly
 import qualified Language.LSP.Protocol.Internal.Types.SymbolKind
 import qualified Language.LSP.Protocol.Internal.Types.SymbolTag
 import qualified Language.LSP.Protocol.Types.Common
-import qualified Language.LSP.Protocol.Types.Uri
 
 {-|
 A special workspace symbol that supports locations without a range.
@@ -60,7 +59,7 @@ data WorkspaceSymbol = WorkspaceSymbol
 
   See SymbolInformation#location for more details.
   -}
-  _location :: (Language.LSP.Protocol.Internal.Types.Location.Location Language.LSP.Protocol.Types.Common.|? (Row.Rec ("uri" Row..== Language.LSP.Protocol.Types.Uri.Uri Row..+ Row.Empty)))
+  _location :: (Language.LSP.Protocol.Internal.Types.Location.Location Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.LocationUriOnly.LocationUriOnly)
   , {-|
   A data entry field that is preserved on a workspace symbol between a
   workspace symbol request and a workspace symbol resolve request.

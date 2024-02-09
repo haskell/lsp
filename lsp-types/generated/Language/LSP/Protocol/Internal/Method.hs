@@ -115,6 +115,7 @@ import qualified Language.LSP.Protocol.Internal.Types.MessageActionItem
 import qualified Language.LSP.Protocol.Internal.Types.Moniker
 import qualified Language.LSP.Protocol.Internal.Types.MonikerParams
 import qualified Language.LSP.Protocol.Internal.Types.MonikerRegistrationOptions
+import qualified Language.LSP.Protocol.Internal.Types.NotebookDocumentSyncRegistrationOptions
 import qualified Language.LSP.Protocol.Internal.Types.PrepareRenameParams
 import qualified Language.LSP.Protocol.Internal.Types.PrepareRenameResult
 import qualified Language.LSP.Protocol.Internal.Types.ProgressParams
@@ -568,10 +569,10 @@ type family RegistrationOptions (m ::  Method f t) where
   RegistrationOptions Method_WorkspaceDidCreateFiles = Language.LSP.Protocol.Internal.Types.FileOperationRegistrationOptions.FileOperationRegistrationOptions
   RegistrationOptions Method_WorkspaceDidRenameFiles = Language.LSP.Protocol.Internal.Types.FileOperationRegistrationOptions.FileOperationRegistrationOptions
   RegistrationOptions Method_WorkspaceDidDeleteFiles = Language.LSP.Protocol.Internal.Types.FileOperationRegistrationOptions.FileOperationRegistrationOptions
-  RegistrationOptions Method_NotebookDocumentDidOpen = Maybe Data.Void.Void
-  RegistrationOptions Method_NotebookDocumentDidChange = Maybe Data.Void.Void
-  RegistrationOptions Method_NotebookDocumentDidSave = Maybe Data.Void.Void
-  RegistrationOptions Method_NotebookDocumentDidClose = Maybe Data.Void.Void
+  RegistrationOptions Method_NotebookDocumentDidOpen = Language.LSP.Protocol.Internal.Types.NotebookDocumentSyncRegistrationOptions.NotebookDocumentSyncRegistrationOptions
+  RegistrationOptions Method_NotebookDocumentDidChange = Language.LSP.Protocol.Internal.Types.NotebookDocumentSyncRegistrationOptions.NotebookDocumentSyncRegistrationOptions
+  RegistrationOptions Method_NotebookDocumentDidSave = Language.LSP.Protocol.Internal.Types.NotebookDocumentSyncRegistrationOptions.NotebookDocumentSyncRegistrationOptions
+  RegistrationOptions Method_NotebookDocumentDidClose = Language.LSP.Protocol.Internal.Types.NotebookDocumentSyncRegistrationOptions.NotebookDocumentSyncRegistrationOptions
   RegistrationOptions Method_Initialized = Maybe Data.Void.Void
   RegistrationOptions Method_Exit = Maybe Data.Void.Void
   RegistrationOptions Method_WorkspaceDidChangeConfiguration = Language.LSP.Protocol.Internal.Types.DidChangeConfigurationRegistrationOptions.DidChangeConfigurationRegistrationOptions

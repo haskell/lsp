@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module ServerCapabilitiesSpec where
@@ -6,7 +6,6 @@ module ServerCapabilitiesSpec where
 import Control.Lens.Operators
 import Data.Aeson hiding (Null)
 import Data.Maybe (fromJust)
-import Data.Row
 import Language.LSP.Protocol.Lens
 import Language.LSP.Protocol.Message
 import Language.LSP.Protocol.Types
@@ -44,5 +43,5 @@ spec = describe "server capabilities" $ do
                             (Just $ DidChangeConfigurationRegistrationOptions Nothing)
                        ]
  where
-  documentFilters = DocumentSelector [DocumentFilter $ InL $ TextDocumentFilter $ InL $ #language .== "haskell" .+ #scheme .== Nothing .+ #pattern .== Nothing]
+  documentFilters = DocumentSelector [DocumentFilter $ InL $ TextDocumentFilter $ InL $ TextDocumentFilterLanguage{_language = "haskell", _scheme = Nothing, _pattern = Nothing}]
   documentFiltersJson = "[{\"language\": \"haskell\"}]"

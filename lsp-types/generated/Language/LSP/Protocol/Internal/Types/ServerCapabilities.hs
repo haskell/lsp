@@ -14,7 +14,6 @@ import Language.LSP.Protocol.Utils.Misc
 import Prettyprinter
 import qualified Data.Aeson
 import qualified Data.Aeson as Aeson
-import qualified Data.Row as Row
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
 import qualified Language.LSP.Protocol.Internal.Types.CallHierarchyOptions
@@ -36,7 +35,6 @@ import qualified Language.LSP.Protocol.Internal.Types.DocumentOnTypeFormattingOp
 import qualified Language.LSP.Protocol.Internal.Types.DocumentRangeFormattingOptions
 import qualified Language.LSP.Protocol.Internal.Types.DocumentSymbolOptions
 import qualified Language.LSP.Protocol.Internal.Types.ExecuteCommandOptions
-import qualified Language.LSP.Protocol.Internal.Types.FileOperationOptions
 import qualified Language.LSP.Protocol.Internal.Types.FoldingRangeOptions
 import qualified Language.LSP.Protocol.Internal.Types.FoldingRangeRegistrationOptions
 import qualified Language.LSP.Protocol.Internal.Types.HoverOptions
@@ -66,7 +64,7 @@ import qualified Language.LSP.Protocol.Internal.Types.TypeDefinitionOptions
 import qualified Language.LSP.Protocol.Internal.Types.TypeDefinitionRegistrationOptions
 import qualified Language.LSP.Protocol.Internal.Types.TypeHierarchyOptions
 import qualified Language.LSP.Protocol.Internal.Types.TypeHierarchyRegistrationOptions
-import qualified Language.LSP.Protocol.Internal.Types.WorkspaceFoldersServerCapabilities
+import qualified Language.LSP.Protocol.Internal.Types.WorkspaceOptions
 import qualified Language.LSP.Protocol.Internal.Types.WorkspaceSymbolOptions
 import qualified Language.LSP.Protocol.Types.Common
 
@@ -242,7 +240,7 @@ data ServerCapabilities = ServerCapabilities
   , {-|
   Workspace specific server capabilities.
   -}
-  _workspace :: (Maybe (Row.Rec ("workspaceFolders" Row..== (Maybe Language.LSP.Protocol.Internal.Types.WorkspaceFoldersServerCapabilities.WorkspaceFoldersServerCapabilities) Row..+ ("fileOperations" Row..== (Maybe Language.LSP.Protocol.Internal.Types.FileOperationOptions.FileOperationOptions) Row..+ Row.Empty))))
+  _workspace :: (Maybe Language.LSP.Protocol.Internal.Types.WorkspaceOptions.WorkspaceOptions)
   , {-|
   Experimental server capabilities.
   -}

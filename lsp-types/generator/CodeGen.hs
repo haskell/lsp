@@ -11,11 +11,13 @@ See Note [Code generation approach] for why we do it this way.
 -}
 module CodeGen where
 
+import Control.Monad
 import Control.Monad.Reader
 import Control.Monad.Writer
 import Data.Foldable
 import Data.Function
 import Data.List (intersperse, sort)
+import Data.List.NonEmpty qualified as NE
 import Data.Map qualified as Map
 import Data.Maybe (catMaybes, fromMaybe, mapMaybe, maybeToList)
 import Data.Set qualified as Set
@@ -28,6 +30,7 @@ import System.Directory
 import System.FilePath
 import Text.RE.Replace qualified as RE
 import Text.RE.TDFA.Text qualified as RE
+import Witherable (forMaybe)
 
 -- | A mapping from names in the metamodel to their names in the generated Haskell.
 type SymbolTable = Map.Map T.Text T.Text
@@ -37,9 +40,13 @@ type SymbolTable = Map.Map T.Text T.Text
 -}
 type StructTable = Map.Map T.Text Structure
 
+data TypeMeta = TypeMeta {isProposed :: Bool}
+type MetaTable = Map.Map T.Text TypeMeta
+
 data CodeGenEnv = CodeGenEnv
   { symbolTable :: SymbolTable
   , structTable :: StructTable
+  , metaTable :: MetaTable
   , modulePrefix :: T.Text
   , outputDir :: FilePath
   }
@@ -159,13 +166,13 @@ lspEntityName mod n = do
 
 genFromMetaModel :: T.Text -> FilePath -> MetaModel -> IO ()
 genFromMetaModel prefix dir mm = do
-  let (symbolTable, structTable) = buildTables mm
-  flip runReaderT (CodeGenEnv symbolTable structTable prefix dir) $ do
+  let (symbolTable, structTable, metaTable) = buildTables mm
+  flip runReaderT (CodeGenEnv symbolTable structTable metaTable prefix dir) $ do
     -- Don't even generate LSPAny, LSPObject, or LSPArry
     let filteredAliases = filter (\TypeAlias{name} -> name `notElem` ["LSPAny", "LSPObject", "LSPArray"]) (typeAliases mm)
-    structModuleNames <- traverse genStruct (structures mm)
-    aliasModuleNames <- traverse genAlias filteredAliases
-    enumModuleNames <- traverse genEnum (enumerations mm)
+    structModuleNames <- catMaybes <$> traverse genStruct (structures mm)
+    aliasModuleNames <- catMaybes <$> traverse genAlias filteredAliases
+    enumModuleNames <- catMaybes <$> traverse genEnum (enumerations mm)
     methodModuleName <- genMethods (requests mm) (notifications mm)
     -- not the methods, we export them separately!
     genAllModule $ sort $ concat [structModuleNames, aliasModuleNames, enumModuleNames]
@@ -174,7 +181,7 @@ genFromMetaModel prefix dir mm = do
     let structNames = mapMaybe (\Structure{name} -> Map.lookup name symbolTable) (structures mm)
         aliasNames = mapMaybe (\TypeAlias{name} -> Map.lookup name symbolTable) filteredAliases
         enumNames = mapMaybe (\Enumeration{name} -> Map.lookup name symbolTable) (enumerations mm)
-    genMetaModule structNames aliasNames enumNames
+    genMetaModule (structures mm) filteredAliases (enumerations mm)
     pure ()
   pure ()
 
@@ -213,19 +220,32 @@ makeConstrName context n =
 makeFieldName :: T.Text -> T.Text
 makeFieldName n = "_" <> sanitizeName n
 
-buildTables :: MetaModel -> (SymbolTable, StructTable)
+buildTables :: MetaModel -> (SymbolTable, StructTable, MetaTable)
 buildTables (MetaModel{structures, enumerations, typeAliases}) =
-  let bothEntries = flip fmap structures $ \s@Structure{name} ->
-        ((name, makeToplevelName name), (name, s))
-      (entries, sentries) = unzip bothEntries
+  let (structNames, structStructs, structMeta) = unzip3 $ flip fmap structures $ \s@Structure{name, proposed} ->
+        ((name, makeToplevelName name), (name, s), (name, TypeMeta (fromMaybe False proposed)))
 
-      entries' = flip fmap enumerations $ \Enumeration{name} -> (name, makeToplevelName name)
+      (enumNames, enumMeta) = unzip $ flip fmap enumerations $ \Enumeration{name, proposed} -> ((name, makeToplevelName name), (name, TypeMeta (fromMaybe False proposed)))
 
-      entries'' = flip fmap typeAliases $ \TypeAlias{name} -> (name, makeToplevelName name)
-      symbolTable = Map.fromList $ entries <> entries' <> entries''
+      (aliasNames, aliasMeta) = unzip $ flip fmap typeAliases $ \TypeAlias{name, proposed} -> ((name, makeToplevelName name), (name, TypeMeta (fromMaybe False proposed)))
+      symbolTable = Map.fromList $ structNames <> enumNames <> aliasNames
 
-      structTable = Map.fromList sentries
-   in (symbolTable, structTable)
+      structTable = Map.fromList structStructs
+
+      metaTable = Map.fromList $ structMeta <> enumMeta <> aliasMeta
+   in (symbolTable, structTable, metaTable)
+
+isProposedM :: T.Text -> ModuleGenM Bool
+isProposedM n = do
+  mt <- asks metaTable
+  case Map.lookup n mt of
+    Just (TypeMeta proposed) -> pure proposed
+    Nothing -> fail $ "Unknown name: " <> show n
+
+isProposedTypeM :: Type -> ModuleGenM Bool
+isProposedTypeM = \case
+  ReferenceType n -> isProposedM n
+  _ -> pure False
 
 {- | Translate a type in the metamodel into the corresponding Haskell type.
  See Note [Translating metamodel types]
@@ -266,9 +286,15 @@ convertType = \case
     n <- pretty <$> entityName "Data.Map" "Map"
     pure $ parens $ n <+> kt <+> vt
   OrType es -> do
-    est <- traverse convertType es
-    n <- pretty <$> entityName "Language.LSP.Protocol.Types.Common" "|?"
-    pure $ foldr1 (\ty o -> parens (ty <+> n <+> o)) est
+    -- Any 'proposed' members should be treated as 'Void', but that's
+    -- annoying and leaks their presence, better to just filter them out
+    es' <- filterM (fmap not . isProposedTypeM) (toList es)
+    case NE.nonEmpty es' of
+      Nothing -> fail $ "Or type with no non-proposed members: " <> show es
+      Just es'' -> do
+        est <- traverse convertType es''
+        n <- pretty <$> entityName "Language.LSP.Protocol.Types.Common" "|?"
+        pure $ foldr1 (\ty o -> parens (ty <+> n <+> o)) est
   AndType es -> do
     st <- asks structTable
     props <- for es $ \case
@@ -289,13 +315,15 @@ convertType = \case
     pure $ parens ty
   BooleanLiteralType _ -> fail "unsupported: boolean literal types"
 
-genStruct :: Structure -> CodeGenM T.Text
-genStruct s@Structure{name} = do
-  st <- asks symbolTable
-  hsName <- case Map.lookup name st of
-    Just hsn -> pure hsn
-    Nothing -> fail $ "Unknown type: " <> show name
-  genModule (typesModSegment <> "." <> hsName) [] Nothing (printStruct hsName s)
+genStruct :: Structure -> CodeGenM (Maybe T.Text)
+genStruct s@Structure{proposed = Just True} = pure Nothing
+genStruct s@Structure{name} =
+  Just <$> do
+    st <- asks symbolTable
+    hsName <- case Map.lookup name st of
+      Just hsn -> pure hsn
+      Nothing -> fail $ "Unknown type: " <> show name
+    genModule (typesModSegment <> "." <> hsName) [] Nothing (printStruct hsName s)
 
 printStruct :: T.Text -> Structure -> ModuleGenM (Doc ann)
 printStruct tn s@Structure{name, documentation, since, proposed, deprecated} = do
@@ -387,28 +415,32 @@ getStructProperties s@Structure{name, properties, extends, mixins} = do
       -- If a property is redefined in the current type, then it overrides the inherited one
       localNames = foldMap (\Property{name} -> Set.singleton name) properties
       filteredSuperProps = filter (\Property{name} -> name `Set.notMember` localNames) allSuperProps
-  pure (filteredSuperProps ++ properties)
+      fullProps = filteredSuperProps ++ properties
+      nonProposedProps = filter (\Property{proposed} -> case proposed of Just True -> False; _ -> True) fullProps
+  pure nonProposedProps
 
 -- | Generate a type corresponding to an anonymous struct.
 genAnonymousStruct :: [Property] -> ModuleGenM (Doc ann)
 genAnonymousStruct properties = do
+  ensureImport "Data.Row" (QualAs "Row")
   row <- for properties $ \Property{name, type_, optional} -> do
     pty <- convertType type_
     let mty = case optional of
           Just True -> parens ("Maybe" <+> pty)
           _ -> pty
-    ensureImport "Data.Row" (QualAs "Row")
     pure $ dquotes (pretty name) <+> "Row..==" <+> mty
   let tyList = foldr (\ty l -> parens $ ty <+> "Row..+" <+> l) "Row.Empty" row
   pure $ parens $ "Row.Rec" <+> tyList
 
-genEnum :: Enumeration -> CodeGenM T.Text
-genEnum e@Enumeration{name} = do
-  st <- asks symbolTable
-  hsName <- case Map.lookup name st of
-    Just hsn -> pure hsn
-    Nothing -> fail $ "Unknown type: " <> show name
-  genModule (typesModSegment <> "." <> hsName) [] Nothing (printEnum hsName e)
+genEnum :: Enumeration -> CodeGenM (Maybe T.Text)
+genEnum s@Enumeration{proposed = Just True} = pure Nothing
+genEnum e@Enumeration{name} =
+  Just <$> do
+    st <- asks symbolTable
+    hsName <- case Map.lookup name st of
+      Just hsn -> pure hsn
+      Nothing -> fail $ "Unknown type: " <> show name
+    genModule (typesModSegment <> "." <> hsName) [] Nothing (printEnum hsName e)
 
 printEnum :: T.Text -> Enumeration -> ModuleGenM (Doc ann)
 printEnum tn Enumeration{name, type_, values, supportsCustomValues, documentation, since, proposed, deprecated} = do
@@ -436,14 +468,17 @@ printEnum tn Enumeration{name, type_, values, supportsCustomValues, documentatio
   let badEnumValues = ["jsonrpcReservedErrorRangeStart", "jsonrpcReservedErrorRangeEnd", "serverErrorStart", "serverErrorEnd"]
       values' = filter (\EnumerationEntry{name} -> name `notElem` badEnumValues) values
   -- The associations between constructor names and their literals
-  assocs <- for values' $ \EnumerationEntry{name, value, documentation, since, proposed} -> do
-    let cn = makeConstrName (Just enumName) name
-        -- The literal for the actual enum value in this case
-        lit = case value of
-          T t -> pretty $ show $ T.unpack t
-          I i -> pretty $ show i
-    doc <- mkDocumentation documentation since proposed
-    pure (cn, lit, doc)
+  assocs <- forMaybe values' $ \case
+    EnumerationEntry{proposed = Just True} -> pure Nothing
+    EnumerationEntry{name, value, documentation, since, proposed} ->
+      Just <$> do
+        let cn = makeConstrName (Just enumName) name
+            -- The literal for the actual enum value in this case
+            lit = case value of
+              T t -> pretty $ show $ T.unpack t
+              I i -> pretty $ show i
+        doc <- mkDocumentation documentation since proposed
+        pure (cn, lit, doc)
 
   let normalCons = flip fmap assocs $ \(cn, _, doc) ->
         hardvcat [multilineHaddock $ pretty doc, pretty cn]
@@ -537,13 +572,15 @@ printEnum tn Enumeration{name, type_, values, supportsCustomValues, documentatio
       <> hardline
       <> (if custom then lspOpenEnumD <> hardline <> hardline else "")
 
-genAlias :: TypeAlias -> CodeGenM T.Text
-genAlias a@TypeAlias{name} = do
-  st <- asks symbolTable
-  hsName <- case Map.lookup name st of
-    Just hsn -> pure hsn
-    Nothing -> fail $ "Unknown type: " <> show name
-  genModule (typesModSegment <> "." <> hsName) [] Nothing (printAlias hsName a)
+genAlias :: TypeAlias -> CodeGenM (Maybe T.Text)
+genAlias s@TypeAlias{proposed = Just True} = pure Nothing
+genAlias a@TypeAlias{name} =
+  Just <$> do
+    st <- asks symbolTable
+    hsName <- case Map.lookup name st of
+      Just hsn -> pure hsn
+      Nothing -> fail $ "Unknown type: " <> show name
+    genModule (typesModSegment <> "." <> hsName) [] Nothing (printAlias hsName a)
 
 printAlias :: forall ann. T.Text -> TypeAlias -> ModuleGenM (Doc ann)
 printAlias hsName TypeAlias{name, type_, documentation, since, proposed, deprecated} = do
@@ -641,66 +678,72 @@ printMethods reqs nots = do
   ensureImport "Language.LSP.Protocol.Message.Meta" (QualAs "MM")
 
   -- Construct the various pieces we'll need for the declarations in one go
-  reqData <- for reqs $ \Request{method, params, result, errorData, registrationOptions, messageDirection} -> do
-    -- <constructor name> :: Method <direction> <method type>
-    let mcn = methodName (Just mtyN) method
-        direction = case messageDirection of
-          MM.ClientToServer -> "MM.ClientToServer"
-          MM.ServerToClient -> "MM.ServerToClient"
-          MM.Both -> "f"
-        methCon = mcn <+> "::" <+> pretty mtyN <+> direction <+> "MM.Request"
-        scn = methodName (Just styN) method
-        singCon = scn <+> "::" <+> pretty styN <+> mcn
+  reqData <- forMaybe reqs $ \case
+    Request{proposed = Just True} -> pure Nothing
+    Request{method, params, result, errorData, registrationOptions, messageDirection} ->
+      Just <$> do
+        -- <constructor name> :: Method <direction> <method type>
+        let mcn = methodName (Just mtyN) method
+            direction = case messageDirection of
+              MM.ClientToServer -> "MM.ClientToServer"
+              MM.ServerToClient -> "MM.ServerToClient"
+              MM.Both -> "f"
+            methCon = mcn <+> "::" <+> pretty mtyN <+> direction <+> "MM.Request"
+            scn = methodName (Just styN) method
+            singCon = scn <+> "::" <+> pretty styN <+> mcn
 
-    -- MessageParams <constructor name> = <param type>
-    paramTy <- messagePartType params
-    let paramsEq = mpN <+> mcn <+> "=" <+> paramTy
-    -- MessageResult <constructor name> = <result type>
-    resultTy <- messagePartType (Just result)
-    let resultEq = mrN <+> mcn <+> "=" <+> resultTy
-    errDatTy <- messagePartType errorData
-    let errorDataEq = edN <+> mcn <+> "=" <+> errDatTy
-    regOptsTy <- messagePartType registrationOptions
-    let registrationOptionsEq = roN <+> mcn <+> "=" <+> regOptsTy
+        -- MessageParams <constructor name> = <param type>
+        paramTy <- messagePartType params
+        let paramsEq = mpN <+> mcn <+> "=" <+> paramTy
+        -- MessageResult <constructor name> = <result type>
+        resultTy <- messagePartType (Just result)
+        let resultEq = mrN <+> mcn <+> "=" <+> resultTy
+        errDatTy <- messagePartType errorData
+        let errorDataEq = edN <+> mcn <+> "=" <+> errDatTy
+        regOptsTy <- messagePartType registrationOptions
+        let registrationOptionsEq = roN <+> mcn <+> "=" <+> regOptsTy
 
-    let toStringClause = toStringN <+> parens (smcn <+> scn) <+> "=" <+> dquotes (pretty method)
-        fromStringClause = fromStringN <+> dquotes (pretty method) <+> "=" <+> smcn <+> scn
-        messageDirectionClause =
-          let d = case messageDirection of
-                MM.ClientToServer -> "MM.SClientToServer"
-                MM.ServerToClient -> "MM.SServerToClient"
-                MM.Both -> "MM.SBothDirections"
-           in mdN <+> scn <+> "=" <+> d
-        messageKindClause = "messageKind" <+> scn <+> "=" <+> "MM.SRequest"
-    pure $ RequestData{..}
+        let toStringClause = toStringN <+> parens (smcn <+> scn) <+> "=" <+> dquotes (pretty method)
+            fromStringClause = fromStringN <+> dquotes (pretty method) <+> "=" <+> smcn <+> scn
+            messageDirectionClause =
+              let d = case messageDirection of
+                    MM.ClientToServer -> "MM.SClientToServer"
+                    MM.ServerToClient -> "MM.SServerToClient"
+                    MM.Both -> "MM.SBothDirections"
+               in mdN <+> scn <+> "=" <+> d
+            messageKindClause = "messageKind" <+> scn <+> "=" <+> "MM.SRequest"
+        pure $ RequestData{..}
 
-  notData <- for nots $ \Notification{method, params, registrationOptions, messageDirection} -> do
-    let mcn = methodName (Just mtyN) method
-        direction = case messageDirection of
-          MM.ClientToServer -> "MM.ClientToServer"
-          MM.ServerToClient -> "MM.ServerToClient"
-          MM.Both -> "f"
-        methCon = mcn <+> "::" <+> pretty mtyN <+> direction <+> "MM.Notification"
-        scn = methodName (Just styN) method
-        singCon = scn <+> "::" <+> pretty styN <+> mcn
+  notData <- forMaybe nots $ \case
+    Notification{proposed = Just True} -> pure Nothing
+    Notification{method, params, registrationOptions, messageDirection} ->
+      Just <$> do
+        let mcn = methodName (Just mtyN) method
+            direction = case messageDirection of
+              MM.ClientToServer -> "MM.ClientToServer"
+              MM.ServerToClient -> "MM.ServerToClient"
+              MM.Both -> "f"
+            methCon = mcn <+> "::" <+> pretty mtyN <+> direction <+> "MM.Notification"
+            scn = methodName (Just styN) method
+            singCon = scn <+> "::" <+> pretty styN <+> mcn
 
-    -- MessageParams <constructor name> = <param type>
-    paramTy <- messagePartType params
-    let paramsEq = mpN <+> mcn <+> "=" <+> paramTy
-    regOptsTy <- messagePartType registrationOptions
-    let registrationOptionsEq = roN <+> mcn <+> "=" <+> regOptsTy
+        -- MessageParams <constructor name> = <param type>
+        paramTy <- messagePartType params
+        let paramsEq = mpN <+> mcn <+> "=" <+> paramTy
+        regOptsTy <- messagePartType registrationOptions
+        let registrationOptionsEq = roN <+> mcn <+> "=" <+> regOptsTy
 
-    let toStringClause = toStringN <+> parens (smcn <+> scn) <+> "=" <+> dquotes (pretty method)
-        fromStringClause = fromStringN <+> dquotes (pretty method) <+> "=" <+> smcn <+> scn
-        messageDirectionClause =
-          let d = case messageDirection of
-                MM.ClientToServer -> "MM.SClientToServer"
-                MM.ServerToClient -> "MM.SServerToClient"
-                MM.Both -> "MM.SBothDirections"
-           in "messageDirection" <+> scn <+> "=" <+> d
-        messageKindClause = "messageKind" <+> scn <+> "=" <+> "MM.SNotification"
+        let toStringClause = toStringN <+> parens (smcn <+> scn) <+> "=" <+> dquotes (pretty method)
+            fromStringClause = fromStringN <+> dquotes (pretty method) <+> "=" <+> smcn <+> scn
+            messageDirectionClause =
+              let d = case messageDirection of
+                    MM.ClientToServer -> "MM.SClientToServer"
+                    MM.ServerToClient -> "MM.SServerToClient"
+                    MM.Both -> "MM.SBothDirections"
+               in "messageDirection" <+> scn <+> "=" <+> d
+            messageKindClause = "messageKind" <+> scn <+> "=" <+> "MM.SNotification"
 
-    pure $ NotificationData{..}
+        pure $ NotificationData{..}
 
   -- Add the custom method case, which isn't in the metamodel
   customDat <- do
@@ -850,14 +893,35 @@ genMethods reqs nots = do
 
 ---------------
 
-genMetaModule :: [T.Text] -> [T.Text] -> [T.Text] -> CodeGenM T.Text
-genMetaModule structNames aliasNames enumNames = do
+genMetaModule :: [Structure] -> [TypeAlias] -> [Enumeration] -> CodeGenM T.Text
+genMetaModule structs aliases enums = do
   genModule "Meta" ["TemplateHaskell"] Nothing $ do
     ensureImport "Language.Haskell.TH" (QualAs "TH")
     let tyn thn = pretty <$> entityName "Language.LSP.Protocol.Internal.Types" thn
-    sns <- traverse tyn structNames
-    ans <- traverse tyn aliasNames
-    ens <- traverse tyn enumNames
+    sns <- forMaybe structs $ \case
+      Structure{proposed = Just True} -> pure Nothing
+      Structure{name} ->
+        Just <$> do
+          st <- asks symbolTable
+          case Map.lookup name st of
+            Just thn -> pretty <$> entityName "Language.LSP.Protocol.Internal.Types" thn
+            Nothing -> fail $ "Unknown struct: " <> show name
+    ans <- forMaybe aliases $ \case
+      TypeAlias{proposed = Just True} -> pure Nothing
+      TypeAlias{name} ->
+        Just <$> do
+          st <- asks symbolTable
+          case Map.lookup name st of
+            Just thn -> pretty <$> entityName "Language.LSP.Protocol.Internal.Types" thn
+            Nothing -> fail $ "Unknown alias: " <> show name
+    ens <- forMaybe enums $ \case
+      Enumeration{proposed = Just True} -> pure Nothing
+      Enumeration{name} ->
+        Just <$> do
+          st <- asks symbolTable
+          case Map.lookup name st of
+            Just thn -> pretty <$> entityName "Language.LSP.Protocol.Internal.Types" thn
+            Nothing -> fail $ "Unknown enum: " <> show name
     let
       sig1 = "structNames" <+> "::" <+> brackets "TH.Name"
       decl1 = "structNames =" <+> nest indentSize (encloseSep "[" "]" "," $ fmap (\n -> "''" <> n) sns)

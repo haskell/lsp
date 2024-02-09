@@ -273,6 +273,7 @@ library
     Language.LSP.Protocol.Internal.Types.DocumentSymbolParams
     Language.LSP.Protocol.Internal.Types.DocumentSymbolRegistrationOptions
     Language.LSP.Protocol.Internal.Types.ErrorCodes
+    Language.LSP.Protocol.Internal.Types.EditRangeWithInsertReplace
     Language.LSP.Protocol.Internal.Types.ExecuteCommandClientCapabilities
     Language.LSP.Protocol.Internal.Types.ExecuteCommandOptions
     Language.LSP.Protocol.Internal.Types.ExecuteCommandParams
@@ -462,7 +463,6 @@ library
     Language.LSP.Protocol.Internal.Types.TextDocumentSyncOptions
     Language.LSP.Protocol.Internal.Types.TextEdit
     Language.LSP.Protocol.Internal.Types.TokenFormat
-    Language.LSP.Protocol.Internal.Types.TraceValues
     Language.LSP.Protocol.Internal.Types.TypeDefinitionClientCapabilities
     Language.LSP.Protocol.Internal.Types.TypeDefinitionOptions
     Language.LSP.Protocol.Internal.Types.TypeDefinitionParams
@@ -509,6 +509,57 @@ library
     Language.LSP.Protocol.Internal.Types.WorkspaceSymbolParams
     Language.LSP.Protocol.Internal.Types.WorkspaceSymbolRegistrationOptions
     Language.LSP.Protocol.Internal.Types.WorkspaceUnchangedDocumentDiagnosticReport
+    Language.LSP.Protocol.Internal.Types.ChangeAnnotationsSupportOptions
+    Language.LSP.Protocol.Internal.Types.ClientCodeActionKindOptions
+    Language.LSP.Protocol.Internal.Types.ClientCodeActionLiteralOptions
+    Language.LSP.Protocol.Internal.Types.ClientCodeActionResolveOptions
+    Language.LSP.Protocol.Internal.Types.ClientCompletionItemInsertTextModeOptions
+    Language.LSP.Protocol.Internal.Types.ClientCompletionItemOptions
+    Language.LSP.Protocol.Internal.Types.ClientCompletionItemOptionsKind
+    Language.LSP.Protocol.Internal.Types.ClientCompletionItemResolveOptions
+    Language.LSP.Protocol.Internal.Types.ClientDiagnosticsTagOptions
+    Language.LSP.Protocol.Internal.Types.ClientFoldingRangeKindOptions
+    Language.LSP.Protocol.Internal.Types.ClientFoldingRangeOptions
+    Language.LSP.Protocol.Internal.Types.ClientInfo
+    Language.LSP.Protocol.Internal.Types.ClientInlayHintResolveOptions
+    Language.LSP.Protocol.Internal.Types.ClientSemanticTokensRequestFullDelta
+    Language.LSP.Protocol.Internal.Types.ClientSemanticTokensRequestOptions
+    Language.LSP.Protocol.Internal.Types.ClientShowMessageActionItemOptions
+    Language.LSP.Protocol.Internal.Types.ClientSignatureInformationOptions
+    Language.LSP.Protocol.Internal.Types.ClientSignatureParameterInformationOptions
+    Language.LSP.Protocol.Internal.Types.ClientSymbolKindOptions
+    Language.LSP.Protocol.Internal.Types.ClientSymbolResolveOptions
+    Language.LSP.Protocol.Internal.Types.ClientSymbolTagOptions
+    Language.LSP.Protocol.Internal.Types.CodeActionDisabled
+    Language.LSP.Protocol.Internal.Types.CompletionItemDefaults
+    Language.LSP.Protocol.Internal.Types.CompletionItemTagOptions
+    Language.LSP.Protocol.Internal.Types.CompletionListCapabilities
+    Language.LSP.Protocol.Internal.Types.LanguageKind
+    Language.LSP.Protocol.Internal.Types.LocationUriOnly
+    Language.LSP.Protocol.Internal.Types.MarkedStringWithLanguage
+    Language.LSP.Protocol.Internal.Types.NotebookCellLanguage
+    Language.LSP.Protocol.Internal.Types.NotebookDocumentCellChangeStructure
+    Language.LSP.Protocol.Internal.Types.NotebookDocumentCellChanges
+    Language.LSP.Protocol.Internal.Types.NotebookDocumentCellContentChanges
+    Language.LSP.Protocol.Internal.Types.NotebookDocumentFilterNotebookType
+    Language.LSP.Protocol.Internal.Types.NotebookDocumentFilterPattern
+    Language.LSP.Protocol.Internal.Types.NotebookDocumentFilterScheme
+    Language.LSP.Protocol.Internal.Types.NotebookDocumentFilterWithCells
+    Language.LSP.Protocol.Internal.Types.NotebookDocumentFilterWithNotebook
+    Language.LSP.Protocol.Internal.Types.PrepareRenameDefaultBehavior
+    Language.LSP.Protocol.Internal.Types.PrepareRenamePlaceholder
+    Language.LSP.Protocol.Internal.Types.RegularExpressionEngineKind
+    Language.LSP.Protocol.Internal.Types.SemanticTokensFullDelta
+    Language.LSP.Protocol.Internal.Types.ServerCompletionItemOptions
+    Language.LSP.Protocol.Internal.Types.ServerInfo
+    Language.LSP.Protocol.Internal.Types.StaleRequestSupportOptions
+    Language.LSP.Protocol.Internal.Types.TextDocumentContentChangePartial
+    Language.LSP.Protocol.Internal.Types.TextDocumentContentChangeWholeDocument
+    Language.LSP.Protocol.Internal.Types.TextDocumentFilterLanguage
+    Language.LSP.Protocol.Internal.Types.TextDocumentFilterPattern
+    Language.LSP.Protocol.Internal.Types.TextDocumentFilterScheme
+    Language.LSP.Protocol.Internal.Types.TraceValue
+    Language.LSP.Protocol.Internal.Types.WorkspaceOptions
 
 library metamodel
   -- We don't currently re-export this from the main
@@ -577,6 +628,7 @@ executable generator
     , prettyprinter
     , regex
     , text
+    , witherable
 
 test-suite lsp-types-test
   type:               exitcode-stdio-1.0

@@ -13,10 +13,11 @@ import GHC.Generics
 import Language.LSP.Protocol.Utils.Misc
 import Prettyprinter
 import qualified Data.Aeson as Aeson
-import qualified Data.Row as Row
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
-import qualified Data.Text
+import qualified Language.LSP.Protocol.Internal.Types.TextDocumentFilterLanguage
+import qualified Language.LSP.Protocol.Internal.Types.TextDocumentFilterPattern
+import qualified Language.LSP.Protocol.Internal.Types.TextDocumentFilterScheme
 import qualified Language.LSP.Protocol.Types.Common
 
 {-|
@@ -37,7 +38,7 @@ Glob patterns can have the following syntax:
 
 @since 3.17.0
 -}
-newtype TextDocumentFilter = TextDocumentFilter ((Row.Rec ("language" Row..== Data.Text.Text Row..+ ("scheme" Row..== (Maybe Data.Text.Text) Row..+ ("pattern" Row..== (Maybe Data.Text.Text) Row..+ Row.Empty)))) Language.LSP.Protocol.Types.Common.|? ((Row.Rec ("language" Row..== (Maybe Data.Text.Text) Row..+ ("scheme" Row..== Data.Text.Text Row..+ ("pattern" Row..== (Maybe Data.Text.Text) Row..+ Row.Empty)))) Language.LSP.Protocol.Types.Common.|? (Row.Rec ("language" Row..== (Maybe Data.Text.Text) Row..+ ("scheme" Row..== (Maybe Data.Text.Text) Row..+ ("pattern" Row..== Data.Text.Text Row..+ Row.Empty))))))
+newtype TextDocumentFilter = TextDocumentFilter (Language.LSP.Protocol.Internal.Types.TextDocumentFilterLanguage.TextDocumentFilterLanguage Language.LSP.Protocol.Types.Common.|? (Language.LSP.Protocol.Internal.Types.TextDocumentFilterScheme.TextDocumentFilterScheme Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.TextDocumentFilterPattern.TextDocumentFilterPattern))
   deriving newtype (Aeson.ToJSON, Aeson.FromJSON)
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

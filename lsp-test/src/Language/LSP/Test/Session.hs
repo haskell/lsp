@@ -2,6 +2,7 @@
 
 {-# LANGUAGE CPP               #-}
 {-# LANGUAGE GADTs             #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE TypeInType #-}
@@ -80,7 +81,6 @@ import System.Process (waitForProcess)
 import System.Timeout ( timeout )
 import Data.IORef
 import Colog.Core (LogAction (..), WithSeverity (..), Severity (..))
-import Data.Row
 import Data.String (fromString)
 import Data.Either (partitionEithers)
 
@@ -472,8 +472,8 @@ updateState (FromServerMess SMethod_WorkspaceApplyEdit r) = do
 
         -- TODO: move somewhere reusable
         editToChangeEvent :: TextEdit |? AnnotatedTextEdit -> TextDocumentContentChangeEvent
-        editToChangeEvent (InR e) = TextDocumentContentChangeEvent $ InL $ #range .== (e ^. L.range) .+ #rangeLength .== Nothing .+ #text .== (e ^. L.newText)
-        editToChangeEvent (InL e) = TextDocumentContentChangeEvent $ InL $ #range .== (e ^. L.range) .+ #rangeLength .== Nothing .+ #text .== (e ^. L.newText)
+        editToChangeEvent (InR e) = TextDocumentContentChangeEvent $ InL $ TextDocumentContentChangePartial { _range = (e ^. L.range) , _rangeLength = Nothing , _text = (e ^. L.newText) }
+        editToChangeEvent (InL e) = TextDocumentContentChangeEvent $ InL $ TextDocumentContentChangePartial { _range = (e ^. L.range) , _rangeLength = Nothing , _text = (e ^. L.newText) }
 
         getParamsFromDocumentChange :: DocumentChange -> Maybe DidChangeTextDocumentParams
         getParamsFromDocumentChange (InL textDocumentEdit) = getParamsFromTextDocumentEdit textDocumentEdit

@@ -1,3 +1,4 @@
+{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -35,7 +36,7 @@ vfsFromText text = VirtualFile 0 0 (Rope.fromText text)
 -- ---------------------------------------------------------------------
 
 mkChangeEvent :: J.Range -> T.Text -> J.TextDocumentContentChangeEvent
-mkChangeEvent r t = J.TextDocumentContentChangeEvent $ J.InL $ #range .== r .+ #rangeLength .== Nothing .+ #text .== t
+mkChangeEvent r t = J.TextDocumentContentChangeEvent $ J.InL $ J.TextDocumentContentChangePartial{J._range = r, J._rangeLength = Nothing, J._text = t}
 
 vspSpec :: Spec
 vspSpec = do

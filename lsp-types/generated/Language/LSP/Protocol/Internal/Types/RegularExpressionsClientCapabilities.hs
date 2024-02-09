@@ -16,6 +16,7 @@ import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
 import qualified Data.Text
+import qualified Language.LSP.Protocol.Internal.Types.RegularExpressionEngineKind
 import qualified Language.LSP.Protocol.Types.Common
 
 {-|
@@ -27,7 +28,7 @@ data RegularExpressionsClientCapabilities = RegularExpressionsClientCapabilities
   { {-|
   The engine's name.
   -}
-  _engine :: Data.Text.Text
+  _engine :: Language.LSP.Protocol.Internal.Types.RegularExpressionEngineKind.RegularExpressionEngineKind
   , {-|
   The engine's version.
   -}

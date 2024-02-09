@@ -13,10 +13,10 @@ import GHC.Generics
 import Language.LSP.Protocol.Utils.Misc
 import Prettyprinter
 import qualified Data.Aeson as Aeson
-import qualified Data.Row as Row
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
 import qualified Data.Text
+import qualified Language.LSP.Protocol.Internal.Types.MarkedStringWithLanguage
 import qualified Language.LSP.Protocol.Types.Common
 
 {-# DEPRECATED MarkedString "use MarkupContent instead." #-}
@@ -34,7 +34,7 @@ ${value}
 Note that markdown strings will be sanitized - that means html will be escaped.
 @deprecated use MarkupContent instead.
 -}
-newtype MarkedString = MarkedString (Data.Text.Text Language.LSP.Protocol.Types.Common.|? (Row.Rec ("language" Row..== Data.Text.Text Row..+ ("value" Row..== Data.Text.Text Row..+ Row.Empty))))
+newtype MarkedString = MarkedString (Data.Text.Text Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.MarkedStringWithLanguage.MarkedStringWithLanguage)
   deriving newtype (Aeson.ToJSON, Aeson.FromJSON)
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

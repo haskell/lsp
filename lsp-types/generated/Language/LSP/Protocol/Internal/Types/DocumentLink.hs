@@ -19,6 +19,7 @@ import qualified Data.Row.Hashable as Hashable
 import qualified Data.Text
 import qualified Language.LSP.Protocol.Internal.Types.Range
 import qualified Language.LSP.Protocol.Types.Common
+import qualified Language.LSP.Protocol.Types.Uri
 
 {-|
 A document link is a range in a text document that links to an internal or external resource, like another
@@ -32,7 +33,7 @@ data DocumentLink = DocumentLink
   , {-|
   The uri this link points to. If missing a resolve request is sent later.
   -}
-  _target :: (Maybe Data.Text.Text)
+  _target :: (Maybe Language.LSP.Protocol.Types.Uri.Uri)
   , {-|
   The tooltip text when you hover over this link.
 

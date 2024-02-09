@@ -1,5 +1,10 @@
 # Revision history for lsp-types
 
+## Unreleased
+
+- Update the metamodel. This results in a number of breaking changes to the generated code, mostly replacing
+  anonymous structs with named ones.
+
 ## 2.1.1.0 -- 2024-02-24
 
 - Require aeson 2

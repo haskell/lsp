@@ -13,10 +13,9 @@ import GHC.Generics
 import Language.LSP.Protocol.Utils.Misc
 import Prettyprinter
 import qualified Data.Aeson as Aeson
-import qualified Data.Row as Row
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
-import qualified Language.LSP.Protocol.Internal.Types.DiagnosticTag
+import qualified Language.LSP.Protocol.Internal.Types.ClientDiagnosticsTagOptions
 import qualified Language.LSP.Protocol.Types.Common
 
 {-|
@@ -33,7 +32,7 @@ data PublishDiagnosticsClientCapabilities = PublishDiagnosticsClientCapabilities
 
   @since 3.15.0
   -}
-  _tagSupport :: (Maybe (Row.Rec ("valueSet" Row..== [Language.LSP.Protocol.Internal.Types.DiagnosticTag.DiagnosticTag] Row..+ Row.Empty)))
+  _tagSupport :: (Maybe Language.LSP.Protocol.Internal.Types.ClientDiagnosticsTagOptions.ClientDiagnosticsTagOptions)
   , {-|
   Whether the client interprets the version property of the
   `textDocument/publishDiagnostics` notification's parameter.

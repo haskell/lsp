@@ -17,6 +17,7 @@ import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
 import qualified Data.Text
 import qualified Language.LSP.Protocol.Types.Common
+import qualified Language.LSP.Protocol.Types.Uri
 
 {-|
 
@@ -25,7 +26,7 @@ data ConfigurationItem = ConfigurationItem
   { {-|
   The scope to get the configuration section for.
   -}
-  _scopeUri :: (Maybe Data.Text.Text)
+  _scopeUri :: (Maybe Language.LSP.Protocol.Types.Uri.Uri)
   , {-|
   The configuration section asked for.
   -}

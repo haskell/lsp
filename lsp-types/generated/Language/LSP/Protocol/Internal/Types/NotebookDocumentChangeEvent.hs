@@ -14,15 +14,9 @@ import Language.LSP.Protocol.Utils.Misc
 import Prettyprinter
 import qualified Data.Aeson
 import qualified Data.Aeson as Aeson
-import qualified Data.Row as Row
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
-import qualified Language.LSP.Protocol.Internal.Types.NotebookCell
-import qualified Language.LSP.Protocol.Internal.Types.NotebookCellArrayChange
-import qualified Language.LSP.Protocol.Internal.Types.TextDocumentContentChangeEvent
-import qualified Language.LSP.Protocol.Internal.Types.TextDocumentIdentifier
-import qualified Language.LSP.Protocol.Internal.Types.TextDocumentItem
-import qualified Language.LSP.Protocol.Internal.Types.VersionedTextDocumentIdentifier
+import qualified Language.LSP.Protocol.Internal.Types.NotebookDocumentCellChanges
 import qualified Language.LSP.Protocol.Types.Common
 
 {-|
@@ -40,7 +34,7 @@ data NotebookDocumentChangeEvent = NotebookDocumentChangeEvent
   , {-|
   Changes to cells
   -}
-  _cells :: (Maybe (Row.Rec ("structure" Row..== (Maybe (Row.Rec ("array" Row..== Language.LSP.Protocol.Internal.Types.NotebookCellArrayChange.NotebookCellArrayChange Row..+ ("didOpen" Row..== (Maybe [Language.LSP.Protocol.Internal.Types.TextDocumentItem.TextDocumentItem]) Row..+ ("didClose" Row..== (Maybe [Language.LSP.Protocol.Internal.Types.TextDocumentIdentifier.TextDocumentIdentifier]) Row..+ Row.Empty))))) Row..+ ("data" Row..== (Maybe [Language.LSP.Protocol.Internal.Types.NotebookCell.NotebookCell]) Row..+ ("textContent" Row..== (Maybe [(Row.Rec ("document" Row..== Language.LSP.Protocol.Internal.Types.VersionedTextDocumentIdentifier.VersionedTextDocumentIdentifier Row..+ ("changes" Row..== [Language.LSP.Protocol.Internal.Types.TextDocumentContentChangeEvent.TextDocumentContentChangeEvent] Row..+ Row.Empty)))]) Row..+ Row.Empty)))))
+  _cells :: (Maybe Language.LSP.Protocol.Internal.Types.NotebookDocumentCellChanges.NotebookDocumentCellChanges)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

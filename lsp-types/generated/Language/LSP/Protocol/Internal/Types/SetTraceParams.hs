@@ -15,7 +15,7 @@ import Prettyprinter
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
-import qualified Language.LSP.Protocol.Internal.Types.TraceValues
+import qualified Language.LSP.Protocol.Internal.Types.TraceValue
 import qualified Language.LSP.Protocol.Types.Common
 
 {-|
@@ -25,7 +25,7 @@ data SetTraceParams = SetTraceParams
   { {-|
 
   -}
-  _value :: Language.LSP.Protocol.Internal.Types.TraceValues.TraceValues
+  _value :: Language.LSP.Protocol.Internal.Types.TraceValue.TraceValue
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

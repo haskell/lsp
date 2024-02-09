@@ -12,16 +12,11 @@ import Data.Hashable
 import GHC.Generics
 import Language.LSP.Protocol.Utils.Misc
 import Prettyprinter
-import qualified Data.Aeson
 import qualified Data.Aeson as Aeson
-import qualified Data.Row as Row
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
-import qualified Data.Text
 import qualified Language.LSP.Protocol.Internal.Types.CompletionItem
-import qualified Language.LSP.Protocol.Internal.Types.InsertTextFormat
-import qualified Language.LSP.Protocol.Internal.Types.InsertTextMode
-import qualified Language.LSP.Protocol.Internal.Types.Range
+import qualified Language.LSP.Protocol.Internal.Types.CompletionItemDefaults
 import qualified Language.LSP.Protocol.Types.Common
 
 {-|
@@ -51,7 +46,7 @@ data CompletionList = CompletionList
 
   @since 3.17.0
   -}
-  _itemDefaults :: (Maybe (Row.Rec ("commitCharacters" Row..== (Maybe [Data.Text.Text]) Row..+ ("editRange" Row..== (Maybe (Language.LSP.Protocol.Internal.Types.Range.Range Language.LSP.Protocol.Types.Common.|? (Row.Rec ("insert" Row..== Language.LSP.Protocol.Internal.Types.Range.Range Row..+ ("replace" Row..== Language.LSP.Protocol.Internal.Types.Range.Range Row..+ Row.Empty))))) Row..+ ("insertTextFormat" Row..== (Maybe Language.LSP.Protocol.Internal.Types.InsertTextFormat.InsertTextFormat) Row..+ ("insertTextMode" Row..== (Maybe Language.LSP.Protocol.Internal.Types.InsertTextMode.InsertTextMode) Row..+ ("data" Row..== (Maybe Data.Aeson.Value) Row..+ Row.Empty)))))))
+  _itemDefaults :: (Maybe Language.LSP.Protocol.Internal.Types.CompletionItemDefaults.CompletionItemDefaults)
   , {-|
   The completion items.
   -}

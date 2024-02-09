@@ -13,9 +13,9 @@ import GHC.Generics
 import Language.LSP.Protocol.Utils.Misc
 import Prettyprinter
 import qualified Data.Aeson as Aeson
-import qualified Data.Row as Row
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
+import qualified Language.LSP.Protocol.Internal.Types.ClientShowMessageActionItemOptions
 import qualified Language.LSP.Protocol.Types.Common
 
 {-|
@@ -25,7 +25,7 @@ data ShowMessageRequestClientCapabilities = ShowMessageRequestClientCapabilities
   { {-|
   Capabilities specific to the `MessageActionItem` type.
   -}
-  _messageActionItem :: (Maybe (Row.Rec ("additionalPropertiesSupport" Row..== (Maybe Bool) Row..+ Row.Empty)))
+  _messageActionItem :: (Maybe Language.LSP.Protocol.Internal.Types.ClientShowMessageActionItemOptions.ClientShowMessageActionItemOptions)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

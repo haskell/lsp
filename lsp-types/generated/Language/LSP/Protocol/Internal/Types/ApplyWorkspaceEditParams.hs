@@ -20,7 +20,7 @@ import qualified Language.LSP.Protocol.Internal.Types.WorkspaceEdit
 import qualified Language.LSP.Protocol.Types.Common
 
 {-|
-The parameters passed via a apply workspace edit request.
+The parameters passed via an apply workspace edit request.
 -}
 data ApplyWorkspaceEditParams = ApplyWorkspaceEditParams 
   { {-|
