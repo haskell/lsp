@@ -119,4 +119,4 @@ withCreateProcess c action =
 #endif
 
 lspTestClientInfo :: L.ClientInfo
-lspTestClientInfo = L.ClientInfo{L._name = "lsp-test", L._version = Just CURRENT_PACKAGE_VERSION}
+lspTestClientInfo = L.ClientInfo{L.name = "lsp-test", L.version = Just CURRENT_PACKAGE_VERSION}

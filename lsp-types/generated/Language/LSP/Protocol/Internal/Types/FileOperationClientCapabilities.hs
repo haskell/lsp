@@ -29,31 +29,31 @@ data FileOperationClientCapabilities = FileOperationClientCapabilities
   { {-|
   Whether the client supports dynamic registration for file requests/notifications.
   -}
-  _dynamicRegistration :: (Maybe Bool)
+  dynamicRegistration :: (Maybe Bool)
   , {-|
   The client has support for sending didCreateFiles notifications.
   -}
-  _didCreate :: (Maybe Bool)
+  didCreate :: (Maybe Bool)
   , {-|
   The client has support for sending willCreateFiles requests.
   -}
-  _willCreate :: (Maybe Bool)
+  willCreate :: (Maybe Bool)
   , {-|
   The client has support for sending didRenameFiles notifications.
   -}
-  _didRename :: (Maybe Bool)
+  didRename :: (Maybe Bool)
   , {-|
   The client has support for sending willRenameFiles requests.
   -}
-  _willRename :: (Maybe Bool)
+  willRename :: (Maybe Bool)
   , {-|
   The client has support for sending didDeleteFiles notifications.
   -}
-  _didDelete :: (Maybe Bool)
+  didDelete :: (Maybe Bool)
   , {-|
   The client has support for sending willDeleteFiles requests.
   -}
-  _willDelete :: (Maybe Bool)
+  willDelete :: (Maybe Bool)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

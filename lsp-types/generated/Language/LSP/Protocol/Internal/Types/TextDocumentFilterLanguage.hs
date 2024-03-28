@@ -28,15 +28,15 @@ data TextDocumentFilterLanguage = TextDocumentFilterLanguage
   { {-|
   A language id, like `typescript`.
   -}
-  _language :: Data.Text.Text
+  language :: Data.Text.Text
   , {-|
   A Uri `Uri.scheme`, like `file` or `untitled`.
   -}
-  _scheme :: (Maybe Data.Text.Text)
+  scheme :: (Maybe Data.Text.Text)
   , {-|
   A glob pattern, like **​/*.{ts,js}. See TextDocumentFilter for examples.
   -}
-  _pattern :: (Maybe Data.Text.Text)
+  pattern :: (Maybe Data.Text.Text)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

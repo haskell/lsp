@@ -30,19 +30,19 @@ data DeleteFile = DeleteFile
 
   @since 3.16.0
   -}
-  _annotationId :: (Maybe Language.LSP.Protocol.Internal.Types.ChangeAnnotationIdentifier.ChangeAnnotationIdentifier)
+  annotationId :: (Maybe Language.LSP.Protocol.Internal.Types.ChangeAnnotationIdentifier.ChangeAnnotationIdentifier)
   , {-|
   A delete
   -}
-  _kind :: (Language.LSP.Protocol.Types.Singletons.AString "delete")
+  kind :: (Language.LSP.Protocol.Types.Singletons.AString "delete")
   , {-|
   The file to delete.
   -}
-  _uri :: Language.LSP.Protocol.Types.Uri.Uri
+  uri :: Language.LSP.Protocol.Types.Uri.Uri
   , {-|
   Delete options.
   -}
-  _options :: (Maybe Language.LSP.Protocol.Internal.Types.DeleteFileOptions.DeleteFileOptions)
+  options :: (Maybe Language.LSP.Protocol.Internal.Types.DeleteFileOptions.DeleteFileOptions)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

@@ -28,7 +28,7 @@ data ClientFoldingRangeOptions = ClientFoldingRangeOptions
 
   @since 3.17.0
   -}
-  _collapsedText :: (Maybe Bool)
+  collapsedText :: (Maybe Bool)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

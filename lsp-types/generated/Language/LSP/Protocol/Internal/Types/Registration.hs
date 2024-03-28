@@ -27,15 +27,15 @@ data Registration = Registration
   The id used to register the request. The id can be used to deregister
   the request again.
   -}
-  _id :: Data.Text.Text
+  id :: Data.Text.Text
   , {-|
   The method / capability to register for.
   -}
-  _method :: Data.Text.Text
+  method :: Data.Text.Text
   , {-|
   Options necessary for the registration.
   -}
-  _registerOptions :: (Maybe Data.Aeson.Value)
+  registerOptions :: (Maybe Data.Aeson.Value)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

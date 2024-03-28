@@ -25,11 +25,11 @@ data SignatureHelpOptions = SignatureHelpOptions
   { {-|
 
   -}
-  _workDoneProgress :: (Maybe Bool)
+  workDoneProgress :: (Maybe Bool)
   , {-|
   List of characters that trigger signature help automatically.
   -}
-  _triggerCharacters :: (Maybe [Data.Text.Text])
+  triggerCharacters :: (Maybe [Data.Text.Text])
   , {-|
   List of characters that re-trigger signature help.
 
@@ -38,7 +38,7 @@ data SignatureHelpOptions = SignatureHelpOptions
 
   @since 3.15.0
   -}
-  _retriggerCharacters :: (Maybe [Data.Text.Text])
+  retriggerCharacters :: (Maybe [Data.Text.Text])
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

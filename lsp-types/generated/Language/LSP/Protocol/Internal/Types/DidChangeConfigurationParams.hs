@@ -25,7 +25,7 @@ data DidChangeConfigurationParams = DidChangeConfigurationParams
   { {-|
   The actual changed settings
   -}
-  _settings :: Data.Aeson.Value
+  settings :: Data.Aeson.Value
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

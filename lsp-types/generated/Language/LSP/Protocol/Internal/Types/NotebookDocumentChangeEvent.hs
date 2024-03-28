@@ -30,11 +30,11 @@ data NotebookDocumentChangeEvent = NotebookDocumentChangeEvent
 
   Note: should always be an object literal (e.g. LSPObject)
   -}
-  _metadata :: (Maybe Data.Aeson.Object)
+  metadata :: (Maybe Data.Aeson.Object)
   , {-|
   Changes to cells
   -}
-  _cells :: (Maybe Language.LSP.Protocol.Internal.Types.NotebookDocumentCellChanges.NotebookDocumentCellChanges)
+  cells :: (Maybe Language.LSP.Protocol.Internal.Types.NotebookDocumentCellChanges.NotebookDocumentCellChanges)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

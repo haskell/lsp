@@ -29,27 +29,27 @@ data SignatureHelpContext = SignatureHelpContext
   { {-|
   Action that caused signature help to be triggered.
   -}
-  _triggerKind :: Language.LSP.Protocol.Internal.Types.SignatureHelpTriggerKind.SignatureHelpTriggerKind
+  triggerKind :: Language.LSP.Protocol.Internal.Types.SignatureHelpTriggerKind.SignatureHelpTriggerKind
   , {-|
   Character that caused signature help to be triggered.
 
   This is undefined when `triggerKind !== SignatureHelpTriggerKind.TriggerCharacter`
   -}
-  _triggerCharacter :: (Maybe Data.Text.Text)
+  triggerCharacter :: (Maybe Data.Text.Text)
   , {-|
   `true` if signature help was already showing when it was triggered.
 
   Retriggers occurs when the signature help is already active and can be caused by actions such as
   typing a trigger character, a cursor move, or document content changes.
   -}
-  _isRetrigger :: Bool
+  isRetrigger :: Bool
   , {-|
   The currently active `SignatureHelp`.
 
   The `activeSignatureHelp` has its `SignatureHelp.activeSignature` field updated based on
   the user navigating through available signatures.
   -}
-  _activeSignatureHelp :: (Maybe Language.LSP.Protocol.Internal.Types.SignatureHelp.SignatureHelp)
+  activeSignatureHelp :: (Maybe Language.LSP.Protocol.Internal.Types.SignatureHelp.SignatureHelp)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

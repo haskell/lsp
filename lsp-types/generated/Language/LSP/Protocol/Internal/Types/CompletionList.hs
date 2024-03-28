@@ -30,7 +30,7 @@ data CompletionList = CompletionList
   Recomputed lists have all their items replaced (not appended) in the
   incomplete completion sessions.
   -}
-  _isIncomplete :: Bool
+  isIncomplete :: Bool
   , {-|
   In many cases the items of an actual completion result share the same
   value for properties like `commitCharacters` or the range of a text
@@ -46,11 +46,11 @@ data CompletionList = CompletionList
 
   @since 3.17.0
   -}
-  _itemDefaults :: (Maybe Language.LSP.Protocol.Internal.Types.CompletionItemDefaults.CompletionItemDefaults)
+  itemDefaults :: (Maybe Language.LSP.Protocol.Internal.Types.CompletionItemDefaults.CompletionItemDefaults)
   , {-|
   The completion items.
   -}
-  _items :: [Language.LSP.Protocol.Internal.Types.CompletionItem.CompletionItem]
+  items :: [Language.LSP.Protocol.Internal.Types.CompletionItem.CompletionItem]
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

@@ -26,16 +26,16 @@ data DocumentSymbolClientCapabilities = DocumentSymbolClientCapabilities
   { {-|
   Whether document symbol supports dynamic registration.
   -}
-  _dynamicRegistration :: (Maybe Bool)
+  dynamicRegistration :: (Maybe Bool)
   , {-|
   Specific capabilities for the `SymbolKind` in the
   `textDocument/documentSymbol` request.
   -}
-  _symbolKind :: (Maybe Language.LSP.Protocol.Internal.Types.ClientSymbolKindOptions.ClientSymbolKindOptions)
+  symbolKind :: (Maybe Language.LSP.Protocol.Internal.Types.ClientSymbolKindOptions.ClientSymbolKindOptions)
   , {-|
   The client supports hierarchical document symbols.
   -}
-  _hierarchicalDocumentSymbolSupport :: (Maybe Bool)
+  hierarchicalDocumentSymbolSupport :: (Maybe Bool)
   , {-|
   The client supports tags on `SymbolInformation`. Tags are supported on
   `DocumentSymbol` if `hierarchicalDocumentSymbolSupport` is set to true.
@@ -43,14 +43,14 @@ data DocumentSymbolClientCapabilities = DocumentSymbolClientCapabilities
 
   @since 3.16.0
   -}
-  _tagSupport :: (Maybe Language.LSP.Protocol.Internal.Types.ClientSymbolTagOptions.ClientSymbolTagOptions)
+  tagSupport :: (Maybe Language.LSP.Protocol.Internal.Types.ClientSymbolTagOptions.ClientSymbolTagOptions)
   , {-|
   The client supports an additional label presented in the UI when
   registering a document symbol provider.
 
   @since 3.16.0
   -}
-  _labelSupport :: (Maybe Bool)
+  labelSupport :: (Maybe Bool)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

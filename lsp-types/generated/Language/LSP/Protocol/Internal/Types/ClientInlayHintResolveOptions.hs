@@ -26,7 +26,7 @@ data ClientInlayHintResolveOptions = ClientInlayHintResolveOptions
   { {-|
   The properties that a client can resolve lazily.
   -}
-  _properties :: [Data.Text.Text]
+  properties :: [Data.Text.Text]
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

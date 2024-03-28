@@ -24,19 +24,19 @@ data Color = Color
   { {-|
   The red component of this color in the range [0-1].
   -}
-  _red :: Float
+  red :: Float
   , {-|
   The green component of this color in the range [0-1].
   -}
-  _green :: Float
+  green :: Float
   , {-|
   The blue component of this color in the range [0-1].
   -}
-  _blue :: Float
+  blue :: Float
   , {-|
   The alpha component of this color in the range [0-1].
   -}
-  _alpha :: Float
+  alpha :: Float
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

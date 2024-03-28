@@ -33,37 +33,37 @@ data CallHierarchyItem = CallHierarchyItem
   { {-|
   The name of this item.
   -}
-  _name :: Data.Text.Text
+  name :: Data.Text.Text
   , {-|
   The kind of this item.
   -}
-  _kind :: Language.LSP.Protocol.Internal.Types.SymbolKind.SymbolKind
+  kind :: Language.LSP.Protocol.Internal.Types.SymbolKind.SymbolKind
   , {-|
   Tags for this item.
   -}
-  _tags :: (Maybe [Language.LSP.Protocol.Internal.Types.SymbolTag.SymbolTag])
+  tags :: (Maybe [Language.LSP.Protocol.Internal.Types.SymbolTag.SymbolTag])
   , {-|
   More detail for this item, e.g. the signature of a function.
   -}
-  _detail :: (Maybe Data.Text.Text)
+  detail :: (Maybe Data.Text.Text)
   , {-|
   The resource identifier of this item.
   -}
-  _uri :: Language.LSP.Protocol.Types.Uri.Uri
+  uri :: Language.LSP.Protocol.Types.Uri.Uri
   , {-|
   The range enclosing this symbol not including leading/trailing whitespace but everything else, e.g. comments and code.
   -}
-  _range :: Language.LSP.Protocol.Internal.Types.Range.Range
+  range :: Language.LSP.Protocol.Internal.Types.Range.Range
   , {-|
   The range that should be selected and revealed when this symbol is being picked, e.g. the name of a function.
   Must be contained by the `CallHierarchyItem.range`.
   -}
-  _selectionRange :: Language.LSP.Protocol.Internal.Types.Range.Range
+  selectionRange :: Language.LSP.Protocol.Internal.Types.Range.Range
   , {-|
   A data entry field that is preserved between a call hierarchy prepare and
   incoming calls or outgoing calls requests.
   -}
-  _data_ :: (Maybe Data.Aeson.Value)
+  data_ :: (Maybe Data.Aeson.Value)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

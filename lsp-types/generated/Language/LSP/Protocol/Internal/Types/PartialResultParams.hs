@@ -26,7 +26,7 @@ data PartialResultParams = PartialResultParams
   An optional token that a server can use to report partial results (e.g. streaming) to
   the client.
   -}
-  _partialResultToken :: (Maybe Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken)
+  partialResultToken :: (Maybe Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

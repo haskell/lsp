@@ -28,20 +28,20 @@ data TextDocumentItem = TextDocumentItem
   { {-|
   The text document's uri.
   -}
-  _uri :: Language.LSP.Protocol.Types.Uri.Uri
+  uri :: Language.LSP.Protocol.Types.Uri.Uri
   , {-|
   The text document's language identifier.
   -}
-  _languageId :: Language.LSP.Protocol.Internal.Types.LanguageKind.LanguageKind
+  languageId :: Language.LSP.Protocol.Internal.Types.LanguageKind.LanguageKind
   , {-|
   The version number of this document (it will increase after each
   change, including undo/redo).
   -}
-  _version :: Language.LSP.Protocol.Types.Common.Int32
+  version :: Language.LSP.Protocol.Types.Common.Int32
   , {-|
   The content of the opened text document.
   -}
-  _text :: Data.Text.Text
+  text :: Data.Text.Text
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

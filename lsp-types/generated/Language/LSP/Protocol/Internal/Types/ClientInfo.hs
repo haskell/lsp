@@ -29,11 +29,11 @@ data ClientInfo = ClientInfo
   { {-|
   The name of the client as defined by the client.
   -}
-  _name :: Data.Text.Text
+  name :: Data.Text.Text
   , {-|
   The client's version as defined by the client.
   -}
-  _version :: (Maybe Data.Text.Text)
+  version :: (Maybe Data.Text.Text)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

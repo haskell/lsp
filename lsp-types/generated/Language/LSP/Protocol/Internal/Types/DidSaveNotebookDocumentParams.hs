@@ -27,7 +27,7 @@ data DidSaveNotebookDocumentParams = DidSaveNotebookDocumentParams
   { {-|
   The notebook document that got saved.
   -}
-  _notebookDocument :: Language.LSP.Protocol.Internal.Types.NotebookDocumentIdentifier.NotebookDocumentIdentifier
+  notebookDocument :: Language.LSP.Protocol.Internal.Types.NotebookDocumentIdentifier.NotebookDocumentIdentifier
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

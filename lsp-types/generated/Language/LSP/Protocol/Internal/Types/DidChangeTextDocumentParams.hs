@@ -28,7 +28,7 @@ data DidChangeTextDocumentParams = DidChangeTextDocumentParams
   to the version after all provided content changes have
   been applied.
   -}
-  _textDocument :: Language.LSP.Protocol.Internal.Types.VersionedTextDocumentIdentifier.VersionedTextDocumentIdentifier
+  textDocument :: Language.LSP.Protocol.Internal.Types.VersionedTextDocumentIdentifier.VersionedTextDocumentIdentifier
   , {-|
   The actual content changes. The content changes describe single state changes
   to the document. So if there are two content changes c1 (at array index 0) and
@@ -42,7 +42,7 @@ data DidChangeTextDocumentParams = DidChangeTextDocumentParams
   - apply the `TextDocumentContentChangeEvent`s in a single notification in the order
     you receive them.
   -}
-  _contentChanges :: [Language.LSP.Protocol.Internal.Types.TextDocumentContentChangeEvent.TextDocumentContentChangeEvent]
+  contentChanges :: [Language.LSP.Protocol.Internal.Types.TextDocumentContentChangeEvent.TextDocumentContentChangeEvent]
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

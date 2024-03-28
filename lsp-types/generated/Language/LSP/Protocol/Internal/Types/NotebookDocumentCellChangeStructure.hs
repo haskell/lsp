@@ -30,15 +30,15 @@ data NotebookDocumentCellChangeStructure = NotebookDocumentCellChangeStructure
   { {-|
   The change to the cell array.
   -}
-  _array :: Language.LSP.Protocol.Internal.Types.NotebookCellArrayChange.NotebookCellArrayChange
+  array :: Language.LSP.Protocol.Internal.Types.NotebookCellArrayChange.NotebookCellArrayChange
   , {-|
   Additional opened cell text documents.
   -}
-  _didOpen :: (Maybe [Language.LSP.Protocol.Internal.Types.TextDocumentItem.TextDocumentItem])
+  didOpen :: (Maybe [Language.LSP.Protocol.Internal.Types.TextDocumentItem.TextDocumentItem])
   , {-|
   Additional closed cell text documents.
   -}
-  _didClose :: (Maybe [Language.LSP.Protocol.Internal.Types.TextDocumentIdentifier.TextDocumentIdentifier])
+  didClose :: (Maybe [Language.LSP.Protocol.Internal.Types.TextDocumentIdentifier.TextDocumentIdentifier])
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

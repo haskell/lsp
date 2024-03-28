@@ -26,17 +26,17 @@ data WorkspaceSymbolParams = WorkspaceSymbolParams
   { {-|
   An optional token that a server can use to report work done progress.
   -}
-  _workDoneToken :: (Maybe Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken)
+  workDoneToken :: (Maybe Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken)
   , {-|
   An optional token that a server can use to report partial results (e.g. streaming) to
   the client.
   -}
-  _partialResultToken :: (Maybe Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken)
+  partialResultToken :: (Maybe Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken)
   , {-|
   A query string to filter symbols by. Clients may send an empty
   string here to request all symbols.
   -}
-  _query :: Data.Text.Text
+  query :: Data.Text.Text
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

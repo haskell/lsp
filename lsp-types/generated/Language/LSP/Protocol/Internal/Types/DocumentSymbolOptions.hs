@@ -25,14 +25,14 @@ data DocumentSymbolOptions = DocumentSymbolOptions
   { {-|
 
   -}
-  _workDoneProgress :: (Maybe Bool)
+  workDoneProgress :: (Maybe Bool)
   , {-|
   A human-readable string that is shown when multiple outlines trees
   are shown for the same document.
 
   @since 3.16.0
   -}
-  _label :: (Maybe Data.Text.Text)
+  label :: (Maybe Data.Text.Text)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

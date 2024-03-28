@@ -38,12 +38,12 @@ data NotebookDocumentSyncOptions = NotebookDocumentSyncOptions
   { {-|
   The notebooks to be synced
   -}
-  _notebookSelector :: [(Language.LSP.Protocol.Internal.Types.NotebookDocumentFilterWithNotebook.NotebookDocumentFilterWithNotebook Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.NotebookDocumentFilterWithCells.NotebookDocumentFilterWithCells)]
+  notebookSelector :: [(Language.LSP.Protocol.Internal.Types.NotebookDocumentFilterWithNotebook.NotebookDocumentFilterWithNotebook Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.NotebookDocumentFilterWithCells.NotebookDocumentFilterWithCells)]
   , {-|
   Whether save notification should be forwarded to
   the server. Will only be honored if mode === `notebook`.
   -}
-  _save :: (Maybe Bool)
+  save :: (Maybe Bool)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

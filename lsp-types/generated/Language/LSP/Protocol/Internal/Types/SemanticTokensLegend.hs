@@ -25,11 +25,11 @@ data SemanticTokensLegend = SemanticTokensLegend
   { {-|
   The token types a server uses.
   -}
-  _tokenTypes :: [Data.Text.Text]
+  tokenTypes :: [Data.Text.Text]
   , {-|
   The token modifiers a server uses.
   -}
-  _tokenModifiers :: [Data.Text.Text]
+  tokenModifiers :: [Data.Text.Text]
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

@@ -38,13 +38,13 @@ data ParameterInformation = ParameterInformation
   *Note*: a label of type string should be a substring of its containing signature label.
   Its intended use case is to highlight the parameter label part in the `SignatureInformation.label`.
   -}
-  _label :: (Data.Text.Text Language.LSP.Protocol.Types.Common.|? ( Language.LSP.Protocol.Types.Common.UInt
+  label :: (Data.Text.Text Language.LSP.Protocol.Types.Common.|? ( Language.LSP.Protocol.Types.Common.UInt
   , Language.LSP.Protocol.Types.Common.UInt ))
   , {-|
   The human-readable doc-comment of this parameter. Will be shown
   in the UI but can be omitted.
   -}
-  _documentation :: (Maybe (Data.Text.Text Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.MarkupContent.MarkupContent))
+  documentation :: (Maybe (Data.Text.Text Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.MarkupContent.MarkupContent))
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

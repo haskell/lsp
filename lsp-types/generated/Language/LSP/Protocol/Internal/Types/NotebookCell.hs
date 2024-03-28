@@ -34,23 +34,23 @@ data NotebookCell = NotebookCell
   { {-|
   The cell's kind
   -}
-  _kind :: Language.LSP.Protocol.Internal.Types.NotebookCellKind.NotebookCellKind
+  kind :: Language.LSP.Protocol.Internal.Types.NotebookCellKind.NotebookCellKind
   , {-|
   The URI of the cell's text document
   content.
   -}
-  _document :: Language.LSP.Protocol.Types.Uri.Uri
+  document :: Language.LSP.Protocol.Types.Uri.Uri
   , {-|
   Additional metadata stored with the cell.
 
   Note: should always be an object literal (e.g. LSPObject)
   -}
-  _metadata :: (Maybe Data.Aeson.Object)
+  metadata :: (Maybe Data.Aeson.Object)
   , {-|
   Additional execution summary information
   if supported by the client.
   -}
-  _executionSummary :: (Maybe Language.LSP.Protocol.Internal.Types.ExecutionSummary.ExecutionSummary)
+  executionSummary :: (Maybe Language.LSP.Protocol.Internal.Types.ExecutionSummary.ExecutionSummary)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

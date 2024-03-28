@@ -26,7 +26,7 @@ data TextDocumentContentChangeWholeDocument = TextDocumentContentChangeWholeDocu
   { {-|
   The new text of the whole document.
   -}
-  _text :: Data.Text.Text
+  text :: Data.Text.Text
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

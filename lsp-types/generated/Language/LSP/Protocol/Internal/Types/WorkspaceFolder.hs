@@ -26,12 +26,12 @@ data WorkspaceFolder = WorkspaceFolder
   { {-|
   The associated URI for this workspace folder.
   -}
-  _uri :: Language.LSP.Protocol.Types.Uri.Uri
+  uri :: Language.LSP.Protocol.Types.Uri.Uri
   , {-|
   The name of the workspace folder. Used to refer to this
   workspace folder in the user interface.
   -}
-  _name :: Data.Text.Text
+  name :: Data.Text.Text
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

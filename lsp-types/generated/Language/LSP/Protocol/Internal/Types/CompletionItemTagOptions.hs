@@ -26,7 +26,7 @@ data CompletionItemTagOptions = CompletionItemTagOptions
   { {-|
   The tags supported by the client.
   -}
-  _valueSet :: [Language.LSP.Protocol.Internal.Types.CompletionItemTag.CompletionItemTag]
+  valueSet :: [Language.LSP.Protocol.Internal.Types.CompletionItemTag.CompletionItemTag]
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

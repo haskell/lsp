@@ -28,11 +28,11 @@ data EditRangeWithInsertReplace = EditRangeWithInsertReplace
   { {-|
 
   -}
-  _insert :: Language.LSP.Protocol.Internal.Types.Range.Range
+  insert :: Language.LSP.Protocol.Internal.Types.Range.Range
   , {-|
 
   -}
-  _replace :: Language.LSP.Protocol.Internal.Types.Range.Range
+  replace :: Language.LSP.Protocol.Internal.Types.Range.Range
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

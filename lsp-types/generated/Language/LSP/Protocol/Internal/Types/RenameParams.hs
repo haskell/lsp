@@ -28,21 +28,21 @@ data RenameParams = RenameParams
   { {-|
   An optional token that a server can use to report work done progress.
   -}
-  _workDoneToken :: (Maybe Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken)
+  workDoneToken :: (Maybe Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken)
   , {-|
   The document to rename.
   -}
-  _textDocument :: Language.LSP.Protocol.Internal.Types.TextDocumentIdentifier.TextDocumentIdentifier
+  textDocument :: Language.LSP.Protocol.Internal.Types.TextDocumentIdentifier.TextDocumentIdentifier
   , {-|
   The position at which this request was sent.
   -}
-  _position :: Language.LSP.Protocol.Internal.Types.Position.Position
+  position :: Language.LSP.Protocol.Internal.Types.Position.Position
   , {-|
   The new name of the symbol. If the given name is not valid the
   request must return a `ResponseError` with an
   appropriate message set.
   -}
-  _newName :: Data.Text.Text
+  newName :: Data.Text.Text
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

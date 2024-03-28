@@ -25,7 +25,7 @@ data ShowMessageRequestClientCapabilities = ShowMessageRequestClientCapabilities
   { {-|
   Capabilities specific to the `MessageActionItem` type.
   -}
-  _messageActionItem :: (Maybe Language.LSP.Protocol.Internal.Types.ClientShowMessageActionItemOptions.ClientShowMessageActionItemOptions)
+  messageActionItem :: (Maybe Language.LSP.Protocol.Internal.Types.ClientShowMessageActionItemOptions.ClientShowMessageActionItemOptions)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

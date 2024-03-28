@@ -24,11 +24,11 @@ data RenameFileOptions = RenameFileOptions
   { {-|
   Overwrite target if existing. Overwrite wins over `ignoreIfExists`
   -}
-  _overwrite :: (Maybe Bool)
+  overwrite :: (Maybe Bool)
   , {-|
   Ignores if target exists.
   -}
-  _ignoreIfExists :: (Maybe Bool)
+  ignoreIfExists :: (Maybe Bool)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

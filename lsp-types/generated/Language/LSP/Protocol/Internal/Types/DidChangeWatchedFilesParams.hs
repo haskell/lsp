@@ -25,7 +25,7 @@ data DidChangeWatchedFilesParams = DidChangeWatchedFilesParams
   { {-|
   The actual file events.
   -}
-  _changes :: [Language.LSP.Protocol.Internal.Types.FileEvent.FileEvent]
+  changes :: [Language.LSP.Protocol.Internal.Types.FileEvent.FileEvent]
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

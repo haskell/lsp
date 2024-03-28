@@ -25,11 +25,11 @@ data VersionedTextDocumentIdentifier = VersionedTextDocumentIdentifier
   { {-|
   The text document's uri.
   -}
-  _uri :: Language.LSP.Protocol.Types.Uri.Uri
+  uri :: Language.LSP.Protocol.Types.Uri.Uri
   , {-|
   The version number of this document.
   -}
-  _version :: Language.LSP.Protocol.Types.Common.Int32
+  version :: Language.LSP.Protocol.Types.Common.Int32
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

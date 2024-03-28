@@ -25,7 +25,7 @@ data DidOpenTextDocumentParams = DidOpenTextDocumentParams
   { {-|
   The document that was opened.
   -}
-  _textDocument :: Language.LSP.Protocol.Internal.Types.TextDocumentItem.TextDocumentItem
+  textDocument :: Language.LSP.Protocol.Internal.Types.TextDocumentItem.TextDocumentItem
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

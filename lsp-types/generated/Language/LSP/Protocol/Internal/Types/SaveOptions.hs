@@ -24,7 +24,7 @@ data SaveOptions = SaveOptions
   { {-|
   The client is supposed to include the content on save.
   -}
-  _includeText :: (Maybe Bool)
+  includeText :: (Maybe Bool)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

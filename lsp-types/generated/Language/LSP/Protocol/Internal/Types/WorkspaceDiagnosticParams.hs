@@ -29,21 +29,21 @@ data WorkspaceDiagnosticParams = WorkspaceDiagnosticParams
   { {-|
   An optional token that a server can use to report work done progress.
   -}
-  _workDoneToken :: (Maybe Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken)
+  workDoneToken :: (Maybe Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken)
   , {-|
   An optional token that a server can use to report partial results (e.g. streaming) to
   the client.
   -}
-  _partialResultToken :: (Maybe Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken)
+  partialResultToken :: (Maybe Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken)
   , {-|
   The additional identifier provided during registration.
   -}
-  _identifier :: (Maybe Data.Text.Text)
+  identifier :: (Maybe Data.Text.Text)
   , {-|
   The currently known diagnostic reports with their
   previous result ids.
   -}
-  _previousResultIds :: [Language.LSP.Protocol.Internal.Types.PreviousResultId.PreviousResultId]
+  previousResultIds :: [Language.LSP.Protocol.Internal.Types.PreviousResultId.PreviousResultId]
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

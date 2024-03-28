@@ -32,7 +32,7 @@ data DiagnosticWorkspaceClientCapabilities = DiagnosticWorkspaceClientCapabiliti
   is useful for situation where a server for example detects a project wide
   change that requires such a calculation.
   -}
-  _refreshSupport :: (Maybe Bool)
+  refreshSupport :: (Maybe Bool)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

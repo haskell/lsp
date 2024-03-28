@@ -26,11 +26,11 @@ data Unregistration = Unregistration
   The id used to unregister the request or notification. Usually an id
   provided during the register request.
   -}
-  _id :: Data.Text.Text
+  id :: Data.Text.Text
   , {-|
   The method to unregister for.
   -}
-  _method :: Data.Text.Text
+  method :: Data.Text.Text
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

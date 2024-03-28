@@ -28,18 +28,18 @@ data ClientSignatureInformationOptions = ClientSignatureInformationOptions
   Client supports the following content formats for the documentation
   property. The order describes the preferred format of the client.
   -}
-  _documentationFormat :: (Maybe [Language.LSP.Protocol.Internal.Types.MarkupKind.MarkupKind])
+  documentationFormat :: (Maybe [Language.LSP.Protocol.Internal.Types.MarkupKind.MarkupKind])
   , {-|
   Client capabilities specific to parameter information.
   -}
-  _parameterInformation :: (Maybe Language.LSP.Protocol.Internal.Types.ClientSignatureParameterInformationOptions.ClientSignatureParameterInformationOptions)
+  parameterInformation :: (Maybe Language.LSP.Protocol.Internal.Types.ClientSignatureParameterInformationOptions.ClientSignatureParameterInformationOptions)
   , {-|
   The client supports the `activeParameter` property on `SignatureInformation`
   literal.
 
   @since 3.16.0
   -}
-  _activeParameterSupport :: (Maybe Bool)
+  activeParameterSupport :: (Maybe Bool)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

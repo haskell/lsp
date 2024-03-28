@@ -13,7 +13,7 @@ import Data.Map.Strict qualified as M
 import Data.Proxy
 import Data.String
 import Data.Text qualified as T
-import Language.LSP.Protocol.Message
+import Language.LSP.Protocol.Message hiding (error)
 import Language.LSP.Protocol.Types
 import Language.LSP.Server
 import System.Directory

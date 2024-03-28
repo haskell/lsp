@@ -29,7 +29,7 @@ data RenameFilesParams = RenameFilesParams
   An array of all files/folders renamed in this operation. When a folder is renamed, only
   the folder will be included, and not its children.
   -}
-  _files :: [Language.LSP.Protocol.Internal.Types.FileRename.FileRename]
+  files :: [Language.LSP.Protocol.Internal.Types.FileRename.FileRename]
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

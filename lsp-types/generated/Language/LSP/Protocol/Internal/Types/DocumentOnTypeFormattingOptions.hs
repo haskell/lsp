@@ -25,11 +25,11 @@ data DocumentOnTypeFormattingOptions = DocumentOnTypeFormattingOptions
   { {-|
   A character on which formatting should be triggered, like `{`.
   -}
-  _firstTriggerCharacter :: Data.Text.Text
+  firstTriggerCharacter :: Data.Text.Text
   , {-|
   More trigger characters.
   -}
-  _moreTriggerCharacter :: (Maybe [Data.Text.Text])
+  moreTriggerCharacter :: (Maybe [Data.Text.Text])
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

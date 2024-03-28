@@ -34,24 +34,24 @@ data ClientCompletionItemOptions = ClientCompletionItemOptions
   the end of the snippet. Placeholders with equal identifiers are linked,
   that is typing in one will update others too.
   -}
-  _snippetSupport :: (Maybe Bool)
+  snippetSupport :: (Maybe Bool)
   , {-|
   Client supports commit characters on a completion item.
   -}
-  _commitCharactersSupport :: (Maybe Bool)
+  commitCharactersSupport :: (Maybe Bool)
   , {-|
   Client supports the following content formats for the documentation
   property. The order describes the preferred format of the client.
   -}
-  _documentationFormat :: (Maybe [Language.LSP.Protocol.Internal.Types.MarkupKind.MarkupKind])
+  documentationFormat :: (Maybe [Language.LSP.Protocol.Internal.Types.MarkupKind.MarkupKind])
   , {-|
   Client supports the deprecated property on a completion item.
   -}
-  _deprecatedSupport :: (Maybe Bool)
+  deprecatedSupport :: (Maybe Bool)
   , {-|
   Client supports the preselect property on a completion item.
   -}
-  _preselectSupport :: (Maybe Bool)
+  preselectSupport :: (Maybe Bool)
   , {-|
   Client supports the tag property on a completion item. Clients supporting
   tags have to handle unknown tags gracefully. Clients especially need to
@@ -60,14 +60,14 @@ data ClientCompletionItemOptions = ClientCompletionItemOptions
 
   @since 3.15.0
   -}
-  _tagSupport :: (Maybe Language.LSP.Protocol.Internal.Types.CompletionItemTagOptions.CompletionItemTagOptions)
+  tagSupport :: (Maybe Language.LSP.Protocol.Internal.Types.CompletionItemTagOptions.CompletionItemTagOptions)
   , {-|
   Client support insert replace edit to control different behavior if a
   completion item is inserted in the text or should replace text.
 
   @since 3.16.0
   -}
-  _insertReplaceSupport :: (Maybe Bool)
+  insertReplaceSupport :: (Maybe Bool)
   , {-|
   Indicates which properties a client can resolve lazily on a completion
   item. Before version 3.16.0 only the predefined properties `documentation`
@@ -75,7 +75,7 @@ data ClientCompletionItemOptions = ClientCompletionItemOptions
 
   @since 3.16.0
   -}
-  _resolveSupport :: (Maybe Language.LSP.Protocol.Internal.Types.ClientCompletionItemResolveOptions.ClientCompletionItemResolveOptions)
+  resolveSupport :: (Maybe Language.LSP.Protocol.Internal.Types.ClientCompletionItemResolveOptions.ClientCompletionItemResolveOptions)
   , {-|
   The client supports the `insertTextMode` property on
   a completion item to override the whitespace handling mode
@@ -83,14 +83,14 @@ data ClientCompletionItemOptions = ClientCompletionItemOptions
 
   @since 3.16.0
   -}
-  _insertTextModeSupport :: (Maybe Language.LSP.Protocol.Internal.Types.ClientCompletionItemInsertTextModeOptions.ClientCompletionItemInsertTextModeOptions)
+  insertTextModeSupport :: (Maybe Language.LSP.Protocol.Internal.Types.ClientCompletionItemInsertTextModeOptions.ClientCompletionItemInsertTextModeOptions)
   , {-|
   The client has support for completion item label
   details (see also `CompletionItemLabelDetails`).
 
   @since 3.17.0
   -}
-  _labelDetailsSupport :: (Maybe Bool)
+  labelDetailsSupport :: (Maybe Bool)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

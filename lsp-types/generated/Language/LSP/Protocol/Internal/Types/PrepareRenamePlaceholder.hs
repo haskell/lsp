@@ -27,11 +27,11 @@ data PrepareRenamePlaceholder = PrepareRenamePlaceholder
   { {-|
 
   -}
-  _range :: Language.LSP.Protocol.Internal.Types.Range.Range
+  range :: Language.LSP.Protocol.Internal.Types.Range.Range
   , {-|
 
   -}
-  _placeholder :: Data.Text.Text
+  placeholder :: Data.Text.Text
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

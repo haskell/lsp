@@ -24,13 +24,13 @@ data DefinitionClientCapabilities = DefinitionClientCapabilities
   { {-|
   Whether definition supports dynamic registration.
   -}
-  _dynamicRegistration :: (Maybe Bool)
+  dynamicRegistration :: (Maybe Bool)
   , {-|
   The client supports additional metadata in the form of definition links.
 
   @since 3.14.0
   -}
-  _linkSupport :: (Maybe Bool)
+  linkSupport :: (Maybe Bool)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

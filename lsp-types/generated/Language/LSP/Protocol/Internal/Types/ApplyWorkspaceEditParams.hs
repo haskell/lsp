@@ -28,11 +28,11 @@ data ApplyWorkspaceEditParams = ApplyWorkspaceEditParams
   presented in the user interface for example on an undo
   stack to undo the workspace edit.
   -}
-  _label :: (Maybe Data.Text.Text)
+  label :: (Maybe Data.Text.Text)
   , {-|
   The edits to apply.
   -}
-  _edit :: Language.LSP.Protocol.Internal.Types.WorkspaceEdit.WorkspaceEdit
+  edit :: Language.LSP.Protocol.Internal.Types.WorkspaceEdit.WorkspaceEdit
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

@@ -26,7 +26,7 @@ data ShowDocumentResult = ShowDocumentResult
   { {-|
   A boolean indicating if the show was successful.
   -}
-  _success :: Bool
+  success :: Bool
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

@@ -1,4 +1,5 @@
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Language.LSP.Protocol.Capabilities (
@@ -8,10 +9,8 @@ module Language.LSP.Protocol.Capabilities (
   dynamicRegistrationSupported,
 ) where
 
-import Control.Lens
 import Data.Maybe
 import Data.Set qualified as Set
-import Language.LSP.Protocol.Lens qualified as L
 import Language.LSP.Protocol.Message
 import Language.LSP.Protocol.Types
 import Prelude hiding (min)
@@ -34,37 +33,37 @@ capsForVersion (LSPVersion maj min) = caps
  where
   caps =
     ClientCapabilities
-      { _workspace = Just w
-      , _textDocument = Just td
-      , _window = Just window
-      , _general = since 3 16 general
-      , _notebookDocument = since 3 17 $ NotebookDocumentClientCapabilities $ NotebookDocumentSyncClientCapabilities dynamicReg (Just True)
-      , _experimental = Nothing
+      { workspace = Just w
+      , textDocument = Just td
+      , window = Just window
+      , general = since 3 16 general
+      , notebookDocument = since 3 17 $ NotebookDocumentClientCapabilities $ NotebookDocumentSyncClientCapabilities dynamicReg (Just True)
+      , experimental = Nothing
       }
   w =
     WorkspaceClientCapabilities
-      { _applyEdit = Just True
-      , _workspaceEdit =
+      { applyEdit = Just True
+      , workspaceEdit =
           Just
             ( WorkspaceEditClientCapabilities
                 (Just True)
                 (since 3 13 resourceOperations)
                 Nothing
                 (since 3 16 True)
-                (since 3 16 (ChangeAnnotationsSupportOptions{_groupsOnLabel = Just True}))
+                (since 3 16 (ChangeAnnotationsSupportOptions{groupsOnLabel = Just True}))
             )
-      , _didChangeConfiguration = Just (DidChangeConfigurationClientCapabilities dynamicReg)
-      , _didChangeWatchedFiles = Just (DidChangeWatchedFilesClientCapabilities dynamicReg (Just True))
-      , _symbol = Just symbolCapabilities
-      , _executeCommand = Just (ExecuteCommandClientCapabilities dynamicReg)
-      , _codeLens = Just (CodeLensWorkspaceClientCapabilities $ Just True)
-      , _workspaceFolders = since 3 6 True
-      , _configuration = since 3 6 True
-      , _semanticTokens = since 3 16 (SemanticTokensWorkspaceClientCapabilities $ Just True)
-      , _inlayHint = since 3 17 (InlayHintWorkspaceClientCapabilities $ Just True)
-      , _fileOperations = since 3 16 fileOperations
-      , _inlineValue = since 3 17 (InlineValueWorkspaceClientCapabilities $ Just True)
-      , _diagnostics = since 3 17 (DiagnosticWorkspaceClientCapabilities $ Just True)
+      , didChangeConfiguration = Just (DidChangeConfigurationClientCapabilities dynamicReg)
+      , didChangeWatchedFiles = Just (DidChangeWatchedFilesClientCapabilities dynamicReg (Just True))
+      , symbol = Just symbolCapabilities
+      , executeCommand = Just (ExecuteCommandClientCapabilities dynamicReg)
+      , codeLens = Just (CodeLensWorkspaceClientCapabilities $ Just True)
+      , workspaceFolders = since 3 6 True
+      , configuration = since 3 6 True
+      , semanticTokens = since 3 16 (SemanticTokensWorkspaceClientCapabilities $ Just True)
+      , inlayHint = since 3 17 (InlayHintWorkspaceClientCapabilities $ Just True)
+      , fileOperations = since 3 16 fileOperations
+      , inlineValue = since 3 17 (InlineValueWorkspaceClientCapabilities $ Just True)
+      , diagnostics = since 3 17 (DiagnosticWorkspaceClientCapabilities $ Just True)
       }
 
   resourceOperations =
@@ -86,9 +85,9 @@ capsForVersion (LSPVersion maj min) = caps
   symbolCapabilities =
     WorkspaceSymbolClientCapabilities
       dynamicReg
-      (since 3 4 (ClientSymbolKindOptions{_valueSet = Just sKs}))
-      (since 3 16 (ClientSymbolTagOptions{_valueSet = [SymbolTag_Deprecated]}))
-      (since 3 17 (ClientSymbolResolveOptions{_properties = []}))
+      (since 3 4 (ClientSymbolKindOptions{valueSet = Just sKs}))
+      (since 3 16 (ClientSymbolTagOptions{valueSet = [SymbolTag_Deprecated]}))
+      (since 3 17 (ClientSymbolResolveOptions{properties = []}))
 
   sKs
     | maj >= 3 && min >= 4 = oldSKs ++ newSKs
@@ -131,87 +130,87 @@ capsForVersion (LSPVersion maj min) = caps
 
   semanticTokensCapabilities =
     SemanticTokensClientCapabilities
-      { _dynamicRegistration = Just True
-      , _requests = ClientSemanticTokensRequestOptions{_range = Just (InL True), _full = Just (InR (ClientSemanticTokensRequestFullDelta{_delta = Just True}))}
-      , _tokenTypes = toEnumBaseType <$> Set.toList (knownValues @SemanticTokenTypes)
-      , _tokenModifiers = toEnumBaseType <$> Set.toList (knownValues @SemanticTokenModifiers)
-      , _formats = tfs
-      , _overlappingTokenSupport = Just True
-      , _multilineTokenSupport = Just True
-      , _serverCancelSupport = Just True
-      , _augmentsSyntaxTokens = Just True
+      { dynamicRegistration = Just True
+      , requests = ClientSemanticTokensRequestOptions{range = Just (InL True), full = Just (InR (ClientSemanticTokensRequestFullDelta{delta = Just True}))}
+      , tokenTypes = toEnumBaseType <$> Set.toList (knownValues @SemanticTokenTypes)
+      , tokenModifiers = toEnumBaseType <$> Set.toList (knownValues @SemanticTokenModifiers)
+      , formats = tfs
+      , overlappingTokenSupport = Just True
+      , multilineTokenSupport = Just True
+      , serverCancelSupport = Just True
+      , augmentsSyntaxTokens = Just True
       }
 
   td =
     TextDocumentClientCapabilities
-      { _synchronization = Just sync
-      , _completion = Just completionCapability
-      , _hover = Just hoverCapability
-      , _signatureHelp = Just signatureHelpCapability
-      , _references = Just (ReferenceClientCapabilities dynamicReg)
-      , _documentHighlight = Just (DocumentHighlightClientCapabilities dynamicReg)
-      , _documentSymbol = Just documentSymbolCapability
-      , _formatting = Just (DocumentFormattingClientCapabilities dynamicReg)
-      , _rangeFormatting = Just (DocumentRangeFormattingClientCapabilities dynamicReg)
-      , _onTypeFormatting = Just (DocumentOnTypeFormattingClientCapabilities dynamicReg)
-      , _declaration = since 3 14 (DeclarationClientCapabilities dynamicReg (Just True))
-      , _definition = Just (DefinitionClientCapabilities dynamicReg (since 3 14 True))
-      , _typeDefinition = since 3 6 (TypeDefinitionClientCapabilities dynamicReg (since 3 14 True))
-      , _implementation = since 3 6 (ImplementationClientCapabilities dynamicReg (since 3 14 True))
-      , _codeAction = Just codeActionCapability
-      , _codeLens = Just (CodeLensClientCapabilities dynamicReg)
-      , _documentLink = Just (DocumentLinkClientCapabilities dynamicReg (since 3 15 True))
-      , _colorProvider = since 3 6 (DocumentColorClientCapabilities dynamicReg)
-      , _rename = Just (RenameClientCapabilities dynamicReg (since 3 12 True) (since 3 16 PrepareSupportDefaultBehavior_Identifier) (since 3 16 True))
-      , _publishDiagnostics = Just publishDiagnosticsCapabilities
-      , _foldingRange = since 3 10 foldingRangeCapability
-      , _selectionRange = since 3 5 (SelectionRangeClientCapabilities dynamicReg)
-      , _callHierarchy = since 3 16 (CallHierarchyClientCapabilities dynamicReg)
-      , _semanticTokens = since 3 16 semanticTokensCapabilities
-      , _linkedEditingRange = since 3 16 (LinkedEditingRangeClientCapabilities dynamicReg)
-      , _moniker = since 3 16 (MonikerClientCapabilities dynamicReg)
-      , _inlayHint = since 3 17 inlayHintCapabilities
-      , _typeHierarchy = since 3 17 (TypeHierarchyClientCapabilities dynamicReg)
-      , _inlineValue = since 3 17 (InlineValueClientCapabilities dynamicReg)
-      , _diagnostic = since 3 17 (DiagnosticClientCapabilities dynamicReg (Just True))
+      { synchronization = Just sync
+      , completion = Just completionCapability
+      , hover = Just hoverCapability
+      , signatureHelp = Just signatureHelpCapability
+      , references = Just (ReferenceClientCapabilities dynamicReg)
+      , documentHighlight = Just (DocumentHighlightClientCapabilities dynamicReg)
+      , documentSymbol = Just documentSymbolCapability
+      , formatting = Just (DocumentFormattingClientCapabilities dynamicReg)
+      , rangeFormatting = Just (DocumentRangeFormattingClientCapabilities dynamicReg)
+      , onTypeFormatting = Just (DocumentOnTypeFormattingClientCapabilities dynamicReg)
+      , declaration = since 3 14 (DeclarationClientCapabilities dynamicReg (Just True))
+      , definition = Just (DefinitionClientCapabilities dynamicReg (since 3 14 True))
+      , typeDefinition = since 3 6 (TypeDefinitionClientCapabilities dynamicReg (since 3 14 True))
+      , implementation = since 3 6 (ImplementationClientCapabilities dynamicReg (since 3 14 True))
+      , codeAction = Just codeActionCapability
+      , codeLens = Just (CodeLensClientCapabilities dynamicReg)
+      , documentLink = Just (DocumentLinkClientCapabilities dynamicReg (since 3 15 True))
+      , colorProvider = since 3 6 (DocumentColorClientCapabilities dynamicReg)
+      , rename = Just (RenameClientCapabilities dynamicReg (since 3 12 True) (since 3 16 PrepareSupportDefaultBehavior_Identifier) (since 3 16 True))
+      , publishDiagnostics = Just publishDiagnosticsCapabilities
+      , foldingRange = since 3 10 foldingRangeCapability
+      , selectionRange = since 3 5 (SelectionRangeClientCapabilities dynamicReg)
+      , callHierarchy = since 3 16 (CallHierarchyClientCapabilities dynamicReg)
+      , semanticTokens = since 3 16 semanticTokensCapabilities
+      , linkedEditingRange = since 3 16 (LinkedEditingRangeClientCapabilities dynamicReg)
+      , moniker = since 3 16 (MonikerClientCapabilities dynamicReg)
+      , inlayHint = since 3 17 inlayHintCapabilities
+      , typeHierarchy = since 3 17 (TypeHierarchyClientCapabilities dynamicReg)
+      , inlineValue = since 3 17 (InlineValueClientCapabilities dynamicReg)
+      , diagnostic = since 3 17 (DiagnosticClientCapabilities dynamicReg (Just True))
       }
 
   sync =
     TextDocumentSyncClientCapabilities
-      { _dynamicRegistration = dynamicReg
-      , _willSave = Just True
-      , _willSaveWaitUntil = Just True
-      , _didSave = Just True
+      { dynamicRegistration = dynamicReg
+      , willSave = Just True
+      , willSaveWaitUntil = Just True
+      , didSave = Just True
       }
 
   completionCapability =
     CompletionClientCapabilities
-      { _dynamicRegistration = dynamicReg
-      , _completionItem = Just completionItemCapabilities
-      , _completionItemKind = since 3 4 (ClientCompletionItemOptionsKind{_valueSet = Just ciKs})
-      , _insertTextMode = since 3 17 InsertTextMode_AsIs
-      , _contextSupport = since 3 3 True
-      , _completionList = since 3 17 (CompletionListCapabilities{_itemDefaults = Just []})
+      { dynamicRegistration = dynamicReg
+      , completionItem = Just completionItemCapabilities
+      , completionItemKind = since 3 4 (ClientCompletionItemOptionsKind{valueSet = Just ciKs})
+      , insertTextMode = since 3 17 InsertTextMode_AsIs
+      , contextSupport = since 3 3 True
+      , completionList = since 3 17 (CompletionListCapabilities{itemDefaults = Just []})
       }
 
   inlayHintCapabilities =
     InlayHintClientCapabilities
-      { _dynamicRegistration = dynamicReg
-      , _resolveSupport = Just (ClientInlayHintResolveOptions{_properties = []})
+      { dynamicRegistration = dynamicReg
+      , resolveSupport = Just (ClientInlayHintResolveOptions{properties = []})
       }
 
   completionItemCapabilities =
     ClientCompletionItemOptions
-      { _snippetSupport = Just True
-      , _commitCharactersSupport = Just True
-      , _documentationFormat = since 3 3 allMarkups
-      , _deprecatedSupport = Just True
-      , _preselectSupport = since 3 9 True
-      , _tagSupport = since 3 15 (CompletionItemTagOptions{_valueSet = []})
-      , _insertReplaceSupport = since 3 16 True
-      , _resolveSupport = since 3 16 (ClientCompletionItemResolveOptions{_properties = ["documentation", "details"]})
-      , _insertTextModeSupport = since 3 16 (ClientCompletionItemInsertTextModeOptions{_valueSet = []})
-      , _labelDetailsSupport = since 3 17 True
+      { snippetSupport = Just True
+      , commitCharactersSupport = Just True
+      , documentationFormat = since 3 3 allMarkups
+      , deprecatedSupport = Just True
+      , preselectSupport = since 3 9 True
+      , tagSupport = since 3 15 (CompletionItemTagOptions{valueSet = []})
+      , insertReplaceSupport = since 3 16 True
+      , resolveSupport = since 3 16 (ClientCompletionItemResolveOptions{properties = ["documentation", "details"]})
+      , insertTextModeSupport = since 3 16 (ClientCompletionItemInsertTextModeOptions{valueSet = []})
+      , labelDetailsSupport = since 3 17 True
       }
 
   ciKs
@@ -251,60 +250,60 @@ capsForVersion (LSPVersion maj min) = caps
 
   hoverCapability =
     HoverClientCapabilities
-      { _dynamicRegistration = dynamicReg
-      , _contentFormat = since 3 3 allMarkups
+      { dynamicRegistration = dynamicReg
+      , contentFormat = since 3 3 allMarkups
       }
 
   codeActionCapability =
     CodeActionClientCapabilities
-      { _dynamicRegistration = dynamicReg
-      , _codeActionLiteralSupport = since 3 8 (ClientCodeActionLiteralOptions{_codeActionKind = ClientCodeActionKindOptions{_valueSet = Set.toList knownValues}})
-      , _isPreferredSupport = since 3 15 True
-      , _disabledSupport = since 3 16 True
-      , _dataSupport = since 3 16 True
-      , _resolveSupport = since 3 16 (ClientCodeActionResolveOptions{_properties = []})
-      , _honorsChangeAnnotations = since 3 16 True
+      { dynamicRegistration = dynamicReg
+      , codeActionLiteralSupport = since 3 8 (ClientCodeActionLiteralOptions{codeActionKind = ClientCodeActionKindOptions{valueSet = Set.toList knownValues}})
+      , isPreferredSupport = since 3 15 True
+      , disabledSupport = since 3 16 True
+      , dataSupport = since 3 16 True
+      , resolveSupport = since 3 16 (ClientCodeActionResolveOptions{properties = []})
+      , honorsChangeAnnotations = since 3 16 True
       }
 
   signatureHelpCapability =
     SignatureHelpClientCapabilities
-      { _dynamicRegistration = dynamicReg
-      , _signatureInformation =
+      { dynamicRegistration = dynamicReg
+      , signatureInformation =
           Just $
             ClientSignatureInformationOptions
-              { _documentationFormat = Just allMarkups
-              , _parameterInformation = Just (ClientSignatureParameterInformationOptions{_labelOffsetSupport = Just True})
-              , _activeParameterSupport = Just True
+              { documentationFormat = Just allMarkups
+              , parameterInformation = Just (ClientSignatureParameterInformationOptions{labelOffsetSupport = Just True})
+              , activeParameterSupport = Just True
               }
-      , _contextSupport = since 3 16 True
+      , contextSupport = since 3 16 True
       }
 
   documentSymbolCapability =
     DocumentSymbolClientCapabilities
-      { _dynamicRegistration = dynamicReg
+      { dynamicRegistration = dynamicReg
       , -- same as workspace symbol kinds
-        _symbolKind = Just (ClientSymbolKindOptions{_valueSet = Just sKs})
-      , _hierarchicalDocumentSymbolSupport = since 3 10 True
-      , _tagSupport = since 3 16 (ClientSymbolTagOptions{_valueSet = [SymbolTag_Deprecated]})
-      , _labelSupport = since 3 16 True
+        symbolKind = Just (ClientSymbolKindOptions{valueSet = Just sKs})
+      , hierarchicalDocumentSymbolSupport = since 3 10 True
+      , tagSupport = since 3 16 (ClientSymbolTagOptions{valueSet = [SymbolTag_Deprecated]})
+      , labelSupport = since 3 16 True
       }
 
   foldingRangeCapability =
     FoldingRangeClientCapabilities
-      { _dynamicRegistration = dynamicReg
-      , _rangeLimit = Nothing
-      , _lineFoldingOnly = Nothing
-      , _foldingRangeKind = since 3 17 (ClientFoldingRangeKindOptions{_valueSet = Just []})
-      , _foldingRange = since 3 16 (ClientFoldingRangeOptions{_collapsedText = Just True})
+      { dynamicRegistration = dynamicReg
+      , rangeLimit = Nothing
+      , lineFoldingOnly = Nothing
+      , foldingRangeKind = since 3 17 (ClientFoldingRangeKindOptions{valueSet = Just []})
+      , foldingRange = since 3 16 (ClientFoldingRangeOptions{collapsedText = Just True})
       }
 
   publishDiagnosticsCapabilities =
     PublishDiagnosticsClientCapabilities
-      { _relatedInformation = since 3 7 True
-      , _tagSupport = since 3 15 (ClientDiagnosticsTagOptions{_valueSet = [DiagnosticTag_Unnecessary, DiagnosticTag_Deprecated]})
-      , _versionSupport = since 3 15 True
-      , _codeDescriptionSupport = since 3 16 True
-      , _dataSupport = since 3 16 True
+      { relatedInformation = since 3 7 True
+      , tagSupport = since 3 15 (ClientDiagnosticsTagOptions{valueSet = [DiagnosticTag_Unnecessary, DiagnosticTag_Deprecated]})
+      , versionSupport = since 3 15 True
+      , codeDescriptionSupport = since 3 16 True
+      , dataSupport = since 3 16 True
       }
 
   dynamicReg
@@ -317,73 +316,64 @@ capsForVersion (LSPVersion maj min) = caps
 
   window =
     WindowClientCapabilities
-      { _workDoneProgress = since 3 15 True
-      , _showMessage = since 3 16 $ ShowMessageRequestClientCapabilities Nothing
-      , _showDocument = since 3 16 $ ShowDocumentClientCapabilities True
+      { workDoneProgress = since 3 15 True
+      , showMessage = since 3 16 $ ShowMessageRequestClientCapabilities Nothing
+      , showDocument = since 3 16 $ ShowDocumentClientCapabilities True
       }
 
   general =
     GeneralClientCapabilities
-      { _staleRequestSupport = since 3 16 (StaleRequestSupportOptions{_cancel = True, _retryOnContentModified = []})
-      , _regularExpressions = since 3 16 $ RegularExpressionsClientCapabilities (RegularExpressionEngineKind "") Nothing
-      , _markdown = since 3 16 $ MarkdownClientCapabilities "" Nothing (Just [])
-      , _positionEncodings = since 3 17 [PositionEncodingKind_UTF16]
+      { staleRequestSupport = since 3 16 (StaleRequestSupportOptions{cancel = True, retryOnContentModified = []})
+      , regularExpressions = since 3 16 $ RegularExpressionsClientCapabilities (RegularExpressionEngineKind "") Nothing
+      , markdown = since 3 16 $ MarkdownClientCapabilities "" Nothing (Just [])
+      , positionEncodings = since 3 17 [PositionEncodingKind_UTF16]
       }
 
   allMarkups = [MarkupKind_PlainText, MarkupKind_Markdown]
 
 -- | Whether the client supports dynamic registration for the given method.
-dynamicRegistrationSupported :: SMethod m -> ClientCapabilities -> Bool
+dynamicRegistrationSupported :: forall t (m :: Method ClientToServer t). SMethod m -> ClientCapabilities -> Bool
 dynamicRegistrationSupported method caps = fromMaybe False $ case method of
-  SMethod_WorkspaceDidChangeConfiguration -> caps ^? ws . L.didChangeConfiguration . _Just . dyn
-  SMethod_WorkspaceDidChangeWatchedFiles -> caps ^? ws . L.didChangeWatchedFiles . _Just . dyn
-  SMethod_WorkspaceSymbol -> caps ^? ws . L.symbol . _Just . dyn
-  SMethod_WorkspaceExecuteCommand -> caps ^? ws . L.executeCommand . _Just . dyn
-  SMethod_WorkspaceWillCreateFiles -> caps ^? ws . L.fileOperations . _Just . dyn
-  SMethod_WorkspaceDidCreateFiles -> caps ^? ws . L.fileOperations . _Just . dyn
-  SMethod_WorkspaceWillDeleteFiles -> caps ^? ws . L.fileOperations . _Just . dyn
-  SMethod_WorkspaceDidDeleteFiles -> caps ^? ws . L.fileOperations . _Just . dyn
-  SMethod_TextDocumentDidOpen -> caps ^? td . L.synchronization . _Just . dyn
-  SMethod_TextDocumentDidChange -> caps ^? td . L.synchronization . _Just . dyn
-  SMethod_TextDocumentDidClose -> caps ^? td . L.synchronization . _Just . dyn
-  SMethod_TextDocumentCompletion -> caps ^? td . L.completion . _Just . dyn
-  SMethod_TextDocumentHover -> caps ^? td . L.hover . _Just . dyn
-  SMethod_TextDocumentSignatureHelp -> caps ^? td . L.signatureHelp . _Just . dyn
-  SMethod_TextDocumentDeclaration -> caps ^? td . L.declaration . _Just . dyn
-  SMethod_TextDocumentDefinition -> caps ^? td . L.definition . _Just . dyn
-  SMethod_TextDocumentTypeDefinition -> caps ^? td . L.typeDefinition . _Just . dyn
-  SMethod_TextDocumentImplementation -> caps ^? td . L.implementation . _Just . dyn
-  SMethod_TextDocumentReferences -> caps ^? td . L.references . _Just . dyn
-  SMethod_TextDocumentDocumentHighlight -> caps ^? td . L.documentHighlight . _Just . dyn
-  SMethod_TextDocumentDocumentSymbol -> caps ^? td . L.documentSymbol . _Just . dyn
-  SMethod_TextDocumentCodeAction -> caps ^? td . L.codeAction . _Just . dyn
-  SMethod_TextDocumentCodeLens -> caps ^? td . L.codeLens . _Just . dyn
-  SMethod_TextDocumentDocumentLink -> caps ^? td . L.documentLink . _Just . dyn
-  SMethod_TextDocumentDocumentColor -> caps ^? td . L.colorProvider . _Just . dyn
-  SMethod_TextDocumentColorPresentation -> caps ^? td . L.colorProvider . _Just . dyn
-  SMethod_TextDocumentFormatting -> caps ^? td . L.formatting . _Just . dyn
-  SMethod_TextDocumentRangeFormatting -> caps ^? td . L.rangeFormatting . _Just . dyn
-  SMethod_TextDocumentOnTypeFormatting -> caps ^? td . L.onTypeFormatting . _Just . dyn
-  SMethod_TextDocumentRename -> caps ^? td . L.rename . _Just . dyn
-  SMethod_TextDocumentFoldingRange -> caps ^? td . L.foldingRange . _Just . dyn
-  SMethod_TextDocumentSelectionRange -> caps ^? td . L.selectionRange . _Just . dyn
-  SMethod_TextDocumentLinkedEditingRange -> caps ^? td . L.linkedEditingRange . _Just . dyn
-  SMethod_TextDocumentPrepareCallHierarchy -> caps ^? td . L.callHierarchy . _Just . dyn
-  SMethod_TextDocumentInlayHint -> caps ^? td . L.inlayHint . _Just . dyn
-  SMethod_TextDocumentInlineValue -> caps ^? td . L.inlineValue . _Just . dyn
-  SMethod_TextDocumentMoniker -> caps ^? td . L.moniker . _Just . dyn
-  SMethod_TextDocumentPrepareTypeHierarchy -> caps ^? td . L.typeHierarchy . _Just . dyn
-  SMethod_TextDocumentDiagnostic -> caps ^? td . L.diagnostic . _Just . dyn
+  SMethod_WorkspaceDidChangeConfiguration -> caps.workspace >>= didChangeConfiguration >>= \c -> c.dynamicRegistration
+  SMethod_WorkspaceDidChangeWatchedFiles -> caps.workspace >>= didChangeWatchedFiles >>= \c -> c.dynamicRegistration
+  SMethod_WorkspaceSymbol -> caps.workspace >>= symbol >>= \s -> s.dynamicRegistration
+  SMethod_WorkspaceExecuteCommand -> caps.workspace >>= executeCommand >>= \c -> c.dynamicRegistration
+  SMethod_WorkspaceWillCreateFiles -> caps.workspace >>= \w -> w.fileOperations >>= \c -> c.dynamicRegistration
+  SMethod_WorkspaceDidCreateFiles -> caps.workspace >>= \w -> w.fileOperations >>= \c -> c.dynamicRegistration
+  SMethod_WorkspaceWillDeleteFiles -> caps.workspace >>= \w -> w.fileOperations >>= \c -> c.dynamicRegistration
+  SMethod_WorkspaceDidDeleteFiles -> caps.workspace >>= \w -> w.fileOperations >>= \c -> c.dynamicRegistration
+  SMethod_TextDocumentDidOpen -> caps.textDocument >>= \td -> td.synchronization >>= \c -> c.dynamicRegistration
+  SMethod_TextDocumentDidChange -> caps.textDocument >>= \td -> td.synchronization >>= \c -> c.dynamicRegistration
+  SMethod_TextDocumentDidClose -> caps.textDocument >>= \td -> td.synchronization >>= \c -> c.dynamicRegistration
+  SMethod_TextDocumentCompletion -> caps.textDocument >>= completion >>= \c -> c.dynamicRegistration
+  SMethod_TextDocumentHover -> caps.textDocument >>= hover >>= \c -> c.dynamicRegistration
+  SMethod_TextDocumentSignatureHelp -> caps.textDocument >>= signatureHelp >>= \c -> c.dynamicRegistration
+  SMethod_TextDocumentDeclaration -> caps.textDocument >>= declaration >>= \c -> c.dynamicRegistration
+  SMethod_TextDocumentDefinition -> caps.textDocument >>= definition >>= \c -> c.dynamicRegistration
+  SMethod_TextDocumentTypeDefinition -> caps.textDocument >>= typeDefinition >>= \c -> c.dynamicRegistration
+  SMethod_TextDocumentImplementation -> caps.textDocument >>= implementation >>= \c -> c.dynamicRegistration
+  SMethod_TextDocumentReferences -> caps.textDocument >>= references >>= \c -> c.dynamicRegistration
+  SMethod_TextDocumentDocumentHighlight -> caps.textDocument >>= documentHighlight >>= \c -> c.dynamicRegistration
+  SMethod_TextDocumentDocumentSymbol -> caps.textDocument >>= documentSymbol >>= \c -> c.dynamicRegistration
+  SMethod_TextDocumentCodeAction -> caps.textDocument >>= codeAction >>= \c -> c.dynamicRegistration
+  SMethod_TextDocumentCodeLens -> caps.textDocument >>= \td -> td.codeLens >>= \c -> c.dynamicRegistration
+  SMethod_TextDocumentDocumentLink -> caps.textDocument >>= documentLink >>= \c -> c.dynamicRegistration
+  SMethod_TextDocumentDocumentColor -> caps.textDocument >>= \td -> td.colorProvider >>= \c -> c.dynamicRegistration
+  SMethod_TextDocumentColorPresentation -> caps.textDocument >>= \td -> td.colorProvider >>= \c -> c.dynamicRegistration
+  SMethod_TextDocumentFormatting -> caps.textDocument >>= formatting >>= \c -> c.dynamicRegistration
+  SMethod_TextDocumentRangeFormatting -> caps.textDocument >>= rangeFormatting >>= \c -> c.dynamicRegistration
+  SMethod_TextDocumentOnTypeFormatting -> caps.textDocument >>= onTypeFormatting >>= \c -> c.dynamicRegistration
+  SMethod_TextDocumentRename -> caps.textDocument >>= rename >>= \c -> c.dynamicRegistration
+  SMethod_TextDocumentFoldingRange -> caps.textDocument >>= \td -> td.foldingRange >>= \c -> c.dynamicRegistration
+  SMethod_TextDocumentSelectionRange -> caps.textDocument >>= \td -> td.selectionRange >>= \c -> c.dynamicRegistration
+  SMethod_TextDocumentLinkedEditingRange -> caps.textDocument >>= linkedEditingRange >>= \c -> c.dynamicRegistration
+  SMethod_TextDocumentPrepareCallHierarchy -> caps.textDocument >>= callHierarchy >>= \c -> c.dynamicRegistration
+  SMethod_TextDocumentInlayHint -> caps.textDocument >>= \td -> td.inlayHint >>= \c -> c.dynamicRegistration
+  SMethod_TextDocumentInlineValue -> caps.textDocument >>= \td -> td.inlineValue >>= \c -> c.dynamicRegistration
+  SMethod_TextDocumentMoniker -> caps.textDocument >>= moniker >>= \c -> c.dynamicRegistration
+  SMethod_TextDocumentPrepareTypeHierarchy -> caps.textDocument >>= typeHierarchy >>= \c -> c.dynamicRegistration
+  SMethod_TextDocumentDiagnostic -> caps.textDocument >>= diagnostic >>= \c -> c.dynamicRegistration
   -- semantic tokens is messed up due to it having you register with an otherwise non-existent method
   -- SMethod_TextDocumentSemanticTokens       -> capDyn $ clientCaps ^? L.textDocument . _Just . L.semanticTokens . _Just
   -- Notebook document methods alway support dynamic registration, it seems?
   _ -> Just False
- where
-  td :: Traversal' ClientCapabilities TextDocumentClientCapabilities
-  td = L.textDocument . _Just
-
-  ws :: Traversal' ClientCapabilities WorkspaceClientCapabilities
-  ws = L.workspace . _Just
-
-  dyn :: L.HasDynamicRegistration a (Maybe Bool) => Traversal' a Bool
-  dyn = L.dynamicRegistration . _Just

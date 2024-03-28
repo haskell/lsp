@@ -25,7 +25,7 @@ data DidChangeWorkspaceFoldersParams = DidChangeWorkspaceFoldersParams
   { {-|
   The actual workspace folder change event.
   -}
-  _event :: Language.LSP.Protocol.Internal.Types.WorkspaceFoldersChangeEvent.WorkspaceFoldersChangeEvent
+  event :: Language.LSP.Protocol.Internal.Types.WorkspaceFoldersChangeEvent.WorkspaceFoldersChangeEvent
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

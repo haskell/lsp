@@ -32,11 +32,11 @@ data RelativePattern = RelativePattern
   A workspace folder or a base URI to which this pattern will be matched
   against relatively.
   -}
-  _baseUri :: (Language.LSP.Protocol.Internal.Types.WorkspaceFolder.WorkspaceFolder Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Types.Uri.Uri)
+  baseUri :: (Language.LSP.Protocol.Internal.Types.WorkspaceFolder.WorkspaceFolder Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Types.Uri.Uri)
   , {-|
   The actual glob pattern;
   -}
-  _pattern :: Language.LSP.Protocol.Internal.Types.Pattern.Pattern
+  pattern :: Language.LSP.Protocol.Internal.Types.Pattern.Pattern
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

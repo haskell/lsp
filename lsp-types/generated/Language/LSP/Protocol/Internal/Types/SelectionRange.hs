@@ -26,11 +26,11 @@ data SelectionRange = SelectionRange
   { {-|
   The `Range` of this selection range.
   -}
-  _range :: Language.LSP.Protocol.Internal.Types.Range.Range
+  range :: Language.LSP.Protocol.Internal.Types.Range.Range
   , {-|
   The parent selection range containing this range. Therefore `parent.range` must contain `this.range`.
   -}
-  _parent :: (Maybe Language.LSP.Protocol.Internal.Types.SelectionRange.SelectionRange)
+  parent :: (Maybe Language.LSP.Protocol.Internal.Types.SelectionRange.SelectionRange)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

@@ -26,7 +26,7 @@ data ClientDiagnosticsTagOptions = ClientDiagnosticsTagOptions
   { {-|
   The tags supported by the client.
   -}
-  _valueSet :: [Language.LSP.Protocol.Internal.Types.DiagnosticTag.DiagnosticTag]
+  valueSet :: [Language.LSP.Protocol.Internal.Types.DiagnosticTag.DiagnosticTag]
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

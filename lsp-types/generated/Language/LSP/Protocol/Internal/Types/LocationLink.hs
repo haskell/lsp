@@ -30,22 +30,22 @@ data LocationLink = LocationLink
   Used as the underlined span for mouse interaction. Defaults to the word range at
   the definition position.
   -}
-  _originSelectionRange :: (Maybe Language.LSP.Protocol.Internal.Types.Range.Range)
+  originSelectionRange :: (Maybe Language.LSP.Protocol.Internal.Types.Range.Range)
   , {-|
   The target resource identifier of this link.
   -}
-  _targetUri :: Language.LSP.Protocol.Types.Uri.Uri
+  targetUri :: Language.LSP.Protocol.Types.Uri.Uri
   , {-|
   The full target range of this link. If the target for example is a symbol then target range is the
   range enclosing this symbol not including leading/trailing whitespace but everything else
   like comments. This information is typically used to highlight the range in the editor.
   -}
-  _targetRange :: Language.LSP.Protocol.Internal.Types.Range.Range
+  targetRange :: Language.LSP.Protocol.Internal.Types.Range.Range
   , {-|
   The range that should be selected and revealed when this link is being followed, e.g the name of a function.
   Must be contained by the `targetRange`. See also `DocumentSymbol#range`
   -}
-  _targetSelectionRange :: Language.LSP.Protocol.Internal.Types.Range.Range
+  targetSelectionRange :: Language.LSP.Protocol.Internal.Types.Range.Range
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

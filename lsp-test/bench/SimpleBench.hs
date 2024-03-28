@@ -62,10 +62,10 @@ main = do
     replicateM_ n $ do
       v <- liftIO $ readIORef i
       liftIO $ when (v `mod` 1000 == 0) $ putStrLn $ show v
-      TResponseMessage{_result = Right (InL _)} <-
+      TResponseMessage{result = Right (InL _)} <-
         Test.request SMethod_TextDocumentHover $
           HoverParams (TextDocumentIdentifier $ Uri "test") (Position 1 100) Nothing
-      TResponseMessage{_result = Right (InL _)} <-
+      TResponseMessage{result = Right (InL _)} <-
         Test.request SMethod_TextDocumentDefinition $
           DefinitionParams (TextDocumentIdentifier $ Uri "test") (Position 1000 100) Nothing Nothing
 

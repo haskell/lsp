@@ -26,11 +26,11 @@ data DeclarationClientCapabilities = DeclarationClientCapabilities
   the client supports the new `DeclarationRegistrationOptions` return value
   for the corresponding server capability as well.
   -}
-  _dynamicRegistration :: (Maybe Bool)
+  dynamicRegistration :: (Maybe Bool)
   , {-|
   The client supports additional metadata in the form of declaration links.
   -}
-  _linkSupport :: (Maybe Bool)
+  linkSupport :: (Maybe Bool)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

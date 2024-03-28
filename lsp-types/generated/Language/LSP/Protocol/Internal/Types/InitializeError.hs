@@ -28,7 +28,7 @@ data InitializeError = InitializeError
   (2) user selects retry or cancel
   (3) if user selected retry the initialize method is sent again.
   -}
-  _retry :: Bool
+  retry :: Bool
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

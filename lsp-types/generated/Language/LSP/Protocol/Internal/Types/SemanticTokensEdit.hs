@@ -24,15 +24,15 @@ data SemanticTokensEdit = SemanticTokensEdit
   { {-|
   The start offset of the edit.
   -}
-  _start :: Language.LSP.Protocol.Types.Common.UInt
+  start :: Language.LSP.Protocol.Types.Common.UInt
   , {-|
   The count of elements to remove.
   -}
-  _deleteCount :: Language.LSP.Protocol.Types.Common.UInt
+  deleteCount :: Language.LSP.Protocol.Types.Common.UInt
   , {-|
   The elements to insert.
   -}
-  _data_ :: (Maybe [Language.LSP.Protocol.Types.Common.UInt])
+  data_ :: (Maybe [Language.LSP.Protocol.Types.Common.UInt])
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

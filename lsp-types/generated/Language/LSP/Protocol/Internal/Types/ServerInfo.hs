@@ -29,11 +29,11 @@ data ServerInfo = ServerInfo
   { {-|
   The name of the server as defined by the server.
   -}
-  _name :: Data.Text.Text
+  name :: Data.Text.Text
   , {-|
   The server's version as defined by the server.
   -}
-  _version :: (Maybe Data.Text.Text)
+  version :: (Maybe Data.Text.Text)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

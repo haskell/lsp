@@ -27,11 +27,11 @@ data FileRename = FileRename
   { {-|
   A file:// URI for the original location of the file/folder being renamed.
   -}
-  _oldUri :: Data.Text.Text
+  oldUri :: Data.Text.Text
   , {-|
   A file:// URI for the new location of the file/folder being renamed.
   -}
-  _newUri :: Data.Text.Text
+  newUri :: Data.Text.Text
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

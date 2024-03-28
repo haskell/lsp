@@ -1,5 +1,7 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ViewPatterns #-}
 
@@ -13,11 +15,13 @@ import Control.Lens hiding (Iso, List)
 import Control.Monad
 import Control.Monad.IO.Class
 import Data.Aeson qualified as J
+import Data.Generics.Labels ()
+import Data.Generics.Product.Fields (field')
 import Data.Maybe
 import Data.Proxy
 import Data.Set qualified as Set
-import Language.LSP.Protocol.Lens qualified as L
-import Language.LSP.Protocol.Message
+import Language.LSP.Protocol.Lens
+import Language.LSP.Protocol.Message hiding (error)
 import Language.LSP.Protocol.Types
 import Language.LSP.Server
 import Language.LSP.Test qualified as Test
@@ -85,7 +89,7 @@ spec = do
         -- has happened and the server has been able to send us a begin message
         skipManyTill Test.anyMessage $ do
           x <- Test.message SMethod_Progress
-          guard $ has (L.params . L.value . _workDoneProgressBegin) x
+          guard $ has (field' @"params" . #value . workDoneProgressBegin) x
 
         -- allow the hander to send us updates
         putMVar startBarrier ()
@@ -93,25 +97,25 @@ spec = do
         do
           u <- Test.message SMethod_Progress
           liftIO $ do
-            u ^? L.params . L.value . _workDoneProgressReport . L.message `shouldBe` Just (Just "step1")
-            u ^? L.params . L.value . _workDoneProgressReport . L.percentage `shouldBe` Just (Just 25)
+            u ^? field' @"params" . #value . workDoneProgressReport . #message `shouldBe` Just (Just "step1")
+            u ^? field' @"params" . #value . workDoneProgressReport . #percentage `shouldBe` Just (Just 25)
 
         do
           u <- Test.message SMethod_Progress
           liftIO $ do
-            u ^? L.params . L.value . _workDoneProgressReport . L.message `shouldBe` Just (Just "step2")
-            u ^? L.params . L.value . _workDoneProgressReport . L.percentage `shouldBe` Just (Just 50)
+            u ^? field' @"params" . #value . workDoneProgressReport . #message `shouldBe` Just (Just "step2")
+            u ^? field' @"params" . #value . workDoneProgressReport . #percentage `shouldBe` Just (Just 50)
 
         do
           u <- Test.message SMethod_Progress
           liftIO $ do
-            u ^? L.params . L.value . _workDoneProgressReport . L.message `shouldBe` Just (Just "step3")
-            u ^? L.params . L.value . _workDoneProgressReport . L.percentage `shouldBe` Just (Just 75)
+            u ^? field' @"params" . #value . workDoneProgressReport . #message `shouldBe` Just (Just "step3")
+            u ^? field' @"params" . #value . workDoneProgressReport . #percentage `shouldBe` Just (Just 75)
 
         -- Then make sure we get a $/progress end notification
         skipManyTill Test.anyMessage $ do
           x <- Test.message SMethod_Progress
-          guard $ has (L.params . L.value . _workDoneProgressEnd) x
+          guard $ has (field' @"params" . #value . workDoneProgressEnd) x
 
     it "handles cancellation" $ do
       wasCancelled <- newMVar False
@@ -142,19 +146,19 @@ spec = do
         -- Wait until we have created the progress so the updates will be sent individually
         token <- skipManyTill Test.anyMessage $ do
           x <- Test.message SMethod_WindowWorkDoneProgressCreate
-          pure $ x ^. L.params . L.token
+          pure $ x ^. field' @"params" . #token
 
         -- First make sure that we get a $/progress begin notification
         skipManyTill Test.anyMessage $ do
           x <- Test.message SMethod_Progress
-          guard $ has (L.params . L.value . _workDoneProgressBegin) x
+          guard $ has (field' @"params" . #value . workDoneProgressBegin) x
 
         Test.sendNotification SMethod_WindowWorkDoneProgressCancel (WorkDoneProgressCancelParams token)
 
         -- Then make sure we still get a $/progress end notification
         skipManyTill Test.anyMessage $ do
           x <- Test.message SMethod_Progress
-          guard $ has (L.params . L.value . _workDoneProgressEnd) x
+          guard $ has (field' @"params" . #value . workDoneProgressEnd) x
 
       c <- readMVar wasCancelled
       c `shouldBe` True
@@ -186,7 +190,7 @@ spec = do
         -- First make sure that we get a $/progress begin notification
         skipManyTill Test.anyMessage $ do
           x <- Test.message SMethod_Progress
-          guard $ has (L.params . L.value . _workDoneProgressBegin) x
+          guard $ has (field' @"params" . #value . workDoneProgressBegin) x
 
         -- Then kill the thread
         liftIO $ putMVar killVar ()
@@ -194,7 +198,7 @@ spec = do
         -- Then make sure we still get a $/progress end notification
         skipManyTill Test.anyMessage $ do
           x <- Test.message SMethod_Progress
-          guard $ has (L.params . L.value . _workDoneProgressEnd) x
+          guard $ has (field' @"params" . #value . workDoneProgressEnd) x
 
   describe "client-initiated progress reporting" $ do
     it "sends updates" $ do
@@ -213,7 +217,7 @@ spec = do
           handlers :: Handlers (LspM ())
           handlers =
             requestHandler SMethod_TextDocumentCodeLens $ \req resp -> void $ forkIO $ do
-              withProgress "Doing something" (req ^. L.params . L.workDoneToken) NotCancellable $ \updater -> do
+              withProgress "Doing something" (req ^. field' @"params" . #workDoneToken) NotCancellable $ \updater -> do
                 updater $ ProgressAmount (Just 25) (Just "step1")
                 updater $ ProgressAmount (Just 50) (Just "step2")
                 updater $ ProgressAmount (Just 75) (Just "step3")
@@ -224,30 +228,30 @@ spec = do
         -- First make sure that we get a $/progress begin notification
         skipManyTill Test.anyMessage $ do
           x <- Test.message SMethod_Progress
-          guard $ has (L.params . L.value . _workDoneProgressBegin) x
+          guard $ has (field' @"params" . #value . workDoneProgressBegin) x
 
         do
           u <- Test.message SMethod_Progress
           liftIO $ do
-            u ^? L.params . L.value . _workDoneProgressReport . L.message `shouldBe` Just (Just "step1")
-            u ^? L.params . L.value . _workDoneProgressReport . L.percentage `shouldBe` Just (Just 25)
+            u ^? field' @"params" . #value . workDoneProgressReport . #message `shouldBe` Just (Just "step1")
+            u ^? field' @"params" . #value . workDoneProgressReport . #percentage `shouldBe` Just (Just 25)
 
         do
           u <- Test.message SMethod_Progress
           liftIO $ do
-            u ^? L.params . L.value . _workDoneProgressReport . L.message `shouldBe` Just (Just "step2")
-            u ^? L.params . L.value . _workDoneProgressReport . L.percentage `shouldBe` Just (Just 50)
+            u ^? field' @"params" . #value . workDoneProgressReport . #message `shouldBe` Just (Just "step2")
+            u ^? field' @"params" . #value . workDoneProgressReport . #percentage `shouldBe` Just (Just 50)
 
         do
           u <- Test.message SMethod_Progress
           liftIO $ do
-            u ^? L.params . L.value . _workDoneProgressReport . L.message `shouldBe` Just (Just "step3")
-            u ^? L.params . L.value . _workDoneProgressReport . L.percentage `shouldBe` Just (Just 75)
+            u ^? field' @"params" . #value . workDoneProgressReport . #message `shouldBe` Just (Just "step3")
+            u ^? field' @"params" . #value . workDoneProgressReport . #percentage `shouldBe` Just (Just 75)
 
         -- Then make sure we get a $/progress end notification
         skipManyTill Test.anyMessage $ do
           x <- Test.message SMethod_Progress
-          guard $ has (L.params . L.value . _workDoneProgressEnd) x
+          guard $ has (field' @"params" . #value . workDoneProgressEnd) x
 
   describe "workspace folders" $
     it "keeps track of open workspace folders" $ do

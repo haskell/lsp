@@ -54,152 +54,152 @@ data TextDocumentClientCapabilities = TextDocumentClientCapabilities
   { {-|
   Defines which synchronization capabilities the client supports.
   -}
-  _synchronization :: (Maybe Language.LSP.Protocol.Internal.Types.TextDocumentSyncClientCapabilities.TextDocumentSyncClientCapabilities)
+  synchronization :: (Maybe Language.LSP.Protocol.Internal.Types.TextDocumentSyncClientCapabilities.TextDocumentSyncClientCapabilities)
   , {-|
   Capabilities specific to the `textDocument/completion` request.
   -}
-  _completion :: (Maybe Language.LSP.Protocol.Internal.Types.CompletionClientCapabilities.CompletionClientCapabilities)
+  completion :: (Maybe Language.LSP.Protocol.Internal.Types.CompletionClientCapabilities.CompletionClientCapabilities)
   , {-|
   Capabilities specific to the `textDocument/hover` request.
   -}
-  _hover :: (Maybe Language.LSP.Protocol.Internal.Types.HoverClientCapabilities.HoverClientCapabilities)
+  hover :: (Maybe Language.LSP.Protocol.Internal.Types.HoverClientCapabilities.HoverClientCapabilities)
   , {-|
   Capabilities specific to the `textDocument/signatureHelp` request.
   -}
-  _signatureHelp :: (Maybe Language.LSP.Protocol.Internal.Types.SignatureHelpClientCapabilities.SignatureHelpClientCapabilities)
+  signatureHelp :: (Maybe Language.LSP.Protocol.Internal.Types.SignatureHelpClientCapabilities.SignatureHelpClientCapabilities)
   , {-|
   Capabilities specific to the `textDocument/declaration` request.
 
   @since 3.14.0
   -}
-  _declaration :: (Maybe Language.LSP.Protocol.Internal.Types.DeclarationClientCapabilities.DeclarationClientCapabilities)
+  declaration :: (Maybe Language.LSP.Protocol.Internal.Types.DeclarationClientCapabilities.DeclarationClientCapabilities)
   , {-|
   Capabilities specific to the `textDocument/definition` request.
   -}
-  _definition :: (Maybe Language.LSP.Protocol.Internal.Types.DefinitionClientCapabilities.DefinitionClientCapabilities)
+  definition :: (Maybe Language.LSP.Protocol.Internal.Types.DefinitionClientCapabilities.DefinitionClientCapabilities)
   , {-|
   Capabilities specific to the `textDocument/typeDefinition` request.
 
   @since 3.6.0
   -}
-  _typeDefinition :: (Maybe Language.LSP.Protocol.Internal.Types.TypeDefinitionClientCapabilities.TypeDefinitionClientCapabilities)
+  typeDefinition :: (Maybe Language.LSP.Protocol.Internal.Types.TypeDefinitionClientCapabilities.TypeDefinitionClientCapabilities)
   , {-|
   Capabilities specific to the `textDocument/implementation` request.
 
   @since 3.6.0
   -}
-  _implementation :: (Maybe Language.LSP.Protocol.Internal.Types.ImplementationClientCapabilities.ImplementationClientCapabilities)
+  implementation :: (Maybe Language.LSP.Protocol.Internal.Types.ImplementationClientCapabilities.ImplementationClientCapabilities)
   , {-|
   Capabilities specific to the `textDocument/references` request.
   -}
-  _references :: (Maybe Language.LSP.Protocol.Internal.Types.ReferenceClientCapabilities.ReferenceClientCapabilities)
+  references :: (Maybe Language.LSP.Protocol.Internal.Types.ReferenceClientCapabilities.ReferenceClientCapabilities)
   , {-|
   Capabilities specific to the `textDocument/documentHighlight` request.
   -}
-  _documentHighlight :: (Maybe Language.LSP.Protocol.Internal.Types.DocumentHighlightClientCapabilities.DocumentHighlightClientCapabilities)
+  documentHighlight :: (Maybe Language.LSP.Protocol.Internal.Types.DocumentHighlightClientCapabilities.DocumentHighlightClientCapabilities)
   , {-|
   Capabilities specific to the `textDocument/documentSymbol` request.
   -}
-  _documentSymbol :: (Maybe Language.LSP.Protocol.Internal.Types.DocumentSymbolClientCapabilities.DocumentSymbolClientCapabilities)
+  documentSymbol :: (Maybe Language.LSP.Protocol.Internal.Types.DocumentSymbolClientCapabilities.DocumentSymbolClientCapabilities)
   , {-|
   Capabilities specific to the `textDocument/codeAction` request.
   -}
-  _codeAction :: (Maybe Language.LSP.Protocol.Internal.Types.CodeActionClientCapabilities.CodeActionClientCapabilities)
+  codeAction :: (Maybe Language.LSP.Protocol.Internal.Types.CodeActionClientCapabilities.CodeActionClientCapabilities)
   , {-|
   Capabilities specific to the `textDocument/codeLens` request.
   -}
-  _codeLens :: (Maybe Language.LSP.Protocol.Internal.Types.CodeLensClientCapabilities.CodeLensClientCapabilities)
+  codeLens :: (Maybe Language.LSP.Protocol.Internal.Types.CodeLensClientCapabilities.CodeLensClientCapabilities)
   , {-|
   Capabilities specific to the `textDocument/documentLink` request.
   -}
-  _documentLink :: (Maybe Language.LSP.Protocol.Internal.Types.DocumentLinkClientCapabilities.DocumentLinkClientCapabilities)
+  documentLink :: (Maybe Language.LSP.Protocol.Internal.Types.DocumentLinkClientCapabilities.DocumentLinkClientCapabilities)
   , {-|
   Capabilities specific to the `textDocument/documentColor` and the
   `textDocument/colorPresentation` request.
 
   @since 3.6.0
   -}
-  _colorProvider :: (Maybe Language.LSP.Protocol.Internal.Types.DocumentColorClientCapabilities.DocumentColorClientCapabilities)
+  colorProvider :: (Maybe Language.LSP.Protocol.Internal.Types.DocumentColorClientCapabilities.DocumentColorClientCapabilities)
   , {-|
   Capabilities specific to the `textDocument/formatting` request.
   -}
-  _formatting :: (Maybe Language.LSP.Protocol.Internal.Types.DocumentFormattingClientCapabilities.DocumentFormattingClientCapabilities)
+  formatting :: (Maybe Language.LSP.Protocol.Internal.Types.DocumentFormattingClientCapabilities.DocumentFormattingClientCapabilities)
   , {-|
   Capabilities specific to the `textDocument/rangeFormatting` request.
   -}
-  _rangeFormatting :: (Maybe Language.LSP.Protocol.Internal.Types.DocumentRangeFormattingClientCapabilities.DocumentRangeFormattingClientCapabilities)
+  rangeFormatting :: (Maybe Language.LSP.Protocol.Internal.Types.DocumentRangeFormattingClientCapabilities.DocumentRangeFormattingClientCapabilities)
   , {-|
   Capabilities specific to the `textDocument/onTypeFormatting` request.
   -}
-  _onTypeFormatting :: (Maybe Language.LSP.Protocol.Internal.Types.DocumentOnTypeFormattingClientCapabilities.DocumentOnTypeFormattingClientCapabilities)
+  onTypeFormatting :: (Maybe Language.LSP.Protocol.Internal.Types.DocumentOnTypeFormattingClientCapabilities.DocumentOnTypeFormattingClientCapabilities)
   , {-|
   Capabilities specific to the `textDocument/rename` request.
   -}
-  _rename :: (Maybe Language.LSP.Protocol.Internal.Types.RenameClientCapabilities.RenameClientCapabilities)
+  rename :: (Maybe Language.LSP.Protocol.Internal.Types.RenameClientCapabilities.RenameClientCapabilities)
   , {-|
   Capabilities specific to the `textDocument/foldingRange` request.
 
   @since 3.10.0
   -}
-  _foldingRange :: (Maybe Language.LSP.Protocol.Internal.Types.FoldingRangeClientCapabilities.FoldingRangeClientCapabilities)
+  foldingRange :: (Maybe Language.LSP.Protocol.Internal.Types.FoldingRangeClientCapabilities.FoldingRangeClientCapabilities)
   , {-|
   Capabilities specific to the `textDocument/selectionRange` request.
 
   @since 3.15.0
   -}
-  _selectionRange :: (Maybe Language.LSP.Protocol.Internal.Types.SelectionRangeClientCapabilities.SelectionRangeClientCapabilities)
+  selectionRange :: (Maybe Language.LSP.Protocol.Internal.Types.SelectionRangeClientCapabilities.SelectionRangeClientCapabilities)
   , {-|
   Capabilities specific to the `textDocument/publishDiagnostics` notification.
   -}
-  _publishDiagnostics :: (Maybe Language.LSP.Protocol.Internal.Types.PublishDiagnosticsClientCapabilities.PublishDiagnosticsClientCapabilities)
+  publishDiagnostics :: (Maybe Language.LSP.Protocol.Internal.Types.PublishDiagnosticsClientCapabilities.PublishDiagnosticsClientCapabilities)
   , {-|
   Capabilities specific to the various call hierarchy requests.
 
   @since 3.16.0
   -}
-  _callHierarchy :: (Maybe Language.LSP.Protocol.Internal.Types.CallHierarchyClientCapabilities.CallHierarchyClientCapabilities)
+  callHierarchy :: (Maybe Language.LSP.Protocol.Internal.Types.CallHierarchyClientCapabilities.CallHierarchyClientCapabilities)
   , {-|
   Capabilities specific to the various semantic token request.
 
   @since 3.16.0
   -}
-  _semanticTokens :: (Maybe Language.LSP.Protocol.Internal.Types.SemanticTokensClientCapabilities.SemanticTokensClientCapabilities)
+  semanticTokens :: (Maybe Language.LSP.Protocol.Internal.Types.SemanticTokensClientCapabilities.SemanticTokensClientCapabilities)
   , {-|
   Capabilities specific to the `textDocument/linkedEditingRange` request.
 
   @since 3.16.0
   -}
-  _linkedEditingRange :: (Maybe Language.LSP.Protocol.Internal.Types.LinkedEditingRangeClientCapabilities.LinkedEditingRangeClientCapabilities)
+  linkedEditingRange :: (Maybe Language.LSP.Protocol.Internal.Types.LinkedEditingRangeClientCapabilities.LinkedEditingRangeClientCapabilities)
   , {-|
   Client capabilities specific to the `textDocument/moniker` request.
 
   @since 3.16.0
   -}
-  _moniker :: (Maybe Language.LSP.Protocol.Internal.Types.MonikerClientCapabilities.MonikerClientCapabilities)
+  moniker :: (Maybe Language.LSP.Protocol.Internal.Types.MonikerClientCapabilities.MonikerClientCapabilities)
   , {-|
   Capabilities specific to the various type hierarchy requests.
 
   @since 3.17.0
   -}
-  _typeHierarchy :: (Maybe Language.LSP.Protocol.Internal.Types.TypeHierarchyClientCapabilities.TypeHierarchyClientCapabilities)
+  typeHierarchy :: (Maybe Language.LSP.Protocol.Internal.Types.TypeHierarchyClientCapabilities.TypeHierarchyClientCapabilities)
   , {-|
   Capabilities specific to the `textDocument/inlineValue` request.
 
   @since 3.17.0
   -}
-  _inlineValue :: (Maybe Language.LSP.Protocol.Internal.Types.InlineValueClientCapabilities.InlineValueClientCapabilities)
+  inlineValue :: (Maybe Language.LSP.Protocol.Internal.Types.InlineValueClientCapabilities.InlineValueClientCapabilities)
   , {-|
   Capabilities specific to the `textDocument/inlayHint` request.
 
   @since 3.17.0
   -}
-  _inlayHint :: (Maybe Language.LSP.Protocol.Internal.Types.InlayHintClientCapabilities.InlayHintClientCapabilities)
+  inlayHint :: (Maybe Language.LSP.Protocol.Internal.Types.InlayHintClientCapabilities.InlayHintClientCapabilities)
   , {-|
   Capabilities specific to the diagnostic pull model.
 
   @since 3.17.0
   -}
-  _diagnostic :: (Maybe Language.LSP.Protocol.Internal.Types.DiagnosticClientCapabilities.DiagnosticClientCapabilities)
+  diagnostic :: (Maybe Language.LSP.Protocol.Internal.Types.DiagnosticClientCapabilities.DiagnosticClientCapabilities)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

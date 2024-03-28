@@ -25,12 +25,12 @@ data SignatureHelpClientCapabilities = SignatureHelpClientCapabilities
   { {-|
   Whether signature help supports dynamic registration.
   -}
-  _dynamicRegistration :: (Maybe Bool)
+  dynamicRegistration :: (Maybe Bool)
   , {-|
   The client supports the following `SignatureInformation`
   specific properties.
   -}
-  _signatureInformation :: (Maybe Language.LSP.Protocol.Internal.Types.ClientSignatureInformationOptions.ClientSignatureInformationOptions)
+  signatureInformation :: (Maybe Language.LSP.Protocol.Internal.Types.ClientSignatureInformationOptions.ClientSignatureInformationOptions)
   , {-|
   The client supports to send additional context information for a
   `textDocument/signatureHelp` request. A client that opts into
@@ -39,7 +39,7 @@ data SignatureHelpClientCapabilities = SignatureHelpClientCapabilities
 
   @since 3.15.0
   -}
-  _contextSupport :: (Maybe Bool)
+  contextSupport :: (Maybe Bool)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

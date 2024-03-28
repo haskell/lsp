@@ -29,7 +29,7 @@ data NotebookDocumentClientCapabilities = NotebookDocumentClientCapabilities
 
   @since 3.17.0
   -}
-  _synchronization :: Language.LSP.Protocol.Internal.Types.NotebookDocumentSyncClientCapabilities.NotebookDocumentSyncClientCapabilities
+  synchronization :: Language.LSP.Protocol.Internal.Types.NotebookDocumentSyncClientCapabilities.NotebookDocumentSyncClientCapabilities
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

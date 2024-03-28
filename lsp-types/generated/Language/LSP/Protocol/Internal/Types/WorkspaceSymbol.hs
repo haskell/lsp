@@ -34,24 +34,24 @@ data WorkspaceSymbol = WorkspaceSymbol
   { {-|
   The name of this symbol.
   -}
-  _name :: Data.Text.Text
+  name :: Data.Text.Text
   , {-|
   The kind of this symbol.
   -}
-  _kind :: Language.LSP.Protocol.Internal.Types.SymbolKind.SymbolKind
+  kind :: Language.LSP.Protocol.Internal.Types.SymbolKind.SymbolKind
   , {-|
   Tags for this symbol.
 
   @since 3.16.0
   -}
-  _tags :: (Maybe [Language.LSP.Protocol.Internal.Types.SymbolTag.SymbolTag])
+  tags :: (Maybe [Language.LSP.Protocol.Internal.Types.SymbolTag.SymbolTag])
   , {-|
   The name of the symbol containing this symbol. This information is for
   user interface purposes (e.g. to render a qualifier in the user interface
   if necessary). It can't be used to re-infer a hierarchy for the document
   symbols.
   -}
-  _containerName :: (Maybe Data.Text.Text)
+  containerName :: (Maybe Data.Text.Text)
   , {-|
   The location of the symbol. Whether a server is allowed to
   return a location without a range depends on the client
@@ -59,12 +59,12 @@ data WorkspaceSymbol = WorkspaceSymbol
 
   See SymbolInformation#location for more details.
   -}
-  _location :: (Language.LSP.Protocol.Internal.Types.Location.Location Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.LocationUriOnly.LocationUriOnly)
+  location :: (Language.LSP.Protocol.Internal.Types.Location.Location Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.LocationUriOnly.LocationUriOnly)
   , {-|
   A data entry field that is preserved on a workspace symbol between a
   workspace symbol request and a workspace symbol resolve request.
   -}
-  _data_ :: (Maybe Data.Aeson.Value)
+  data_ :: (Maybe Data.Aeson.Value)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

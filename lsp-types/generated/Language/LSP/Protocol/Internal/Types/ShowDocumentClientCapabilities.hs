@@ -27,7 +27,7 @@ data ShowDocumentClientCapabilities = ShowDocumentClientCapabilities
   The client has support for the showDocument
   request.
   -}
-  _support :: Bool
+  support :: Bool
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

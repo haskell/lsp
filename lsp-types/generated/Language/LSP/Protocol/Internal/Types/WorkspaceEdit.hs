@@ -44,7 +44,7 @@ data WorkspaceEdit = WorkspaceEdit
   { {-|
   Holds changes to existing resources.
   -}
-  _changes :: (Maybe (Data.Map.Map Language.LSP.Protocol.Types.Uri.Uri [Language.LSP.Protocol.Internal.Types.TextEdit.TextEdit]))
+  changes :: (Maybe (Data.Map.Map Language.LSP.Protocol.Types.Uri.Uri [Language.LSP.Protocol.Internal.Types.TextEdit.TextEdit]))
   , {-|
   Depending on the client capability `workspace.workspaceEdit.resourceOperations` document changes
   are either an array of `TextDocumentEdit`s to express changes to n different text documents
@@ -57,7 +57,7 @@ data WorkspaceEdit = WorkspaceEdit
   If a client neither supports `documentChanges` nor `workspace.workspaceEdit.resourceOperations` then
   only plain `TextEdit`s using the `changes` property are supported.
   -}
-  _documentChanges :: (Maybe [(Language.LSP.Protocol.Internal.Types.TextDocumentEdit.TextDocumentEdit Language.LSP.Protocol.Types.Common.|? (Language.LSP.Protocol.Internal.Types.CreateFile.CreateFile Language.LSP.Protocol.Types.Common.|? (Language.LSP.Protocol.Internal.Types.RenameFile.RenameFile Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.DeleteFile.DeleteFile)))])
+  documentChanges :: (Maybe [(Language.LSP.Protocol.Internal.Types.TextDocumentEdit.TextDocumentEdit Language.LSP.Protocol.Types.Common.|? (Language.LSP.Protocol.Internal.Types.CreateFile.CreateFile Language.LSP.Protocol.Types.Common.|? (Language.LSP.Protocol.Internal.Types.RenameFile.RenameFile Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.DeleteFile.DeleteFile)))])
   , {-|
   A map of change annotations that can be referenced in `AnnotatedTextEdit`s or create, rename and
   delete file / folder operations.
@@ -66,7 +66,7 @@ data WorkspaceEdit = WorkspaceEdit
 
   @since 3.16.0
   -}
-  _changeAnnotations :: (Maybe (Data.Map.Map Language.LSP.Protocol.Internal.Types.ChangeAnnotationIdentifier.ChangeAnnotationIdentifier Language.LSP.Protocol.Internal.Types.ChangeAnnotation.ChangeAnnotation))
+  changeAnnotations :: (Maybe (Data.Map.Map Language.LSP.Protocol.Internal.Types.ChangeAnnotationIdentifier.ChangeAnnotationIdentifier Language.LSP.Protocol.Internal.Types.ChangeAnnotation.ChangeAnnotation))
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
