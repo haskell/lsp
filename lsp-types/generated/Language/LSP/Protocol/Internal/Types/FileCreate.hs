@@ -27,7 +27,7 @@ data FileCreate = FileCreate
   { {-|
   A file:// URI for the location of the file/folder being created.
   -}
-  _uri :: Data.Text.Text
+  uri :: Data.Text.Text
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

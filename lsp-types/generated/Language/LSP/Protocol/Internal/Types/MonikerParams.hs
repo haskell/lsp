@@ -27,20 +27,20 @@ data MonikerParams = MonikerParams
   { {-|
   The text document.
   -}
-  _textDocument :: Language.LSP.Protocol.Internal.Types.TextDocumentIdentifier.TextDocumentIdentifier
+  textDocument :: Language.LSP.Protocol.Internal.Types.TextDocumentIdentifier.TextDocumentIdentifier
   , {-|
   The position inside the text document.
   -}
-  _position :: Language.LSP.Protocol.Internal.Types.Position.Position
+  position :: Language.LSP.Protocol.Internal.Types.Position.Position
   , {-|
   An optional token that a server can use to report work done progress.
   -}
-  _workDoneToken :: (Maybe Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken)
+  workDoneToken :: (Maybe Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken)
   , {-|
   An optional token that a server can use to report partial results (e.g. streaming) to
   the client.
   -}
-  _partialResultToken :: (Maybe Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken)
+  partialResultToken :: (Maybe Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

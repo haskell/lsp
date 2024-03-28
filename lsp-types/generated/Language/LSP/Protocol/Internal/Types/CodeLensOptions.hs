@@ -24,11 +24,11 @@ data CodeLensOptions = CodeLensOptions
   { {-|
 
   -}
-  _workDoneProgress :: (Maybe Bool)
+  workDoneProgress :: (Maybe Bool)
   , {-|
   Code lens has a resolve provider as well.
   -}
-  _resolveProvider :: (Maybe Bool)
+  resolveProvider :: (Maybe Bool)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

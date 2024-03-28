@@ -28,9 +28,6 @@ module Language.LSP.Protocol.Types (
   -- ** Code actions
   module CodeAction,
 
-  -- ** Progress
-  module Progress,
-
   -- ** Semantic tokens
   module SemanticTokens,
 
@@ -49,7 +46,6 @@ import Language.LSP.Protocol.Types.Location as Locations
 import Language.LSP.Protocol.Types.LspEnum as LspEnum
 import Language.LSP.Protocol.Types.MarkupContent as Markup
 import Language.LSP.Protocol.Types.Orphans ()
-import Language.LSP.Protocol.Types.Progress as Progress
 import Language.LSP.Protocol.Types.SemanticTokens as SemanticTokens
 import Language.LSP.Protocol.Types.Singletons as Singletons
 import Language.LSP.Protocol.Types.Uri as Uri

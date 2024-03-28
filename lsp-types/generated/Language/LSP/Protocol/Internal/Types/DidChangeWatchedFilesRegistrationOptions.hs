@@ -25,7 +25,7 @@ data DidChangeWatchedFilesRegistrationOptions = DidChangeWatchedFilesRegistratio
   { {-|
   The watchers to register.
   -}
-  _watchers :: [Language.LSP.Protocol.Internal.Types.FileSystemWatcher.FileSystemWatcher]
+  watchers :: [Language.LSP.Protocol.Internal.Types.FileSystemWatcher.FileSystemWatcher]
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

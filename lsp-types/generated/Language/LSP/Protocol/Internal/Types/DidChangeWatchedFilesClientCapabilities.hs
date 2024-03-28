@@ -26,14 +26,14 @@ data DidChangeWatchedFilesClientCapabilities = DidChangeWatchedFilesClientCapabi
   that the current protocol doesn't support static configuration for file changes
   from the server side.
   -}
-  _dynamicRegistration :: (Maybe Bool)
+  dynamicRegistration :: (Maybe Bool)
   , {-|
   Whether the client has support for `RelativePattern`
   or not.
 
   @since 3.17.0
   -}
-  _relativePatternSupport :: (Maybe Bool)
+  relativePatternSupport :: (Maybe Bool)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

@@ -26,7 +26,7 @@ data InlineValueClientCapabilities = InlineValueClientCapabilities
   { {-|
   Whether implementation supports dynamic registration for inline value providers.
   -}
-  _dynamicRegistration :: (Maybe Bool)
+  dynamicRegistration :: (Maybe Bool)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

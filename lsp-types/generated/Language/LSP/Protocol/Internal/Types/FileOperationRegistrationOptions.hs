@@ -27,7 +27,7 @@ data FileOperationRegistrationOptions = FileOperationRegistrationOptions
   { {-|
   The actual filters.
   -}
-  _filters :: [Language.LSP.Protocol.Internal.Types.FileOperationFilter.FileOperationFilter]
+  filters :: [Language.LSP.Protocol.Internal.Types.FileOperationFilter.FileOperationFilter]
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

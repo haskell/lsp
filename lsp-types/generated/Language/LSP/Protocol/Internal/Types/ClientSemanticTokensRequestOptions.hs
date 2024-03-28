@@ -28,12 +28,12 @@ data ClientSemanticTokensRequestOptions = ClientSemanticTokensRequestOptions
   The client will send the `textDocument/semanticTokens/range` request if
   the server provides a corresponding handler.
   -}
-  _range :: (Maybe (Bool Language.LSP.Protocol.Types.Common.|? (Row.Rec Row.Empty)))
+  range :: (Maybe (Bool Language.LSP.Protocol.Types.Common.|? (Row.Rec Row.Empty)))
   , {-|
   The client will send the `textDocument/semanticTokens/full` request if
   the server provides a corresponding handler.
   -}
-  _full :: (Maybe (Bool Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.ClientSemanticTokensRequestFullDelta.ClientSemanticTokensRequestFullDelta))
+  full :: (Maybe (Bool Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.ClientSemanticTokensRequestFullDelta.ClientSemanticTokensRequestFullDelta))
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

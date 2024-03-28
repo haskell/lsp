@@ -26,14 +26,14 @@ data WorkDoneProgressReport = WorkDoneProgressReport
   { {-|
 
   -}
-  _kind :: (Language.LSP.Protocol.Types.Singletons.AString "report")
+  kind :: (Language.LSP.Protocol.Types.Singletons.AString "report")
   , {-|
   Controls enablement state of a cancel button.
 
   Clients that don't support cancellation or don't support controlling the button's
   enablement state are allowed to ignore the property.
   -}
-  _cancellable :: (Maybe Bool)
+  cancellable :: (Maybe Bool)
   , {-|
   Optional, more detailed associated progress message. Contains
   complementary information to the `title`.
@@ -41,7 +41,7 @@ data WorkDoneProgressReport = WorkDoneProgressReport
   Examples: "3/25 files", "project/src/module2", "node_modules/some_dep".
   If unset, the previous progress message (if any) is still valid.
   -}
-  _message :: (Maybe Data.Text.Text)
+  message :: (Maybe Data.Text.Text)
   , {-|
   Optional progress percentage to display (value 100 is considered 100%).
   If not provided infinite progress is assumed and clients are allowed
@@ -50,7 +50,7 @@ data WorkDoneProgressReport = WorkDoneProgressReport
   The value should be steadily rising. Clients are free to ignore values
   that are not following this rule. The value range is [0, 100]
   -}
-  _percentage :: (Maybe Language.LSP.Protocol.Types.Common.UInt)
+  percentage :: (Maybe Language.LSP.Protocol.Types.Common.UInt)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

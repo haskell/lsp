@@ -25,7 +25,7 @@ data DidChangeConfigurationRegistrationOptions = DidChangeConfigurationRegistrat
   { {-|
 
   -}
-  _section :: (Maybe (Data.Text.Text Language.LSP.Protocol.Types.Common.|? [Data.Text.Text]))
+  section :: (Maybe (Data.Text.Text Language.LSP.Protocol.Types.Common.|? [Data.Text.Text]))
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

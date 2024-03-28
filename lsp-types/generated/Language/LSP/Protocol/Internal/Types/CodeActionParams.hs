@@ -28,24 +28,24 @@ data CodeActionParams = CodeActionParams
   { {-|
   An optional token that a server can use to report work done progress.
   -}
-  _workDoneToken :: (Maybe Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken)
+  workDoneToken :: (Maybe Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken)
   , {-|
   An optional token that a server can use to report partial results (e.g. streaming) to
   the client.
   -}
-  _partialResultToken :: (Maybe Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken)
+  partialResultToken :: (Maybe Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken)
   , {-|
   The document in which the command was invoked.
   -}
-  _textDocument :: Language.LSP.Protocol.Internal.Types.TextDocumentIdentifier.TextDocumentIdentifier
+  textDocument :: Language.LSP.Protocol.Internal.Types.TextDocumentIdentifier.TextDocumentIdentifier
   , {-|
   The range for which the command was invoked.
   -}
-  _range :: Language.LSP.Protocol.Internal.Types.Range.Range
+  range :: Language.LSP.Protocol.Internal.Types.Range.Range
   , {-|
   Context carrying additional information.
   -}
-  _context :: Language.LSP.Protocol.Internal.Types.CodeActionContext.CodeActionContext
+  context :: Language.LSP.Protocol.Internal.Types.CodeActionContext.CodeActionContext
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

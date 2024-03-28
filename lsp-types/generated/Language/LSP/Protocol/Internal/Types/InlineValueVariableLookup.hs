@@ -31,15 +31,15 @@ data InlineValueVariableLookup = InlineValueVariableLookup
   The document range for which the inline value applies.
   The range is used to extract the variable name from the underlying document.
   -}
-  _range :: Language.LSP.Protocol.Internal.Types.Range.Range
+  range :: Language.LSP.Protocol.Internal.Types.Range.Range
   , {-|
   If specified the name of the variable to look up.
   -}
-  _variableName :: (Maybe Data.Text.Text)
+  variableName :: (Maybe Data.Text.Text)
   , {-|
   How to perform the lookup.
   -}
-  _caseSensitiveLookup :: Bool
+  caseSensitiveLookup :: Bool
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

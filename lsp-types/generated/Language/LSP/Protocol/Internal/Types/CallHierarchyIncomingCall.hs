@@ -28,12 +28,12 @@ data CallHierarchyIncomingCall = CallHierarchyIncomingCall
   { {-|
   The item that makes the call.
   -}
-  _from :: Language.LSP.Protocol.Internal.Types.CallHierarchyItem.CallHierarchyItem
+  from :: Language.LSP.Protocol.Internal.Types.CallHierarchyItem.CallHierarchyItem
   , {-|
   The ranges at which the calls appear. This is relative to the caller
   denoted by `CallHierarchyIncomingCall.from`.
   -}
-  _fromRanges :: [Language.LSP.Protocol.Internal.Types.Range.Range]
+  fromRanges :: [Language.LSP.Protocol.Internal.Types.Range.Range]
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

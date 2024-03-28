@@ -28,24 +28,24 @@ data DocumentOnTypeFormattingParams = DocumentOnTypeFormattingParams
   { {-|
   The document to format.
   -}
-  _textDocument :: Language.LSP.Protocol.Internal.Types.TextDocumentIdentifier.TextDocumentIdentifier
+  textDocument :: Language.LSP.Protocol.Internal.Types.TextDocumentIdentifier.TextDocumentIdentifier
   , {-|
   The position around which the on type formatting should happen.
   This is not necessarily the exact position where the character denoted
   by the property `ch` got typed.
   -}
-  _position :: Language.LSP.Protocol.Internal.Types.Position.Position
+  position :: Language.LSP.Protocol.Internal.Types.Position.Position
   , {-|
   The character that has been typed that triggered the formatting
   on type request. That is not necessarily the last character that
   got inserted into the document since the client could auto insert
   characters as well (e.g. like automatic brace completion).
   -}
-  _ch :: Data.Text.Text
+  ch :: Data.Text.Text
   , {-|
   The formatting options.
   -}
-  _options :: Language.LSP.Protocol.Internal.Types.FormattingOptions.FormattingOptions
+  options :: Language.LSP.Protocol.Internal.Types.FormattingOptions.FormattingOptions
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

@@ -31,7 +31,7 @@ data DidChangeNotebookDocumentParams = DidChangeNotebookDocumentParams
   only the text document content of a cell changes the notebook version
   doesn't necessarily have to change.
   -}
-  _notebookDocument :: Language.LSP.Protocol.Internal.Types.VersionedNotebookDocumentIdentifier.VersionedNotebookDocumentIdentifier
+  notebookDocument :: Language.LSP.Protocol.Internal.Types.VersionedNotebookDocumentIdentifier.VersionedNotebookDocumentIdentifier
   , {-|
   The actual changes to the notebook document.
 
@@ -47,7 +47,7 @@ data DidChangeNotebookDocumentParams = DidChangeNotebookDocumentParams
   - apply the `NotebookChangeEvent`s in a single notification in the order
     you receive them.
   -}
-  _change :: Language.LSP.Protocol.Internal.Types.NotebookDocumentChangeEvent.NotebookDocumentChangeEvent
+  change :: Language.LSP.Protocol.Internal.Types.NotebookDocumentChangeEvent.NotebookDocumentChangeEvent
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

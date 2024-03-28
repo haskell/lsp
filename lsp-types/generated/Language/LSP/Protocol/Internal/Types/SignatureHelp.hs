@@ -27,7 +27,7 @@ data SignatureHelp = SignatureHelp
   { {-|
   One or more signatures.
   -}
-  _signatures :: [Language.LSP.Protocol.Internal.Types.SignatureInformation.SignatureInformation]
+  signatures :: [Language.LSP.Protocol.Internal.Types.SignatureInformation.SignatureInformation]
   , {-|
   The active signature. If omitted or the value lies outside the
   range of `signatures` the value defaults to zero or is ignored if
@@ -39,7 +39,7 @@ data SignatureHelp = SignatureHelp
   In future version of the protocol this property might become
   mandatory to better express this.
   -}
-  _activeSignature :: (Maybe Language.LSP.Protocol.Types.Common.UInt)
+  activeSignature :: (Maybe Language.LSP.Protocol.Types.Common.UInt)
   , {-|
   The active parameter of the active signature.
 
@@ -58,7 +58,7 @@ data SignatureHelp = SignatureHelp
   mandatory (but still nullable) to better express the active parameter if
   the active signature does have any.
   -}
-  _activeParameter :: (Maybe (Language.LSP.Protocol.Types.Common.UInt Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Types.Common.Null))
+  activeParameter :: (Maybe (Language.LSP.Protocol.Types.Common.UInt Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Types.Common.Null))
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

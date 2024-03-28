@@ -27,27 +27,27 @@ data FileOperationOptions = FileOperationOptions
   { {-|
   The server is interested in receiving didCreateFiles notifications.
   -}
-  _didCreate :: (Maybe Language.LSP.Protocol.Internal.Types.FileOperationRegistrationOptions.FileOperationRegistrationOptions)
+  didCreate :: (Maybe Language.LSP.Protocol.Internal.Types.FileOperationRegistrationOptions.FileOperationRegistrationOptions)
   , {-|
   The server is interested in receiving willCreateFiles requests.
   -}
-  _willCreate :: (Maybe Language.LSP.Protocol.Internal.Types.FileOperationRegistrationOptions.FileOperationRegistrationOptions)
+  willCreate :: (Maybe Language.LSP.Protocol.Internal.Types.FileOperationRegistrationOptions.FileOperationRegistrationOptions)
   , {-|
   The server is interested in receiving didRenameFiles notifications.
   -}
-  _didRename :: (Maybe Language.LSP.Protocol.Internal.Types.FileOperationRegistrationOptions.FileOperationRegistrationOptions)
+  didRename :: (Maybe Language.LSP.Protocol.Internal.Types.FileOperationRegistrationOptions.FileOperationRegistrationOptions)
   , {-|
   The server is interested in receiving willRenameFiles requests.
   -}
-  _willRename :: (Maybe Language.LSP.Protocol.Internal.Types.FileOperationRegistrationOptions.FileOperationRegistrationOptions)
+  willRename :: (Maybe Language.LSP.Protocol.Internal.Types.FileOperationRegistrationOptions.FileOperationRegistrationOptions)
   , {-|
   The server is interested in receiving didDeleteFiles file notifications.
   -}
-  _didDelete :: (Maybe Language.LSP.Protocol.Internal.Types.FileOperationRegistrationOptions.FileOperationRegistrationOptions)
+  didDelete :: (Maybe Language.LSP.Protocol.Internal.Types.FileOperationRegistrationOptions.FileOperationRegistrationOptions)
   , {-|
   The server is interested in receiving willDeleteFiles file requests.
   -}
-  _willDelete :: (Maybe Language.LSP.Protocol.Internal.Types.FileOperationRegistrationOptions.FileOperationRegistrationOptions)
+  willDelete :: (Maybe Language.LSP.Protocol.Internal.Types.FileOperationRegistrationOptions.FileOperationRegistrationOptions)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

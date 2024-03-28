@@ -25,7 +25,7 @@ data WorkDoneProgressCreateParams = WorkDoneProgressCreateParams
   { {-|
   The token to be used to report progress.
   -}
-  _token :: Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken
+  token :: Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

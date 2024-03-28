@@ -24,11 +24,11 @@ data DeleteFileOptions = DeleteFileOptions
   { {-|
   Delete the content recursively if a folder is denoted.
   -}
-  _recursive :: (Maybe Bool)
+  recursive :: (Maybe Bool)
   , {-|
   Ignore the operation if the file doesn't exist.
   -}
-  _ignoreIfNotExists :: (Maybe Bool)
+  ignoreIfNotExists :: (Maybe Bool)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

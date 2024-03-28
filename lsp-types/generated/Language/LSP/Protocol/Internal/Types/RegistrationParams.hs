@@ -25,7 +25,7 @@ data RegistrationParams = RegistrationParams
   { {-|
 
   -}
-  _registrations :: [Language.LSP.Protocol.Internal.Types.Registration.Registration]
+  registrations :: [Language.LSP.Protocol.Internal.Types.Registration.Registration]
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

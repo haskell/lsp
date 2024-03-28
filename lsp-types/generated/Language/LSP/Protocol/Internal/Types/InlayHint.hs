@@ -36,19 +36,19 @@ data InlayHint = InlayHint
   If multiple hints have the same position, they will be shown in the order
   they appear in the response.
   -}
-  _position :: Language.LSP.Protocol.Internal.Types.Position.Position
+  position :: Language.LSP.Protocol.Internal.Types.Position.Position
   , {-|
   The label of this hint. A human readable string or an array of
   InlayHintLabelPart label parts.
 
   *Note* that neither the string nor the label part can be empty.
   -}
-  _label :: (Data.Text.Text Language.LSP.Protocol.Types.Common.|? [Language.LSP.Protocol.Internal.Types.InlayHintLabelPart.InlayHintLabelPart])
+  label :: (Data.Text.Text Language.LSP.Protocol.Types.Common.|? [Language.LSP.Protocol.Internal.Types.InlayHintLabelPart.InlayHintLabelPart])
   , {-|
   The kind of this hint. Can be omitted in which case the client
   should fall back to a reasonable default.
   -}
-  _kind :: (Maybe Language.LSP.Protocol.Internal.Types.InlayHintKind.InlayHintKind)
+  kind :: (Maybe Language.LSP.Protocol.Internal.Types.InlayHintKind.InlayHintKind)
   , {-|
   Optional text edits that are performed when accepting this inlay hint.
 
@@ -56,11 +56,11 @@ data InlayHint = InlayHint
   hint (or its nearest variant) is now part of the document and the inlay
   hint itself is now obsolete.
   -}
-  _textEdits :: (Maybe [Language.LSP.Protocol.Internal.Types.TextEdit.TextEdit])
+  textEdits :: (Maybe [Language.LSP.Protocol.Internal.Types.TextEdit.TextEdit])
   , {-|
   The tooltip text when you hover over this item.
   -}
-  _tooltip :: (Maybe (Data.Text.Text Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.MarkupContent.MarkupContent))
+  tooltip :: (Maybe (Data.Text.Text Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.MarkupContent.MarkupContent))
   , {-|
   Render padding before the hint.
 
@@ -68,7 +68,7 @@ data InlayHint = InlayHint
   background color of the hint itself. That means padding can be used
   to visually align/separate an inlay hint.
   -}
-  _paddingLeft :: (Maybe Bool)
+  paddingLeft :: (Maybe Bool)
   , {-|
   Render padding after the hint.
 
@@ -76,12 +76,12 @@ data InlayHint = InlayHint
   background color of the hint itself. That means padding can be used
   to visually align/separate an inlay hint.
   -}
-  _paddingRight :: (Maybe Bool)
+  paddingRight :: (Maybe Bool)
   , {-|
   A data entry field that is preserved on an inlay hint between
   a `textDocument/inlayHint` and a `inlayHint/resolve` request.
   -}
-  _data_ :: (Maybe Data.Aeson.Value)
+  data_ :: (Maybe Data.Aeson.Value)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

@@ -26,13 +26,13 @@ data StaleRequestSupportOptions = StaleRequestSupportOptions
   { {-|
   The client will actively cancel the request.
   -}
-  _cancel :: Bool
+  cancel :: Bool
   , {-|
   The list of requests for which the client
   will retry the request if it receives a
   response with error code `ContentModified`
   -}
-  _retryOnContentModified :: [Data.Text.Text]
+  retryOnContentModified :: [Data.Text.Text]
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

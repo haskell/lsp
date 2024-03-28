@@ -29,31 +29,31 @@ data FoldingRangeClientCapabilities = FoldingRangeClientCapabilities
   `FoldingRangeRegistrationOptions` return value for the corresponding
   server capability as well.
   -}
-  _dynamicRegistration :: (Maybe Bool)
+  dynamicRegistration :: (Maybe Bool)
   , {-|
   The maximum number of folding ranges that the client prefers to receive
   per document. The value serves as a hint, servers are free to follow the
   limit.
   -}
-  _rangeLimit :: (Maybe Language.LSP.Protocol.Types.Common.UInt)
+  rangeLimit :: (Maybe Language.LSP.Protocol.Types.Common.UInt)
   , {-|
   If set, the client signals that it only supports folding complete lines.
   If set, client will ignore specified `startCharacter` and `endCharacter`
   properties in a FoldingRange.
   -}
-  _lineFoldingOnly :: (Maybe Bool)
+  lineFoldingOnly :: (Maybe Bool)
   , {-|
   Specific options for the folding range kind.
 
   @since 3.17.0
   -}
-  _foldingRangeKind :: (Maybe Language.LSP.Protocol.Internal.Types.ClientFoldingRangeKindOptions.ClientFoldingRangeKindOptions)
+  foldingRangeKind :: (Maybe Language.LSP.Protocol.Internal.Types.ClientFoldingRangeKindOptions.ClientFoldingRangeKindOptions)
   , {-|
   Specific options for the folding range.
 
   @since 3.17.0
   -}
-  _foldingRange :: (Maybe Language.LSP.Protocol.Internal.Types.ClientFoldingRangeOptions.ClientFoldingRangeOptions)
+  foldingRange :: (Maybe Language.LSP.Protocol.Internal.Types.ClientFoldingRangeOptions.ClientFoldingRangeOptions)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

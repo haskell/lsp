@@ -35,7 +35,7 @@ data CompletionListCapabilities = CompletionListCapabilities
 
   @since 3.17.0
   -}
-  _itemDefaults :: (Maybe [Data.Text.Text])
+  itemDefaults :: (Maybe [Data.Text.Text])
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

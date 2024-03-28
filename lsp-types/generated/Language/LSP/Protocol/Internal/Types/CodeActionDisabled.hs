@@ -30,7 +30,7 @@ data CodeActionDisabled = CodeActionDisabled
 
   This is displayed in the code actions UI.
   -}
-  _reason :: Data.Text.Text
+  reason :: Data.Text.Text
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

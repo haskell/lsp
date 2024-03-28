@@ -26,7 +26,7 @@ data ClientSymbolTagOptions = ClientSymbolTagOptions
   { {-|
   The tags supported by the client.
   -}
-  _valueSet :: [Language.LSP.Protocol.Internal.Types.SymbolTag.SymbolTag]
+  valueSet :: [Language.LSP.Protocol.Internal.Types.SymbolTag.SymbolTag]
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

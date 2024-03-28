@@ -27,7 +27,7 @@ data CodeDescription = CodeDescription
   { {-|
   An URI to open with more information about the diagnostic error.
   -}
-  _href :: Language.LSP.Protocol.Types.Uri.Uri
+  href :: Language.LSP.Protocol.Types.Uri.Uri
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

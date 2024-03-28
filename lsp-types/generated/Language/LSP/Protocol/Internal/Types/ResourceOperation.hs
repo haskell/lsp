@@ -26,13 +26,13 @@ data ResourceOperation = ResourceOperation
   { {-|
   The resource operation kind.
   -}
-  _kind :: Data.Text.Text
+  kind :: Data.Text.Text
   , {-|
   An optional annotation identifier describing the operation.
 
   @since 3.16.0
   -}
-  _annotationId :: (Maybe Language.LSP.Protocol.Internal.Types.ChangeAnnotationIdentifier.ChangeAnnotationIdentifier)
+  annotationId :: (Maybe Language.LSP.Protocol.Internal.Types.ChangeAnnotationIdentifier.ChangeAnnotationIdentifier)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

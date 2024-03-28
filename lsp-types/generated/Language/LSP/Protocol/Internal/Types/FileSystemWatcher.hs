@@ -28,13 +28,13 @@ data FileSystemWatcher = FileSystemWatcher
 
   @since 3.17.0 support for relative patterns.
   -}
-  _globPattern :: Language.LSP.Protocol.Internal.Types.GlobPattern.GlobPattern
+  globPattern :: Language.LSP.Protocol.Internal.Types.GlobPattern.GlobPattern
   , {-|
   The kind of events of interest. If omitted it defaults
   to WatchKind.Create | WatchKind.Change | WatchKind.Delete
   which is 7.
   -}
-  _kind :: (Maybe Language.LSP.Protocol.Internal.Types.WatchKind.WatchKind)
+  kind :: (Maybe Language.LSP.Protocol.Internal.Types.WatchKind.WatchKind)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

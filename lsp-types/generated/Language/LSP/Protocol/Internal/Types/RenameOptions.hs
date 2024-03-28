@@ -24,13 +24,13 @@ data RenameOptions = RenameOptions
   { {-|
 
   -}
-  _workDoneProgress :: (Maybe Bool)
+  workDoneProgress :: (Maybe Bool)
   , {-|
   Renames should be checked and tested before being executed.
 
   @since version 3.12.0
   -}
-  _prepareProvider :: (Maybe Bool)
+  prepareProvider :: (Maybe Bool)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

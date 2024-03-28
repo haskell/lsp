@@ -29,11 +29,11 @@ data NotebookDocumentSyncClientCapabilities = NotebookDocumentSyncClientCapabili
   `(TextDocumentRegistrationOptions & StaticRegistrationOptions)`
   return value for the corresponding server capability as well.
   -}
-  _dynamicRegistration :: (Maybe Bool)
+  dynamicRegistration :: (Maybe Bool)
   , {-|
   The client supports sending execution summary data per cell.
   -}
-  _executionSummarySupport :: (Maybe Bool)
+  executionSummarySupport :: (Maybe Bool)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

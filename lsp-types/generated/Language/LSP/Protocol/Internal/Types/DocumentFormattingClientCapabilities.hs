@@ -24,7 +24,7 @@ data DocumentFormattingClientCapabilities = DocumentFormattingClientCapabilities
   { {-|
   Whether formatting supports dynamic registration.
   -}
-  _dynamicRegistration :: (Maybe Bool)
+  dynamicRegistration :: (Maybe Bool)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

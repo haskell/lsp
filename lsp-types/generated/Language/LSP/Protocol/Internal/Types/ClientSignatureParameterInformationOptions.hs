@@ -28,7 +28,7 @@ data ClientSignatureParameterInformationOptions = ClientSignatureParameterInform
 
   @since 3.14.0
   -}
-  _labelOffsetSupport :: (Maybe Bool)
+  labelOffsetSupport :: (Maybe Bool)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

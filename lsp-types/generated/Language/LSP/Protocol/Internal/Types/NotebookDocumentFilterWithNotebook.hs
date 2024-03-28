@@ -30,11 +30,11 @@ data NotebookDocumentFilterWithNotebook = NotebookDocumentFilterWithNotebook
   value is provided it matches against the
   notebook type. '*' matches every notebook.
   -}
-  _notebook :: (Data.Text.Text Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.NotebookDocumentFilter.NotebookDocumentFilter)
+  notebook :: (Data.Text.Text Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.NotebookDocumentFilter.NotebookDocumentFilter)
   , {-|
   The cells of the matching notebook to be synced.
   -}
-  _cells :: (Maybe [Language.LSP.Protocol.Internal.Types.NotebookCellLanguage.NotebookCellLanguage])
+  cells :: (Maybe [Language.LSP.Protocol.Internal.Types.NotebookCellLanguage.NotebookCellLanguage])
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

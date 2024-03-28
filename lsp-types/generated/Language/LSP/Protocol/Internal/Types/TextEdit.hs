@@ -27,12 +27,12 @@ data TextEdit = TextEdit
   The range of the text document to be manipulated. To insert
   text into a document create a range where start === end.
   -}
-  _range :: Language.LSP.Protocol.Internal.Types.Range.Range
+  range :: Language.LSP.Protocol.Internal.Types.Range.Range
   , {-|
   The string to be inserted. For delete operations use an
   empty string.
   -}
-  _newText :: Data.Text.Text
+  newText :: Data.Text.Text
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

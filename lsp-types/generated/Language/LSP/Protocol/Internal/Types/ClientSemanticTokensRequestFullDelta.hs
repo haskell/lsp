@@ -26,7 +26,7 @@ data ClientSemanticTokensRequestFullDelta = ClientSemanticTokensRequestFullDelta
   The client will send the `textDocument/semanticTokens/full/delta` request if
   the server provides a corresponding handler.
   -}
-  _delta :: (Maybe Bool)
+  delta :: (Maybe Bool)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

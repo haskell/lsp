@@ -27,7 +27,7 @@ data ClientSymbolResolveOptions = ClientSymbolResolveOptions
   The properties that a client can resolve lazily. Usually
   `location.range`
   -}
-  _properties :: [Data.Text.Text]
+  properties :: [Data.Text.Text]
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

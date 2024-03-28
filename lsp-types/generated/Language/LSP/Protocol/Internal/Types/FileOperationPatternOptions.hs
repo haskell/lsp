@@ -26,7 +26,7 @@ data FileOperationPatternOptions = FileOperationPatternOptions
   { {-|
   The pattern should be matched ignoring casing.
   -}
-  _ignoreCase :: (Maybe Bool)
+  ignoreCase :: (Maybe Bool)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

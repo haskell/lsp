@@ -26,11 +26,11 @@ data ConfigurationItem = ConfigurationItem
   { {-|
   The scope to get the configuration section for.
   -}
-  _scopeUri :: (Maybe Language.LSP.Protocol.Types.Uri.Uri)
+  scopeUri :: (Maybe Language.LSP.Protocol.Types.Uri.Uri)
   , {-|
   The configuration section asked for.
   -}
-  _section :: (Maybe Data.Text.Text)
+  section :: (Maybe Data.Text.Text)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

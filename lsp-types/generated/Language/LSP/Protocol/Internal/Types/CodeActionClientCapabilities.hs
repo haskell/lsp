@@ -26,7 +26,7 @@ data CodeActionClientCapabilities = CodeActionClientCapabilities
   { {-|
   Whether code action supports dynamic registration.
   -}
-  _dynamicRegistration :: (Maybe Bool)
+  dynamicRegistration :: (Maybe Bool)
   , {-|
   The client support code action literals of type `CodeAction` as a valid
   response of the `textDocument/codeAction` request. If the property is not
@@ -34,19 +34,19 @@ data CodeActionClientCapabilities = CodeActionClientCapabilities
 
   @since 3.8.0
   -}
-  _codeActionLiteralSupport :: (Maybe Language.LSP.Protocol.Internal.Types.ClientCodeActionLiteralOptions.ClientCodeActionLiteralOptions)
+  codeActionLiteralSupport :: (Maybe Language.LSP.Protocol.Internal.Types.ClientCodeActionLiteralOptions.ClientCodeActionLiteralOptions)
   , {-|
   Whether code action supports the `isPreferred` property.
 
   @since 3.15.0
   -}
-  _isPreferredSupport :: (Maybe Bool)
+  isPreferredSupport :: (Maybe Bool)
   , {-|
   Whether code action supports the `disabled` property.
 
   @since 3.16.0
   -}
-  _disabledSupport :: (Maybe Bool)
+  disabledSupport :: (Maybe Bool)
   , {-|
   Whether code action supports the `data` property which is
   preserved between a `textDocument/codeAction` and a
@@ -54,14 +54,14 @@ data CodeActionClientCapabilities = CodeActionClientCapabilities
 
   @since 3.16.0
   -}
-  _dataSupport :: (Maybe Bool)
+  dataSupport :: (Maybe Bool)
   , {-|
   Whether the client supports resolving additional code action
   properties via a separate `codeAction/resolve` request.
 
   @since 3.16.0
   -}
-  _resolveSupport :: (Maybe Language.LSP.Protocol.Internal.Types.ClientCodeActionResolveOptions.ClientCodeActionResolveOptions)
+  resolveSupport :: (Maybe Language.LSP.Protocol.Internal.Types.ClientCodeActionResolveOptions.ClientCodeActionResolveOptions)
   , {-|
   Whether the client honors the change annotations in
   text edits and resource operations returned via the
@@ -71,7 +71,7 @@ data CodeActionClientCapabilities = CodeActionClientCapabilities
 
   @since 3.16.0
   -}
-  _honorsChangeAnnotations :: (Maybe Bool)
+  honorsChangeAnnotations :: (Maybe Bool)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

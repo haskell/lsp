@@ -29,17 +29,17 @@ data NotebookDocumentSyncRegistrationOptions = NotebookDocumentSyncRegistrationO
   { {-|
   The notebooks to be synced
   -}
-  _notebookSelector :: [(Language.LSP.Protocol.Internal.Types.NotebookDocumentFilterWithNotebook.NotebookDocumentFilterWithNotebook Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.NotebookDocumentFilterWithCells.NotebookDocumentFilterWithCells)]
+  notebookSelector :: [(Language.LSP.Protocol.Internal.Types.NotebookDocumentFilterWithNotebook.NotebookDocumentFilterWithNotebook Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.NotebookDocumentFilterWithCells.NotebookDocumentFilterWithCells)]
   , {-|
   Whether save notification should be forwarded to
   the server. Will only be honored if mode === `notebook`.
   -}
-  _save :: (Maybe Bool)
+  save :: (Maybe Bool)
   , {-|
   The id used to register the request. The id can be used to deregister
   the request again. See also Registration#id.
   -}
-  _id :: (Maybe Data.Text.Text)
+  id :: (Maybe Data.Text.Text)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

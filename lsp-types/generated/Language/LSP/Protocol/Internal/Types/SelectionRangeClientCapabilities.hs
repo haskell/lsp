@@ -26,7 +26,7 @@ data SelectionRangeClientCapabilities = SelectionRangeClientCapabilities
   the client supports the new `SelectionRangeRegistrationOptions` return value for the corresponding server
   capability as well.
   -}
-  _dynamicRegistration :: (Maybe Bool)
+  dynamicRegistration :: (Maybe Bool)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

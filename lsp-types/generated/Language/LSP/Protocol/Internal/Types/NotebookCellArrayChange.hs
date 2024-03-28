@@ -28,15 +28,15 @@ data NotebookCellArrayChange = NotebookCellArrayChange
   { {-|
   The start oftest of the cell that changed.
   -}
-  _start :: Language.LSP.Protocol.Types.Common.UInt
+  start :: Language.LSP.Protocol.Types.Common.UInt
   , {-|
   The deleted cells
   -}
-  _deleteCount :: Language.LSP.Protocol.Types.Common.UInt
+  deleteCount :: Language.LSP.Protocol.Types.Common.UInt
   , {-|
   The new cells, if any
   -}
-  _cells :: (Maybe [Language.LSP.Protocol.Internal.Types.NotebookCell.NotebookCell])
+  cells :: (Maybe [Language.LSP.Protocol.Internal.Types.NotebookCell.NotebookCell])
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

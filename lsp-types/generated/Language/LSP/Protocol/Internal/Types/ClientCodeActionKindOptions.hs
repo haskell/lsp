@@ -29,7 +29,7 @@ data ClientCodeActionKindOptions = ClientCodeActionKindOptions
   handle values outside its set gracefully and falls back
   to a default value when unknown.
   -}
-  _valueSet :: [Language.LSP.Protocol.Internal.Types.CodeActionKind.CodeActionKind]
+  valueSet :: [Language.LSP.Protocol.Internal.Types.CodeActionKind.CodeActionKind]
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

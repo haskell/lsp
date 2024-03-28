@@ -30,31 +30,31 @@ data ClientCapabilities = ClientCapabilities
   { {-|
   Workspace specific client capabilities.
   -}
-  _workspace :: (Maybe Language.LSP.Protocol.Internal.Types.WorkspaceClientCapabilities.WorkspaceClientCapabilities)
+  workspace :: (Maybe Language.LSP.Protocol.Internal.Types.WorkspaceClientCapabilities.WorkspaceClientCapabilities)
   , {-|
   Text document specific client capabilities.
   -}
-  _textDocument :: (Maybe Language.LSP.Protocol.Internal.Types.TextDocumentClientCapabilities.TextDocumentClientCapabilities)
+  textDocument :: (Maybe Language.LSP.Protocol.Internal.Types.TextDocumentClientCapabilities.TextDocumentClientCapabilities)
   , {-|
   Capabilities specific to the notebook document support.
 
   @since 3.17.0
   -}
-  _notebookDocument :: (Maybe Language.LSP.Protocol.Internal.Types.NotebookDocumentClientCapabilities.NotebookDocumentClientCapabilities)
+  notebookDocument :: (Maybe Language.LSP.Protocol.Internal.Types.NotebookDocumentClientCapabilities.NotebookDocumentClientCapabilities)
   , {-|
   Window specific client capabilities.
   -}
-  _window :: (Maybe Language.LSP.Protocol.Internal.Types.WindowClientCapabilities.WindowClientCapabilities)
+  window :: (Maybe Language.LSP.Protocol.Internal.Types.WindowClientCapabilities.WindowClientCapabilities)
   , {-|
   General client capabilities.
 
   @since 3.16.0
   -}
-  _general :: (Maybe Language.LSP.Protocol.Internal.Types.GeneralClientCapabilities.GeneralClientCapabilities)
+  general :: (Maybe Language.LSP.Protocol.Internal.Types.GeneralClientCapabilities.GeneralClientCapabilities)
   , {-|
   Experimental client capabilities.
   -}
-  _experimental :: (Maybe Data.Aeson.Value)
+  experimental :: (Maybe Data.Aeson.Value)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

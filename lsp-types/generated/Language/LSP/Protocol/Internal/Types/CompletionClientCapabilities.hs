@@ -28,16 +28,16 @@ data CompletionClientCapabilities = CompletionClientCapabilities
   { {-|
   Whether completion supports dynamic registration.
   -}
-  _dynamicRegistration :: (Maybe Bool)
+  dynamicRegistration :: (Maybe Bool)
   , {-|
   The client supports the following `CompletionItem` specific
   capabilities.
   -}
-  _completionItem :: (Maybe Language.LSP.Protocol.Internal.Types.ClientCompletionItemOptions.ClientCompletionItemOptions)
+  completionItem :: (Maybe Language.LSP.Protocol.Internal.Types.ClientCompletionItemOptions.ClientCompletionItemOptions)
   , {-|
 
   -}
-  _completionItemKind :: (Maybe Language.LSP.Protocol.Internal.Types.ClientCompletionItemOptionsKind.ClientCompletionItemOptionsKind)
+  completionItemKind :: (Maybe Language.LSP.Protocol.Internal.Types.ClientCompletionItemOptionsKind.ClientCompletionItemOptionsKind)
   , {-|
   Defines how the client handles whitespace and indentation
   when accepting a completion item that uses multi line
@@ -45,19 +45,19 @@ data CompletionClientCapabilities = CompletionClientCapabilities
 
   @since 3.17.0
   -}
-  _insertTextMode :: (Maybe Language.LSP.Protocol.Internal.Types.InsertTextMode.InsertTextMode)
+  insertTextMode :: (Maybe Language.LSP.Protocol.Internal.Types.InsertTextMode.InsertTextMode)
   , {-|
   The client supports to send additional context information for a
   `textDocument/completion` request.
   -}
-  _contextSupport :: (Maybe Bool)
+  contextSupport :: (Maybe Bool)
   , {-|
   The client supports the following `CompletionList` specific
   capabilities.
 
   @since 3.17.0
   -}
-  _completionList :: (Maybe Language.LSP.Protocol.Internal.Types.CompletionListCapabilities.CompletionListCapabilities)
+  completionList :: (Maybe Language.LSP.Protocol.Internal.Types.CompletionListCapabilities.CompletionListCapabilities)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

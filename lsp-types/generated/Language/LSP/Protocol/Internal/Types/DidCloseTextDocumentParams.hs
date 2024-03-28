@@ -25,7 +25,7 @@ data DidCloseTextDocumentParams = DidCloseTextDocumentParams
   { {-|
   The document that was closed.
   -}
-  _textDocument :: Language.LSP.Protocol.Internal.Types.TextDocumentIdentifier.TextDocumentIdentifier
+  textDocument :: Language.LSP.Protocol.Internal.Types.TextDocumentIdentifier.TextDocumentIdentifier
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

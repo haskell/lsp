@@ -2,6 +2,7 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeInType #-}
 -- So we can keep using the old prettyprinter modules (which have a better
@@ -40,7 +41,7 @@ import Data.Text.Prettyprint.Doc
 import GHC.Generics (Generic)
 import Language.LSP.Diagnostics
 import Language.LSP.Logging (defaultClientLogger)
-import Language.LSP.Protocol.Lens qualified as LSP
+import Language.LSP.Protocol.Lens
 import Language.LSP.Protocol.Message qualified as LSP
 import Language.LSP.Protocol.Types qualified as LSP
 import Language.LSP.Server
@@ -121,11 +122,11 @@ run = flip E.catches handlers $ do
 syncOptions :: LSP.TextDocumentSyncOptions
 syncOptions =
   LSP.TextDocumentSyncOptions
-    { LSP._openClose = Just True
-    , LSP._change = Just LSP.TextDocumentSyncKind_Incremental
-    , LSP._willSave = Just False
-    , LSP._willSaveWaitUntil = Just False
-    , LSP._save = Just $ LSP.InR $ LSP.SaveOptions $ Just False
+    { LSP.openClose = Just True
+    , LSP.change = Just LSP.TextDocumentSyncKind_Incremental
+    , LSP.willSave = Just False
+    , LSP.willSaveWaitUntil = Just False
+    , LSP.save = Just $ LSP.InR $ LSP.SaveOptions $ Just False
     }
 
 lspOptions :: Options
@@ -229,7 +230,8 @@ handle logger =
                       rsp = [LSP.CodeLens (LSP.mkRange 0 0 0 100) (Just cmd) Nothing]
                   responder (Right $ LSP.InL rsp)
     , notificationHandler LSP.SMethod_TextDocumentDidOpen $ \msg -> do
-        let doc = msg ^. LSP.params . LSP.textDocument . LSP.uri
+        let params = msg.params
+            doc = params.textDocument.uri
             fileName = LSP.uriToFilePath doc
         logger <& ("Processing DidOpenTextDocument for: " <> T.pack (show fileName)) `WithSeverity` Info
         sendDiagnostics (LSP.toNormalizedUri doc) (Just 0)
@@ -240,12 +242,9 @@ handle logger =
           LSP.ShowMessageParams LSP.MessageType_Info $
             "Wibble factor set to " <> T.pack (show (wibbleFactor cfg))
     , notificationHandler LSP.SMethod_TextDocumentDidChange $ \msg -> do
-        let doc =
-              msg
-                ^. LSP.params
-                  . LSP.textDocument
-                  . LSP.uri
-                  . to LSP.toNormalizedUri
+        let
+          params = msg.params
+          doc = LSP.toNormalizedUri (params.textDocument.uri)
         logger <& ("Processing DidChangeTextDocument for: " <> T.pack (show doc)) `WithSeverity` Info
         mdoc <- getVirtualFile doc
         case mdoc of
@@ -254,25 +253,27 @@ handle logger =
           Nothing -> do
             logger <& ("Didn't find anything in the VFS for: " <> T.pack (show doc)) `WithSeverity` Info
     , notificationHandler LSP.SMethod_TextDocumentDidSave $ \msg -> do
-        let doc = msg ^. LSP.params . LSP.textDocument . LSP.uri
-            fileName = LSP.uriToFilePath doc
+        let
+          params = msg.params
+          doc = params.textDocument.uri
+          fileName = LSP.uriToFilePath doc
         logger <& ("Processing DidSaveTextDocument  for: " <> T.pack (show fileName)) `WithSeverity` Info
         sendDiagnostics (LSP.toNormalizedUri doc) Nothing
     , requestHandler LSP.SMethod_TextDocumentRename $ \req responder -> do
         logger <& "Processing a textDocument/rename request" `WithSeverity` Info
-        let params = req ^. LSP.params
-            LSP.Position l c = params ^. LSP.position
-            newName = params ^. LSP.newName
-        vdoc <- getVersionedTextDoc (params ^. LSP.textDocument)
+        let params = req.params
+            LSP.Position l c = params.position
+            newName = params.newName
+        vdoc <- getVersionedTextDoc (params.textDocument)
         -- Replace some text at the position with what the user entered
         let edit = LSP.InL $ LSP.TextEdit (LSP.mkRange l c l (c + fromIntegral (T.length newName))) newName
-            tde = LSP.TextDocumentEdit (LSP._versionedTextDocumentIdentifier # vdoc) [edit]
+            tde = LSP.TextDocumentEdit (versionedTextDocumentIdentifier # vdoc) [edit]
             -- "documentChanges" field is preferred over "changes"
             rsp = LSP.WorkspaceEdit Nothing (Just [LSP.InL tde]) Nothing
         responder (Right $ LSP.InL rsp)
     , requestHandler LSP.SMethod_TextDocumentHover $ \req responder -> do
         logger <& "Processing a textDocument/hover request" `WithSeverity` Info
-        let LSP.HoverParams _doc pos _workDone = req ^. LSP.params
+        let LSP.HoverParams _doc pos _workDone = req.params
             LSP.Position _l _c' = pos
             rsp = LSP.Hover ms (Just range)
             ms = LSP.InL $ LSP.mkMarkdown "Your type info here!"
@@ -280,21 +281,21 @@ handle logger =
         responder (Right $ LSP.InL rsp)
     , requestHandler LSP.SMethod_TextDocumentDocumentSymbol $ \req responder -> do
         logger <& "Processing a textDocument/documentSymbol request" `WithSeverity` Info
-        let LSP.DocumentSymbolParams _ _ doc = req ^. LSP.params
-            loc = LSP.Location (doc ^. LSP.uri) (LSP.Range (LSP.Position 0 0) (LSP.Position 0 0))
+        let LSP.DocumentSymbolParams _ _ doc = req.params
+            loc = LSP.Location (doc.uri) (LSP.Range (LSP.Position 0 0) (LSP.Position 0 0))
             rsp = [LSP.SymbolInformation "lsp-hello" LSP.SymbolKind_Function Nothing Nothing Nothing loc]
         responder (Right $ LSP.InL rsp)
     , requestHandler LSP.SMethod_TextDocumentCodeAction $ \req responder -> do
         logger <& "Processing a textDocument/codeAction request" `WithSeverity` Info
-        let params = req ^. LSP.params
-            doc = params ^. LSP.textDocument
-            diags = params ^. LSP.context . LSP.diagnostics
+        let params = req.params
+            doc = params.textDocument
+            diags = params.context.diagnostics
             -- makeCommand only generates commands for diagnostics whose source is us
             makeCommand d
-              | (LSP.Range s _) <- d ^. LSP.range
-              , (Just "lsp-hello") <- d ^. LSP.source =
+              | (LSP.Range s _) <- d.range
+              , (Just "lsp-hello") <- d.source =
                   let
-                    title = "Apply LSP hello command:" <> head (T.lines $ d ^. LSP.message)
+                    title = "Apply LSP hello command:" <> head (T.lines $ d.message)
                     -- NOTE: the cmd needs to be registered via the InitializeResponse message. See lspOptions above
                     cmd = "lsp-hello-command"
                     -- need 'file' and 'start_pos'
@@ -310,12 +311,14 @@ handle logger =
         responder (Right $ LSP.InL rsp)
     , requestHandler LSP.SMethod_WorkspaceExecuteCommand $ \req responder -> do
         logger <& "Processing a workspace/executeCommand request" `WithSeverity` Info
-        let params = req ^. LSP.params
-            margs = params ^. LSP.arguments
+        let
+          params :: LSP.ExecuteCommandParams
+          params = req.params
+          margs = params.arguments
 
         logger <& ("The arguments are: " <> T.pack (show margs)) `WithSeverity` Debug
         responder (Right $ LSP.InL (J.Object mempty)) -- respond to the request
-        void $ withProgress "Executing some long running command" (req ^. LSP.params . LSP.workDoneToken) Cancellable $ \update ->
+        void $ withProgress "Executing some long running command" (params.workDoneToken) Cancellable $ \update ->
           forM [(0 :: LSP.UInt) .. 10] $ \i -> do
             update (ProgressAmount (Just (i * 10)) (Just "Doing stuff"))
             liftIO $ threadDelay (1 * 1000000)

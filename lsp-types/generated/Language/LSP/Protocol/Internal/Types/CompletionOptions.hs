@@ -26,7 +26,7 @@ data CompletionOptions = CompletionOptions
   { {-|
 
   -}
-  _workDoneProgress :: (Maybe Bool)
+  workDoneProgress :: (Maybe Bool)
   , {-|
   Most tools trigger completion request automatically without explicitly requesting
   it using a keyboard shortcut (e.g. Ctrl+Space). Typically they do so when the user
@@ -37,7 +37,7 @@ data CompletionOptions = CompletionOptions
   If code complete should automatically be trigger on characters not being valid inside
   an identifier (for example `.` in JavaScript) list them in `triggerCharacters`.
   -}
-  _triggerCharacters :: (Maybe [Data.Text.Text])
+  triggerCharacters :: (Maybe [Data.Text.Text])
   , {-|
   The list of all possible characters that commit a completion. This field can be used
   if clients don't support individual commit characters per completion item. See
@@ -48,19 +48,19 @@ data CompletionOptions = CompletionOptions
 
   @since 3.2.0
   -}
-  _allCommitCharacters :: (Maybe [Data.Text.Text])
+  allCommitCharacters :: (Maybe [Data.Text.Text])
   , {-|
   The server provides support to resolve additional
   information for a completion item.
   -}
-  _resolveProvider :: (Maybe Bool)
+  resolveProvider :: (Maybe Bool)
   , {-|
   The server supports the following `CompletionItem` specific
   capabilities.
 
   @since 3.17.0
   -}
-  _completionItem :: (Maybe Language.LSP.Protocol.Internal.Types.ServerCompletionItemOptions.ServerCompletionItemOptions)
+  completionItem :: (Maybe Language.LSP.Protocol.Internal.Types.ServerCompletionItemOptions.ServerCompletionItemOptions)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

@@ -44,31 +44,31 @@ data CompletionItemDefaults = CompletionItemDefaults
 
   @since 3.17.0
   -}
-  _commitCharacters :: (Maybe [Data.Text.Text])
+  commitCharacters :: (Maybe [Data.Text.Text])
   , {-|
   A default edit range.
 
   @since 3.17.0
   -}
-  _editRange :: (Maybe (Language.LSP.Protocol.Internal.Types.Range.Range Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.EditRangeWithInsertReplace.EditRangeWithInsertReplace))
+  editRange :: (Maybe (Language.LSP.Protocol.Internal.Types.Range.Range Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.EditRangeWithInsertReplace.EditRangeWithInsertReplace))
   , {-|
   A default insert text format.
 
   @since 3.17.0
   -}
-  _insertTextFormat :: (Maybe Language.LSP.Protocol.Internal.Types.InsertTextFormat.InsertTextFormat)
+  insertTextFormat :: (Maybe Language.LSP.Protocol.Internal.Types.InsertTextFormat.InsertTextFormat)
   , {-|
   A default insert text mode.
 
   @since 3.17.0
   -}
-  _insertTextMode :: (Maybe Language.LSP.Protocol.Internal.Types.InsertTextMode.InsertTextMode)
+  insertTextMode :: (Maybe Language.LSP.Protocol.Internal.Types.InsertTextMode.InsertTextMode)
   , {-|
   A default data value.
 
   @since 3.17.0
   -}
-  _data_ :: (Maybe Data.Aeson.Value)
+  data_ :: (Maybe Data.Aeson.Value)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

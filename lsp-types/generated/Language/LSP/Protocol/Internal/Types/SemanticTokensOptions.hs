@@ -27,20 +27,20 @@ data SemanticTokensOptions = SemanticTokensOptions
   { {-|
 
   -}
-  _workDoneProgress :: (Maybe Bool)
+  workDoneProgress :: (Maybe Bool)
   , {-|
   The legend used by the server
   -}
-  _legend :: Language.LSP.Protocol.Internal.Types.SemanticTokensLegend.SemanticTokensLegend
+  legend :: Language.LSP.Protocol.Internal.Types.SemanticTokensLegend.SemanticTokensLegend
   , {-|
   Server supports providing semantic tokens for a specific range
   of a document.
   -}
-  _range :: (Maybe (Bool Language.LSP.Protocol.Types.Common.|? (Row.Rec Row.Empty)))
+  range :: (Maybe (Bool Language.LSP.Protocol.Types.Common.|? (Row.Rec Row.Empty)))
   , {-|
   Server supports providing semantic tokens for a full document.
   -}
-  _full :: (Maybe (Bool Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.SemanticTokensFullDelta.SemanticTokensFullDelta))
+  full :: (Maybe (Bool Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.SemanticTokensFullDelta.SemanticTokensFullDelta))
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

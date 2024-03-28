@@ -27,18 +27,18 @@ data WorkspaceSymbolClientCapabilities = WorkspaceSymbolClientCapabilities
   { {-|
   Symbol request supports dynamic registration.
   -}
-  _dynamicRegistration :: (Maybe Bool)
+  dynamicRegistration :: (Maybe Bool)
   , {-|
   Specific capabilities for the `SymbolKind` in the `workspace/symbol` request.
   -}
-  _symbolKind :: (Maybe Language.LSP.Protocol.Internal.Types.ClientSymbolKindOptions.ClientSymbolKindOptions)
+  symbolKind :: (Maybe Language.LSP.Protocol.Internal.Types.ClientSymbolKindOptions.ClientSymbolKindOptions)
   , {-|
   The client supports tags on `SymbolInformation`.
   Clients supporting tags have to handle unknown tags gracefully.
 
   @since 3.16.0
   -}
-  _tagSupport :: (Maybe Language.LSP.Protocol.Internal.Types.ClientSymbolTagOptions.ClientSymbolTagOptions)
+  tagSupport :: (Maybe Language.LSP.Protocol.Internal.Types.ClientSymbolTagOptions.ClientSymbolTagOptions)
   , {-|
   The client support partial workspace symbols. The client will send the
   request `workspaceSymbol/resolve` to the server to resolve additional
@@ -46,7 +46,7 @@ data WorkspaceSymbolClientCapabilities = WorkspaceSymbolClientCapabilities
 
   @since 3.17.0
   -}
-  _resolveSupport :: (Maybe Language.LSP.Protocol.Internal.Types.ClientSymbolResolveOptions.ClientSymbolResolveOptions)
+  resolveSupport :: (Maybe Language.LSP.Protocol.Internal.Types.ClientSymbolResolveOptions.ClientSymbolResolveOptions)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

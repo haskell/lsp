@@ -29,16 +29,16 @@ data Command = Command
   { {-|
   Title of the command, like `save`.
   -}
-  _title :: Data.Text.Text
+  title :: Data.Text.Text
   , {-|
   The identifier of the actual command handler.
   -}
-  _command :: Data.Text.Text
+  command :: Data.Text.Text
   , {-|
   Arguments that the command handler should be
   invoked with.
   -}
-  _arguments :: (Maybe [Data.Aeson.Value])
+  arguments :: (Maybe [Data.Aeson.Value])
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

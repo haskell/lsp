@@ -25,12 +25,12 @@ data HoverClientCapabilities = HoverClientCapabilities
   { {-|
   Whether hover supports dynamic registration.
   -}
-  _dynamicRegistration :: (Maybe Bool)
+  dynamicRegistration :: (Maybe Bool)
   , {-|
   Client supports the following content formats for the content
   property. The order describes the preferred format of the client.
   -}
-  _contentFormat :: (Maybe [Language.LSP.Protocol.Internal.Types.MarkupKind.MarkupKind])
+  contentFormat :: (Maybe [Language.LSP.Protocol.Internal.Types.MarkupKind.MarkupKind])
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

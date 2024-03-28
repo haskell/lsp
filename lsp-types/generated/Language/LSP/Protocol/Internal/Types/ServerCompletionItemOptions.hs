@@ -29,7 +29,7 @@ data ServerCompletionItemOptions = ServerCompletionItemOptions
 
   @since 3.17.0
   -}
-  _labelDetailsSupport :: (Maybe Bool)
+  labelDetailsSupport :: (Maybe Bool)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

@@ -36,17 +36,17 @@ data FileOperationPattern = FileOperationPattern
   - `[]` to declare a range of characters to match in a path segment (e.g., `example.[0-9]` to match on `example.0`, `example.1`, …)
   - `[!...]` to negate a range of characters to match in a path segment (e.g., `example.[!0-9]` to match on `example.a`, `example.b`, but not `example.0`)
   -}
-  _glob :: Data.Text.Text
+  glob :: Data.Text.Text
   , {-|
   Whether to match files or folders with this pattern.
 
   Matches both if undefined.
   -}
-  _matches :: (Maybe Language.LSP.Protocol.Internal.Types.FileOperationPatternKind.FileOperationPatternKind)
+  matches :: (Maybe Language.LSP.Protocol.Internal.Types.FileOperationPatternKind.FileOperationPatternKind)
   , {-|
   Additional options used during matching.
   -}
-  _options :: (Maybe Language.LSP.Protocol.Internal.Types.FileOperationPatternOptions.FileOperationPatternOptions)
+  options :: (Maybe Language.LSP.Protocol.Internal.Types.FileOperationPatternOptions.FileOperationPatternOptions)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

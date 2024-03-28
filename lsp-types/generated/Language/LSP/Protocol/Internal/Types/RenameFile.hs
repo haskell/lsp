@@ -30,23 +30,23 @@ data RenameFile = RenameFile
 
   @since 3.16.0
   -}
-  _annotationId :: (Maybe Language.LSP.Protocol.Internal.Types.ChangeAnnotationIdentifier.ChangeAnnotationIdentifier)
+  annotationId :: (Maybe Language.LSP.Protocol.Internal.Types.ChangeAnnotationIdentifier.ChangeAnnotationIdentifier)
   , {-|
   A rename
   -}
-  _kind :: (Language.LSP.Protocol.Types.Singletons.AString "rename")
+  kind :: (Language.LSP.Protocol.Types.Singletons.AString "rename")
   , {-|
   The old (existing) location.
   -}
-  _oldUri :: Language.LSP.Protocol.Types.Uri.Uri
+  oldUri :: Language.LSP.Protocol.Types.Uri.Uri
   , {-|
   The new location.
   -}
-  _newUri :: Language.LSP.Protocol.Types.Uri.Uri
+  newUri :: Language.LSP.Protocol.Types.Uri.Uri
   , {-|
   Rename options.
   -}
-  _options :: (Maybe Language.LSP.Protocol.Internal.Types.RenameFileOptions.RenameFileOptions)
+  options :: (Maybe Language.LSP.Protocol.Internal.Types.RenameFileOptions.RenameFileOptions)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

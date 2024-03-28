@@ -26,15 +26,15 @@ data DocumentLinkRegistrationOptions = DocumentLinkRegistrationOptions
   A document selector to identify the scope of the registration. If set to null
   the document selector provided on the client side will be used.
   -}
-  _documentSelector :: (Language.LSP.Protocol.Internal.Types.DocumentSelector.DocumentSelector Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Types.Common.Null)
+  documentSelector :: (Language.LSP.Protocol.Internal.Types.DocumentSelector.DocumentSelector Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Types.Common.Null)
   , {-|
 
   -}
-  _workDoneProgress :: (Maybe Bool)
+  workDoneProgress :: (Maybe Bool)
   , {-|
   Document links have a resolve provider as well.
   -}
-  _resolveProvider :: (Maybe Bool)
+  resolveProvider :: (Maybe Bool)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

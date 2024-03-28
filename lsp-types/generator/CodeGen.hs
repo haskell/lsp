@@ -218,7 +218,7 @@ makeConstrName context n =
 
 -- | Make a name for a field.
 makeFieldName :: T.Text -> T.Text
-makeFieldName n = "_" <> sanitizeName n
+makeFieldName n = sanitizeName n
 
 buildTables :: MetaModel -> (SymbolTable, StructTable, MetaTable)
 buildTables (MetaModel{structures, enumerations, typeAliases}) =

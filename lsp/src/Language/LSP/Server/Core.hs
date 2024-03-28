@@ -1,7 +1,9 @@
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
@@ -24,7 +26,6 @@ import Control.Concurrent.Async
 import Control.Concurrent.MVar
 import Control.Concurrent.STM
 import Control.Exception qualified as E
-import Control.Lens (at, (^.), (^?), _Just)
 import Control.Monad
 import Control.Monad.Catch (
   MonadCatch,
@@ -54,8 +55,7 @@ import Data.Text qualified as T
 import Data.UUID qualified as UUID
 import Language.LSP.Diagnostics
 import Language.LSP.Protocol.Capabilities
-import Language.LSP.Protocol.Lens qualified as L
-import Language.LSP.Protocol.Message
+import Language.LSP.Protocol.Message hiding (error)
 import Language.LSP.Protocol.Message qualified as L
 import Language.LSP.Protocol.Types
 import Language.LSP.Protocol.Types qualified as L
@@ -441,7 +441,7 @@ sendRequest m params resHandler = do
 getVirtualFile :: MonadLsp config m => NormalizedUri -> m (Maybe VirtualFile)
 getVirtualFile uri = do
   dat <- vfsData <$> getsState resVFS
-  pure $ dat ^. vfsMap . at uri
+  pure $ Map.lookup uri dat.vfsMap
 {-# INLINE getVirtualFile #-}
 
 getVirtualFiles :: MonadLsp config m => m VFS
@@ -476,7 +476,7 @@ persistVirtualFile logger dir uri = do
 -- | Given a text document identifier, annotate it with the latest version.
 getVersionedTextDoc :: MonadLsp config m => TextDocumentIdentifier -> m VersionedTextDocumentIdentifier
 getVersionedTextDoc doc = do
-  let uri = doc ^. L.uri
+  let uri = doc.uri
   mvf <- getVirtualFile (toNormalizedUri uri)
   let ver = case mvf of
         Just (VirtualFile lspver _ _) -> lspver
@@ -538,7 +538,7 @@ getRootPath = resRootPath <$> getLspEnv
 getWorkspaceFolders :: MonadLsp config m => m (Maybe [WorkspaceFolder])
 getWorkspaceFolders = do
   clientCaps <- getClientCapabilities
-  let clientSupportsWfs = fromMaybe False $ clientCaps ^? L.workspace . _Just . L.workspaceFolders . _Just
+  let clientSupportsWfs = fromMaybe False $ clientCaps.workspace >>= \w -> w.workspaceFolders
   if clientSupportsWfs
     then Just <$> getsState resWorkspaceFolders
     else pure Nothing
@@ -761,7 +761,7 @@ withProgressBase indefinite title clientToken cancellable f = do
       wait aid
 
 clientSupportsServerInitiatedProgress :: L.ClientCapabilities -> Bool
-clientSupportsServerInitiatedProgress caps = fromMaybe False $ caps ^? L.window . _Just . L.workDoneProgress . _Just
+clientSupportsServerInitiatedProgress caps = fromMaybe False $ caps.window >>= \w -> w.workDoneProgress
 {-# INLINE clientSupportsServerInitiatedProgress #-}
 
 {- |
@@ -854,7 +854,7 @@ reverseSortEdit (L.WorkspaceEdit cs dcs anns) = L.WorkspaceEdit cs' dcs' anns
   dcs' = (fmap . fmap) sortOnlyTextDocumentEdits dcs
 
   sortTextEdits :: [L.TextEdit] -> [L.TextEdit]
-  sortTextEdits edits = L.sortOn (Down . (^. L.range)) edits
+  sortTextEdits edits = L.sortOn (Down . (\r -> r.range)) edits
 
   sortOnlyTextDocumentEdits :: L.DocumentChange -> L.DocumentChange
   sortOnlyTextDocumentEdits (L.InL (L.TextDocumentEdit td edits)) = L.InL $ L.TextDocumentEdit td edits'
@@ -863,8 +863,8 @@ reverseSortEdit (L.WorkspaceEdit cs dcs anns) = L.WorkspaceEdit cs' dcs' anns
   sortOnlyTextDocumentEdits (L.InR others) = L.InR others
 
   editRange :: L.TextEdit L.|? L.AnnotatedTextEdit -> L.Range
-  editRange (L.InR e) = e ^. L.range
-  editRange (L.InL e) = e ^. L.range
+  editRange (L.InR e) = e.range
+  editRange (L.InL e) = e.range
 
 --------------------------------------------------------------------------------
 -- CONFIG
@@ -893,7 +893,7 @@ tryChangeConfig logger newConfigObject = do
 requestConfigUpdate :: (m ~ LspM config) => LogAction m (WithSeverity LspCoreLog) -> m ()
 requestConfigUpdate logger = do
   caps <- LspT $ asks resClientCapabilities
-  let supportsConfiguration = fromMaybe False $ caps ^? L.workspace . _Just . L.configuration . _Just
+  let supportsConfiguration = fromMaybe False $ caps.workspace >>= configuration
   if supportsConfiguration
     then do
       section <- LspT $ asks resConfigSection

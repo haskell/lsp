@@ -26,7 +26,7 @@ data DocumentColorClientCapabilities = DocumentColorClientCapabilities
   the client supports the new `DocumentColorRegistrationOptions` return value
   for the corresponding server capability as well.
   -}
-  _dynamicRegistration :: (Maybe Bool)
+  dynamicRegistration :: (Maybe Bool)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

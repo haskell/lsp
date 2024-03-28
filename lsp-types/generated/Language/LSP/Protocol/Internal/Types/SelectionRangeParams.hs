@@ -27,20 +27,20 @@ data SelectionRangeParams = SelectionRangeParams
   { {-|
   An optional token that a server can use to report work done progress.
   -}
-  _workDoneToken :: (Maybe Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken)
+  workDoneToken :: (Maybe Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken)
   , {-|
   An optional token that a server can use to report partial results (e.g. streaming) to
   the client.
   -}
-  _partialResultToken :: (Maybe Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken)
+  partialResultToken :: (Maybe Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken)
   , {-|
   The text document.
   -}
-  _textDocument :: Language.LSP.Protocol.Internal.Types.TextDocumentIdentifier.TextDocumentIdentifier
+  textDocument :: Language.LSP.Protocol.Internal.Types.TextDocumentIdentifier.TextDocumentIdentifier
   , {-|
   The positions inside the text document.
   -}
-  _positions :: [Language.LSP.Protocol.Internal.Types.Position.Position]
+  positions :: [Language.LSP.Protocol.Internal.Types.Position.Position]
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

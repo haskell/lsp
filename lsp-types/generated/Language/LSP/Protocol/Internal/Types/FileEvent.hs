@@ -26,11 +26,11 @@ data FileEvent = FileEvent
   { {-|
   The file's uri.
   -}
-  _uri :: Language.LSP.Protocol.Types.Uri.Uri
+  uri :: Language.LSP.Protocol.Types.Uri.Uri
   , {-|
   The change type.
   -}
-  _type_ :: Language.LSP.Protocol.Internal.Types.FileChangeType.FileChangeType
+  type_ :: Language.LSP.Protocol.Internal.Types.FileChangeType.FileChangeType
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

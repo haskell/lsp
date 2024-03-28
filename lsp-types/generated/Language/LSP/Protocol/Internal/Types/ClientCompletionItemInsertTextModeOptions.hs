@@ -26,7 +26,7 @@ data ClientCompletionItemInsertTextModeOptions = ClientCompletionItemInsertTextM
   { {-|
 
   -}
-  _valueSet :: [Language.LSP.Protocol.Internal.Types.InsertTextMode.InsertTextMode]
+  valueSet :: [Language.LSP.Protocol.Internal.Types.InsertTextMode.InsertTextMode]
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

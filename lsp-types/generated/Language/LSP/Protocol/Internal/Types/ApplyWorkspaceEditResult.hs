@@ -27,19 +27,19 @@ data ApplyWorkspaceEditResult = ApplyWorkspaceEditResult
   { {-|
   Indicates whether the edit was applied or not.
   -}
-  _applied :: Bool
+  applied :: Bool
   , {-|
   An optional textual description for why the edit was not applied.
   This may be used by the server for diagnostic logging or to provide
   a suitable error for a request that triggered the edit.
   -}
-  _failureReason :: (Maybe Data.Text.Text)
+  failureReason :: (Maybe Data.Text.Text)
   , {-|
   Depending on the client's failure handling strategy `failedChange` might
   contain the index of the change that failed. This property is only available
   if the client signals a `failureHandlingStrategy` in its client capabilities.
   -}
-  _failedChange :: (Maybe Language.LSP.Protocol.Types.Common.UInt)
+  failedChange :: (Maybe Language.LSP.Protocol.Types.Common.UInt)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

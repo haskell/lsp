@@ -28,11 +28,11 @@ data RegularExpressionsClientCapabilities = RegularExpressionsClientCapabilities
   { {-|
   The engine's name.
   -}
-  _engine :: Language.LSP.Protocol.Internal.Types.RegularExpressionEngineKind.RegularExpressionEngineKind
+  engine :: Language.LSP.Protocol.Internal.Types.RegularExpressionEngineKind.RegularExpressionEngineKind
   , {-|
   The engine's version.
   -}
-  _version :: (Maybe Data.Text.Text)
+  version :: (Maybe Data.Text.Text)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

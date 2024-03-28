@@ -9,13 +9,9 @@ module Language.LSP.Protocol.Utils.Misc (
   lspOptionsUntagged,
   prettyJSON,
   ViaJSON (..),
-  genLenses,
 ) where
 
-import Control.Lens.Internal.FieldTH
-import Control.Lens.TH
 import Control.Monad
-import Control.Monad.State
 import Data.Aeson
 import Data.Aeson.Text as Aeson
 import Data.Foldable qualified as F
@@ -113,7 +109,7 @@ lspOptions = defaultOptions{omitNothingFields = True, fieldLabelModifier = modif
   -- fixes up the json derivation
   modifier "_xdata" = "data"
   modifier "_xtype" = "type"
-  modifier xs = drop 1 xs
+  modifier xs = dropWhile (\x -> x == '_') xs
 
 -- | Standard options for use when generating JSON instances for an untagged union
 lspOptionsUntagged :: Options
@@ -136,18 +132,3 @@ newtype ViaJSON a = ViaJSON a
 
 instance ToJSON a => Pretty (ViaJSON a) where
   pretty (ViaJSON a) = prettyJSON $ toJSON a
-
-{- | Given a list of type names, make a splice that generates the lens typeclass declarations
-for all of them. Defined here to avoid stage restrictions.
--}
-genLenses :: [TH.Name] -> TH.Q [TH.Dec]
-genLenses names = do
-  let
-    -- We need to use the internals of the lens TH machinery so that we can do this
-    -- in one go without generating duplicate classes.
-    opticMaker :: TH.Name -> HasFieldClasses [TH.Dec]
-    opticMaker n = do
-      (TH.TyConI d) <- lift $ TH.reify n
-      makeFieldOpticsForDec' classUnderscoreNoPrefixFields d
-  decss <- flip evalStateT mempty $ traverse opticMaker names
-  pure $ concat decss

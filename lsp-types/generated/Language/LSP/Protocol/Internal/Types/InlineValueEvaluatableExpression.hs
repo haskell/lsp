@@ -31,11 +31,11 @@ data InlineValueEvaluatableExpression = InlineValueEvaluatableExpression
   The document range for which the inline value applies.
   The range is used to extract the evaluatable expression from the underlying document.
   -}
-  _range :: Language.LSP.Protocol.Internal.Types.Range.Range
+  range :: Language.LSP.Protocol.Internal.Types.Range.Range
   , {-|
   If specified the expression overrides the extracted expression.
   -}
-  _expression :: (Maybe Data.Text.Text)
+  expression :: (Maybe Data.Text.Text)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

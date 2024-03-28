@@ -26,12 +26,12 @@ data DidSaveTextDocumentParams = DidSaveTextDocumentParams
   { {-|
   The document that was saved.
   -}
-  _textDocument :: Language.LSP.Protocol.Internal.Types.TextDocumentIdentifier.TextDocumentIdentifier
+  textDocument :: Language.LSP.Protocol.Internal.Types.TextDocumentIdentifier.TextDocumentIdentifier
   , {-|
   Optional the content when saved. Depends on the includeText value
   when the save notification was requested.
   -}
-  _text :: (Maybe Data.Text.Text)
+  text :: (Maybe Data.Text.Text)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

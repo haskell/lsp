@@ -25,14 +25,14 @@ data RenameClientCapabilities = RenameClientCapabilities
   { {-|
   Whether rename supports dynamic registration.
   -}
-  _dynamicRegistration :: (Maybe Bool)
+  dynamicRegistration :: (Maybe Bool)
   , {-|
   Client supports testing for validity of rename operations
   before execution.
 
   @since 3.12.0
   -}
-  _prepareSupport :: (Maybe Bool)
+  prepareSupport :: (Maybe Bool)
   , {-|
   Client supports the default behavior result.
 
@@ -41,7 +41,7 @@ data RenameClientCapabilities = RenameClientCapabilities
 
   @since 3.16.0
   -}
-  _prepareSupportDefaultBehavior :: (Maybe Language.LSP.Protocol.Internal.Types.PrepareSupportDefaultBehavior.PrepareSupportDefaultBehavior)
+  prepareSupportDefaultBehavior :: (Maybe Language.LSP.Protocol.Internal.Types.PrepareSupportDefaultBehavior.PrepareSupportDefaultBehavior)
   , {-|
   Whether the client honors the change annotations in
   text edits and resource operations returned via the
@@ -51,7 +51,7 @@ data RenameClientCapabilities = RenameClientCapabilities
 
   @since 3.16.0
   -}
-  _honorsChangeAnnotations :: (Maybe Bool)
+  honorsChangeAnnotations :: (Maybe Bool)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

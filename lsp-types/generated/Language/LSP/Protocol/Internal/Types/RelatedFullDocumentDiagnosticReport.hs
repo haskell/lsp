@@ -33,17 +33,17 @@ data RelatedFullDocumentDiagnosticReport = RelatedFullDocumentDiagnosticReport
   { {-|
   A full document diagnostic report.
   -}
-  _kind :: (Language.LSP.Protocol.Types.Singletons.AString "full")
+  kind :: (Language.LSP.Protocol.Types.Singletons.AString "full")
   , {-|
   An optional result id. If provided it will
   be sent on the next diagnostic request for the
   same document.
   -}
-  _resultId :: (Maybe Data.Text.Text)
+  resultId :: (Maybe Data.Text.Text)
   , {-|
   The actual items.
   -}
-  _items :: [Language.LSP.Protocol.Internal.Types.Diagnostic.Diagnostic]
+  items :: [Language.LSP.Protocol.Internal.Types.Diagnostic.Diagnostic]
   , {-|
   Diagnostics of related documents. This information is useful
   in programming languages where code in a file A can generate
@@ -53,7 +53,7 @@ data RelatedFullDocumentDiagnosticReport = RelatedFullDocumentDiagnosticReport
 
   @since 3.17.0
   -}
-  _relatedDocuments :: (Maybe (Data.Map.Map Language.LSP.Protocol.Types.Uri.Uri (Language.LSP.Protocol.Internal.Types.FullDocumentDiagnosticReport.FullDocumentDiagnosticReport Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.UnchangedDocumentDiagnosticReport.UnchangedDocumentDiagnosticReport)))
+  relatedDocuments :: (Maybe (Data.Map.Map Language.LSP.Protocol.Types.Uri.Uri (Language.LSP.Protocol.Internal.Types.FullDocumentDiagnosticReport.FullDocumentDiagnosticReport Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.UnchangedDocumentDiagnosticReport.UnchangedDocumentDiagnosticReport)))
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

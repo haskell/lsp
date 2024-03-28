@@ -32,51 +32,51 @@ data Diagnostic = Diagnostic
   { {-|
   The range at which the message applies
   -}
-  _range :: Language.LSP.Protocol.Internal.Types.Range.Range
+  range :: Language.LSP.Protocol.Internal.Types.Range.Range
   , {-|
   The diagnostic's severity. Can be omitted. If omitted it is up to the
   client to interpret diagnostics as error, warning, info or hint.
   -}
-  _severity :: (Maybe Language.LSP.Protocol.Internal.Types.DiagnosticSeverity.DiagnosticSeverity)
+  severity :: (Maybe Language.LSP.Protocol.Internal.Types.DiagnosticSeverity.DiagnosticSeverity)
   , {-|
   The diagnostic's code, which usually appear in the user interface.
   -}
-  _code :: (Maybe (Language.LSP.Protocol.Types.Common.Int32 Language.LSP.Protocol.Types.Common.|? Data.Text.Text))
+  code :: (Maybe (Language.LSP.Protocol.Types.Common.Int32 Language.LSP.Protocol.Types.Common.|? Data.Text.Text))
   , {-|
   An optional property to describe the error code.
   Requires the code field (above) to be present/not null.
 
   @since 3.16.0
   -}
-  _codeDescription :: (Maybe Language.LSP.Protocol.Internal.Types.CodeDescription.CodeDescription)
+  codeDescription :: (Maybe Language.LSP.Protocol.Internal.Types.CodeDescription.CodeDescription)
   , {-|
   A human-readable string describing the source of this
   diagnostic, e.g. 'typescript' or 'super lint'. It usually
   appears in the user interface.
   -}
-  _source :: (Maybe Data.Text.Text)
+  source :: (Maybe Data.Text.Text)
   , {-|
   The diagnostic's message. It usually appears in the user interface
   -}
-  _message :: Data.Text.Text
+  message :: Data.Text.Text
   , {-|
   Additional metadata about the diagnostic.
 
   @since 3.15.0
   -}
-  _tags :: (Maybe [Language.LSP.Protocol.Internal.Types.DiagnosticTag.DiagnosticTag])
+  tags :: (Maybe [Language.LSP.Protocol.Internal.Types.DiagnosticTag.DiagnosticTag])
   , {-|
   An array of related diagnostic information, e.g. when symbol-names within
   a scope collide all definitions can be marked via this property.
   -}
-  _relatedInformation :: (Maybe [Language.LSP.Protocol.Internal.Types.DiagnosticRelatedInformation.DiagnosticRelatedInformation])
+  relatedInformation :: (Maybe [Language.LSP.Protocol.Internal.Types.DiagnosticRelatedInformation.DiagnosticRelatedInformation])
   , {-|
   A data entry field that is preserved between a `textDocument/publishDiagnostics`
   notification and `textDocument/codeAction` request.
 
   @since 3.16.0
   -}
-  _data_ :: (Maybe Data.Aeson.Value)
+  data_ :: (Maybe Data.Aeson.Value)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

@@ -26,12 +26,12 @@ data WorkDoneProgressEnd = WorkDoneProgressEnd
   { {-|
 
   -}
-  _kind :: (Language.LSP.Protocol.Types.Singletons.AString "end")
+  kind :: (Language.LSP.Protocol.Types.Singletons.AString "end")
   , {-|
   Optional, a final message indicating to for example indicate the outcome
   of the operation.
   -}
-  _message :: (Maybe Data.Text.Text)
+  message :: (Maybe Data.Text.Text)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

@@ -25,7 +25,7 @@ data MessageActionItem = MessageActionItem
   { {-|
   A short title like 'Retry', 'Open Log' etc.
   -}
-  _title :: Data.Text.Text
+  title :: Data.Text.Text
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

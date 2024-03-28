@@ -31,13 +31,13 @@ data WorkspaceOptions = WorkspaceOptions
 
   @since 3.6.0
   -}
-  _workspaceFolders :: (Maybe Language.LSP.Protocol.Internal.Types.WorkspaceFoldersServerCapabilities.WorkspaceFoldersServerCapabilities)
+  workspaceFolders :: (Maybe Language.LSP.Protocol.Internal.Types.WorkspaceFoldersServerCapabilities.WorkspaceFoldersServerCapabilities)
   , {-|
   The server is interested in notifications/requests for operations on files.
 
   @since 3.16.0
   -}
-  _fileOperations :: (Maybe Language.LSP.Protocol.Internal.Types.FileOperationOptions.FileOperationOptions)
+  fileOperations :: (Maybe Language.LSP.Protocol.Internal.Types.FileOperationOptions.FileOperationOptions)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

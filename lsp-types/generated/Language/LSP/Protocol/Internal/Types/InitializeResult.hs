@@ -26,13 +26,13 @@ data InitializeResult = InitializeResult
   { {-|
   The capabilities the language server provides.
   -}
-  _capabilities :: Language.LSP.Protocol.Internal.Types.ServerCapabilities.ServerCapabilities
+  capabilities :: Language.LSP.Protocol.Internal.Types.ServerCapabilities.ServerCapabilities
   , {-|
   Information about the server.
 
   @since 3.15.0
   -}
-  _serverInfo :: (Maybe Language.LSP.Protocol.Internal.Types.ServerInfo.ServerInfo)
+  serverInfo :: (Maybe Language.LSP.Protocol.Internal.Types.ServerInfo.ServerInfo)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

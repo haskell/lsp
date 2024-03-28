@@ -35,12 +35,12 @@ data RelatedUnchangedDocumentDiagnosticReport = RelatedUnchangedDocumentDiagnost
   only return `unchanged` if result ids are
   provided.
   -}
-  _kind :: (Language.LSP.Protocol.Types.Singletons.AString "unchanged")
+  kind :: (Language.LSP.Protocol.Types.Singletons.AString "unchanged")
   , {-|
   A result id which will be sent on the next
   diagnostic request for the same document.
   -}
-  _resultId :: Data.Text.Text
+  resultId :: Data.Text.Text
   , {-|
   Diagnostics of related documents. This information is useful
   in programming languages where code in a file A can generate
@@ -50,7 +50,7 @@ data RelatedUnchangedDocumentDiagnosticReport = RelatedUnchangedDocumentDiagnost
 
   @since 3.17.0
   -}
-  _relatedDocuments :: (Maybe (Data.Map.Map Language.LSP.Protocol.Types.Uri.Uri (Language.LSP.Protocol.Internal.Types.FullDocumentDiagnosticReport.FullDocumentDiagnosticReport Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.UnchangedDocumentDiagnosticReport.UnchangedDocumentDiagnosticReport)))
+  relatedDocuments :: (Maybe (Data.Map.Map Language.LSP.Protocol.Types.Uri.Uri (Language.LSP.Protocol.Internal.Types.FullDocumentDiagnosticReport.FullDocumentDiagnosticReport Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.UnchangedDocumentDiagnosticReport.UnchangedDocumentDiagnosticReport)))
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

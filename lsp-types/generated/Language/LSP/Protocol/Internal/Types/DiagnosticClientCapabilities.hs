@@ -28,11 +28,11 @@ data DiagnosticClientCapabilities = DiagnosticClientCapabilities
   the client supports the new `(TextDocumentRegistrationOptions & StaticRegistrationOptions)`
   return value for the corresponding server capability as well.
   -}
-  _dynamicRegistration :: (Maybe Bool)
+  dynamicRegistration :: (Maybe Bool)
   , {-|
   Whether the clients supports related documents for document diagnostic pulls.
   -}
-  _relatedDocumentSupport :: (Maybe Bool)
+  relatedDocumentSupport :: (Maybe Bool)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

@@ -6,7 +6,6 @@ module Language.LSP.Protocol.Types.Edit where
 import Data.Text (Text)
 import Data.Text qualified as T
 
-import Control.Lens hiding (index)
 import Language.LSP.Protocol.Internal.Types
 import Language.LSP.Protocol.Types.Common
 
@@ -49,11 +48,3 @@ editTextEdit :: TextEdit -> TextEdit -> TextEdit
 editTextEdit (TextEdit origRange origText) innerEdit =
   let newText = applyTextEdit innerEdit origText
    in TextEdit origRange newText
-
--- | Conversion between 'OptionalVersionedTextDocumentIdentifier' and 'VersionedTextDocumentIdentifier'.
-_versionedTextDocumentIdentifier :: Prism' OptionalVersionedTextDocumentIdentifier VersionedTextDocumentIdentifier
-_versionedTextDocumentIdentifier = prism down up
- where
-  down (VersionedTextDocumentIdentifier uri v) = OptionalVersionedTextDocumentIdentifier uri (InL v)
-  up (OptionalVersionedTextDocumentIdentifier uri (InL v)) = Right $ VersionedTextDocumentIdentifier uri v
-  up i@(OptionalVersionedTextDocumentIdentifier _ (InR _)) = Left i

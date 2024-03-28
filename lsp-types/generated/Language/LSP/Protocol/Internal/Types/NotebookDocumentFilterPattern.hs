@@ -28,15 +28,15 @@ data NotebookDocumentFilterPattern = NotebookDocumentFilterPattern
   { {-|
   The type of the enclosing notebook.
   -}
-  _notebookType :: (Maybe Data.Text.Text)
+  notebookType :: (Maybe Data.Text.Text)
   , {-|
   A Uri `Uri.scheme`, like `file` or `untitled`.
   -}
-  _scheme :: (Maybe Data.Text.Text)
+  scheme :: (Maybe Data.Text.Text)
   , {-|
   A glob pattern.
   -}
-  _pattern :: Data.Text.Text
+  pattern :: Data.Text.Text
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

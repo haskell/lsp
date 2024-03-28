@@ -28,11 +28,11 @@ data InlineValueText = InlineValueText
   { {-|
   The document range for which the inline value applies.
   -}
-  _range :: Language.LSP.Protocol.Internal.Types.Range.Range
+  range :: Language.LSP.Protocol.Internal.Types.Range.Range
   , {-|
   The text of the inline value.
   -}
-  _text :: Data.Text.Text
+  text :: Data.Text.Text
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

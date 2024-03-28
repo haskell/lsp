@@ -25,7 +25,7 @@ data WorkspaceFoldersServerCapabilities = WorkspaceFoldersServerCapabilities
   { {-|
   The server has support for workspace folders
   -}
-  _supported :: (Maybe Bool)
+  supported :: (Maybe Bool)
   , {-|
   Whether the server wants to receive workspace folder
   change notifications.
@@ -35,7 +35,7 @@ data WorkspaceFoldersServerCapabilities = WorkspaceFoldersServerCapabilities
   side. The ID can be used to unregister for these events
   using the `client/unregisterCapability` request.
   -}
-  _changeNotifications :: (Maybe (Data.Text.Text Language.LSP.Protocol.Types.Common.|? Bool))
+  changeNotifications :: (Maybe (Data.Text.Text Language.LSP.Protocol.Types.Common.|? Bool))
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

@@ -26,17 +26,17 @@ data PublishDiagnosticsParams = PublishDiagnosticsParams
   { {-|
   The URI for which diagnostic information is reported.
   -}
-  _uri :: Language.LSP.Protocol.Types.Uri.Uri
+  uri :: Language.LSP.Protocol.Types.Uri.Uri
   , {-|
   Optional the version number of the document the diagnostics are published for.
 
   @since 3.15.0
   -}
-  _version :: (Maybe Language.LSP.Protocol.Types.Common.Int32)
+  version :: (Maybe Language.LSP.Protocol.Types.Common.Int32)
   , {-|
   An array of diagnostic information items.
   -}
-  _diagnostics :: [Language.LSP.Protocol.Internal.Types.Diagnostic.Diagnostic]
+  diagnostics :: [Language.LSP.Protocol.Internal.Types.Diagnostic.Diagnostic]
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

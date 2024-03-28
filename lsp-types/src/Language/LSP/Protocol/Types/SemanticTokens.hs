@@ -44,11 +44,11 @@ defaultSemanticTokensLegend =
  This is the kind of token that is usually easiest for editors to produce.
 -}
 data SemanticTokenAbsolute = SemanticTokenAbsolute
-  { _line :: UInt
-  , _startChar :: UInt
-  , _length :: UInt
-  , _tokenType :: SemanticTokenTypes
-  , _tokenModifiers :: [SemanticTokenModifiers]
+  { line :: UInt
+  , startChar :: UInt
+  , length :: UInt
+  , tokenType :: SemanticTokenTypes
+  , tokenModifiers :: [SemanticTokenModifiers]
   }
   deriving stock (Show, Eq, Ord)
 
@@ -57,11 +57,11 @@ data SemanticTokenAbsolute = SemanticTokenAbsolute
 
 -- | A single 'semantic token' as described in the LSP specification, using relative positions.
 data SemanticTokenRelative = SemanticTokenRelative
-  { _deltaLine :: UInt
-  , _deltaStartChar :: UInt
-  , _length :: UInt
-  , _tokenType :: SemanticTokenTypes
-  , _tokenModifiers :: [SemanticTokenModifiers]
+  { deltaLine :: UInt
+  , deltaStartChar :: UInt
+  , length :: UInt
+  , tokenType :: SemanticTokenTypes
+  , tokenModifiers :: [SemanticTokenModifiers]
   }
   deriving stock (Show, Eq, Ord)
 
@@ -104,7 +104,7 @@ absolutizeTokens xs = DList.toList $ go 0 0 xs mempty
 
 -- | Encode a series of relatively-positioned semantic tokens into an integer array following the given legend.
 encodeTokens :: SemanticTokensLegend -> [SemanticTokenRelative] -> Either Text [UInt]
-encodeTokens SemanticTokensLegend{_tokenTypes = tts, _tokenModifiers = tms} sts =
+encodeTokens SemanticTokensLegend{tokenTypes = tts, tokenModifiers = tms} sts =
   DList.toList . DList.concat <$> traverse encodeToken sts
  where
   -- Note that there's no "fast" version of these (e.g. backed by an IntMap or similar)
@@ -183,7 +183,7 @@ makeSemanticTokens legend sts = do
  The resulting 'SemanticTokensDelta' lacks a result ID, which must be set separately if you are using that.
 -}
 makeSemanticTokensDelta :: SemanticTokens -> SemanticTokens -> SemanticTokensDelta
-makeSemanticTokensDelta SemanticTokens{_data_ = prevTokens} SemanticTokens{_data_ = curTokens} =
+makeSemanticTokensDelta SemanticTokens{data_ = prevTokens} SemanticTokens{data_ = curTokens} =
   let edits = computeEdits prevTokens curTokens
       stEdits = fmap (\(Edit s ds as) -> SemanticTokensEdit s ds (Just as)) edits
    in SemanticTokensDelta Nothing stEdits

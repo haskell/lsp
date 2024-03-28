@@ -26,20 +26,20 @@ data WorkDoneProgressBegin = WorkDoneProgressBegin
   { {-|
 
   -}
-  _kind :: (Language.LSP.Protocol.Types.Singletons.AString "begin")
+  kind :: (Language.LSP.Protocol.Types.Singletons.AString "begin")
   , {-|
   Mandatory title of the progress operation. Used to briefly inform about
   the kind of operation being performed.
 
   Examples: "Indexing" or "Linking dependencies".
   -}
-  _title :: Data.Text.Text
+  title :: Data.Text.Text
   , {-|
   Controls if a cancel button should show to allow the user to cancel the
   long running operation. Clients that don't support cancellation are allowed
   to ignore the setting.
   -}
-  _cancellable :: (Maybe Bool)
+  cancellable :: (Maybe Bool)
   , {-|
   Optional, more detailed associated progress message. Contains
   complementary information to the `title`.
@@ -47,7 +47,7 @@ data WorkDoneProgressBegin = WorkDoneProgressBegin
   Examples: "3/25 files", "project/src/module2", "node_modules/some_dep".
   If unset, the previous progress message (if any) is still valid.
   -}
-  _message :: (Maybe Data.Text.Text)
+  message :: (Maybe Data.Text.Text)
   , {-|
   Optional progress percentage to display (value 100 is considered 100%).
   If not provided infinite progress is assumed and clients are allowed
@@ -56,7 +56,7 @@ data WorkDoneProgressBegin = WorkDoneProgressBegin
   The value should be steadily rising. Clients are free to ignore values
   that are not following this rule. The value range is [0, 100].
   -}
-  _percentage :: (Maybe Language.LSP.Protocol.Types.Common.UInt)
+  percentage :: (Maybe Language.LSP.Protocol.Types.Common.UInt)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

@@ -28,18 +28,18 @@ data ColorPresentation = ColorPresentation
   picker header. By default this is also the text that is inserted when selecting
   this color presentation.
   -}
-  _label :: Data.Text.Text
+  label :: Data.Text.Text
   , {-|
   An `TextEdit` which is applied to a document when selecting
   this presentation for the color.  When `falsy` the `ColorPresentation.label`
   is used.
   -}
-  _textEdit :: (Maybe Language.LSP.Protocol.Internal.Types.TextEdit.TextEdit)
+  textEdit :: (Maybe Language.LSP.Protocol.Internal.Types.TextEdit.TextEdit)
   , {-|
   An optional array of additional `TextEdit` that are applied when
   selecting this color presentation. Edits must not overlap with the main `ColorPresentation.textEdit` nor with themselves.
   -}
-  _additionalTextEdits :: (Maybe [Language.LSP.Protocol.Internal.Types.TextEdit.TextEdit])
+  additionalTextEdits :: (Maybe [Language.LSP.Protocol.Internal.Types.TextEdit.TextEdit])
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

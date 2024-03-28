@@ -34,17 +34,17 @@ data CodeAction = CodeAction
   { {-|
   A short, human-readable, title for this code action.
   -}
-  _title :: Data.Text.Text
+  title :: Data.Text.Text
   , {-|
   The kind of the code action.
 
   Used to filter code actions.
   -}
-  _kind :: (Maybe Language.LSP.Protocol.Internal.Types.CodeActionKind.CodeActionKind)
+  kind :: (Maybe Language.LSP.Protocol.Internal.Types.CodeActionKind.CodeActionKind)
   , {-|
   The diagnostics that this code action resolves.
   -}
-  _diagnostics :: (Maybe [Language.LSP.Protocol.Internal.Types.Diagnostic.Diagnostic])
+  diagnostics :: (Maybe [Language.LSP.Protocol.Internal.Types.Diagnostic.Diagnostic])
   , {-|
   Marks this as a preferred action. Preferred actions are used by the `auto fix` command and can be targeted
   by keybindings.
@@ -54,7 +54,7 @@ data CodeAction = CodeAction
 
   @since 3.15.0
   -}
-  _isPreferred :: (Maybe Bool)
+  isPreferred :: (Maybe Bool)
   , {-|
   Marks that the code action cannot currently be applied.
 
@@ -72,24 +72,24 @@ data CodeAction = CodeAction
 
   @since 3.16.0
   -}
-  _disabled :: (Maybe Language.LSP.Protocol.Internal.Types.CodeActionDisabled.CodeActionDisabled)
+  disabled :: (Maybe Language.LSP.Protocol.Internal.Types.CodeActionDisabled.CodeActionDisabled)
   , {-|
   The workspace edit this code action performs.
   -}
-  _edit :: (Maybe Language.LSP.Protocol.Internal.Types.WorkspaceEdit.WorkspaceEdit)
+  edit :: (Maybe Language.LSP.Protocol.Internal.Types.WorkspaceEdit.WorkspaceEdit)
   , {-|
   A command this code action executes. If a code action
   provides an edit and a command, first the edit is
   executed and then the command.
   -}
-  _command :: (Maybe Language.LSP.Protocol.Internal.Types.Command.Command)
+  command :: (Maybe Language.LSP.Protocol.Internal.Types.Command.Command)
   , {-|
   A data entry field that is preserved on a code action between
   a `textDocument/codeAction` and a `codeAction/resolve` request.
 
   @since 3.16.0
   -}
-  _data_ :: (Maybe Data.Aeson.Value)
+  data_ :: (Maybe Data.Aeson.Value)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
