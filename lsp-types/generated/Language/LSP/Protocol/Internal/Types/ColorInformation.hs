@@ -26,11 +26,11 @@ data ColorInformation = ColorInformation
   { {-|
   The range in the document where this color appears.
   -}
-  _range :: Language.LSP.Protocol.Internal.Types.Range.Range
+  range :: Language.LSP.Protocol.Internal.Types.Range.Range
   , {-|
   The actual color value for this color range.
   -}
-  _color :: Language.LSP.Protocol.Internal.Types.Color.Color
+  color :: Language.LSP.Protocol.Internal.Types.Color.Color
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

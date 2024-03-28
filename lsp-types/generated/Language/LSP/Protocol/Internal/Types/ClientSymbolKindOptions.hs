@@ -33,7 +33,7 @@ data ClientSymbolKindOptions = ClientSymbolKindOptions
   the symbol kinds from `File` to `Array` as defined in
   the initial version of the protocol.
   -}
-  _valueSet :: (Maybe [Language.LSP.Protocol.Internal.Types.SymbolKind.SymbolKind])
+  valueSet :: (Maybe [Language.LSP.Protocol.Internal.Types.SymbolKind.SymbolKind])
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

@@ -26,12 +26,12 @@ data InlayHintOptions = InlayHintOptions
   { {-|
 
   -}
-  _workDoneProgress :: (Maybe Bool)
+  workDoneProgress :: (Maybe Bool)
   , {-|
   The server provides support to resolve additional
   information for an inlay hint item.
   -}
-  _resolveProvider :: (Maybe Bool)
+  resolveProvider :: (Maybe Bool)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

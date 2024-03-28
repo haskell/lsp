@@ -29,11 +29,11 @@ data FileOperationFilter = FileOperationFilter
   { {-|
   A Uri scheme like `file` or `untitled`.
   -}
-  _scheme :: (Maybe Data.Text.Text)
+  scheme :: (Maybe Data.Text.Text)
   , {-|
   The actual file operation pattern.
   -}
-  _pattern :: Language.LSP.Protocol.Internal.Types.FileOperationPattern.FileOperationPattern
+  pattern :: Language.LSP.Protocol.Internal.Types.FileOperationPattern.FileOperationPattern
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

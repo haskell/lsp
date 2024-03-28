@@ -26,7 +26,7 @@ data NotebookCellLanguage = NotebookCellLanguage
   { {-|
 
   -}
-  _language :: Data.Text.Text
+  language :: Data.Text.Text
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

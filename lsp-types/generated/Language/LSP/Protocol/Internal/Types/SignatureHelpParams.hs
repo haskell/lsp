@@ -28,22 +28,22 @@ data SignatureHelpParams = SignatureHelpParams
   { {-|
   The text document.
   -}
-  _textDocument :: Language.LSP.Protocol.Internal.Types.TextDocumentIdentifier.TextDocumentIdentifier
+  textDocument :: Language.LSP.Protocol.Internal.Types.TextDocumentIdentifier.TextDocumentIdentifier
   , {-|
   The position inside the text document.
   -}
-  _position :: Language.LSP.Protocol.Internal.Types.Position.Position
+  position :: Language.LSP.Protocol.Internal.Types.Position.Position
   , {-|
   An optional token that a server can use to report work done progress.
   -}
-  _workDoneToken :: (Maybe Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken)
+  workDoneToken :: (Maybe Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken)
   , {-|
   The signature help context. This is only available if the client specifies
   to send this using the client capability `textDocument.signatureHelp.contextSupport === true`
 
   @since 3.15.0
   -}
-  _context :: (Maybe Language.LSP.Protocol.Internal.Types.SignatureHelpContext.SignatureHelpContext)
+  context :: (Maybe Language.LSP.Protocol.Internal.Types.SignatureHelpContext.SignatureHelpContext)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

@@ -27,12 +27,12 @@ data InlayHintClientCapabilities = InlayHintClientCapabilities
   { {-|
   Whether inlay hints support dynamic registration.
   -}
-  _dynamicRegistration :: (Maybe Bool)
+  dynamicRegistration :: (Maybe Bool)
   , {-|
   Indicates which properties a client can resolve lazily on an inlay
   hint.
   -}
-  _resolveSupport :: (Maybe Language.LSP.Protocol.Internal.Types.ClientInlayHintResolveOptions.ClientInlayHintResolveOptions)
+  resolveSupport :: (Maybe Language.LSP.Protocol.Internal.Types.ClientInlayHintResolveOptions.ClientInlayHintResolveOptions)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

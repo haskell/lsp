@@ -28,11 +28,11 @@ data DiagnosticRelatedInformation = DiagnosticRelatedInformation
   { {-|
   The location of this related diagnostic information.
   -}
-  _location :: Language.LSP.Protocol.Internal.Types.Location.Location
+  location :: Language.LSP.Protocol.Internal.Types.Location.Location
   , {-|
   The message of this related diagnostic information.
   -}
-  _message :: Data.Text.Text
+  message :: Data.Text.Text
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

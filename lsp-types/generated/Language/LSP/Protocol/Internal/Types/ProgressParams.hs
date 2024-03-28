@@ -26,11 +26,11 @@ data ProgressParams = ProgressParams
   { {-|
   The progress token provided by the client or server.
   -}
-  _token :: Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken
+  token :: Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken
   , {-|
   The progress data.
   -}
-  _value :: Data.Aeson.Value
+  value :: Data.Aeson.Value
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

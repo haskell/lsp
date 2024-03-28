@@ -31,7 +31,7 @@ data UInitializeParams = UInitializeParams
   { {-|
   An optional token that a server can use to report work done progress.
   -}
-  _workDoneToken :: (Maybe Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken)
+  workDoneToken :: (Maybe Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken)
   , {-|
   The process Id of the parent process that started
   the server.
@@ -39,13 +39,13 @@ data UInitializeParams = UInitializeParams
   Is `null` if the process has not been started by another process.
   If the parent process is not alive then the server should exit.
   -}
-  _processId :: (Language.LSP.Protocol.Types.Common.Int32 Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Types.Common.Null)
+  processId :: (Language.LSP.Protocol.Types.Common.Int32 Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Types.Common.Null)
   , {-|
   Information about the client
 
   @since 3.15.0
   -}
-  _clientInfo :: (Maybe Language.LSP.Protocol.Internal.Types.ClientInfo.ClientInfo)
+  clientInfo :: (Maybe Language.LSP.Protocol.Internal.Types.ClientInfo.ClientInfo)
   , {-|
   The locale the client is currently showing the user interface
   in. This must not necessarily be the locale of the operating
@@ -56,14 +56,14 @@ data UInitializeParams = UInitializeParams
 
   @since 3.16.0
   -}
-  _locale :: (Maybe Data.Text.Text)
+  locale :: (Maybe Data.Text.Text)
   , {-|
   The rootPath of the workspace. Is null
   if no folder is open.
 
   @deprecated in favour of rootUri.
   -}
-  _rootPath :: (Maybe (Data.Text.Text Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Types.Common.Null))
+  rootPath :: (Maybe (Data.Text.Text Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Types.Common.Null))
   , {-|
   The rootUri of the workspace. Is null if no
   folder is open. If both `rootPath` and `rootUri` are set
@@ -71,19 +71,19 @@ data UInitializeParams = UInitializeParams
 
   @deprecated in favour of workspaceFolders.
   -}
-  _rootUri :: (Language.LSP.Protocol.Types.Uri.Uri Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Types.Common.Null)
+  rootUri :: (Language.LSP.Protocol.Types.Uri.Uri Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Types.Common.Null)
   , {-|
   The capabilities provided by the client (editor or tool)
   -}
-  _capabilities :: Language.LSP.Protocol.Internal.Types.ClientCapabilities.ClientCapabilities
+  capabilities :: Language.LSP.Protocol.Internal.Types.ClientCapabilities.ClientCapabilities
   , {-|
   User provided initialization options.
   -}
-  _initializationOptions :: (Maybe Data.Aeson.Value)
+  initializationOptions :: (Maybe Data.Aeson.Value)
   , {-|
   The initial trace setting. If omitted trace is disabled ('off').
   -}
-  _trace :: (Maybe Language.LSP.Protocol.Internal.Types.TraceValue.TraceValue)
+  trace :: (Maybe Language.LSP.Protocol.Internal.Types.TraceValue.TraceValue)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

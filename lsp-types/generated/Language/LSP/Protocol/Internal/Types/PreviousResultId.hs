@@ -29,11 +29,11 @@ data PreviousResultId = PreviousResultId
   The URI for which the client knowns a
   result id.
   -}
-  _uri :: Language.LSP.Protocol.Types.Uri.Uri
+  uri :: Language.LSP.Protocol.Types.Uri.Uri
   , {-|
   The value of the previous result id.
   -}
-  _value :: Data.Text.Text
+  value :: Data.Text.Text
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

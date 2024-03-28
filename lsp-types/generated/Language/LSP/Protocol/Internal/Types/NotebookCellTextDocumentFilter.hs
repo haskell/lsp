@@ -32,14 +32,14 @@ data NotebookCellTextDocumentFilter = NotebookCellTextDocumentFilter
   value is provided it matches against the
   notebook type. '*' matches every notebook.
   -}
-  _notebook :: (Data.Text.Text Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.NotebookDocumentFilter.NotebookDocumentFilter)
+  notebook :: (Data.Text.Text Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.NotebookDocumentFilter.NotebookDocumentFilter)
   , {-|
   A language id like `python`.
 
   Will be matched against the language id of the
   notebook cell document. '*' matches every language.
   -}
-  _language :: (Maybe Data.Text.Text)
+  language :: (Maybe Data.Text.Text)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

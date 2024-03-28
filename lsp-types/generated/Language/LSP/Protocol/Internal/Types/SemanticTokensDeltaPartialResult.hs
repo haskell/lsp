@@ -25,7 +25,7 @@ data SemanticTokensDeltaPartialResult = SemanticTokensDeltaPartialResult
   { {-|
 
   -}
-  _edits :: [Language.LSP.Protocol.Internal.Types.SemanticTokensEdit.SemanticTokensEdit]
+  edits :: [Language.LSP.Protocol.Internal.Types.SemanticTokensEdit.SemanticTokensEdit]
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

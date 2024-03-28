@@ -26,11 +26,11 @@ data SemanticTokensDelta = SemanticTokensDelta
   { {-|
 
   -}
-  _resultId :: (Maybe Data.Text.Text)
+  resultId :: (Maybe Data.Text.Text)
   , {-|
   The semantic token edits to transform a previous result into a new result.
   -}
-  _edits :: [Language.LSP.Protocol.Internal.Types.SemanticTokensEdit.SemanticTokensEdit]
+  edits :: [Language.LSP.Protocol.Internal.Types.SemanticTokensEdit.SemanticTokensEdit]
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

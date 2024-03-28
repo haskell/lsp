@@ -30,14 +30,14 @@ data TextDocumentEdit = TextDocumentEdit
   { {-|
   The text document to change.
   -}
-  _textDocument :: Language.LSP.Protocol.Internal.Types.OptionalVersionedTextDocumentIdentifier.OptionalVersionedTextDocumentIdentifier
+  textDocument :: Language.LSP.Protocol.Internal.Types.OptionalVersionedTextDocumentIdentifier.OptionalVersionedTextDocumentIdentifier
   , {-|
   The edits to be applied.
 
   @since 3.16.0 - support for AnnotatedTextEdit. This is guarded using a
   client capability.
   -}
-  _edits :: [(Language.LSP.Protocol.Internal.Types.TextEdit.TextEdit Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.AnnotatedTextEdit.AnnotatedTextEdit)]
+  edits :: [(Language.LSP.Protocol.Internal.Types.TextEdit.TextEdit Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.AnnotatedTextEdit.AnnotatedTextEdit)]
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

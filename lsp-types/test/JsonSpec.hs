@@ -50,7 +50,7 @@ spec = do
         `shouldBe` Right
           ( CompletionList
               True
-              (Just (CompletionItemDefaults{_commitCharacters = Nothing, _editRange = Nothing, _insertTextFormat = Nothing, _insertTextMode = Nothing, _data_ = Just J.Null}))
+              (Just (CompletionItemDefaults{commitCharacters = Nothing, editRange = Nothing, insertTextFormat = Nothing, insertTextMode = Nothing, data_ = Just J.Null}))
               mempty
           )
 

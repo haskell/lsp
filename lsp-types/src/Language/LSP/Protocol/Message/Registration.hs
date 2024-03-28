@@ -20,12 +20,12 @@ import Prettyprinter
 
 -- | Typed dynamic registration type, with correct options.
 data TRegistration (m :: Method ClientToServer t) = TRegistration
-  { _id :: Text
+  { id :: Text
   -- ^ The id used to register the request. The id can be used to deregister
   -- the request again.
-  , _method :: SClientMethod m
+  , method :: SClientMethod m
   -- ^ The method / capability to register for.
-  , _registerOptions :: !(Maybe (RegistrationOptions m))
+  , registerOptions :: !(Maybe (RegistrationOptions m))
   -- ^ Options necessary for the registration.
   -- Make this strict to aid the pattern matching exhaustiveness checker
   }
@@ -79,10 +79,10 @@ toSomeRegistration r =
 
 -- | Typed dynamic unregistration type.
 data TUnregistration (m :: Method ClientToServer t) = TUnregistration
-  { _id :: Text
+  { id :: Text
   -- ^ The id used to unregister the request or notification. Usually an id
   -- provided during the register request.
-  , _method :: SMethod m
+  , method :: SMethod m
   -- ^ The method / capability to unregister for.
   }
   deriving stock (Generic)

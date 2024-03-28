@@ -29,11 +29,11 @@ data DocumentLink = DocumentLink
   { {-|
   The range this link applies to.
   -}
-  _range :: Language.LSP.Protocol.Internal.Types.Range.Range
+  range :: Language.LSP.Protocol.Internal.Types.Range.Range
   , {-|
   The uri this link points to. If missing a resolve request is sent later.
   -}
-  _target :: (Maybe Language.LSP.Protocol.Types.Uri.Uri)
+  target :: (Maybe Language.LSP.Protocol.Types.Uri.Uri)
   , {-|
   The tooltip text when you hover over this link.
 
@@ -43,12 +43,12 @@ data DocumentLink = DocumentLink
 
   @since 3.15.0
   -}
-  _tooltip :: (Maybe Data.Text.Text)
+  tooltip :: (Maybe Data.Text.Text)
   , {-|
   A data entry field that is preserved on a document link between a
   DocumentLinkRequest and a DocumentLinkResolveRequest.
   -}
-  _data_ :: (Maybe Data.Aeson.Value)
+  data_ :: (Maybe Data.Aeson.Value)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

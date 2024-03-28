@@ -26,9 +26,9 @@ import Prettyprinter
 
 -- | Notification message type as defined in the spec.
 data NotificationMessage = NotificationMessage
-  { _jsonrpc :: Text
-  , _method :: Text
-  , _params :: Maybe Value
+  { jsonrpc :: Text
+  , method :: Text
+  , params :: Maybe Value
   }
   deriving stock (Show, Eq, Generic)
 
@@ -39,10 +39,10 @@ deriving via ViaJSON NotificationMessage instance Pretty NotificationMessage
 
 -- | Request message type as defined in the spec.
 data RequestMessage = RequestMessage
-  { _jsonrpc :: Text
-  , _id :: Int32 |? Text
-  , _method :: Text
-  , _params :: Maybe Value
+  { jsonrpc :: Text
+  , id :: Int32 |? Text
+  , method :: Text
+  , params :: Maybe Value
   }
   deriving stock (Show, Eq, Generic)
 
@@ -51,9 +51,9 @@ deriving via ViaJSON RequestMessage instance Pretty RequestMessage
 
 -- | Response error type as defined in the spec.
 data ResponseError = ResponseError
-  { _code :: LSPErrorCodes |? ErrorCodes
-  , _message :: Text
-  , _xdata :: Maybe Value
+  { code :: LSPErrorCodes |? ErrorCodes
+  , message :: Text
+  , xdata :: Maybe Value
   }
   deriving stock (Show, Eq, Generic)
 
@@ -84,17 +84,17 @@ instance FromJSON ResponseError where
    where
     go :: ResponseError -> ResponseError
     go x@(ResponseError (InL (LSPErrorCodes_Custom n)) _ _) =
-      x{_code = InR (fromOpenEnumBaseType n)}
+      x{code = InR (fromOpenEnumBaseType n)}
     go x = x
 
 deriving via ViaJSON ResponseError instance Pretty ResponseError
 
 -- | Response message type as defined in the spec.
 data ResponseMessage = ResponseMessage
-  { _jsonrpc :: Text
-  , _id :: Int32 |? Text |? Null
-  , _result :: Maybe Value
-  , _error :: Maybe ResponseError
+  { jsonrpc :: Text
+  , id :: Int32 |? Text |? Null
+  , result :: Maybe Value
+  , error :: Maybe ResponseError
   }
   deriving stock (Show, Eq, Generic)
 
@@ -106,9 +106,9 @@ deriving via ViaJSON ResponseMessage instance Pretty ResponseMessage
 
 -- | Typed notification message, containing the correct parameter payload.
 data TNotificationMessage (m :: Method f Notification) = TNotificationMessage
-  { _jsonrpc :: Text
-  , _method :: SMethod m
-  , _params :: MessageParams m
+  { jsonrpc :: Text
+  , method :: SMethod m
+  , params :: MessageParams m
   }
   deriving stock (Generic)
 
@@ -136,10 +136,10 @@ deriving via ViaJSON (TNotificationMessage m) instance (ToJSON (MessageParams m)
 
 -- | Typed request message, containing the correct parameter payload.
 data TRequestMessage (m :: Method f Request) = TRequestMessage
-  { _jsonrpc :: Text
-  , _id :: LspId m
-  , _method :: SMethod m
-  , _params :: MessageParams m
+  { jsonrpc :: Text
+  , id :: LspId m
+  , method :: SMethod m
+  , params :: MessageParams m
   }
   deriving stock (Generic)
 
@@ -156,9 +156,9 @@ instance (ToJSON (MessageParams m)) => ToJSON (TRequestMessage m) where
 deriving via ViaJSON (TRequestMessage m) instance (ToJSON (MessageParams m)) => Pretty (TRequestMessage m)
 
 data TResponseError (m :: Method f Request) = TResponseError
-  { _code :: LSPErrorCodes |? ErrorCodes
-  , _message :: Text
-  , _xdata :: Maybe (ErrorData m)
+  { code :: LSPErrorCodes |? ErrorCodes
+  , message :: Text
+  , xdata :: Maybe (ErrorData m)
   }
   deriving stock (Generic)
 
@@ -176,7 +176,7 @@ instance (FromJSON (ErrorData m)) => FromJSON (TResponseError m) where
    where
     go :: TResponseError m -> TResponseError m
     go x@(TResponseError (InL (LSPErrorCodes_Custom n)) _ _) =
-      x{_code = InR (fromOpenEnumBaseType n)}
+      x{code = InR (fromOpenEnumBaseType n)}
     go x = x
 instance (ToJSON (ErrorData m)) => ToJSON (TResponseError m) where
   toJSON = genericToJSON lspOptions
@@ -190,9 +190,9 @@ toUntypedResponseError (TResponseError c m d) = ResponseError c m (fmap toJSON d
 
 -- | A typed response message with a correct result payload.
 data TResponseMessage (m :: Method f Request) = TResponseMessage
-  { _jsonrpc :: Text
-  , _id :: Maybe (LspId m)
-  , _result :: Either (TResponseError m) (MessageResult m)
+  { jsonrpc :: Text
+  , id :: Maybe (LspId m)
+  , result :: Either (TResponseError m) (MessageResult m)
   }
   deriving stock (Generic)
 
@@ -200,7 +200,7 @@ deriving stock instance (Eq (MessageResult m), Eq (ErrorData m)) => Eq (TRespons
 deriving stock instance (Show (MessageResult m), Show (ErrorData m)) => Show (TResponseMessage m)
 
 instance (ToJSON (MessageResult m), ToJSON (ErrorData m)) => ToJSON (TResponseMessage m) where
-  toJSON TResponseMessage{_jsonrpc = jsonrpc, _id = lspid, _result = result} =
+  toJSON TResponseMessage{jsonrpc = jsonrpc, id = lspid, result = result} =
     object
       [ "jsonrpc" .= jsonrpc
       , "id" .= lspid

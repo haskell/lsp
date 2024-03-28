@@ -25,27 +25,27 @@ data PublishDiagnosticsClientCapabilities = PublishDiagnosticsClientCapabilities
   { {-|
   Whether the clients accepts diagnostics with related information.
   -}
-  _relatedInformation :: (Maybe Bool)
+  relatedInformation :: (Maybe Bool)
   , {-|
   Client supports the tag property to provide meta data about a diagnostic.
   Clients supporting tags have to handle unknown tags gracefully.
 
   @since 3.15.0
   -}
-  _tagSupport :: (Maybe Language.LSP.Protocol.Internal.Types.ClientDiagnosticsTagOptions.ClientDiagnosticsTagOptions)
+  tagSupport :: (Maybe Language.LSP.Protocol.Internal.Types.ClientDiagnosticsTagOptions.ClientDiagnosticsTagOptions)
   , {-|
   Whether the client interprets the version property of the
   `textDocument/publishDiagnostics` notification's parameter.
 
   @since 3.15.0
   -}
-  _versionSupport :: (Maybe Bool)
+  versionSupport :: (Maybe Bool)
   , {-|
   Client supports a codeDescription property
 
   @since 3.16.0
   -}
-  _codeDescriptionSupport :: (Maybe Bool)
+  codeDescriptionSupport :: (Maybe Bool)
   , {-|
   Whether code action supports the `data` property which is
   preserved between a `textDocument/publishDiagnostics` and
@@ -53,7 +53,7 @@ data PublishDiagnosticsClientCapabilities = PublishDiagnosticsClientCapabilities
 
   @since 3.16.0
   -}
-  _dataSupport :: (Maybe Bool)
+  dataSupport :: (Maybe Bool)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

@@ -27,18 +27,18 @@ data MarkdownClientCapabilities = MarkdownClientCapabilities
   { {-|
   The name of the parser.
   -}
-  _parser :: Data.Text.Text
+  parser :: Data.Text.Text
   , {-|
   The version of the parser.
   -}
-  _version :: (Maybe Data.Text.Text)
+  version :: (Maybe Data.Text.Text)
   , {-|
   A list of HTML tags that the client allows / supports in
   Markdown.
 
   @since 3.17.0
   -}
-  _allowedTags :: (Maybe [Data.Text.Text])
+  allowedTags :: (Maybe [Data.Text.Text])
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

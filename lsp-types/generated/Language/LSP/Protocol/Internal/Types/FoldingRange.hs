@@ -28,26 +28,26 @@ data FoldingRange = FoldingRange
   The zero-based start line of the range to fold. The folded area starts after the line's last character.
   To be valid, the end must be zero or larger and smaller than the number of lines in the document.
   -}
-  _startLine :: Language.LSP.Protocol.Types.Common.UInt
+  startLine :: Language.LSP.Protocol.Types.Common.UInt
   , {-|
   The zero-based character offset from where the folded range starts. If not defined, defaults to the length of the start line.
   -}
-  _startCharacter :: (Maybe Language.LSP.Protocol.Types.Common.UInt)
+  startCharacter :: (Maybe Language.LSP.Protocol.Types.Common.UInt)
   , {-|
   The zero-based end line of the range to fold. The folded area ends with the line's last character.
   To be valid, the end must be zero or larger and smaller than the number of lines in the document.
   -}
-  _endLine :: Language.LSP.Protocol.Types.Common.UInt
+  endLine :: Language.LSP.Protocol.Types.Common.UInt
   , {-|
   The zero-based character offset before the folded range ends. If not defined, defaults to the length of the end line.
   -}
-  _endCharacter :: (Maybe Language.LSP.Protocol.Types.Common.UInt)
+  endCharacter :: (Maybe Language.LSP.Protocol.Types.Common.UInt)
   , {-|
   Describes the kind of the folding range such as 'comment' or 'region'. The kind
   is used to categorize folding ranges and used by commands like 'Fold all comments'.
   See `FoldingRangeKind` for an enumeration of standardized kinds.
   -}
-  _kind :: (Maybe Language.LSP.Protocol.Internal.Types.FoldingRangeKind.FoldingRangeKind)
+  kind :: (Maybe Language.LSP.Protocol.Internal.Types.FoldingRangeKind.FoldingRangeKind)
   , {-|
   The text that the client should show when the specified range is
   collapsed. If not defined or not supported by the client, a default
@@ -55,7 +55,7 @@ data FoldingRange = FoldingRange
 
   @since 3.17.0
   -}
-  _collapsedText :: (Maybe Data.Text.Text)
+  collapsedText :: (Maybe Data.Text.Text)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

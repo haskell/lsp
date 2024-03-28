@@ -24,7 +24,7 @@ data SemanticTokensPartialResult = SemanticTokensPartialResult
   { {-|
 
   -}
-  _data_ :: [Language.LSP.Protocol.Types.Common.UInt]
+  data_ :: [Language.LSP.Protocol.Types.Common.UInt]
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

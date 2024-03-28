@@ -29,7 +29,7 @@ data SemanticTokensClientCapabilities = SemanticTokensClientCapabilities
   the client supports the new `(TextDocumentRegistrationOptions & StaticRegistrationOptions)`
   return value for the corresponding server capability as well.
   -}
-  _dynamicRegistration :: (Maybe Bool)
+  dynamicRegistration :: (Maybe Bool)
   , {-|
   Which requests the client supports and might send to the server
   depending on the server's capability. Please note that clients might not
@@ -40,27 +40,27 @@ data SemanticTokensClientCapabilities = SemanticTokensClientCapabilities
   range provider the client might not render a minimap correctly or might
   even decide to not show any semantic tokens at all.
   -}
-  _requests :: Language.LSP.Protocol.Internal.Types.ClientSemanticTokensRequestOptions.ClientSemanticTokensRequestOptions
+  requests :: Language.LSP.Protocol.Internal.Types.ClientSemanticTokensRequestOptions.ClientSemanticTokensRequestOptions
   , {-|
   The token types that the client supports.
   -}
-  _tokenTypes :: [Data.Text.Text]
+  tokenTypes :: [Data.Text.Text]
   , {-|
   The token modifiers that the client supports.
   -}
-  _tokenModifiers :: [Data.Text.Text]
+  tokenModifiers :: [Data.Text.Text]
   , {-|
   The token formats the clients supports.
   -}
-  _formats :: [Language.LSP.Protocol.Internal.Types.TokenFormat.TokenFormat]
+  formats :: [Language.LSP.Protocol.Internal.Types.TokenFormat.TokenFormat]
   , {-|
   Whether the client supports tokens that can overlap each other.
   -}
-  _overlappingTokenSupport :: (Maybe Bool)
+  overlappingTokenSupport :: (Maybe Bool)
   , {-|
   Whether the client supports tokens that can span multiple lines.
   -}
-  _multilineTokenSupport :: (Maybe Bool)
+  multilineTokenSupport :: (Maybe Bool)
   , {-|
   Whether the client allows the server to actively cancel a
   semantic token request, e.g. supports returning
@@ -69,7 +69,7 @@ data SemanticTokensClientCapabilities = SemanticTokensClientCapabilities
 
   @since 3.17.0
   -}
-  _serverCancelSupport :: (Maybe Bool)
+  serverCancelSupport :: (Maybe Bool)
   , {-|
   Whether the client uses semantic tokens to augment existing
   syntax tokens. If set to `true` client side created syntax
@@ -82,7 +82,7 @@ data SemanticTokensClientCapabilities = SemanticTokensClientCapabilities
 
   @since 3.17.0
   -}
-  _augmentsSyntaxTokens :: (Maybe Bool)
+  augmentsSyntaxTokens :: (Maybe Bool)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

@@ -27,27 +27,27 @@ data TextDocumentSyncOptions = TextDocumentSyncOptions
   Open and close notifications are sent to the server. If omitted open close notification should not
   be sent.
   -}
-  _openClose :: (Maybe Bool)
+  openClose :: (Maybe Bool)
   , {-|
   Change notifications are sent to the server. See TextDocumentSyncKind.None, TextDocumentSyncKind.Full
   and TextDocumentSyncKind.Incremental. If omitted it defaults to TextDocumentSyncKind.None.
   -}
-  _change :: (Maybe Language.LSP.Protocol.Internal.Types.TextDocumentSyncKind.TextDocumentSyncKind)
+  change :: (Maybe Language.LSP.Protocol.Internal.Types.TextDocumentSyncKind.TextDocumentSyncKind)
   , {-|
   If present will save notifications are sent to the server. If omitted the notification should not be
   sent.
   -}
-  _willSave :: (Maybe Bool)
+  willSave :: (Maybe Bool)
   , {-|
   If present will save wait until requests are sent to the server. If omitted the request should not be
   sent.
   -}
-  _willSaveWaitUntil :: (Maybe Bool)
+  willSaveWaitUntil :: (Maybe Bool)
   , {-|
   If present save notifications are sent to the server. If omitted the notification should not be
   sent.
   -}
-  _save :: (Maybe (Bool Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.SaveOptions.SaveOptions))
+  save :: (Maybe (Bool Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.SaveOptions.SaveOptions))
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

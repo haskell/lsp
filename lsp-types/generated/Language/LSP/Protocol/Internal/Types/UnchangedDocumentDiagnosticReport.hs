@@ -32,12 +32,12 @@ data UnchangedDocumentDiagnosticReport = UnchangedDocumentDiagnosticReport
   only return `unchanged` if result ids are
   provided.
   -}
-  _kind :: (Language.LSP.Protocol.Types.Singletons.AString "unchanged")
+  kind :: (Language.LSP.Protocol.Types.Singletons.AString "unchanged")
   , {-|
   A result id which will be sent on the next
   diagnostic request for the same document.
   -}
-  _resultId :: Data.Text.Text
+  resultId :: Data.Text.Text
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

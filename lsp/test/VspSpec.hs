@@ -34,7 +34,7 @@ vfsFromText text = VirtualFile 0 0 (Rope.fromText text)
 -- ---------------------------------------------------------------------
 
 mkChangeEvent :: J.Range -> T.Text -> J.TextDocumentContentChangeEvent
-mkChangeEvent r t = J.TextDocumentContentChangeEvent $ J.InL $ J.TextDocumentContentChangePartial{J._range = r, J._rangeLength = Nothing, J._text = t}
+mkChangeEvent r t = J.TextDocumentContentChangeEvent $ J.InL $ J.TextDocumentContentChangePartial{J.range = r, J.rangeLength = Nothing, J.text = t}
 
 vspSpec :: Spec
 vspSpec = do

@@ -31,16 +31,16 @@ data NotebookDocumentCellChanges = NotebookDocumentCellChanges
   Changes to the cell structure to add or
   remove cells.
   -}
-  _structure :: (Maybe Language.LSP.Protocol.Internal.Types.NotebookDocumentCellChangeStructure.NotebookDocumentCellChangeStructure)
+  structure :: (Maybe Language.LSP.Protocol.Internal.Types.NotebookDocumentCellChangeStructure.NotebookDocumentCellChangeStructure)
   , {-|
   Changes to notebook cells properties like its
   kind, execution summary or metadata.
   -}
-  _data_ :: (Maybe [Language.LSP.Protocol.Internal.Types.NotebookCell.NotebookCell])
+  data_ :: (Maybe [Language.LSP.Protocol.Internal.Types.NotebookCell.NotebookCell])
   , {-|
   Changes to the text content of notebook cells.
   -}
-  _textContent :: (Maybe [Language.LSP.Protocol.Internal.Types.NotebookDocumentCellContentChanges.NotebookDocumentCellContentChanges])
+  textContent :: (Maybe [Language.LSP.Protocol.Internal.Types.NotebookDocumentCellContentChanges.NotebookDocumentCellContentChanges])
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

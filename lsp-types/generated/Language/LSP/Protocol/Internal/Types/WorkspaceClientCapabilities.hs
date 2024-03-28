@@ -37,80 +37,80 @@ data WorkspaceClientCapabilities = WorkspaceClientCapabilities
   to the workspace by supporting the request
   'workspace/applyEdit'
   -}
-  _applyEdit :: (Maybe Bool)
+  applyEdit :: (Maybe Bool)
   , {-|
   Capabilities specific to `WorkspaceEdit`s.
   -}
-  _workspaceEdit :: (Maybe Language.LSP.Protocol.Internal.Types.WorkspaceEditClientCapabilities.WorkspaceEditClientCapabilities)
+  workspaceEdit :: (Maybe Language.LSP.Protocol.Internal.Types.WorkspaceEditClientCapabilities.WorkspaceEditClientCapabilities)
   , {-|
   Capabilities specific to the `workspace/didChangeConfiguration` notification.
   -}
-  _didChangeConfiguration :: (Maybe Language.LSP.Protocol.Internal.Types.DidChangeConfigurationClientCapabilities.DidChangeConfigurationClientCapabilities)
+  didChangeConfiguration :: (Maybe Language.LSP.Protocol.Internal.Types.DidChangeConfigurationClientCapabilities.DidChangeConfigurationClientCapabilities)
   , {-|
   Capabilities specific to the `workspace/didChangeWatchedFiles` notification.
   -}
-  _didChangeWatchedFiles :: (Maybe Language.LSP.Protocol.Internal.Types.DidChangeWatchedFilesClientCapabilities.DidChangeWatchedFilesClientCapabilities)
+  didChangeWatchedFiles :: (Maybe Language.LSP.Protocol.Internal.Types.DidChangeWatchedFilesClientCapabilities.DidChangeWatchedFilesClientCapabilities)
   , {-|
   Capabilities specific to the `workspace/symbol` request.
   -}
-  _symbol :: (Maybe Language.LSP.Protocol.Internal.Types.WorkspaceSymbolClientCapabilities.WorkspaceSymbolClientCapabilities)
+  symbol :: (Maybe Language.LSP.Protocol.Internal.Types.WorkspaceSymbolClientCapabilities.WorkspaceSymbolClientCapabilities)
   , {-|
   Capabilities specific to the `workspace/executeCommand` request.
   -}
-  _executeCommand :: (Maybe Language.LSP.Protocol.Internal.Types.ExecuteCommandClientCapabilities.ExecuteCommandClientCapabilities)
+  executeCommand :: (Maybe Language.LSP.Protocol.Internal.Types.ExecuteCommandClientCapabilities.ExecuteCommandClientCapabilities)
   , {-|
   The client has support for workspace folders.
 
   @since 3.6.0
   -}
-  _workspaceFolders :: (Maybe Bool)
+  workspaceFolders :: (Maybe Bool)
   , {-|
   The client supports `workspace/configuration` requests.
 
   @since 3.6.0
   -}
-  _configuration :: (Maybe Bool)
+  configuration :: (Maybe Bool)
   , {-|
   Capabilities specific to the semantic token requests scoped to the
   workspace.
 
   @since 3.16.0.
   -}
-  _semanticTokens :: (Maybe Language.LSP.Protocol.Internal.Types.SemanticTokensWorkspaceClientCapabilities.SemanticTokensWorkspaceClientCapabilities)
+  semanticTokens :: (Maybe Language.LSP.Protocol.Internal.Types.SemanticTokensWorkspaceClientCapabilities.SemanticTokensWorkspaceClientCapabilities)
   , {-|
   Capabilities specific to the code lens requests scoped to the
   workspace.
 
   @since 3.16.0.
   -}
-  _codeLens :: (Maybe Language.LSP.Protocol.Internal.Types.CodeLensWorkspaceClientCapabilities.CodeLensWorkspaceClientCapabilities)
+  codeLens :: (Maybe Language.LSP.Protocol.Internal.Types.CodeLensWorkspaceClientCapabilities.CodeLensWorkspaceClientCapabilities)
   , {-|
   The client has support for file notifications/requests for user operations on files.
 
   Since 3.16.0
   -}
-  _fileOperations :: (Maybe Language.LSP.Protocol.Internal.Types.FileOperationClientCapabilities.FileOperationClientCapabilities)
+  fileOperations :: (Maybe Language.LSP.Protocol.Internal.Types.FileOperationClientCapabilities.FileOperationClientCapabilities)
   , {-|
   Capabilities specific to the inline values requests scoped to the
   workspace.
 
   @since 3.17.0.
   -}
-  _inlineValue :: (Maybe Language.LSP.Protocol.Internal.Types.InlineValueWorkspaceClientCapabilities.InlineValueWorkspaceClientCapabilities)
+  inlineValue :: (Maybe Language.LSP.Protocol.Internal.Types.InlineValueWorkspaceClientCapabilities.InlineValueWorkspaceClientCapabilities)
   , {-|
   Capabilities specific to the inlay hint requests scoped to the
   workspace.
 
   @since 3.17.0.
   -}
-  _inlayHint :: (Maybe Language.LSP.Protocol.Internal.Types.InlayHintWorkspaceClientCapabilities.InlayHintWorkspaceClientCapabilities)
+  inlayHint :: (Maybe Language.LSP.Protocol.Internal.Types.InlayHintWorkspaceClientCapabilities.InlayHintWorkspaceClientCapabilities)
   , {-|
   Capabilities specific to the diagnostic requests scoped to the
   workspace.
 
   @since 3.17.0.
   -}
-  _diagnostics :: (Maybe Language.LSP.Protocol.Internal.Types.DiagnosticWorkspaceClientCapabilities.DiagnosticWorkspaceClientCapabilities)
+  diagnostics :: (Maybe Language.LSP.Protocol.Internal.Types.DiagnosticWorkspaceClientCapabilities.DiagnosticWorkspaceClientCapabilities)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

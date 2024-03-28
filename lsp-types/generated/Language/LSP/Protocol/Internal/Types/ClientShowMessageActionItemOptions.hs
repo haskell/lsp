@@ -27,7 +27,7 @@ data ClientShowMessageActionItemOptions = ClientShowMessageActionItemOptions
   are preserved and send back to the server in the
   request's response.
   -}
-  _additionalPropertiesSupport :: (Maybe Bool)
+  additionalPropertiesSupport :: (Maybe Bool)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

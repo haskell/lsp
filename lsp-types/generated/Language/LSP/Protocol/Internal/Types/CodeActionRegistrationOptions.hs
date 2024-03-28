@@ -27,25 +27,25 @@ data CodeActionRegistrationOptions = CodeActionRegistrationOptions
   A document selector to identify the scope of the registration. If set to null
   the document selector provided on the client side will be used.
   -}
-  _documentSelector :: (Language.LSP.Protocol.Internal.Types.DocumentSelector.DocumentSelector Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Types.Common.Null)
+  documentSelector :: (Language.LSP.Protocol.Internal.Types.DocumentSelector.DocumentSelector Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Types.Common.Null)
   , {-|
 
   -}
-  _workDoneProgress :: (Maybe Bool)
+  workDoneProgress :: (Maybe Bool)
   , {-|
   CodeActionKinds that this server may return.
 
   The list of kinds may be generic, such as `CodeActionKind.Refactor`, or the server
   may list out every specific kind they provide.
   -}
-  _codeActionKinds :: (Maybe [Language.LSP.Protocol.Internal.Types.CodeActionKind.CodeActionKind])
+  codeActionKinds :: (Maybe [Language.LSP.Protocol.Internal.Types.CodeActionKind.CodeActionKind])
   , {-|
   The server provides support to resolve additional
   information for a code action.
 
   @since 3.16.0
   -}
-  _resolveProvider :: (Maybe Bool)
+  resolveProvider :: (Maybe Bool)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

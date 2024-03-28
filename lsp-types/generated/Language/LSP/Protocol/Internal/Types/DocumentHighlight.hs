@@ -28,11 +28,11 @@ data DocumentHighlight = DocumentHighlight
   { {-|
   The range this highlight applies to.
   -}
-  _range :: Language.LSP.Protocol.Internal.Types.Range.Range
+  range :: Language.LSP.Protocol.Internal.Types.Range.Range
   , {-|
   The highlight kind, default is `DocumentHighlightKind.Text`.
   -}
-  _kind :: (Maybe Language.LSP.Protocol.Internal.Types.DocumentHighlightKind.DocumentHighlightKind)
+  kind :: (Maybe Language.LSP.Protocol.Internal.Types.DocumentHighlightKind.DocumentHighlightKind)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

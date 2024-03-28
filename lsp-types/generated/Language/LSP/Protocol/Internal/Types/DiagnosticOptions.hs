@@ -27,23 +27,23 @@ data DiagnosticOptions = DiagnosticOptions
   { {-|
 
   -}
-  _workDoneProgress :: (Maybe Bool)
+  workDoneProgress :: (Maybe Bool)
   , {-|
   An optional identifier under which the diagnostics are
   managed by the client.
   -}
-  _identifier :: (Maybe Data.Text.Text)
+  identifier :: (Maybe Data.Text.Text)
   , {-|
   Whether the language has inter file dependencies meaning that
   editing code in one file can result in a different diagnostic
   set in another file. Inter file dependencies are common for
   most programming languages and typically uncommon for linters.
   -}
-  _interFileDependencies :: Bool
+  interFileDependencies :: Bool
   , {-|
   The server provides support for workspace diagnostics as well.
   -}
-  _workspaceDiagnostics :: Bool
+  workspaceDiagnostics :: Bool
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

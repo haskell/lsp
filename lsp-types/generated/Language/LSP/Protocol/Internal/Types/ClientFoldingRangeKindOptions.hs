@@ -29,7 +29,7 @@ data ClientFoldingRangeKindOptions = ClientFoldingRangeKindOptions
   handle values outside its set gracefully and falls back
   to a default value when unknown.
   -}
-  _valueSet :: (Maybe [Language.LSP.Protocol.Internal.Types.FoldingRangeKind.FoldingRangeKind])
+  valueSet :: (Maybe [Language.LSP.Protocol.Internal.Types.FoldingRangeKind.FoldingRangeKind])
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE RecursiveDo #-}
@@ -50,8 +51,7 @@ import Data.Monoid
 import Data.String (fromString)
 import Data.Text qualified as T
 import Data.Text.Lazy.Encoding qualified as TL
-import Language.LSP.Protocol.Lens qualified as L
-import Language.LSP.Protocol.Message
+import Language.LSP.Protocol.Message hiding (error)
 import Language.LSP.Protocol.Types
 import Language.LSP.Protocol.Utils.SMethodMap (SMethodMap)
 import Language.LSP.Protocol.Utils.SMethodMap qualified as SMethodMap
@@ -103,14 +103,14 @@ processMessage logger jsonStr = do
         -- see Note [Shutdown]
         writeTVar pendingResponsesVar newMap
         unless shutdown <$> do
-          pure $ liftIO $ f (res ^. L.result)
+          pure $ liftIO $ f res.result
  where
   parser :: ResponseMap -> Value -> Parser (FromClientMessage' (P.Product ServerResponseCallback (Const ResponseMap)))
   parser rm = parseClientMessage $ \i ->
     let (mhandler, newMap) = pickFromIxMap i rm
      in (\(P.Pair m handler) -> (m, P.Pair handler (Const newMap))) <$> mhandler
 
-  handleErrors = either (\e -> logger <& MessageProcessingError jsonStr e `WithSeverity` Error) id
+  handleErrors = either (\e -> logger <& MessageProcessingError jsonStr e `WithSeverity` Error) Prelude.id
 
 -- | Call this to initialize the session
 initializeRequestHandler ::
@@ -123,26 +123,26 @@ initializeRequestHandler ::
 initializeRequestHandler logger ServerDefinition{..} vfs sendFunc req = do
   let sendResp = sendFunc . FromServerRsp SMethod_Initialize
       handleErr (Left err) = do
-        sendResp $ makeResponseError (req ^. L.id) err
+        sendResp $ makeResponseError req.id err
         pure Nothing
       handleErr (Right a) = pure $ Just a
-  E.handle (initializeErrorHandler $ sendResp . makeResponseError (req ^. L.id)) $ handleErr <=< runExceptT $ mdo
-    let p = req ^. L.params
+  E.handle (initializeErrorHandler $ sendResp . makeResponseError req.id) $ handleErr <=< runExceptT $ mdo
+    let p = req.params
         rootDir =
           getFirst $
             foldMap
               First
-              [ p ^? L.rootUri . _L >>= uriToFilePath
-              , p ^? L.rootPath . _Just . _L <&> T.unpack
+              [ case p.rootUri of InL p -> uriToFilePath p; _ -> Nothing
+              , case p.rootPath of Just (InL p) -> Just (T.unpack p); _ -> Nothing
               ]
-        clientCaps = p ^. L.capabilities
+        clientCaps = p.capabilities
 
-    let initialWfs = case p ^. L.workspaceFolders of
+    let initialWfs = case p.workspaceFolders of
           Just (InL xs) -> xs
           _ -> []
 
         -- See Note [LSP configuration]
-        configObject = lookForConfigSection configSection <$> (p ^. L.initializationOptions)
+        configObject = lookForConfigSection configSection <$> p.initializationOptions
 
     initialConfig <- case configObject of
       Just o -> case parseConfig defaultConfig o of
@@ -180,7 +180,7 @@ initializeRequestHandler logger ServerDefinition{..} vfs sendFunc req = do
             configChanger
             sendFunc
             stateVars
-            (p ^. L.capabilities)
+            p.capabilities
             rootDir
             (optProgressStartDelay options)
             (optProgressUpdateDelay options)
@@ -190,7 +190,7 @@ initializeRequestHandler logger ServerDefinition{..} vfs sendFunc req = do
     initializationResult <- ExceptT $ doInitialize env req
 
     let serverCaps = inferServerCapabilities clientCaps options handlers
-    liftIO $ sendResp $ makeResponseMessage (req ^. L.id) (InitializeResult serverCaps (optServerInfo options))
+    liftIO $ sendResp $ makeResponseMessage req.id (InitializeResult serverCaps (optServerInfo options))
     pure env
  where
   makeResponseMessage rid result = TResponseMessage "2.0" (Just rid) (Right result)
@@ -210,118 +210,118 @@ initializeRequestHandler logger ServerDefinition{..} vfs sendFunc req = do
 inferServerCapabilities :: ClientCapabilities -> Options -> Handlers m -> ServerCapabilities
 inferServerCapabilities _clientCaps o h =
   ServerCapabilities
-    { _textDocumentSync = sync
-    , _hoverProvider =
+    { textDocumentSync = sync
+    , hoverProvider =
         supported' SMethod_TextDocumentHover $
           InR $
             HoverOptions clientInitiatedProgress
-    , _completionProvider = completionProvider
-    , _inlayHintProvider = inlayProvider
-    , _declarationProvider =
+    , completionProvider = completionProvider
+    , inlayHintProvider = inlayProvider
+    , declarationProvider =
         supported' SMethod_TextDocumentDeclaration $
           InR $
             InL $
               DeclarationOptions clientInitiatedProgress
-    , _signatureHelpProvider = signatureHelpProvider
-    , _definitionProvider =
+    , signatureHelpProvider = signatureHelpProvider
+    , definitionProvider =
         supported' SMethod_TextDocumentDefinition $
           InR $
             DefinitionOptions clientInitiatedProgress
-    , _typeDefinitionProvider =
+    , typeDefinitionProvider =
         supported' SMethod_TextDocumentTypeDefinition $
           InR $
             InL $
               TypeDefinitionOptions clientInitiatedProgress
-    , _implementationProvider =
+    , implementationProvider =
         supported' SMethod_TextDocumentImplementation $
           InR $
             InL $
               ImplementationOptions clientInitiatedProgress
-    , _referencesProvider =
+    , referencesProvider =
         supported' SMethod_TextDocumentReferences $
           InR $
             ReferenceOptions clientInitiatedProgress
-    , _documentHighlightProvider =
+    , documentHighlightProvider =
         supported' SMethod_TextDocumentDocumentHighlight $
           InR $
             DocumentHighlightOptions clientInitiatedProgress
-    , _documentSymbolProvider =
+    , documentSymbolProvider =
         supported' SMethod_TextDocumentDocumentSymbol $
           InR $
             DocumentSymbolOptions clientInitiatedProgress Nothing
-    , _codeActionProvider = codeActionProvider
-    , _codeLensProvider =
+    , codeActionProvider = codeActionProvider
+    , codeLensProvider =
         supported' SMethod_TextDocumentCodeLens $
           CodeLensOptions clientInitiatedProgress (supported SMethod_CodeLensResolve)
-    , _documentFormattingProvider =
+    , documentFormattingProvider =
         supported' SMethod_TextDocumentFormatting $
           InR $
             DocumentFormattingOptions clientInitiatedProgress
-    , _documentRangeFormattingProvider =
+    , documentRangeFormattingProvider =
         supported' SMethod_TextDocumentRangeFormatting $
           InR $
             DocumentRangeFormattingOptions clientInitiatedProgress
-    , _documentOnTypeFormattingProvider = documentOnTypeFormattingProvider
-    , _renameProvider =
+    , documentOnTypeFormattingProvider = documentOnTypeFormattingProvider
+    , renameProvider =
         supported' SMethod_TextDocumentRename $
           InR $
             RenameOptions clientInitiatedProgress (supported SMethod_TextDocumentPrepareRename)
-    , _documentLinkProvider =
+    , documentLinkProvider =
         supported' SMethod_TextDocumentDocumentLink $
           DocumentLinkOptions clientInitiatedProgress (supported SMethod_DocumentLinkResolve)
-    , _colorProvider =
+    , colorProvider =
         supported' SMethod_TextDocumentDocumentColor $
           InR $
             InL $
               DocumentColorOptions clientInitiatedProgress
-    , _foldingRangeProvider =
+    , foldingRangeProvider =
         supported' SMethod_TextDocumentFoldingRange $
           InR $
             InL $
               FoldingRangeOptions clientInitiatedProgress
-    , _executeCommandProvider = executeCommandProvider
-    , _selectionRangeProvider =
+    , executeCommandProvider = executeCommandProvider
+    , selectionRangeProvider =
         supported' SMethod_TextDocumentSelectionRange $
           InR $
             InL $
               SelectionRangeOptions clientInitiatedProgress
-    , _callHierarchyProvider =
+    , callHierarchyProvider =
         supported' SMethod_TextDocumentPrepareCallHierarchy $
           InR $
             InL $
               CallHierarchyOptions clientInitiatedProgress
-    , _semanticTokensProvider = semanticTokensProvider
-    , _workspaceSymbolProvider =
+    , semanticTokensProvider = semanticTokensProvider
+    , workspaceSymbolProvider =
         supported' SMethod_WorkspaceSymbol $
           InR $
             WorkspaceSymbolOptions clientInitiatedProgress (supported SMethod_WorkspaceSymbolResolve)
-    , _workspace = Just workspace
-    , _experimental = Nothing :: Maybe Value
+    , workspace = Just workspace
+    , experimental = Nothing :: Maybe Value
     , -- The only encoding the VFS supports is the legacy UTF16 option at the moment
-      _positionEncoding = Just PositionEncodingKind_UTF16
-    , _linkedEditingRangeProvider =
+      positionEncoding = Just PositionEncodingKind_UTF16
+    , linkedEditingRangeProvider =
         supported' SMethod_TextDocumentLinkedEditingRange $
           InR $
             InL $
               LinkedEditingRangeOptions clientInitiatedProgress
-    , _monikerProvider =
+    , monikerProvider =
         supported' SMethod_TextDocumentMoniker $
           InR $
             InL $
               MonikerOptions clientInitiatedProgress
-    , _typeHierarchyProvider =
+    , typeHierarchyProvider =
         supported' SMethod_TextDocumentPrepareTypeHierarchy $
           InR $
             InL $
               TypeHierarchyOptions clientInitiatedProgress
-    , _inlineValueProvider =
+    , inlineValueProvider =
         supported' SMethod_TextDocumentInlineValue $
           InR $
             InL $
               InlineValueOptions clientInitiatedProgress
-    , _diagnosticProvider = diagnosticProvider
+    , diagnosticProvider = diagnosticProvider
     , -- TODO: super unclear what to do about notebooks in general
-      _notebookDocumentSync = Nothing
+      notebookDocumentSync = Nothing
     }
  where
   clientInitiatedProgress = Just (optSupportClientInitiatedProgress o)
@@ -345,11 +345,11 @@ inferServerCapabilities _clientCaps o h =
   completionProvider =
     supported' SMethod_TextDocumentCompletion $
       CompletionOptions
-        { _triggerCharacters = map T.singleton <$> optCompletionTriggerCharacters o
-        , _allCommitCharacters = map T.singleton <$> optCompletionAllCommitCharacters o
-        , _resolveProvider = supported SMethod_CompletionItemResolve
-        , _completionItem = Nothing
-        , _workDoneProgress = clientInitiatedProgress
+        { triggerCharacters = map T.singleton <$> optCompletionTriggerCharacters o
+        , allCommitCharacters = map T.singleton <$> optCompletionAllCommitCharacters o
+        , resolveProvider = supported SMethod_CompletionItemResolve
+        , completionItem = Nothing
+        , workDoneProgress = clientInitiatedProgress
         }
 
   inlayProvider =
@@ -357,17 +357,17 @@ inferServerCapabilities _clientCaps o h =
       InR $
         InL
           InlayHintOptions
-            { _workDoneProgress = clientInitiatedProgress
-            , _resolveProvider = supported SMethod_InlayHintResolve
+            { workDoneProgress = clientInitiatedProgress
+            , resolveProvider = supported SMethod_InlayHintResolve
             }
 
   codeActionProvider =
     supported' SMethod_TextDocumentCodeAction $
       InR $
         CodeActionOptions
-          { _workDoneProgress = clientInitiatedProgress
-          , _codeActionKinds = optCodeActionKinds o
-          , _resolveProvider = supported SMethod_CodeActionResolve
+          { workDoneProgress = clientInitiatedProgress
+          , codeActionKinds = optCodeActionKinds o
+          , resolveProvider = supported SMethod_CodeActionResolve
           }
 
   signatureHelpProvider =
@@ -403,14 +403,14 @@ inferServerCapabilities _clientCaps o h =
     | supported_b SMethod_TextDocumentSemanticTokensRange = Just $ InL True
     | otherwise = Nothing
   semanticTokenFullProvider
-    | supported_b SMethod_TextDocumentSemanticTokensFull = Just $ InR $ SemanticTokensFullDelta{_delta = supported SMethod_TextDocumentSemanticTokensFullDelta}
+    | supported_b SMethod_TextDocumentSemanticTokensFull = Just $ InR $ SemanticTokensFullDelta{delta = supported SMethod_TextDocumentSemanticTokensFullDelta}
     | otherwise = Nothing
 
   sync = case optTextDocumentSync o of
     Just x -> Just (InL x)
     Nothing -> Nothing
 
-  workspace = WorkspaceOptions{_workspaceFolders = workspaceFolder, _fileOperations = Nothing}
+  workspace = WorkspaceOptions{workspaceFolders = workspaceFolder, fileOperations = Nothing}
   workspaceFolder =
     supported' SMethod_WorkspaceDidChangeWorkspaceFolders $
       -- sign up to receive notifications
@@ -420,11 +420,11 @@ inferServerCapabilities _clientCaps o h =
     supported' SMethod_TextDocumentDiagnostic $
       InL $
         DiagnosticOptions
-          { _workDoneProgress = clientInitiatedProgress
-          , _identifier = Nothing
+          { workDoneProgress = clientInitiatedProgress
+          , identifier = Nothing
           , -- TODO: this is a conservative but maybe inaccurate, unclear how much it matters
-            _interFileDependencies = True
-          , _workspaceDiagnostics = supported_b SMethod_WorkspaceDiagnostic
+            interFileDependencies = True
+          , workspaceDiagnostics = supported_b SMethod_WorkspaceDiagnostic
           }
 
 {- | Invokes the registered dynamic or static handlers for the given message and
@@ -519,7 +519,7 @@ handle' logger mAction m msg = do
     (Nothing, Nothing) -> Nothing
 
   sendResponse :: forall m1. TRequestMessage (m1 :: Method ClientToServer Request) -> Either (TResponseError m1) (MessageResult m1) -> m ()
-  sendResponse req res = sendToClient $ FromServerRsp (req ^. L.method) $ TResponseMessage "2.0" (Just (req ^. L.id)) res
+  sendResponse req res = sendToClient $ FromServerRsp req.method $ TResponseMessage "2.0" (Just req.id) res
 
   requestDuringShutdown :: forall m1. TRequestMessage (m1 :: Method ClientToServer Request) -> m ()
   requestDuringShutdown req = do
@@ -598,7 +598,8 @@ handleDidChangeConfiguration logger req = do
   --    Then we will succeed the first attempt and fail (or in fact do nothing in) the second one.
   -- 3. Client supports `workspace/configuration` and sends updated config in `workspace/didChangeConfiguration`.
   --    Then both will succeed, which is a bit redundant but not a big deal.
-  tryChangeConfig (cmap (fmap LspCore) logger) (lookForConfigSection section $ req ^. L.params . L.settings)
+  let p = req.params
+  tryChangeConfig (cmap (fmap LspCore) logger) (lookForConfigSection section p.settings)
   requestConfigUpdate (cmap (fmap LspCore) logger)
 
 vfsFunc ::
@@ -626,8 +627,8 @@ vfsFunc logger modifyVfs req = do
 -- | Updates the list of workspace folders
 updateWorkspaceFolders :: TMessage Method_WorkspaceDidChangeWorkspaceFolders -> LspM config ()
 updateWorkspaceFolders (TNotificationMessage _ _ params) = do
-  let toRemove = params ^. L.event . L.removed
-      toAdd = params ^. L.event . L.added
+  let toRemove = params.event.removed
+      toAdd = params.event.added
       newWfs oldWfs = foldr delete oldWfs toRemove <> toAdd
   modifyState resWorkspaceFolders newWfs
 

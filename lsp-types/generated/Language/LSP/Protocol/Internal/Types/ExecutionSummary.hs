@@ -26,12 +26,12 @@ data ExecutionSummary = ExecutionSummary
   indicating the execution order of a cell
   inside a notebook.
   -}
-  _executionOrder :: Language.LSP.Protocol.Types.Common.UInt
+  executionOrder :: Language.LSP.Protocol.Types.Common.UInt
   , {-|
   Whether the execution was successful or
   not if known by the client.
   -}
-  _success :: (Maybe Bool)
+  success :: (Maybe Bool)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

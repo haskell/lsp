@@ -27,7 +27,7 @@ data ChangeAnnotationsSupportOptions = ChangeAnnotationsSupportOptions
   for instance all edits labelled with "Changes in Strings" would
   be a tree node.
   -}
-  _groupsOnLabel :: (Maybe Bool)
+  groupsOnLabel :: (Maybe Bool)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

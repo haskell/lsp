@@ -28,17 +28,17 @@ data ChangeAnnotation = ChangeAnnotation
   A human-readable string describing the actual change. The string
   is rendered prominent in the user interface.
   -}
-  _label :: Data.Text.Text
+  label :: Data.Text.Text
   , {-|
   A flag which indicates that user confirmation is needed
   before applying the change.
   -}
-  _needsConfirmation :: (Maybe Bool)
+  needsConfirmation :: (Maybe Bool)
   , {-|
   A human-readable string which is rendered less prominent in
   the user interface.
   -}
-  _description :: (Maybe Data.Text.Text)
+  description :: (Maybe Data.Text.Text)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

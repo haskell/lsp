@@ -25,7 +25,7 @@ data ConfigurationParams = ConfigurationParams
   { {-|
 
   -}
-  _items :: [Language.LSP.Protocol.Internal.Types.ConfigurationItem.ConfigurationItem]
+  items :: [Language.LSP.Protocol.Internal.Types.ConfigurationItem.ConfigurationItem]
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

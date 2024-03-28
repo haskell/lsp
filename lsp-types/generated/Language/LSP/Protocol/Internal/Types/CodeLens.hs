@@ -31,16 +31,16 @@ data CodeLens = CodeLens
   { {-|
   The range in which this code lens is valid. Should only span a single line.
   -}
-  _range :: Language.LSP.Protocol.Internal.Types.Range.Range
+  range :: Language.LSP.Protocol.Internal.Types.Range.Range
   , {-|
   The command this code lens represents.
   -}
-  _command :: (Maybe Language.LSP.Protocol.Internal.Types.Command.Command)
+  command :: (Maybe Language.LSP.Protocol.Internal.Types.Command.Command)
   , {-|
   A data entry field that is preserved on a code lens item between
   a `CodeLensRequest`
   -}
-  _data_ :: (Maybe Data.Aeson.Value)
+  data_ :: (Maybe Data.Aeson.Value)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

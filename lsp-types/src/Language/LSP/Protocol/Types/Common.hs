@@ -8,8 +8,6 @@
 module Language.LSP.Protocol.Types.Common (
   type (|?) (..),
   toEither,
-  _L,
-  _R,
   Int32,
   UInt,
   Null (..),
@@ -22,11 +20,11 @@ module Language.LSP.Protocol.Types.Common (
 
 import Control.Applicative
 import Control.DeepSeq
-import Control.Lens
 import Data.Aeson hiding (Null)
 import Data.Aeson qualified as J
 import Data.Aeson.KeyMap qualified as KM
 import Data.Aeson.Types qualified as J
+import Data.Bifunctor (bimap)
 import Data.Hashable
 import Data.Int (Int32)
 import Data.Mod.Word
@@ -84,18 +82,6 @@ data a |? b
   deriving (Pretty) via (ViaJSON (a |? b))
 
 infixr 9 |?
-
--- | Prism for the left-hand side of an '(|?)'.
-_L :: Prism' (a |? b) a
-_L = prism' InL $ \case
-  InL a -> Just a
-  InR _ -> Nothing
-
--- | Prism for the right-hand side of an '(|?)'.
-_R :: Prism' (a |? b) b
-_R = prism' InR $ \case
-  InL _ -> Nothing
-  InR b -> Just b
 
 toEither :: a |? b -> Either a b
 toEither (InL a) = Left a

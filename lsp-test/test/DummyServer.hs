@@ -14,7 +14,7 @@ import Data.Map.Strict qualified as M
 import Data.Proxy
 import Data.String
 import Data.Text qualified as T
-import Language.LSP.Protocol.Message
+import Language.LSP.Protocol.Message hiding (error)
 import Language.LSP.Protocol.Types
 import Language.LSP.Server
 import System.Directory
@@ -167,7 +167,7 @@ handlers =
               params =
                 ApplyWorkspaceEditParams (Just "Howdy edit") $
                   WorkspaceEdit (Just (M.singleton docUri edit)) Nothing Nothing
-            resp $ Right $ InR $ Null
+            resp $ Right $ InR Null
             void $ sendRequest SMethod_WorkspaceApplyEdit params (const (pure ()))
           TRequestMessage _ _ _ (ExecuteCommandParams Nothing "doAVersionedEdit" (Just [val])) -> do
             let
@@ -273,9 +273,9 @@ handlers =
         resp $ Right $ InL [ih]
     , requestHandler SMethod_InlayHintResolve $ \req resp -> do
         let TRequestMessage _ _ _ params = req
-            (InlayHint{_data_ = Just data_, ..}) = params
+            (InlayHint{data_ = Just data_, ..}) = params
             start :: Position
             Success start = fromJSON data_
-            ih = InlayHint{_data_ = Nothing, _tooltip = Just $ InL $ "start at " <> T.pack (show start), ..}
+            ih = InlayHint{data_ = Nothing, tooltip = Just $ InL $ "start at " <> T.pack (show start), ..}
         resp $ Right ih
     ]

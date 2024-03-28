@@ -27,15 +27,15 @@ data ExecuteCommandParams = ExecuteCommandParams
   { {-|
   An optional token that a server can use to report work done progress.
   -}
-  _workDoneToken :: (Maybe Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken)
+  workDoneToken :: (Maybe Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken)
   , {-|
   The identifier of the actual command handler.
   -}
-  _command :: Data.Text.Text
+  command :: Data.Text.Text
   , {-|
   Arguments that the command should be invoked with.
   -}
-  _arguments :: (Maybe [Data.Aeson.Value])
+  arguments :: (Maybe [Data.Aeson.Value])
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

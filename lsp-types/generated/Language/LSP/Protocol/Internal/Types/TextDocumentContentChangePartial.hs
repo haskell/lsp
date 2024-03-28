@@ -27,17 +27,17 @@ data TextDocumentContentChangePartial = TextDocumentContentChangePartial
   { {-|
   The range of the document that changed.
   -}
-  _range :: Language.LSP.Protocol.Internal.Types.Range.Range
+  range :: Language.LSP.Protocol.Internal.Types.Range.Range
   , {-|
   The optional length of the range that got replaced.
 
   @deprecated use range instead.
   -}
-  _rangeLength :: (Maybe Language.LSP.Protocol.Types.Common.UInt)
+  rangeLength :: (Maybe Language.LSP.Protocol.Types.Common.UInt)
   , {-|
   The new text for the provided range.
   -}
-  _text :: Data.Text.Text
+  text :: Data.Text.Text
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

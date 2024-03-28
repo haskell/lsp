@@ -42,14 +42,14 @@ fromServerNot ::
   TMessage m ~ TNotificationMessage m =>
   TNotificationMessage m ->
   FromServerMessage
-fromServerNot m@TNotificationMessage{_method = meth} = FromServerMess meth m
+fromServerNot m@TNotificationMessage{method = meth} = FromServerMess meth m
 
 fromServerReq ::
   forall (m :: Method ServerToClient Request).
   TMessage m ~ TRequestMessage m =>
   TRequestMessage m ->
   FromServerMessage
-fromServerReq m@TRequestMessage{_method = meth} = FromServerMess meth m
+fromServerReq m@TRequestMessage{method = meth} = FromServerMess meth m
 
 data FromClientMessage' a where
   FromClientMess :: forall t (m :: Method ClientToServer t) a. SMethod m -> TMessage m -> FromClientMessage' a
@@ -66,14 +66,14 @@ fromClientNot ::
   TMessage m ~ TNotificationMessage m =>
   TNotificationMessage m ->
   FromClientMessage
-fromClientNot m@TNotificationMessage{_method = meth} = FromClientMess meth m
+fromClientNot m@TNotificationMessage{method = meth} = FromClientMess meth m
 
 fromClientReq ::
   forall (m :: Method ClientToServer Request).
   TMessage m ~ TRequestMessage m =>
   TRequestMessage m ->
   FromClientMessage
-fromClientReq m@TRequestMessage{_method = meth} = FromClientMess meth m
+fromClientReq m@TRequestMessage{method = meth} = FromClientMess meth m
 
 -- ---------------------------------------------------------------------
 -- Parsing

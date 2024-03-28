@@ -27,21 +27,21 @@ data WorkspaceEditClientCapabilities = WorkspaceEditClientCapabilities
   { {-|
   The client supports versioned document changes in `WorkspaceEdit`s
   -}
-  _documentChanges :: (Maybe Bool)
+  documentChanges :: (Maybe Bool)
   , {-|
   The resource operations the client supports. Clients should at least
   support 'create', 'rename' and 'delete' files and folders.
 
   @since 3.13.0
   -}
-  _resourceOperations :: (Maybe [Language.LSP.Protocol.Internal.Types.ResourceOperationKind.ResourceOperationKind])
+  resourceOperations :: (Maybe [Language.LSP.Protocol.Internal.Types.ResourceOperationKind.ResourceOperationKind])
   , {-|
   The failure handling strategy of a client if applying the workspace edit
   fails.
 
   @since 3.13.0
   -}
-  _failureHandling :: (Maybe Language.LSP.Protocol.Internal.Types.FailureHandlingKind.FailureHandlingKind)
+  failureHandling :: (Maybe Language.LSP.Protocol.Internal.Types.FailureHandlingKind.FailureHandlingKind)
   , {-|
   Whether the client normalizes line endings to the client specific
   setting.
@@ -51,14 +51,14 @@ data WorkspaceEditClientCapabilities = WorkspaceEditClientCapabilities
 
   @since 3.16.0
   -}
-  _normalizesLineEndings :: (Maybe Bool)
+  normalizesLineEndings :: (Maybe Bool)
   , {-|
   Whether the client in general supports change annotations on text edits,
   create file, rename file and delete file changes.
 
   @since 3.16.0
   -}
-  _changeAnnotationSupport :: (Maybe Language.LSP.Protocol.Internal.Types.ChangeAnnotationsSupportOptions.ChangeAnnotationsSupportOptions)
+  changeAnnotationSupport :: (Maybe Language.LSP.Protocol.Internal.Types.ChangeAnnotationsSupportOptions.ChangeAnnotationsSupportOptions)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

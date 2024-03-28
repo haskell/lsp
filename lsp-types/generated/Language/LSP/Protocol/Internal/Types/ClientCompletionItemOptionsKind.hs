@@ -33,7 +33,7 @@ data ClientCompletionItemOptionsKind = ClientCompletionItemOptionsKind
   the completion items kinds from `Text` to `Reference` as defined in
   the initial version of the protocol.
   -}
-  _valueSet :: (Maybe [Language.LSP.Protocol.Internal.Types.CompletionItemKind.CompletionItemKind])
+  valueSet :: (Maybe [Language.LSP.Protocol.Internal.Types.CompletionItemKind.CompletionItemKind])
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

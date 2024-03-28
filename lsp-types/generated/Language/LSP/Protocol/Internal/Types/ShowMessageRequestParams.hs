@@ -27,15 +27,15 @@ data ShowMessageRequestParams = ShowMessageRequestParams
   { {-|
   The message type. See `MessageType`
   -}
-  _type_ :: Language.LSP.Protocol.Internal.Types.MessageType.MessageType
+  type_ :: Language.LSP.Protocol.Internal.Types.MessageType.MessageType
   , {-|
   The actual message.
   -}
-  _message :: Data.Text.Text
+  message :: Data.Text.Text
   , {-|
   The message action items to present.
   -}
-  _actions :: (Maybe [Language.LSP.Protocol.Internal.Types.MessageActionItem.MessageActionItem])
+  actions :: (Maybe [Language.LSP.Protocol.Internal.Types.MessageActionItem.MessageActionItem])
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

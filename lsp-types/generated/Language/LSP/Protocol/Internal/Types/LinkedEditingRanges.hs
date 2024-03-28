@@ -29,13 +29,13 @@ data LinkedEditingRanges = LinkedEditingRanges
   A list of ranges that can be edited together. The ranges must have
   identical length and contain identical text content. The ranges cannot overlap.
   -}
-  _ranges :: [Language.LSP.Protocol.Internal.Types.Range.Range]
+  ranges :: [Language.LSP.Protocol.Internal.Types.Range.Range]
   , {-|
   An optional word pattern (regular expression) that describes valid contents for
   the given ranges. If no pattern is provided, the client configuration's word
   pattern will be used.
   -}
-  _wordPattern :: (Maybe Data.Text.Text)
+  wordPattern :: (Maybe Data.Text.Text)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

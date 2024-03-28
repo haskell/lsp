@@ -53,7 +53,7 @@ data Position = Position
   If a line number is greater than the number of lines in a document, it defaults back to the number of lines in the document.
   If a line number is negative, it defaults to 0.
   -}
-  _line :: Language.LSP.Protocol.Types.Common.UInt
+  line :: Language.LSP.Protocol.Types.Common.UInt
   , {-|
   Character offset on a line in a document (zero-based).
 
@@ -63,7 +63,7 @@ data Position = Position
   If the character value is greater than the line length it defaults back to the
   line length.
   -}
-  _character :: Language.LSP.Protocol.Types.Common.UInt
+  character :: Language.LSP.Protocol.Types.Common.UInt
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

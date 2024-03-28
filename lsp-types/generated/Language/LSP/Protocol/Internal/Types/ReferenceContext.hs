@@ -25,7 +25,7 @@ data ReferenceContext = ReferenceContext
   { {-|
   Include the declaration of the current symbol.
   -}
-  _includeDeclaration :: Bool
+  includeDeclaration :: Bool
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

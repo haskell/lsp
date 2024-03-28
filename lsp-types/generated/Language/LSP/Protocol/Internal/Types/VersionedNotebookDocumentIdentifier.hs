@@ -27,11 +27,11 @@ data VersionedNotebookDocumentIdentifier = VersionedNotebookDocumentIdentifier
   { {-|
   The version number of this notebook document.
   -}
-  _version :: Language.LSP.Protocol.Types.Common.Int32
+  version :: Language.LSP.Protocol.Types.Common.Int32
   , {-|
   The notebook document's uri.
   -}
-  _uri :: Language.LSP.Protocol.Types.Uri.Uri
+  uri :: Language.LSP.Protocol.Types.Uri.Uri
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

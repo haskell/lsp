@@ -30,16 +30,16 @@ data SignatureInformation = SignatureInformation
   The label of this signature. Will be shown in
   the UI.
   -}
-  _label :: Data.Text.Text
+  label :: Data.Text.Text
   , {-|
   The human-readable doc-comment of this signature. Will be shown
   in the UI but can be omitted.
   -}
-  _documentation :: (Maybe (Data.Text.Text Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.MarkupContent.MarkupContent))
+  documentation :: (Maybe (Data.Text.Text Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.MarkupContent.MarkupContent))
   , {-|
   The parameters of this signature.
   -}
-  _parameters :: (Maybe [Language.LSP.Protocol.Internal.Types.ParameterInformation.ParameterInformation])
+  parameters :: (Maybe [Language.LSP.Protocol.Internal.Types.ParameterInformation.ParameterInformation])
   , {-|
   The index of the active parameter.
 
@@ -53,7 +53,7 @@ data SignatureInformation = SignatureInformation
 
   @since 3.16.0
   -}
-  _activeParameter :: (Maybe (Language.LSP.Protocol.Types.Common.UInt Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Types.Common.Null))
+  activeParameter :: (Maybe (Language.LSP.Protocol.Types.Common.UInt Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Types.Common.Null))
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

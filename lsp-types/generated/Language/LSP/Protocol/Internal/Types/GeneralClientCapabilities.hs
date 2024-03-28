@@ -35,19 +35,19 @@ data GeneralClientCapabilities = GeneralClientCapabilities
 
   @since 3.17.0
   -}
-  _staleRequestSupport :: (Maybe Language.LSP.Protocol.Internal.Types.StaleRequestSupportOptions.StaleRequestSupportOptions)
+  staleRequestSupport :: (Maybe Language.LSP.Protocol.Internal.Types.StaleRequestSupportOptions.StaleRequestSupportOptions)
   , {-|
   Client capabilities specific to regular expressions.
 
   @since 3.16.0
   -}
-  _regularExpressions :: (Maybe Language.LSP.Protocol.Internal.Types.RegularExpressionsClientCapabilities.RegularExpressionsClientCapabilities)
+  regularExpressions :: (Maybe Language.LSP.Protocol.Internal.Types.RegularExpressionsClientCapabilities.RegularExpressionsClientCapabilities)
   , {-|
   Client capabilities specific to the client's markdown parser.
 
   @since 3.16.0
   -}
-  _markdown :: (Maybe Language.LSP.Protocol.Internal.Types.MarkdownClientCapabilities.MarkdownClientCapabilities)
+  markdown :: (Maybe Language.LSP.Protocol.Internal.Types.MarkdownClientCapabilities.MarkdownClientCapabilities)
   , {-|
   The position encodings supported by the client. Client and server
   have to agree on the same position encoding to ensure that offsets
@@ -68,7 +68,7 @@ data GeneralClientCapabilities = GeneralClientCapabilities
 
   @since 3.17.0
   -}
-  _positionEncodings :: (Maybe [Language.LSP.Protocol.Internal.Types.PositionEncodingKind.PositionEncodingKind])
+  positionEncodings :: (Maybe [Language.LSP.Protocol.Internal.Types.PositionEncodingKind.PositionEncodingKind])
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

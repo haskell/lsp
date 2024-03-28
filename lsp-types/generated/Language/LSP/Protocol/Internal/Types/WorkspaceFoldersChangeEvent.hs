@@ -25,11 +25,11 @@ data WorkspaceFoldersChangeEvent = WorkspaceFoldersChangeEvent
   { {-|
   The array of added workspace folders
   -}
-  _added :: [Language.LSP.Protocol.Internal.Types.WorkspaceFolder.WorkspaceFolder]
+  added :: [Language.LSP.Protocol.Internal.Types.WorkspaceFolder.WorkspaceFolder]
   , {-|
   The array of the removed workspace folders
   -}
-  _removed :: [Language.LSP.Protocol.Internal.Types.WorkspaceFolder.WorkspaceFolder]
+  removed :: [Language.LSP.Protocol.Internal.Types.WorkspaceFolder.WorkspaceFolder]
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

@@ -5,7 +5,7 @@ module SemanticTokensSpec where
 import Data.Either (isRight)
 import Data.List (unfoldr)
 import Language.LSP.Protocol.Types
-import Test.Hspec
+import Test.Hspec as Hspec
 
 spec :: Spec
 spec = do
@@ -52,7 +52,7 @@ spec = do
     it "handles big tokens" $ relativizeTokens bigTokens `shouldBe` bigTokensRel
 
   describe "encodeTokens" $ do
-    context "when running the LSP examples" $ do
+    Hspec.context "when running the LSP examples" $ do
       it "encodes example 1 correctly" $
         let encoded = encodeTokens exampleLegend (relativizeTokens exampleTokens1)
          in encoded `shouldBe` Right [{- token 1 -} 2, 5, 3, 0, 3 {- token 2 -}, 0, 5, 4, 1, 0 {- token 3 -}, 3, 2, 7, 2, 0]

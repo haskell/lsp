@@ -1,12 +1,11 @@
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module ServerCapabilitiesSpec where
 
-import Control.Lens.Operators
 import Data.Aeson hiding (Null)
 import Data.Maybe (fromJust)
-import Language.LSP.Protocol.Lens
 import Language.LSP.Protocol.Message
 import Language.LSP.Protocol.Types
 import Test.Hspec
@@ -30,12 +29,12 @@ spec = describe "server capabilities" $ do
   it "decodes" $
     let input = "{\"hoverProvider\": true, \"colorProvider\": {\"id\": \"abc123\", \"documentSelector\": " <> documentFiltersJson <> "}}"
         caps :: ServerCapabilities = fromJust $ decode input
-     in caps ^. colorProvider `shouldBe` Just (InR $ InR $ DocumentColorRegistrationOptions (InL documentFilters) Nothing (Just "abc123"))
+     in caps.colorProvider `shouldBe` Just (InR $ InR $ DocumentColorRegistrationOptions (InL documentFilters) Nothing (Just "abc123"))
   describe "client/registerCapability" $
     it "allows empty registerOptions" $
       let input = "{\"registrations\":[{\"registerOptions\":{},\"method\":\"workspace/didChangeConfiguration\",\"id\":\"4a56f5ca-7188-4f4c-a366-652d6f9d63aa\"}]}"
           registrationParams :: RegistrationParams = fromJust $ decode input
-       in registrationParams ^. registrations
+       in registrationParams.registrations
             `shouldBe` [ toUntypedRegistration $
                           TRegistration
                             "4a56f5ca-7188-4f4c-a366-652d6f9d63aa"
@@ -43,5 +42,5 @@ spec = describe "server capabilities" $ do
                             (Just $ DidChangeConfigurationRegistrationOptions Nothing)
                        ]
  where
-  documentFilters = DocumentSelector [DocumentFilter $ InL $ TextDocumentFilter $ InL $ TextDocumentFilterLanguage{_language = "haskell", _scheme = Nothing, _pattern = Nothing}]
+  documentFilters = DocumentSelector [DocumentFilter $ InL $ TextDocumentFilter $ InL $ TextDocumentFilterLanguage{language = "haskell", scheme = Nothing, pattern = Nothing}]
   documentFiltersJson = "[{\"language\": \"haskell\"}]"

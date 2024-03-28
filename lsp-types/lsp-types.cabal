@@ -70,10 +70,11 @@ library
     , deepseq                        >=1.4   && <1.6
     , Diff                           >=0.4   && <0.6
     , dlist                          ^>=1.0
+    , generic-lens
     , hashable                       ^>=1.4
     , indexed-traversable            ^>=0.1
     , indexed-traversable-instances  ^>=0.1
-    , lens                           >=5.1   && <5.4
+    , microlens                            ^>=0.4
     , mod                            ^>=0.2
     , mtl                            >=2.2   && <2.4
     , network-uri                    ^>=2.6
@@ -105,7 +106,6 @@ library
     Data.Row.Aeson
     Data.Row.Hashable
     Language.LSP.Protocol.Capabilities
-    Language.LSP.Protocol.Lens
     Language.LSP.Protocol.Message
     Language.LSP.Protocol.Types
     Language.LSP.Protocol.Meta
@@ -113,7 +113,6 @@ library
     Language.LSP.Protocol.Utils.SMethodMap
 
   other-modules:
-    Language.LSP.Protocol.Message.Lens
     Language.LSP.Protocol.Message.LspId
     Language.LSP.Protocol.Message.Meta
     Language.LSP.Protocol.Message.Method
@@ -123,12 +122,10 @@ library
     Language.LSP.Protocol.Types.CodeAction
     Language.LSP.Protocol.Types.Common
     Language.LSP.Protocol.Types.Edit
-    Language.LSP.Protocol.Types.Lens
     Language.LSP.Protocol.Types.Location
     Language.LSP.Protocol.Types.LspEnum
     Language.LSP.Protocol.Types.MarkupContent
     Language.LSP.Protocol.Types.Orphans
-    Language.LSP.Protocol.Types.Progress
     Language.LSP.Protocol.Types.SemanticTokens
     Language.LSP.Protocol.Types.Singletons
     Language.LSP.Protocol.Types.Uri
@@ -614,6 +611,21 @@ library lsp-types-quickcheck
     , generic-arbitrary
     , template-haskell
 
+library lsp-types-lens
+  visibility:         public
+  hs-source-dirs:     lens
+  default-language:   GHC2021
+
+  exposed-modules:
+    Language.LSP.Protocol.Lens
+
+  build-depends:
+    , aeson             >=2
+    , base              >=4.11    && <5
+    , lsp-types
+    , lens              >=5.1     && <5.3
+    , text              >=1       && <2.2
+
 executable generator
   hs-source-dirs:     generator
   default-language:   GHC2021
@@ -659,7 +671,6 @@ test-suite lsp-types-test
     , filepath
     , hspec
     , hspec-golden
-    , lens
     , lsp-types
     , lsp-types-quickcheck
     , network-uri

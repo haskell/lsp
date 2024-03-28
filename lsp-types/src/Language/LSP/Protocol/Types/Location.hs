@@ -13,7 +13,7 @@ mkRange l c l' c' = Range (Position l c) (Position l' c')
 
 -- | 'isSubrangeOf' returns true if for every 'Position' in the first 'Range', it's also in the second 'Range'.
 isSubrangeOf :: Range -> Range -> Bool
-isSubrangeOf smallRange range = _start smallRange >= _start range && _end smallRange <= _end range
+isSubrangeOf smallRange range = start smallRange >= start range && end smallRange <= end range
 
 -- | 'positionInRange' returns true if the given 'Position' is in the 'Range'.
 positionInRange :: Position -> Range -> Bool

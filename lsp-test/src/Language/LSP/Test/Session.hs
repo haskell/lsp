@@ -5,10 +5,12 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE OverloadedLabels #-}
-{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE OverloadedRecordDot #-}
+{-# LANGUAGE TypeInType #-}
 
 module Language.LSP.Test.Session
   ( Session(..)
+
   , SessionConfig(..)
   , defaultConfig
   , SessionMessage(..)
@@ -64,9 +66,9 @@ import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import Data.Maybe
 import Data.Function
-import Language.LSP.Protocol.Types as LSP
-import qualified Language.LSP.Protocol.Lens as L
-import Language.LSP.Protocol.Message as LSP
+import Language.LSP.Protocol.Types as LSP hiding (to)
+import Language.LSP.Protocol.Message as LSP hiding (error)
+import Language.LSP.Protocol.Lens
 import Language.LSP.VFS
 import Language.LSP.Test.Compat
 import Language.LSP.Test.Decoding
@@ -331,11 +333,11 @@ updateStateC = awaitForever $ \msg -> do
   updateState msg
   case msg of
     FromServerMess SMethod_WindowWorkDoneProgressCreate req ->
-      sendMessage $ TResponseMessage "2.0" (Just $ req ^. L.id) (Right Null)
+      sendMessage $ TResponseMessage "2.0" (Just req.id) (Right Null)
     FromServerMess SMethod_WorkspaceApplyEdit r -> do
-      sendMessage $ TResponseMessage "2.0" (Just $ r ^. L.id) (Right $ ApplyWorkspaceEditResult True Nothing Nothing)
+      sendMessage $ TResponseMessage "2.0" (Just r.id) (Right $ ApplyWorkspaceEditResult True Nothing Nothing)
     FromServerMess SMethod_WorkspaceConfiguration r -> do
-      let requestedSections = mapMaybe (\i -> i ^? L.section . _Just) $ r ^. L.params . L.items
+      let requestedSections = mapMaybe (\i -> i ^? #section . _Just) r.params.items
       let o = curLspConfig state
       -- check for each requested section whether we have it
       let configsOrErrs = flip fmap requestedSections $ \section ->
@@ -346,7 +348,7 @@ updateStateC = awaitForever $ \msg -> do
       let (errs, configs) = partitionEithers configsOrErrs
 
       -- we have to return exactly the number of sections requested, so if we can't find all of them then that's an error
-      sendMessage $ TResponseMessage "2.0" (Just $ r ^. L.id) $
+      sendMessage $ TResponseMessage "2.0" (Just r.id) $
         if null errs
         then Right configs
         else Left $ TResponseError (InL LSPErrorCodes_RequestFailed) ("No configuration for requested sections: " <> T.pack (show errs)) Nothing
@@ -374,38 +376,39 @@ updateStateC = awaitForever $ \msg -> do
 -- extract Uri out from DocumentChange
 -- didn't put this in `lsp-types` because TH was getting in the way
 documentChangeUri :: DocumentChange -> Uri
-documentChangeUri (InL x) = x ^. L.textDocument . L.uri
-documentChangeUri (InR (InL x)) = x ^. L.uri
-documentChangeUri (InR (InR (InL x))) = x ^. L.oldUri
-documentChangeUri (InR (InR (InR x))) = x ^. L.uri
+documentChangeUri (InL x) = x.textDocument.uri
+documentChangeUri (InR (InL x)) = x.uri
+documentChangeUri (InR (InR (InL x))) = x.oldUri
+documentChangeUri (InR (InR (InR x))) = x.uri
 
 updateState :: (MonadIO m, HasReader SessionContext m, HasState SessionState m)
             => FromServerMessage -> m ()
-updateState (FromServerMess SMethod_Progress req) = case req ^. L.params . L.value of
-  v | Just _ <- v ^? _workDoneProgressBegin ->
-    modify $ \s -> s { curProgressSessions = Set.insert (req ^. L.params . L.token) $ curProgressSessions s }
-  v | Just _ <- v ^? _workDoneProgressEnd ->
-    modify $ \s -> s { curProgressSessions = Set.delete (req ^. L.params . L.token) $ curProgressSessions s }
+updateState (FromServerMess SMethod_Progress req) = case req.params.value of
+  v | Just _ <- v ^? workDoneProgressBegin ->
+    modify $ \s -> s { curProgressSessions = Set.insert (req.params.token) $ curProgressSessions s }
+  v | Just _ <- v ^? workDoneProgressEnd ->
+    modify $ \s -> s { curProgressSessions = Set.delete (req.params.token) $ curProgressSessions s }
   _ -> pure ()
 
 -- Keep track of dynamic capability registration
 updateState (FromServerMess SMethod_ClientRegisterCapability req) = do
   let
+    params = req ^. #params
     regs :: [SomeRegistration]
-    regs = req ^.. L.params . L.registrations . traversed . to toSomeRegistration . _Just
-  let newRegs = (\sr@(SomeRegistration r) -> (r ^. L.id, sr)) <$> regs
+    regs = params ^.. #registrations . traversed . to toSomeRegistration . _Just
+  let newRegs = (\sr@(SomeRegistration r) -> (r.id, sr)) <$> regs
   modify $ \s ->
     s { curDynCaps = Map.union (Map.fromList newRegs) (curDynCaps s) }
 
 updateState (FromServerMess SMethod_ClientUnregisterCapability req) = do
-  let unRegs = (^. L.id) <$> req ^. L.params . L.unregisterations
+  let unRegs = (^. #id) <$> req.params.unregisterations
   modify $ \s ->
     let newCurDynCaps = foldr' Map.delete (curDynCaps s) unRegs
     in s { curDynCaps = newCurDynCaps }
 
 updateState (FromServerMess SMethod_TextDocumentPublishDiagnostics n) = do
-  let diags = n ^. L.params . L.diagnostics
-      doc = n ^. L.params . L.uri
+  let diags = n.params.diagnostics
+      doc = n.params.uri
   modify $ \s ->
     let newDiags = Map.insert (toNormalizedUri doc) diags (curDiagnostics s)
       in s { curDiagnostics = newDiags }
@@ -413,15 +416,15 @@ updateState (FromServerMess SMethod_TextDocumentPublishDiagnostics n) = do
 updateState (FromServerMess SMethod_WorkspaceApplyEdit r) = do
 
   -- First, prefer the versioned documentChanges field
-  allChangeParams <- case r ^. L.params . L.edit . L.documentChanges of
+  allChangeParams <- case r.params.edit.documentChanges of
     Just cs -> do
       mapM_ (checkIfNeedsOpened . documentChangeUri) cs
       -- replace the user provided version numbers with the VFS ones + 1
       -- (technically we should check that the user versions match the VFS ones)
-      cs' <- traverseOf (traverse . _L . L.textDocument . _versionedTextDocumentIdentifier) bumpNewestVersion cs
+      cs' <- traverseOf (traverse . #_InL . #textDocument . versionedTextDocumentIdentifier) bumpNewestVersion cs
       return $ mapMaybe getParamsFromDocumentChange cs'
     -- Then fall back to the changes field
-    Nothing -> case r ^. L.params . L.edit . L.changes of
+    Nothing -> case r.params.edit.changes of
       Just cs -> do
         mapM_ checkIfNeedsOpened (Map.keys cs)
         concat <$> mapM (uncurry getChangeParams) (Map.toList cs)
@@ -432,21 +435,21 @@ updateState (FromServerMess SMethod_WorkspaceApplyEdit r) = do
     let newVFS = flip execState (vfs s) $ changeFromServerVFS logger r
     return $ s { vfs = newVFS }
 
-  let groupedParams = groupBy (\a b -> a ^. L.textDocument == b ^. L.textDocument) allChangeParams
+  let groupedParams = groupBy (\a b -> a.textDocument == b.textDocument) allChangeParams
       mergedParams = map mergeParams groupedParams
 
   -- TODO: Don't do this when replaying a session
   forM_ mergedParams (sendMessage . TNotificationMessage "2.0" SMethod_TextDocumentDidChange)
 
   -- Update VFS to new document versions
-  let sortedVersions = map (sortBy (compare `on` (^. L.textDocument . L.version))) groupedParams
-      latestVersions = map ((^. L.textDocument) . last) sortedVersions
+  let sortedVersions = map (sortBy (compare `on` (^. #textDocument . #version))) groupedParams
+      latestVersions = map ((^. #textDocument) . last) sortedVersions
 
   forM_ latestVersions $ \(VersionedTextDocumentIdentifier uri v) ->
     modify $ \s ->
       let oldVFS = vfs s
           update (VirtualFile _ file_ver t) = VirtualFile v (file_ver +1) t
-          newVFS = oldVFS & vfsMap . ix (toNormalizedUri uri) %~ update
+          newVFS = oldVFS & #vfsMap . ix (toNormalizedUri uri) %~ update
       in s { vfs = newVFS }
 
   where
@@ -455,7 +458,7 @@ updateState (FromServerMess SMethod_WorkspaceApplyEdit r) = do
           oldVFS <- vfs <$> get
 
           -- if its not open, open it
-          unless (has (vfsMap . ix (toNormalizedUri uri)) oldVFS) $ do
+          unless (has (#vfsMap . ix (toNormalizedUri uri)) oldVFS) $ do
             let fp = fromJust $ uriToFilePath uri
             contents <- liftIO $ T.readFile fp
             let item = TextDocumentItem (filePathToUri fp) "" 0 contents
@@ -468,12 +471,12 @@ updateState (FromServerMess SMethod_WorkspaceApplyEdit r) = do
 
         getParamsFromTextDocumentEdit :: TextDocumentEdit -> Maybe DidChangeTextDocumentParams
         getParamsFromTextDocumentEdit (TextDocumentEdit docId edits) =
-          DidChangeTextDocumentParams <$> docId ^? _versionedTextDocumentIdentifier <*> pure (map editToChangeEvent edits)
+          DidChangeTextDocumentParams <$> docId ^? versionedTextDocumentIdentifier <*> pure (map editToChangeEvent edits)
 
         -- TODO: move somewhere reusable
         editToChangeEvent :: TextEdit |? AnnotatedTextEdit -> TextDocumentContentChangeEvent
-        editToChangeEvent (InR e) = TextDocumentContentChangeEvent $ InL $ TextDocumentContentChangePartial { _range = e ^. L.range , _rangeLength = Nothing , _text = e ^. L.newText }
-        editToChangeEvent (InL e) = TextDocumentContentChangeEvent $ InL $ TextDocumentContentChangePartial { _range = e ^. L.range , _rangeLength = Nothing , _text = e ^. L.newText }
+        editToChangeEvent (InR e) = TextDocumentContentChangeEvent $ InL $ TextDocumentContentChangePartial { range = e.range , rangeLength = Nothing , text = e.newText }
+        editToChangeEvent (InL e) = TextDocumentContentChangeEvent $ InL $ TextDocumentContentChangePartial { range = e.range , rangeLength = Nothing , text = e.newText }
 
         getParamsFromDocumentChange :: DocumentChange -> Maybe DidChangeTextDocumentParams
         getParamsFromDocumentChange (InL textDocumentEdit) = getParamsFromTextDocumentEdit textDocumentEdit
@@ -486,20 +489,20 @@ updateState (FromServerMess SMethod_WorkspaceApplyEdit r) = do
         -- where n is the current version
         textDocumentVersions uri = do
           vfs <- vfs <$> get
-          let curVer = fromMaybe 0 $ vfs ^? vfsMap . ix (toNormalizedUri uri) . lsp_version
+          let curVer = fromMaybe 0 $ vfs ^? #vfsMap . ix (toNormalizedUri uri) . #lsp_version
           pure $ map (VersionedTextDocumentIdentifier uri) [curVer + 1..]
 
         textDocumentEdits uri edits = do
           vers <- textDocumentVersions uri
-          pure $ zipWith (\v e -> TextDocumentEdit (review _versionedTextDocumentIdentifier v) [InL e]) vers edits
+          pure $ zipWith (\v e -> TextDocumentEdit (review versionedTextDocumentIdentifier v) [InL e]) vers edits
 
         getChangeParams uri edits = do
           edits <- textDocumentEdits uri (reverse edits)
           pure $ mapMaybe getParamsFromTextDocumentEdit edits
 
         mergeParams :: [DidChangeTextDocumentParams] -> DidChangeTextDocumentParams
-        mergeParams params = let events = concat (toList (map (toList . (^. L.contentChanges)) params))
-                              in DidChangeTextDocumentParams (head params ^. L.textDocument) events
+        mergeParams params = let events = concat (toList (map (toList . (^. #contentChanges)) params))
+                              in DidChangeTextDocumentParams (head params ^. #textDocument) events
 updateState _ = return ()
 
 sendMessage :: (MonadIO m, HasReader SessionContext m, ToJSON a) => a -> m ()

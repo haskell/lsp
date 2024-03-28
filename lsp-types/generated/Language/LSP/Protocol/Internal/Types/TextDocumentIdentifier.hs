@@ -25,7 +25,7 @@ data TextDocumentIdentifier = TextDocumentIdentifier
   { {-|
   The text document's uri.
   -}
-  _uri :: Language.LSP.Protocol.Types.Uri.Uri
+  uri :: Language.LSP.Protocol.Types.Uri.Uri
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

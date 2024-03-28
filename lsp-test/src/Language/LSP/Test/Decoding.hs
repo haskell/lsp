@@ -1,5 +1,7 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Language.LSP.Test.Decoding where
@@ -11,9 +13,9 @@ import Data.Aeson.Types
 import Data.ByteString.Lazy.Char8 qualified as B
 import Data.Foldable
 import Data.Functor.Product
+import Data.Generics.Labels ()
 import Data.Maybe
-import Language.LSP.Protocol.Lens qualified as L
-import Language.LSP.Protocol.Message
+import Language.LSP.Protocol.Message hiding (error)
 import Language.LSP.Test.Exceptions
 import System.IO
 import System.IO.Error
@@ -67,10 +69,10 @@ getRequestMap = foldl' helper emptyIxMap
   helper acc msg = case msg of
     FromClientMess m mess -> case splitClientMethod m of
       IsClientNot -> acc
-      IsClientReq -> fromJust $ updateRequestMap acc (mess ^. L.id) m
+      IsClientReq -> fromJust $ updateRequestMap acc (mess.id) m
       IsClientEither -> case mess of
         NotMess _ -> acc
-        ReqMess msg -> fromJust $ updateRequestMap acc (msg ^. L.id) m
+        ReqMess msg -> fromJust $ updateRequestMap acc (msg.id) m
     _ -> acc
 
 decodeFromServerMsg :: RequestMap -> B.ByteString -> (RequestMap, FromServerMessage)

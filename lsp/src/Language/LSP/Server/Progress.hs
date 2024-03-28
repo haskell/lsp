@@ -1,4 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedRecordDot #-}
 
 module Language.LSP.Server.Progress (
   withProgress,
@@ -12,7 +13,6 @@ import Control.Concurrent.Async
 import Control.Concurrent.Extra as C
 import Control.Concurrent.STM
 import Control.Exception qualified as E
-import Control.Lens hiding (Empty)
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.IO.Unlift
@@ -21,7 +21,6 @@ import Data.Foldable
 import Data.Map.Strict qualified as Map
 import Data.Maybe
 import Data.Text (Text)
-import Language.LSP.Protocol.Lens qualified as L
 import Language.LSP.Protocol.Message
 import Language.LSP.Protocol.Types
 import Language.LSP.Protocol.Types qualified as L
@@ -196,7 +195,7 @@ withProgressBase indefinite title clientToken cancellable f = do
   getProgressCancellationHandlers = getStateVar (progressCancel . resProgressData)
 
 clientSupportsServerInitiatedProgress :: L.ClientCapabilities -> Bool
-clientSupportsServerInitiatedProgress caps = fromMaybe False $ caps ^? L.window . _Just . L.workDoneProgress . _Just
+clientSupportsServerInitiatedProgress caps = fromMaybe False $ caps.window >>= \w -> w.workDoneProgress
 {-# INLINE clientSupportsServerInitiatedProgress #-}
 
 {- |

@@ -1,4 +1,4 @@
-cabal-version:      2.2
+cabal-version:      3.0
 name:               lsp
 version:            2.7.0.0
 synopsis:           Haskell library for the Microsoft Language Server Protocol
@@ -36,7 +36,6 @@ library
   ghc-options:        -fprint-explicit-kinds
   reexported-modules:
     , Language.LSP.Protocol.Types
-    , Language.LSP.Protocol.Lens
     , Language.LSP.Protocol.Capabilities
     , Language.LSP.Protocol.Message
 
@@ -65,6 +64,7 @@ library
     , exceptions            ^>=0.10
     , extra                 ^>=1.7
     , filepath              >=1.4 && < 1.6
+    , generic-lens          ^>=2.2
     , hashable              ^>=1.4
     , lens                  >=5.1    && <5.4
     , lens-aeson            ^>=1.2
@@ -91,6 +91,7 @@ executable lsp-demo-reactor-server
     , co-log-core
     , lens
     , lsp
+    , lsp-types:lsp-types-lens
     , prettyprinter
     , stm
     , text

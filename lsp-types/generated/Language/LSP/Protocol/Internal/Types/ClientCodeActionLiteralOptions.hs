@@ -27,7 +27,7 @@ data ClientCodeActionLiteralOptions = ClientCodeActionLiteralOptions
   The code action kind is support with the following value
   set.
   -}
-  _codeActionKind :: Language.LSP.Protocol.Internal.Types.ClientCodeActionKindOptions.ClientCodeActionKindOptions
+  codeActionKind :: Language.LSP.Protocol.Internal.Types.ClientCodeActionKindOptions.ClientCodeActionKindOptions
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

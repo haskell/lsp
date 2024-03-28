@@ -25,11 +25,11 @@ data LogTraceParams = LogTraceParams
   { {-|
 
   -}
-  _message :: Data.Text.Text
+  message :: Data.Text.Text
   , {-|
 
   -}
-  _verbose :: (Maybe Data.Text.Text)
+  verbose :: (Maybe Data.Text.Text)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

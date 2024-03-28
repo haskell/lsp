@@ -21,3 +21,4 @@ hie
 hie.yaml
 .envrc
 **/.golden/*/actual
+.jj

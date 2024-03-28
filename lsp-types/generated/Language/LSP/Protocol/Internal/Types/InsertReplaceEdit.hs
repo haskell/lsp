@@ -28,15 +28,15 @@ data InsertReplaceEdit = InsertReplaceEdit
   { {-|
   The string to be inserted.
   -}
-  _newText :: Data.Text.Text
+  newText :: Data.Text.Text
   , {-|
   The range if the insert is requested
   -}
-  _insert :: Language.LSP.Protocol.Internal.Types.Range.Range
+  insert :: Language.LSP.Protocol.Internal.Types.Range.Range
   , {-|
   The range if the replace is requested.
   -}
-  _replace :: Language.LSP.Protocol.Internal.Types.Range.Range
+  replace :: Language.LSP.Protocol.Internal.Types.Range.Range
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

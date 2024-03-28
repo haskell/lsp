@@ -24,14 +24,14 @@ data WorkspaceSymbolRegistrationOptions = WorkspaceSymbolRegistrationOptions
   { {-|
 
   -}
-  _workDoneProgress :: (Maybe Bool)
+  workDoneProgress :: (Maybe Bool)
   , {-|
   The server provides support to resolve additional
   information for a workspace symbol.
 
   @since 3.17.0
   -}
-  _resolveProvider :: (Maybe Bool)
+  resolveProvider :: (Maybe Bool)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

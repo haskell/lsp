@@ -47,11 +47,11 @@ data MarkupContent = MarkupContent
   { {-|
   The type of the Markup
   -}
-  _kind :: Language.LSP.Protocol.Internal.Types.MarkupKind.MarkupKind
+  kind :: Language.LSP.Protocol.Internal.Types.MarkupKind.MarkupKind
   , {-|
   The content itself
   -}
-  _value :: Data.Text.Text
+  value :: Data.Text.Text
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

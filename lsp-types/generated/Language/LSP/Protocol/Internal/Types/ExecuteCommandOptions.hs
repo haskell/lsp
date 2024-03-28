@@ -25,11 +25,11 @@ data ExecuteCommandOptions = ExecuteCommandOptions
   { {-|
 
   -}
-  _workDoneProgress :: (Maybe Bool)
+  workDoneProgress :: (Maybe Bool)
   , {-|
   The commands to be executed on the server
   -}
-  _commands :: [Data.Text.Text]
+  commands :: [Data.Text.Text]
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

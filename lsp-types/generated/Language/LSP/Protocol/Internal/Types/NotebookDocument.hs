@@ -30,27 +30,27 @@ data NotebookDocument = NotebookDocument
   { {-|
   The notebook document's uri.
   -}
-  _uri :: Language.LSP.Protocol.Types.Uri.Uri
+  uri :: Language.LSP.Protocol.Types.Uri.Uri
   , {-|
   The type of the notebook.
   -}
-  _notebookType :: Data.Text.Text
+  notebookType :: Data.Text.Text
   , {-|
   The version number of this document (it will increase after each
   change, including undo/redo).
   -}
-  _version :: Language.LSP.Protocol.Types.Common.Int32
+  version :: Language.LSP.Protocol.Types.Common.Int32
   , {-|
   Additional metadata stored with the notebook
   document.
 
   Note: should always be an object literal (e.g. LSPObject)
   -}
-  _metadata :: (Maybe Data.Aeson.Object)
+  metadata :: (Maybe Data.Aeson.Object)
   , {-|
   The cells of a notebook.
   -}
-  _cells :: [Language.LSP.Protocol.Internal.Types.NotebookCell.NotebookCell]
+  cells :: [Language.LSP.Protocol.Internal.Types.NotebookCell.NotebookCell]
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

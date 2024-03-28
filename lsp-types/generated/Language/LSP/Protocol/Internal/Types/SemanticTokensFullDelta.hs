@@ -27,7 +27,7 @@ data SemanticTokensFullDelta = SemanticTokensFullDelta
   { {-|
   The server supports deltas for full documents.
   -}
-  _delta :: (Maybe Bool)
+  delta :: (Maybe Bool)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

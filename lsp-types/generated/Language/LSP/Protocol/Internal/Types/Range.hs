@@ -35,11 +35,11 @@ data Range = Range
   { {-|
   The range's start position.
   -}
-  _start :: Language.LSP.Protocol.Internal.Types.Position.Position
+  start :: Language.LSP.Protocol.Internal.Types.Position.Position
   , {-|
   The range's end position.
   -}
-  _end :: Language.LSP.Protocol.Internal.Types.Position.Position
+  end :: Language.LSP.Protocol.Internal.Types.Position.Position
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

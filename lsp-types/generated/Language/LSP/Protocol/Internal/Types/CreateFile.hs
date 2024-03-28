@@ -30,19 +30,19 @@ data CreateFile = CreateFile
 
   @since 3.16.0
   -}
-  _annotationId :: (Maybe Language.LSP.Protocol.Internal.Types.ChangeAnnotationIdentifier.ChangeAnnotationIdentifier)
+  annotationId :: (Maybe Language.LSP.Protocol.Internal.Types.ChangeAnnotationIdentifier.ChangeAnnotationIdentifier)
   , {-|
   A create
   -}
-  _kind :: (Language.LSP.Protocol.Types.Singletons.AString "create")
+  kind :: (Language.LSP.Protocol.Types.Singletons.AString "create")
   , {-|
   The resource to create.
   -}
-  _uri :: Language.LSP.Protocol.Types.Uri.Uri
+  uri :: Language.LSP.Protocol.Types.Uri.Uri
   , {-|
   Additional options
   -}
-  _options :: (Maybe Language.LSP.Protocol.Internal.Types.CreateFileOptions.CreateFileOptions)
+  options :: (Maybe Language.LSP.Protocol.Internal.Types.CreateFileOptions.CreateFileOptions)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

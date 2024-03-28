@@ -25,7 +25,7 @@ data UnregistrationParams = UnregistrationParams
   { {-|
 
   -}
-  _unregisterations :: [Language.LSP.Protocol.Internal.Types.Unregistration.Unregistration]
+  unregisterations :: [Language.LSP.Protocol.Internal.Types.Unregistration.Unregistration]
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

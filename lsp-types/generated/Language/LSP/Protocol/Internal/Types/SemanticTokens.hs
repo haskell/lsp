@@ -28,11 +28,11 @@ data SemanticTokens = SemanticTokens
   A server can then instead of computing all semantic tokens again simply
   send a delta.
   -}
-  _resultId :: (Maybe Data.Text.Text)
+  resultId :: (Maybe Data.Text.Text)
   , {-|
   The actual tokens.
   -}
-  _data_ :: [Language.LSP.Protocol.Types.Common.UInt]
+  data_ :: [Language.LSP.Protocol.Types.Common.UInt]
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

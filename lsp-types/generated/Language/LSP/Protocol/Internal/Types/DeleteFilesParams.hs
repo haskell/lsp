@@ -28,7 +28,7 @@ data DeleteFilesParams = DeleteFilesParams
   { {-|
   An array of all files/folders deleted in this operation.
   -}
-  _files :: [Language.LSP.Protocol.Internal.Types.FileDelete.FileDelete]
+  files :: [Language.LSP.Protocol.Internal.Types.FileDelete.FileDelete]
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
