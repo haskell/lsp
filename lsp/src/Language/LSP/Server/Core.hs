@@ -23,6 +23,7 @@ import Control.Applicative
 import Control.Concurrent.Async
 import Control.Concurrent.MVar
 import Control.Concurrent.STM
+import Control.Concurrent.Extra as C
 import Control.Exception qualified as E
 import Control.Lens (at, (^.), (^?), _Just)
 import Control.Monad
@@ -211,6 +212,10 @@ data LanguageContextState config = LanguageContextState
   , resRegistrationsNot :: !(TVar (RegistrationMap Notification))
   , resRegistrationsReq :: !(TVar (RegistrationMap Request))
   , resLspId :: !(TVar Int32)
+  , resShutdown :: !(C.Barrier ())
+  -- ^ Has the server received 'shutdown'? Can be used to conveniently trigger e.g. thread termination,
+  -- but if you need a cleanup action to terminate before exiting, then you should install a full
+  -- 'shutdown' handler
   }
 
 type ResponseMap = IxMap LspId (Product SMethod ServerResponseCallback)
@@ -903,6 +908,25 @@ requestConfigUpdate logger = do
         Left err -> logger <& BadConfigurationResponse err `WithSeverity` Error
     else logger <& ConfigurationNotSupported `WithSeverity` Debug
 
+--------------------------------------------------------------------------------
+-- CONFIG
+--------------------------------------------------------------------------------
+
+-- | Checks if the server has received a 'shutdown' request.
+isShuttingDown :: (m ~ LspM config) => m Bool
+isShuttingDown = do
+  b <- resShutdown . resState <$> getLspEnv
+  r <- liftIO $ C.waitBarrierMaybe b
+  pure $ case r of
+    Just _ -> True
+    Nothing -> False
+
+-- | Blocks until the server receives a 'shutdown' request.
+waitShuttingDown :: (m ~ LspM config) => m ()
+waitShuttingDown = do
+  b <- resShutdown . resState <$> getLspEnv
+  liftIO $ C.waitBarrier b
+
 {- Note [LSP configuration]
 LSP configuration is a huge mess.
 - The configuration model of the client is not specified
@@ -987,4 +1011,17 @@ https://github.com/microsoft/language-server-protocol/issues/1159.
 The 'cancellable' property that we can set when making progress reports just
 affects whether the client should show a 'Cancel' button to the user in the UI.
 The client can still always choose to cancel for another reason.
+-}
+
+{- Note [Shutdown]
+The 'shutdown' request basically tells the server to clean up and stop doing things.
+In particular, it allows us to ignore or reject all further messages apart from 'exit'.
+
+We also provide a `Barrier` that indicates whether or not we are shutdown, this can
+be convenient, e.g. you can race a thread against `waitBarrier` to have it automatically
+be cancelled when we receive `shutdown`.
+
+Shutdown is a request, and the client won't send `exit` until a server responds, so if you
+want to be sure that some cleanup happens, you need to ensure we don't respond to `shutdown`
+until it's done. The best way to do this is just to install a specific `shutdown` handler.
 -}
