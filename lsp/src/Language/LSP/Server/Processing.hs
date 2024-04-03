@@ -22,9 +22,11 @@ import Colog.Core (
  )
 
 import Control.Concurrent.STM
+import Control.Concurrent.Extra as C
 import Control.Exception qualified as E
 import Control.Lens hiding (Empty)
 import Control.Monad
+import Debug.Trace
 import Control.Monad.Except ()
 import Control.Monad.IO.Class
 import Control.Monad.Reader
@@ -69,6 +71,8 @@ data LspProcessingLog
   | MessageProcessingError BSL.ByteString String
   | forall m. MissingHandler Bool (SClientMethod m)
   | ProgressCancel ProgressToken
+  | forall m. MessageDuringShutdown (SClientMethod m)
+  | ShuttingDown
   | Exiting
 
 deriving instance Show LspProcessingLog
@@ -85,7 +89,9 @@ instance Pretty LspProcessingLog where
       ]
   pretty (MissingHandler _ m) = "LSP: no handler for:" <+> pretty m
   pretty (ProgressCancel tid) = "LSP: cancelling action for token:" <+> pretty tid
-  pretty Exiting = "LSP: Got exit, exiting"
+  pretty (MessageDuringShutdown m) = "LSP: received message during shutdown:" <+> pretty m
+  pretty ShuttingDown = "LSP: received shutdown"
+  pretty Exiting = "LSP: received exit"
 
 processMessage :: (m ~ LspM config) => LogAction m (WithSeverity LspProcessingLog) -> BSL.ByteString -> m ()
 processMessage logger jsonStr = do
@@ -164,6 +170,7 @@ initializeRequestHandler logger ServerDefinition{..} vfs sendFunc req = do
       resRegistrationsNot <- newTVarIO mempty
       resRegistrationsReq <- newTVarIO mempty
       resLspId <- newTVarIO 0
+      resShutdown <- C.newBarrier
       pure LanguageContextState{..}
 
     -- Call the 'duringInitialization' callback to let the server kick stuff up
@@ -414,13 +421,21 @@ inferServerCapabilities _clientCaps o h =
 {- | Invokes the registered dynamic or static handlers for the given message and
  method, as well as doing some bookkeeping.
 -}
-handle :: (m ~ LspM config) => LogAction m (WithSeverity LspProcessingLog) -> SClientMethod meth -> TClientMessage meth -> m ()
+handle :: forall m config meth . (m ~ LspM config) => LogAction m (WithSeverity LspProcessingLog) -> SClientMethod meth -> TClientMessage meth -> m ()
 handle logger m msg =
   case m of
     SMethod_WorkspaceDidChangeWorkspaceFolders -> handle' logger (Just updateWorkspaceFolders) m msg
     SMethod_WorkspaceDidChangeConfiguration -> handle' logger (Just $ handleDidChangeConfiguration logger) m msg
     -- See Note [LSP configuration]
     SMethod_Initialized -> handle' logger (Just $ \_ -> initialDynamicRegistrations logger >> requestConfigUpdate (cmap (fmap LspCore) logger)) m msg
+    SMethod_Shutdown -> handle' logger (Just $ \_ -> signalShutdown) m msg
+      where
+        -- See Note [Shutdown]
+        signalShutdown :: LspM config ()
+        signalShutdown = do
+          logger <& ShuttingDown `WithSeverity` Info
+          b <- resShutdown . resState <$> getLspEnv
+          liftIO $ signalBarrier b ()
     SMethod_TextDocumentDidOpen -> handle' logger (Just $ vfsFunc logger openVFS) m msg
     SMethod_TextDocumentDidChange -> handle' logger (Just $ vfsFunc logger changeFromClientVFS) m msg
     SMethod_TextDocumentDidClose -> handle' logger (Just $ vfsFunc logger closeVFS) m msg
@@ -445,48 +460,40 @@ handle' logger mAction m msg = do
 
   env <- getLspEnv
   let Handlers{reqHandlers, notHandlers} = resHandlers env
-
-  let mkRspCb :: TRequestMessage (m1 :: Method ClientToServer Request) -> Either ResponseError (MessageResult m1) -> IO ()
-      mkRspCb req (Left err) =
-        runLspT env $
-          sendToClient $
-            FromServerRsp (req ^. L.method) $
-              TResponseMessage "2.0" (Just (req ^. L.id)) (Left err)
-      mkRspCb req (Right rsp) =
-        runLspT env $
-          sendToClient $
-            FromServerRsp (req ^. L.method) $
-              TResponseMessage "2.0" (Just (req ^. L.id)) (Right rsp)
+  shutdown <- isShuttingDown
 
   case splitClientMethod m of
+    -- See Note [Shutdown]
+    IsClientNot | shutdown, not (allowedMethod m) -> notificationDuringShutdown
+      where
+        allowedMethod SMethod_Exit = True
+        allowedMethod _ = False
     IsClientNot -> case pickHandler dynNotHandlers notHandlers of
       Just h -> liftIO $ h msg
       Nothing
         | SMethod_Exit <- m -> exitNotificationHandler logger msg
-        | otherwise -> do
-            reportMissingHandler
+        | otherwise -> missingNotificationHandler
+    -- See Note [Shutdown]
+    IsClientReq | shutdown, not (allowedMethod m) -> requestDuringShutdown msg
+      where
+        allowedMethod SMethod_Shutdown = True
+        allowedMethod _ = False
     IsClientReq -> case pickHandler dynReqHandlers reqHandlers of
-      Just h -> liftIO $ h msg (mkRspCb msg)
+      Just h -> liftIO $ h msg (runLspT env . sendResponse msg)
       Nothing
-        | SMethod_Shutdown <- m -> liftIO $ shutdownRequestHandler msg (mkRspCb msg)
-        | otherwise -> do
-            let errorMsg = T.pack $ unwords ["lsp:no handler for: ", show m]
-                err = ResponseError (InR ErrorCodes_MethodNotFound) errorMsg Nothing
-            sendToClient $
-              FromServerRsp (msg ^. L.method) $
-                TResponseMessage "2.0" (Just (msg ^. L.id)) (Left err)
+        | SMethod_Shutdown <- m -> liftIO $ shutdownRequestHandler msg (runLspT env . sendResponse msg)
+        | otherwise -> missingRequestHandler msg
     IsClientEither -> case msg of
+      -- See Note [Shutdown]
+      NotMess _ | shutdown ->  notificationDuringShutdown
       NotMess noti -> case pickHandler dynNotHandlers notHandlers of
         Just h -> liftIO $ h noti
-        Nothing -> reportMissingHandler
+        Nothing -> missingNotificationHandler
+      -- See Note [Shutdown]
+      ReqMess req | shutdown -> requestDuringShutdown req
       ReqMess req -> case pickHandler dynReqHandlers reqHandlers of
-        Just h -> liftIO $ h req (mkRspCb req)
-        Nothing -> do
-          let errorMsg = T.pack $ unwords ["lsp:no handler for: ", show m]
-              err = ResponseError (InR ErrorCodes_MethodNotFound) errorMsg Nothing
-          sendToClient $
-            FromServerRsp (req ^. L.method) $
-              TResponseMessage "2.0" (Just (req ^. L.id)) (Left err)
+        Just h -> liftIO $ h req (runLspT env . sendResponse req)
+        Nothing -> missingRequestHandler req
  where
   -- \| Checks to see if there's a dynamic handler, and uses it in favour of the
   -- static handler, if it exists.
@@ -496,13 +503,31 @@ handle' logger mAction m msg = do
     (Nothing, Just (ClientMessageHandler h)) -> Just h
     (Nothing, Nothing) -> Nothing
 
+  sendResponse :: forall m1 . TRequestMessage (m1 :: Method ClientToServer Request) -> Either ResponseError (MessageResult m1) -> m ()
+  sendResponse req res = sendToClient $ FromServerRsp (req ^. L.method) $ TResponseMessage "2.0" (Just (req ^. L.id)) res
+
+  requestDuringShutdown :: forall m1 . TRequestMessage (m1 :: Method ClientToServer Request) -> m ()
+  requestDuringShutdown req = do
+    logger <& MessageDuringShutdown m `WithSeverity` Warning
+    sendResponse req (Left (ResponseError (InR ErrorCodes_InvalidRequest) "Server is shutdown" Nothing))
+
+  notificationDuringShutdown :: m ()
+  notificationDuringShutdown = logger <& MessageDuringShutdown m `WithSeverity` Warning
+
   -- '$/' notifications should/could be ignored by server.
   -- Don't log errors in that case.
   -- See https://microsoft.github.io/language-server-protocol/specifications/specification-current/#-notifications-and-requests.
-  reportMissingHandler :: m ()
-  reportMissingHandler =
+  missingNotificationHandler :: m ()
+  missingNotificationHandler =
     let optional = isOptionalMethod (SomeMethod m)
      in logger <& MissingHandler optional m `WithSeverity` if optional then Warning else Error
+
+  missingRequestHandler :: TRequestMessage (m1 :: Method ClientToServer Request) -> m ()
+  missingRequestHandler req = do
+    logger <& MissingHandler False m `WithSeverity` Error
+    let errorMsg = T.pack $ unwords ["No handler for: ", show m]
+        err = ResponseError (InR ErrorCodes_MethodNotFound) errorMsg Nothing
+    sendResponse req (Left err)
 
 progressCancelHandler :: (m ~ LspM config) => LogAction m (WithSeverity LspProcessingLog) -> TMessage Method_WindowWorkDoneProgressCancel -> m ()
 progressCancelHandler logger (TNotificationMessage _ _ (WorkDoneProgressCancelParams tid)) = do

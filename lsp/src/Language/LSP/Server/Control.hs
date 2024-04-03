@@ -17,6 +17,7 @@ import Colog.Core qualified as L
 import Control.Applicative ((<|>))
 import Control.Concurrent
 import Control.Concurrent.STM.TChan
+import Control.Concurrent.Extra as C
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.STM
