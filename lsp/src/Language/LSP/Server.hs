@@ -35,6 +35,10 @@ module Language.LSP.Server (
   requestConfigUpdate,
   tryChangeConfig,
 
+  -- * Shutdown
+  isShuttingDown,
+  waitShuttingDown,
+
   -- * VFS
   getVirtualFile,
   getVirtualFiles,
