@@ -1,8 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
--- So we can keep using the old prettyprinter modules (which have a better
--- compatibility range) for now.
-{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Language.LSP.Server.Control (
   -- * Running
@@ -30,7 +27,7 @@ import Data.List
 import Data.Text qualified as T
 import Data.Text.Lazy qualified as TL
 import Data.Text.Lazy.Encoding qualified as TL
-import Data.Text.Prettyprint.Doc
+import Prettyprinter
 import Language.LSP.Logging (defaultClientLogger)
 import Language.LSP.Protocol.Message
 import Language.LSP.Server.Core

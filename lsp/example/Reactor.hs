@@ -4,9 +4,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeInType #-}
--- So we can keep using the old prettyprinter modules (which have a better
--- compatibility range) for now.
-{-# OPTIONS_GHC -Wno-deprecations #-}
 
 {- |
 This is an example language server built with haskell-lsp using a 'Reactor'
@@ -36,7 +33,7 @@ import Control.Monad.STM
 import Data.Aeson qualified as J
 import Data.Int (Int32)
 import Data.Text qualified as T
-import Data.Text.Prettyprint.Doc
+import Prettyprinter
 import GHC.Generics (Generic)
 import Language.LSP.Diagnostics
 import Language.LSP.Logging (defaultClientLogger)
