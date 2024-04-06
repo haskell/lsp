@@ -449,14 +449,15 @@ handle' ::
   TClientMessage meth ->
   m ()
 handle' logger mAction m msg = do
-  maybe (return ()) (\f -> f msg) mAction
+  shutdown <- isShuttingDown
+
+  when (not shutdown) $ maybe (return ()) (\f -> f msg) mAction
 
   dynReqHandlers <- getsState resRegistrationsReq
   dynNotHandlers <- getsState resRegistrationsNot
 
   env <- getLspEnv
   let Handlers{reqHandlers, notHandlers} = resHandlers env
-  shutdown <- isShuttingDown
 
   case splitClientMethod m of
     -- See Note [Shutdown]
