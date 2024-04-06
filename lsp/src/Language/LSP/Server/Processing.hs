@@ -26,6 +26,7 @@ import Control.Concurrent.Extra as C
 import Control.Exception qualified as E
 import Control.Lens hiding (Empty)
 import Control.Monad
+import Debug.Trace
 import Control.Monad.Except ()
 import Control.Monad.IO.Class
 import Control.Monad.Reader
@@ -48,7 +49,6 @@ import Data.Foldable (traverse_)
 import Data.Functor.Product qualified as P
 import Data.IxMap
 import Data.List
-import Data.GADT.Compare (geq)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Map.Strict qualified as Map
 import Data.Monoid
@@ -464,14 +464,20 @@ handle' logger mAction m msg = do
 
   case splitClientMethod m of
     -- See Note [Shutdown]
-    IsClientNot | shutdown, Nothing <- m `geq` SMethod_Exit -> notificationDuringShutdown
+    IsClientNot | shutdown, not (allowedMethod m) -> notificationDuringShutdown
+      where
+        allowedMethod SMethod_Exit = True
+        allowedMethod _ = False
     IsClientNot -> case pickHandler dynNotHandlers notHandlers of
       Just h -> liftIO $ h msg
       Nothing
         | SMethod_Exit <- m -> exitNotificationHandler logger msg
         | otherwise -> missingNotificationHandler
     -- See Note [Shutdown]
-    IsClientReq | shutdown -> requestDuringShutdown msg
+    IsClientReq | shutdown, not (allowedMethod m) -> requestDuringShutdown msg
+      where
+        allowedMethod SMethod_Shutdown = True
+        allowedMethod _ = False
     IsClientReq -> case pickHandler dynReqHandlers reqHandlers of
       Just h -> liftIO $ h msg (runLspT env . sendResponse msg)
       Nothing
@@ -479,7 +485,7 @@ handle' logger mAction m msg = do
         | otherwise -> missingRequestHandler msg
     IsClientEither -> case msg of
       -- See Note [Shutdown]
-      NotMess _ | shutdown, Nothing <- m `geq` SMethod_Exit ->  notificationDuringShutdown
+      NotMess _ | shutdown ->  notificationDuringShutdown
       NotMess noti -> case pickHandler dynNotHandlers notHandlers of
         Just h -> liftIO $ h noti
         Nothing -> missingNotificationHandler

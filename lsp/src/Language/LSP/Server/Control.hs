@@ -230,7 +230,7 @@ parseOne logger clientIn = go
 
 -- | Simple server to make sure all output is serialised
 sendServer :: LogAction IO (WithSeverity LspServerLog) -> TChan J.Value -> (BSL.ByteString -> IO ()) -> IO ()
-sendServer _logger msgChan clientOut = do
+sendServer logger msgChan clientOut = do
   forever $ do
     msg <- atomically $ readTChan msgChan
 
@@ -247,9 +247,9 @@ sendServer _logger msgChan clientOut = do
 
     clientOut out
 
--- TODO: figure out how to re-enable
--- This can lead to infinite recursion in logging, see https://github.com/haskell/lsp/issues/447
--- logger <& SendMsg (TL.decodeUtf8 str) `WithSeverity` Debug
+    -- TODO: figure out how to re-enable
+    -- This can lead to infinite recursion in logging, see https://github.com/haskell/lsp/issues/447
+    logger <& SendMsg (TL.decodeUtf8 str) `WithSeverity` Debug
 
 _ONE_CRLF :: BS.ByteString
 _ONE_CRLF = "\r\n"

@@ -66,7 +66,6 @@ import Language.LSP.Protocol.Utils.SMethodMap qualified as SMethodMap
 import Language.LSP.VFS hiding (end)
 import Prettyprinter
 import System.Random hiding (next)
-import GHC.Foreign (withCStringsLen)
 
 -- ---------------------------------------------------------------------
 {-# ANN module ("HLint: ignore Eta reduce" :: String) #-}

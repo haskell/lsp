@@ -70,7 +70,6 @@ library
     , random                ^>=1.2
     , row-types             ^>=1.0
     , sorted-list           ^>=0.2.1
-    , some                  ^>=1.0
     , stm                   ^>=2.5
     , text                  >=1      && <2.2
     , text-rope             ^>=0.2
