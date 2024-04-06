@@ -67,13 +67,13 @@ import Data.Ord
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.IO qualified as T
-import Prettyprinter hiding (line)
 import Data.Text.Utf16.Lines as Utf16 (Position (..))
 import Data.Text.Utf16.Rope.Mixed (Rope)
 import Data.Text.Utf16.Rope.Mixed qualified as Rope
 import Language.LSP.Protocol.Lens qualified as J
 import Language.LSP.Protocol.Message qualified as J
 import Language.LSP.Protocol.Types qualified as J
+import Prettyprinter hiding (line)
 import System.Directory
 import System.FilePath
 import System.IO

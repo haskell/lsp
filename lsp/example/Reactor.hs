@@ -33,7 +33,6 @@ import Control.Monad.STM
 import Data.Aeson qualified as J
 import Data.Int (Int32)
 import Data.Text qualified as T
-import Prettyprinter
 import GHC.Generics (Generic)
 import Language.LSP.Diagnostics
 import Language.LSP.Logging (defaultClientLogger)
@@ -42,6 +41,7 @@ import Language.LSP.Protocol.Message qualified as LSP
 import Language.LSP.Protocol.Types qualified as LSP
 import Language.LSP.Server
 import Language.LSP.VFS
+import Prettyprinter
 import System.Exit
 import System.IO
 

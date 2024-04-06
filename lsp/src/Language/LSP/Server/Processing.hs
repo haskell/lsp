@@ -50,7 +50,6 @@ import Data.Monoid
 import Data.String (fromString)
 import Data.Text qualified as T
 import Data.Text.Lazy.Encoding qualified as TL
-import Prettyprinter
 import Language.LSP.Protocol.Lens qualified as L
 import Language.LSP.Protocol.Message
 import Language.LSP.Protocol.Types
@@ -58,6 +57,7 @@ import Language.LSP.Protocol.Utils.SMethodMap (SMethodMap)
 import Language.LSP.Protocol.Utils.SMethodMap qualified as SMethodMap
 import Language.LSP.Server.Core
 import Language.LSP.VFS as VFS
+import Prettyprinter
 import System.Exit
 
 data LspProcessingLog

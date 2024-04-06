@@ -27,12 +27,12 @@ import Data.List
 import Data.Text qualified as T
 import Data.Text.Lazy qualified as TL
 import Data.Text.Lazy.Encoding qualified as TL
-import Prettyprinter
 import Language.LSP.Logging (defaultClientLogger)
 import Language.LSP.Protocol.Message
 import Language.LSP.Server.Core
 import Language.LSP.Server.Processing qualified as Processing
 import Language.LSP.VFS
+import Prettyprinter
 import System.IO
 
 data LspServerLog
