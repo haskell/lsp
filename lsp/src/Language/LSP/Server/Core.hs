@@ -21,9 +21,9 @@ import Colog.Core (
  )
 import Control.Applicative
 import Control.Concurrent.Async
+import Control.Concurrent.Extra as C
 import Control.Concurrent.MVar
 import Control.Concurrent.STM
-import Control.Concurrent.Extra as C
 import Control.Exception qualified as E
 import Control.Lens (at, (^.), (^?), _Just)
 import Control.Monad

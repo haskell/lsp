@@ -21,8 +21,8 @@ import Colog.Core (
   (<&),
  )
 
-import Control.Concurrent.STM
 import Control.Concurrent.Extra as C
+import Control.Concurrent.STM
 import Control.Exception qualified as E
 import Control.Lens hiding (Empty)
 import Control.Monad
@@ -420,7 +420,7 @@ inferServerCapabilities _clientCaps o h =
 {- | Invokes the registered dynamic or static handlers for the given message and
  method, as well as doing some bookkeeping.
 -}
-handle :: forall m config meth . (m ~ LspM config) => LogAction m (WithSeverity LspProcessingLog) -> SClientMethod meth -> TClientMessage meth -> m ()
+handle :: forall m config meth. (m ~ LspM config) => LogAction m (WithSeverity LspProcessingLog) -> SClientMethod meth -> TClientMessage meth -> m ()
 handle logger m msg =
   case m of
     SMethod_WorkspaceDidChangeWorkspaceFolders -> handle' logger (Just updateWorkspaceFolders) m msg
@@ -428,13 +428,13 @@ handle logger m msg =
     -- See Note [LSP configuration]
     SMethod_Initialized -> handle' logger (Just $ \_ -> initialDynamicRegistrations logger >> requestConfigUpdate (cmap (fmap LspCore) logger)) m msg
     SMethod_Shutdown -> handle' logger (Just $ \_ -> signalShutdown) m msg
-      where
-        -- See Note [Shutdown]
-        signalShutdown :: LspM config ()
-        signalShutdown = do
-          logger <& ShuttingDown `WithSeverity` Info
-          b <- resShutdown . resState <$> getLspEnv
-          liftIO $ signalBarrier b ()
+     where
+      -- See Note [Shutdown]
+      signalShutdown :: LspM config ()
+      signalShutdown = do
+        logger <& ShuttingDown `WithSeverity` Info
+        b <- resShutdown . resState <$> getLspEnv
+        liftIO $ signalBarrier b ()
     SMethod_TextDocumentDidOpen -> handle' logger (Just $ vfsFunc logger openVFS) m msg
     SMethod_TextDocumentDidChange -> handle' logger (Just $ vfsFunc logger changeFromClientVFS) m msg
     SMethod_TextDocumentDidClose -> handle' logger (Just $ vfsFunc logger closeVFS) m msg
@@ -464,9 +464,9 @@ handle' logger mAction m msg = do
   case splitClientMethod m of
     -- See Note [Shutdown]
     IsClientNot | shutdown, not (allowedMethod m) -> notificationDuringShutdown
-      where
-        allowedMethod SMethod_Exit = True
-        allowedMethod _ = False
+     where
+      allowedMethod SMethod_Exit = True
+      allowedMethod _ = False
     IsClientNot -> case pickHandler dynNotHandlers notHandlers of
       Just h -> liftIO $ h msg
       Nothing
@@ -474,9 +474,9 @@ handle' logger mAction m msg = do
         | otherwise -> missingNotificationHandler
     -- See Note [Shutdown]
     IsClientReq | shutdown, not (allowedMethod m) -> requestDuringShutdown msg
-      where
-        allowedMethod SMethod_Shutdown = True
-        allowedMethod _ = False
+     where
+      allowedMethod SMethod_Shutdown = True
+      allowedMethod _ = False
     IsClientReq -> case pickHandler dynReqHandlers reqHandlers of
       Just h -> liftIO $ h msg (runLspT env . sendResponse msg)
       Nothing
@@ -484,7 +484,7 @@ handle' logger mAction m msg = do
         | otherwise -> missingRequestHandler msg
     IsClientEither -> case msg of
       -- See Note [Shutdown]
-      NotMess _ | shutdown ->  notificationDuringShutdown
+      NotMess _ | shutdown -> notificationDuringShutdown
       NotMess noti -> case pickHandler dynNotHandlers notHandlers of
         Just h -> liftIO $ h noti
         Nothing -> missingNotificationHandler
@@ -502,10 +502,10 @@ handle' logger mAction m msg = do
     (Nothing, Just (ClientMessageHandler h)) -> Just h
     (Nothing, Nothing) -> Nothing
 
-  sendResponse :: forall m1 . TRequestMessage (m1 :: Method ClientToServer Request) -> Either ResponseError (MessageResult m1) -> m ()
+  sendResponse :: forall m1. TRequestMessage (m1 :: Method ClientToServer Request) -> Either ResponseError (MessageResult m1) -> m ()
   sendResponse req res = sendToClient $ FromServerRsp (req ^. L.method) $ TResponseMessage "2.0" (Just (req ^. L.id)) res
 
-  requestDuringShutdown :: forall m1 . TRequestMessage (m1 :: Method ClientToServer Request) -> m ()
+  requestDuringShutdown :: forall m1. TRequestMessage (m1 :: Method ClientToServer Request) -> m ()
   requestDuringShutdown req = do
     logger <& MessageDuringShutdown m `WithSeverity` Warning
     sendResponse req (Left (ResponseError (InR ErrorCodes_InvalidRequest) "Server is shutdown" Nothing))
