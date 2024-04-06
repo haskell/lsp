@@ -1,5 +1,11 @@
 # Revision history for lsp
 
+## Unreleased
+
+- The server will now reject messages sent after `shutdown` has been received.
+- There is a `shutdownBarrier` member in the server state which can be used to
+  conveniently run actions when shutdown is triggered.
+
 ## 2.4.0.0
 
 - Server-created progress now will not send reports until and unless the client 
