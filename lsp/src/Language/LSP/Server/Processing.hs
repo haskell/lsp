@@ -450,6 +450,10 @@ handle' ::
   m ()
 handle' logger mAction m msg = do
   shutdown <- isShuttingDown
+  let allowedMethod m = case (splitClientMethod m, m) of
+        (IsClientNot, SMethod_Exit) -> True
+        (IsClientReq, SMethod_Shutdown) -> True
+        _ -> False
 
   when (not shutdown || allowedMethod m) $ maybe (return ()) (\f -> f msg) mAction
 
@@ -462,9 +466,6 @@ handle' logger mAction m msg = do
   case splitClientMethod m of
     -- See Note [Shutdown]
     IsClientNot | shutdown, not (allowedMethod m) -> notificationDuringShutdown
-     where
-      allowedMethod SMethod_Exit = True
-      allowedMethod _ = False
     IsClientNot -> case pickHandler dynNotHandlers notHandlers of
       Just h -> liftIO $ h msg
       Nothing
@@ -472,9 +473,6 @@ handle' logger mAction m msg = do
         | otherwise -> missingNotificationHandler
     -- See Note [Shutdown]
     IsClientReq | shutdown, not (allowedMethod m) -> requestDuringShutdown msg
-     where
-      allowedMethod SMethod_Shutdown = True
-      allowedMethod _ = False
     IsClientReq -> case pickHandler dynReqHandlers reqHandlers of
       Just h -> liftIO $ h msg (runLspT env . sendResponse msg)
       Nothing
