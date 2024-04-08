@@ -70,6 +70,7 @@ data LspProcessingLog
   | forall m. MessageDuringShutdown (SClientMethod m)
   | ShuttingDown
   | Exiting
+  | LspMessage String
 
 deriving instance Show LspProcessingLog
 
@@ -88,6 +89,7 @@ instance Pretty LspProcessingLog where
   pretty (MessageDuringShutdown m) = "LSP: received message during shutdown:" <+> pretty m
   pretty ShuttingDown = "LSP: received shutdown"
   pretty Exiting = "LSP: received exit"
+  pretty (LspMessage s) = "LSP Msg:" <+> pretty s
 
 processMessage :: (m ~ LspM config) => LogAction m (WithSeverity LspProcessingLog) -> BSL.ByteString -> m ()
 processMessage logger jsonStr = do
@@ -455,7 +457,10 @@ handle' logger mAction m msg = do
         (IsClientReq, SMethod_Shutdown) -> True
         _ -> False
 
+
   when (not shutdown || allowedMethod m) $ maybe (return ()) (\f -> f msg) mAction
+
+  logger <& LspMessage (show m) `WithSeverity` Debug
 
   dynReqHandlers <- getsState resRegistrationsReq
   dynNotHandlers <- getsState resRegistrationsNot
