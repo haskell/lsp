@@ -451,7 +451,7 @@ handle' ::
 handle' logger mAction m msg = do
   shutdown <- isShuttingDown
 
-  when (not shutdown) $ maybe (return ()) (\f -> f msg) mAction
+  when (not shutdown || allowedMethod m) $ maybe (return ()) (\f -> f msg) mAction
 
   dynReqHandlers <- getsState resRegistrationsReq
   dynNotHandlers <- getsState resRegistrationsNot
