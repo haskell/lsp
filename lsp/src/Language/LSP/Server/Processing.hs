@@ -457,10 +457,8 @@ handle' logger mAction m msg = do
         (IsClientReq, SMethod_Shutdown) -> True
         _ -> False
 
-
-  when (not shutdown || allowedMethod m) $ maybe (return ()) (\f -> f msg) mAction
-
   logger <& LspMessage (show m) `WithSeverity` Debug
+  when (not shutdown || allowedMethod m) $ maybe (return ()) (\f -> f msg) mAction
 
   dynReqHandlers <- getsState resRegistrationsReq
   dynNotHandlers <- getsState resRegistrationsNot
