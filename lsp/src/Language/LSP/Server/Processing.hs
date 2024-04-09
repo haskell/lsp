@@ -94,6 +94,8 @@ instance Pretty LspProcessingLog where
 processMessage :: (m ~ LspM config) => LogAction m (WithSeverity LspProcessingLog) -> BSL.ByteString -> m ()
 processMessage logger jsonStr = do
   pendingResponsesVar <- LspT $ asks $ resPendingResponses . resState
+  shutdown <- isShuttingDown
+  logger <& LspMessage ("processMessage ["<> show shutdown <> "]: "<> show jsonStr) `WithSeverity` Debug
   join $ liftIO $ atomically $ fmap handleErrors $ runExceptT $ do
     val <- except $ eitherDecode jsonStr
     pending <- lift $ readTVar pendingResponsesVar
@@ -102,8 +104,9 @@ processMessage logger jsonStr = do
       FromClientMess m mess ->
         pure $ handle logger m mess
       FromClientRsp (P.Pair (ServerResponseCallback f) (Const !newMap)) res -> do
-        writeTVar pendingResponsesVar newMap
-        pure $ liftIO $ f (res ^. L.result)
+        unless shutdown <$> do
+          writeTVar pendingResponsesVar newMap
+          pure $ liftIO $ f (res ^. L.result)
  where
   parser :: ResponseMap -> Value -> Parser (FromClientMessage' (P.Product ServerResponseCallback (Const ResponseMap)))
   parser rm = parseClientMessage $ \i ->
@@ -457,7 +460,6 @@ handle' logger mAction m msg = do
         (IsClientReq, SMethod_Shutdown) -> True
         _ -> False
 
-  logger <& LspMessage (show m) `WithSeverity` Debug
   when (not shutdown || allowedMethod m) $ maybe (return ()) (\f -> f msg) mAction
 
   dynReqHandlers <- getsState resRegistrationsReq
