@@ -70,7 +70,6 @@ data LspProcessingLog
   | forall m. MessageDuringShutdown (SClientMethod m)
   | ShuttingDown
   | Exiting
-  | LspMessage String
 
 deriving instance Show LspProcessingLog
 
@@ -89,13 +88,11 @@ instance Pretty LspProcessingLog where
   pretty (MessageDuringShutdown m) = "LSP: received message during shutdown:" <+> pretty m
   pretty ShuttingDown = "LSP: received shutdown"
   pretty Exiting = "LSP: received exit"
-  pretty (LspMessage s) = "LSP Msg:" <+> pretty s
 
 processMessage :: (m ~ LspM config) => LogAction m (WithSeverity LspProcessingLog) -> BSL.ByteString -> m ()
 processMessage logger jsonStr = do
   pendingResponsesVar <- LspT $ asks $ resPendingResponses . resState
   shutdown <- isShuttingDown
-  logger <& LspMessage ("processMessage ["<> show shutdown <> "]: "<> show jsonStr) `WithSeverity` Debug
   join $ liftIO $ atomically $ fmap handleErrors $ runExceptT $ do
     val <- except $ eitherDecode jsonStr
     pending <- lift $ readTVar pendingResponsesVar
