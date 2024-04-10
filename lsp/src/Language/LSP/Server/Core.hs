@@ -1024,4 +1024,8 @@ be cancelled when we receive `shutdown`.
 Shutdown is a request, and the client won't send `exit` until a server responds, so if you
 want to be sure that some cleanup happens, you need to ensure we don't respond to `shutdown`
 until it's done. The best way to do this is just to install a specific `shutdown` handler.
+
+After the `shutdown` request, we don't handle any more requests and notifications other than
+`exit`. We also don't handle any more responses to requests we have sent but just throw the
+responses away.
 -}

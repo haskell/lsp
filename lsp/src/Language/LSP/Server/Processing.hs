@@ -92,6 +92,7 @@ instance Pretty LspProcessingLog where
 processMessage :: (m ~ LspM config) => LogAction m (WithSeverity LspProcessingLog) -> BSL.ByteString -> m ()
 processMessage logger jsonStr = do
   pendingResponsesVar <- LspT $ asks $ resPendingResponses . resState
+  shutdown <- isShuttingDown
   join $ liftIO $ atomically $ fmap handleErrors $ runExceptT $ do
     val <- except $ eitherDecode jsonStr
     pending <- lift $ readTVar pendingResponsesVar
@@ -100,8 +101,10 @@ processMessage logger jsonStr = do
       FromClientMess m mess ->
         pure $ handle logger m mess
       FromClientRsp (P.Pair (ServerResponseCallback f) (Const !newMap)) res -> do
+        -- see Note [Shutdown]
         writeTVar pendingResponsesVar newMap
-        pure $ liftIO $ f (res ^. L.result)
+        unless shutdown <$> do
+          pure $ liftIO $ f (res ^. L.result)
  where
   parser :: ResponseMap -> Value -> Parser (FromClientMessage' (P.Product ServerResponseCallback (Const ResponseMap)))
   parser rm = parseClientMessage $ \i ->
@@ -449,21 +452,30 @@ handle' ::
   TClientMessage meth ->
   m ()
 handle' logger mAction m msg = do
-  maybe (return ()) (\f -> f msg) mAction
+  shutdown <- isShuttingDown
+  -- These are the methods that we are allowed to process during shutdown.
+  -- The reason that we do not include 'shutdown' itself here is because
+  -- by the time we get the first 'shutdown' message, isShuttingDown will
+  -- still be false, so we would still be able to process it.
+  -- This ensures we won't process the second 'shutdown' message and only
+  -- process 'exit' during shutdown.
+  let allowedMethod m = case (splitClientMethod m, m) of
+        (IsClientNot, SMethod_Exit) -> True
+        _ -> False
+
+  case mAction of
+    Just f | not shutdown || allowedMethod m -> f msg
+    _ -> pure ()
 
   dynReqHandlers <- getsState resRegistrationsReq
   dynNotHandlers <- getsState resRegistrationsNot
 
   env <- getLspEnv
   let Handlers{reqHandlers, notHandlers} = resHandlers env
-  shutdown <- isShuttingDown
 
   case splitClientMethod m of
     -- See Note [Shutdown]
     IsClientNot | shutdown, not (allowedMethod m) -> notificationDuringShutdown
-     where
-      allowedMethod SMethod_Exit = True
-      allowedMethod _ = False
     IsClientNot -> case pickHandler dynNotHandlers notHandlers of
       Just h -> liftIO $ h msg
       Nothing
@@ -471,9 +483,6 @@ handle' logger mAction m msg = do
         | otherwise -> missingNotificationHandler
     -- See Note [Shutdown]
     IsClientReq | shutdown, not (allowedMethod m) -> requestDuringShutdown msg
-     where
-      allowedMethod SMethod_Shutdown = True
-      allowedMethod _ = False
     IsClientReq -> case pickHandler dynReqHandlers reqHandlers of
       Just h -> liftIO $ h msg (runLspT env . sendResponse msg)
       Nothing
