@@ -457,7 +457,9 @@ handle' logger mAction m msg = do
         (IsClientReq, SMethod_Shutdown) -> True
         _ -> False
 
-  when (not shutdown || allowedMethod m) $ maybe (return ()) (\f -> f msg) mAction
+  case maction of 
+    Just f | not shutdown || allowedMethod m -> f msg
+    _ -> pure ()
 
   dynReqHandlers <- getsState resRegistrationsReq
   dynNotHandlers <- getsState resRegistrationsNot
