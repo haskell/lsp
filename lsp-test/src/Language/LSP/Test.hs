@@ -24,6 +24,7 @@ module Language.LSP.Test (
   runSessionWithHandles,
   runSessionWithHandles',
   setIgnoringLogNotifications,
+  setIgnoringProgressNotifications,
   setIgnoringConfigurationRequests,
   setIgnoringRegistrationRequests,
 
@@ -472,15 +473,19 @@ initializeResponse :: Session (TResponseMessage Method_Initialize)
 initializeResponse = ask >>= (liftIO . readMVar) . initRsp
 
 setIgnoringLogNotifications :: Bool -> Session ()
-setIgnoringLogNotifications value = do
+setIgnoringLogNotifications value =
   modify (\ss -> ss{ignoringLogNotifications = value})
 
+setIgnoringProgressNotifications :: Bool -> Session ()
+setIgnoringProgressNotifications value =
+  modify (\ss -> ss{ignoringProgressNotifications = value})
+
 setIgnoringConfigurationRequests :: Bool -> Session ()
-setIgnoringConfigurationRequests value = do
+setIgnoringConfigurationRequests value =
   modify (\ss -> ss{ignoringConfigurationRequests = value})
 
 setIgnoringRegistrationRequests :: Bool -> Session ()
-setIgnoringRegistrationRequests value = do
+setIgnoringRegistrationRequests value =
   modify (\ss -> ss{ignoringRegistrationRequests = value})
 
 {- | Modify the client config. This will send a notification to the server that the

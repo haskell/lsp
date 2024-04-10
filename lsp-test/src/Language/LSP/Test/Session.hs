@@ -118,13 +118,15 @@ data SessionConfig = SessionConfig
   -- with a 'mylang' key whose value is the actual config for the server. You
   -- can also include other config sections if your server may request those.
   , ignoreLogNotifications :: Bool
-  -- ^ Whether or not to ignore @window/showMessage@ and @window/logMessage@ notifications 
+  -- ^ Whether or not to ignore @window/showMessage@ and @window/logMessage@ notifications
   -- from the server, defaults to True.
+  , ignoreProgressNotifications :: Bool
+  -- ^ Whether or not to ignore @$/progress@ notifications from the server, defaults to True.
   , ignoreConfigurationRequests :: Bool
   -- ^ Whether or not to ignore @workspace/configuration@ requests from the server,
   -- defaults to True.
   , ignoreRegistrationRequests :: Bool
-  -- ^ Whether or not to ignore @client/registerCapability@ and @client/unregisterCapability@ 
+  -- ^ Whether or not to ignore @client/registerCapability@ and @client/unregisterCapability@
   -- requests from the server, defaults to True.
   , initialWorkspaceFolders :: Maybe [WorkspaceFolder]
   -- ^ The initial workspace folders to send in the @initialize@ request.
@@ -133,7 +135,7 @@ data SessionConfig = SessionConfig
 
 -- | The configuration used in 'Language.LSP.Test.runSession'.
 defaultConfig :: SessionConfig
-defaultConfig = SessionConfig 60 False False True mempty True True True Nothing
+defaultConfig = SessionConfig 60 False False True mempty True True True True Nothing
 
 instance Default SessionConfig where
   def = defaultConfig
@@ -192,6 +194,7 @@ data SessionState = SessionState
   , curLspConfig :: Object
   , curProgressSessions :: !(Set.Set ProgressToken)
   , ignoringLogNotifications :: Bool
+  , ignoringProgressNotifications :: Bool
   , ignoringConfigurationRequests :: Bool
   , ignoringRegistrationRequests :: Bool
   }
@@ -297,6 +300,7 @@ runSession' serverIn serverOut mServerProc serverHandler config caps rootDir exi
         (lspConfig config)
         mempty
         (ignoreLogNotifications config)
+        (ignoreProgressNotifications config)
         (ignoreConfigurationRequests config)
         (ignoreRegistrationRequests config)
       runSession' = runSessionMonad context initState
@@ -347,12 +351,13 @@ updateStateC = awaitForever $ \msg -> do
 
       -- we have to return exactly the number of sections requested, so if we can't find all of them then that's an error
       sendMessage $ TResponseMessage "2.0" (Just $ r ^. L.id) $
-        if null errs 
+        if null errs
         then (Right configs)
         else Left $ ResponseError (InL LSPErrorCodes_RequestFailed) ("No configuration for requested sections: " <> (T.pack $ show errs)) Nothing
     _ -> pure ()
   unless (
     (ignoringLogNotifications state && isLogNotification msg)
+    || (ignoringProgressNotifications state && isProgressNotification msg)
     || (ignoringConfigurationRequests state && isConfigRequest msg)
     || (ignoringRegistrationRequests state && isRegistrationRequest msg)) $
     yield msg
@@ -363,6 +368,9 @@ updateStateC = awaitForever $ \msg -> do
     isLogNotification (FromServerMess SMethod_WindowLogMessage _) = True
     isLogNotification (FromServerMess SMethod_WindowShowDocument _) = True
     isLogNotification _ = False
+
+    isProgressNotification (FromServerMess SMethod_Progress _) = True
+    isProgressNotification _ = False
 
     isConfigRequest (FromServerMess SMethod_WorkspaceConfiguration _) = True
     isConfigRequest _ = False
