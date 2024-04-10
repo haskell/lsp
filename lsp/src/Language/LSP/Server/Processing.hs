@@ -457,7 +457,7 @@ handle' logger mAction m msg = do
         (IsClientReq, SMethod_Shutdown) -> True
         _ -> False
 
-  case maction of 
+  case mAction of 
     Just f | not shutdown || allowedMethod m -> f msg
     _ -> pure ()
 
