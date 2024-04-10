@@ -878,8 +878,6 @@ reverseSortEdit (L.WorkspaceEdit cs dcs anns) = L.WorkspaceEdit cs' dcs' anns
 -- | Given a new config object, try to update our config with it.
 tryChangeConfig :: (m ~ LspM config) => LogAction m (WithSeverity LspCoreLog) -> J.Value -> m ()
 tryChangeConfig logger newConfigObject = do
-  shutDown <- isShuttingDown
-  unless shutDown $ do
     parseCfg <- LspT $ asks resParseConfig
     res <- stateState resConfig $ \oldConfig -> case parseCfg oldConfig newConfigObject of
       Left err -> (Left err, oldConfig)
