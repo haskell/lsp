@@ -457,7 +457,7 @@ handle' logger mAction m msg = do
   -- The reason that we do not include 'shutdown' itself here is because
   -- by the time we get the first 'shutdown' message, isShuttingDown will
   -- still be false, so we would still be able to process it.
-  -- This ensures we won't process the second 'shutdown' message and only 
+  -- This ensures we won't process the second 'shutdown' message and only
   -- process 'exit' during shutdown.
   let allowedMethod m = case (splitClientMethod m, m) of
         (IsClientNot, SMethod_Exit) -> True
