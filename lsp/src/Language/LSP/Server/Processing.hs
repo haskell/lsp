@@ -458,6 +458,7 @@ handle' logger mAction m msg = do
   -- state to "shutting down" just _before_ we process the message itself!
   let allowedMethod m = case (splitClientMethod m, m) of
         (IsClientNot, SMethod_Exit) -> True
+        -- we do not allow SMethod_Shutdown to be called during shutdown
         _ -> False
 
   case mAction of
