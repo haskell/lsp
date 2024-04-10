@@ -101,8 +101,9 @@ processMessage logger jsonStr = do
       FromClientMess m mess ->
         pure $ handle logger m mess
       FromClientRsp (P.Pair (ServerResponseCallback f) (Const !newMap)) res -> do
+        -- see Note [Shutdown]
+        writeTVar pendingResponsesVar newMap
         unless shutdown <$> do
-          writeTVar pendingResponsesVar newMap
           pure $ liftIO $ f (res ^. L.result)
  where
   parser :: ResponseMap -> Value -> Parser (FromClientMessage' (P.Product ServerResponseCallback (Const ResponseMap)))
