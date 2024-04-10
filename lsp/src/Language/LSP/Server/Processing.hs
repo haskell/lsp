@@ -454,11 +454,13 @@ handle' ::
 handle' logger mAction m msg = do
   shutdown <- isShuttingDown
   -- These are the methods that we are allowed to process during shutdown.
-  -- The reason that we include 'shutdown' itself here is because we change
-  -- state to "shutting down" just _before_ we process the message itself!
+  -- The reason that we do not include 'shutdown' itself here is because 
+  -- by the time we get the first 'shutdown' message, isShuttingDown will
+  -- still be false, so we would still be able to process it.
+  -- This ensures we won't process the second 'shutdown' message and only 
+  -- process 'exit' during shutdown.
   let allowedMethod m = case (splitClientMethod m, m) of
         (IsClientNot, SMethod_Exit) -> True
-        -- we do not allow SMethod_Shutdown to be called during shutdown
         _ -> False
 
   case mAction of
