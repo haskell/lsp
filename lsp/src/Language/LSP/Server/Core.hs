@@ -1026,6 +1026,6 @@ want to be sure that some cleanup happens, you need to ensure we don't respond t
 until it's done. The best way to do this is just to install a specific `shutdown` handler.
 
 After the `shutdown` request, we don't handle any more requests and notifications other than
-`exit`. We also don't handle any more responses to requests we have sent but just throw the 
-responses away. 
+`exit`. We also don't handle any more responses to requests we have sent but just throw the
+responses away.
 -}
