@@ -90,6 +90,9 @@ library
   else
     build-depends: filepath >=1.4 && < 1.6
 
+  if impl(ghc >= 9.6)
+    build-depends: exceptions ^>=0.10
+
   ghc-options:
     -Wall -Wmissing-deriving-strategies
     -Wno-unticked-promoted-constructors
