@@ -1,10 +1,8 @@
 {-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module VspSpec where
 
-import Data.Row
 import Data.String
 import Data.Text qualified as T
 import Data.Text.Utf16.Rope.Mixed qualified as Rope

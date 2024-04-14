@@ -50,7 +50,7 @@ type DiagnosticsBySource = Map.Map (Maybe Text) (SL.SortedList J.Diagnostic)
 -- ---------------------------------------------------------------------
 
 partitionBySource :: [J.Diagnostic] -> DiagnosticsBySource
-partitionBySource diags = Map.fromListWith mappend $ map (\d -> (J._source d, (SL.singleton d))) diags
+partitionBySource diags = Map.fromListWith mappend $ map (\d -> (J._source d, SL.singleton d)) diags
 
 -- ---------------------------------------------------------------------
 

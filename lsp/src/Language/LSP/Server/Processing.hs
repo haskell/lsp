@@ -1,5 +1,4 @@
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE RecursiveDo #-}
@@ -47,7 +46,6 @@ import Data.IxMap
 import Data.List
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Map.Strict qualified as Map
-import Data.Monoid
 import Data.String (fromString)
 import Data.Text qualified as T
 import Data.Text.Lazy.Encoding qualified as TL
@@ -127,7 +125,7 @@ initializeRequestHandler logger ServerDefinition{..} vfs sendFunc req = do
         sendResp $ makeResponseError (req ^. L.id) err
         pure Nothing
       handleErr (Right a) = pure $ Just a
-  flip E.catch (initializeErrorHandler $ sendResp . makeResponseError (req ^. L.id)) $ handleErr <=< runExceptT $ mdo
+  E.handle (initializeErrorHandler $ sendResp . makeResponseError (req ^. L.id)) $ handleErr <=< runExceptT $ mdo
     let p = req ^. L.params
         rootDir =
           getFirst $
@@ -136,7 +134,7 @@ initializeRequestHandler logger ServerDefinition{..} vfs sendFunc req = do
               [ p ^? L.rootUri . _L >>= uriToFilePath
               , p ^? L.rootPath . _Just . _L <&> T.unpack
               ]
-        clientCaps = (p ^. L.capabilities)
+        clientCaps = p ^. L.capabilities
 
     let initialWfs = case p ^. L.workspaceFolders of
           Just (InL xs) -> xs
@@ -148,11 +146,11 @@ initializeRequestHandler logger ServerDefinition{..} vfs sendFunc req = do
     initialConfig <- case configObject of
       Just o -> case parseConfig defaultConfig o of
         Right newConfig -> do
-          liftIO $ logger <& (LspCore $ NewConfig o) `WithSeverity` Debug
+          liftIO $ logger <& LspCore (NewConfig o) `WithSeverity` Debug
           pure newConfig
         Left err -> do
           -- Warn not error here, since initializationOptions is pretty unspecified
-          liftIO $ logger <& (LspCore $ ConfigurationParseError o err) `WithSeverity` Warning
+          liftIO $ logger <& LspCore (ConfigurationParseError o err) `WithSeverity` Warning
           pure defaultConfig
       Nothing -> pure defaultConfig
 

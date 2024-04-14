@@ -83,18 +83,13 @@ mapUris f event =
         swapDocumentChangeUri (InR (InR (InL renameFile))) = InR $ InR $ InL $ L.newUri .~ f (renameFile ^. L.newUri) $ renameFile
         swapDocumentChangeUri (InR (InR (InR deleteFile))) = InR $ InR $ InR $ swapUri id deleteFile
      in e
-          & L.changes . _Just %~ swapKeys f
+          & L.changes . _Just %~ M.mapKeys f
           & L.documentChanges . _Just . traversed %~ swapDocumentChangeUri
 
-  swapKeys :: (Uri -> Uri) -> M.Map Uri b -> M.Map Uri b
-  swapKeys f = M.foldlWithKey' (\acc k v -> M.insert (f k) v acc) M.empty
-
   swapUri :: L.HasUri b Uri => Lens' a b -> a -> a
-  swapUri lens x =
-    let newUri = f (x ^. lens . L.uri)
-     in (lens . L.uri) .~ newUri $ x
+  swapUri lens = (lens . L.uri) %~ f
 
-  -- \| Transforms rootUri/rootPath.
+  -- Transforms rootUri/rootPath.
   transformInit :: InitializeParams -> InitializeParams
   transformInit x =
     let modifyRootPath p =

@@ -67,12 +67,10 @@ library
     , deepseq                        >=1.4   && <1.6
     , Diff                           >=0.4   && <0.6
     , dlist                          ^>=1.0
-    , exceptions                     ^>=0.10
     , hashable                       ^>=1.4
     , indexed-traversable            ^>=0.1
     , indexed-traversable-instances  ^>=0.1
     , lens                           >=5.1   && <5.3
-    , lens-aeson                     ^>=1.2
     , mod                            ^>=0.2
     , mtl                            >=2.2   && <2.4
     , network-uri                    ^>=2.6
@@ -600,7 +598,6 @@ library lsp-types-quickcheck
     Language.LSP.Protocol.QuickCheck.Types
 
   build-depends:
-    , aeson             >=2
     , base              >=4.11    && <5
     , lsp-types
     , row-types
@@ -608,7 +605,6 @@ library lsp-types-quickcheck
     , quickcheck-instances
     , generic-arbitrary
     , template-haskell
-    , text              >=1       && <2.2
 
 executable generator
   hs-source-dirs:     generator
@@ -659,7 +655,6 @@ test-suite lsp-types-test
     , network-uri
     , QuickCheck
     , quickcheck-instances
-    , row-types
     , text
 
   build-tool-depends: hspec-discover:hspec-discover
