@@ -496,7 +496,7 @@ getVersionedTextDoc doc = do
 reverseFileMap :: MonadLsp config m => m (FilePath -> FilePath)
 reverseFileMap = do
   vfs <- getsState resVFS
-  let f fp = fromMaybe fp . Map.lookup fp . reverseMap $ vfs
+  let f fp = Map.findWithDefault fp fp $ reverseMap vfs
   return f
 {-# INLINE reverseFileMap #-}
 
