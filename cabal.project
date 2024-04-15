@@ -10,9 +10,6 @@ test-show-details: direct
 
 benchmarks: True
 
-package *
-  ghc-options: -Wunused-packages
-
 package lsp
   flags: +demo
 

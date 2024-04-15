@@ -5,7 +5,6 @@ module Language.LSP.Protocol.QuickCheck.Common where
 import Data.Foldable
 import Data.Row qualified as R
 import Data.Row.Records qualified as R
-import Data.Void
 import GHC.TypeLits
 import Language.LSP.Protocol.Message
 import Language.LSP.Protocol.Types

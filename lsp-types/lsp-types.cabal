@@ -31,7 +31,11 @@ flag force-ospath
   description:
     Force a version bound on filepath library, to enable 'OsPath'.
 
+common warnings
+  ghc-options: -Wunused-packages
+
 library
+  import:             warnings
   hs-source-dirs:     src generated
   default-language:   GHC2021
 
@@ -53,7 +57,6 @@ library
     GADTs
     NegativeLiterals
     OverloadedStrings
-    StandaloneKindSignatures
     StrictData
     TypeFamilies
     UndecidableInstances
@@ -563,6 +566,7 @@ library
     Language.LSP.Protocol.Internal.Types.WorkspaceOptions
 
 library metamodel
+  import:             warnings
   -- We don't currently re-export this from the main
   -- library, but it's here if people want it
   visibility:         public
@@ -584,6 +588,7 @@ library metamodel
     , text              >=1       && <2.2
 
 library lsp-types-quickcheck
+  import:             warnings
   visibility:         public
   hs-source-dirs:     quickcheck generated
   default-language:   GHC2021
@@ -630,6 +635,7 @@ executable generator
     , witherable
 
 test-suite lsp-types-test
+  import:             warnings
   type:               exitcode-stdio-1.0
   hs-source-dirs:     test
   default-language:   GHC2021
