@@ -1,4 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Language.LSP.Server.Control (
@@ -180,9 +179,9 @@ ioLoop ioLogger logger clientIn serverDefinition vfs sendMsg = do
           go (parse parser remainder)
 
   parser = do
-    try contentType <|> (return ())
+    try contentType <|> return ()
     len <- contentLength
-    try contentType <|> (return ())
+    try contentType <|> return ()
     _ <- string _ONE_CRLF
     Attoparsec.take len
 

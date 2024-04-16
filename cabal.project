@@ -15,7 +15,7 @@ package lsp
 
 package lsp-types
   -- This makes a big difference here as lsp-types
-  -- has very many independent modules 
+  -- has very many independent modules
   ghc-options: -j4
 
 -- We allow filepath-1.5, this lets us actually test it. There is no problem

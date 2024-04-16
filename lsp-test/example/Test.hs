@@ -6,6 +6,7 @@ import Language.LSP.Protocol.Message
 import Language.LSP.Protocol.Types
 import Language.LSP.Test
 
+main :: IO ()
 main = runSession "lsp-demo-reactor-server" fullCaps "test/data/" $ do
   doc <- openDoc "Rename.hs" "haskell"
 

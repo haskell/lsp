@@ -1,5 +1,5 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE TypeInType #-}
 
 module Language.LSP.Protocol.Message.Parsing where
 

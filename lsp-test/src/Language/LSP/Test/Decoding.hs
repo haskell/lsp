@@ -1,6 +1,6 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeInType #-}
 
 module Language.LSP.Test.Decoding where
 
@@ -10,7 +10,6 @@ import Data.Aeson
 import Data.Aeson.Types
 import Data.ByteString.Lazy.Char8 qualified as B
 import Data.Foldable
-import Data.Functor.Const
 import Data.Functor.Product
 import Data.Maybe
 import Language.LSP.Protocol.Lens qualified as L
@@ -82,7 +81,7 @@ decodeFromServerMsg reqMap bytes = unP $ parse p obj
     let (mm, newMap) = pickFromIxMap lid reqMap
      in case mm of
           Nothing -> Nothing
-          Just m -> Just $ (m, Pair m (Const newMap))
+          Just m -> Just (m, Pair m (Const newMap))
   unP (Success (FromServerMess m msg)) = (reqMap, FromServerMess m msg)
   unP (Success (FromServerRsp (Pair m (Const newMap)) msg)) = (newMap, FromServerRsp m msg)
   unP (Error e) = error $ "Error decoding " <> show obj <> " :" <> e

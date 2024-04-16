@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs #-}
@@ -5,7 +6,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
-{-# LANGUAGE TypeInType #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE CUSKs #-}
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
@@ -22,7 +22,6 @@ import Colog.Core (
 import Control.Applicative
 import Control.Concurrent.Async
 import Control.Concurrent.Extra as C
-import Control.Concurrent.MVar
 import Control.Concurrent.STM
 import Control.Exception qualified as E
 import Control.Lens (at, (^.), (^?), _Just)
@@ -88,7 +87,7 @@ deriving instance (Show LspCoreLog)
 
 instance Pretty LspCoreLog where
   pretty (NewConfig config) = "LSP: set new config:" <+> prettyJSON config
-  pretty (ConfigurationNotSupported) = "LSP: not requesting configuration since the client does not support workspace/configuration"
+  pretty ConfigurationNotSupported = "LSP: not requesting configuration since the client does not support workspace/configuration"
   pretty (ConfigurationParseError settings err) =
     vsep
       [ "LSP: configuration parse error:"
@@ -97,7 +96,7 @@ instance Pretty LspCoreLog where
       , prettyJSON settings
       ]
   pretty (BadConfigurationResponse err) = "LSP: error when requesting configuration: " <+> pretty err
-  pretty (WrongConfigSections sections) = "LSP: expected only one configuration section, got: " <+> (prettyJSON $ J.toJSON sections)
+  pretty (WrongConfigSections sections) = "LSP: expected only one configuration section, got: " <+> prettyJSON (J.toJSON sections)
   pretty (CantRegister m) = "LSP: can't register dynamically for:" <+> pretty m
 
 newtype LspT config m a = LspT {unLspT :: ReaderT (LanguageContextEnv config) m a}
@@ -497,7 +496,7 @@ getVersionedTextDoc doc = do
 reverseFileMap :: MonadLsp config m => m (FilePath -> FilePath)
 reverseFileMap = do
   vfs <- getsState resVFS
-  let f fp = fromMaybe fp . Map.lookup fp . reverseMap $ vfs
+  let f fp = Map.findWithDefault fp fp $ reverseMap vfs
   return f
 {-# INLINE reverseFileMap #-}
 
@@ -612,7 +611,7 @@ trySendRegistration logger method regOpts = do
 
       pure (Just $ RegistrationToken method regId)
     else do
-      logger <& (CantRegister SMethod_WorkspaceDidChangeConfiguration) `WithSeverity` Warning
+      logger <& CantRegister SMethod_WorkspaceDidChangeConfiguration `WithSeverity` Warning
       pure Nothing
 
 {- | Sends a @client/unregisterCapability@ request and removes the handler

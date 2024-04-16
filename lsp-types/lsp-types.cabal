@@ -31,7 +31,11 @@ flag force-ospath
   description:
     Force a version bound on filepath library, to enable 'OsPath'.
 
+common warnings
+  ghc-options: -Wunused-packages
+
 library
+  import:             warnings
   hs-source-dirs:     src generated
   default-language:   GHC2021
 
@@ -53,7 +57,6 @@ library
     GADTs
     NegativeLiterals
     OverloadedStrings
-    StandaloneKindSignatures
     StrictData
     TypeFamilies
     UndecidableInstances
@@ -67,12 +70,10 @@ library
     , deepseq                        >=1.4   && <1.6
     , Diff                           >=0.4   && <0.6
     , dlist                          ^>=1.0
-    , exceptions                     ^>=0.10
     , hashable                       ^>=1.4
     , indexed-traversable            ^>=0.1
     , indexed-traversable-instances  ^>=0.1
     , lens                           >=5.1   && <5.3
-    , lens-aeson                     ^>=1.2
     , mod                            ^>=0.2
     , mtl                            >=2.2   && <2.4
     , network-uri                    ^>=2.6
@@ -91,6 +92,9 @@ library
 
   else
     build-depends: filepath >=1.4 && < 1.6
+
+  if impl(ghc >= 9.6)
+    build-depends: exceptions ^>=0.10
 
   ghc-options:
     -Wall -Wmissing-deriving-strategies
@@ -562,6 +566,7 @@ library
     Language.LSP.Protocol.Internal.Types.WorkspaceOptions
 
 library metamodel
+  import:             warnings
   -- We don't currently re-export this from the main
   -- library, but it's here if people want it
   visibility:         public
@@ -583,6 +588,7 @@ library metamodel
     , text              >=1       && <2.2
 
 library lsp-types-quickcheck
+  import:             warnings
   visibility:         public
   hs-source-dirs:     quickcheck generated
   default-language:   GHC2021
@@ -600,7 +606,6 @@ library lsp-types-quickcheck
     Language.LSP.Protocol.QuickCheck.Types
 
   build-depends:
-    , aeson             >=2
     , base              >=4.11    && <5
     , lsp-types
     , row-types
@@ -608,7 +613,6 @@ library lsp-types-quickcheck
     , quickcheck-instances
     , generic-arbitrary
     , template-haskell
-    , text              >=1       && <2.2
 
 executable generator
   hs-source-dirs:     generator
@@ -631,6 +635,7 @@ executable generator
     , witherable
 
 test-suite lsp-types-test
+  import:             warnings
   type:               exitcode-stdio-1.0
   hs-source-dirs:     test
   default-language:   GHC2021
@@ -659,7 +664,6 @@ test-suite lsp-types-test
     , network-uri
     , QuickCheck
     , quickcheck-instances
-    , row-types
     , text
 
   build-tool-depends: hspec-discover:hspec-discover

@@ -1,8 +1,8 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeInType #-}
 
 {- |
 Module      : Language.LSP.Test
@@ -559,7 +559,7 @@ createDoc file languageId contents = do
   let pred :: SomeRegistration -> [TRegistration Method_WorkspaceDidChangeWatchedFiles]
       pred (SomeRegistration r@(TRegistration _ SMethod_WorkspaceDidChangeWatchedFiles _)) = [r]
       pred _ = mempty
-      regs = concatMap pred $ Map.elems dynCaps
+      regs = concatMap pred dynCaps
       watchHits :: FileSystemWatcher -> Bool
       watchHits (FileSystemWatcher (GlobPattern (InL (Pattern pattern))) kind) =
         -- If WatchKind is excluded, defaults to all true as per spec
@@ -740,7 +740,7 @@ getCodeActionContext doc = do
  Note that this does not wait for more to come in.
 -}
 getCurrentDiagnostics :: TextDocumentIdentifier -> Session [Diagnostic]
-getCurrentDiagnostics doc = fromMaybe [] . Map.lookup (toNormalizedUri $ doc ^. L.uri) . curDiagnostics <$> get
+getCurrentDiagnostics doc = Map.findWithDefault [] (toNormalizedUri $ doc ^. L.uri) . curDiagnostics <$> get
 
 -- | Returns the tokens of all progress sessions that have started but not yet ended.
 getIncompleteProgressSessions :: Session (Set.Set ProgressToken)

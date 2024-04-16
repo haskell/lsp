@@ -15,14 +15,12 @@ import Control.Monad.IO.Class
 import Data.Aeson qualified as J
 import Data.Maybe
 import Data.Proxy
-import Data.Set qualified as Set
 import Language.LSP.Protocol.Lens qualified as L
 import Language.LSP.Protocol.Message
 import Language.LSP.Protocol.Types
 import Language.LSP.Server
 import Language.LSP.Test qualified as Test
 import System.Exit
-import System.IO
 import System.Process
 import Test.Hspec
 import UnliftIO

@@ -5,7 +5,7 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE OverloadedLabels #-}
-{-# LANGUAGE TypeInType #-}
+{-# LANGUAGE DataKinds #-}
 
 module Language.LSP.Test.Session
   ( Session(..)
@@ -118,13 +118,13 @@ data SessionConfig = SessionConfig
   -- with a 'mylang' key whose value is the actual config for the server. You
   -- can also include other config sections if your server may request those.
   , ignoreLogNotifications :: Bool
-  -- ^ Whether or not to ignore @window/showMessage@ and @window/logMessage@ notifications 
+  -- ^ Whether or not to ignore @window/showMessage@ and @window/logMessage@ notifications
   -- from the server, defaults to True.
   , ignoreConfigurationRequests :: Bool
   -- ^ Whether or not to ignore @workspace/configuration@ requests from the server,
   -- defaults to True.
   , ignoreRegistrationRequests :: Bool
-  -- ^ Whether or not to ignore @client/registerCapability@ and @client/unregisterCapability@ 
+  -- ^ Whether or not to ignore @client/registerCapability@ and @client/unregisterCapability@
   -- requests from the server, defaults to True.
   , initialWorkspaceFolders :: Maybe [WorkspaceFolder]
   -- ^ The initial workspace folders to send in the @initialize@ request.
@@ -247,7 +247,7 @@ runSessionMonad context state (Session session) = runReaderT (runStateT conduit 
       curId <- getCurTimeoutId
       case msg of
         ServerMessage sMsg -> yield sMsg
-        TimeoutMessage tId -> when (curId == tId) $ lastReceivedMessage <$> get >>= throw . Timeout
+        TimeoutMessage tId -> when (curId == tId) $ get >>= throw . Timeout . lastReceivedMessage
 
 -- | An internal version of 'runSession' that allows for a custom handler to listen to the server.
 -- It also does not automatically send initialize and exit messages.
@@ -338,7 +338,7 @@ updateStateC = awaitForever $ \msg -> do
       let requestedSections = mapMaybe (\i -> i ^? L.section . _Just) $ r ^. L.params . L.items
       let o = curLspConfig state
       -- check for each requested section whether we have it
-      let configsOrErrs = (flip fmap) requestedSections $ \section ->
+      let configsOrErrs = flip fmap requestedSections $ \section ->
             case o ^. at (fromString $ T.unpack section) of
               Just config -> Right config
               Nothing -> Left section
@@ -347,9 +347,9 @@ updateStateC = awaitForever $ \msg -> do
 
       -- we have to return exactly the number of sections requested, so if we can't find all of them then that's an error
       sendMessage $ TResponseMessage "2.0" (Just $ r ^. L.id) $
-        if null errs 
-        then (Right configs)
-        else Left $ ResponseError (InL LSPErrorCodes_RequestFailed) ("No configuration for requested sections: " <> (T.pack $ show errs)) Nothing
+        if null errs
+        then Right configs
+        else Left $ ResponseError (InL LSPErrorCodes_RequestFailed) ("No configuration for requested sections: " <> T.pack (show errs)) Nothing
     _ -> pure ()
   unless (
     (ignoringLogNotifications state && isLogNotification msg)
@@ -414,7 +414,7 @@ updateState (FromServerMess SMethod_WorkspaceApplyEdit r) = do
 
   -- First, prefer the versioned documentChanges field
   allChangeParams <- case r ^. L.params . L.edit . L.documentChanges of
-    Just (cs) -> do
+    Just cs -> do
       mapM_ (checkIfNeedsOpened . documentChangeUri) cs
       -- replace the user provided version numbers with the VFS ones + 1
       -- (technically we should check that the user versions match the VFS ones)
@@ -472,8 +472,8 @@ updateState (FromServerMess SMethod_WorkspaceApplyEdit r) = do
 
         -- TODO: move somewhere reusable
         editToChangeEvent :: TextEdit |? AnnotatedTextEdit -> TextDocumentContentChangeEvent
-        editToChangeEvent (InR e) = TextDocumentContentChangeEvent $ InL $ TextDocumentContentChangePartial { _range = (e ^. L.range) , _rangeLength = Nothing , _text = (e ^. L.newText) }
-        editToChangeEvent (InL e) = TextDocumentContentChangeEvent $ InL $ TextDocumentContentChangePartial { _range = (e ^. L.range) , _rangeLength = Nothing , _text = (e ^. L.newText) }
+        editToChangeEvent (InR e) = TextDocumentContentChangeEvent $ InL $ TextDocumentContentChangePartial { _range = e ^. L.range , _rangeLength = Nothing , _text = e ^. L.newText }
+        editToChangeEvent (InL e) = TextDocumentContentChangeEvent $ InL $ TextDocumentContentChangePartial { _range = e ^. L.range , _rangeLength = Nothing , _text = e ^. L.newText }
 
         getParamsFromDocumentChange :: DocumentChange -> Maybe DidChangeTextDocumentParams
         getParamsFromDocumentChange (InL textDocumentEdit) = getParamsFromTextDocumentEdit textDocumentEdit
@@ -491,11 +491,11 @@ updateState (FromServerMess SMethod_WorkspaceApplyEdit r) = do
 
         textDocumentEdits uri edits = do
           vers <- textDocumentVersions uri
-          pure $ map (\(v, e) -> TextDocumentEdit (review _versionedTextDocumentIdentifier v) [InL e]) $ zip vers edits
+          pure $ zipWith (\v e -> TextDocumentEdit (review _versionedTextDocumentIdentifier v) [InL e]) vers edits
 
         getChangeParams uri edits = do
           edits <- textDocumentEdits uri (reverse edits)
-          pure $ catMaybes $ map getParamsFromTextDocumentEdit edits
+          pure $ mapMaybe getParamsFromTextDocumentEdit edits
 
         mergeParams :: [DidChangeTextDocumentParams] -> DidChangeTextDocumentParams
         mergeParams params = let events = concat (toList (map (toList . (^. L.contentChanges)) params))

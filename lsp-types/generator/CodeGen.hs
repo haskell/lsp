@@ -367,7 +367,7 @@ printStruct tn s@Structure{name, documentation, since, proposed, deprecated} = d
   optionalMatcherName <- entityName "Language.LSP.Protocol.Types.Common" ".:!?"
   let toJsonD =
         let (unzip -> (args, pairEs)) = flip fmap (zip props [0 ..]) $ \(Property{name, optional}, i) ->
-              let n :: T.Text = "arg" <> (T.pack $ show i)
+              let n :: T.Text = "arg" <> T.pack (show i)
                   pairE = case optional of
                     Just True -> dquotes (pretty name) <+> pretty optionalPairerName <+> pretty n
                     _ -> brackets (dquotes (pretty name) <+> "Aeson..=" <+> pretty n)
@@ -485,7 +485,7 @@ printEnum tn Enumeration{name, type_, values, supportsCustomValues, documentatio
   let customCon =
         let cn = makeConstrName (Just enumName) "Custom"
          in if custom then Just (cn, pretty cn <+> ty) else Nothing
-  let cons = normalCons ++ (fmap snd $ maybeToList customCon)
+  let cons = normalCons ++ (snd <$> maybeToList customCon)
 
   ensureImport "Data.Aeson" (QualAs "Aeson")
   ensureImport "Data.Row.Aeson" (QualAs "Aeson")
