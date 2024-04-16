@@ -1,8 +1,8 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE UndecidableInstances #-}
 -- we're using some deprecated stuff from the LSP spec, that's fine
 {-# OPTIONS_GHC -fno-warn-deprecations #-}
