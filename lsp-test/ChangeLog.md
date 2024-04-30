@@ -1,5 +1,9 @@
 # Revision history for lsp-test
 
+## 0.17.0.1
+
+- Support for newer versions of dependencies.
+
 ## 0.17.0.0
 
 - `ignoreRegistrationRequests` option to ignore `client/registerCapability` requests, on

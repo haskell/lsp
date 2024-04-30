@@ -1,6 +1,6 @@
 # Revision history for lsp
 
-## Unreleased
+## 2.5.0.0
 
 - The server will now reject messages sent after `shutdown` has been received.
 - There is a `shutdownBarrier` member in the server state which can be used to
