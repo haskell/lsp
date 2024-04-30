@@ -1,6 +1,6 @@
 # Revision history for lsp-types
 
-## Unreleased
+## 2.2.0.0 -- 2024-04-29
 
 - Update the metamodel. This results in a number of breaking changes to the generated code, mostly replacing
   anonymous structs with named ones.
