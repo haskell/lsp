@@ -76,6 +76,7 @@ library
     , text                  >=1      && <2.2
     , text-rope             ^>=0.2
     , transformers          >=0.5    && <0.7
+    , unliftio              ^>=0.2
     , unliftio-core         ^>=0.2
     , unordered-containers  ^>=0.2
     , uuid                  >=1.3

@@ -172,7 +172,18 @@ initializeRequestHandler logger ServerDefinition{..} vfs sendFunc req = do
       pure LanguageContextState{..}
 
     -- Call the 'duringInitialization' callback to let the server kick stuff up
-    let env = LanguageContextEnv handlers configSection parseConfig configChanger sendFunc stateVars (p ^. L.capabilities) rootDir
+    let env =
+          LanguageContextEnv
+            handlers
+            configSection
+            parseConfig
+            configChanger
+            sendFunc
+            stateVars
+            (p ^. L.capabilities)
+            rootDir
+            (optProgressStartDelay options)
+            (optProgressUpdateDelay options)
         configChanger config = forward interpreter (onConfigChange config)
         handlers = transmuteHandlers interpreter (staticHandlers clientCaps)
         interpreter = interpretHandler initializationResult
