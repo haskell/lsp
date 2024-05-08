@@ -6,7 +6,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
-{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE CUSKs #-}
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
@@ -66,6 +65,7 @@ import Language.LSP.Protocol.Utils.SMethodMap qualified as SMethodMap
 import Language.LSP.VFS hiding (end)
 import Prettyprinter
 import System.Random hiding (next)
+import UnliftIO qualified as U
 import UnliftIO.Exception qualified as UE
 
 -- ---------------------------------------------------------------------
@@ -244,20 +244,24 @@ data VFSData = VFSData
 {-# INLINE modifyState #-}
 modifyState :: MonadLsp config m => (LanguageContextState config -> TVar a) -> (a -> a) -> m ()
 modifyState sel f = do
-  tvarDat <- sel . resState <$> getLspEnv
+  tvarDat <- getStateVar sel
   liftIO $ atomically $ modifyTVar' tvarDat f
 
 {-# INLINE stateState #-}
 stateState :: MonadLsp config m => (LanguageContextState config -> TVar s) -> (s -> (a, s)) -> m a
 stateState sel f = do
-  tvarDat <- sel . resState <$> getLspEnv
+  tvarDat <- getStateVar sel
   liftIO $ atomically $ stateTVar tvarDat f
 
 {-# INLINE getsState #-}
 getsState :: MonadLsp config m => (LanguageContextState config -> TVar a) -> m a
 getsState f = do
-  tvarDat <- f . resState <$> getLspEnv
+  tvarDat <- getStateVar f
   liftIO $ readTVarIO tvarDat
+
+{-# INLINE getStateVar #-}
+getStateVar :: MonadLsp config m => (LanguageContextState config -> TVar a) -> m (TVar a)
+getStateVar f = f . resState <$> getLspEnv
 
 -- ---------------------------------------------------------------------
 
@@ -313,8 +317,8 @@ instance Default Options where
       Nothing
       False
       -- See Note [Delayed progress reporting]
-      1_000_000
-      5_00_000
+      0
+      0
 
 defaultOptions :: Options
 defaultOptions = def
@@ -645,14 +649,6 @@ unregisterCapability (RegistrationToken m (RegistrationId uuid)) = do
 -- PROGRESS
 --------------------------------------------------------------------------------
 
-addProgressCancellationHandler :: MonadLsp config m => ProgressToken -> IO () -> m ()
-addProgressCancellationHandler n act = modifyState (progressCancel . resProgressData) $ Map.insert n act
-{-# INLINE addProgressCancellationHandler #-}
-
-deleteProgressCancellationHandler :: MonadLsp config m => ProgressToken -> m ()
-deleteProgressCancellationHandler n = modifyState (progressCancel . resProgressData) $ Map.delete n
-{-# INLINE deleteProgressCancellationHandler #-}
-
 -- Get a new id for the progress session and make a new one
 getNewProgressId :: MonadLsp config m => m ProgressToken
 getNewProgressId = do
@@ -661,28 +657,17 @@ getNewProgressId = do
      in (L.ProgressToken $ L.InL cur, next)
 {-# INLINE getNewProgressId #-}
 
-{- | A stateful representation of a progress tracker.
-Do not use this unless you need to, prefer to use the 'withProgress' functions.
--}
-data ProgressTracker = ProgressTracker
-  { updateProgress :: ProgressAmount -> IO ()
-  -- ^ Send a progress update to the tracker.
-  , progressEnded :: MVar ()
-  -- ^ Has the progress tracking ended? This can happen two ways: the client can cancel it
-  -- (in which case the server should cancel the corresponding work); or the server can
-  -- set it when it finishes the work.
-  }
-
--- | Create a 'ProgressTracker'.
-makeProgressTracker ::
-  forall c m.
+withProgressBase ::
+  forall c m a.
   MonadLsp c m =>
+  Bool ->
   Text ->
-  ProgressAmount ->
   Maybe ProgressToken ->
   ProgressCancellable ->
-  m ProgressTracker
-makeProgressTracker title initialProgress clientToken cancellable = do
+  ((ProgressAmount -> m ()) -> m a) ->
+  m a
+withProgressBase indefinite title clientToken cancellable f = do
+  let initialProgress = ProgressAmount (if indefinite then Nothing else Just 0) Nothing
   LanguageContextEnv{resProgressStartDelay = startDelay, resProgressUpdateDelay = updateDelay} <- getLspEnv
 
   tokenVar <- liftIO newEmptyTMVarIO
@@ -690,27 +675,38 @@ makeProgressTracker title initialProgress clientToken cancellable = do
   endBarrier <- liftIO newEmptyMVar
 
   let
-    sendProgressReport :: (J.ToJSON r) => ProgressToken -> r -> m ()
-    sendProgressReport token report = sendNotification SMethod_Progress $ ProgressParams token $ J.toJSON report
+    updater :: ProgressAmount -> m ()
+    updater pa = liftIO $ atomically $ do
+      -- I don't know of a way to do this with a normal MVar!
+      -- That is: put something into it regardless of whether it is full or empty
+      _ <- tryTakeTMVar reportVar
+      putTMVar reportVar pa
 
-    -- \| Once we have a 'ProgressToken', store it in the variable and also register the cancellation
+    progressEnded :: IO ()
+    progressEnded = readMVar endBarrier
+
+    endProgress :: IO ()
+    endProgress = void $ tryPutMVar endBarrier ()
+
+    -- Once we have a 'ProgressToken', store it in the variable and also register the cancellation
     -- handler.
     registerToken :: ProgressToken -> m ()
     registerToken t = do
-      -- TODO: this is currently racy, we need these two to occur in one STM
-      -- transaction
-      liftIO $ atomically $ putTMVar tokenVar t
-      addProgressCancellationHandler t (void $ tryPutMVar endBarrier ())
+      handlers <- getProgressCancellationHandlers
+      liftIO $ atomically $ do
+        putTMVar tokenVar t
+        modifyTVar handlers (Map.insert t endProgress)
 
-    -- \| Deregister our 'ProgressToken', specifically its cancellation handler. It is important
+    -- Deregister our 'ProgressToken', specifically its cancellation handler. It is important
     -- to do this reliably or else we will leak handlers.
     unregisterToken :: m ()
     unregisterToken = do
-      -- TODO: this is also racy, see above
-      t <- liftIO $ atomically $ tryReadTMVar tokenVar
-      for_ t deleteProgressCancellationHandler
+      handlers <- getProgressCancellationHandlers
+      liftIO $ atomically $ do
+        mt <- tryReadTMVar tokenVar
+        for_ mt $ \t -> modifyTVar handlers (Map.delete t)
 
-    -- \| Find and register our 'ProgressToken', asking the client for it if necessary.
+    -- Find and register our 'ProgressToken', asking the client for it if necessary.
     -- Note that this computation may terminate before we get the token, we need to wait
     -- for the token var to be filled if we want to use it.
     createToken :: m ()
@@ -743,7 +739,7 @@ makeProgressTracker title initialProgress clientToken cancellable = do
               -- The client sent us an error, we can't use the token.
               Left _err -> pure ()
 
-    -- \| Actually send the progress reports.
+    -- Actually send the progress reports.
     sendReports :: m ()
     sendReports = do
       t <- liftIO $ atomically $ readTMVar tokenVar
@@ -771,54 +767,28 @@ makeProgressTracker title initialProgress clientToken cancellable = do
           sendProgressReport t $ WorkDoneProgressReport L.AString Nothing msg pct
       end t = sendProgressReport t (WorkDoneProgressEnd L.AString Nothing)
 
-    -- \| Blocks until the progress reporting should end.
-    endProgress :: IO ()
-    endProgress = readMVar endBarrier
+    -- Create the token and then start sending reports; all of which races with the check for the
+    -- progress having ended. In all cases, make sure to unregister the token at the end.
+    progressThreads :: m ()
+    progressThreads =
+      ((createToken >> sendReports) `UE.finally` unregisterToken) `U.race_` liftIO progressEnded
 
-    progressThreads :: m (Async ())
-    progressThreads = withRunInIO $ \runInBase ->
-      async $
-        -- Create the token and then start sending reports; all of which races with the check for the
-        -- progress having ended. In all cases, make sure to unregister the token at the end.
-        (runInBase (createToken >> sendReports) `race_` endProgress) `E.finally` runInBase unregisterToken
+  withRunInIO $ \runInBase -> do
+    withAsync (runInBase $ f updater) $ \mainAct ->
+      -- If the progress gets cancelled then we need to get cancelled too
+      withAsync (runInBase progressThreads) $ \pthreads -> do
+        r <- waitEither mainAct pthreads
+        -- TODO: is this weird? I can't see how else to gracefully use the ending barrier
+        -- as a guard to cancel the other async
+        case r of
+          Left a -> pure a
+          Right _ -> cancelWith mainAct ProgressCancelledException >> wait mainAct
+ where
+  sendProgressReport :: (J.ToJSON r) => ProgressToken -> r -> m ()
+  sendProgressReport token report = sendNotification SMethod_Progress $ ProgressParams token $ J.toJSON report
 
-  -- Launch the threads with no handle, rely on the end barrier to kill them
-  _threads <- progressThreads
-
-  -- The update function for clients: just write to the var
-  let update pa = atomically $ do
-        -- I don't know of a way to do this with a normal MVar!
-        -- That is: put something into it regardless of whether it is full or empty
-        _ <- tryTakeTMVar reportVar
-        putTMVar reportVar pa
-  pure $ ProgressTracker update endBarrier
-
-withProgressBase ::
-  forall c m a.
-  MonadLsp c m =>
-  Bool ->
-  Text ->
-  Maybe ProgressToken ->
-  ProgressCancellable ->
-  ((ProgressAmount -> m ()) -> m a) ->
-  m a
-withProgressBase indefinite title clientToken cancellable f = withRunInIO $ \runInBase -> do
-  let initialPercentage = if indefinite then Nothing else Just 0
-  E.bracket
-    -- Create the progress tracker, which will start the progress threads
-    (runInBase $ makeProgressTracker title (ProgressAmount initialPercentage Nothing) clientToken cancellable)
-    -- When we finish, trigger the progress ending barrier
-    (\tracker -> tryPutMVar (progressEnded tracker) ())
-    $ \tracker -> do
-      -- Tie the given computation to the progress ending barrier so it will cancel us if triggered
-      withAsync (runInBase $ f (liftIO . updateProgress tracker)) $ \mainAct ->
-        withAsync (readMVar (progressEnded tracker)) $ \ender -> do
-          -- TODO: is this weird? I can't see how else to gracefully use the ending barrier
-          -- as a guard to cancel the other async
-          r <- waitEither mainAct ender
-          case r of
-            Left a -> pure a
-            Right _ -> cancelWith mainAct ProgressCancelledException >> wait mainAct
+  getProgressCancellationHandlers :: m (TVar (Map.Map ProgressToken (IO ())))
+  getProgressCancellationHandlers = getStateVar (progressCancel . resProgressData)
 
 clientSupportsServerInitiatedProgress :: L.ClientCapabilities -> Bool
 clientSupportsServerInitiatedProgress caps = fromMaybe False $ caps ^? L.window . _Just . L.workDoneProgress . _Just
@@ -1050,13 +1020,7 @@ like the client's job. Nonetheless, this does not always happen, and so it is he
 to moderate the spam.
 
 For this reason we have configurable delays on starting progress tracking and on sending
-updates.
-
-The default values we use are based on the usual interface responsiveness research:
-- 1s is about the point at which people definitely notice something is happening, so
-  this is where we start progress reporting.
-- Updates are at 0.5s, so they happen fast enough that things are clearly happening,
-  without being too distracting.
+updates. However, the defaults are set to 0, so it's opt-in.
 -}
 
 {- Note [Request cancellation]
