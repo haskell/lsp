@@ -50,6 +50,7 @@ library
     Language.LSP.Server.Control
     Language.LSP.Server.Core
     Language.LSP.Server.Processing
+    Language.LSP.Server.Progress
 
   build-depends:
     , aeson                 >=2      && <2.3

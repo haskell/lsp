@@ -67,3 +67,4 @@ module Language.LSP.Server (
 
 import Language.LSP.Server.Control
 import Language.LSP.Server.Core
+import Language.LSP.Server.Progress
