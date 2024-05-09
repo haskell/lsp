@@ -1,5 +1,9 @@
 # Revision history for lsp-test
 
+## 0.17.0.2
+
+- Support for newer versions of dependencies.
+
 ## 0.17.0.1
 
 - Support for newer versions of dependencies.
