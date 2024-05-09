@@ -19,11 +19,8 @@ import Colog.Core (
   WithSeverity (..),
   (<&),
  )
-import Control.Applicative
-import Control.Concurrent.Async
 import Control.Concurrent.Extra as C
 import Control.Concurrent.STM
-import Control.Exception qualified as E
 import Control.Lens (at, (^.), (^?), _Just)
 import Control.Monad
 import Control.Monad.Catch (
@@ -138,6 +135,10 @@ data LanguageContextEnv config = LanguageContextEnv
     resState :: !(LanguageContextState config)
   , resClientCapabilities :: !L.ClientCapabilities
   , resRootPath :: !(Maybe FilePath)
+  , resProgressStartDelay :: Int
+  -- ^ The delay before starting a progress reporting session, in microseconds
+  , resProgressUpdateDelay :: Int
+  -- ^ The delay between sending progress updates, in microseconds
   }
 
 -- ---------------------------------------------------------------------
@@ -238,24 +239,28 @@ data VFSData = VFSData
 {-# INLINE modifyState #-}
 modifyState :: MonadLsp config m => (LanguageContextState config -> TVar a) -> (a -> a) -> m ()
 modifyState sel f = do
-  tvarDat <- sel . resState <$> getLspEnv
+  tvarDat <- getStateVar sel
   liftIO $ atomically $ modifyTVar' tvarDat f
 
 {-# INLINE stateState #-}
 stateState :: MonadLsp config m => (LanguageContextState config -> TVar s) -> (s -> (a, s)) -> m a
 stateState sel f = do
-  tvarDat <- sel . resState <$> getLspEnv
+  tvarDat <- getStateVar sel
   liftIO $ atomically $ stateTVar tvarDat f
 
 {-# INLINE getsState #-}
 getsState :: MonadLsp config m => (LanguageContextState config -> TVar a) -> m a
 getsState f = do
-  tvarDat <- f . resState <$> getLspEnv
+  tvarDat <- getStateVar f
   liftIO $ readTVarIO tvarDat
+
+{-# INLINE getStateVar #-}
+getStateVar :: MonadLsp config m => (LanguageContextState config -> TVar a) -> m (TVar a)
+getStateVar f = f . resState <$> getLspEnv
 
 -- ---------------------------------------------------------------------
 
-{- | Language Server Protocol options that the server may configure.
+{- | Options that the server may configure.
  If you set handlers for some requests, you may need to set some of these options.
 -}
 data Options = Options
@@ -287,6 +292,10 @@ data Options = Options
   -- ^ Information about the server that can be advertised to the client.
   , optSupportClientInitiatedProgress :: Bool
   -- ^ Whether or not to support client-initiated progress.
+  , optProgressStartDelay :: Int
+  -- ^ The delay before starting a progress reporting session, in microseconds
+  , optProgressUpdateDelay :: Int
+  -- ^ The delay between sending progress updates, in microseconds
   }
 
 instance Default Options where
@@ -302,32 +311,12 @@ instance Default Options where
       Nothing
       Nothing
       False
+      -- See Note [Delayed progress reporting]
+      0
+      0
 
 defaultOptions :: Options
 defaultOptions = def
-
-{- | A package indicating the percentage of progress complete and a
- an optional message to go with it during a 'withProgress'
-
- @since 0.10.0.0
--}
-data ProgressAmount = ProgressAmount (Maybe UInt) (Maybe Text)
-
-{- | Thrown if the user cancels a 'Cancellable' 'withProgress'/'withIndefiniteProgress'/ session
-
- @since 0.11.0.0
--}
-data ProgressCancelledException = ProgressCancelledException
-  deriving (Show)
-
-instance E.Exception ProgressCancelledException
-
-{- | Whether or not the user should be able to cancel a 'withProgress'/'withIndefiniteProgress'
- session
-
- @since 0.11.0.0
--}
-data ProgressCancellable = Cancellable | NotCancellable
 
 -- See Note [LSP configuration] for discussion of the configuration-related fields
 
@@ -628,183 +617,6 @@ unregisterCapability (RegistrationToken m (RegistrationId uuid)) = do
       params = L.UnregistrationParams [toUntypedUnregistration unregistration]
   void $ sendRequest SMethod_ClientUnregisterCapability params $ \_res -> pure ()
 
---------------------------------------------------------------------------------
--- PROGRESS
---------------------------------------------------------------------------------
-
-storeProgress :: MonadLsp config m => ProgressToken -> Async a -> m ()
-storeProgress n a = modifyState (progressCancel . resProgressData) $ Map.insert n (cancelWith a ProgressCancelledException)
-{-# INLINE storeProgress #-}
-
-deleteProgress :: MonadLsp config m => ProgressToken -> m ()
-deleteProgress n = modifyState (progressCancel . resProgressData) $ Map.delete n
-{-# INLINE deleteProgress #-}
-
--- Get a new id for the progress session and make a new one
-getNewProgressId :: MonadLsp config m => m ProgressToken
-getNewProgressId = do
-  stateState (progressNextId . resProgressData) $ \cur ->
-    let !next = cur + 1
-     in (L.ProgressToken $ L.InL cur, next)
-{-# INLINE getNewProgressId #-}
-
-{- | The progress states we can be in.
-See Note [Progress states]
--}
-data ProgressState = ProgressInitial | ProgressStarted ProgressToken | ProgressEnded
-
-withProgressBase ::
-  forall c m a.
-  MonadLsp c m =>
-  Bool ->
-  Text ->
-  Maybe ProgressToken ->
-  ProgressCancellable ->
-  ((ProgressAmount -> m ()) -> m a) ->
-  m a
-withProgressBase indefinite title clientToken cancellable f = do
-  progressState <- liftIO $ newMVar ProgressInitial
-
-  -- Until we start the progress reporting, track the current latest progress in an MVar, so when
-  -- we do start we can start at the right point.
-  let initialPercentage = if indefinite then Nothing else Just 0
-  initialProgress <- liftIO $ newMVar (ProgressAmount initialPercentage Nothing)
-
-  let
-    sendProgressReport :: (J.ToJSON r) => ProgressToken -> r -> m ()
-    sendProgressReport token report = sendNotification SMethod_Progress $ ProgressParams token $ J.toJSON report
-
-    -- See Note [Progress states]
-    tryStart :: ProgressToken -> m ()
-    tryStart t = withRunInIO $ \runInBase -> modifyMVar_ progressState $ \case
-      -- Can start if we are in the initial state, otherwise not
-      ProgressInitial -> withMVar initialProgress $ \(ProgressAmount pct msg) -> do
-        let
-          cancellable' = case cancellable of
-            Cancellable -> Just True
-            NotCancellable -> Just False
-        runInBase $ sendProgressReport t $ WorkDoneProgressBegin L.AString title cancellable' msg pct
-        pure (ProgressStarted t)
-      s -> pure s
-    -- See Note [Progress states]
-    tryUpdate :: ProgressAmount -> m ()
-    tryUpdate (ProgressAmount pct msg) = withRunInIO $ \runInBase -> withMVar progressState $ \case
-      -- If the progress has not started yet, then record the latest progress percentage
-      ProgressInitial -> modifyMVar_ initialProgress $ \(ProgressAmount oldPct oldMsg) -> do
-        let
-          -- Update the percentage if the new one is not nothing
-          newPct = pct <|> oldPct
-          -- Update the message if the new one is not nothing
-          newMsg = msg <|> oldMsg
-        pure $ ProgressAmount newPct newMsg
-      -- Just send the update, we don't need to worry about updating initialProgress any more
-      ProgressStarted t -> runInBase $ sendProgressReport t $ WorkDoneProgressReport L.AString Nothing msg pct
-      _ -> pure ()
-    -- See Note [Progress states]
-    tryEnd :: m ()
-    tryEnd = withRunInIO $ \runInBase -> modifyMVar_ progressState $ \case
-      -- Don't send an end message unless we successfully started
-      ProgressStarted t -> do
-        runInBase $ sendProgressReport t $ WorkDoneProgressEnd L.AString Nothing
-        pure ProgressEnded
-      -- But in all cases we still want to transition state
-      _ -> pure ProgressEnded
-
-    -- The progress token is also used as the cancellation ID
-    -- See Note [Request cancellation]
-    createAndStart :: m ProgressToken
-    createAndStart =
-      case clientToken of
-        -- See Note [Client- versus server-initiated progress]
-        -- Client-initiated progress
-        Just t -> tryStart t >> pure t
-        -- Try server-initiated progress
-        Nothing -> do
-          t <- getNewProgressId
-          clientCaps <- getClientCapabilities
-
-          -- If we don't have a progress token from the client and
-          -- the client doesn't support server-initiated progress then
-          -- there's nothing to do: we can't report progress.
-          -- But we still need to return our internal token to use for
-          -- cancellation
-          when (clientSupportsServerInitiatedProgress clientCaps)
-            $ void
-            $
-            -- Server-initiated progress
-            -- See Note [Client- versus server-initiated progress]
-            sendRequest
-              SMethod_WindowWorkDoneProgressCreate
-              (WorkDoneProgressCreateParams t)
-            $ \case
-              -- Successfully registered the token, we can now use it.
-              -- So we go ahead and start. We do this as soon as we get the
-              -- token back so the client gets feedback ASAP
-              Right _ -> tryStart t
-              -- The client sent us an error, we can't use the token. So we remain
-              -- in ProgressInitial and don't send any progress updates ever
-              -- TODO: log the error
-              Left _err -> pure ()
-
-          pure t
-
-    end :: ProgressToken -> m ()
-    end cancellationId = do
-      tryEnd
-      -- Delete the progress cancellation from the map
-      -- If we don't do this then it's easy to leak things as the map contains any IO action.
-      deleteProgress cancellationId
-
-  -- Send the begin and done notifications via 'bracket' so that they are always fired
-  withRunInIO $ \runInBase ->
-    E.bracket (runInBase createAndStart) (runInBase . end) $ \cancellationId -> do
-      -- Run f asynchronously
-      aid <- async $ runInBase $ f tryUpdate
-      -- Always store the thread ID so we can cancel, see Note [Request cancellation]
-      runInBase $ storeProgress cancellationId aid
-      wait aid
-
-clientSupportsServerInitiatedProgress :: L.ClientCapabilities -> Bool
-clientSupportsServerInitiatedProgress caps = fromMaybe False $ caps ^? L.window . _Just . L.workDoneProgress . _Just
-{-# INLINE clientSupportsServerInitiatedProgress #-}
-
-{- |
-Wrapper for reporting progress to the client during a long running task.
--}
-withProgress ::
-  MonadLsp c m =>
-  -- | The title of the progress operation
-  Text ->
-  -- | The progress token provided by the client in the method params, if any
-  Maybe ProgressToken ->
-  -- | Whether or not this operation is cancellable. If true, the user will be
-  -- shown a button to allow cancellation. Note that requests can still be cancelled
-  -- even if this is not set.
-  ProgressCancellable ->
-  -- | An update function to pass progress updates to
-  ((ProgressAmount -> m ()) -> m a) ->
-  m a
-withProgress title clientToken cancellable f = withProgressBase False title clientToken cancellable f
-
-{- |
-Same as 'withProgress', but for processes that do not report the precentage complete.
--}
-withIndefiniteProgress ::
-  MonadLsp c m =>
-  -- | The title of the progress operation
-  Text ->
-  -- | The progress token provided by the client in the method params, if any
-  Maybe ProgressToken ->
-  -- | Whether or not this operation is cancellable. If true, the user will be
-  -- shown a button to allow cancellation. Note that requests can still be cancelled
-  -- even if this is not set.
-  ProgressCancellable ->
-  -- | An update function to pass progress updates to
-  ((Text -> m ()) -> m a) ->
-  m a
-withIndefiniteProgress title clientToken cancellable f =
-  withProgressBase True title clientToken cancellable (\update -> f (\msg -> update (ProgressAmount Nothing (Just msg))))
-
 -- ---------------------------------------------------------------------
 
 {- | Aggregate all diagnostics pertaining to a particular version of a document,
@@ -974,31 +786,27 @@ of sensible cases where the client sends us mostly our config, either wrapped
 in our section or not.
 -}
 
-{- Note [Progress states]
-Creating and using progress actually requires a small state machine.
-The states are:
-- ProgressInitial: we haven't got a progress token
-- ProgressStarted: we have got a progress token and started the progress
-- ProgressEnded: we have ended the progress
-
-Notably,
-1. We can't send updates except in ProgressStarted
-2. We can't start the progress until we get the token back
-   - This means that we may have to wait to send the start report, we can't necessarily
-     send it immediately!
-3. We can end if we haven't started (by just transitioning state), but we shouldn't
-   send an end report.
-
-We can have concurrent updates to the state, since we sometimes transiton states
-in response to the client. In particular, for server-initiated progress, we have
-to wait for the client to confirm the token until we can enter ProgressStarted.
--}
-
 {- Note [Client- versus server-initiated progress]
 The protocol supports both client- and server-initiated progress. Client-initiated progress
 is simpler: the client gives you a progress token, and then you use that to report progress.
 Server-initiated progress is more complex: you need to send a request to the client to tell
 them about the token you want to use, and only after that can you send updates using it.
+-}
+
+{- Note [Delayed progress reporting]
+Progress updates can be very noisy by default. There are two ways this can happen:
+- Creating progress notifications for very short-lived operations that don't deserve them.
+  This directs the user's attention to something that then immediately ceases to exist,
+  which is annoying, the more so if it happens frequently.
+- Very frequently updating progress information.
+
+Now, in theory the client could deal with this for us. Probably they _should_: working
+out how to display an (accurate) series of progress notifications from the server seems
+like the client's job. Nonetheless, this does not always happen, and so it is helpful
+to moderate the spam.
+
+For this reason we have configurable delays on starting progress tracking and on sending
+updates. However, the defaults are set to 0, so it's opt-in.
 -}
 
 {- Note [Request cancellation]

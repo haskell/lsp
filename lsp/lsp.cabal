@@ -1,6 +1,6 @@
 cabal-version:      2.2
 name:               lsp
-version:            2.5.0.0
+version:            2.6.0.0
 synopsis:           Haskell library for the Microsoft Language Server Protocol
 description:
   An implementation of the types, and basic message server to
@@ -50,6 +50,7 @@ library
     Language.LSP.Server.Control
     Language.LSP.Server.Core
     Language.LSP.Server.Processing
+    Language.LSP.Server.Progress
 
   build-depends:
     , aeson                 >=2      && <2.3
@@ -76,6 +77,7 @@ library
     , text                  >=1      && <2.2
     , text-rope             ^>=0.2
     , transformers          >=0.5    && <0.7
+    , unliftio              ^>=0.2
     , unliftio-core         ^>=0.2
     , unordered-containers  ^>=0.2
     , uuid                  >=1.3
