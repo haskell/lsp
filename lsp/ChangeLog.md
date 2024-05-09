@@ -1,6 +1,6 @@
 # Revision history for lsp
 
-## Unreleased
+## 2.6.0.0
 
 - Progress reporting now has a configurable start delay and update delay. This allows
   servers to set up progress reporting for any operation and not worry about spamming
