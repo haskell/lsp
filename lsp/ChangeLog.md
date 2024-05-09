@@ -1,5 +1,11 @@
 # Revision history for lsp
 
+## Unreleased
+
+- Progress reporting now has a configurable start delay and update delay. This allows
+  servers to set up progress reporting for any operation and not worry about spamming
+  the user with extremely short-lived progress sessions.
+
 ## 2.5.0.0
 
 - The server will now reject messages sent after `shutdown` has been received.
