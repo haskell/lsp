@@ -711,6 +711,13 @@ withProgressBase indefinite title clientToken cancellable f = do
     -- for the token var to be filled if we want to use it.
     createToken :: m ()
     createToken = do
+      -- See Note [Delayed progress reporting]
+      -- This delays the creation of the token as well as the 'begin' message. Creating
+      -- the token shouldn't result in any visible action on the client side since
+      -- the title/initial percentage aren't given until the 'begin' mesage. However,
+      -- it's neater not to create tokens that we won't use, and clients may find it
+      -- easier to clean them up if they receive begin/end reports for them.
+      liftIO $ threadDelay startDelay
       case clientToken of
         -- See Note [Client- versus server-initiated progress]
         -- Client-initiated progress
@@ -752,11 +759,6 @@ withProgressBase indefinite title clientToken cancellable f = do
         Cancellable -> Just True
         NotCancellable -> Just False
       begin t = do
-        -- See Note [Delayed progress reporting]
-        -- This delays the 'begin' message but not the creation of the token. Creating
-        -- the token shouldn't result in any visible action on the client side since
-        -- the title/initial percentage aren't given until the 'begin' mesage
-        liftIO $ threadDelay startDelay
         (ProgressAmount pct msg) <- liftIO $ atomically $ takeTMVar reportVar
         sendProgressReport t $ WorkDoneProgressBegin L.AString title cancellable' msg pct
       update t =
