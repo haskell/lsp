@@ -20,6 +20,9 @@ package lsp-types
 
 if impl(ghc >= 9.9)
   allow-newer:
+    aeson:containers,
+    aeson:template-haskell,
+    co-log-core:base,
     entropy:base,
     entropy:directory,
     entropy:filepath,
