@@ -283,8 +283,8 @@ runSessionWithHandles' serverProc serverIn serverOut config' caps rootDir sessio
           -- be outside the range
           (InL $ fromIntegral pid)
           (Just lspTestClientInfo)
-          (Just $ T.pack absRootDir)
           Nothing
+          (Just $ InL $ T.pack absRootDir)
           (InL $ filePathToUri absRootDir)
           caps
           -- TODO: make this configurable?
