@@ -25,3 +25,4 @@ if impl(ghc >= 9.9)
     entropy:filepath,
     entropy:process,
     uuid-types:template-haskell,
+    these:base,
