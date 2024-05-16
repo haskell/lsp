@@ -48,7 +48,6 @@ import Data.Monoid (Ap (..))
 import Data.Ord (Down (Down))
 import Data.Text (Text)
 import Data.Text qualified as T
-import Data.UUID qualified as UUID
 import Language.LSP.Diagnostics
 import Language.LSP.Protocol.Capabilities
 import Language.LSP.Protocol.Lens qualified as L
@@ -590,7 +589,7 @@ trySendRegistration logger method regOpts = do
   -- First, check to see if the client supports dynamic registration on this method
   if dynamicRegistrationSupported method clientCaps
     then do
-      uuid <- liftIO $ UUID.toText <$> getStdRandom random
+      uuid <- liftIO $ T.pack <$> sequence (replicate 32 (getStdRandom (randomR (' ', '~'))))
       let registration = L.TRegistration uuid method (Just regOpts)
           params = L.RegistrationParams [toUntypedRegistration registration]
           regId = RegistrationId uuid
