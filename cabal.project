@@ -18,6 +18,10 @@ package lsp-types
   -- has very many independent modules
   ghc-options: -j4
 
--- We allow filepath-1.5, this lets us actually test it. There is no problem
--- on the lens side.
-allow-newer: lens:filepath
+if impl(ghc >= 9.9)
+  allow-newer:
+    entropy:base,
+    entropy:directory,
+    entropy:filepath,
+    entropy:process,
+    uuid-types:template-haskell,
