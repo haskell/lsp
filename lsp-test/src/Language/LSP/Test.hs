@@ -276,21 +276,22 @@ runSessionWithHandles' serverProc serverIn serverOut config' caps rootDir sessio
 
   config <- envOverrideConfig config'
 
-  let initializeParams =
+  let initializeParams = 
         InitializeParams
-          Nothing
-          -- Narrowing to Int32 here, but it's unlikely that a PID will
-          -- be outside the range
-          (InL $ fromIntegral pid)
-          (Just lspTestClientInfo)
-          Nothing
-          (Just $ InL $ T.pack absRootDir)
-          (InL $ filePathToUri absRootDir)
-          caps
-          -- TODO: make this configurable?
-          (Just $ Object $ lspConfig config')
-          (Just TraceValue_Off)
-          (fmap InL $ initialWorkspaceFolders config)
+        { _workDoneToken = Nothing
+        -- Narrowing to Int32 here, but it's unlikely that a PID will
+        -- be outside the range
+        , _processId = InL $ fromIntegral pid 
+        , _clientInfo = Just lspTestClientInfo
+        , _locale = Nothing
+        , _rootPath = Just (InL $ T.pack absRootDir)
+        , _rootUri = InL $ filePathToUri absRootDir
+        , _capabilities = caps
+        -- TODO: make this configurable?
+        , _initializationOptions = Just $ Object $ lspConfig config' 
+        , _trace = Just TraceValue_Off
+        , _workspaceFolders = InL <$> initialWorkspaceFolders config
+        }
   runSession' serverIn serverOut serverProc listenServer config caps rootDir exitServer $ do
     -- Wrap the session around initialize and shutdown calls
     initReqId <- sendRequest SMethod_Initialize initializeParams
