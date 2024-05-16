@@ -454,3 +454,13 @@ main = hspec $ around withDummyServer $ do
       let doc = TextDocumentIdentifier (Uri "")
       InL toks <- getSemanticTokens doc
       liftIO $ toks ^. L.data_ `shouldBe` [0, 1, 2, 1, 0]
+
+  describe "inlay hints" $ do
+    it "get works" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "." $ do
+      doc <- openDoc "test/data/renamePass/Desktop/simple.hs" "haskell"
+      inlayHints <- getInlayHints doc (Range (Position 1 2) (Position 3 4))
+      liftIO $ head inlayHints ^. L.label `shouldBe` InL ":: Text"
+    it "resolve tooltip works" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "." $ do
+      doc <- openDoc "test/data/renamePass/Desktop/simple.hs" "haskell"
+      inlayHints <- getAndResolveInlayHints doc (Range (Position 1 2) (Position 3 4))
+      liftIO $ head inlayHints ^. L.tooltip `shouldBe` Just (InL $ "start at " <> T.pack (show (Position 1 2)))

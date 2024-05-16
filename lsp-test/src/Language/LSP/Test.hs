@@ -124,6 +124,11 @@ module Language.LSP.Test (
   getAndResolveCodeLenses,
   resolveCodeLens,
 
+  -- ** Inlay Hints
+  getInlayHints,
+  getAndResolveInlayHints,
+  resolveInlayHint,
+
   -- ** Call hierarchy
   prepareCallHierarchy,
   incomingCalls,
@@ -979,6 +984,28 @@ resolveCodeLens cl = do
   rsp <- request SMethod_CodeLensResolve cl
   case rsp ^. L.result of
     Right cl -> return cl
+    Left error -> throw (UnexpectedResponseError (SomeLspId $ fromJust $ rsp ^. L.id) error)
+
+-- | Returns the inlay hints in the specified range.
+getInlayHints :: TextDocumentIdentifier -> Range -> Session [InlayHint]
+getInlayHints tId range = do
+  rsp <- request SMethod_TextDocumentInlayHint (InlayHintParams Nothing tId range)
+  pure $ absorbNull $ getResponseResult rsp
+
+{- | Returns the inlay hints in the specified range, resolving any with
+ a non empty _data_ field.
+-}
+getAndResolveInlayHints :: TextDocumentIdentifier -> Range -> Session [InlayHint]
+getAndResolveInlayHints tId range = do
+  inlayHints <- getInlayHints tId range
+  for inlayHints $ \inlayHint -> if isJust (inlayHint ^. L.data_) then resolveInlayHint inlayHint else pure inlayHint
+
+-- | Resolves the provided inlay hint.
+resolveInlayHint :: InlayHint -> Session InlayHint
+resolveInlayHint ih = do
+  rsp <- request SMethod_InlayHintResolve ih
+  case rsp ^. L.result of
+    Right ih -> return ih
     Left error -> throw (UnexpectedResponseError (SomeLspId $ fromJust $ rsp ^. L.id) error)
 
 -- | Pass a param and return the response from `prepareCallHierarchy`
