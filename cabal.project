@@ -1,4 +1,4 @@
-index-state: 2024-04-30T00:00:00Z
+index-state: 2024-05-16T14:00:00Z
 
 packages:
          ./lsp
@@ -18,6 +18,20 @@ package lsp-types
   -- has very many independent modules
   ghc-options: -j4
 
--- We allow filepath-1.5, this lets us actually test it. There is no problem
--- on the lens side.
-allow-newer: lens:filepath
+if impl(ghc >= 9.9)
+  allow-newer:
+    aeson:containers,
+    aeson:template-haskell,
+    boring:base,
+    co-log-core:base,
+    entropy:base,
+    entropy:directory,
+    entropy:filepath,
+    entropy:process,
+    quickcheck-instances:base,
+    quickcheck-instances:containers,
+    semialign:base, 
+    semialign:containers, 
+    these:base,
+    uuid-types:template-haskell,
+    witherable:containers,
