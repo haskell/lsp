@@ -273,9 +273,9 @@ handlers =
         resp $ Right $ InL [ih]
     , requestHandler SMethod_InlayHintResolve $ \req resp -> do
         let TRequestMessage _ _ _ params = req
-            (InlayHint {_data_= Just data_, ..}) = params
+            (InlayHint{_data_ = Just data_, ..}) = params
             start :: Position
             Success start = fromJSON data_
-            ih = InlayHint {_data_ = Nothing, _tooltip = Just $ InL $ "start at " <> T.pack (show start),  ..}
+            ih = InlayHint{_data_ = Nothing, _tooltip = Just $ InL $ "start at " <> T.pack (show start), ..}
         resp $ Right ih
     ]
