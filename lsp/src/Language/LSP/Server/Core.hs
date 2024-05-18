@@ -48,7 +48,6 @@ import Data.Monoid (Ap (..))
 import Data.Ord (Down (Down))
 import Data.Text (Text)
 import Data.Text qualified as T
-import Data.UUID qualified as UUID
 import Language.LSP.Diagnostics
 import Language.LSP.Protocol.Capabilities
 import Language.LSP.Protocol.Lens qualified as L
@@ -61,7 +60,6 @@ import Language.LSP.Protocol.Utils.SMethodMap (SMethodMap)
 import Language.LSP.Protocol.Utils.SMethodMap qualified as SMethodMap
 import Language.LSP.VFS hiding (end)
 import Prettyprinter
-import System.Random hiding (next)
 
 -- ---------------------------------------------------------------------
 {-# ANN module ("HLint: ignore Eta reduce" :: String) #-}
@@ -590,10 +588,10 @@ trySendRegistration logger method regOpts = do
   -- First, check to see if the client supports dynamic registration on this method
   if dynamicRegistrationSupported method clientCaps
     then do
-      uuid <- liftIO $ UUID.toText <$> getStdRandom random
-      let registration = L.TRegistration uuid method (Just regOpts)
+      rid <- T.pack . show <$> freshLspId
+      let registration = L.TRegistration rid method (Just regOpts)
           params = L.RegistrationParams [toUntypedRegistration registration]
-          regId = RegistrationId uuid
+          regId = RegistrationId rid
 
       -- TODO: handle the scenario where this returns an error
       _ <- sendRequest SMethod_ClientRegisterCapability params $ \_res -> pure ()
