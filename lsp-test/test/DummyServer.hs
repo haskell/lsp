@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module DummyServer where
 
@@ -256,4 +257,25 @@ handlers =
         case tokens of
           Left t -> resp $ Left $ ResponseError (InR ErrorCodes_InternalError) t Nothing
           Right tokens -> resp $ Right $ InL tokens
+    , requestHandler SMethod_TextDocumentInlayHint $ \req resp -> do
+        let TRequestMessage _ _ _ params = req
+            InlayHintParams _ _ (Range start end) = params
+            ih =
+              InlayHint
+                end
+                (InL ":: Text")
+                Nothing
+                Nothing
+                Nothing
+                Nothing
+                Nothing
+                (Just $ toJSON start)
+        resp $ Right $ InL [ih]
+    , requestHandler SMethod_InlayHintResolve $ \req resp -> do
+        let TRequestMessage _ _ _ params = req
+            (InlayHint{_data_ = Just data_, ..}) = params
+            start :: Position
+            Success start = fromJSON data_
+            ih = InlayHint{_data_ = Nothing, _tooltip = Just $ InL $ "start at " <> T.pack (show start), ..}
+        resp $ Right ih
     ]
