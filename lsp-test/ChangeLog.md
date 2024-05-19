@@ -1,5 +1,9 @@
 # Revision history for lsp-test
 
+## Unreleased
+
+- Add helpers for testing inlay hints.
+
 ## 0.17.0.2
 
 - Support for newer versions of dependencies.
