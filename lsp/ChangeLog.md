@@ -1,5 +1,10 @@
 # Revision history for lsp
 
+## Unreleased
+
+- Drop dependency on `uuid` and `random`
+- Fix handling of `rootPath` in `intializeParams`
+
 ## 2.6.0.0
 
 - Progress reporting now has a configurable start delay and update delay. This allows
