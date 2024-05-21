@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Language.LSP.Protocol.Message.Registration where
@@ -17,7 +18,7 @@ import Data.Text qualified as T
 import GHC.Generics
 import Prettyprinter
 
--- | Typed registration type, with correct options.
+-- | Typed dynamic registration type, with correct options.
 data TRegistration (m :: Method ClientToServer t) = TRegistration
   { _id :: Text
   -- ^ The id used to register the request. The id can be used to deregister
@@ -36,8 +37,8 @@ deriving stock instance Show (RegistrationOptions m) => Show (TRegistration m)
 -- TODO: can we do this generically somehow?
 -- This generates the function
 -- regHelper :: SMethod m
---           -> (( Show (RegistrationOptions m)
---               , ToJSON (RegistrationOptions m)
+--           -> (( Show (ServerCapability m)
+--               , ToJSON (ServerCapability m)
 --               , FromJSON ($regOptTcon m)
 --              => x)
 --           -> x
@@ -76,7 +77,7 @@ toSomeRegistration r =
 
 -- ---------------------------------------------------------------------
 
--- | Typed unregistration type.
+-- | Typed dynamic unregistration type.
 data TUnregistration (m :: Method ClientToServer t) = TUnregistration
   { _id :: Text
   -- ^ The id used to unregister the request or notification. Usually an id

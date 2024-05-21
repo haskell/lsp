@@ -83,7 +83,7 @@ spec = do
                 updater $ ProgressAmount (Just 75) (Just "step3")
                 liftIO $ waitBarrier b3
 
-      runSessionWithServer logger definition Test.defaultConfig Test.fullCaps "." $ do
+      runSessionWithServer logger definition Test.defaultConfig Test.fullLatestClientCaps "." $ do
         Test.sendRequest (SMethod_CustomMethod (Proxy @"something")) J.Null
 
         -- Wait until we have seen a begin messsage. This means that the token setup
@@ -144,7 +144,7 @@ spec = do
                 -- Wait around to be cancelled, set the MVar only if we are
                 liftIO $ threadDelay (5 * 1000000) `Control.Exception.catch` (\(e :: ProgressCancelledException) -> modifyMVar_ wasCancelled (\_ -> pure True))
 
-      runSessionWithServer logger definition Test.defaultConfig Test.fullCaps "." $ do
+      runSessionWithServer logger definition Test.defaultConfig Test.fullLatestClientCaps "." $ do
         Test.sendRequest (SMethod_CustomMethod (Proxy @"something")) J.Null
 
         -- Wait until we have created the progress so the updates will be sent individually
@@ -190,7 +190,7 @@ spec = do
                   takeMVar killVar
                   Control.Exception.throwIO AsyncCancelled
 
-      runSessionWithServer logger definition Test.defaultConfig Test.fullCaps "." $ do
+      runSessionWithServer logger definition Test.defaultConfig Test.fullLatestClientCaps "." $ do
         -- First make sure that we get a $/progress begin notification
         skipManyTill Test.anyMessage $ do
           x <- Test.message SMethod_Progress
@@ -235,7 +235,7 @@ spec = do
                 updater $ ProgressAmount (Just 75) (Just "step3")
                 liftIO $ waitBarrier b3
 
-      runSessionWithServer logger definition Test.defaultConfig Test.fullCaps "." $ do
+      runSessionWithServer logger definition Test.defaultConfig Test.fullLatestClientCaps "." $ do
         Test.sendRequest SMethod_TextDocumentCodeLens (CodeLensParams (Just $ ProgressToken $ InR "hello") Nothing (TextDocumentIdentifier $ Uri "."))
 
         -- First make sure that we get a $/progress begin notification
@@ -318,7 +318,7 @@ spec = do
                 ps = DidChangeWorkspaceFoldersParams ev
              in Test.sendNotification SMethod_WorkspaceDidChangeWorkspaceFolders ps
 
-      runSessionWithServer logger definition config Test.fullCaps "." $ do
+      runSessionWithServer logger definition config Test.fullLatestClientCaps "." $ do
         changeFolders [wf1] []
         changeFolders [wf2] [wf1]
 

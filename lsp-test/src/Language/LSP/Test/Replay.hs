@@ -67,7 +67,7 @@ replaySession serverExe sessionDir = do
       runSessionWithHandles serverIn serverOut serverProc
                             (listenServer serverMsgs requestMap reqSema rspSema passSema mainThread)
                             def
-                            fullCaps
+                            fullLatestClientCaps
                             sessionDir
                             (return ()) -- No finalizer cleanup
                             (sendMessages clientMsgs reqSema rspSema)
