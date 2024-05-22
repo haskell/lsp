@@ -394,39 +394,79 @@ dynamicRegistrationSupported method caps = fromMaybe False $ case method of
 type DocumentSyncCaps = TextDocumentSyncOptions |? TextDocumentSyncKind
 
 type ServerCapability :: forall f t . Method f t -> Type
+-- | The server capability associated with a given method.
+--
+-- Where several methods are provided together (e.g. the three `callHierarchy` methods), we associate all of them
+-- with the capaiblity, even if there is one "primary" method.
+--
+-- For methods which strictly only need a client capability but which are closely related to a server capability
+-- (e.g. `codeLens/refresh`), we also associate them with that server capability.
 type family ServerCapability (m :: Method f t) where
   ServerCapability Method_TextDocumentDeclaration = Bool |? (DeclarationOptions |? DeclarationRegistrationOptions)
   ServerCapability Method_TextDocumentImplementation = Bool |? (ImplementationOptions |? ImplementationRegistrationOptions)
   ServerCapability Method_TextDocumentTypeDefinition = Bool |? (TypeDefinitionOptions |? TypeDefinitionRegistrationOptions)
-  ServerCapability Method_TextDocumentCompletion = CompletionOptions
-  ServerCapability Method_CompletionItemResolve = CompletionOptions
   ServerCapability Method_TextDocumentHover = Bool |? HoverOptions
   ServerCapability Method_TextDocumentSignatureHelp = SignatureHelpOptions
   ServerCapability Method_TextDocumentDefinition = Bool |? DefinitionOptions
   ServerCapability Method_TextDocumentReferences = Bool |? ReferenceOptions
   ServerCapability Method_TextDocumentDocumentHighlight = Bool |? DocumentHighlightOptions
   ServerCapability Method_TextDocumentDocumentSymbol = Bool |? DocumentSymbolOptions
-  ServerCapability Method_TextDocumentCodeAction = Bool |? CodeActionOptions
-  ServerCapability Method_TextDocumentCodeLens = CodeLensOptions
-  ServerCapability Method_TextDocumentDocumentLink = DocumentLinkOptions
-  ServerCapability Method_TextDocumentDocumentColor = Bool |? (DocumentColorOptions |? DocumentColorRegistrationOptions)
-  ServerCapability Method_WorkspaceSymbol = Bool |? WorkspaceSymbolOptions
-  ServerCapability Method_TextDocumentFormatting = Bool |? DocumentFormattingOptions
-  ServerCapability Method_TextDocumentRangeFormatting = Bool |? DocumentRangeFormattingOptions
-  ServerCapability Method_TextDocumentOnTypeFormatting = DocumentOnTypeFormattingOptions
-  ServerCapability Method_TextDocumentRename = Bool |? RenameOptions
   ServerCapability Method_TextDocumentFoldingRange = Bool |? (FoldingRangeOptions |? FoldingRangeRegistrationOptions)
   ServerCapability Method_TextDocumentSelectionRange = Bool |? (SelectionRangeOptions |? SelectionRangeRegistrationOptions)
   ServerCapability Method_WorkspaceExecuteCommand = ExecuteCommandOptions
-  ServerCapability Method_TextDocumentPrepareCallHierarchy = Bool |? (CallHierarchyOptions |? CallHierarchyRegistrationOptions)
   ServerCapability Method_TextDocumentLinkedEditingRange = Bool |? (LinkedEditingRangeOptions |? LinkedEditingRangeRegistrationOptions)
-  ServerCapability Method_TextDocumentSemanticTokensFull = SemanticTokensOptions |? SemanticTokensRegistrationOptions
   ServerCapability Method_TextDocumentMoniker = Bool |? (MonikerOptions |? MonikerRegistrationOptions)
-  ServerCapability Method_TextDocumentPrepareTypeHierarchy = Bool |? (TypeHierarchyOptions |? TypeHierarchyRegistrationOptions)
-  ServerCapability Method_TextDocumentInlineValue = Bool |? (InlineValueOptions |? InlineValueRegistrationOptions)
-  ServerCapability Method_TextDocumentInlayHint = Bool |? (InlayHintOptions |? InlayHintRegistrationOptions)
-  ServerCapability Method_TextDocumentDiagnostic = DiagnosticOptions |? DiagnosticRegistrationOptions
   ServerCapability Method_WorkspaceWorkspaceFolders = WorkspaceFoldersServerCapabilities
+
+  ServerCapability Method_TextDocumentCompletion = CompletionOptions
+  ServerCapability Method_CompletionItemResolve = CompletionOptions
+
+  ServerCapability Method_TextDocumentCodeAction = Bool |? CodeActionOptions
+  ServerCapability Method_CodeActionResolve = Bool |? CodeActionOptions
+
+  ServerCapability Method_TextDocumentCodeLens = CodeLensOptions
+  ServerCapability Method_CodeLensResolve = CodeLensOptions
+  ServerCapability Method_WorkspaceCodeLensRefresh = CodeLensOptions
+
+  ServerCapability Method_TextDocumentDocumentLink = DocumentLinkOptions
+  ServerCapability Method_DocumentLinkResolve = DocumentLinkOptions
+
+  ServerCapability Method_WorkspaceSymbol = Bool |? WorkspaceSymbolOptions
+  ServerCapability Method_WorkspaceSymbolResolve = Bool |? WorkspaceSymbolOptions
+
+  ServerCapability Method_TextDocumentRename = Bool |? RenameOptions
+  ServerCapability Method_TextDocumentPrepareRename = Bool |? RenameOptions
+
+  ServerCapability Method_TextDocumentDocumentColor = Bool |? (DocumentColorOptions |? DocumentColorRegistrationOptions)
+  ServerCapability Method_TextDocumentColorPresentation = Bool |? (DocumentColorOptions |? DocumentColorRegistrationOptions)
+
+  ServerCapability Method_TextDocumentFormatting = Bool |? DocumentFormattingOptions
+  ServerCapability Method_TextDocumentRangeFormatting = Bool |? DocumentRangeFormattingOptions
+  ServerCapability Method_TextDocumentOnTypeFormatting = DocumentOnTypeFormattingOptions
+
+  ServerCapability Method_TextDocumentPrepareCallHierarchy = Bool |? (CallHierarchyOptions |? CallHierarchyRegistrationOptions)
+  ServerCapability Method_CallHierarchyIncomingCalls = Bool |? (CallHierarchyOptions |? CallHierarchyRegistrationOptions)
+  ServerCapability Method_CallHierarchyOutgoingCalls = Bool |? (CallHierarchyOptions |? CallHierarchyRegistrationOptions)
+
+  ServerCapability Method_TextDocumentSemanticTokensFull = SemanticTokensOptions |? SemanticTokensRegistrationOptions
+  ServerCapability Method_TextDocumentSemanticTokensFullDelta = SemanticTokensOptions |? SemanticTokensRegistrationOptions
+  ServerCapability Method_TextDocumentSemanticTokensRange = SemanticTokensOptions |? SemanticTokensRegistrationOptions
+  ServerCapability Method_WorkspaceSemanticTokensRefresh = SemanticTokensOptions |? SemanticTokensRegistrationOptions
+
+  ServerCapability Method_TextDocumentPrepareTypeHierarchy = Bool |? (TypeHierarchyOptions |? TypeHierarchyRegistrationOptions)
+  ServerCapability Method_TypeHierarchySupertypes = Bool |? (TypeHierarchyOptions |? TypeHierarchyRegistrationOptions)
+  ServerCapability Method_TypeHierarchySubtypes = Bool |? (TypeHierarchyOptions |? TypeHierarchyRegistrationOptions)
+
+  ServerCapability Method_TextDocumentInlineValue = Bool |? (InlineValueOptions |? InlineValueRegistrationOptions)
+  ServerCapability Method_WorkspaceInlineValueRefresh = Bool |? (InlineValueOptions |? InlineValueRegistrationOptions)
+
+  ServerCapability Method_TextDocumentInlayHint = Bool |? (InlayHintOptions |? InlayHintRegistrationOptions)
+  ServerCapability Method_InlayHintResolve = Bool |? (InlayHintOptions |? InlayHintRegistrationOptions)
+  ServerCapability Method_WorkspaceInlayHintRefresh = Bool |? (InlayHintOptions |? InlayHintRegistrationOptions)
+
+  ServerCapability Method_TextDocumentDiagnostic = DiagnosticOptions |? DiagnosticRegistrationOptions
+  ServerCapability Method_WorkspaceDiagnostic = DiagnosticOptions |? DiagnosticRegistrationOptions
+  ServerCapability Method_WorkspaceDiagnosticRefresh = DiagnosticOptions |? DiagnosticRegistrationOptions
 
   ServerCapability Method_WorkspaceWillCreateFiles = FileOperationOptions
   ServerCapability Method_WorkspaceWillRenameFiles = FileOperationOptions
@@ -445,49 +485,40 @@ type family ServerCapability (m :: Method f t) where
   ServerCapability Method_TextDocumentWillSave = DocumentSyncCaps
   ServerCapability Method_TextDocumentWillSaveWaitUntil = DocumentSyncCaps
 
-  ServerCapability Method_CodeActionResolve = Void -- TODO?
-  ServerCapability Method_CodeLensResolve = Void -- TODO?
-  ServerCapability Method_WorkspaceCodeLensRefresh = Void
-  ServerCapability Method_DocumentLinkResolve = Void -- TODO?
-  ServerCapability Method_WorkspaceSymbolResolve = Void
-  ServerCapability Method_CallHierarchyIncomingCalls = Void -- TODO?
-  ServerCapability Method_CallHierarchyOutgoingCalls = Void -- TODO?
-  ServerCapability Method_TextDocumentSemanticTokensFullDelta = Void -- TODO?
-  ServerCapability Method_TextDocumentSemanticTokensRange = Void -- TODO?
-  ServerCapability Method_WorkspaceSemanticTokensRefresh = Void -- TODO?
-  ServerCapability Method_TextDocumentPrepareRename = Void
-  ServerCapability Method_TypeHierarchySupertypes = Void
-  ServerCapability Method_TypeHierarchySubtypes = Void
-  ServerCapability Method_WorkspaceInlineValueRefresh = Void
-  ServerCapability Method_InlayHintResolve = Void
-  ServerCapability Method_WorkspaceInlayHintRefresh = Void
-  ServerCapability Method_WorkspaceDiagnostic = Void
-  ServerCapability Method_WorkspaceDiagnosticRefresh = Void
-  ServerCapability Method_TextDocumentColorPresentation = Void
+  -- Dynamic registration only
   ServerCapability Method_WorkspaceDidChangeConfiguration = Void
   ServerCapability Method_WorkspaceDidChangeWatchedFiles = Void
   ServerCapability Method_WorkspaceDidChangeWorkspaceFolders = Void
 
+  -- Client capability only
+  ServerCapability Method_TextDocumentPublishDiagnostics = Void
   ServerCapability Method_WorkspaceConfiguration = Void
+
+  -- All required by default, no capabilities
   ServerCapability Method_WindowWorkDoneProgressCreate = Void
-  ServerCapability Method_WindowShowDocument = Void
-  ServerCapability Method_ClientRegisterCapability = Void
-  ServerCapability Method_ClientUnregisterCapability = Void
-  ServerCapability Method_Initialize = Void
-  ServerCapability Method_Shutdown = Void
-  ServerCapability Method_WindowShowMessageRequest = Void
-  ServerCapability Method_WorkspaceApplyEdit = Void
   ServerCapability Method_WindowWorkDoneProgressCancel = Void
-  ServerCapability Method_Initialized = Void
-  ServerCapability Method_Exit = Void
+  ServerCapability Method_Progress = Void
+
+  ServerCapability Method_WindowShowDocument = Void
+  ServerCapability Method_WindowShowMessageRequest = Void
   ServerCapability Method_WindowShowMessage = Void
   ServerCapability Method_WindowLogMessage = Void
+
+  ServerCapability Method_ClientRegisterCapability = Void
+  ServerCapability Method_ClientUnregisterCapability = Void
+
+  ServerCapability Method_Initialize = Void
+  ServerCapability Method_Initialized = Void
+  ServerCapability Method_Shutdown = Void
+  ServerCapability Method_Exit = Void
+
+  ServerCapability Method_WorkspaceApplyEdit = Void
+
   ServerCapability Method_TelemetryEvent = Void
-  ServerCapability Method_TextDocumentPublishDiagnostics = Void
   ServerCapability Method_SetTrace = Void
   ServerCapability Method_LogTrace = Void
   ServerCapability Method_CancelRequest = Void
-  ServerCapability Method_Progress = Void
+
   ServerCapability (Method_CustomMethod s) = Void
 
 serverCapability :: forall m . SMethod m -> Traversal' ServerCapabilities (ServerCapability m)
@@ -495,34 +526,69 @@ serverCapability = \case
   SMethod_TextDocumentDeclaration -> L.declarationProvider . _Just
   SMethod_TextDocumentImplementation -> L.implementationProvider . _Just
   SMethod_TextDocumentTypeDefinition -> L.typeDefinitionProvider . _Just
-  SMethod_TextDocumentCompletion -> L.completionProvider . _Just
-  SMethod_CompletionItemResolve -> L.completionProvider . _Just
   SMethod_TextDocumentHover -> L.hoverProvider . _Just
   SMethod_TextDocumentSignatureHelp -> L.signatureHelpProvider . _Just
   SMethod_TextDocumentDefinition -> L.definitionProvider . _Just
   SMethod_TextDocumentReferences -> L.referencesProvider . _Just
   SMethod_TextDocumentDocumentHighlight -> L.documentHighlightProvider . _Just
   SMethod_TextDocumentDocumentSymbol -> L.documentSymbolProvider . _Just
-  SMethod_TextDocumentCodeAction -> L.codeActionProvider . _Just
-  SMethod_TextDocumentCodeLens -> L.codeLensProvider . _Just
-  SMethod_TextDocumentDocumentLink -> L.documentLinkProvider . _Just
-  SMethod_TextDocumentDocumentColor -> L.colorProvider . _Just
-  SMethod_WorkspaceSymbol -> L.workspaceSymbolProvider . _Just
-  SMethod_TextDocumentFormatting -> L.documentFormattingProvider . _Just
-  SMethod_TextDocumentRangeFormatting -> L.documentRangeFormattingProvider . _Just
-  SMethod_TextDocumentOnTypeFormatting -> L.documentOnTypeFormattingProvider . _Just
-  SMethod_TextDocumentRename -> L.renameProvider . _Just
   SMethod_TextDocumentFoldingRange -> L.foldingRangeProvider . _Just
   SMethod_TextDocumentSelectionRange -> L.selectionRangeProvider . _Just
   SMethod_WorkspaceExecuteCommand -> L.executeCommandProvider . _Just
-  SMethod_TextDocumentPrepareCallHierarchy -> L.callHierarchyProvider . _Just
-  SMethod_TextDocumentLinkedEditingRange -> L.linkedEditingRangeProvider . _Just
-  SMethod_TextDocumentSemanticTokensFull -> L.semanticTokensProvider . _Just
   SMethod_TextDocumentMoniker -> L.monikerProvider . _Just
+
+  SMethod_TextDocumentCompletion -> L.completionProvider . _Just
+  SMethod_CompletionItemResolve -> L.completionProvider . _Just
+
+  SMethod_TextDocumentCodeAction -> L.codeActionProvider . _Just
+  SMethod_CodeActionResolve -> L.codeActionProvider . _Just
+
+  SMethod_TextDocumentCodeLens -> L.codeLensProvider . _Just
+  SMethod_CodeLensResolve -> L.codeLensProvider . _Just
+  SMethod_WorkspaceCodeLensRefresh -> L.codeLensProvider . _Just
+
+  SMethod_TextDocumentDocumentLink -> L.documentLinkProvider . _Just
+  SMethod_DocumentLinkResolve -> L.documentLinkProvider . _Just
+
+  SMethod_TextDocumentDocumentColor -> L.colorProvider . _Just
+  SMethod_TextDocumentColorPresentation -> L.colorProvider . _Just
+
+  SMethod_WorkspaceSymbol -> L.workspaceSymbolProvider . _Just
+  SMethod_WorkspaceSymbolResolve -> L.workspaceSymbolProvider . _Just
+
+  SMethod_TextDocumentFormatting -> L.documentFormattingProvider . _Just
+  SMethod_TextDocumentRangeFormatting -> L.documentRangeFormattingProvider . _Just
+  SMethod_TextDocumentOnTypeFormatting -> L.documentOnTypeFormattingProvider . _Just
+
+  SMethod_TextDocumentRename -> L.renameProvider . _Just
+  SMethod_TextDocumentPrepareRename -> L.renameProvider . _Just
+
+  SMethod_TextDocumentPrepareCallHierarchy -> L.callHierarchyProvider . _Just
+  SMethod_CallHierarchyIncomingCalls -> L.callHierarchyProvider . _Just
+  SMethod_CallHierarchyOutgoingCalls -> L.callHierarchyProvider . _Just
+
+  SMethod_TextDocumentLinkedEditingRange -> L.linkedEditingRangeProvider . _Just
+
+  SMethod_TextDocumentSemanticTokensFull -> L.semanticTokensProvider . _Just
+  SMethod_TextDocumentSemanticTokensFullDelta -> L.semanticTokensProvider . _Just
+  SMethod_TextDocumentSemanticTokensRange -> L.semanticTokensProvider . _Just
+  SMethod_WorkspaceSemanticTokensRefresh -> L.semanticTokensProvider . _Just
+
   SMethod_TextDocumentPrepareTypeHierarchy -> L.typeHierarchyProvider . _Just
+  SMethod_TypeHierarchySubtypes -> L.typeHierarchyProvider . _Just
+  SMethod_TypeHierarchySupertypes -> L.typeHierarchyProvider . _Just
+
   SMethod_TextDocumentInlineValue -> L.inlineValueProvider . _Just
+  SMethod_WorkspaceInlineValueRefresh -> L.inlineValueProvider . _Just
+
   SMethod_TextDocumentInlayHint -> L.inlayHintProvider . _Just
+  SMethod_InlayHintResolve -> L.inlayHintProvider . _Just
+  SMethod_WorkspaceInlayHintRefresh -> L.inlayHintProvider . _Just
+
   SMethod_TextDocumentDiagnostic -> L.diagnosticProvider . _Just
+  SMethod_WorkspaceDiagnostic -> L.diagnosticProvider . _Just
+  SMethod_WorkspaceDiagnosticRefresh -> L.diagnosticProvider . _Just
+
   SMethod_WorkspaceWorkspaceFolders -> L.workspace . _Just . L.workspaceFolders . _Just
 
   SMethod_WorkspaceWillCreateFiles -> fileOps
@@ -542,7 +608,30 @@ serverCapability = \case
   SMethod_TextDocumentWillSave -> documentSync
   SMethod_TextDocumentWillSaveWaitUntil -> documentSync
 
-  _ -> ignored
+  SMethod_WorkspaceDidChangeConfiguration -> ignored
+  SMethod_WorkspaceDidChangeWatchedFiles -> ignored
+  SMethod_WorkspaceDidChangeWorkspaceFolders -> ignored
+  SMethod_TextDocumentPublishDiagnostics -> ignored
+  SMethod_WorkspaceConfiguration -> ignored
+  SMethod_WindowWorkDoneProgressCreate -> ignored
+  SMethod_WindowWorkDoneProgressCancel -> ignored
+  SMethod_Progress -> ignored
+  SMethod_WindowShowDocument -> ignored
+  SMethod_WindowShowMessageRequest -> ignored
+  SMethod_WindowShowMessage -> ignored
+  SMethod_WindowLogMessage -> ignored
+  SMethod_ClientRegisterCapability -> ignored
+  SMethod_ClientUnregisterCapability -> ignored
+  SMethod_Initialize -> ignored
+  SMethod_Initialized -> ignored
+  SMethod_Shutdown -> ignored
+  SMethod_Exit -> ignored
+  SMethod_WorkspaceApplyEdit -> ignored
+  SMethod_TelemetryEvent -> ignored
+  SMethod_SetTrace -> ignored
+  SMethod_LogTrace -> ignored
+  SMethod_CancelRequest -> ignored
+  (SMethod_CustomMethod _s) -> ignored
   where
     fileOps :: Traversal' ServerCapabilities FileOperationOptions
     fileOps = L.workspace . _Just . L.fileOperations . _Just
