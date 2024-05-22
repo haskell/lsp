@@ -1,0 +1,303 @@
+{
+  "general": {
+    "markdown": { "allowedTags": [  ], "parser": "" },
+    "positionEncodings": [ "utf-16" ],
+    "regularExpressions": { "engine": "" },
+    "staleRequestSupport": { "cancel": true, "retryOnContentModified": [  ] }
+  },
+  "notebookDocument": {
+    "synchronization": {
+      "dynamicRegistration": true,
+      "executionSummarySupport": true
+    }
+  },
+  "textDocument": {
+    "callHierarchy": { "dynamicRegistration": true },
+    "codeAction": {
+      "codeActionLiteralSupport": {
+        "codeActionKind": {
+          "valueSet": [
+            "",
+            "quickfix",
+            "refactor",
+            "refactor.extract",
+            "refactor.inline",
+            "refactor.rewrite",
+            "source",
+            "source.organizeImports",
+            "source.fixAll",
+            "notebook"
+          ]
+        }
+      },
+      "dataSupport": true,
+      "disabledSupport": true,
+      "dynamicRegistration": true,
+      "honorsChangeAnnotations": true,
+      "isPreferredSupport": true,
+      "resolveSupport": { "properties": [  ] }
+    },
+    "codeLens": { "dynamicRegistration": true },
+    "colorProvider": { "dynamicRegistration": true },
+    "completion": {
+      "completionItem": {
+        "commitCharactersSupport": true,
+        "deprecatedSupport": true,
+        "documentationFormat": [ "plaintext", "markdown" ],
+        "insertReplaceSupport": true,
+        "insertTextModeSupport": { "valueSet": [  ] },
+        "labelDetailsSupport": true,
+        "preselectSupport": true,
+        "resolveSupport": { "properties": [ "documentation", "details" ] },
+        "snippetSupport": true,
+        "tagSupport": { "valueSet": [  ] }
+      },
+      "completionItemKind": {
+        "valueSet": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23,
+          24,
+          25
+        ]
+      },
+      "completionList": { "itemDefaults": [  ] },
+      "contextSupport": true,
+      "dynamicRegistration": true,
+      "insertTextMode": 1
+    },
+    "declaration": { "dynamicRegistration": true, "linkSupport": true },
+    "definition": { "dynamicRegistration": true, "linkSupport": true },
+    "diagnostic": {
+      "dynamicRegistration": true,
+      "relatedDocumentSupport": true
+    },
+    "documentHighlight": { "dynamicRegistration": true },
+    "documentLink": { "dynamicRegistration": true, "tooltipSupport": true },
+    "documentSymbol": {
+      "dynamicRegistration": true,
+      "hierarchicalDocumentSymbolSupport": true,
+      "labelSupport": true,
+      "symbolKind": {
+        "valueSet": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23,
+          24,
+          25,
+          26
+        ]
+      },
+      "tagSupport": { "valueSet": [ 1 ] }
+    },
+    "foldingRange": {
+      "dynamicRegistration": true,
+      "foldingRange": { "collapsedText": true },
+      "foldingRangeKind": { "valueSet": [  ] }
+    },
+    "formatting": { "dynamicRegistration": true },
+    "hover": {
+      "contentFormat": [ "plaintext", "markdown" ],
+      "dynamicRegistration": true
+    },
+    "implementation": { "dynamicRegistration": true, "linkSupport": true },
+    "inlayHint": {
+      "dynamicRegistration": true,
+      "resolveSupport": { "properties": [  ] }
+    },
+    "inlineValue": { "dynamicRegistration": true },
+    "linkedEditingRange": { "dynamicRegistration": true },
+    "moniker": { "dynamicRegistration": true },
+    "onTypeFormatting": { "dynamicRegistration": true },
+    "publishDiagnostics": {
+      "codeDescriptionSupport": true,
+      "dataSupport": true,
+      "relatedInformation": true,
+      "tagSupport": { "valueSet": [ 1, 2 ] },
+      "versionSupport": true
+    },
+    "rangeFormatting": { "dynamicRegistration": true },
+    "references": { "dynamicRegistration": true },
+    "rename": {
+      "dynamicRegistration": true,
+      "honorsChangeAnnotations": true,
+      "prepareSupport": true,
+      "prepareSupportDefaultBehavior": 1
+    },
+    "selectionRange": { "dynamicRegistration": true },
+    "semanticTokens": {
+      "augmentsSyntaxTokens": true,
+      "dynamicRegistration": true,
+      "formats": [ "relative" ],
+      "multilineTokenSupport": true,
+      "overlappingTokenSupport": true,
+      "requests": { "full": { "delta": true }, "range": true },
+      "serverCancelSupport": true,
+      "tokenModifiers": [
+        "declaration",
+        "definition",
+        "readonly",
+        "static",
+        "deprecated",
+        "abstract",
+        "async",
+        "modification",
+        "documentation",
+        "defaultLibrary"
+      ],
+      "tokenTypes": [
+        "namespace",
+        "type",
+        "class",
+        "enum",
+        "interface",
+        "struct",
+        "typeParameter",
+        "parameter",
+        "variable",
+        "property",
+        "enumMember",
+        "event",
+        "function",
+        "method",
+        "macro",
+        "keyword",
+        "modifier",
+        "comment",
+        "string",
+        "number",
+        "regexp",
+        "operator",
+        "decorator"
+      ]
+    },
+    "signatureHelp": {
+      "contextSupport": true,
+      "dynamicRegistration": true,
+      "signatureInformation": {
+        "activeParameterSupport": true,
+        "documentationFormat": [ "plaintext", "markdown" ],
+        "parameterInformation": { "labelOffsetSupport": true }
+      }
+    },
+    "synchronization": {
+      "didSave": true,
+      "dynamicRegistration": true,
+      "willSave": true,
+      "willSaveWaitUntil": true
+    },
+    "typeDefinition": { "dynamicRegistration": true, "linkSupport": true },
+    "typeHierarchy": { "dynamicRegistration": true }
+  },
+  "window": {
+    "showDocument": { "support": true },
+    "showMessage": {  },
+    "workDoneProgress": true
+  },
+  "workspace": {
+    "applyEdit": true,
+    "codeLens": { "refreshSupport": true },
+    "configuration": true,
+    "diagnostics": { "refreshSupport": true },
+    "didChangeConfiguration": { "dynamicRegistration": true },
+    "didChangeWatchedFiles": {
+      "dynamicRegistration": true,
+      "relativePatternSupport": true
+    },
+    "executeCommand": { "dynamicRegistration": true },
+    "fileOperations": {
+      "didCreate": true,
+      "didDelete": true,
+      "didRename": true,
+      "dynamicRegistration": true,
+      "willCreate": true,
+      "willDelete": true,
+      "willRename": true
+    },
+    "inlayHint": { "refreshSupport": true },
+    "inlineValue": { "refreshSupport": true },
+    "semanticTokens": { "refreshSupport": true },
+    "symbol": {
+      "dynamicRegistration": true,
+      "resolveSupport": { "properties": [  ] },
+      "symbolKind": {
+        "valueSet": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23,
+          24,
+          25,
+          26
+        ]
+      },
+      "tagSupport": { "valueSet": [ 1 ] }
+    },
+    "workspaceEdit": {
+      "changeAnnotationSupport": { "groupsOnLabel": true },
+      "documentChanges": true,
+      "normalizesLineEndings": true,
+      "resourceOperations": [ "create", "delete", "rename" ]
+    },
+    "workspaceFolders": true
+  }
+}
