@@ -18,6 +18,7 @@ import Language.LSP.Protocol.Lens qualified as L
 import Language.LSP.Protocol.Message
 import Language.LSP.Protocol.Types
 import Prelude hiding (min)
+import Language.LSP.Protocol.Lens (HasSynchronization(synchronization))
 
 {-
 TODO: this is out-of-date/needs an audit
@@ -335,6 +336,269 @@ capsForVersion (LSPVersion maj min) = caps
 
   allMarkups = [MarkupKind_PlainText, MarkupKind_Markdown]
 
+---- CLIENT CAPABILITIES
+
+type ClientCapability :: forall f t . Method f t -> Type
+type family ClientCapability (m :: Method f t) where
+  ClientCapability Method_TextDocumentDeclaration = DeclarationClientCapabilities
+  ClientCapability Method_TextDocumentImplementation = ImplementationClientCapabilities
+  ClientCapability Method_TextDocumentTypeDefinition = TypeDefinitionClientCapabilities
+  ClientCapability Method_TextDocumentHover = HoverClientCapabilities
+  ClientCapability Method_TextDocumentSignatureHelp = SignatureHelpClientCapabilities
+  ClientCapability Method_TextDocumentDefinition = DefinitionClientCapabilities
+  ClientCapability Method_TextDocumentReferences = ReferenceClientCapabilities
+  ClientCapability Method_TextDocumentDocumentHighlight = DocumentHighlightClientCapabilities
+  ClientCapability Method_TextDocumentDocumentSymbol = DocumentSymbolClientCapabilities
+  ClientCapability Method_TextDocumentFoldingRange = FoldingRangeClientCapabilities
+  ClientCapability Method_TextDocumentSelectionRange = SelectionRangeClientCapabilities
+  ClientCapability Method_WorkspaceExecuteCommand = ExecuteCommandClientCapabilities
+  ClientCapability Method_TextDocumentLinkedEditingRange = LinkedEditingRangeClientCapabilities
+  ClientCapability Method_TextDocumentMoniker = MonikerClientCapabilities
+  ClientCapability Method_WorkspaceWorkspaceFolders = Bool
+
+  ClientCapability Method_TextDocumentCompletion = CompletionClientCapabilities
+  ClientCapability Method_CompletionItemResolve = CompletionClientCapabilities
+
+  ClientCapability Method_TextDocumentCodeAction = CodeActionClientCapabilities
+  ClientCapability Method_CodeActionResolve = CodeActionClientCapabilities
+
+  ClientCapability Method_TextDocumentCodeLens = CodeLensClientCapabilities
+  ClientCapability Method_CodeLensResolve = CodeLensClientCapabilities
+  ClientCapability Method_WorkspaceCodeLensRefresh = CodeLensWorkspaceClientCapabilities
+
+  ClientCapability Method_TextDocumentDocumentLink = DocumentLinkClientCapabilities
+  ClientCapability Method_DocumentLinkResolve = DocumentLinkClientCapabilities
+
+  ClientCapability Method_WorkspaceSymbol = WorkspaceSymbolClientCapabilities
+  ClientCapability Method_WorkspaceSymbolResolve = WorkspaceSymbolClientCapabilities
+
+  ClientCapability Method_TextDocumentRename = RenameClientCapabilities
+  ClientCapability Method_TextDocumentPrepareRename = RenameClientCapabilities
+
+  ClientCapability Method_TextDocumentDocumentColor = DocumentColorClientCapabilities
+  ClientCapability Method_TextDocumentColorPresentation = DocumentColorClientCapabilities
+
+  ClientCapability Method_TextDocumentFormatting = DocumentFormattingClientCapabilities
+  ClientCapability Method_TextDocumentRangeFormatting = DocumentFormattingClientCapabilities
+  ClientCapability Method_TextDocumentOnTypeFormatting = DocumentFormattingClientCapabilities
+
+  ClientCapability Method_TextDocumentPrepareCallHierarchy = CallHierarchyClientCapabilities
+  ClientCapability Method_CallHierarchyIncomingCalls = CallHierarchyClientCapabilities
+  ClientCapability Method_CallHierarchyOutgoingCalls = CallHierarchyClientCapabilities
+
+  ClientCapability Method_TextDocumentSemanticTokensFull = SemanticTokensClientCapabilities
+  ClientCapability Method_TextDocumentSemanticTokensFullDelta = SemanticTokensClientCapabilities
+  ClientCapability Method_TextDocumentSemanticTokensRange = SemanticTokensClientCapabilities
+  ClientCapability Method_WorkspaceSemanticTokensRefresh = SemanticTokensWorkspaceClientCapabilities
+
+  ClientCapability Method_TextDocumentPrepareTypeHierarchy = TypeHierarchyClientCapabilities
+  ClientCapability Method_TypeHierarchySupertypes = TypeHierarchyClientCapabilities
+  ClientCapability Method_TypeHierarchySubtypes = TypeHierarchyClientCapabilities
+
+  ClientCapability Method_TextDocumentInlineValue = InlineValueClientCapabilities
+  ClientCapability Method_WorkspaceInlineValueRefresh = InlineValueWorkspaceClientCapabilities
+
+  ClientCapability Method_TextDocumentInlayHint = InlayHintClientCapabilities
+  ClientCapability Method_InlayHintResolve = InlayHintClientCapabilities
+  ClientCapability Method_WorkspaceInlayHintRefresh = InlayHintWorkspaceClientCapabilities
+
+  ClientCapability Method_TextDocumentDiagnostic = DiagnosticClientCapabilities
+  ClientCapability Method_WorkspaceDiagnostic = DiagnosticWorkspaceClientCapabilities
+  ClientCapability Method_WorkspaceDiagnosticRefresh = DiagnosticWorkspaceClientCapabilities
+
+  ClientCapability Method_WorkspaceWillCreateFiles = FileOperationClientCapabilities
+  ClientCapability Method_WorkspaceWillRenameFiles = FileOperationClientCapabilities
+  ClientCapability Method_WorkspaceWillDeleteFiles = FileOperationClientCapabilities
+  ClientCapability Method_WorkspaceDidCreateFiles = FileOperationClientCapabilities
+  ClientCapability Method_WorkspaceDidRenameFiles = FileOperationClientCapabilities
+  ClientCapability Method_WorkspaceDidDeleteFiles = FileOperationClientCapabilities
+
+  ClientCapability Method_TextDocumentDidOpen = TextDocumentSyncClientCapabilities
+  ClientCapability Method_TextDocumentDidChange = TextDocumentSyncClientCapabilities
+  ClientCapability Method_TextDocumentDidClose = TextDocumentSyncClientCapabilities
+  ClientCapability Method_TextDocumentDidSave = TextDocumentSyncClientCapabilities
+  ClientCapability Method_TextDocumentWillSave = TextDocumentSyncClientCapabilities
+  ClientCapability Method_TextDocumentWillSaveWaitUntil = TextDocumentSyncClientCapabilities
+
+  ClientCapability Method_NotebookDocumentDidOpen = NotebookDocumentSyncClientCapabilities
+  ClientCapability Method_NotebookDocumentDidChange = NotebookDocumentSyncClientCapabilities
+  ClientCapability Method_NotebookDocumentDidSave = NotebookDocumentSyncClientCapabilities
+  ClientCapability Method_NotebookDocumentDidClose = NotebookDocumentSyncClientCapabilities
+
+  ClientCapability Method_WorkspaceDidChangeConfiguration = DidChangeConfigurationClientCapabilities
+  ClientCapability Method_WorkspaceDidChangeWatchedFiles = DidChangeWatchedFilesClientCapabilities
+  ClientCapability Method_WorkspaceDidChangeWorkspaceFolders = Void
+
+  ClientCapability Method_TextDocumentPublishDiagnostics = PublishDiagnosticsClientCapabilities
+  ClientCapability Method_WorkspaceConfiguration = Bool
+
+  ClientCapability Method_WorkspaceApplyEdit = Bool
+  ClientCapability Method_WindowWorkDoneProgressCreate = Bool
+  ClientCapability Method_WindowWorkDoneProgressCancel = Bool
+  ClientCapability Method_WindowShowMessage = ShowMessageRequestClientCapabilities
+  ClientCapability Method_WindowShowMessageRequest = ShowMessageRequestClientCapabilities
+  ClientCapability Method_WindowShowDocument = ShowDocumentClientCapabilities
+
+  -- All required by default, no capabilities
+  ClientCapability Method_Progress = Void
+
+  ClientCapability Method_WindowLogMessage = Void
+
+  ClientCapability Method_ClientRegisterCapability = Void
+  ClientCapability Method_ClientUnregisterCapability = Void
+
+  ClientCapability Method_Initialize = Void
+  ClientCapability Method_Initialized = Void
+  ClientCapability Method_Shutdown = Void
+  ClientCapability Method_Exit = Void
+
+  ClientCapability Method_TelemetryEvent = Void
+  ClientCapability Method_SetTrace = Void
+  ClientCapability Method_LogTrace = Void
+  ClientCapability Method_CancelRequest = Void
+
+  ClientCapability (Method_CustomMethod s) = Void
+
+clientCapability :: forall m . SMethod m -> Lens' ClientCapabilities (Maybe (ClientCapability m))
+clientCapability = \case
+  SMethod_TextDocumentDeclaration -> td . L.declaration
+  SMethod_TextDocumentImplementation -> td . L.implementation
+  SMethod_TextDocumentTypeDefinition -> td . L.typeDefinition
+  SMethod_TextDocumentHover -> td . L.hover
+  SMethod_TextDocumentSignatureHelp -> td . L.signatureHelp
+  SMethod_TextDocumentDefinition -> td . L.definition
+  SMethod_TextDocumentReferences -> td . L.references
+  SMethod_TextDocumentDocumentHighlight -> td . L.documentHighlight
+  SMethod_TextDocumentDocumentSymbol -> td . L.documentSymbol
+  SMethod_TextDocumentFoldingRange -> td . L.foldingRange
+  SMethod_TextDocumentSelectionRange -> td . L.selectionRange
+  SMethod_WorkspaceExecuteCommand -> ws . L.executeCommand
+  SMethod_TextDocumentMoniker -> td . L.moniker
+
+  SMethod_TextDocumentCompletion -> td . L.completion
+  SMethod_CompletionItemResolve -> td . L.completion
+
+  SMethod_TextDocumentCodeAction -> td . L.codeAction
+  SMethod_CodeActionResolve -> td . L.codeAction
+
+  SMethod_TextDocumentCodeLens -> td . L.codeLens
+  SMethod_CodeLensResolve -> td . L.codeLens
+  SMethod_WorkspaceCodeLensRefresh -> ws . L.codeLens
+
+  SMethod_TextDocumentDocumentLink -> td . L.documentLink
+  SMethod_DocumentLinkResolve -> td . L.documentLink
+
+  SMethod_TextDocumentDocumentColor -> td . L.colorProvider
+  SMethod_TextDocumentColorPresentation -> td . L.colorProvider
+
+  SMethod_WorkspaceSymbol -> ws . L.symbol
+  SMethod_WorkspaceSymbolResolve -> ws . L.symbol
+
+  SMethod_TextDocumentFormatting -> td . L.formatting
+  SMethod_TextDocumentRangeFormatting -> td . L.formatting
+  SMethod_TextDocumentOnTypeFormatting -> td . L.formatting
+
+  SMethod_TextDocumentRename -> td . L.rename
+  SMethod_TextDocumentPrepareRename -> td . L.rename
+
+  SMethod_TextDocumentPrepareCallHierarchy -> td . L.callHierarchy
+  SMethod_CallHierarchyIncomingCalls -> td . L.callHierarchy
+  SMethod_CallHierarchyOutgoingCalls -> td . L.callHierarchy
+
+  SMethod_TextDocumentLinkedEditingRange -> td . L.linkedEditingRange
+
+  SMethod_TextDocumentSemanticTokensFull -> td . L.semanticTokens
+  SMethod_TextDocumentSemanticTokensFullDelta -> td . L.semanticTokens
+  SMethod_TextDocumentSemanticTokensRange -> td . L.semanticTokens
+  SMethod_WorkspaceSemanticTokensRefresh -> ws . L.semanticTokens
+
+  SMethod_TextDocumentPrepareTypeHierarchy -> td . L.typeHierarchy
+  SMethod_TypeHierarchySubtypes -> td . L.typeHierarchy
+  SMethod_TypeHierarchySupertypes -> td . L.typeHierarchy
+
+  SMethod_TextDocumentInlineValue -> td . L.inlineValue
+  SMethod_WorkspaceInlineValueRefresh -> ws . L.inlineValue
+
+  SMethod_TextDocumentInlayHint -> td . L.inlayHint
+  SMethod_InlayHintResolve -> td . L.inlayHint
+  SMethod_WorkspaceInlayHintRefresh -> ws . L.inlayHint
+
+  SMethod_TextDocumentDiagnostic -> td . L.diagnostic
+  SMethod_WorkspaceDiagnostic -> ws . L.diagnostics
+  SMethod_WorkspaceDiagnosticRefresh -> ws . L.diagnostics
+
+  SMethod_WorkspaceWorkspaceFolders -> ws . L.workspaceFolders
+
+  SMethod_WorkspaceWillCreateFiles -> ws . L.fileOperations
+  SMethod_WorkspaceWillRenameFiles -> ws . L.fileOperations
+  SMethod_WorkspaceWillDeleteFiles -> ws . L.fileOperations
+  SMethod_WorkspaceDidCreateFiles -> ws . L.fileOperations
+  SMethod_WorkspaceDidRenameFiles -> ws . L.fileOperations
+  SMethod_WorkspaceDidDeleteFiles -> ws . L.fileOperations
+
+  SMethod_TextDocumentDidOpen -> td . L.synchronization
+  SMethod_TextDocumentDidChange -> td . L.synchronization
+  SMethod_TextDocumentDidClose -> td . L.synchronization
+  SMethod_TextDocumentDidSave -> td . L.synchronization
+  SMethod_TextDocumentWillSave -> td . L.synchronization
+  SMethod_TextDocumentWillSaveWaitUntil -> td . L.synchronization
+
+  SMethod_NotebookDocumentDidOpen -> nbs
+  SMethod_NotebookDocumentDidChange -> nbs
+  SMethod_NotebookDocumentDidSave -> nbs
+  SMethod_NotebookDocumentDidClose -> nbs
+
+  SMethod_WorkspaceDidChangeConfiguration -> ws . L.didChangeConfiguration
+  SMethod_WorkspaceDidChangeWatchedFiles -> ws . L.didChangeWatchedFiles
+  SMethod_TextDocumentPublishDiagnostics -> td . L.publishDiagnostics
+  SMethod_WorkspaceConfiguration -> ws . L.configuration
+  SMethod_WindowWorkDoneProgressCreate -> wd . L.workDoneProgress
+  SMethod_WindowWorkDoneProgressCancel -> wd . L.workDoneProgress
+  SMethod_WorkspaceApplyEdit -> ws . L.applyEdit
+  SMethod_WindowShowDocument -> wd . L.showDocument
+  SMethod_WindowShowMessageRequest -> wd . L.showMessage
+  SMethod_WindowShowMessage -> wd . L.showMessage
+
+  SMethod_WorkspaceDidChangeWorkspaceFolders -> noCap
+  SMethod_Progress -> noCap
+  SMethod_WindowLogMessage -> noCap
+  SMethod_ClientRegisterCapability -> noCap
+  SMethod_ClientUnregisterCapability -> noCap
+  SMethod_Initialize -> noCap
+  SMethod_Initialized -> noCap
+  SMethod_Shutdown -> noCap
+  SMethod_Exit -> noCap
+  SMethod_TelemetryEvent -> noCap
+  SMethod_SetTrace -> noCap
+  SMethod_LogTrace -> noCap
+  SMethod_CancelRequest -> noCap
+  (SMethod_CustomMethod _s) -> noCap
+  where
+    -- TODO: this is silly
+    emptyWorkspace :: WorkspaceClientCapabilities
+    emptyWorkspace = WorkspaceClientCapabilities Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+    emptyWindow :: WindowClientCapabilities
+    emptyWindow = WindowClientCapabilities Nothing Nothing Nothing
+    emptyTextDocument :: TextDocumentClientCapabilities
+    emptyTextDocument = TextDocumentClientCapabilities Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+    emptyNotebookDocument :: NotebookDocumentClientCapabilities
+    emptyNotebookDocument = NotebookDocumentClientCapabilities (NotebookDocumentSyncClientCapabilities Nothing Nothing)
+
+    ws :: Lens' ClientCapabilities WorkspaceClientCapabilities
+    ws = L.workspace . non emptyWorkspace
+    wd :: Lens' ClientCapabilities WindowClientCapabilities
+    wd = L.window . non emptyWindow
+    td :: Lens' ClientCapabilities TextDocumentClientCapabilities
+    td = L.textDocument . non emptyTextDocument
+    -- This is messed up because, unlike literally everything else, `NotebookDocumentClientCapabilities.synchronization` is
+    -- a mandatory field, so if we don't have it we need to unset the parent `notebookDocument` field. Maybe.
+    nbs :: Lens' ClientCapabilities (Maybe NotebookDocumentSyncClientCapabilities)
+    nbs = lens g s
+      where
+        g c = c ^. L.notebookDocument . non emptyNotebookDocument . L.synchronization . to Just
+        s c Nothing = c & L.notebookDocument .~ Nothing
+        s c (Just v) = c & L.notebookDocument . non emptyNotebookDocument . L.synchronization .~ v
+
 -- | Whether the client supports dynamic registration for the given method.
 dynamicRegistrationSupported :: SMethod m -> ClientCapabilities -> Bool
 dynamicRegistrationSupported method caps = fromMaybe False $ case method of
@@ -391,7 +655,10 @@ dynamicRegistrationSupported method caps = fromMaybe False $ case method of
   dyn :: L.HasDynamicRegistration a (Maybe Bool) => Traversal' a Bool
   dyn = L.dynamicRegistration . _Just
 
+---- SERVER CAPABILITIES
+
 type DocumentSyncCaps = TextDocumentSyncOptions |? TextDocumentSyncKind
+type NotebookDocumentSyncCaps = NotebookDocumentSyncOptions |? NotebookDocumentSyncRegistrationOptions
 
 type ServerCapability :: forall f t . Method f t -> Type
 -- | The server capability associated with a given method.
@@ -474,16 +741,18 @@ type family ServerCapability (m :: Method f t) where
   ServerCapability Method_WorkspaceDidCreateFiles = FileOperationOptions
   ServerCapability Method_WorkspaceDidRenameFiles = FileOperationOptions
   ServerCapability Method_WorkspaceDidDeleteFiles = FileOperationOptions
-  ServerCapability Method_NotebookDocumentDidOpen = DocumentSyncCaps
-  ServerCapability Method_NotebookDocumentDidChange = DocumentSyncCaps
-  ServerCapability Method_NotebookDocumentDidSave = DocumentSyncCaps
-  ServerCapability Method_NotebookDocumentDidClose = DocumentSyncCaps
+
   ServerCapability Method_TextDocumentDidOpen = DocumentSyncCaps
   ServerCapability Method_TextDocumentDidChange = DocumentSyncCaps
   ServerCapability Method_TextDocumentDidClose = DocumentSyncCaps
   ServerCapability Method_TextDocumentDidSave = DocumentSyncCaps
   ServerCapability Method_TextDocumentWillSave = DocumentSyncCaps
   ServerCapability Method_TextDocumentWillSaveWaitUntil = DocumentSyncCaps
+
+  ServerCapability Method_NotebookDocumentDidOpen = NotebookDocumentSyncCaps
+  ServerCapability Method_NotebookDocumentDidChange = NotebookDocumentSyncCaps
+  ServerCapability Method_NotebookDocumentDidSave = NotebookDocumentSyncCaps
+  ServerCapability Method_NotebookDocumentDidClose = NotebookDocumentSyncCaps
 
   -- Dynamic registration only
   ServerCapability Method_WorkspaceDidChangeConfiguration = Void
@@ -515,6 +784,7 @@ type family ServerCapability (m :: Method f t) where
   ServerCapability Method_WorkspaceApplyEdit = Void
 
   ServerCapability Method_TelemetryEvent = Void
+
   ServerCapability Method_SetTrace = Void
   ServerCapability Method_LogTrace = Void
   ServerCapability Method_CancelRequest = Void
@@ -589,7 +859,7 @@ serverCapability = \case
   SMethod_WorkspaceDiagnostic -> L.diagnosticProvider
   SMethod_WorkspaceDiagnosticRefresh -> L.diagnosticProvider
 
-  SMethod_WorkspaceWorkspaceFolders -> L.workspace . non (WorkspaceOptions Nothing Nothing) . L.workspaceFolders
+  SMethod_WorkspaceWorkspaceFolders -> L.workspace . non emptyWorkspace . L.workspaceFolders
 
   SMethod_WorkspaceWillCreateFiles -> fileOps
   SMethod_WorkspaceWillRenameFiles -> fileOps
@@ -597,16 +867,18 @@ serverCapability = \case
   SMethod_WorkspaceDidCreateFiles -> fileOps
   SMethod_WorkspaceDidRenameFiles -> fileOps
   SMethod_WorkspaceDidDeleteFiles -> fileOps
-  SMethod_NotebookDocumentDidOpen -> documentSync
-  SMethod_NotebookDocumentDidChange -> documentSync
-  SMethod_NotebookDocumentDidSave -> documentSync
-  SMethod_NotebookDocumentDidClose -> documentSync
+
   SMethod_TextDocumentDidOpen -> documentSync
   SMethod_TextDocumentDidChange -> documentSync
   SMethod_TextDocumentDidClose -> documentSync
   SMethod_TextDocumentDidSave -> documentSync
   SMethod_TextDocumentWillSave -> documentSync
   SMethod_TextDocumentWillSaveWaitUntil -> documentSync
+
+  SMethod_NotebookDocumentDidOpen -> notebookDocumentSync
+  SMethod_NotebookDocumentDidChange -> notebookDocumentSync
+  SMethod_NotebookDocumentDidSave -> notebookDocumentSync
+  SMethod_NotebookDocumentDidClose -> notebookDocumentSync
 
   SMethod_WorkspaceDidChangeConfiguration -> noCap
   SMethod_WorkspaceDidChangeWatchedFiles -> noCap
@@ -633,13 +905,18 @@ serverCapability = \case
   SMethod_CancelRequest -> noCap
   (SMethod_CustomMethod _s) -> noCap
   where
+    emptyWorkspace :: WorkspaceOptions
+    emptyWorkspace = WorkspaceOptions Nothing Nothing
     fileOps :: Lens' ServerCapabilities (Maybe FileOperationOptions)
-    fileOps = L.workspace . non (WorkspaceOptions Nothing Nothing) . L.fileOperations
+    fileOps = L.workspace . non emptyWorkspace . L.fileOperations
     documentSync :: Lens' ServerCapabilities (Maybe DocumentSyncCaps)
     documentSync = L.textDocumentSync
-    noCap :: Lens' a (Maybe Void)
-    noCap = lens g s
-      where
-        g _ = Nothing
-        s a Nothing = a
-        s _ (Just v) = absurd v
+    notebookDocumentSync :: Lens' ServerCapabilities (Maybe NotebookDocumentSyncCaps)
+    notebookDocumentSync = L.notebookDocumentSync
+
+noCap :: Lens' a (Maybe Void)
+noCap = lens g s
+  where
+    g _ = Nothing
+    s a Nothing = a
+    s _ (Just v) = absurd v
