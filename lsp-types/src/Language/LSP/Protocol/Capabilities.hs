@@ -18,7 +18,6 @@ import Language.LSP.Protocol.Lens qualified as L
 import Language.LSP.Protocol.Message
 import Language.LSP.Protocol.Types
 import Prelude hiding (min)
-import Language.LSP.Protocol.Lens (HasSynchronization(synchronization))
 
 {-
 TODO: this is out-of-date/needs an audit
@@ -336,6 +335,352 @@ capsForVersion (LSPVersion maj min) = caps
 
   allMarkups = [MarkupKind_PlainText, MarkupKind_Markdown]
 
+capsForVersionAndMethod :: LSPVersion -> SMethod m -> Maybe (ClientCapability m)
+capsForVersionAndMethod (LSPVersion maj min) = \case
+  SMethod_TextDocumentDeclaration -> declaration
+  SMethod_TextDocumentImplementation -> implementation
+  SMethod_TextDocumentTypeDefinition -> typeDefinition
+  SMethod_TextDocumentHover -> hover
+  SMethod_TextDocumentSignatureHelp -> signatureHelp
+  SMethod_TextDocumentDefinition -> definition
+  SMethod_TextDocumentReferences -> references
+  SMethod_TextDocumentDocumentHighlight -> documentHighlight
+  SMethod_TextDocumentDocumentSymbol -> documentSymbol
+  SMethod_TextDocumentFoldingRange -> foldingRange
+  SMethod_TextDocumentSelectionRange -> selectionRange
+  SMethod_WorkspaceExecuteCommand -> executeCommand
+  SMethod_TextDocumentMoniker -> moniker
+
+  SMethod_TextDocumentCompletion -> completion
+  SMethod_CompletionItemResolve -> completion
+
+  SMethod_TextDocumentCodeAction -> codeAction
+  SMethod_CodeActionResolve -> codeAction
+
+  SMethod_TextDocumentCodeLens -> codeLens
+  SMethod_CodeLensResolve -> codeLens
+  SMethod_WorkspaceCodeLensRefresh -> wsCodeLens
+
+  SMethod_TextDocumentDocumentLink -> documentLink
+  SMethod_DocumentLinkResolve -> documentLink
+
+  SMethod_TextDocumentDocumentColor -> colorProvider
+  SMethod_TextDocumentColorPresentation -> colorProvider
+
+  SMethod_WorkspaceSymbol -> wsSymbol
+  SMethod_WorkspaceSymbolResolve -> wsSymbol
+
+  SMethod_TextDocumentFormatting -> formatting
+  SMethod_TextDocumentRangeFormatting -> rangeFormatting
+  SMethod_TextDocumentOnTypeFormatting -> onTypeFormatting
+
+  SMethod_TextDocumentRename -> rename
+  SMethod_TextDocumentPrepareRename -> rename
+
+  SMethod_TextDocumentPrepareCallHierarchy -> callHierarchy
+  SMethod_CallHierarchyIncomingCalls -> callHierarchy
+  SMethod_CallHierarchyOutgoingCalls -> callHierarchy
+
+  SMethod_TextDocumentLinkedEditingRange -> linkedEditingRange
+
+  SMethod_TextDocumentSemanticTokensFull -> semanticTokens
+  SMethod_TextDocumentSemanticTokensFullDelta -> semanticTokens
+  SMethod_TextDocumentSemanticTokensRange -> semanticTokens
+  SMethod_WorkspaceSemanticTokensRefresh -> wsSemanticTokens
+
+  SMethod_TextDocumentPrepareTypeHierarchy -> typeHierarchy
+  SMethod_TypeHierarchySubtypes -> typeHierarchy
+  SMethod_TypeHierarchySupertypes -> typeHierarchy
+
+  SMethod_TextDocumentInlineValue -> inlineValue
+  SMethod_WorkspaceInlineValueRefresh -> wsInlineValue
+
+  SMethod_TextDocumentInlayHint -> inlayHint
+  SMethod_InlayHintResolve -> inlayHint
+  SMethod_WorkspaceInlayHintRefresh -> wsInlayHint
+
+  SMethod_TextDocumentDiagnostic -> diagnostic
+  SMethod_WorkspaceDiagnostic -> diagnostics
+  SMethod_WorkspaceDiagnosticRefresh -> diagnostics
+
+  SMethod_WorkspaceWorkspaceFolders -> workspaceFolders
+
+  SMethod_WorkspaceWillCreateFiles -> fileOperations
+  SMethod_WorkspaceWillRenameFiles -> fileOperations
+  SMethod_WorkspaceWillDeleteFiles -> fileOperations
+  SMethod_WorkspaceDidCreateFiles -> fileOperations
+  SMethod_WorkspaceDidRenameFiles -> fileOperations
+  SMethod_WorkspaceDidDeleteFiles -> fileOperations
+
+  SMethod_TextDocumentDidOpen -> synchronization
+  SMethod_TextDocumentDidChange -> synchronization
+  SMethod_TextDocumentDidClose -> synchronization
+  SMethod_TextDocumentDidSave -> synchronization
+  SMethod_TextDocumentWillSave -> synchronization
+  SMethod_TextDocumentWillSaveWaitUntil -> synchronization
+
+  SMethod_NotebookDocumentDidOpen -> notebookDocumentSync
+  SMethod_NotebookDocumentDidChange -> notebookDocumentSync
+  SMethod_NotebookDocumentDidSave -> notebookDocumentSync
+  SMethod_NotebookDocumentDidClose -> notebookDocumentSync
+
+  SMethod_WorkspaceDidChangeConfiguration -> didChangeConfiguration
+  SMethod_WorkspaceDidChangeWatchedFiles -> didChangeWatchedFiles
+  SMethod_TextDocumentPublishDiagnostics -> publishDiagnostics
+  SMethod_WorkspaceConfiguration -> configuration
+  SMethod_WindowWorkDoneProgressCreate -> workDoneProgress
+  SMethod_WindowWorkDoneProgressCancel -> workDoneProgress
+  SMethod_WorkspaceApplyEdit -> applyEdit
+  SMethod_WindowShowDocument -> showDocument
+  SMethod_WindowShowMessageRequest -> showMessage
+  SMethod_WindowShowMessage -> showMessage
+
+  SMethod_WorkspaceDidChangeWorkspaceFolders -> Nothing
+  SMethod_Progress -> Nothing
+  SMethod_WindowLogMessage -> Nothing
+  SMethod_ClientRegisterCapability -> Nothing
+  SMethod_ClientUnregisterCapability -> Nothing
+  SMethod_Initialize -> Nothing
+  SMethod_Initialized -> Nothing
+  SMethod_Shutdown -> Nothing
+  SMethod_Exit -> Nothing
+  SMethod_TelemetryEvent -> Nothing
+  SMethod_SetTrace -> Nothing
+  SMethod_LogTrace -> Nothing
+  SMethod_CancelRequest -> Nothing
+  (SMethod_CustomMethod _s) -> Nothing
+
+ where
+   workDoneProgress = since 3 15 True
+   showMessage = since 3 16 $ ShowMessageRequestClientCapabilities Nothing
+   showDocument = since 3 16 $ ShowDocumentClientCapabilities True
+   applyEdit = Just True
+   didChangeConfiguration = Just (DidChangeConfigurationClientCapabilities dynamicReg)
+   didChangeWatchedFiles = Just (DidChangeWatchedFilesClientCapabilities dynamicReg (Just True))
+   wsSymbol = Just $
+    WorkspaceSymbolClientCapabilities
+      dynamicReg
+      (since 3 4 (ClientSymbolKindOptions{_valueSet = Just sKs}))
+      (since 3 16 (ClientSymbolTagOptions{_valueSet = [SymbolTag_Deprecated]}))
+      (since 3 17 (ClientSymbolResolveOptions{_properties = []}))
+   executeCommand = Just (ExecuteCommandClientCapabilities dynamicReg)
+   wsCodeLens = Just (CodeLensWorkspaceClientCapabilities $ Just True)
+   workspaceFolders = since 3 6 True
+   configuration = since 3 6 True
+   wsSemanticTokens = since 3 16 (SemanticTokensWorkspaceClientCapabilities $ Just True)
+   wsInlayHint = since 3 17 (InlayHintWorkspaceClientCapabilities $ Just True)
+   fileOperations = since 3 16 $
+    FileOperationClientCapabilities
+      dynamicReg
+      (Just True)
+      (Just True)
+      (Just True)
+      (Just True)
+      (Just True)
+      (Just True)
+   wsInlineValue = since 3 17 (InlineValueWorkspaceClientCapabilities $ Just True)
+   diagnostics = since 3 17 (DiagnosticWorkspaceClientCapabilities $ Just True)
+
+   notebookDocumentSync = since 3 17 $ NotebookDocumentSyncClientCapabilities dynamicReg (Just True)
+
+   synchronization = Just $
+     TextDocumentSyncClientCapabilities { _dynamicRegistration = dynamicReg , _willSave = Just True , _willSaveWaitUntil = Just True , _didSave = Just True }
+   completion = Just $
+     CompletionClientCapabilities
+        { _dynamicRegistration = dynamicReg
+        , _completionItem = Just completionItemCapabilities
+        , _completionItemKind = since 3 4 (ClientCompletionItemOptionsKind{_valueSet = Just ciKs})
+        , _insertTextMode = since 3 17 InsertTextMode_AsIs
+        , _contextSupport = since 3 3 True
+        , _completionList = since 3 17 (CompletionListCapabilities{_itemDefaults = Just []})
+        }
+   hover = Just $
+    HoverClientCapabilities
+      { _dynamicRegistration = dynamicReg
+      , _contentFormat = since 3 3 allMarkups
+      }
+   signatureHelp = Just $
+    SignatureHelpClientCapabilities
+      { _dynamicRegistration = dynamicReg
+      , _signatureInformation =
+          Just $
+            ClientSignatureInformationOptions
+              { _documentationFormat = Just allMarkups
+              , _parameterInformation = Just (ClientSignatureParameterInformationOptions{_labelOffsetSupport = Just True})
+              , _activeParameterSupport = Just True
+              }
+      , _contextSupport = since 3 16 True
+      }
+   references = Just $ ReferenceClientCapabilities dynamicReg
+   documentHighlight = Just $ DocumentHighlightClientCapabilities dynamicReg
+   documentSymbol = Just $
+    DocumentSymbolClientCapabilities
+      { _dynamicRegistration = dynamicReg
+      , -- same as workspace symbol kinds
+        _symbolKind = Just (ClientSymbolKindOptions{_valueSet = Just sKs})
+      , _hierarchicalDocumentSymbolSupport = since 3 10 True
+      , _tagSupport = since 3 16 (ClientSymbolTagOptions{_valueSet = [SymbolTag_Deprecated]})
+      , _labelSupport = since 3 16 True
+      }
+   formatting = Just $ DocumentFormattingClientCapabilities dynamicReg
+   rangeFormatting = Just $ DocumentRangeFormattingClientCapabilities dynamicReg
+   onTypeFormatting = Just $ DocumentOnTypeFormattingClientCapabilities dynamicReg
+   declaration = since 3 14 (DeclarationClientCapabilities dynamicReg (Just True))
+   definition = Just (DefinitionClientCapabilities dynamicReg (since 3 14 True))
+   typeDefinition = since 3 6 (TypeDefinitionClientCapabilities dynamicReg (since 3 14 True))
+   implementation = since 3 6 (ImplementationClientCapabilities dynamicReg (since 3 14 True))
+   codeAction = Just $
+    CodeActionClientCapabilities
+      { _dynamicRegistration = dynamicReg
+      , _codeActionLiteralSupport = since 3 8 (ClientCodeActionLiteralOptions{_codeActionKind = ClientCodeActionKindOptions{_valueSet = Set.toList knownValues}})
+      , _isPreferredSupport = since 3 15 True
+      , _disabledSupport = since 3 16 True
+      , _dataSupport = since 3 16 True
+      , _resolveSupport = since 3 16 (ClientCodeActionResolveOptions{_properties = []})
+      , _honorsChangeAnnotations = since 3 16 True
+      }
+   codeLens = Just (CodeLensClientCapabilities dynamicReg)
+   documentLink = Just (DocumentLinkClientCapabilities dynamicReg (since 3 15 True))
+   colorProvider = since 3 6 (DocumentColorClientCapabilities dynamicReg)
+   rename = Just (RenameClientCapabilities dynamicReg (since 3 12 True) (since 3 16 PrepareSupportDefaultBehavior_Identifier) (since 3 16 True))
+   publishDiagnostics = Just
+    PublishDiagnosticsClientCapabilities
+      { _relatedInformation = since 3 7 True
+      , _tagSupport = since 3 15 (ClientDiagnosticsTagOptions{_valueSet = [DiagnosticTag_Unnecessary, DiagnosticTag_Deprecated]})
+      , _versionSupport = since 3 15 True
+      , _codeDescriptionSupport = since 3 16 True
+      , _dataSupport = since 3 16 True
+      }
+   foldingRange = since 3 10 $
+    FoldingRangeClientCapabilities
+      { _dynamicRegistration = dynamicReg
+      , _rangeLimit = Nothing
+      , _lineFoldingOnly = Nothing
+      , _foldingRangeKind = since 3 17 (ClientFoldingRangeKindOptions{_valueSet = Just []})
+      , _foldingRange = since 3 16 (ClientFoldingRangeOptions{_collapsedText = Just True})
+      }
+   selectionRange = since 3 5 (SelectionRangeClientCapabilities dynamicReg)
+   callHierarchy = since 3 16 (CallHierarchyClientCapabilities dynamicReg)
+   semanticTokens = since 3 16 $
+    SemanticTokensClientCapabilities
+      { _dynamicRegistration = Just True
+      , _requests = ClientSemanticTokensRequestOptions{_range = Just (InL True), _full = Just (InR (ClientSemanticTokensRequestFullDelta{_delta = Just True}))}
+      , _tokenTypes = toEnumBaseType <$> Set.toList (knownValues @SemanticTokenTypes)
+      , _tokenModifiers = toEnumBaseType <$> Set.toList (knownValues @SemanticTokenModifiers)
+      , _formats = tfs
+      , _overlappingTokenSupport = Just True
+      , _multilineTokenSupport = Just True
+      , _serverCancelSupport = Just True
+      , _augmentsSyntaxTokens = Just True
+      }
+   linkedEditingRange = since 3 16 (LinkedEditingRangeClientCapabilities dynamicReg)
+   moniker = since 3 16 (MonikerClientCapabilities dynamicReg)
+   inlayHint = since 3 17 $
+    InlayHintClientCapabilities
+      { _dynamicRegistration = dynamicReg
+      , _resolveSupport = Just (ClientInlayHintResolveOptions{_properties = []})
+      }
+   typeHierarchy = since 3 17 (TypeHierarchyClientCapabilities dynamicReg)
+   inlineValue = since 3 17 (InlineValueClientCapabilities dynamicReg)
+   diagnostic = since 3 17 (DiagnosticClientCapabilities dynamicReg (Just True))
+
+   completionItemCapabilities =
+    ClientCompletionItemOptions
+      { _snippetSupport = Just True
+      , _commitCharactersSupport = Just True
+      , _documentationFormat = since 3 3 allMarkups
+      , _deprecatedSupport = Just True
+      , _preselectSupport = since 3 9 True
+      , _tagSupport = since 3 15 (CompletionItemTagOptions{_valueSet = []})
+      , _insertReplaceSupport = since 3 16 True
+      , _resolveSupport = since 3 16 (ClientCompletionItemResolveOptions{_properties = ["documentation", "details"]})
+      , _insertTextModeSupport = since 3 16 (ClientCompletionItemInsertTextModeOptions{_valueSet = []})
+      , _labelDetailsSupport = since 3 17 True
+      }
+
+   sKs
+     | maj >= 3 && min >= 4 = oldSKs ++ newSKs
+     | otherwise = oldSKs
+
+   oldSKs =
+    [ SymbolKind_File
+    , SymbolKind_Module
+    , SymbolKind_Namespace
+    , SymbolKind_Package
+    , SymbolKind_Class
+    , SymbolKind_Method
+    , SymbolKind_Property
+    , SymbolKind_Field
+    , SymbolKind_Constructor
+    , SymbolKind_Enum
+    , SymbolKind_Interface
+    , SymbolKind_Function
+    , SymbolKind_Variable
+    , SymbolKind_Constant
+    , SymbolKind_String
+    , SymbolKind_Number
+    , SymbolKind_Boolean
+    , SymbolKind_Array
+    ]
+
+   newSKs =
+    [ SymbolKind_Object
+    , SymbolKind_Key
+    , SymbolKind_Null
+    , SymbolKind_EnumMember
+    , SymbolKind_Struct
+    , SymbolKind_Event
+    , SymbolKind_Operator
+    , SymbolKind_TypeParameter
+    ]
+
+   ciKs
+     | maj >= 3 && min >= 4 = oldCiKs ++ newCiKs
+     | otherwise = oldCiKs
+
+   oldCiKs =
+    [ CompletionItemKind_Text
+    , CompletionItemKind_Method
+    , CompletionItemKind_Function
+    , CompletionItemKind_Constructor
+    , CompletionItemKind_Field
+    , CompletionItemKind_Variable
+    , CompletionItemKind_Class
+    , CompletionItemKind_Interface
+    , CompletionItemKind_Module
+    , CompletionItemKind_Property
+    , CompletionItemKind_Unit
+    , CompletionItemKind_Value
+    , CompletionItemKind_Enum
+    , CompletionItemKind_Keyword
+    , CompletionItemKind_Snippet
+    , CompletionItemKind_Color
+    , CompletionItemKind_File
+    , CompletionItemKind_Reference
+    ]
+
+   newCiKs =
+    [ CompletionItemKind_Folder
+    , CompletionItemKind_EnumMember
+    , CompletionItemKind_Constant
+    , CompletionItemKind_Struct
+    , CompletionItemKind_Event
+    , CompletionItemKind_Operator
+    , CompletionItemKind_TypeParameter
+    ]
+
+   allMarkups = [MarkupKind_PlainText, MarkupKind_Markdown]
+
+   tfs = [TokenFormat_Relative]
+
+   dynamicReg
+      | maj >= 3 = Just True
+      | otherwise = Nothing
+   since :: Int -> Int -> a -> Maybe a
+   since x y a
+      | maj >= x && min >= y = Just a
+      | otherwise = Nothing
+
 ---- CLIENT CAPABILITIES
 
 type ClientCapability :: forall f t . Method f t -> Type
@@ -379,8 +724,8 @@ type family ClientCapability (m :: Method f t) where
   ClientCapability Method_TextDocumentColorPresentation = DocumentColorClientCapabilities
 
   ClientCapability Method_TextDocumentFormatting = DocumentFormattingClientCapabilities
-  ClientCapability Method_TextDocumentRangeFormatting = DocumentFormattingClientCapabilities
-  ClientCapability Method_TextDocumentOnTypeFormatting = DocumentFormattingClientCapabilities
+  ClientCapability Method_TextDocumentRangeFormatting = DocumentRangeFormattingClientCapabilities
+  ClientCapability Method_TextDocumentOnTypeFormatting = DocumentOnTypeFormattingClientCapabilities
 
   ClientCapability Method_TextDocumentPrepareCallHierarchy = CallHierarchyClientCapabilities
   ClientCapability Method_CallHierarchyIncomingCalls = CallHierarchyClientCapabilities
@@ -495,8 +840,8 @@ clientCapability = \case
   SMethod_WorkspaceSymbolResolve -> ws . L.symbol
 
   SMethod_TextDocumentFormatting -> td . L.formatting
-  SMethod_TextDocumentRangeFormatting -> td . L.formatting
-  SMethod_TextDocumentOnTypeFormatting -> td . L.formatting
+  SMethod_TextDocumentRangeFormatting -> td . L.rangeFormatting
+  SMethod_TextDocumentOnTypeFormatting -> td . L.onTypeFormatting
 
   SMethod_TextDocumentRename -> td . L.rename
   SMethod_TextDocumentPrepareRename -> td . L.rename
