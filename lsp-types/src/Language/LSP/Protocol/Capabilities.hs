@@ -919,31 +919,22 @@ clientCapability = \case
   SMethod_CancelRequest -> noCap
   (SMethod_CustomMethod _s) -> noCap
   where
-    -- TODO: this is silly
-    emptyWorkspace :: WorkspaceClientCapabilities
-    emptyWorkspace = WorkspaceClientCapabilities Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
-    emptyWindow :: WindowClientCapabilities
-    emptyWindow = WindowClientCapabilities Nothing Nothing Nothing
-    emptyTextDocument :: TextDocumentClientCapabilities
-    emptyTextDocument = TextDocumentClientCapabilities Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
-    emptyNotebookDocument :: NotebookDocumentClientCapabilities
-    emptyNotebookDocument = NotebookDocumentClientCapabilities (NotebookDocumentSyncClientCapabilities Nothing Nothing)
-
     ws :: Lens' ClientCapabilities WorkspaceClientCapabilities
-    ws = L.workspace . non emptyWorkspace
+    ws = L.workspace . non emptyWorkspaceClientCaps
     wd :: Lens' ClientCapabilities WindowClientCapabilities
-    wd = L.window . non emptyWindow
+    wd = L.window . non emptyWindowClientCaps
     td :: Lens' ClientCapabilities TextDocumentClientCapabilities
-    td = L.textDocument . non emptyTextDocument
+    td = L.textDocument . non emptyTextDocumentClientCaps
     -- This is messed up because, unlike literally everything else, `NotebookDocumentClientCapabilities.synchronization` is
     -- a mandatory field, so if we don't have it we need to unset the parent `notebookDocument` field. Maybe.
     nbs :: Lens' ClientCapabilities (Maybe NotebookDocumentSyncClientCapabilities)
     nbs = lens g s
       where
-        g c = c ^. L.notebookDocument . non emptyNotebookDocument . L.synchronization . to Just
+        g c = c ^. L.notebookDocument . non emptyNotebookDocumentClientCaps . L.synchronization . to Just
         s c Nothing = c & L.notebookDocument .~ Nothing
-        s c (Just v) = c & L.notebookDocument . non emptyNotebookDocument . L.synchronization .~ v
+        s c (Just v) = c & L.notebookDocument . non emptyNotebookDocumentClientCaps . L.synchronization .~ v
 
+-- TODO: can we do this generically somehow?
 -- | Whether the client supports dynamic registration for the given method.
 --
 -- Note that here we only consider the "main" method against which you dynamically register, so
@@ -1203,7 +1194,7 @@ serverCapability = \case
   SMethod_WorkspaceDiagnostic -> L.diagnosticProvider
   SMethod_WorkspaceDiagnosticRefresh -> L.diagnosticProvider
 
-  SMethod_WorkspaceWorkspaceFolders -> L.workspace . non emptyWorkspace . L.workspaceFolders
+  SMethod_WorkspaceWorkspaceFolders -> L.workspace . non emptyWorkspaceServerCaps . L.workspaceFolders
 
   SMethod_WorkspaceWillCreateFiles -> fileOps
   SMethod_WorkspaceWillRenameFiles -> fileOps
@@ -1249,10 +1240,8 @@ serverCapability = \case
   SMethod_CancelRequest -> noCap
   (SMethod_CustomMethod _s) -> noCap
   where
-    emptyWorkspace :: WorkspaceOptions
-    emptyWorkspace = WorkspaceOptions Nothing Nothing
     fileOps :: Lens' ServerCapabilities (Maybe FileOperationOptions)
-    fileOps = L.workspace . non emptyWorkspace . L.fileOperations
+    fileOps = L.workspace . non emptyWorkspaceServerCaps . L.fileOperations
     documentSync :: Lens' ServerCapabilities (Maybe DocumentSyncCaps)
     documentSync = L.textDocumentSync
     notebookDocumentSync :: Lens' ServerCapabilities (Maybe NotebookDocumentSyncCaps)
@@ -1264,3 +1253,20 @@ noCap = lens g s
     g _ = Nothing
     s a Nothing = a
     s _ (Just v) = absurd v
+
+allMethods :: [SomeMethod]
+allMethods = []
+
+-- TODO: this is silly
+emptyClientCaps :: ClientCapabilities
+emptyClientCaps = ClientCapabilities Nothing Nothing Nothing Nothing Nothing Nothing
+emptyWorkspaceClientCaps = WorkspaceClientCapabilities Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+emptyWindowClientCaps :: WindowClientCapabilities
+emptyWindowClientCaps = WindowClientCapabilities Nothing Nothing Nothing
+emptyTextDocumentClientCaps :: TextDocumentClientCapabilities
+emptyTextDocumentClientCaps = TextDocumentClientCapabilities Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+emptyNotebookDocumentClientCaps :: NotebookDocumentClientCapabilities
+emptyNotebookDocumentClientCaps = NotebookDocumentClientCapabilities (NotebookDocumentSyncClientCapabilities Nothing Nothing)
+
+emptyWorkspaceServerCaps :: WorkspaceOptions
+emptyWorkspaceServerCaps = WorkspaceOptions Nothing Nothing
