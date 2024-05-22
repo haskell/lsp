@@ -521,75 +521,75 @@ type family ServerCapability (m :: Method f t) where
 
   ServerCapability (Method_CustomMethod s) = Void
 
-serverCapability :: forall m . SMethod m -> Traversal' ServerCapabilities (ServerCapability m)
+serverCapability :: forall m . SMethod m -> Lens' ServerCapabilities (Maybe (ServerCapability m))
 serverCapability = \case
-  SMethod_TextDocumentDeclaration -> L.declarationProvider . _Just
-  SMethod_TextDocumentImplementation -> L.implementationProvider . _Just
-  SMethod_TextDocumentTypeDefinition -> L.typeDefinitionProvider . _Just
-  SMethod_TextDocumentHover -> L.hoverProvider . _Just
-  SMethod_TextDocumentSignatureHelp -> L.signatureHelpProvider . _Just
-  SMethod_TextDocumentDefinition -> L.definitionProvider . _Just
-  SMethod_TextDocumentReferences -> L.referencesProvider . _Just
-  SMethod_TextDocumentDocumentHighlight -> L.documentHighlightProvider . _Just
-  SMethod_TextDocumentDocumentSymbol -> L.documentSymbolProvider . _Just
-  SMethod_TextDocumentFoldingRange -> L.foldingRangeProvider . _Just
-  SMethod_TextDocumentSelectionRange -> L.selectionRangeProvider . _Just
-  SMethod_WorkspaceExecuteCommand -> L.executeCommandProvider . _Just
-  SMethod_TextDocumentMoniker -> L.monikerProvider . _Just
+  SMethod_TextDocumentDeclaration -> L.declarationProvider
+  SMethod_TextDocumentImplementation -> L.implementationProvider
+  SMethod_TextDocumentTypeDefinition -> L.typeDefinitionProvider
+  SMethod_TextDocumentHover -> L.hoverProvider
+  SMethod_TextDocumentSignatureHelp -> L.signatureHelpProvider
+  SMethod_TextDocumentDefinition -> L.definitionProvider
+  SMethod_TextDocumentReferences -> L.referencesProvider
+  SMethod_TextDocumentDocumentHighlight -> L.documentHighlightProvider
+  SMethod_TextDocumentDocumentSymbol -> L.documentSymbolProvider
+  SMethod_TextDocumentFoldingRange -> L.foldingRangeProvider
+  SMethod_TextDocumentSelectionRange -> L.selectionRangeProvider
+  SMethod_WorkspaceExecuteCommand -> L.executeCommandProvider
+  SMethod_TextDocumentMoniker -> L.monikerProvider
 
-  SMethod_TextDocumentCompletion -> L.completionProvider . _Just
-  SMethod_CompletionItemResolve -> L.completionProvider . _Just
+  SMethod_TextDocumentCompletion -> L.completionProvider
+  SMethod_CompletionItemResolve -> L.completionProvider
 
-  SMethod_TextDocumentCodeAction -> L.codeActionProvider . _Just
-  SMethod_CodeActionResolve -> L.codeActionProvider . _Just
+  SMethod_TextDocumentCodeAction -> L.codeActionProvider
+  SMethod_CodeActionResolve -> L.codeActionProvider
 
-  SMethod_TextDocumentCodeLens -> L.codeLensProvider . _Just
-  SMethod_CodeLensResolve -> L.codeLensProvider . _Just
-  SMethod_WorkspaceCodeLensRefresh -> L.codeLensProvider . _Just
+  SMethod_TextDocumentCodeLens -> L.codeLensProvider
+  SMethod_CodeLensResolve -> L.codeLensProvider
+  SMethod_WorkspaceCodeLensRefresh -> L.codeLensProvider
 
-  SMethod_TextDocumentDocumentLink -> L.documentLinkProvider . _Just
-  SMethod_DocumentLinkResolve -> L.documentLinkProvider . _Just
+  SMethod_TextDocumentDocumentLink -> L.documentLinkProvider
+  SMethod_DocumentLinkResolve -> L.documentLinkProvider
 
-  SMethod_TextDocumentDocumentColor -> L.colorProvider . _Just
-  SMethod_TextDocumentColorPresentation -> L.colorProvider . _Just
+  SMethod_TextDocumentDocumentColor -> L.colorProvider
+  SMethod_TextDocumentColorPresentation -> L.colorProvider
 
-  SMethod_WorkspaceSymbol -> L.workspaceSymbolProvider . _Just
-  SMethod_WorkspaceSymbolResolve -> L.workspaceSymbolProvider . _Just
+  SMethod_WorkspaceSymbol -> L.workspaceSymbolProvider
+  SMethod_WorkspaceSymbolResolve -> L.workspaceSymbolProvider
 
-  SMethod_TextDocumentFormatting -> L.documentFormattingProvider . _Just
-  SMethod_TextDocumentRangeFormatting -> L.documentRangeFormattingProvider . _Just
-  SMethod_TextDocumentOnTypeFormatting -> L.documentOnTypeFormattingProvider . _Just
+  SMethod_TextDocumentFormatting -> L.documentFormattingProvider
+  SMethod_TextDocumentRangeFormatting -> L.documentRangeFormattingProvider
+  SMethod_TextDocumentOnTypeFormatting -> L.documentOnTypeFormattingProvider
 
-  SMethod_TextDocumentRename -> L.renameProvider . _Just
-  SMethod_TextDocumentPrepareRename -> L.renameProvider . _Just
+  SMethod_TextDocumentRename -> L.renameProvider
+  SMethod_TextDocumentPrepareRename -> L.renameProvider
 
-  SMethod_TextDocumentPrepareCallHierarchy -> L.callHierarchyProvider . _Just
-  SMethod_CallHierarchyIncomingCalls -> L.callHierarchyProvider . _Just
-  SMethod_CallHierarchyOutgoingCalls -> L.callHierarchyProvider . _Just
+  SMethod_TextDocumentPrepareCallHierarchy -> L.callHierarchyProvider
+  SMethod_CallHierarchyIncomingCalls -> L.callHierarchyProvider
+  SMethod_CallHierarchyOutgoingCalls -> L.callHierarchyProvider
 
-  SMethod_TextDocumentLinkedEditingRange -> L.linkedEditingRangeProvider . _Just
+  SMethod_TextDocumentLinkedEditingRange -> L.linkedEditingRangeProvider
 
-  SMethod_TextDocumentSemanticTokensFull -> L.semanticTokensProvider . _Just
-  SMethod_TextDocumentSemanticTokensFullDelta -> L.semanticTokensProvider . _Just
-  SMethod_TextDocumentSemanticTokensRange -> L.semanticTokensProvider . _Just
-  SMethod_WorkspaceSemanticTokensRefresh -> L.semanticTokensProvider . _Just
+  SMethod_TextDocumentSemanticTokensFull -> L.semanticTokensProvider
+  SMethod_TextDocumentSemanticTokensFullDelta -> L.semanticTokensProvider
+  SMethod_TextDocumentSemanticTokensRange -> L.semanticTokensProvider
+  SMethod_WorkspaceSemanticTokensRefresh -> L.semanticTokensProvider
 
-  SMethod_TextDocumentPrepareTypeHierarchy -> L.typeHierarchyProvider . _Just
-  SMethod_TypeHierarchySubtypes -> L.typeHierarchyProvider . _Just
-  SMethod_TypeHierarchySupertypes -> L.typeHierarchyProvider . _Just
+  SMethod_TextDocumentPrepareTypeHierarchy -> L.typeHierarchyProvider
+  SMethod_TypeHierarchySubtypes -> L.typeHierarchyProvider
+  SMethod_TypeHierarchySupertypes -> L.typeHierarchyProvider
 
-  SMethod_TextDocumentInlineValue -> L.inlineValueProvider . _Just
-  SMethod_WorkspaceInlineValueRefresh -> L.inlineValueProvider . _Just
+  SMethod_TextDocumentInlineValue -> L.inlineValueProvider
+  SMethod_WorkspaceInlineValueRefresh -> L.inlineValueProvider
 
-  SMethod_TextDocumentInlayHint -> L.inlayHintProvider . _Just
-  SMethod_InlayHintResolve -> L.inlayHintProvider . _Just
-  SMethod_WorkspaceInlayHintRefresh -> L.inlayHintProvider . _Just
+  SMethod_TextDocumentInlayHint -> L.inlayHintProvider
+  SMethod_InlayHintResolve -> L.inlayHintProvider
+  SMethod_WorkspaceInlayHintRefresh -> L.inlayHintProvider
 
-  SMethod_TextDocumentDiagnostic -> L.diagnosticProvider . _Just
-  SMethod_WorkspaceDiagnostic -> L.diagnosticProvider . _Just
-  SMethod_WorkspaceDiagnosticRefresh -> L.diagnosticProvider . _Just
+  SMethod_TextDocumentDiagnostic -> L.diagnosticProvider
+  SMethod_WorkspaceDiagnostic -> L.diagnosticProvider
+  SMethod_WorkspaceDiagnosticRefresh -> L.diagnosticProvider
 
-  SMethod_WorkspaceWorkspaceFolders -> L.workspace . _Just . L.workspaceFolders . _Just
+  SMethod_WorkspaceWorkspaceFolders -> L.workspace . non (WorkspaceOptions Nothing Nothing) . L.workspaceFolders
 
   SMethod_WorkspaceWillCreateFiles -> fileOps
   SMethod_WorkspaceWillRenameFiles -> fileOps
@@ -608,32 +608,38 @@ serverCapability = \case
   SMethod_TextDocumentWillSave -> documentSync
   SMethod_TextDocumentWillSaveWaitUntil -> documentSync
 
-  SMethod_WorkspaceDidChangeConfiguration -> ignored
-  SMethod_WorkspaceDidChangeWatchedFiles -> ignored
-  SMethod_WorkspaceDidChangeWorkspaceFolders -> ignored
-  SMethod_TextDocumentPublishDiagnostics -> ignored
-  SMethod_WorkspaceConfiguration -> ignored
-  SMethod_WindowWorkDoneProgressCreate -> ignored
-  SMethod_WindowWorkDoneProgressCancel -> ignored
-  SMethod_Progress -> ignored
-  SMethod_WindowShowDocument -> ignored
-  SMethod_WindowShowMessageRequest -> ignored
-  SMethod_WindowShowMessage -> ignored
-  SMethod_WindowLogMessage -> ignored
-  SMethod_ClientRegisterCapability -> ignored
-  SMethod_ClientUnregisterCapability -> ignored
-  SMethod_Initialize -> ignored
-  SMethod_Initialized -> ignored
-  SMethod_Shutdown -> ignored
-  SMethod_Exit -> ignored
-  SMethod_WorkspaceApplyEdit -> ignored
-  SMethod_TelemetryEvent -> ignored
-  SMethod_SetTrace -> ignored
-  SMethod_LogTrace -> ignored
-  SMethod_CancelRequest -> ignored
-  (SMethod_CustomMethod _s) -> ignored
+  SMethod_WorkspaceDidChangeConfiguration -> noCap
+  SMethod_WorkspaceDidChangeWatchedFiles -> noCap
+  SMethod_WorkspaceDidChangeWorkspaceFolders -> noCap
+  SMethod_TextDocumentPublishDiagnostics -> noCap
+  SMethod_WorkspaceConfiguration -> noCap
+  SMethod_WindowWorkDoneProgressCreate -> noCap
+  SMethod_WindowWorkDoneProgressCancel -> noCap
+  SMethod_Progress -> noCap
+  SMethod_WindowShowDocument -> noCap
+  SMethod_WindowShowMessageRequest -> noCap
+  SMethod_WindowShowMessage -> noCap
+  SMethod_WindowLogMessage -> noCap
+  SMethod_ClientRegisterCapability -> noCap
+  SMethod_ClientUnregisterCapability -> noCap
+  SMethod_Initialize -> noCap
+  SMethod_Initialized -> noCap
+  SMethod_Shutdown -> noCap
+  SMethod_Exit -> noCap
+  SMethod_WorkspaceApplyEdit -> noCap
+  SMethod_TelemetryEvent -> noCap
+  SMethod_SetTrace -> noCap
+  SMethod_LogTrace -> noCap
+  SMethod_CancelRequest -> noCap
+  (SMethod_CustomMethod _s) -> noCap
   where
-    fileOps :: Traversal' ServerCapabilities FileOperationOptions
-    fileOps = L.workspace . _Just . L.fileOperations . _Just
-    documentSync :: Traversal' ServerCapabilities DocumentSyncCaps
-    documentSync = L.textDocumentSync . _Just
+    fileOps :: Lens' ServerCapabilities (Maybe FileOperationOptions)
+    fileOps = L.workspace . non (WorkspaceOptions Nothing Nothing) . L.fileOperations
+    documentSync :: Lens' ServerCapabilities (Maybe DocumentSyncCaps)
+    documentSync = L.textDocumentSync
+    noCap :: Lens' a (Maybe Void)
+    noCap = lens g s
+      where
+        g _ = Nothing
+        s a Nothing = a
+        s _ (Just v) = absurd v
