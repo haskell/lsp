@@ -600,60 +600,59 @@ clientCapability = \case
         s c (Just v) = c & L.notebookDocument . non emptyNotebookDocument . L.synchronization .~ v
 
 -- | Whether the client supports dynamic registration for the given method.
+--
+-- Note that here we only consider the "main" method against which you dynamically register, so
+-- even though e.g. we associate the client capabilities for code lenses with `codeLens/resolve`,
+-- we don't ever say that you can dynamically register `codeLens/resolve`, because you in fact
+-- need to register `textDocument/codeLens`.
 dynamicRegistrationSupported :: SMethod m -> ClientCapabilities -> Bool
-dynamicRegistrationSupported method caps = fromMaybe False $ case method of
-  SMethod_WorkspaceDidChangeConfiguration -> caps ^? ws . L.didChangeConfiguration . _Just . dyn
-  SMethod_WorkspaceDidChangeWatchedFiles -> caps ^? ws . L.didChangeWatchedFiles . _Just . dyn
-  SMethod_WorkspaceSymbol -> caps ^? ws . L.symbol . _Just . dyn
-  SMethod_WorkspaceExecuteCommand -> caps ^? ws . L.executeCommand . _Just . dyn
-  SMethod_WorkspaceWillCreateFiles -> caps ^? ws . L.fileOperations . _Just . dyn
-  SMethod_WorkspaceDidCreateFiles -> caps ^? ws . L.fileOperations . _Just . dyn
-  SMethod_WorkspaceWillDeleteFiles -> caps ^? ws . L.fileOperations . _Just . dyn
-  SMethod_WorkspaceDidDeleteFiles -> caps ^? ws . L.fileOperations . _Just . dyn
-  SMethod_TextDocumentDidOpen -> caps ^? td . L.synchronization . _Just . dyn
-  SMethod_TextDocumentDidChange -> caps ^? td . L.synchronization . _Just . dyn
-  SMethod_TextDocumentDidClose -> caps ^? td . L.synchronization . _Just . dyn
-  SMethod_TextDocumentCompletion -> caps ^? td . L.completion . _Just . dyn
-  SMethod_TextDocumentHover -> caps ^? td . L.hover . _Just . dyn
-  SMethod_TextDocumentSignatureHelp -> caps ^? td . L.signatureHelp . _Just . dyn
-  SMethod_TextDocumentDeclaration -> caps ^? td . L.declaration . _Just . dyn
-  SMethod_TextDocumentDefinition -> caps ^? td . L.definition . _Just . dyn
-  SMethod_TextDocumentTypeDefinition -> caps ^? td . L.typeDefinition . _Just . dyn
-  SMethod_TextDocumentImplementation -> caps ^? td . L.implementation . _Just . dyn
-  SMethod_TextDocumentReferences -> caps ^? td . L.references . _Just . dyn
-  SMethod_TextDocumentDocumentHighlight -> caps ^? td . L.documentHighlight . _Just . dyn
-  SMethod_TextDocumentDocumentSymbol -> caps ^? td . L.documentSymbol . _Just . dyn
-  SMethod_TextDocumentCodeAction -> caps ^? td . L.codeAction . _Just . dyn
-  SMethod_TextDocumentCodeLens -> caps ^? td . L.codeLens . _Just . dyn
-  SMethod_TextDocumentDocumentLink -> caps ^? td . L.documentLink . _Just . dyn
-  SMethod_TextDocumentDocumentColor -> caps ^? td . L.colorProvider . _Just . dyn
-  SMethod_TextDocumentColorPresentation -> caps ^? td . L.colorProvider . _Just . dyn
-  SMethod_TextDocumentFormatting -> caps ^? td . L.formatting . _Just . dyn
-  SMethod_TextDocumentRangeFormatting -> caps ^? td . L.rangeFormatting . _Just . dyn
-  SMethod_TextDocumentOnTypeFormatting -> caps ^? td . L.onTypeFormatting . _Just . dyn
-  SMethod_TextDocumentRename -> caps ^? td . L.rename . _Just . dyn
-  SMethod_TextDocumentFoldingRange -> caps ^? td . L.foldingRange . _Just . dyn
-  SMethod_TextDocumentSelectionRange -> caps ^? td . L.selectionRange . _Just . dyn
-  SMethod_TextDocumentLinkedEditingRange -> caps ^? td . L.linkedEditingRange . _Just . dyn
-  SMethod_TextDocumentPrepareCallHierarchy -> caps ^? td . L.callHierarchy . _Just . dyn
-  SMethod_TextDocumentInlayHint -> caps ^? td . L.inlayHint . _Just . dyn
-  SMethod_TextDocumentInlineValue -> caps ^? td . L.inlineValue . _Just . dyn
-  SMethod_TextDocumentMoniker -> caps ^? td . L.moniker . _Just . dyn
-  SMethod_TextDocumentPrepareTypeHierarchy -> caps ^? td . L.typeHierarchy . _Just . dyn
-  SMethod_TextDocumentDiagnostic -> caps ^? td . L.diagnostic . _Just . dyn
+dynamicRegistrationSupported m caps = fromMaybe False $ case m of
+  SMethod_WorkspaceDidChangeConfiguration -> caps ^? dyn m
+  SMethod_WorkspaceDidChangeWatchedFiles -> caps ^? dyn m
+  SMethod_WorkspaceSymbol -> caps ^? dyn m
+  SMethod_WorkspaceExecuteCommand -> caps ^? dyn m
+  SMethod_WorkspaceWillCreateFiles -> caps ^? dyn m
+  SMethod_WorkspaceDidCreateFiles -> caps ^? dyn m
+  SMethod_WorkspaceWillDeleteFiles -> caps ^? dyn m
+  SMethod_WorkspaceDidDeleteFiles -> caps ^? dyn m
+  SMethod_TextDocumentDidOpen -> caps ^? dyn m
+  SMethod_TextDocumentDidChange -> caps ^? dyn m
+  SMethod_TextDocumentDidClose -> caps ^? dyn m
+  SMethod_TextDocumentCompletion -> caps ^? dyn m
+  SMethod_TextDocumentHover -> caps ^? dyn m
+  SMethod_TextDocumentSignatureHelp -> caps ^? dyn m
+  SMethod_TextDocumentDeclaration -> caps ^? dyn m
+  SMethod_TextDocumentDefinition -> caps ^? dyn m
+  SMethod_TextDocumentTypeDefinition -> caps ^? dyn m
+  SMethod_TextDocumentImplementation -> caps ^? dyn m
+  SMethod_TextDocumentReferences -> caps ^? dyn m
+  SMethod_TextDocumentDocumentHighlight -> caps ^? dyn m
+  SMethod_TextDocumentDocumentSymbol -> caps ^? dyn m
+  SMethod_TextDocumentCodeAction -> caps ^? dyn m
+  SMethod_TextDocumentCodeLens -> caps ^? dyn m
+  SMethod_TextDocumentDocumentLink -> caps ^? dyn m
+  SMethod_TextDocumentDocumentColor -> caps ^? dyn m
+  SMethod_TextDocumentColorPresentation -> caps ^? dyn m
+  SMethod_TextDocumentFormatting -> caps ^? dyn m
+  SMethod_TextDocumentRangeFormatting -> caps ^? dyn m
+  SMethod_TextDocumentOnTypeFormatting -> caps ^? dyn m
+  SMethod_TextDocumentRename -> caps ^? dyn m
+  SMethod_TextDocumentFoldingRange -> caps ^? dyn m
+  SMethod_TextDocumentSelectionRange -> caps ^? dyn m
+  SMethod_TextDocumentLinkedEditingRange -> caps ^? dyn m
+  SMethod_TextDocumentPrepareCallHierarchy -> caps ^? dyn m
+  SMethod_TextDocumentInlayHint -> caps ^? dyn m
+  SMethod_TextDocumentInlineValue -> caps ^? dyn m
+  SMethod_TextDocumentMoniker -> caps ^? dyn m
+  SMethod_TextDocumentPrepareTypeHierarchy -> caps ^? dyn m
+  SMethod_TextDocumentDiagnostic -> caps ^? dyn m
   -- semantic tokens is messed up due to it having you register with an otherwise non-existent method
   -- SMethod_TextDocumentSemanticTokens       -> capDyn $ clientCaps ^? L.textDocument . _Just . L.semanticTokens . _Just
   -- Notebook document methods alway support dynamic registration, it seems?
   _ -> Just False
  where
-  td :: Traversal' ClientCapabilities TextDocumentClientCapabilities
-  td = L.textDocument . _Just
-
-  ws :: Traversal' ClientCapabilities WorkspaceClientCapabilities
-  ws = L.workspace . _Just
-
-  dyn :: L.HasDynamicRegistration a (Maybe Bool) => Traversal' a Bool
-  dyn = L.dynamicRegistration . _Just
+  dyn :: L.HasDynamicRegistration (ClientCapability m) (Maybe Bool) => SMethod m -> Traversal' ClientCapabilities Bool
+  dyn m1 = clientCapability m1 . _Just . L.dynamicRegistration . _Just
 
 ---- SERVER CAPABILITIES
 
