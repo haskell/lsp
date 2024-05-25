@@ -7,7 +7,7 @@ import Language.LSP.Protocol.Types
 import Language.LSP.Test
 
 main :: IO ()
-main = runSession "lsp-demo-reactor-server" fullCaps "test/data/" $ do
+main = runSession "lsp-demo-reactor-server" fullLatestClientCaps "test/data/" $ do
   doc <- openDoc "Rename.hs" "haskell"
 
   -- Use your favourite favourite combinators.

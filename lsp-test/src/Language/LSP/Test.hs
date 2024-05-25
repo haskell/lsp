@@ -30,7 +30,7 @@ module Language.LSP.Test (
   -- ** Config
   SessionConfig (..),
   defaultConfig,
-  C.fullCaps,
+  C.fullLatestClientCaps,
 
   -- ** Exceptions
   module Language.LSP.Test.Exceptions,
@@ -181,7 +181,7 @@ import System.Process (CreateProcess, ProcessHandle)
 
 {- | Starts a new session.
 
- > runSession "hie" fullCaps "path/to/root/dir" $ do
+ > runSession "hie" fullLatestClientCaps "path/to/root/dir" $ do
  >   doc <- openDoc "Desktop/simple.hs" "haskell"
  >   diags <- waitForDiagnostics
  >   let pos = Position 12 5
@@ -243,7 +243,7 @@ runSessionWithConfigCustomProcess modifyCreateProcess config' serverExe caps roo
  > (houtRead, houtWrite) <- createPipe
  >
  > forkIO $ void $ runServerWithHandles hinRead houtWrite serverDefinition
- > runSessionWithHandles hinWrite houtRead defaultConfig fullCaps "." $ do
+ > runSessionWithHandles hinWrite houtRead defaultConfig fullLatestClientCaps "." $ do
  >   -- ...
 -}
 runSessionWithHandles ::

@@ -8,7 +8,7 @@ and [lsp-types](https://hackage.haskell.org/package/lsp-types)
 
 ```haskell
 import Language.LSP.Test
-main = runSession "hie" fullCaps "proj/dir" $ do
+main = runSession "hie" fullLatestClientCaps "proj/dir" $ do
   doc <- openDoc "Foo.hs" "haskell"
   skipMany anyNotification
   symbols <- getDocumentSymbols doc
@@ -19,7 +19,7 @@ main = runSession "hie" fullCaps "proj/dir" $ do
 ### Unit tests with HSpec
 ```haskell
 describe "diagnostics" $
-  it "report errors" $ runSession "hie" fullCaps "test/data" $ do
+  it "report errors" $ runSession "hie" fullLatestClientCaps "test/data" $ do
     openDoc "Error.hs" "haskell"
     [diag] <- waitForDiagnosticsSource "ghcmod"
     liftIO $ do

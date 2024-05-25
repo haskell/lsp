@@ -56,7 +56,7 @@ main = do
 
   i <- newIORef (0 :: Integer)
 
-  Test.runSessionWithHandles hinWrite houtRead Test.defaultConfig Test.fullCaps "." $ do
+  Test.runSessionWithHandles hinWrite houtRead Test.defaultConfig Test.fullLatestClientCaps "." $ do
     start <- liftIO offsetTime
     replicateM_ n $ do
       v <- liftIO $ readIORef i

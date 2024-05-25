@@ -658,10 +658,12 @@ test-suite lsp-types-test
     , base
     , filepath
     , hspec
+    , hspec-golden
     , lens
     , lsp-types
     , lsp-types-quickcheck
     , network-uri
+    , prettyprinter
     , QuickCheck
     , quickcheck-instances
     , text
