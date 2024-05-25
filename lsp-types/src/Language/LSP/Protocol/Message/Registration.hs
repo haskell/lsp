@@ -37,8 +37,8 @@ deriving stock instance Show (RegistrationOptions m) => Show (TRegistration m)
 -- TODO: can we do this generically somehow?
 -- This generates the function
 -- regHelper :: SMethod m
---           -> (( Show (ServerCapability m)
---               , ToJSON (ServerCapability m)
+--           -> (( Show (RegistrationOptions m)
+--               , ToJSON (RegistrationOptions m)
 --               , FromJSON ($regOptTcon m)
 --              => x)
 --           -> x
