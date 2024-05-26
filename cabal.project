@@ -1,4 +1,4 @@
-index-state: 2024-05-16T14:00:00Z
+index-state: 2024-05-26T14:00:00Z
 
 packages:
          ./lsp
@@ -17,21 +17,3 @@ package lsp-types
   -- This makes a big difference here as lsp-types
   -- has very many independent modules
   ghc-options: -j4
-
-if impl(ghc >= 9.9)
-  allow-newer:
-    aeson:containers,
-    aeson:template-haskell,
-    boring:base,
-    co-log-core:base,
-    entropy:base,
-    entropy:directory,
-    entropy:filepath,
-    entropy:process,
-    quickcheck-instances:base,
-    quickcheck-instances:containers,
-    semialign:base, 
-    semialign:containers, 
-    these:base,
-    uuid-types:template-haskell,
-    witherable:containers,
