@@ -196,9 +196,9 @@ initializeRequestHandler logger ServerDefinition{..} vfs sendFunc req = do
   makeResponseMessage rid result = TResponseMessage "2.0" (Just rid) (Right result)
   makeResponseError origId err = TResponseMessage "2.0" (Just origId) (Left err)
 
-  initializeErrorHandler :: (ResponseError -> IO ()) -> E.SomeException -> IO (Maybe a)
+  initializeErrorHandler :: (TResponseError Method_Initialize -> IO ()) -> E.SomeException -> IO (Maybe a)
   initializeErrorHandler sendResp e = do
-    sendResp $ ResponseError (InR ErrorCodes_InternalError) msg Nothing
+    sendResp $ TResponseError (InR ErrorCodes_InternalError) msg Nothing
     pure Nothing
    where
     msg = T.pack $ unwords ["Error on initialize:", show e]
@@ -518,13 +518,13 @@ handle' logger mAction m msg = do
     (Nothing, Just (ClientMessageHandler h)) -> Just h
     (Nothing, Nothing) -> Nothing
 
-  sendResponse :: forall m1. TRequestMessage (m1 :: Method ClientToServer Request) -> Either ResponseError (MessageResult m1) -> m ()
+  sendResponse :: forall m1. TRequestMessage (m1 :: Method ClientToServer Request) -> Either (TResponseError m1) (MessageResult m1) -> m ()
   sendResponse req res = sendToClient $ FromServerRsp (req ^. L.method) $ TResponseMessage "2.0" (Just (req ^. L.id)) res
 
   requestDuringShutdown :: forall m1. TRequestMessage (m1 :: Method ClientToServer Request) -> m ()
   requestDuringShutdown req = do
     logger <& MessageDuringShutdown m `WithSeverity` Warning
-    sendResponse req (Left (ResponseError (InR ErrorCodes_InvalidRequest) "Server is shutdown" Nothing))
+    sendResponse req (Left (TResponseError (InR ErrorCodes_InvalidRequest) "Server is shutdown" Nothing))
 
   notificationDuringShutdown :: m ()
   notificationDuringShutdown = logger <& MessageDuringShutdown m `WithSeverity` Warning
@@ -541,7 +541,7 @@ handle' logger mAction m msg = do
   missingRequestHandler req = do
     logger <& MissingHandler False m `WithSeverity` Error
     let errorMsg = T.pack $ unwords ["No handler for: ", show m]
-        err = ResponseError (InR ErrorCodes_MethodNotFound) errorMsg Nothing
+        err = TResponseError (InR ErrorCodes_MethodNotFound) errorMsg Nothing
     sendResponse req (Left err)
 
 progressCancelHandler :: (m ~ LspM config) => LogAction m (WithSeverity LspProcessingLog) -> TMessage Method_WindowWorkDoneProgressCancel -> m ()

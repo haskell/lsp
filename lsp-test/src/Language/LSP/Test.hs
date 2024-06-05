@@ -674,7 +674,7 @@ getDocumentSymbols doc = do
     Right (InL xs) -> return (Left xs)
     Right (InR (InL xs)) -> return (Right xs)
     Right (InR (InR _)) -> return (Right [])
-    Left err -> throw (UnexpectedResponseError (SomeLspId $ fromJust rspLid) err)
+    Left err -> throw (UnexpectedResponseError (fromJust rspLid) err)
 
 -- | Returns the code actions in the specified range.
 getCodeActions :: TextDocumentIdentifier -> Range -> Session [Command |? CodeAction]
@@ -685,7 +685,7 @@ getCodeActions doc range = do
   case rsp ^. L.result of
     Right (InL xs) -> return xs
     Right (InR _) -> return []
-    Left error -> throw (UnexpectedResponseError (SomeLspId $ fromJust $ rsp ^. L.id) error)
+    Left error -> throw (UnexpectedResponseError (fromJust $ rsp ^. L.id) error)
 
 {- | Returns the code actions in the specified range, resolving any with
  a non empty _data_ field.
@@ -713,7 +713,7 @@ getAllCodeActions doc = do
     TResponseMessage _ rspLid res <- request SMethod_TextDocumentCodeAction (CodeActionParams Nothing Nothing doc (diag ^. L.range) ctx)
 
     case res of
-      Left e -> throw (UnexpectedResponseError (SomeLspId $ fromJust rspLid) e)
+      Left e -> throw (UnexpectedResponseError (fromJust rspLid) e)
       Right (InL cmdOrCAs) -> pure (acc ++ cmdOrCAs)
       Right (InR _) -> pure acc
 
@@ -781,7 +781,7 @@ resolveCodeAction ca = do
   rsp <- request SMethod_CodeActionResolve ca
   case rsp ^. L.result of
     Right ca -> return ca
-    Left er -> throw (UnexpectedResponseError (SomeLspId $ fromJust $ rsp ^. L.id) er)
+    Left er -> throw (UnexpectedResponseError (fromJust $ rsp ^. L.id) er)
 
 {- | If a code action contains a _data_ field: resolves the code action, then
  executes it. Otherwise, just executes it.
@@ -849,7 +849,7 @@ resolveCompletion ci = do
   rsp <- request SMethod_CompletionItemResolve ci
   case rsp ^. L.result of
     Right ci -> return ci
-    Left error -> throw (UnexpectedResponseError (SomeLspId $ fromJust $ rsp ^. L.id) error)
+    Left error -> throw (UnexpectedResponseError (fromJust $ rsp ^. L.id) error)
 
 -- | Returns the references for the position in the document.
 getReferences ::
@@ -937,11 +937,11 @@ getHighlights doc pos =
 {- | Checks the response for errors and throws an exception if needed.
  Returns the result if successful.
 -}
-getResponseResult :: (ToJSON (ErrorData m)) => TResponseMessage m -> MessageResult m
+getResponseResult :: (Show (ErrorData m)) => TResponseMessage m -> MessageResult m
 getResponseResult rsp =
   case rsp ^. L.result of
     Right x -> x
-    Left err -> throw $ UnexpectedResponseError (SomeLspId $ fromJust $ rsp ^. L.id) err
+    Left err -> throw $ UnexpectedResponseError (fromJust $ rsp ^. L.id) err
 
 -- | Applies formatting to the specified document.
 formatDoc :: TextDocumentIdentifier -> FormattingOptions -> Session ()
@@ -984,7 +984,7 @@ resolveCodeLens cl = do
   rsp <- request SMethod_CodeLensResolve cl
   case rsp ^. L.result of
     Right cl -> return cl
-    Left error -> throw (UnexpectedResponseError (SomeLspId $ fromJust $ rsp ^. L.id) error)
+    Left error -> throw (UnexpectedResponseError (fromJust $ rsp ^. L.id) error)
 
 -- | Returns the inlay hints in the specified range.
 getInlayHints :: TextDocumentIdentifier -> Range -> Session [InlayHint]
@@ -1006,7 +1006,7 @@ resolveInlayHint ih = do
   rsp <- request SMethod_InlayHintResolve ih
   case rsp ^. L.result of
     Right ih -> return ih
-    Left error -> throw (UnexpectedResponseError (SomeLspId $ fromJust $ rsp ^. L.id) error)
+    Left error -> throw (UnexpectedResponseError (fromJust $ rsp ^. L.id) error)
 
 -- | Pass a param and return the response from `prepareCallHierarchy`
 prepareCallHierarchy :: CallHierarchyPrepareParams -> Session [CallHierarchyItem]
@@ -1021,7 +1021,7 @@ outgoingCalls = resolveRequestWithListResp SMethod_CallHierarchyOutgoingCalls
 -- | Send a request and receive a response with list.
 resolveRequestWithListResp ::
   forall (m :: Method ClientToServer Request) a.
-  (ToJSON (ErrorData m), MessageResult m ~ ([a] |? Null)) =>
+  (Show (ErrorData m), MessageResult m ~ ([a] |? Null)) =>
   SMethod m ->
   MessageParams m ->
   Session [a]

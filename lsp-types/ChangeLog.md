@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Add support for identifying client and server capabilities associated with a method.
+- `TResponseMessage` now contains a `TResponseError` instead of a `ResponseError`
 
 ## 2.2.0.0 -- 2024-04-29
 

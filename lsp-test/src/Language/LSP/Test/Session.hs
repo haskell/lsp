@@ -349,7 +349,7 @@ updateStateC = awaitForever $ \msg -> do
       sendMessage $ TResponseMessage "2.0" (Just $ r ^. L.id) $
         if null errs
         then Right configs
-        else Left $ ResponseError (InL LSPErrorCodes_RequestFailed) ("No configuration for requested sections: " <> T.pack (show errs)) Nothing
+        else Left $ TResponseError (InL LSPErrorCodes_RequestFailed) ("No configuration for requested sections: " <> T.pack (show errs)) Nothing
     _ -> pure ()
   unless (
     (ignoringLogNotifications state && isLogNotification msg)

@@ -255,7 +255,7 @@ handlers =
     , requestHandler SMethod_TextDocumentSemanticTokensFull $ \_req resp -> do
         let tokens = makeSemanticTokens defaultSemanticTokensLegend [SemanticTokenAbsolute 0 1 2 SemanticTokenTypes_Type []]
         case tokens of
-          Left t -> resp $ Left $ ResponseError (InR ErrorCodes_InternalError) t Nothing
+          Left t -> resp $ Left $ TResponseError (InR ErrorCodes_InternalError) t Nothing
           Right tokens -> resp $ Right $ InL tokens
     , requestHandler SMethod_TextDocumentInlayHint $ \req resp -> do
         let TRequestMessage _ _ _ params = req

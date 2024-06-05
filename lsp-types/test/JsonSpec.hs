@@ -77,7 +77,7 @@ spec = do
       let input = "{\"jsonrpc\": \"2.0\", \"id\": 123, \"error\": { \"code\": -32700, \"message\": \"oh no\", \"data\": null }}"
        in J.decode input
             `shouldBe` Just
-              ( (TResponseMessage "2.0" (Just (IdInt 123)) (Left $ ResponseError (InR ErrorCodes_ParseError) "oh no" (Just J.Null))) ::
+              ( (TResponseMessage "2.0" (Just (IdInt 123)) (Left $ TResponseError (InR ErrorCodes_ParseError) "oh no" (Just J.Null))) ::
                   TResponseMessage ('Method_CustomMethod "hello")
               )
     it "throws if neither result nor error is present" $ do

@@ -17,11 +17,10 @@ data SessionException
   | ReplayOutOfOrder FromServerMessage [FromServerMessage]
   | UnexpectedDiagnostics
   | IncorrectApplyEditRequest String
-  | UnexpectedResponseError SomeLspId ResponseError
+  | forall m. Show (ErrorData m) => UnexpectedResponseError (LspId m) (TResponseError m)
   | UnexpectedServerTermination
   | IllegalInitSequenceMessage FromServerMessage
   | MessageSendError Value IOError
-  deriving (Eq)
 
 instance Exception SessionException
 

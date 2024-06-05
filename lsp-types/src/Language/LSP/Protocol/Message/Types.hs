@@ -192,8 +192,7 @@ toUntypedResponseError (TResponseError c m d) = ResponseError c m (fmap toJSON d
 data TResponseMessage (m :: Method f Request) = TResponseMessage
   { _jsonrpc :: Text
   , _id :: Maybe (LspId m)
-  , -- TODO: use `TResponseError m` for the error type, this will require quite a lot of adaptation downstream
-    _result :: Either ResponseError (MessageResult m)
+  , _result :: Either (TResponseError m) (MessageResult m)
   }
   deriving stock (Generic)
 
