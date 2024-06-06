@@ -1,6 +1,6 @@
 # Revision history for lsp-types
-
-## Unreleased
+ 
+## 2.3.0.0 -- 2024-06-06
 
 - Add support for identifying client and server capabilities associated with a method.
 - `TResponseMessage` now contains a `TResponseError` instead of a `ResponseError`

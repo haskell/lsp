@@ -1,6 +1,6 @@
 # Revision history for lsp
 
-## Unreleased
+## 2.7.0.0 -- 2024-06-06
 
 - Drop dependency on `uuid` and `random`
 - Fix handling of `rootPath` in `intializeParams`
