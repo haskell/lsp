@@ -74,7 +74,7 @@ data LspCoreLog
     NewConfig J.Value
   | ConfigurationParseError J.Value T.Text
   | ConfigurationNotSupported
-  | BadConfigurationResponse ResponseError
+  | BadConfigurationResponse (TResponseError Method_WorkspaceConfiguration)
   | WrongConfigSections [J.Value]
   | forall m. CantRegister (SMethod m)
 
@@ -177,7 +177,7 @@ newtype ClientMessageHandler f (t :: MessageKind) (m :: Method ClientToServer t)
  from the server or client
 -}
 type family Handler (f :: Type -> Type) (m :: Method from t) = (result :: Type) | result -> f t m where
-  Handler f (m :: Method _from Request) = TRequestMessage m -> (Either ResponseError (MessageResult m) -> f ()) -> f ()
+  Handler f (m :: Method _from Request) = TRequestMessage m -> (Either (TResponseError m) (MessageResult m) -> f ()) -> f ()
   Handler f (m :: Method _from Notification) = TNotificationMessage m -> f ()
 
 -- | How to convert two isomorphic data structures between each other.
@@ -348,7 +348,7 @@ data ServerDefinition config = forall m a.
   -- the new config. Servers that want to react to config changes should provide
   -- a callback here, it is not sufficient to just add e.g. a @workspace/didChangeConfiguration@
   -- handler.
-  , doInitialize :: LanguageContextEnv config -> TMessage Method_Initialize -> IO (Either ResponseError a)
+  , doInitialize :: LanguageContextEnv config -> TMessage Method_Initialize -> IO (Either (TResponseError Method_Initialize) a)
   -- ^ Called *after* receiving the @initialize@ request and *before*
   -- returning the response. This callback will be invoked to offer the
   -- language server implementation the chance to create any processes or
@@ -383,7 +383,7 @@ data ServerDefinition config = forall m a.
  request with either an error, or the response params.
 -}
 newtype ServerResponseCallback (m :: Method ServerToClient Request)
-  = ServerResponseCallback (Either ResponseError (MessageResult m) -> IO ())
+  = ServerResponseCallback (Either (TResponseError m) (MessageResult m) -> IO ())
 
 {- | Return value signals if response handler was inserted successfully
  Might fail if the id was already in the map
@@ -412,7 +412,7 @@ sendRequest ::
   MonadLsp config f =>
   SServerMethod m ->
   MessageParams m ->
-  (Either ResponseError (MessageResult m) -> f ()) ->
+  (Either (TResponseError m) (MessageResult m) -> f ()) ->
   f (LspId m)
 sendRequest m params resHandler = do
   reqId <- IdInt <$> freshLspId

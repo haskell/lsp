@@ -4,6 +4,7 @@
 
 - Drop dependency on `uuid` and `random`
 - Fix handling of `rootPath` in `intializeParams`
+- Update to newer `lsp-types`
 
 ## 2.6.0.0
 
