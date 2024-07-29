@@ -1,7 +1,7 @@
 ![CI](https://github.com/alanz/lsp/workflows/Haskell%20CI/badge.svg)
 [![Hackage](https://img.shields.io/hackage/v/lsp?label=lsp)](https://hackage.haskell.org/package/lsp)
-[![Hackage](https://img.shields.io/hackage/v/lsp?label=lsp-types)](https://hackage.haskell.org/package/lsp-types)
-[![Hackage](https://img.shields.io/hackage/v/lsp?label=lsp-test)](https://hackage.haskell.org/package/lsp-test)
+[![Hackage](https://img.shields.io/hackage/v/lsp-types?label=lsp-types)](https://hackage.haskell.org/package/lsp-types)
+[![Hackage](https://img.shields.io/hackage/v/lsp-test?label=lsp-test)](https://hackage.haskell.org/package/lsp-test)
 
 # lsp
 Haskell library for the Microsoft Language Server Protocol.
