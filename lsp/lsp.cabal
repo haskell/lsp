@@ -74,7 +74,7 @@ library
     , sorted-list           ^>=0.2.1
     , stm                   ^>=2.5
     , text                  >=1      && <2.2
-    , text-rope             ^>=0.2
+    , text-rope             >=0.2    && <0.4
     , transformers          >=0.5    && <0.7
     , unliftio              ^>=0.2
     , unliftio-core         ^>=0.2
