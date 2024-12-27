@@ -66,11 +66,11 @@ library
     , base                           >=4.11  && <5
     , binary                         ^>=0.8
     , containers                     >=0.6 && < 0.8
-    , data-default                   ^>=0.7
+    , data-default                   >=0.7 && < 0.9
     , deepseq                        >=1.4   && <1.6
-    , Diff                           >=0.4   && <0.6
+    , Diff                           >=0.4   && <1.1
     , dlist                          ^>=1.0
-    , hashable                       ^>=1.4
+    , hashable                       >=1.4 && <1.6
     , indexed-traversable            ^>=0.1
     , indexed-traversable-instances  ^>=0.1
     , lens                           >=5.1   && <5.4
@@ -81,7 +81,7 @@ library
     , row-types                      ^>=1.0
     , safe                           ^>=0.3
     , some                           ^>=1.0
-    , template-haskell               >=2.7   && <2.23
+    , template-haskell               >=2.7   && <2.24
     , text                           >=1     && <2.2
 
   -- This version of filepath comes with GHC 9.6, so
@@ -584,7 +584,7 @@ library metamodel
     , base              >=4.11    && <5
     , file-embed        ^>=0.0.15
     , lens              >=5.1     && <5.4
-    , template-haskell  >=2.7     && <2.23
+    , template-haskell  >=2.7     && <2.24
     , text              >=1       && <2.2
 
 library lsp-types-quickcheck

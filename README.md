@@ -1,7 +1,7 @@
 ![CI](https://github.com/alanz/lsp/workflows/Haskell%20CI/badge.svg)
 [![Hackage](https://img.shields.io/hackage/v/lsp?label=lsp)](https://hackage.haskell.org/package/lsp)
-[![Hackage](https://img.shields.io/hackage/v/lsp?label=lsp-types)](https://hackage.haskell.org/package/lsp-types)
-[![Hackage](https://img.shields.io/hackage/v/lsp?label=lsp-test)](https://hackage.haskell.org/package/lsp-test)
+[![Hackage](https://img.shields.io/hackage/v/lsp-types?label=lsp-types)](https://hackage.haskell.org/package/lsp-types)
+[![Hackage](https://img.shields.io/hackage/v/lsp-test?label=lsp-test)](https://hackage.haskell.org/package/lsp-test)
 
 # lsp
 Haskell library for the Microsoft Language Server Protocol.
@@ -30,50 +30,61 @@ typescript definitions laid out in the specification
 There are two example language servers in the `lsp/example/` folder. `Simple.hs` provides a minimal example:
 
 ```haskell
+{-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-import Language.LSP.Server
-import Language.LSP.Types
 import Control.Monad.IO.Class
-import qualified Data.Text as T
+import Data.Text qualified as T
+import Language.LSP.Protocol.Message
+import Language.LSP.Protocol.Types
+import Language.LSP.Server
 
 handlers :: Handlers (LspM ())
-handlers = mconcat
-  [ notificationHandler SInitialized $ \_not -> do
-      let params = ShowMessageRequestParams MtInfo "Turn on code lenses?"
-            (Just [MessageActionItem "Turn on", MessageActionItem "Don't"])
-      _ <- sendRequest SWindowShowMessageRequest params $ \res ->
-        case res of
-          Right (Just (MessageActionItem "Turn on")) -> do
-            let regOpts = CodeLensRegistrationOptions Nothing Nothing (Just False)
-              
-            _ <- registerCapability STextDocumentCodeLens regOpts $ \_req responder -> do
+handlers =
+  mconcat
+    [ notificationHandler SMethod_Initialized $ \_not -> do
+        let params =
+              ShowMessageRequestParams
+                MessageType_Info
+                "Turn on code lenses?"
+                (Just [MessageActionItem "Turn on", MessageActionItem "Don't"])
+        _ <- sendRequest SMethod_WindowShowMessageRequest params $ \case
+          Right (InL (MessageActionItem "Turn on")) -> do
+            let regOpts = CodeLensRegistrationOptions (InR Null) Nothing (Just False)
+
+            _ <- registerCapability mempty SMethod_TextDocumentCodeLens regOpts $ \_req responder -> do
               let cmd = Command "Say hello" "lsp-hello-command" Nothing
-                  rsp = List [CodeLens (mkRange 0 0 0 100) (Just cmd) Nothing]
-              responder (Right rsp)
+                  rsp = [CodeLens (mkRange 0 0 0 100) (Just cmd) Nothing]
+              responder $ Right $ InL rsp
             pure ()
           Right _ ->
-            sendNotification SWindowShowMessage (ShowMessageParams MtInfo "Not turning on code lenses")
+            sendNotification SMethod_WindowShowMessage (ShowMessageParams MessageType_Info "Not turning on code lenses")
           Left err ->
-            sendNotification SWindowShowMessage (ShowMessageParams MtError $ "Something went wrong!\n" <> T.pack (show err))
-      pure ()
-  , requestHandler STextDocumentHover $ \req responder -> do
-      let RequestMessage _ _ _ (HoverParams _doc pos _workDone) = req
-          Position _l _c' = pos
-          rsp = Hover ms (Just range)
-          ms = HoverContents $ markedUpContent "lsp-demo-simple-server" "Hello world"
-          range = Range pos pos
-      responder (Right $ Just rsp)
-  ]
+            sendNotification SMethod_WindowShowMessage (ShowMessageParams MessageType_Error $ "Something went wrong!\n" <> T.pack (show err))
+        pure ()
+    , requestHandler SMethod_TextDocumentHover $ \req responder -> do
+        let TRequestMessage _ _ _ (HoverParams _doc pos _workDone) = req
+            Position _l _c' = pos
+            rsp = Hover (InL ms) (Just range)
+            ms = mkMarkdown "Hello world"
+            range = Range pos pos
+        responder (Right $ InL rsp)
+    ]
 
 main :: IO Int
-main = runServer $ ServerDefinition
-  { onConfigurationChange = const $ pure $ Right ()
-  , doInitialize = \env _req -> pure $ Right env
-  , staticHandlers = \_caps -> handlers
-  , interpretHandler = \env -> Iso (runLspT env) liftIO
-  , options = defaultOptions
-  }
+main =
+  runServer $
+    ServerDefinition
+      { parseConfig = const $ const $ Right ()
+      , onConfigChange = const $ pure ()
+      , defaultConfig = ()
+      , configSection = "demo"
+      , doInitialize = \env _req -> pure $ Right env
+      , staticHandlers = \_caps -> handlers
+      , interpretHandler = \env -> Iso (runLspT env) liftIO
+      , options = defaultOptions
+      }
 ```
 
 Whilst `Reactor.hs` shows how a reactor design can be used to handle all
