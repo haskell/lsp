@@ -1,8 +1,8 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE OverloadedLabels #-}
 
 module Language.LSP.Protocol.Capabilities (
   LSPVersion (..),
@@ -20,17 +20,17 @@ module Language.LSP.Protocol.Capabilities (
   serverCapability,
 ) where
 
+import Data.Function ((&))
+import Data.Generics.Labels ()
 import Data.Kind (Type)
 import Data.Maybe
 import Data.Set qualified as Set
 import Data.Void
 import Language.LSP.Protocol.Message
 import Language.LSP.Protocol.Types
-import Prelude hiding (min)
+import Lens.Micro (Lens', lens, non, (.~), (^.), (^?), _Just)
 import Lens.Micro qualified as L
-import Lens.Micro (Lens', (.~), (^.), lens, non, (^?), _Just)
-import Data.Generics.Labels ()
-import Data.Function ((&))
+import Prelude hiding (min)
 
 -- | A specific version of the LSP specification.
 data LSPVersion = LSPVersion Int Int
@@ -307,7 +307,7 @@ dynamicRegistrationSupported m caps = fromMaybe False $ case m of
   -- Notebook document methods alway support dynamic registration, it seems?
   _ -> Just False
  where
-  --dyn :: L.HasDynamicRegistration (ClientCapability m) (Maybe Bool) => SMethod m -> Traversal' ClientCapabilities Bool
+  -- dyn :: L.HasDynamicRegistration (ClientCapability m) (Maybe Bool) => SMethod m -> Traversal' ClientCapabilities Bool
   dyn m1 = clientCapability m1 . _Just . #dynamicRegistration . _Just
 
 -- | Client capabilities for full support of the current LSP specification.
@@ -328,12 +328,12 @@ fullClientCapsForVersion v@(LSPVersion maj min) = caps
 
   caps =
     ClientCapabilities
-       { workspace = Just workspace
-       , textDocument = Just td
-       , window = Just window
-       , general = since 3 16 general
-       , notebookDocument = NotebookDocumentClientCapabilities <$> methCaps SMethod_NotebookDocumentDidOpen
-       , experimental = Nothing
+      { workspace = Just workspace
+      , textDocument = Just td
+      , window = Just window
+      , general = since 3 16 general
+      , notebookDocument = NotebookDocumentClientCapabilities <$> methCaps SMethod_NotebookDocumentDidOpen
+      , experimental = Nothing
       }
 
   window =
@@ -353,8 +353,8 @@ fullClientCapsForVersion v@(LSPVersion maj min) = caps
 
   workspace =
     WorkspaceClientCapabilities
-       { applyEdit = methCaps SMethod_WorkspaceApplyEdit
-       , workspaceEdit =
+      { applyEdit = methCaps SMethod_WorkspaceApplyEdit
+      , workspaceEdit =
           Just
             ( WorkspaceEditClientCapabilities
                 (Just True)

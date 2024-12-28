@@ -68,7 +68,6 @@ library
     , lens-aeson          ^>=1.2
     , lsp                 ^>=2.7
     , lsp-types           ^>=2.3
-    , lsp-types:lsp-types-lens
     , mtl                 >=2.2   && <2.4
     , parser-combinators  ^>=1.3
     , process             ^>=1.6
@@ -138,7 +137,6 @@ test-suite func-test
     , lens
     , lsp
     , lsp-test
-    , lsp-types:lsp-types-lens
     , parser-combinators
     , process
     , unliftio

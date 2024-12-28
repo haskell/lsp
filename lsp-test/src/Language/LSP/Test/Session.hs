@@ -68,7 +68,6 @@ import Data.Maybe
 import Data.Function
 import Language.LSP.Protocol.Types as LSP hiding (to)
 import Language.LSP.Protocol.Message as LSP hiding (error)
-import Language.LSP.Protocol.Lens
 import Language.LSP.VFS
 import Language.LSP.Test.Compat
 import Language.LSP.Test.Decoding
@@ -385,9 +384,9 @@ updateState :: (MonadIO m, HasReader SessionContext m, HasState SessionState m)
             => FromServerMessage -> m ()
 updateState (FromServerMess SMethod_Progress req) = case req.params.value of
   v | Just _ <- v ^? workDoneProgressBegin ->
-    modify $ \s -> s { curProgressSessions = Set.insert (req.params.token) $ curProgressSessions s }
+    modify $ \s -> s { curProgressSessions = Set.insert req.params.token $ curProgressSessions s }
   v | Just _ <- v ^? workDoneProgressEnd ->
-    modify $ \s -> s { curProgressSessions = Set.delete (req.params.token) $ curProgressSessions s }
+    modify $ \s -> s { curProgressSessions = Set.delete req.params.token $ curProgressSessions s }
   _ -> pure ()
 
 -- Keep track of dynamic capability registration

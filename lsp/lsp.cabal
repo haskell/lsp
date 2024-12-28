@@ -91,7 +91,6 @@ executable lsp-demo-reactor-server
     , co-log-core
     , lens
     , lsp
-    , lsp-types:lsp-types-lens
     , prettyprinter
     , stm
     , text

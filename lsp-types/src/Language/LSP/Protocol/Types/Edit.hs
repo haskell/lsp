@@ -1,5 +1,4 @@
 {-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE OverloadedStrings #-}
 
 module Language.LSP.Protocol.Types.Edit where
 
@@ -8,6 +7,7 @@ import Data.Text qualified as T
 
 import Language.LSP.Protocol.Internal.Types
 import Language.LSP.Protocol.Types.Common
+import Language.LSP.Protocol.Utils.Misc (Prism, prism)
 
 -- | Convenience alias for the type in the 'WorkspaceEdit._documentChanges' field.
 type DocumentChange = TextDocumentEdit |? CreateFile |? RenameFile |? DeleteFile
@@ -48,3 +48,11 @@ editTextEdit :: TextEdit -> TextEdit -> TextEdit
 editTextEdit (TextEdit origRange origText) innerEdit =
   let newText = applyTextEdit innerEdit origText
    in TextEdit origRange newText
+
+-- | Conversion between 'OptionalVersionedTextDocumentIdentifier' and 'VersionedTextDocumentIdentifier'.
+versionedTextDocumentIdentifier :: Prism OptionalVersionedTextDocumentIdentifier OptionalVersionedTextDocumentIdentifier VersionedTextDocumentIdentifier VersionedTextDocumentIdentifier
+versionedTextDocumentIdentifier = prism down up
+ where
+  down (VersionedTextDocumentIdentifier uri v) = OptionalVersionedTextDocumentIdentifier uri (InL v)
+  up (OptionalVersionedTextDocumentIdentifier uri (InL v)) = Right $ VersionedTextDocumentIdentifier uri v
+  up i@(OptionalVersionedTextDocumentIdentifier _ (InR _)) = Left i

@@ -69,10 +69,10 @@ getRequestMap = foldl' helper emptyIxMap
   helper acc msg = case msg of
     FromClientMess m mess -> case splitClientMethod m of
       IsClientNot -> acc
-      IsClientReq -> fromJust $ updateRequestMap acc (mess.id) m
+      IsClientReq -> fromJust $ updateRequestMap acc mess.id m
       IsClientEither -> case mess of
         NotMess _ -> acc
-        ReqMess msg -> fromJust $ updateRequestMap acc (msg.id) m
+        ReqMess msg -> fromJust $ updateRequestMap acc msg.id m
     _ -> acc
 
 decodeFromServerMsg :: RequestMap -> B.ByteString -> (RequestMap, FromServerMessage)

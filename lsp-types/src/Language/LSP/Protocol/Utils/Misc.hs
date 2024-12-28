@@ -9,6 +9,8 @@ module Language.LSP.Protocol.Utils.Misc (
   lspOptionsUntagged,
   prettyJSON,
   ViaJSON (..),
+  Prism,
+  prism,
 ) where
 
 import Control.Monad
@@ -19,6 +21,8 @@ import Data.Foldable.WithIndex qualified as F
 import Data.Functor.WithIndex.Instances qualified ()
 import Data.List hiding (group)
 import Data.Maybe (mapMaybe)
+import Data.Profunctor (dimap)
+import Data.Profunctor.Choice (Choice, right')
 import Language.Haskell.TH as TH
 import Prettyprinter
 
@@ -132,3 +136,8 @@ newtype ViaJSON a = ViaJSON a
 
 instance ToJSON a => Pretty (ViaJSON a) where
   pretty (ViaJSON a) = prettyJSON $ toJSON a
+
+type Prism s t a b = forall p f. (Choice p, Applicative f) => p a (f b) -> p s (f t)
+
+prism :: (b -> t) -> (s -> Either t a) -> Prism s t a b
+prism bt seta = dimap seta (either pure (fmap bt)) . right'

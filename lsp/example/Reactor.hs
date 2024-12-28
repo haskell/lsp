@@ -37,7 +37,6 @@ import Data.Text qualified as T
 import GHC.Generics (Generic)
 import Language.LSP.Diagnostics
 import Language.LSP.Logging (defaultClientLogger)
-import Language.LSP.Protocol.Lens
 import Language.LSP.Protocol.Message qualified as LSP
 import Language.LSP.Protocol.Types qualified as LSP
 import Language.LSP.Server
@@ -241,7 +240,7 @@ handle logger =
     , notificationHandler LSP.SMethod_TextDocumentDidChange $ \msg -> do
         let
           params = msg.params
-          doc = LSP.toNormalizedUri (params.textDocument.uri)
+          doc = LSP.toNormalizedUri params.textDocument.uri
         logger <& ("Processing DidChangeTextDocument for: " <> T.pack (show doc)) `WithSeverity` Info
         mdoc <- getVirtualFile doc
         case mdoc of
@@ -261,10 +260,10 @@ handle logger =
         let params = req.params
             LSP.Position l c = params.position
             newName = params.newName
-        vdoc <- getVersionedTextDoc (params.textDocument)
+        vdoc <- getVersionedTextDoc params.textDocument
         -- Replace some text at the position with what the user entered
         let edit = LSP.InL $ LSP.TextEdit (LSP.mkRange l c l (c + fromIntegral (T.length newName))) newName
-            tde = LSP.TextDocumentEdit (versionedTextDocumentIdentifier # vdoc) [edit]
+            tde = LSP.TextDocumentEdit (LSP.versionedTextDocumentIdentifier # vdoc) [edit]
             -- "documentChanges" field is preferred over "changes"
             rsp = LSP.WorkspaceEdit Nothing (Just [LSP.InL tde]) Nothing
         responder (Right $ LSP.InL rsp)
@@ -279,7 +278,7 @@ handle logger =
     , requestHandler LSP.SMethod_TextDocumentDocumentSymbol $ \req responder -> do
         logger <& "Processing a textDocument/documentSymbol request" `WithSeverity` Info
         let LSP.DocumentSymbolParams _ _ doc = req.params
-            loc = LSP.Location (doc.uri) (LSP.Range (LSP.Position 0 0) (LSP.Position 0 0))
+            loc = LSP.Location doc.uri (LSP.Range (LSP.Position 0 0) (LSP.Position 0 0))
             rsp = [LSP.SymbolInformation "lsp-hello" LSP.SymbolKind_Function Nothing Nothing Nothing loc]
         responder (Right $ LSP.InL rsp)
     , requestHandler LSP.SMethod_TextDocumentCodeAction $ \req responder -> do
@@ -315,7 +314,7 @@ handle logger =
 
         logger <& ("The arguments are: " <> T.pack (show margs)) `WithSeverity` Debug
         responder (Right $ LSP.InL (J.Object mempty)) -- respond to the request
-        void $ withProgress "Executing some long running command" (params.workDoneToken) Cancellable $ \update ->
+        void $ withProgress "Executing some long running command" params.workDoneToken Cancellable $ \update ->
           forM [(0 :: LSP.UInt) .. 10] $ \i -> do
             update (ProgressAmount (Just (i * 10)) (Just "Doing stuff"))
             liftIO $ threadDelay (1 * 1000000)

@@ -21,7 +21,6 @@ import Data.Generics.Product.Fields (field')
 import Data.Maybe
 import Data.Proxy
 import Data.Set qualified as Set
-import Language.LSP.Protocol.Lens
 import Language.LSP.Protocol.Message hiding (error)
 import Language.LSP.Protocol.Types
 import Language.LSP.Server

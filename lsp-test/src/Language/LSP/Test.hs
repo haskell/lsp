@@ -167,7 +167,6 @@ import Data.Text qualified as T
 import Data.Text.IO qualified as T
 import Data.Traversable (for)
 import Language.LSP.Protocol.Capabilities qualified as C
-import Language.LSP.Protocol.Lens qualified as L
 import Language.LSP.Protocol.Message (MessageDirection (..), MessageKind (..), Method (..), SMethod (..))
 import Language.LSP.Protocol.Message qualified as L
 import Language.LSP.Protocol.Types (ClientCapabilities, type (|?) (..))
@@ -773,8 +772,8 @@ executeCommand cmd = do
 -}
 executeCodeAction :: L.CodeAction -> Session ()
 executeCodeAction action = do
-  maybe (return ()) handleEdit  action.edit
-  maybe (return ()) executeCommand  action.command
+  maybe (return ()) handleEdit action.edit
+  maybe (return ()) executeCommand action.command
  where
   handleEdit :: L.WorkspaceEdit -> Session ()
   handleEdit e =
