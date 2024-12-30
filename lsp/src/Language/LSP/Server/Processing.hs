@@ -21,7 +21,6 @@ import Colog.Core (
 import Control.Concurrent.Extra as C
 import Control.Concurrent.STM
 import Control.Exception qualified as E
-import Control.Lens hiding (Empty)
 import Control.Monad
 import Control.Monad.Except ()
 import Control.Monad.IO.Class
@@ -34,6 +33,7 @@ import Data.Aeson hiding (
   Null,
   Options,
  )
+import Data.Aeson.KeyMap qualified as Aeson
 import Data.Aeson.Lens ()
 import Data.Aeson.Types hiding (
   Error,
@@ -42,6 +42,7 @@ import Data.Aeson.Types hiding (
  )
 import Data.ByteString.Lazy qualified as BSL
 import Data.Foldable (traverse_)
+import Data.Functor.Const (Const (Const))
 import Data.Functor.Product qualified as P
 import Data.IxMap
 import Data.List
@@ -582,7 +583,7 @@ initialDynamicRegistrations logger = do
  See Note [LSP configuration]
 -}
 lookForConfigSection :: T.Text -> Value -> Value
-lookForConfigSection section (Object o) | Just s' <- o ^. at (fromString $ T.unpack section) = s'
+lookForConfigSection section (Object o) | Just s' <- Aeson.lookup (fromString $ T.unpack section) o = s'
 lookForConfigSection _ o = o
 
 -- | Handle a workspace/didChangeConfiguration request.

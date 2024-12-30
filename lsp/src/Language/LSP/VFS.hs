@@ -1,10 +1,8 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE ViewPatterns #-}
 
 {- |
@@ -31,13 +29,9 @@ module Language.LSP.VFS (
 
   -- * Positions and transformations
   CodePointPosition (..),
-  line,
-  character,
   codePointPositionToPosition,
   positionToCodePointPosition,
   CodePointRange (..),
-  start,
-  end,
   codePointRangeToRange,
   rangeToCodePointRange,
 
@@ -51,7 +45,6 @@ module Language.LSP.VFS (
 ) where
 
 import Colog.Core (LogAction (..), Severity (..), WithSeverity (..), (<&))
-import Control.Lens hiding (parts, (<.>))
 import Control.Monad
 import Control.Monad.State
 import Data.Foldable (traverse_)
@@ -70,6 +63,9 @@ import Data.Text.Utf16.Rope.Mixed qualified as Rope
 import GHC.Generics
 import Language.LSP.Protocol.Message qualified as J
 import Language.LSP.Protocol.Types qualified as J
+import Lens.Micro
+import Lens.Micro.Extras
+import Lens.Micro.GHC ()
 import Prettyprinter hiding (line)
 import System.Directory
 import System.FilePath
@@ -78,6 +74,8 @@ import System.IO
 -- ---------------------------------------------------------------------
 {-# ANN module ("hlint: ignore Eta reduce" :: String) #-}
 {-# ANN module ("hlint: ignore Redundant do" :: String) #-}
+
+infix 4 .=, %=
 
 -- ---------------------------------------------------------------------
 
@@ -137,8 +135,8 @@ emptyVFS = VFS mempty
 openVFS :: (MonadState VFS m) => LogAction m (WithSeverity VfsLog) -> J.TMessage 'J.Method_TextDocumentDidOpen -> m ()
 openVFS logger msg = do
   let
-    p = msg ^. #params
-    J.TextDocumentItem (J.toNormalizedUri -> uri) _ version text = p ^. #textDocument
+    p = msg.params
+    J.TextDocumentItem (J.toNormalizedUri -> uri) _ version text = p.textDocument
     vfile = VirtualFile version 0 (Rope.fromText text)
   logger <& Opening uri `WithSeverity` Debug
   #vfsMap . at uri .= Just vfile
@@ -149,11 +147,11 @@ openVFS logger msg = do
 changeFromClientVFS :: (MonadState VFS m) => LogAction m (WithSeverity VfsLog) -> J.TMessage 'J.Method_TextDocumentDidChange -> m ()
 changeFromClientVFS logger msg = do
   let
-    J.DidChangeTextDocumentParams vid changes = msg ^. #params
+    J.DidChangeTextDocumentParams vid changes = msg.params
     -- the client shouldn't be sending over a null version, only the server, but we just use 0 if that happens
     J.VersionedTextDocumentIdentifier (J.toNormalizedUri -> uri) version = vid
   vfs <- get
-  case vfs ^. #vfsMap . at uri of
+  case vfs ^. #vfsMap . at @(Map.Map J.NormalizedUri VirtualFile) uri of
     Just (VirtualFile _ file_ver contents) -> do
       contents' <- applyChanges logger contents changes
       #vfsMap . at uri .= Just (VirtualFile version (file_ver + 1) contents')
@@ -216,7 +214,8 @@ applyDeleteFile logger (J.DeleteFile _ann _kind (J.toNormalizedUri -> uri) optio
   when (options ^? _Just . #recursive . _Just == Just True) $
     logger <& CantRecursiveDelete uri `WithSeverity` Warning
   -- Remove and get the old value so we can check if it was missing
-  old <- #vfsMap . at uri <.= Nothing
+  old <- gets (view $ #vfsMap . at uri)
+  #vfsMap . at uri .= Nothing
   case old of
     -- It's not entirely clear what the semantics of 'ignoreIfNotExists' are, but if it
     -- doesn't exist and we're not ignoring it, let's at least log it.
@@ -232,18 +231,18 @@ applyTextDocumentEdit logger (J.TextDocumentEdit vid edits) = do
   let sortedEdits = sortOn (Down . editRange) edits
       changeEvents = map editToChangeEvent sortedEdits
       -- TODO: is this right?
-      vid' = J.VersionedTextDocumentIdentifier (vid ^. #uri) (case vid ^. #version of J.InL v -> v; J.InR _ -> 0)
+      vid' = J.VersionedTextDocumentIdentifier vid.uri (case vid.version of J.InL v -> v; J.InR _ -> 0)
       ps = J.DidChangeTextDocumentParams vid' changeEvents
       notif = J.TNotificationMessage "" J.SMethod_TextDocumentDidChange ps
   changeFromClientVFS logger notif
  where
   editRange :: J.TextEdit J.|? J.AnnotatedTextEdit -> J.Range
-  editRange (J.InR e) = e ^. #range
-  editRange (J.InL e) = e ^. #range
+  editRange (J.InR e) = e.range
+  editRange (J.InL e) = e.range
 
   editToChangeEvent :: J.TextEdit J.|? J.AnnotatedTextEdit -> J.TextDocumentContentChangeEvent
-  editToChangeEvent (J.InR e) = J.TextDocumentContentChangeEvent $ J.InL $ J.TextDocumentContentChangePartial{range = e ^. #range, rangeLength = Nothing, text = e ^. #newText}
-  editToChangeEvent (J.InL e) = J.TextDocumentContentChangeEvent $ J.InL $ J.TextDocumentContentChangePartial{range = e ^. #range, rangeLength = Nothing, text = e ^. #newText}
+  editToChangeEvent (J.InR e) = J.TextDocumentContentChangeEvent $ J.InL $ J.TextDocumentContentChangePartial{range = e.range, rangeLength = Nothing, text = e.newText}
+  editToChangeEvent (J.InL e) = J.TextDocumentContentChangeEvent $ J.InL $ J.TextDocumentContentChangePartial{range = e.range, rangeLength = Nothing, text = e.newText}
 
 applyDocumentChange :: (MonadState VFS m) => LogAction m (WithSeverity VfsLog) -> J.DocumentChange -> m ()
 applyDocumentChange logger (J.InL change) = applyTextDocumentEdit logger change
@@ -254,7 +253,7 @@ applyDocumentChange logger (J.InR (J.InR (J.InR change))) = applyDeleteFile logg
 -- | Applies the changes from a 'ApplyWorkspaceEditRequest' to the 'VFS'
 changeFromServerVFS :: forall m. MonadState VFS m => LogAction m (WithSeverity VfsLog) -> J.TMessage 'J.Method_WorkspaceApplyEdit -> m ()
 changeFromServerVFS logger msg = do
-  let J.ApplyWorkspaceEditParams _label edit = msg ^. #params
+  let J.ApplyWorkspaceEditParams _label edit = msg.params
       J.WorkspaceEdit mChanges mDocChanges _anns = edit
   case mDocChanges of
     Just docChanges -> applyDocumentChanges docChanges
@@ -270,7 +269,7 @@ changeFromServerVFS logger msg = do
 
   -- for sorting [DocumentChange]
   project :: J.DocumentChange -> Maybe J.Int32
-  project (J.InL textDocumentEdit) = case textDocumentEdit ^. #textDocument . #version of
+  project (J.InL textDocumentEdit) = case textDocumentEdit.textDocument.version of
     J.InL v -> Just v
     _ -> Nothing
   project _ = Nothing
@@ -313,7 +312,7 @@ persistFileVFS logger dir vfs uri =
 
 closeVFS :: (MonadState VFS m) => LogAction m (WithSeverity VfsLog) -> J.TMessage 'J.Method_TextDocumentDidClose -> m ()
 closeVFS logger msg = do
-  let J.DidCloseTextDocumentParams (J.TextDocumentIdentifier (J.toNormalizedUri -> uri)) = msg ^. #params
+  let J.DidCloseTextDocumentParams (J.TextDocumentIdentifier (J.toNormalizedUri -> uri)) = msg.params
   logger <& Closing uri `WithSeverity` Debug
   #vfsMap . at uri .= Nothing
 
@@ -330,11 +329,11 @@ applyChanges logger = foldM (applyChange logger)
 
 applyChange :: (Monad m) => LogAction m (WithSeverity VfsLog) -> Rope -> J.TextDocumentContentChangeEvent -> m Rope
 applyChange logger str (J.TextDocumentContentChangeEvent (J.InL e))
-  | J.Range (J.Position sl sc) (J.Position fl fc) <- e ^. #range
-  , txt <- e ^. #text =
+  | J.Range (J.Position sl sc) (J.Position fl fc) <- e.range
+  , txt <- e.text =
       changeChars logger str (Utf16.Position (fromIntegral sl) (fromIntegral sc)) (Utf16.Position (fromIntegral fl) (fromIntegral fc)) txt
 applyChange _ _ (J.TextDocumentContentChangeEvent (J.InR e)) =
-  pure $ Rope.fromText $ e ^. #text
+  pure $ Rope.fromText $ e.text
 
 -- ---------------------------------------------------------------------
 
@@ -356,9 +355,9 @@ changeChars logger str start finish new = do
  Unicode code points instead of UTF-16 code units.
 -}
 data CodePointPosition = CodePointPosition
-  { _line :: J.UInt
+  { line :: J.UInt
   -- ^ Line position in a document (zero-based).
-  , _character :: J.UInt
+  , character :: J.UInt
   -- ^ Character offset on a line in a document in *code points* (zero-based).
   }
   deriving (Show, Read, Eq, Ord)
@@ -367,15 +366,12 @@ data CodePointPosition = CodePointPosition
  Unicode code points instead of UTF-16 code units.
 -}
 data CodePointRange = CodePointRange
-  { _start :: CodePointPosition
+  { start :: CodePointPosition
   -- ^ The range's start position.
-  , _end :: CodePointPosition
+  , end :: CodePointPosition
   -- ^ The range's end position.
   }
   deriving (Show, Read, Eq, Ord)
-
-makeFieldsNoPrefix ''CodePointPosition
-makeFieldsNoPrefix ''CodePointRange
 
 {- Note [Converting between code points and code units]
 This is inherently a somewhat expensive operation, but we take some care to minimize the cost.
@@ -464,3 +460,9 @@ rangeLinesFromVfs (VirtualFile _ _ ropetext) (J.Range (J.Position lf _cf) (J.Pos
   (_, s1) = Rope.splitAtLine (fromIntegral lf) ropetext
   (s2, _) = Rope.splitAtLine (fromIntegral (lt - lf)) s1
   r = Rope.toText s2
+
+(.=) :: MonadState s m => ASetter s s a b -> b -> m ()
+l .= b = modify (l .~ b)
+
+(%=) :: MonadState s m => ASetter s s a b -> (a -> b) -> m ()
+l %= f = modify (l %~ f)

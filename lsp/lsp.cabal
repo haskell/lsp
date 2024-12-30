@@ -66,7 +66,8 @@ library
     , filepath              >=1.4 && < 1.6
     , generic-lens          ^>=2.2
     , hashable              ^>=1.4
-    , lens                  >=5.1    && <5.4
+    , microlens                            ^>=0.4
+    , microlens-ghc                            ^>=0.4
     , lens-aeson            ^>=1.2
     , lsp-types             ^>=2.3
     , mtl                   >=2.2    && <2.4
