@@ -71,7 +71,7 @@ library
     , lsp-types             ^>=2.3
     , mtl                   >=2.2    && <2.4
     , prettyprinter         ^>=1.7
-    , sorted-list           ^>=0.2.1
+    , sorted-list           >=0.2.1 && < 0.4
     , stm                   ^>=2.5
     , text                  >=1      && <2.2
     , text-rope             >=0.2    && <0.4
