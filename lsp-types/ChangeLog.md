@@ -1,4 +1,8 @@
 # Revision history for lsp-types
+
+## 2.3.0.1 -- 2024-12-31
+
+- Relax dependency version bounds
  
 ## 2.3.0.0 -- 2024-06-06
 
