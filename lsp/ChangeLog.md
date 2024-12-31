@@ -1,5 +1,9 @@
 # Revision history for lsp
 
+## 2.7.0.1 -- 2024-12-31
+
+- Relax dependency version bounds
+
 ## 2.7.0.0 -- 2024-06-06
 
 - Drop dependency on `uuid` and `random`

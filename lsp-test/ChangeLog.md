@@ -1,5 +1,9 @@
 # Revision history for lsp-test
 
+## 0.17.1.1 -- 2024-12-31
+
+- Relax dependency version bounds
+
 ## 0.17.1.0 -- 2024-06-06
 
 - Add helpers for testing inlay hints.
