@@ -93,6 +93,7 @@ module Language.LSP.Test (
   -- ** Completions
   getCompletions,
   getAndResolveCompletions,
+  resolveCompletion,
 
   -- ** References
   getReferences,
