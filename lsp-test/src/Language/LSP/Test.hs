@@ -137,6 +137,10 @@ module Language.LSP.Test (
   -- ** SemanticTokens
   getSemanticTokens,
 
+  -- ** Workspace Symbols
+  getWorkspaceSymbols,
+  resolveWorkspaceSymbols,
+
   -- ** Capabilities
   getRegisteredCapabilities,
 ) where
@@ -1034,6 +1038,19 @@ getSemanticTokens :: TextDocumentIdentifier -> Session (SemanticTokens |? Null)
 getSemanticTokens doc = do
   let params = SemanticTokensParams Nothing Nothing doc
   rsp <- request SMethod_TextDocumentSemanticTokensFull params
+  pure $ getResponseResult rsp
+
+{- | Query the workspace and filter by the given 'T.Text'.
+If empty, this queries the entire workspace.
+-}
+getWorkspaceSymbols :: T.Text -> Session ([SymbolInformation] |? ([WorkspaceSymbol] |? Null))
+getWorkspaceSymbols query = do
+  rsp <- request SMethod_WorkspaceSymbol (WorkspaceSymbolParams Nothing Nothing query)
+  pure $ getResponseResult rsp
+
+resolveWorkspaceSymbols :: WorkspaceSymbol -> Session WorkspaceSymbol
+resolveWorkspaceSymbols item = do
+  rsp <- request SMethod_WorkspaceSymbolResolve item
   pure $ getResponseResult rsp
 
 {- | Returns a list of capabilities that the server has requested to /dynamically/
