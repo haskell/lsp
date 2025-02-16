@@ -33,6 +33,7 @@ import Data.Aeson hiding (
   Null,
   Options,
  )
+import Data.Aeson qualified as J
 import Data.Aeson.Lens ()
 import Data.Aeson.Types hiding (
   Error,
@@ -145,6 +146,9 @@ initializeRequestHandler logger ServerDefinition{..} vfs sendFunc req = do
         configObject = lookForConfigSection configSection <$> (p ^. L.initializationOptions)
 
     initialConfig <- case configObject of
+      -- Treat non-existing "initializationOptions" and `"initializationOptions": null` the same way.
+      Nothing -> pure defaultConfig
+      Just J.Null -> pure defaultConfig
       Just o -> case parseConfig defaultConfig o of
         Right newConfig -> do
           liftIO $ logger <& LspCore (NewConfig o) `WithSeverity` Debug
@@ -153,7 +157,6 @@ initializeRequestHandler logger ServerDefinition{..} vfs sendFunc req = do
           -- Warn not error here, since initializationOptions is pretty unspecified
           liftIO $ logger <& LspCore (ConfigurationParseError o err) `WithSeverity` Warning
           pure defaultConfig
-      Nothing -> pure defaultConfig
 
     stateVars <- liftIO $ do
       resVFS <- newTVarIO (VFSData vfs mempty)
