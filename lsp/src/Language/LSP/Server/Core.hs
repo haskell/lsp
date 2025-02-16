@@ -775,13 +775,13 @@ not have to support `workspace/configuration`! In practice,
 many clients seem to follow the sensible approach laid out here:
 https://github.com/microsoft/language-server-protocol/issues/972#issuecomment-626668243
 
-To make this work, we try to be tolerant by using the following strategy.
-When we receive a configuration object from any of the sources above, we first
-check to see if it has a field corresponding to our configuration section. If it
-does, then we assume that it our config and try to parse it. If it does not, we
-try to parse the entire config object. This hopefully lets us handle a variety
-of sensible cases where the client sends us mostly our config, either wrapped
-in our section or not.
+To make this work, we try to be tolerant by using the following strategy. When
+we receive a configuration object from any of the sources above, we first check
+to see if it has a field corresponding to our configuration section. If it does,
+then we assume that it is our config and try to parse it. If it does not parse,
+we try to parse the entire config object. This hopefully lets us handle a
+variety of sensible cases where the client sends us mostly our config, either
+wrapped in our section or not.
 -}
 
 {- Note [Client- versus server-initiated progress]
