@@ -1,5 +1,9 @@
 # Revision history for lsp-types
 
+## Unreleased 
+
+- export `emptyNormalizedUri` from `Language.LSP.Protocol.Types.Uri`
+
 ## 2.3.0.1 -- 2024-12-31
 
 - Relax dependency version bounds
