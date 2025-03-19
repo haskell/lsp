@@ -14,6 +14,7 @@ module Language.LSP.Protocol.Types.Uri (
   normalizedFilePathToUri,
   uriToNormalizedFilePath,
   emptyNormalizedFilePath,
+  emptyNormalizedUri,
   -- Private functions
   platformAwareUriToFilePath,
   platformAwareFilePathToUri,
