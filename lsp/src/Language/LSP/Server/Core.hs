@@ -322,7 +322,8 @@ defaultOptions = def
  it is parameterized over a config type variable representing the type for the
  specific configuration data the language server needs to use.
 -}
-data ServerDefinition config = forall m a.
+data ServerDefinition config
+  = forall m a.
   ServerDefinition
   { defaultConfig :: config
   -- ^ The default value we initialize the config variable to.
