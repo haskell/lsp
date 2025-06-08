@@ -23,6 +23,7 @@ module Language.LSP.VFS (
   file_text,
   virtualFileText,
   virtualFileVersion,
+  virtualFileLanguageKind,
   VfsLog (..),
 
   -- * Managing the VFS
@@ -92,6 +93,12 @@ data VirtualFile = VirtualFile
   -- remains in the map.
   , _file_text :: !Rope
   -- ^ The full contents of the document
+  , _language_id :: !(Maybe J.LanguageKind)
+  -- ^ The text document's language identifier
+  -- This is a Maybe, since when we use the VFS as a client
+  -- we don't have this information, since server sends WorkspaceEdit
+  -- notifications without a language kind.
+  -- When using the VFS in a server, this should always be Just.
   }
   deriving (Show)
 
@@ -132,6 +139,9 @@ virtualFileText vf = Rope.toText (_file_text vf)
 virtualFileVersion :: VirtualFile -> Int32
 virtualFileVersion vf = _lsp_version vf
 
+virtualFileLanguageKind :: VirtualFile -> Maybe J.LanguageKind
+virtualFileLanguageKind vf = _language_id vf
+
 ---
 
 emptyVFS :: VFS
@@ -142,8 +152,8 @@ emptyVFS = VFS mempty
 -- | Applies the changes from a 'J.DidOpenTextDocument' to the 'VFS'
 openVFS :: (MonadState VFS m) => LogAction m (WithSeverity VfsLog) -> J.TMessage 'J.Method_TextDocumentDidOpen -> m ()
 openVFS logger msg = do
-  let J.TextDocumentItem (J.toNormalizedUri -> uri) _ version text = msg ^. J.params . J.textDocument
-      vfile = VirtualFile version 0 (Rope.fromText text)
+  let J.TextDocumentItem (J.toNormalizedUri -> uri) languageId version text = msg ^. J.params . J.textDocument
+      vfile = VirtualFile version 0 (Rope.fromText text) (Just languageId)
   logger <& Opening uri `WithSeverity` Debug
   vfsMap . at uri .= Just vfile
 
@@ -158,9 +168,9 @@ changeFromClientVFS logger msg = do
     J.VersionedTextDocumentIdentifier (J.toNormalizedUri -> uri) version = vid
   vfs <- get
   case vfs ^. vfsMap . at uri of
-    Just (VirtualFile _ file_ver contents) -> do
+    Just (VirtualFile _ file_ver contents kind) -> do
       contents' <- applyChanges logger contents changes
-      vfsMap . at uri .= Just (VirtualFile version (file_ver + 1) contents')
+      vfsMap . at uri .= Just (VirtualFile version (file_ver + 1) contents' kind)
     Nothing -> logger <& URINotFound uri `WithSeverity` Warning
 
 -- ---------------------------------------------------------------------
@@ -171,7 +181,7 @@ applyCreateFile (J.CreateFile _ann _kind (J.toNormalizedUri -> uri) options) =
     %= Map.insertWith
       (\new old -> if shouldOverwrite then new else old)
       uri
-      (VirtualFile 0 0 mempty)
+      (VirtualFile 0 0 mempty Nothing)
  where
   shouldOverwrite :: Bool
   shouldOverwrite = case options of
@@ -281,7 +291,7 @@ changeFromServerVFS logger msg = do
 
 -- ---------------------------------------------------------------------
 virtualFileName :: FilePath -> J.NormalizedUri -> VirtualFile -> FilePath
-virtualFileName prefix uri (VirtualFile _ file_ver _) =
+virtualFileName prefix uri (VirtualFile _ file_ver _ _) =
   let uri_raw = J.fromNormalizedUri uri
       basename = maybe "" takeFileName (J.uriToFilePath uri_raw)
       -- Given a length and a version number, pad the version number to
@@ -463,7 +473,7 @@ rangeToCodePointRange vFile (J.Range b e) =
   CodePointRange <$> positionToCodePointPosition vFile b <*> positionToCodePointPosition vFile e
 
 rangeLinesFromVfs :: VirtualFile -> J.Range -> T.Text
-rangeLinesFromVfs (VirtualFile _ _ ropetext) (J.Range (J.Position lf _cf) (J.Position lt _ct)) = r
+rangeLinesFromVfs (VirtualFile _ _ ropetext _) (J.Range (J.Position lf _cf) (J.Position lt _ct)) = r
  where
   (_, s1) = Rope.splitAtLine (fromIntegral lf) ropetext
   (s2, _) = Rope.splitAtLine (fromIntegral (lt - lf)) s1

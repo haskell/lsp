@@ -246,7 +246,7 @@ handle logger =
         logger <& ("Processing DidChangeTextDocument for: " <> T.pack (show doc)) `WithSeverity` Info
         mdoc <- getVirtualFile doc
         case mdoc of
-          Just (VirtualFile _version str _) -> do
+          Just (VirtualFile _version str _ _) -> do
             logger <& ("Found the virtual file: " <> T.pack (show str)) `WithSeverity` Info
           Nothing -> do
             logger <& ("Didn't find anything in the VFS for: " <> T.pack (show doc)) `WithSeverity` Info
