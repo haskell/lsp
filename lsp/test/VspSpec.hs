@@ -29,7 +29,7 @@ spec = describe "VSP functions" vspSpec
 -- ---------------------------------------------------------------------
 
 vfsFromText :: T.Text -> VirtualFile
-vfsFromText text = VirtualFile 0 0 (Rope.fromText text)
+vfsFromText text = VirtualFile 0 0 (Rope.fromText text) $ Just J.LanguageKind_Haskell
 
 -- ---------------------------------------------------------------------
 
@@ -243,7 +243,7 @@ vspSpec = do
             [ "a𐐀b"
             , "a𐐀b"
             ]
-        vfile = VirtualFile 0 0 (fromString orig)
+        vfile = VirtualFile 0 0 (fromString orig) $ Just J.LanguageKind_Haskell
 
       positionToCodePointPosition vfile (J.Position 1 0) `shouldBe` Just (CodePointPosition 1 0)
       positionToCodePointPosition vfile (J.Position 1 1) `shouldBe` Just (CodePointPosition 1 1)
@@ -265,7 +265,7 @@ vspSpec = do
             [ "a𐐀b"
             , "a𐐀b"
             ]
-        vfile = VirtualFile 0 0 (fromString orig)
+        vfile = VirtualFile 0 0 (fromString orig) $ Just J.LanguageKind_Haskell
 
       codePointPositionToPosition vfile (CodePointPosition 1 0) `shouldBe` Just (J.Position 1 0)
       codePointPositionToPosition vfile (CodePointPosition 1 1) `shouldBe` Just (J.Position 1 1)

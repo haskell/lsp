@@ -445,7 +445,7 @@ updateState (FromServerMess SMethod_WorkspaceApplyEdit r) = do
   forM_ latestVersions $ \(VersionedTextDocumentIdentifier uri v) ->
     modify $ \s ->
       let oldVFS = vfs s
-          update (VirtualFile _ file_ver t) = VirtualFile v (file_ver +1) t
+          update (VirtualFile _ file_ver t _kind) = VirtualFile v (file_ver +1) t _kind
           newVFS = oldVFS & vfsMap . ix (toNormalizedUri uri) %~ update
       in s { vfs = newVFS }
 

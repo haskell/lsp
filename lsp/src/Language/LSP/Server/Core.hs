@@ -470,7 +470,7 @@ getVersionedTextDoc doc = do
   let uri = doc ^. L.uri
   mvf <- getVirtualFile (toNormalizedUri uri)
   let ver = case mvf of
-        Just (VirtualFile lspver _ _) -> lspver
+        Just (VirtualFile lspver _ _ _) -> lspver
         Nothing -> 0
   return (VersionedTextDocumentIdentifier uri ver)
 {-# INLINE getVersionedTextDoc #-}
