@@ -446,7 +446,7 @@ updateState (FromServerMess SMethod_WorkspaceApplyEdit r) = do
     modify $ \s ->
       let oldVFS = vfs s
           update (VirtualFile _ file_ver t _kind) = VirtualFile v (file_ver +1) t _kind
-          newVFS = oldVFS & vfsMap . ix (toNormalizedUri uri) %~ update
+          newVFS = oldVFS & vfsMap . ix (toNormalizedUri uri) . _Open %~ update
       in s { vfs = newVFS }
 
   where
@@ -486,7 +486,7 @@ updateState (FromServerMess SMethod_WorkspaceApplyEdit r) = do
         -- where n is the current version
         textDocumentVersions uri = do
           vfs <- vfs <$> get
-          let curVer = fromMaybe 0 $ vfs ^? vfsMap . ix (toNormalizedUri uri) . lsp_version
+          let curVer = fromMaybe 0 $ vfs ^? vfsMap . ix (toNormalizedUri uri) . _Open . lsp_version
           pure $ map (VersionedTextDocumentIdentifier uri) [curVer + 1..]
 
         textDocumentEdits uri edits = do

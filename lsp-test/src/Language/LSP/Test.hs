@@ -371,7 +371,7 @@ envOverrideConfig cfg = do
 documentContents :: TextDocumentIdentifier -> Session T.Text
 documentContents doc = do
   vfs <- vfs <$> get
-  let Just file = vfs ^. vfsMap . at (toNormalizedUri (doc ^. L.uri))
+  let Just file = vfs ^? vfsMap . ix (toNormalizedUri (doc ^. L.uri)) . _Open
   return (virtualFileText file)
 
 {- | Parses an ApplyEditRequest, checks that it is for the passed document
@@ -801,7 +801,7 @@ resolveAndExecuteCodeAction ca = executeCodeAction ca
 getVersionedDoc :: TextDocumentIdentifier -> Session VersionedTextDocumentIdentifier
 getVersionedDoc (TextDocumentIdentifier uri) = do
   vfs <- vfs <$> get
-  let ver = vfs ^? vfsMap . ix (toNormalizedUri uri) . to virtualFileVersion
+  let ver = vfs ^? vfsMap . ix (toNormalizedUri uri) . _Open . to virtualFileVersion
   -- TODO: is this correct? Could return an OptionalVersionedTextDocumentIdentifier,
   -- but that complicated callers...
   return (VersionedTextDocumentIdentifier uri (fromMaybe 0 ver))
