@@ -21,7 +21,7 @@ import Colog.Core (
  )
 import Control.Concurrent.Extra as C
 import Control.Concurrent.STM
-import Control.Lens (at, (^.), (^?), _Just)
+import Control.Lens (ix, (^.), (^?), _Just)
 import Control.Monad
 import Control.Monad.Catch (
   MonadCatch,
@@ -433,7 +433,7 @@ sendRequest m params resHandler = do
 getVirtualFile :: MonadLsp config m => NormalizedUri -> m (Maybe VirtualFile)
 getVirtualFile uri = do
   dat <- vfsData <$> getsState resVFS
-  pure $ dat ^. vfsMap . at uri
+  pure $ dat ^? vfsMap . ix uri . _Open
 {-# INLINE getVirtualFile #-}
 
 getVirtualFiles :: MonadLsp config m => m VFS
