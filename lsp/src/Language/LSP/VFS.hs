@@ -18,12 +18,19 @@ module Language.LSP.VFS (
   VFS (..),
   vfsMap,
   VirtualFile (..),
+  ClosedVirtualFile (..),
+  VirtualFileEntry (..),
   lsp_version,
   file_version,
   file_text,
+  language_id,
+  _Open,
+  _Closed,
   virtualFileText,
   virtualFileVersion,
   virtualFileLanguageKind,
+  closedVirtualFileLanguageKind,
+  virtualFileEntryLanguageKind,
   VfsLog (..),
 
   -- * Managing the VFS
@@ -102,13 +109,27 @@ data VirtualFile = VirtualFile
   }
   deriving (Show)
 
+{- | Represents a closed file in the VFS
+We are keeping track of this in order to be able to get information
+on virtual files after they were closed.
+-}
+data ClosedVirtualFile = ClosedVirtualFile
+  { _language_id :: !(Maybe J.LanguageKind)
+  -- ^ see 'VirtualFile._language_id'
+  }
+  deriving (Show)
+
+data VirtualFileEntry = Open VirtualFile | Closed ClosedVirtualFile
+  deriving (Show)
+
 data VFS = VFS
-  { _vfsMap :: !(Map.Map J.NormalizedUri VirtualFile)
+  { _vfsMap :: !(Map.Map J.NormalizedUri VirtualFileEntry)
   }
   deriving (Show)
 
 data VfsLog
   = SplitInsideCodePoint Utf16.Position Rope
+  | ApplyChangeToClosedFile J.NormalizedUri
   | URINotFound J.NormalizedUri
   | Opening J.NormalizedUri
   | Closing J.NormalizedUri
@@ -120,6 +141,7 @@ data VfsLog
 instance Pretty VfsLog where
   pretty (SplitInsideCodePoint pos r) =
     "VFS: asked to make change inside code point. Position" <+> viaShow pos <+> "in" <+> viaShow r
+  pretty (ApplyChangeToClosedFile uri) = "VFS: trying to apply a change to a closed file" <+> pretty uri
   pretty (URINotFound uri) = "VFS: don't know about URI" <+> pretty uri
   pretty (Opening uri) = "VFS: opening" <+> pretty uri
   pretty (Closing uri) = "VFS: closing" <+> pretty uri
@@ -129,7 +151,9 @@ instance Pretty VfsLog where
   pretty (DeleteNonExistent uri) = "VFS: asked to delete non-existent file" <+> pretty uri
 
 makeFieldsNoPrefix ''VirtualFile
+makeFieldsNoPrefix ''ClosedVirtualFile
 makeFieldsNoPrefix ''VFS
+makePrisms ''VirtualFileEntry
 
 ---
 
@@ -140,7 +164,20 @@ virtualFileVersion :: VirtualFile -> Int32
 virtualFileVersion vf = _lsp_version vf
 
 virtualFileLanguageKind :: VirtualFile -> Maybe J.LanguageKind
-virtualFileLanguageKind vf = _language_id vf
+virtualFileLanguageKind vf = vf ^. language_id
+
+closedVirtualFileLanguageKind :: ClosedVirtualFile -> Maybe J.LanguageKind
+closedVirtualFileLanguageKind vf = vf ^. language_id
+
+virtualFileEntryLanguageKind :: VirtualFileEntry -> Maybe J.LanguageKind
+virtualFileEntryLanguageKind (Open vf) = virtualFileLanguageKind vf
+virtualFileEntryLanguageKind (Closed vf) = closedVirtualFileLanguageKind vf
+
+toClosedVirtualFile :: VirtualFile -> ClosedVirtualFile
+toClosedVirtualFile vf =
+  ClosedVirtualFile
+    { _language_id = virtualFileLanguageKind vf
+    }
 
 ---
 
@@ -155,7 +192,7 @@ openVFS logger msg = do
   let J.TextDocumentItem (J.toNormalizedUri -> uri) languageId version text = msg ^. J.params . J.textDocument
       vfile = VirtualFile version 0 (Rope.fromText text) (Just languageId)
   logger <& Opening uri `WithSeverity` Debug
-  vfsMap . at uri .= Just vfile
+  vfsMap . at uri .= (Just $ Open vfile)
 
 -- ---------------------------------------------------------------------
 
@@ -168,9 +205,10 @@ changeFromClientVFS logger msg = do
     J.VersionedTextDocumentIdentifier (J.toNormalizedUri -> uri) version = vid
   vfs <- get
   case vfs ^. vfsMap . at uri of
-    Just (VirtualFile _ file_ver contents kind) -> do
+    Just (Open (VirtualFile _ file_ver contents kind)) -> do
       contents' <- applyChanges logger contents changes
-      vfsMap . at uri .= Just (VirtualFile version (file_ver + 1) contents' kind)
+      vfsMap . at uri .= Just (Open (VirtualFile version (file_ver + 1) contents' kind))
+    Just (Closed (ClosedVirtualFile _)) -> logger <& ApplyChangeToClosedFile uri `WithSeverity` Warning
     Nothing -> logger <& URINotFound uri `WithSeverity` Warning
 
 -- ---------------------------------------------------------------------
@@ -181,7 +219,7 @@ applyCreateFile (J.CreateFile _ann _kind (J.toNormalizedUri -> uri) options) =
     %= Map.insertWith
       (\new old -> if shouldOverwrite then new else old)
       uri
-      (VirtualFile 0 0 mempty Nothing)
+      (Open (VirtualFile 0 0 mempty Nothing))
  where
   shouldOverwrite :: Bool
   shouldOverwrite = case options of
@@ -308,7 +346,8 @@ persistFileVFS :: (MonadIO m) => LogAction m (WithSeverity VfsLog) -> FilePath -
 persistFileVFS logger dir vfs uri =
   case vfs ^. vfsMap . at uri of
     Nothing -> Nothing
-    Just vf ->
+    (Just (Closed _)) -> Nothing
+    (Just (Open vf)) ->
       let tfn = virtualFileName dir uri vf
           action = do
             exists <- liftIO $ doesFileExist tfn
@@ -329,7 +368,12 @@ closeVFS :: (MonadState VFS m) => LogAction m (WithSeverity VfsLog) -> J.TMessag
 closeVFS logger msg = do
   let J.DidCloseTextDocumentParams (J.TextDocumentIdentifier (J.toNormalizedUri -> uri)) = msg ^. J.params
   logger <& Closing uri `WithSeverity` Debug
-  vfsMap . at uri .= Nothing
+  vfsMap . ix uri
+    %= ( \mf ->
+          case mf of
+            Open f -> Closed $ toClosedVirtualFile f
+            Closed f -> Closed f
+       )
 
 -- ---------------------------------------------------------------------
 
