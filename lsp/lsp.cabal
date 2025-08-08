@@ -79,6 +79,7 @@ library
     , unliftio              ^>=0.2
     , unliftio-core         ^>=0.2
     , unordered-containers  ^>=0.2
+    , websockets            ^>=0.13
 
 executable lsp-demo-reactor-server
   import:             warnings
