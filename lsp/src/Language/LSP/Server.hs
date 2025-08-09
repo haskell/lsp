@@ -50,6 +50,7 @@ module Language.LSP.Server (
   -- * Diagnostics
   publishDiagnostics,
   flushDiagnosticsBySource,
+  flushDiagnosticsBySourceAndUri,
 
   -- * Progress
   withProgress,

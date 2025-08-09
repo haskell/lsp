@@ -11,6 +11,7 @@ module Language.LSP.Diagnostics (
   StoreItem (..),
   partitionBySource,
   flushBySource,
+  flushBySourceAndUri,
   updateDiagnostics,
   getDiagnosticParamsFor,
 
@@ -41,8 +42,10 @@ all prior entries for the Uri.
 
 type DiagnosticStore = HM.HashMap J.NormalizedUri StoreItem
 
-data StoreItem
-  = StoreItem (Maybe J.Int32) DiagnosticsBySource
+data StoreItem = StoreItem
+  { documentVersion :: Maybe J.Int32
+  , diagnostics :: DiagnosticsBySource
+  }
   deriving (Show, Eq)
 
 type DiagnosticsBySource = Map.Map (Maybe Text) (SL.SortedList J.Diagnostic)
@@ -59,6 +62,13 @@ flushBySource store Nothing = store
 flushBySource store (Just source) = HM.map remove store
  where
   remove (StoreItem mv diags) = StoreItem mv (Map.delete (Just source) diags)
+
+flushBySourceAndUri :: DiagnosticStore -> Maybe Text -> J.NormalizedUri -> DiagnosticStore
+flushBySourceAndUri store msource uri = HM.mapWithKey remove store
+ where
+  remove k item
+    | k == uri = item{diagnostics = Map.delete msource $ diagnostics item}
+    | otherwise = item
 
 -- ---------------------------------------------------------------------
 

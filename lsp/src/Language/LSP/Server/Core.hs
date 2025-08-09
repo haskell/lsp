@@ -656,6 +656,29 @@ flushDiagnosticsBySource maxDiagnosticCount msource = join $ stateState resDiagn
 
 -- ---------------------------------------------------------------------
 
+{- | Remove all diagnostics from a particular uri and source, and send the updates to
+ the client.
+-}
+flushDiagnosticsBySourceAndUri ::
+  MonadLsp config m =>
+  -- | Max number of diagnostics to send
+  Int ->
+  Maybe Text ->
+  NormalizedUri ->
+  m ()
+flushDiagnosticsBySourceAndUri maxDiagnosticCount msource uri = join $ stateState resDiagnostics $ \oldDiags ->
+  let !newDiags = flushBySourceAndUri oldDiags msource uri
+      -- Send the updated diagnostics to the client
+      act = forM_ (HM.keys newDiags) $ \uri' -> do
+        let mdp = getDiagnosticParamsFor maxDiagnosticCount newDiags uri'
+        case mdp of
+          Nothing -> return ()
+          Just params -> do
+            sendToClient $ L.fromServerNot $ L.TNotificationMessage "2.0" L.SMethod_TextDocumentPublishDiagnostics params
+   in (act, newDiags)
+
+-- ---------------------------------------------------------------------
+
 {- | The changes in a workspace edit should be applied from the end of the file
  toward the start. Sort them into this order.
 -}
