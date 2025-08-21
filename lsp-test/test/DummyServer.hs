@@ -72,6 +72,12 @@ handlers =
             Right $
               InL $
                 Hover (InL (MarkupContent MarkupKind_PlainText "hello")) Nothing
+    , requestHandler SMethod_TextDocumentSignatureHelp $
+        \_req responder ->
+          responder $
+            Right $
+              InL $
+                SignatureHelp [] Nothing Nothing
     , requestHandler SMethod_TextDocumentDocumentSymbol $
         \_req responder ->
           responder $

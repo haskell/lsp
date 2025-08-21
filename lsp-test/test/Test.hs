@@ -307,6 +307,12 @@ main = hspec $ around withDummyServer $ do
       hover <- getHover doc (Position 45 9)
       liftIO $ hover `shouldSatisfy` isJust
 
+  describe "getSignatureHelp" $
+    it "works" $ \(hin, hout) -> runSessionWithHandles hin hout def fullLatestClientCaps "." $ do
+      doc <- openDoc "test/data/renamePass/Desktop/simple.hs" "haskell"
+      signatureHelp <- getSignatureHelp doc (Position 22 32)
+      liftIO $ signatureHelp `shouldSatisfy` isJust
+
   -- describe "getHighlights" $
   --   it "works" $ \(hin, hout) -> runSessionWithHandles hin hout def fullLatestClientCaps "." $ do
   --     doc <- openDoc "test/data/renamePass/Desktop/simple.hs" "haskell"
