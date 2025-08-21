@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Language.LSP.Server.Control (
   -- * Running
@@ -11,9 +12,9 @@ module Language.LSP.Server.Control (
 import Colog.Core (LogAction (..), Severity (..), WithSeverity (..), (<&))
 import Colog.Core qualified as L
 import Control.Applicative ((<|>))
-import Control.Concurrent
+import Control.Concurrent.Async (withAsync)
 import Control.Concurrent.STM.TChan
-import Control.Monad
+import Control.Exception (catchJust, throwIO)
 import Control.Monad.IO.Class
 import Control.Monad.STM
 import Data.Aeson qualified as J
@@ -33,18 +34,22 @@ import Language.LSP.Server.Processing qualified as Processing
 import Language.LSP.VFS
 import Prettyprinter
 import System.IO
+import System.IO.Error (isResourceVanishedError)
 
 data LspServerLog
   = LspProcessingLog Processing.LspProcessingLog
   | DecodeInitializeError String
   | HeaderParseFail [String] String
   | EOF
+  | BrokenPipeWhileSending TL.Text -- truncated outgoing message (including header)
   | Starting
+  | ServerStopped
   | ParsedMsg T.Text
   | SendMsg TL.Text
   deriving (Show)
 
 instance Pretty LspServerLog where
+  pretty ServerStopped = "Server stopped"
   pretty (LspProcessingLog l) = pretty l
   pretty (DecodeInitializeError err) =
     vsep
@@ -57,7 +62,12 @@ instance Pretty LspServerLog where
       , pretty (intercalate " > " ctxs) <> ": " <+> pretty err
       ]
   pretty EOF = "Got EOF"
-  pretty Starting = "Starting server"
+  pretty (BrokenPipeWhileSending msg) =
+    vsep
+      [ "Broken pipe while sending (client likely closed output handle):"
+      , indent 2 (pretty msg)
+      ]
+  pretty Starting = "Server starting"
   pretty (ParsedMsg msg) = "---> " <> pretty msg
   pretty (SendMsg msg) = "<--2-- " <> pretty msg
 
@@ -108,9 +118,15 @@ runServerWithHandles ioLogger logger hin hout serverDefinition = do
   let
     clientIn = BS.hGetSome hin defaultChunkSize
 
-    clientOut out = do
-      BSL.hPut hout out
-      hFlush hout
+    clientOut out =
+      catchJust
+        (\e -> if isResourceVanishedError e then Just e else Nothing)
+        (BSL.hPut hout out >> hFlush hout)
+        ( \e -> do
+            let txt = TL.toStrict $ TL.take 400 $ TL.decodeUtf8 out -- limit size
+            ioLogger <& BrokenPipeWhileSending (TL.fromStrict txt) `WithSeverity` Error
+            throwIO e
+        )
 
   runServerWith ioLogger logger clientIn clientOut serverDefinition
 
@@ -130,15 +146,12 @@ runServerWith ::
   IO Int -- exit code
 runServerWith ioLogger logger clientIn clientOut serverDefinition = do
   ioLogger <& Starting `WithSeverity` Info
-
-  cout <- atomically newTChan :: IO (TChan J.Value)
-  _rhpid <- forkIO $ sendServer ioLogger cout clientOut
-
-  let sendMsg msg = atomically $ writeTChan cout $ J.toJSON msg
-
-  ioLoop ioLogger logger clientIn serverDefinition emptyVFS sendMsg
-
-  return 1
+  cout <- atomically newTChan :: IO (TChan FromServerMessage)
+  withAsync (sendServer ioLogger cout clientOut) $ \_sendAsync -> do
+    let sendMsg = atomically . writeTChan cout
+    ioLoop ioLogger logger clientIn serverDefinition emptyVFS sendMsg
+    ioLogger <& ServerStopped `WithSeverity` Info
+    return 0
 
 -- ---------------------------------------------------------------------
 
@@ -224,9 +237,10 @@ parseOne logger clientIn = go
 -- ---------------------------------------------------------------------
 
 -- | Simple server to make sure all output is serialised
-sendServer :: LogAction IO (WithSeverity LspServerLog) -> TChan J.Value -> (BSL.ByteString -> IO ()) -> IO ()
-sendServer _logger msgChan clientOut = do
-  forever $ do
+sendServer :: LogAction IO (WithSeverity LspServerLog) -> TChan FromServerMessage -> (BSL.ByteString -> IO ()) -> IO ()
+sendServer _logger msgChan clientOut = go
+ where
+  go = do
     msg <- atomically $ readTChan msgChan
 
     -- We need to make sure we only send over the content of the message,
@@ -241,6 +255,10 @@ sendServer _logger msgChan clientOut = do
             ]
 
     clientOut out
+    -- close the client sender when we send out the shutdown request's response
+    case msg of
+      FromServerRsp SMethod_Shutdown _ -> pure ()
+      _ -> go
 
 -- TODO: figure out how to re-enable
 -- This can lead to infinite recursion in logging, see https://github.com/haskell/lsp/issues/447
