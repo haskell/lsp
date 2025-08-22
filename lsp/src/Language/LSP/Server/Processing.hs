@@ -172,6 +172,7 @@ initializeRequestHandler logger ServerDefinition{..} vfs sendFunc req = do
       resRegistrationsReq <- newTVarIO mempty
       resLspId <- newTVarIO 0
       resShutdown <- C.newBarrier
+      resExit <- C.newBarrier
       pure LanguageContextState{..}
 
     -- Call the 'duringInitialization' callback to let the server kick stuff up
@@ -440,6 +441,7 @@ handle logger m msg =
     SMethod_WorkspaceDidChangeConfiguration -> handle' logger (Just $ handleDidChangeConfiguration logger) m msg
     -- See Note [LSP configuration]
     SMethod_Initialized -> handle' logger (Just $ \_ -> initialDynamicRegistrations logger >> requestConfigUpdate (cmap (fmap LspCore) logger)) m msg
+    SMethod_Exit -> exitNotificationHandler logger msg
     SMethod_Shutdown -> handle' logger (Just $ \_ -> signalShutdown) m msg
      where
       -- See Note [Shutdown]
@@ -466,18 +468,9 @@ handle' ::
   m ()
 handle' logger mAction m msg = do
   shutdown <- isShuttingDown
-  -- These are the methods that we are allowed to process during shutdown.
-  -- The reason that we do not include 'shutdown' itself here is because
-  -- by the time we get the first 'shutdown' message, isShuttingDown will
-  -- still be false, so we would still be able to process it.
-  -- This ensures we won't process the second 'shutdown' message and only
-  -- process 'exit' during shutdown.
-  let allowedMethod m = case (splitClientMethod m, m) of
-        (IsClientNot, SMethod_Exit) -> True
-        _ -> False
 
   case mAction of
-    Just f | not shutdown || allowedMethod m -> f msg
+    Just f | not shutdown -> f msg
     _ -> pure ()
 
   dynReqHandlers <- getsState resRegistrationsReq
@@ -488,14 +481,12 @@ handle' logger mAction m msg = do
 
   case splitClientMethod m of
     -- See Note [Shutdown]
-    IsClientNot | shutdown, not (allowedMethod m) -> notificationDuringShutdown
+    IsClientNot | shutdown -> notificationDuringShutdown
     IsClientNot -> case pickHandler dynNotHandlers notHandlers of
       Just h -> liftIO $ h msg
-      Nothing
-        | SMethod_Exit <- m -> exitNotificationHandler logger msg
-        | otherwise -> missingNotificationHandler
+      Nothing | otherwise -> missingNotificationHandler
     -- See Note [Shutdown]
-    IsClientReq | shutdown, not (allowedMethod m) -> requestDuringShutdown msg
+    IsClientReq | shutdown -> requestDuringShutdown msg
     IsClientReq -> case pickHandler dynReqHandlers reqHandlers of
       Just h -> liftIO $ h msg (runLspT env . sendResponse msg)
       Nothing
@@ -556,10 +547,11 @@ progressCancelHandler logger (TNotificationMessage _ _ (WorkDoneProgressCancelPa
       logger <& ProgressCancel tid `WithSeverity` Debug
       liftIO cancelAction
 
-exitNotificationHandler :: (MonadIO m) => LogAction m (WithSeverity LspProcessingLog) -> Handler m Method_Exit
+exitNotificationHandler :: (MonadIO m, MonadLsp config0 m) => LogAction m (WithSeverity LspProcessingLog) -> Handler m Method_Exit
 exitNotificationHandler logger _ = do
-  logger <& Exiting `WithSeverity` Info
-  liftIO exitSuccess
+  logger <& ShuttingDown `WithSeverity` Info
+  b <- resExit . resState <$> getLspEnv
+  liftIO $ signalBarrier b ()
 
 -- | Default Shutdown handler
 shutdownRequestHandler :: Handler IO Method_Shutdown

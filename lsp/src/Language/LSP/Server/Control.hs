@@ -149,9 +149,9 @@ runServerWith ioLogger logger clientIn clientOut serverDefinition = do
   cout <- atomically newTChan :: IO (TChan FromServerMessage)
   withAsync (sendServer ioLogger cout clientOut) $ \_sendAsync -> do
     let sendMsg = atomically . writeTChan cout
-    ioLoop ioLogger logger clientIn serverDefinition emptyVFS sendMsg
+    res <- ioLoop ioLogger logger clientIn serverDefinition emptyVFS sendMsg
     ioLogger <& ServerStopped `WithSeverity` Info
-    return 0
+    return res
 
 -- ---------------------------------------------------------------------
 
@@ -163,33 +163,37 @@ ioLoop ::
   ServerDefinition config ->
   VFS ->
   (FromServerMessage -> IO ()) ->
-  IO ()
+  IO Int
 ioLoop ioLogger logger clientIn serverDefinition vfs sendMsg = do
   minitialize <- parseOne ioLogger clientIn (parse parser "")
   case minitialize of
-    Nothing -> pure ()
+    Nothing -> pure 1
     Just (msg, remainder) -> do
       case J.eitherDecode $ BSL.fromStrict msg of
-        Left err -> ioLogger <& DecodeInitializeError err `WithSeverity` Error
+        Left err -> do
+          ioLogger <& DecodeInitializeError err `WithSeverity` Error
+          return 1
         Right initialize -> do
           mInitResp <- Processing.initializeRequestHandler pioLogger serverDefinition vfs sendMsg initialize
           case mInitResp of
-            Nothing -> pure ()
+            Nothing -> pure 1
             Just env -> runLspT env $ loop (parse parser remainder)
  where
   pioLogger = L.cmap (fmap LspProcessingLog) ioLogger
   pLogger = L.cmap (fmap LspProcessingLog) logger
 
-  loop :: Result BS.ByteString -> LspM config ()
+  loop :: Result BS.ByteString -> LspM config Int
   loop = go
    where
     go r = do
-      res <- parseOne logger clientIn r
-      case res of
-        Nothing -> pure ()
-        Just (msg, remainder) -> do
-          Processing.processMessage pLogger $ BSL.fromStrict msg
-          go (parse parser remainder)
+      b <- isExiting
+      if b then pure 0 else do
+        res <- parseOne logger clientIn r
+        case res of
+          Nothing -> pure 1
+          Just (msg, remainder) -> do
+            Processing.processMessage pLogger $ BSL.fromStrict msg
+            go (parse parser remainder)
 
   parser = do
     try contentType <|> return ()

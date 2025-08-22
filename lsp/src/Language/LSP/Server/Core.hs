@@ -211,6 +211,7 @@ data LanguageContextState config = LanguageContextState
   , resRegistrationsReq :: !(TVar (RegistrationMap Request))
   , resLspId :: !(TVar Int32)
   , resShutdown :: !(C.Barrier ())
+  , resExit :: !(C.Barrier ())
   -- ^ Has the server received 'shutdown'? Can be used to conveniently trigger e.g. thread termination,
   -- but if you need a cleanup action to terminate before exiting, then you should install a full
   -- 'shutdown' handler
@@ -749,6 +750,14 @@ requestConfigUpdate logger = do
 isShuttingDown :: (m ~ LspM config) => m Bool
 isShuttingDown = do
   b <- resShutdown . resState <$> getLspEnv
+  r <- liftIO $ C.waitBarrierMaybe b
+  pure $ case r of
+    Just _ -> True
+    Nothing -> False
+
+isExiting :: (m ~ LspM config) => m Bool
+isExiting = do
+  b <- resExit . resState <$> getLspEnv
   r <- liftIO $ C.waitBarrierMaybe b
   pure $ case r of
     Just _ -> True
