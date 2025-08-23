@@ -12,7 +12,8 @@ module Language.LSP.Server.Control (
 import Colog.Core (LogAction (..), Severity (..), WithSeverity (..), (<&))
 import Colog.Core qualified as L
 import Control.Applicative ((<|>))
-import Control.Concurrent.Async (withAsync)
+import Control.Concurrent.Async (withAsync, wait, cancel, race)
+import Control.Concurrent (threadDelay)
 import Control.Concurrent.STM.TChan
 import Control.Exception (catchJust, throwIO)
 import Control.Monad.IO.Class
@@ -44,6 +45,7 @@ data LspServerLog
   | BrokenPipeWhileSending TL.Text -- truncated outgoing message (including header)
   | Starting
   | ServerStopped
+  | SenderShutdownTimeout -- client sender did not stop in time
   | ParsedMsg T.Text
   | SendMsg TL.Text
   deriving (Show)
@@ -70,6 +72,7 @@ instance Pretty LspServerLog where
   pretty Starting = "Server starting"
   pretty (ParsedMsg msg) = "---> " <> pretty msg
   pretty (SendMsg msg) = "<--2-- " <> pretty msg
+  pretty SenderShutdownTimeout = "Sender did not stop within 3s; cancelling"
 
 -- ---------------------------------------------------------------------
 
@@ -150,6 +153,14 @@ runServerWith ioLogger logger clientIn clientOut serverDefinition = do
   withAsync (sendServer ioLogger cout clientOut) $ \_sendAsync -> do
     let sendMsg = atomically . writeTChan cout
     res <- ioLoop ioLogger logger clientIn serverDefinition emptyVFS sendMsg
+    -- The sender should stop after we send the shutdown response.
+    -- Wait up to 3 seconds for the sender to finish; cancel if it doesn't.
+    r <- race (wait _sendAsync) (threadDelay 3_000_000)
+    case r of
+      Left _  -> pure ()
+      Right _ -> do
+        ioLogger <& SenderShutdownTimeout `WithSeverity` Warning
+        cancel _sendAsync
     ioLogger <& ServerStopped `WithSeverity` Info
     return res
 
