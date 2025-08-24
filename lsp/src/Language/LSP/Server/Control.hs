@@ -158,9 +158,7 @@ runServerWith ioLogger logger clientIn clientOut serverDefinition = do
     r <- race (wait _sendAsync) (threadDelay 3_000_000)
     case r of
       Left _  -> pure ()
-      Right _ -> do
-        ioLogger <& SenderShutdownTimeout `WithSeverity` Warning
-        cancel _sendAsync
+      Right _ -> ioLogger <& SenderShutdownTimeout `WithSeverity` Warning
     ioLogger <& ServerStopped `WithSeverity` Info
     return res
 
