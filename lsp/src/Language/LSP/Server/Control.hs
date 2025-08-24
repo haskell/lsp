@@ -12,8 +12,8 @@ module Language.LSP.Server.Control (
 import Colog.Core (LogAction (..), Severity (..), WithSeverity (..), (<&))
 import Colog.Core qualified as L
 import Control.Applicative ((<|>))
-import Control.Concurrent.Async (withAsync, wait, cancel, race)
 import Control.Concurrent (threadDelay)
+import Control.Concurrent.Async (cancel, race, wait, withAsync)
 import Control.Concurrent.STM.TChan
 import Control.Exception (catchJust, throwIO)
 import Control.Monad.IO.Class
@@ -157,7 +157,7 @@ runServerWith ioLogger logger clientIn clientOut serverDefinition = do
     -- Wait up to 3 seconds for the sender to finish; cancel if it doesn't.
     r <- race (wait _sendAsync) (threadDelay 3_000_000)
     case r of
-      Left _  -> pure ()
+      Left _ -> pure ()
       Right _ -> ioLogger <& SenderShutdownTimeout `WithSeverity` Warning
     ioLogger <& ServerStopped `WithSeverity` Info
     return res
@@ -196,13 +196,15 @@ ioLoop ioLogger logger clientIn serverDefinition vfs sendMsg = do
    where
     go r = do
       b <- isExiting
-      if b then pure 0 else do
-        res <- parseOne logger clientIn r
-        case res of
-          Nothing -> pure 1
-          Just (msg, remainder) -> do
-            Processing.processMessage pLogger $ BSL.fromStrict msg
-            go (parse parser remainder)
+      if b
+        then pure 0
+        else do
+          res <- parseOne logger clientIn r
+          case res of
+            Nothing -> pure 1
+            Just (msg, remainder) -> do
+              Processing.processMessage pLogger $ BSL.fromStrict msg
+              go (parse parser remainder)
 
   parser = do
     try contentType <|> return ()
