@@ -39,13 +39,15 @@ runSessionWithServer logger defn testConfig caps root session = do
   (hinRead, hinWrite) <- createPipe
   (houtRead, houtWrite) <- createPipe
 
-  server <- async $ void $ runServerWithHandles logger (L.hoistLogAction liftIO logger) hinRead houtWrite defn
+  server <- async $ runServerWithHandles logger (L.hoistLogAction liftIO logger) hinRead houtWrite defn
 
   res <- Test.runSessionWithHandles hinWrite houtRead testConfig caps root session
 
   timeout 3000000 $ do
-    Left (fromException -> Just ExitSuccess) <- waitCatch server
-    pure ()
+    return_code <- wait server
+    case return_code of
+      0 -> pure ()
+      _ -> error $ "Server exited with non-zero code: " ++ show return_code
 
   pure res
 
