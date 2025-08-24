@@ -549,7 +549,7 @@ progressCancelHandler logger (TNotificationMessage _ _ (WorkDoneProgressCancelPa
 
 exitNotificationHandler :: (MonadIO m, MonadLsp config0 m) => LogAction m (WithSeverity LspProcessingLog) -> Handler m Method_Exit
 exitNotificationHandler logger _ = do
-  logger <& ShuttingDown `WithSeverity` Info
+  logger <& Exiting `WithSeverity` Info
   b <- resExit . resState <$> getLspEnv
   liftIO $ signalBarrier b ()
 
