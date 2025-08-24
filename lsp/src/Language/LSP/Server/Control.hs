@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Language.LSP.Server.Control (
   -- * Running
@@ -11,9 +12,10 @@ module Language.LSP.Server.Control (
 import Colog.Core (LogAction (..), Severity (..), WithSeverity (..), (<&))
 import Colog.Core qualified as L
 import Control.Applicative ((<|>))
-import Control.Concurrent
+import Control.Concurrent (threadDelay)
+import Control.Concurrent.Async (cancel, race, wait, withAsync)
 import Control.Concurrent.STM.TChan
-import Control.Monad
+import Control.Exception (catchJust, throwIO)
 import Control.Monad.IO.Class
 import Control.Monad.STM
 import Data.Aeson qualified as J
@@ -33,18 +35,23 @@ import Language.LSP.Server.Processing qualified as Processing
 import Language.LSP.VFS
 import Prettyprinter
 import System.IO
+import System.IO.Error (isResourceVanishedError)
 
 data LspServerLog
   = LspProcessingLog Processing.LspProcessingLog
   | DecodeInitializeError String
   | HeaderParseFail [String] String
   | EOF
+  | BrokenPipeWhileSending TL.Text -- truncated outgoing message (including header)
   | Starting
+  | ServerStopped
+  | SenderShutdownTimeout -- client sender did not stop in time
   | ParsedMsg T.Text
   | SendMsg TL.Text
   deriving (Show)
 
 instance Pretty LspServerLog where
+  pretty ServerStopped = "Server stopped"
   pretty (LspProcessingLog l) = pretty l
   pretty (DecodeInitializeError err) =
     vsep
@@ -57,9 +64,15 @@ instance Pretty LspServerLog where
       , pretty (intercalate " > " ctxs) <> ": " <+> pretty err
       ]
   pretty EOF = "Got EOF"
-  pretty Starting = "Starting server"
+  pretty (BrokenPipeWhileSending msg) =
+    vsep
+      [ "Broken pipe while sending (client likely closed output handle):"
+      , indent 2 (pretty msg)
+      ]
+  pretty Starting = "Server starting"
   pretty (ParsedMsg msg) = "---> " <> pretty msg
   pretty (SendMsg msg) = "<--2-- " <> pretty msg
+  pretty SenderShutdownTimeout = "Sender did not stop within 3s; cancelling"
 
 -- ---------------------------------------------------------------------
 
@@ -108,9 +121,15 @@ runServerWithHandles ioLogger logger hin hout serverDefinition = do
   let
     clientIn = BS.hGetSome hin defaultChunkSize
 
-    clientOut out = do
-      BSL.hPut hout out
-      hFlush hout
+    clientOut out =
+      catchJust
+        (\e -> if isResourceVanishedError e then Just e else Nothing)
+        (BSL.hPut hout out >> hFlush hout)
+        ( \e -> do
+            let txt = TL.toStrict $ TL.take 400 $ TL.decodeUtf8 out -- limit size
+            ioLogger <& BrokenPipeWhileSending (TL.fromStrict txt) `WithSeverity` Error
+            throwIO e
+        )
 
   runServerWith ioLogger logger clientIn clientOut serverDefinition
 
@@ -130,15 +149,18 @@ runServerWith ::
   IO Int -- exit code
 runServerWith ioLogger logger clientIn clientOut serverDefinition = do
   ioLogger <& Starting `WithSeverity` Info
-
-  cout <- atomically newTChan :: IO (TChan J.Value)
-  _rhpid <- forkIO $ sendServer ioLogger cout clientOut
-
-  let sendMsg msg = atomically $ writeTChan cout $ J.toJSON msg
-
-  ioLoop ioLogger logger clientIn serverDefinition emptyVFS sendMsg
-
-  return 1
+  cout <- atomically newTChan :: IO (TChan FromServerMessage)
+  withAsync (sendServer ioLogger cout clientOut) $ \_sendAsync -> do
+    let sendMsg = atomically . writeTChan cout
+    res <- ioLoop ioLogger logger clientIn serverDefinition emptyVFS sendMsg
+    -- The sender should stop after we send the shutdown response.
+    -- Wait up to 3 seconds for the sender to finish; cancel if it doesn't.
+    r <- race (wait _sendAsync) (threadDelay 3_000_000)
+    case r of
+      Left _ -> pure ()
+      Right _ -> ioLogger <& SenderShutdownTimeout `WithSeverity` Warning
+    ioLogger <& ServerStopped `WithSeverity` Info
+    return res
 
 -- ---------------------------------------------------------------------
 
@@ -150,33 +172,39 @@ ioLoop ::
   ServerDefinition config ->
   VFS ->
   (FromServerMessage -> IO ()) ->
-  IO ()
+  IO Int
 ioLoop ioLogger logger clientIn serverDefinition vfs sendMsg = do
   minitialize <- parseOne ioLogger clientIn (parse parser "")
   case minitialize of
-    Nothing -> pure ()
+    Nothing -> pure 1
     Just (msg, remainder) -> do
       case J.eitherDecode $ BSL.fromStrict msg of
-        Left err -> ioLogger <& DecodeInitializeError err `WithSeverity` Error
+        Left err -> do
+          ioLogger <& DecodeInitializeError err `WithSeverity` Error
+          return 1
         Right initialize -> do
           mInitResp <- Processing.initializeRequestHandler pioLogger serverDefinition vfs sendMsg initialize
           case mInitResp of
-            Nothing -> pure ()
+            Nothing -> pure 1
             Just env -> runLspT env $ loop (parse parser remainder)
  where
   pioLogger = L.cmap (fmap LspProcessingLog) ioLogger
   pLogger = L.cmap (fmap LspProcessingLog) logger
 
-  loop :: Result BS.ByteString -> LspM config ()
+  loop :: Result BS.ByteString -> LspM config Int
   loop = go
    where
     go r = do
-      res <- parseOne logger clientIn r
-      case res of
-        Nothing -> pure ()
-        Just (msg, remainder) -> do
-          Processing.processMessage pLogger $ BSL.fromStrict msg
-          go (parse parser remainder)
+      b <- isExiting
+      if b
+        then pure 0
+        else do
+          res <- parseOne logger clientIn r
+          case res of
+            Nothing -> pure 1
+            Just (msg, remainder) -> do
+              Processing.processMessage pLogger $ BSL.fromStrict msg
+              go (parse parser remainder)
 
   parser = do
     try contentType <|> return ()
@@ -224,9 +252,10 @@ parseOne logger clientIn = go
 -- ---------------------------------------------------------------------
 
 -- | Simple server to make sure all output is serialised
-sendServer :: LogAction IO (WithSeverity LspServerLog) -> TChan J.Value -> (BSL.ByteString -> IO ()) -> IO ()
-sendServer _logger msgChan clientOut = do
-  forever $ do
+sendServer :: LogAction IO (WithSeverity LspServerLog) -> TChan FromServerMessage -> (BSL.ByteString -> IO ()) -> IO ()
+sendServer _logger msgChan clientOut = go
+ where
+  go = do
     msg <- atomically $ readTChan msgChan
 
     -- We need to make sure we only send over the content of the message,
@@ -241,6 +270,10 @@ sendServer _logger msgChan clientOut = do
             ]
 
     clientOut out
+    -- close the client sender when we send out the shutdown request's response
+    case msg of
+      FromServerRsp SMethod_Shutdown _ -> pure ()
+      _ -> go
 
 -- TODO: figure out how to re-enable
 -- This can lead to infinite recursion in logging, see https://github.com/haskell/lsp/issues/447
