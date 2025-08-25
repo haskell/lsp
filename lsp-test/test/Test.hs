@@ -310,7 +310,7 @@ main = hspec $ around withDummyServer $ do
   describe "getSignatureHelp" $
     it "works" $ \(hin, hout) -> runSessionWithHandles hin hout def fullLatestClientCaps "." $ do
       doc <- openDoc "test/data/renamePass/Desktop/simple.hs" "haskell"
-      signatureHelp <- getSignatureHelp doc (Position 22 32)
+      signatureHelp <- getSignatureHelp doc (Position 22 32) Nothing
       liftIO $ signatureHelp `shouldSatisfy` isJust
 
   -- describe "getHighlights" $
