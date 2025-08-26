@@ -937,9 +937,9 @@ getHover doc pos =
    in nullToMaybe . getResponseResult <$> request SMethod_TextDocumentHover params
 
 -- | Returns the signature help at the specified position.
-getSignatureHelp :: TextDocumentIdentifier -> Position -> Session (Maybe SignatureHelp)
-getSignatureHelp doc pos =
-  let params = SignatureHelpParams doc pos Nothing Nothing
+getSignatureHelp :: TextDocumentIdentifier -> Position -> Maybe SignatureHelpContext -> Session (Maybe SignatureHelp)
+getSignatureHelp doc pos mCtx =
+  let params = SignatureHelpParams doc pos Nothing mCtx
    in nullToMaybe . getResponseResult <$> request SMethod_TextDocumentSignatureHelp params
 
 -- | Returns the highlighted occurrences of the term at the specified position
