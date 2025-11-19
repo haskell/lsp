@@ -199,7 +199,13 @@ This is one of the most performance critical parts of HLS, do not
 modify it without profiling.
 -}
 data NormalizedFilePath = NormalizedFilePath !NormalizedUri {-# UNPACK #-} !Text
-  deriving stock (Generic, Eq, Ord)
+  deriving stock (Generic)
+
+instance Eq NormalizedFilePath where
+  NormalizedFilePath _uri1 fp1 == NormalizedFilePath _uri2 fp2 = fp1 == fp2
+
+instance Ord NormalizedFilePath where
+  compare (NormalizedFilePath _uri1 fp1) (NormalizedFilePath _uri2 fp2) = compare fp1 fp2
 
 instance NFData NormalizedFilePath
 
