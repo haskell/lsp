@@ -116,6 +116,7 @@ test-suite tests
     , parser-combinators
     , process
     , text
+    , text-rope
     , unliftio
 
 test-suite func-test
