@@ -83,6 +83,7 @@ import Data.IORef
 import Colog.Core (LogAction (..), WithSeverity (..), Severity (..))
 import Data.String (fromString)
 import Data.Either (partitionEithers)
+import Control.Concurrent.Async (async, cancel)
 
 -- | A session representing one instance of launching and connecting to a server.
 --
@@ -303,9 +304,9 @@ runSession' serverIn serverOut mServerProc serverHandler config caps rootDir exi
 
       errorHandler = throwTo mainThreadId :: SessionException -> IO ()
       serverListenerLauncher =
-        forkIO $ catch (serverHandler serverOut context) errorHandler
+        async $ catch (serverHandler serverOut context) errorHandler
       msgTimeoutMs = messageTimeout config * 10^6
-      serverAndListenerFinalizer tid = do
+      serverAndListenerFinalizer async = do
         let cleanup
               | Just sp <- mServerProc = do
                   -- Give the server some time to exit cleanly
@@ -318,7 +319,7 @@ runSession' serverIn serverOut mServerProc serverHandler config caps rootDir exi
         finally (timeout msgTimeoutMs (runSession' exitServer))
                 -- Make sure to kill the listener first, before closing
                 -- handles etc via cleanupProcess
-                (killThread tid >> cleanup)
+                (cancel async >> cleanup)
 
   (result, _) <- bracket serverListenerLauncher
                          serverAndListenerFinalizer
