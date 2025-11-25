@@ -59,7 +59,6 @@ import Language.LSP.Protocol.Utils.SMethodMap qualified as SMethodMap
 import Language.LSP.Server.Core
 import Language.LSP.VFS as VFS
 import Prettyprinter
-import System.Exit
 
 data LspProcessingLog
   = VfsLog VfsLog
@@ -119,9 +118,10 @@ initializeRequestHandler ::
   ServerDefinition config ->
   VFS ->
   (FromServerMessage -> IO ()) ->
+  IO () -> -- ^ Action that waits for the sender thread to finish. We use it to set LanguageContextEnv.resWaitSender, See Note [Shutdown].
   TMessage Method_Initialize ->
   IO (Maybe (LanguageContextEnv config))
-initializeRequestHandler logger ServerDefinition{..} vfs sendFunc req = do
+initializeRequestHandler logger ServerDefinition{..} vfs sendFunc waitSender req = do
   let sendResp = sendFunc . FromServerRsp SMethod_Initialize
       handleErr (Left err) = do
         sendResp $ makeResponseError (req ^. L.id) err
@@ -172,6 +172,7 @@ initializeRequestHandler logger ServerDefinition{..} vfs sendFunc req = do
       resRegistrationsReq <- newTVarIO mempty
       resLspId <- newTVarIO 0
       resShutdown <- C.newBarrier
+      resExit <- C.newBarrier
       pure LanguageContextState{..}
 
     -- Call the 'duringInitialization' callback to let the server kick stuff up
@@ -187,6 +188,7 @@ initializeRequestHandler logger ServerDefinition{..} vfs sendFunc req = do
             rootDir
             (optProgressStartDelay options)
             (optProgressUpdateDelay options)
+            waitSender
         configChanger config = forward interpreter (onConfigChange config)
         handlers = transmuteHandlers interpreter (staticHandlers clientCaps)
         interpreter = interpretHandler initializationResult
@@ -440,6 +442,13 @@ handle logger m msg =
     SMethod_WorkspaceDidChangeConfiguration -> handle' logger (Just $ handleDidChangeConfiguration logger) m msg
     -- See Note [LSP configuration]
     SMethod_Initialized -> handle' logger (Just $ \_ -> initialDynamicRegistrations logger >> requestConfigUpdate (cmap (fmap LspCore) logger)) m msg
+    SMethod_Exit -> handle' logger (Just $ \_ -> signalExit) m msg
+     where
+      signalExit :: LspM config ()
+      signalExit = do
+        logger <& Exiting `WithSeverity` Info
+        b <- resExit . resState <$> getLspEnv
+        liftIO $ signalBarrier b ()
     SMethod_Shutdown -> handle' logger (Just $ \_ -> signalShutdown) m msg
      where
       -- See Note [Shutdown]
@@ -497,6 +506,10 @@ handle' logger mAction m msg = do
     -- See Note [Shutdown]
     IsClientReq | shutdown, not (allowedMethod m) -> requestDuringShutdown msg
     IsClientReq -> case pickHandler dynReqHandlers reqHandlers of
+      Just h | SMethod_Shutdown <- m -> do
+        waitSender <- resWaitSender <$> getLspEnv
+        liftIO $ h msg (runLspT env . sendResponse msg)
+        liftIO waitSender
       Just h -> liftIO $ h msg (runLspT env . sendResponse msg)
       Nothing
         | SMethod_Shutdown <- m -> liftIO $ shutdownRequestHandler msg (runLspT env . sendResponse msg)
@@ -557,9 +570,9 @@ progressCancelHandler logger (TNotificationMessage _ _ (WorkDoneProgressCancelPa
       liftIO cancelAction
 
 exitNotificationHandler :: (MonadIO m) => LogAction m (WithSeverity LspProcessingLog) -> Handler m Method_Exit
-exitNotificationHandler logger _ = do
-  logger <& Exiting `WithSeverity` Info
-  liftIO exitSuccess
+exitNotificationHandler _logger _ = do
+  -- default exit handler do nothing
+  return ()
 
 -- | Default Shutdown handler
 shutdownRequestHandler :: Handler IO Method_Shutdown

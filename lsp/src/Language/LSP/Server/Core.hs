@@ -137,6 +137,9 @@ data LanguageContextEnv config = LanguageContextEnv
   -- ^ The delay before starting a progress reporting session, in microseconds
   , resProgressUpdateDelay :: Int
   -- ^ The delay between sending progress updates, in microseconds
+  , resWaitSender :: !(IO ())
+  -- ^ An IO action that waits for the sender thread to finish sending all pending messages.
+  -- This is used to ensure all responses are sent before the server exits. See Note [Shutdown]
   }
 
 -- ---------------------------------------------------------------------
@@ -211,9 +214,9 @@ data LanguageContextState config = LanguageContextState
   , resRegistrationsReq :: !(TVar (RegistrationMap Request))
   , resLspId :: !(TVar Int32)
   , resShutdown :: !(C.Barrier ())
-  -- ^ Has the server received 'shutdown'? Can be used to conveniently trigger e.g. thread termination,
-  -- but if you need a cleanup action to terminate before exiting, then you should install a full
-  -- 'shutdown' handler
+  -- ^ Barrier signaled when the server receives the 'shutdown' request. See Note [Shutdown]
+  , resExit :: !(C.Barrier ())
+  -- ^ Barrier signaled when the server receives the 'exit' notification. See Note [Shutdown]
   }
 
 type ResponseMap = IxMap LspId (Product SMethod ServerResponseCallback)
@@ -754,6 +757,16 @@ isShuttingDown = do
     Just _ -> True
     Nothing -> False
 
+-- | Check if the server has received the 'exit' notification.
+-- See Note [Shutdown]
+isExiting :: (m ~ LspM config) => m Bool
+isExiting = do
+  b <- resExit . resState <$> getLspEnv
+  r <- liftIO $ C.waitBarrierMaybe b
+  pure $ case r of
+    Just () -> True
+    Nothing -> False
+
 -- | Blocks until the server receives a 'shutdown' request.
 waitShuttingDown :: (m ~ LspM config) => m ()
 waitShuttingDown = do
@@ -843,18 +856,34 @@ The client can still always choose to cancel for another reason.
 -}
 
 {- Note [Shutdown]
-The 'shutdown' request basically tells the server to clean up and stop doing things.
-In particular, it allows us to ignore or reject all further messages apart from 'exit'.
+~~~~~~~~~~~~~~~~~~
+The LSP protocol has a two-phase shutdown sequence:
 
-We also provide a `Barrier` that indicates whether or not we are shutdown, this can
-be convenient, e.g. you can race a thread against `waitBarrier` to have it automatically
-be cancelled when we receive `shutdown`.
+1. `shutdown` request: ask the server to stop doing work and finish
+   any in-flight operations.
+2. `exit` notification: tell the server to terminate the process.
 
-Shutdown is a request, and the client won't send `exit` until a server responds, so if you
-want to be sure that some cleanup happens, you need to ensure we don't respond to `shutdown`
-until it's done. The best way to do this is just to install a specific `shutdown` handler.
+We expose two `Barrier`s to track this state:
 
-After the `shutdown` request, we don't handle any more requests and notifications other than
-`exit`. We also don't handle any more responses to requests we have sent but just throw the
-responses away.
+- `resShutdown`: signalled when we receive the `shutdown` request.
+  Use `isShuttingDown` to check this.
+- `resExit`: signalled when we receive the `exit` notification.
+  Use `isExiting` to check this.
+
+Shutdown is itself a request, and we assume the client will not send
+`exit` before `shutdown`. If you want to be sure that some cleanup has
+run before the server exits, make that cleanup part of your customize
+`shutdown` handler.
+
+We use a dedicated sender thread to serialise all messages that go to
+the client. That thread is set up to stop sending messages after the
+`shutdown` response has been sent.
+
+While handling the `shutdown` request we call `resWaitSender` to wait
+for the sender thread to flush and finish. Otherwise, we might get a
+"broken pipe" error from trying to send messages after the client has
+closed our output handle.
+
+After the `shutdown` request has been processed, we do not handle any
+more requests or notifications except for `exit`.
 -}
