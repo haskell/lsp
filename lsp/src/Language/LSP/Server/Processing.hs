@@ -118,7 +118,7 @@ initializeRequestHandler ::
   ServerDefinition config ->
   VFS ->
   (FromServerMessage -> IO ()) ->
-  -- | Action that waits for the sender thread to finish. We use it to set LanguageContextEnv.resWaitSender, See Note [Shutdown].
+  -- | Action that waits for the sender thread to finish. We use it to set 'LanguageContextEnv.resWaitSender', See Note [Shutdown].
   IO () ->
   TMessage Method_Initialize ->
   IO (Maybe (LanguageContextEnv config))
