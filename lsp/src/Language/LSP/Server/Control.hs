@@ -1,7 +1,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Language.LSP.Server.Control (
   -- * Running
@@ -30,7 +30,7 @@ import Control.Applicative ((<|>))
 import Control.Concurrent
 import Control.Concurrent.Async
 import Control.Concurrent.STM.TChan
-import Control.Exception (catchJust, throwIO, finally)
+import Control.Exception (catchJust, finally, throwIO)
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.STM

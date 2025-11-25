@@ -757,8 +757,9 @@ isShuttingDown = do
     Just _ -> True
     Nothing -> False
 
--- | Check if the server has received the 'exit' notification.
--- See Note [Shutdown]
+{- | Check if the server has received the 'exit' notification.
+See Note [Shutdown]
+-}
 isExiting :: (m ~ LspM config) => m Bool
 isExiting = do
   b <- resExit . resState <$> getLspEnv
