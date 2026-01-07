@@ -344,8 +344,8 @@ runSessionWithHandles' serverProc serverIn serverOut config' caps rootDir sessio
   -- \| Listens to the server output until the shutdown ACK,
   -- makes sure it matches the record and signals any semaphores
   listenServer :: Handle -> SessionContext -> IO ()
-  listenServer serverOut context = do
-    msgBytes <- getNextMessage serverOut
+  listenServer servOut context = do
+    msgBytes <- getNextMessage servOut
 
     msg <- modifyMVar (requestMap context) $ \reqMap ->
       pure $ decodeFromServerMsg reqMap msgBytes
@@ -353,7 +353,7 @@ runSessionWithHandles' serverProc serverIn serverOut config' caps rootDir sessio
 
     case msg of
       (FromServerRsp SMethod_Shutdown _) -> return ()
-      _ -> listenServer serverOut context
+      _ -> listenServer servOut context
 
   -- \| Is this message allowed to be sent by the server between the intialize
   -- request and response?
@@ -436,21 +436,20 @@ sendRequest ::
 sendRequest method params = do
   idn <- curReqId <$> get
   modifyStatePure_ $ \c -> c{curReqId = idn + 1}
-  let id = IdInt idn
 
-  let mess = TRequestMessage "2.0" id method params
+  let mess = TRequestMessage "2.0" (IdInt idn) method params
 
   -- Update the request map
   reqMap <- requestMap <$> ask
   liftIO $
     modifyMVar_ reqMap $
-      \r -> return $ fromJust $ updateRequestMap r id method
+      \r -> return $ fromJust $ updateRequestMap r (IdInt idn) method
 
   ~() <- case splitClientMethod method of
     IsClientReq -> sendMessage mess
     IsClientEither -> sendMessage $ ReqMess mess
 
-  return id
+  return (IdInt idn)
 
 -- | Sends a notification to the server.
 sendNotification ::
@@ -583,10 +582,10 @@ createDoc file languageId contents = do
   rootDir <- asks rootDir
   caps <- asks sessionCapabilities
   absFile <- liftIO $ canonicalizePath (rootDir </> file)
-  let pred :: SomeRegistration -> [TRegistration Method_WorkspaceDidChangeWatchedFiles]
-      pred (SomeRegistration r@(TRegistration _ SMethod_WorkspaceDidChangeWatchedFiles _)) = [r]
-      pred _ = mempty
-      regs = concatMap pred dynCaps
+  let pred' :: SomeRegistration -> [TRegistration Method_WorkspaceDidChangeWatchedFiles]
+      pred' (SomeRegistration r@(TRegistration _ SMethod_WorkspaceDidChangeWatchedFiles _)) = [r]
+      pred' _ = mempty
+      regs = concatMap pred' dynCaps
       watchHits :: FileSystemWatcher -> Bool
       watchHits (FileSystemWatcher (GlobPattern (InL (Pattern pattern))) kind) =
         -- If WatchKind is excluded, defaults to all true as per spec
@@ -706,7 +705,7 @@ getCodeActions doc range = do
   case rsp ^. L.result of
     Right (InL xs) -> return xs
     Right (InR _) -> return []
-    Left error -> throw (UnexpectedResponseError (fromJust $ rsp ^. L.id) error)
+    Left err -> throw (UnexpectedResponseError (fromJust $ rsp ^. L.id) err)
 
 {- | Returns the code actions in the specified range, resolving any with
  a non empty _data_ field.
@@ -748,11 +747,11 @@ getCodeActionContextInRange doc caRange = do
  where
   overlappingRange :: Range -> Range -> Bool
   overlappingRange (Range s e) range =
-    positionInRange s range
-      || positionInRange e range
+    positionInRange' s range
+      || positionInRange' e range
 
-  positionInRange :: Position -> Range -> Bool
-  positionInRange (Position pl po) (Range (Position sl so) (Position el eo)) =
+  positionInRange' :: Position -> Range -> Bool
+  positionInRange' (Position pl po) (Range (Position sl so) (Position el eo)) =
     pl > sl && pl < el
       || pl == sl && pl == el && po >= so && po <= eo
       || pl == sl && po >= so
@@ -801,7 +800,7 @@ resolveCodeAction :: (MonadLoggerIO m, MonadUnliftIO m, Alternative m) => CodeAc
 resolveCodeAction ca = do
   rsp <- request SMethod_CodeActionResolve ca
   case rsp ^. L.result of
-    Right ca -> return ca
+    Right ca' -> return ca'
     Left er -> throw (UnexpectedResponseError (fromJust $ rsp ^. L.id) er)
 
 {- | If a code action contains a _data_ field: resolves the code action, then
@@ -869,8 +868,8 @@ resolveCompletion :: (MonadLoggerIO m, MonadUnliftIO m, Alternative m) => Comple
 resolveCompletion ci = do
   rsp <- request SMethod_CompletionItemResolve ci
   case rsp ^. L.result of
-    Right ci -> return ci
-    Left error -> throw (UnexpectedResponseError (fromJust $ rsp ^. L.id) error)
+    Right ci' -> return ci'
+    Left err -> throw (UnexpectedResponseError (fromJust $ rsp ^. L.id) err)
 
 -- | Returns the references for the position in the document.
 getReferences ::
@@ -1015,8 +1014,8 @@ resolveCodeLens :: (MonadLoggerIO m, MonadUnliftIO m, Alternative m) => CodeLens
 resolveCodeLens cl = do
   rsp <- request SMethod_CodeLensResolve cl
   case rsp ^. L.result of
-    Right cl -> return cl
-    Left error -> throw (UnexpectedResponseError (fromJust $ rsp ^. L.id) error)
+    Right cl' -> return cl'
+    Left err -> throw (UnexpectedResponseError (fromJust $ rsp ^. L.id) err)
 
 -- | Returns the inlay hints in the specified range.
 getInlayHints :: (MonadLoggerIO m, MonadUnliftIO m, Alternative m) => TextDocumentIdentifier -> Range -> Session m [InlayHint]
@@ -1037,8 +1036,8 @@ resolveInlayHint :: (MonadLoggerIO m, MonadUnliftIO m, Alternative m) => InlayHi
 resolveInlayHint ih = do
   rsp <- request SMethod_InlayHintResolve ih
   case rsp ^. L.result of
-    Right ih -> return ih
-    Left error -> throw (UnexpectedResponseError (fromJust $ rsp ^. L.id) error)
+    Right ih' -> return ih'
+    Left err -> throw (UnexpectedResponseError (fromJust $ rsp ^. L.id) err)
 
 -- | Pass a param and return the response from `prepareCallHierarchy`
 prepareCallHierarchy :: (MonadLoggerIO m, MonadUnliftIO m, Alternative m) => CallHierarchyPrepareParams -> Session m [CallHierarchyItem]
