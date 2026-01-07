@@ -200,8 +200,8 @@ import System.Process (CreateProcess, ProcessHandle)
 -}
 runSession ::
   (MonadLoggerIO m, MonadUnliftIO m, MonadThrow m, Alternative m) =>
-  -- | The command to run the server.
-  String ->
+  -- | The base CreateProcess run the server.
+  CreateProcess ->
   -- | The capabilities that the client should declare.
   ClientCapabilities ->
   -- | The filepath to the root directory for the session.
@@ -216,8 +216,8 @@ runSessionWithConfig ::
   (MonadLoggerIO m, MonadUnliftIO m, MonadThrow m, Alternative m) =>
   -- | Configuration options for the session.
   SessionConfig ->
-  -- | The command to run the server.
-  String ->
+  -- | The base CreateProcess run the server.
+  CreateProcess ->
   -- | The capabilities that the client should declare.
   ClientCapabilities ->
   -- | The filepath to the root directory for the session.
@@ -234,8 +234,8 @@ runSessionWithConfigCustomProcess ::
   (CreateProcess -> CreateProcess) ->
   -- | Configuration options for the session.
   SessionConfig ->
-  -- | The command to run the server.
-  String ->
+  -- | The base CreateProcess run the server.
+  CreateProcess ->
   -- | The capabilities that the client should declare.
   ClientCapabilities ->
   -- | The filepath to the root directory for the session.
