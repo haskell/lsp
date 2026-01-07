@@ -1,4 +1,5 @@
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Language.LSP.Test.Session.UpdateState (
@@ -22,7 +23,7 @@ import Data.Foldable (toList, foldr')
 import Data.Function (on)
 import Data.List (groupBy, sortBy)
 import qualified Data.Map.Strict as Map
-import Data.Maybe
+import Data.Maybe (fromMaybe, mapMaybe, fromJust)
 import qualified Data.Set as Set
 import UnliftIO.Concurrent (readMVar, modifyMVar, modifyMVar_)
 import qualified Data.Text.IO as T
@@ -88,7 +89,7 @@ updateState (FromServerMess SMethod_WorkspaceApplyEdit r) = do
     in s { vfs = newVFS }
 
   let groupedParams = groupBy (\a b -> a ^. L.textDocument == b ^. L.textDocument) allChangeParams
-      mergedParams = map mergeParams groupedParams
+      mergedParams = mapMaybe mergeParams groupedParams
 
   -- TODO: Don't do this when replaying a session
   forM_ mergedParams (sendMessage . TNotificationMessage "2.0" SMethod_TextDocumentDidChange)
@@ -134,8 +135,11 @@ updateState (FromServerMess SMethod_WorkspaceApplyEdit r) = do
         getParamsFromDocumentChange (InL textDocumentEdit) = getParamsFromTextDocumentEdit textDocumentEdit
         getParamsFromDocumentChange _ = Nothing
 
-        bumpNewestVersion (VersionedTextDocumentIdentifier uri _) =
-          head <$> textDocumentVersions uri
+        bumpNewestVersion (VersionedTextDocumentIdentifier uri _) = do
+          versions <- textDocumentVersions uri
+          case versions of
+            (v:_) -> return v
+            [] -> error "textDocumentVersions returned empty list"
 
         -- For a uri returns an infinite list of versions [n,n+1,n+2,...]
         -- where n is the current version
@@ -152,9 +156,10 @@ updateState (FromServerMess SMethod_WorkspaceApplyEdit r) = do
           edits <- textDocumentEdits uri (reverse edits)
           pure $ mapMaybe getParamsFromTextDocumentEdit edits
 
-        mergeParams :: [DidChangeTextDocumentParams] -> DidChangeTextDocumentParams
-        mergeParams params = let events = concat (toList (map (toList . (^. L.contentChanges)) params))
-                              in DidChangeTextDocumentParams (head params ^. L.textDocument) events
+        mergeParams :: [DidChangeTextDocumentParams] -> Maybe DidChangeTextDocumentParams
+        mergeParams [] = Nothing
+        mergeParams (p:ps) = let events = concat (toList (map (toList . (^. L.contentChanges)) (p:ps)))
+                              in Just $ DidChangeTextDocumentParams (p ^. L.textDocument) events
 updateState _ = return ()
 
 modifyStatePure :: (MonadUnliftIO m, MonadReader SessionContext m) => (SessionState -> (SessionState, a)) -> m a

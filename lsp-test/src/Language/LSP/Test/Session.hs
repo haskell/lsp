@@ -31,66 +31,41 @@ module Language.LSP.Test.Session
 
 where
 
-import Colog.Core (LogAction (..), WithSeverity (..), Severity (..))
-import Control.Applicative
 import Control.Lens hiding (List, Empty)
 import Control.Monad
-import Control.Monad.Catch (MonadCatch, MonadMask, MonadThrow)
-import Control.Monad.Except
+import Control.Monad.Catch (MonadThrow)
 import Control.Monad.IO.Class
 import Control.Monad.IO.Unlift
 import Control.Monad.Logger
 import Control.Monad.Reader
-import Control.Monad.Trans.Class
-import Control.Monad.Trans.Reader (ReaderT, runReaderT)
-import qualified Control.Monad.Trans.Reader as Reader (ask)
-import Control.Monad.Trans.State (StateT, runStateT, execState)
-import qualified Control.Monad.Trans.State as State
-import Data.Aeson hiding (Error, Null)
-import Data.Aeson.Encode.Pretty
 import Data.Aeson.Lens ()
-import qualified Data.ByteString.Lazy.Char8 as B
-import Data.Default
 import Data.Either (partitionEithers)
-import Data.Foldable
-import Data.Function
-import Data.List
-import qualified Data.Map.Strict as Map
 import Data.Maybe
-import qualified Data.Set as Set
 import Data.String (fromString)
 import Data.String.Interpolate
 import qualified Data.Text as T
-import qualified Data.Text.IO as T
-import qualified Data.Text.Lazy.Builder as T
 import qualified Language.LSP.Protocol.Lens as L
 import Language.LSP.Protocol.Message as LSP
 import Language.LSP.Protocol.Types as LSP
 import Language.LSP.Test.Compat
 import Language.LSP.Test.Decoding
-import Language.LSP.Test.Exceptions
 import Language.LSP.Test.Process (gracefullyWaitForProcess)
 import Language.LSP.Test.Session.Core
 import Language.LSP.Test.Session.UpdateState
 import Language.LSP.Test.Types
 import Language.LSP.VFS
-import System.Console.ANSI
 import System.Directory
 import System.IO
 import System.Process (ProcessHandle())
 import UnliftIO.Async
 import UnliftIO.Concurrent
 import UnliftIO.Exception
-import UnliftIO.IORef
 import UnliftIO.Timeout (timeout)
 
 #if __GLASGOW_HASKELL__ == 806
 import Control.Monad.Fail
 #endif
 
-#ifndef mingw32_HOST_OS
-import System.Process (waitForProcess)
-#endif
 
 -- | An internal version of 'runSession' that allows for a custom handler to listen to the server.
 -- It also does not automatically send initialize and exit messages.
@@ -107,7 +82,7 @@ runSession' :: forall m a. (
   -> Session m () -- ^ To exit the Server properly
   -> Session m a
   -> m a
-runSession' serverIn serverOut mServerProc serverHandler config caps rootDir exitServer session = do
+runSession' serverIn serverOut mServerProc _serverHandler config caps rootDir exitServer session = do
   absRootDir <- liftIO $ canonicalizePath rootDir
 
   liftIO $ hSetBuffering serverIn  NoBuffering
@@ -121,7 +96,7 @@ runSession' serverIn serverOut mServerProc serverHandler config caps rootDir exi
   messageChan <- newChan
   initRsp <- newEmptyMVar
 
-  mainThreadId <- myThreadId
+  _ <- myThreadId
 
   let initState = SessionState
         0

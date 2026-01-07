@@ -24,15 +24,11 @@ module Language.LSP.Test.Parsing (
 
 import Control.Applicative
 import Control.Monad
-import Control.Monad.IO.Class
 import Control.Monad.IO.Unlift
 import Control.Monad.Logger
-import Data.Conduit.Parser hiding (named)
-import Data.Conduit.Parser qualified (named)
 import Data.GADT.Compare
-import Data.Text qualified as T
 import Data.Typeable
-import GHC.TypeLits (KnownSymbol, symbolVal)
+import GHC.TypeLits (KnownSymbol)
 import Language.LSP.Protocol.Message
 import Language.LSP.Test.Exceptions
 import Language.LSP.Test.Session
@@ -118,29 +114,27 @@ message m1 = satisfyMaybe $ \case
 
 customRequest :: (MonadLoggerIO m, MonadUnliftIO m, KnownSymbol s) => Proxy s -> Session m (TMessage (Method_CustomMethod s :: Method ServerToClient Request))
 customRequest p =
-  let m = T.pack $ symbolVal p
-   in satisfyMaybe $ \case
-        FromServerMess m1 msg -> case splitServerMethod m1 of
-          IsServerEither -> case msg of
-            ReqMess _ -> case m1 `geq` SMethod_CustomMethod p of
-              Just Refl -> Just msg
-              _ -> Nothing
-            _ -> Nothing
+  satisfyMaybe $ \case
+    FromServerMess m1 msg -> case splitServerMethod m1 of
+      IsServerEither -> case msg of
+        ReqMess _ -> case m1 `geq` SMethod_CustomMethod p of
+          Just Refl -> Just msg
           _ -> Nothing
         _ -> Nothing
+      _ -> Nothing
+    _ -> Nothing
 
 customNotification :: (MonadLoggerIO m, MonadUnliftIO m, KnownSymbol s) => Proxy s -> Session m (TMessage (Method_CustomMethod s :: Method ServerToClient Notification))
 customNotification p =
-  let m = T.pack $ symbolVal p
-   in satisfyMaybe $ \case
-        FromServerMess m1 msg -> case splitServerMethod m1 of
-          IsServerEither -> case msg of
-            NotMess _ -> case m1 `geq` SMethod_CustomMethod p of
-              Just Refl -> Just msg
-              _ -> Nothing
-            _ -> Nothing
+  satisfyMaybe $ \case
+    FromServerMess m1 msg -> case splitServerMethod m1 of
+      IsServerEither -> case msg of
+        NotMess _ -> case m1 `geq` SMethod_CustomMethod p of
+          Just Refl -> Just msg
           _ -> Nothing
         _ -> Nothing
+      _ -> Nothing
+    _ -> Nothing
 
 -- | Matches if the message is a notification.
 anyNotification :: (MonadLoggerIO m, MonadUnliftIO m) => Session m FromServerMessage
