@@ -11,56 +11,27 @@ module Language.LSP.Test.Session.UpdateState (
   ) where
 
 import Colog.Core (LogAction (..), WithSeverity (..), Severity (..))
-import Control.Applicative
 import Control.Lens hiding (List, Empty)
 import Control.Monad
-import Control.Monad.Catch (MonadCatch, MonadMask, MonadThrow)
-import Control.Monad.Except
 import Control.Monad.IO.Class
 import Control.Monad.IO.Unlift
 import Control.Monad.Logger
 import Control.Monad.Reader
-import Control.Monad.Trans.Class
-import Control.Monad.Trans.Reader (ReaderT, runReaderT)
-import qualified Control.Monad.Trans.Reader as Reader (ask)
-import Control.Monad.Trans.State (StateT, runStateT, execState)
-import qualified Control.Monad.Trans.State as State
-import Data.Aeson hiding (Error, Null)
-import Data.Aeson.Encode.Pretty
-import Data.Aeson.Lens ()
-import qualified Data.ByteString.Lazy.Char8 as B
-import Data.Default
-import Data.Either (partitionEithers)
-import Data.Foldable
-import Data.Function
-import Data.List
+import Control.Monad.Trans.State (execState)
+import Data.Foldable (toList, foldr')
+import Data.Function (on)
+import Data.List (groupBy, sortBy)
 import qualified Data.Map.Strict as Map
 import Data.Maybe
 import qualified Data.Set as Set
-import Data.String (fromString)
-import Data.String.Interpolate
-import qualified Data.Text as T
+import UnliftIO.Concurrent (readMVar, modifyMVar, modifyMVar_)
 import qualified Data.Text.IO as T
-import qualified Data.Text.Lazy.Builder as T
 import qualified Language.LSP.Protocol.Lens as L
 import Language.LSP.Protocol.Message as LSP
 import Language.LSP.Protocol.Types as LSP
-import Language.LSP.Test.Compat
-import Language.LSP.Test.Decoding
-import Language.LSP.Test.Exceptions
-import Language.LSP.Test.Process (gracefullyWaitForProcess)
 import Language.LSP.Test.Session.Core
 import Language.LSP.Test.Types
 import Language.LSP.VFS
-import System.Console.ANSI
-import System.Directory
-import System.IO
-import System.Process (ProcessHandle())
-import UnliftIO.Async
-import UnliftIO.Concurrent
-import UnliftIO.Exception
-import UnliftIO.IORef
-import UnliftIO.Timeout (timeout)
 
 
 updateState :: (MonadLoggerIO m, MonadUnliftIO m, MonadReader SessionContext m)
