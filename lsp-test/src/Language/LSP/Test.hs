@@ -377,11 +377,11 @@ envOverrideConfig cfg = do
   convertVal "0" = False
   convertVal _ = True
 
-get :: (Monad m, MonadIO m) => Session m SessionState
+get :: MonadIO m => Session m SessionState
 get = asks sessionState >>= readMVar
 
 -- | The current text contents of a document.
-documentContents :: (Monad m, MonadIO m) => TextDocumentIdentifier -> Session m T.Text
+documentContents :: MonadIO m => TextDocumentIdentifier -> Session m T.Text
 documentContents doc = do
   vfs <- vfs <$> get
   let Just file = vfs ^? vfsMap . ix (toNormalizedUri (doc ^. L.uri)) . _Open
@@ -426,7 +426,7 @@ request_ p = void . request p
 
 -- | Sends a request to the server. Unlike 'request', this doesn't wait for the response.
 sendRequest ::
-  (Monad n, MonadIO n, MonadUnliftIO n) =>
+  MonadUnliftIO n =>
   -- | The request method.
   SClientMethod m ->
   -- | The request parameters.
@@ -454,7 +454,7 @@ sendRequest method params = do
 
 -- | Sends a notification to the server.
 sendNotification ::
-  (Monad n, MonadIO n, MonadUnliftIO n) =>
+  MonadUnliftIO n =>
   -- | The notification method.
   SClientMethod (m :: Method ClientToServer Notification) ->
   -- | The notification parameters.
@@ -487,32 +487,32 @@ sendNotification method params =
     IsClientEither -> sendMessage (NotMess $ TNotificationMessage "2.0" method params)
 
 -- | Sends a response to the server.
-sendResponse :: (Monad n, MonadUnliftIO n) => (ToJSON (MessageResult m), ToJSON (ErrorData m)) => TResponseMessage m -> Session n ()
+sendResponse :: MonadUnliftIO n => (ToJSON (MessageResult m), ToJSON (ErrorData m)) => TResponseMessage m -> Session n ()
 sendResponse = sendMessage
 
 {- | Returns the initialize response that was received from the server.
  The initialize requests and responses are not included the session,
  so if you need to test it use this.
 -}
-initializeResponse :: (Monad m, MonadIO m) => Session m (TResponseMessage Method_Initialize)
+initializeResponse :: MonadIO m => Session m (TResponseMessage Method_Initialize)
 initializeResponse = ask >>= (liftIO . readMVar) . initRsp
 
-setIgnoringLogNotifications :: (Monad m, MonadUnliftIO m) => Bool -> Session m ()
+setIgnoringLogNotifications :: MonadUnliftIO m => Bool -> Session m ()
 setIgnoringLogNotifications value = do
   modifyStatePure_ (\ss -> ss{ignoringLogNotifications = value})
 
-setIgnoringConfigurationRequests :: (Monad m, MonadUnliftIO m) => Bool -> Session m ()
+setIgnoringConfigurationRequests :: MonadUnliftIO m => Bool -> Session m ()
 setIgnoringConfigurationRequests value = do
   modifyStatePure_ (\ss -> ss{ignoringConfigurationRequests = value})
 
-setIgnoringRegistrationRequests :: (Monad m, MonadUnliftIO m) => Bool -> Session m ()
+setIgnoringRegistrationRequests :: MonadUnliftIO m => Bool -> Session m ()
 setIgnoringRegistrationRequests value = do
   modifyStatePure_ (\ss -> ss{ignoringRegistrationRequests = value})
 
 {- | Modify the client config. This will send a notification to the server that the
  config has changed.
 -}
-modifyConfig :: (Monad m, MonadIO m, MonadUnliftIO m) => (Object -> Object) -> Session m ()
+modifyConfig :: MonadUnliftIO m => (Object -> Object) -> Session m ()
 modifyConfig f = do
   oldConfig <- curLspConfig <$> get
   let newConfig = f oldConfig
@@ -543,19 +543,19 @@ modifyConfig f = do
 {- | Set the client config. This will send a notification to the server that the
  config has changed.
 -}
-setConfig :: (Monad m, MonadIO m, MonadUnliftIO m) => Object -> Session m ()
+setConfig :: MonadUnliftIO m => Object -> Session m ()
 setConfig newConfig = modifyConfig (const newConfig)
 
 {- | Modify a client config section (if already present, otherwise does nothing).
  This will send a notification to the server that the config has changed.
 -}
-modifyConfigSection :: (Monad m, MonadIO m, MonadUnliftIO m) => String -> (Value -> Value) -> Session m ()
+modifyConfigSection :: MonadUnliftIO m => String -> (Value -> Value) -> Session m ()
 modifyConfigSection section f = modifyConfig (\o -> o & ix (fromString section) %~ f)
 
 {- | Set a client config section. This will send a notification to the server that the
  config has changed.
 -}
-setConfigSection :: (Monad m, MonadIO m, MonadUnliftIO m) => String -> Value -> Session m ()
+setConfigSection :: MonadUnliftIO m => String -> Value -> Session m ()
 setConfigSection section settings = modifyConfig (\o -> o & at (fromString section) ?~ settings)
 
 {- | /Creates/ a new text document. This is different from 'openDoc'
@@ -569,7 +569,7 @@ setConfigSection section settings = modifyConfig (\o -> o & at (fromString secti
  @since 11.0.0.0
 -}
 createDoc ::
-  (Monad m, MonadIO m, MonadUnliftIO m) =>
+  MonadUnliftIO m =>
   -- | The path to the document to open, __relative to the root directory__.
   FilePath ->
   -- | The text document's language identifier, e.g. @"haskell"@.
@@ -618,7 +618,7 @@ createDoc file languageId contents = do
 {- | Opens a text document that /exists on disk/, and sends a
  textDocument/didOpen notification to the server.
 -}
-openDoc :: (Monad m, MonadIO m, MonadUnliftIO m) => FilePath -> LanguageKind -> Session m TextDocumentIdentifier
+openDoc :: MonadUnliftIO m => FilePath -> LanguageKind -> Session m TextDocumentIdentifier
 openDoc file languageId = do
   context <- ask
   let fp = rootDir context </> file
@@ -628,7 +628,7 @@ openDoc file languageId = do
 {- | This is a variant of `openDoc` that takes the file content as an argument.
  Use this is the file exists /outside/ of the current workspace.
 -}
-openDoc' :: (Monad m, MonadUnliftIO m) => FilePath -> LanguageKind -> T.Text -> Session m TextDocumentIdentifier
+openDoc' :: MonadUnliftIO m => FilePath -> LanguageKind -> T.Text -> Session m TextDocumentIdentifier
 openDoc' file languageId contents = do
   context <- ask
   let fp = rootDir context </> file
@@ -638,13 +638,13 @@ openDoc' file languageId contents = do
   pure $ TextDocumentIdentifier uri
 
 -- | Closes a text document and sends a textDocument/didOpen notification to the server.
-closeDoc :: (Monad m, MonadUnliftIO m) => TextDocumentIdentifier -> Session m ()
+closeDoc :: MonadUnliftIO m => TextDocumentIdentifier -> Session m ()
 closeDoc docId = do
   let params = DidCloseTextDocumentParams (TextDocumentIdentifier (docId ^. L.uri))
   sendNotification SMethod_TextDocumentDidClose params
 
 -- | Changes a text document and sends a textDocument/didOpen notification to the server.
-changeDoc :: (Monad m, MonadIO m, MonadUnliftIO m) => TextDocumentIdentifier -> [TextDocumentContentChangeEvent] -> Session m ()
+changeDoc :: MonadUnliftIO m => TextDocumentIdentifier -> [TextDocumentContentChangeEvent] -> Session m ()
 changeDoc docId changes = do
   verDoc <- getVersionedDoc docId
   let params = DidChangeTextDocumentParams (verDoc & L.version +~ 1) changes
@@ -738,7 +738,7 @@ getAllCodeActions doc = do
       Right (InL cmdOrCAs) -> pure (acc ++ cmdOrCAs)
       Right (InR _) -> pure acc
 
-getCodeActionContextInRange :: (Monad m, MonadIO m) => TextDocumentIdentifier -> Range -> Session m CodeActionContext
+getCodeActionContextInRange :: MonadIO m => TextDocumentIdentifier -> Range -> Session m CodeActionContext
 getCodeActionContextInRange doc caRange = do
   curDiags <- getCurrentDiagnostics doc
   let diags =
@@ -758,7 +758,7 @@ getCodeActionContextInRange doc caRange = do
       || pl == sl && po >= so
       || pl == el && po <= eo
 
-getCodeActionContext :: (Monad m, MonadIO m) => TextDocumentIdentifier -> Session m CodeActionContext
+getCodeActionContext :: MonadIO m => TextDocumentIdentifier -> Session m CodeActionContext
 getCodeActionContext doc = do
   curDiags <- getCurrentDiagnostics doc
   return $ CodeActionContext curDiags Nothing Nothing
@@ -766,15 +766,15 @@ getCodeActionContext doc = do
 {- | Returns the current diagnostics that have been sent to the client.
  Note that this does not wait for more to come in.
 -}
-getCurrentDiagnostics :: (Monad m, MonadIO m) => TextDocumentIdentifier -> Session m [Diagnostic]
+getCurrentDiagnostics :: MonadIO m => TextDocumentIdentifier -> Session m [Diagnostic]
 getCurrentDiagnostics doc = Map.findWithDefault [] (toNormalizedUri $ doc ^. L.uri) . curDiagnostics <$> get
 
 -- | Returns the tokens of all progress sessions that have started but not yet ended.
-getIncompleteProgressSessions :: (Monad m, MonadIO m) => Session m (Set.Set ProgressToken)
+getIncompleteProgressSessions :: MonadIO m => Session m (Set.Set ProgressToken)
 getIncompleteProgressSessions = curProgressSessions <$> get
 
 -- | Executes a command.
-executeCommand :: (Monad m, MonadUnliftIO m) => Command -> Session m ()
+executeCommand :: MonadUnliftIO m => Command -> Session m ()
 executeCommand cmd = do
   let args = decode $ encode $ fromJust $ cmd ^. L.arguments
       execParams = ExecuteCommandParams Nothing (cmd ^. L.command) args
@@ -814,7 +814,7 @@ resolveAndExecuteCodeAction ca@CodeAction{_data_ = Just _} = do
 resolveAndExecuteCodeAction ca = executeCodeAction ca
 
 -- | Adds the current version to the document, as tracked by the session.
-getVersionedDoc :: (Monad m, MonadIO m) => TextDocumentIdentifier -> Session m VersionedTextDocumentIdentifier
+getVersionedDoc :: MonadIO m => TextDocumentIdentifier -> Session m VersionedTextDocumentIdentifier
 getVersionedDoc (TextDocumentIdentifier uri) = do
   vfs <- vfs <$> get
   let ver = vfs ^? vfsMap . ix (toNormalizedUri uri) . _Open . to virtualFileVersion
@@ -1086,5 +1086,5 @@ resolveWorkspaceSymbols item = do
 
  @since 0.11.0.0
 -}
-getRegisteredCapabilities :: (Monad m, MonadIO m) => Session m [SomeRegistration]
+getRegisteredCapabilities :: MonadIO m => Session m [SomeRegistration]
 getRegisteredCapabilities = Map.elems . curDynCaps <$> get

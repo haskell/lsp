@@ -95,7 +95,7 @@ library
     Language.LSP.Test.Server
     Language.LSP.Test.Session
 
-  ghc-options:        -W
+  ghc-options:        -W -Wredundant-constraints
 
 test-suite tests
   import:             warnings
