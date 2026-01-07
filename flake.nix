@@ -26,7 +26,7 @@
             hpkgs.cabal-fmt
             hpkgs.cabal-install
             hpkgs.fourmolu
-            hpkgs.ghc
+            pkgs.haskell.compiler.ghc9122
             hpkgs.haskell-language-server
 
             # Misc.

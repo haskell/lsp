@@ -1,0 +1,16 @@
+
+resolver: nightly-2025-12-25
+
+packages:
+- ./lsp
+- ./lsp-types
+- ./lsp-test
+
+nix:
+  enable: false
+
+system-ghc: true
+
+# extra-deps:
+# - co-log-core-0.3.2.0
+# - row-types-1.0.1.2
