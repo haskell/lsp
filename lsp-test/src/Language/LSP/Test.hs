@@ -426,7 +426,7 @@ request_ p = void . request p
 
 -- | Sends a request to the server. Unlike 'request', this doesn't wait for the response.
 sendRequest ::
-  MonadUnliftIO n =>
+  (MonadUnliftIO n, MonadLoggerIO n) =>
   -- | The request method.
   SClientMethod m ->
   -- | The request parameters.
@@ -453,7 +453,7 @@ sendRequest method params = do
 
 -- | Sends a notification to the server.
 sendNotification ::
-  MonadUnliftIO n =>
+  (MonadUnliftIO n, MonadLoggerIO n) =>
   -- | The notification method.
   SClientMethod (m :: Method ClientToServer Notification) ->
   -- | The notification parameters.
@@ -486,7 +486,7 @@ sendNotification method params =
     IsClientEither -> sendMessage (NotMess $ TNotificationMessage "2.0" method params)
 
 -- | Sends a response to the server.
-sendResponse :: MonadUnliftIO n => (ToJSON (MessageResult m), ToJSON (ErrorData m)) => TResponseMessage m -> Session n ()
+sendResponse :: (MonadUnliftIO n, MonadLoggerIO n) => (ToJSON (MessageResult m), ToJSON (ErrorData m)) => TResponseMessage m -> Session n ()
 sendResponse = sendMessage
 
 {- | Returns the initialize response that was received from the server.
@@ -511,7 +511,7 @@ setIgnoringRegistrationRequests value = do
 {- | Modify the client config. This will send a notification to the server that the
  config has changed.
 -}
-modifyConfig :: MonadUnliftIO m => (Object -> Object) -> Session m ()
+modifyConfig :: (MonadUnliftIO m, MonadLoggerIO m) => (Object -> Object) -> Session m ()
 modifyConfig f = do
   oldConfig <- curLspConfig <$> get
   let newConfig = f oldConfig
@@ -542,19 +542,19 @@ modifyConfig f = do
 {- | Set the client config. This will send a notification to the server that the
  config has changed.
 -}
-setConfig :: MonadUnliftIO m => Object -> Session m ()
+setConfig :: (MonadUnliftIO m, MonadLoggerIO m) => Object -> Session m ()
 setConfig newConfig = modifyConfig (const newConfig)
 
 {- | Modify a client config section (if already present, otherwise does nothing).
  This will send a notification to the server that the config has changed.
 -}
-modifyConfigSection :: MonadUnliftIO m => String -> (Value -> Value) -> Session m ()
+modifyConfigSection :: (MonadUnliftIO m, MonadLoggerIO m) => String -> (Value -> Value) -> Session m ()
 modifyConfigSection section f = modifyConfig (\o -> o & ix (fromString section) %~ f)
 
 {- | Set a client config section. This will send a notification to the server that the
  config has changed.
 -}
-setConfigSection :: MonadUnliftIO m => String -> Value -> Session m ()
+setConfigSection :: (MonadUnliftIO m, MonadLoggerIO m) => String -> Value -> Session m ()
 setConfigSection section settings = modifyConfig (\o -> o & at (fromString section) ?~ settings)
 
 {- | /Creates/ a new text document. This is different from 'openDoc'
@@ -568,7 +568,7 @@ setConfigSection section settings = modifyConfig (\o -> o & at (fromString secti
  @since 11.0.0.0
 -}
 createDoc ::
-  MonadUnliftIO m =>
+  (MonadUnliftIO m, MonadLoggerIO m) =>
   -- | The path to the document to open, __relative to the root directory__.
   FilePath ->
   -- | The text document's language identifier, e.g. @"haskell"@.
@@ -617,7 +617,7 @@ createDoc file languageId contents = do
 {- | Opens a text document that /exists on disk/, and sends a
  textDocument/didOpen notification to the server.
 -}
-openDoc :: MonadUnliftIO m => FilePath -> LanguageKind -> Session m TextDocumentIdentifier
+openDoc :: (MonadUnliftIO m, MonadLoggerIO m) => FilePath -> LanguageKind -> Session m TextDocumentIdentifier
 openDoc file languageId = do
   context <- ask
   let fp = rootDir context </> file
@@ -627,7 +627,7 @@ openDoc file languageId = do
 {- | This is a variant of `openDoc` that takes the file content as an argument.
  Use this is the file exists /outside/ of the current workspace.
 -}
-openDoc' :: MonadUnliftIO m => FilePath -> LanguageKind -> T.Text -> Session m TextDocumentIdentifier
+openDoc' :: (MonadUnliftIO m, MonadLoggerIO m) => FilePath -> LanguageKind -> T.Text -> Session m TextDocumentIdentifier
 openDoc' file languageId contents = do
   context <- ask
   let fp = rootDir context </> file
@@ -637,13 +637,13 @@ openDoc' file languageId contents = do
   pure $ TextDocumentIdentifier uri
 
 -- | Closes a text document and sends a textDocument/didOpen notification to the server.
-closeDoc :: MonadUnliftIO m => TextDocumentIdentifier -> Session m ()
+closeDoc :: (MonadUnliftIO m, MonadLoggerIO m) => TextDocumentIdentifier -> Session m ()
 closeDoc docId = do
   let params = DidCloseTextDocumentParams (TextDocumentIdentifier (docId ^. L.uri))
   sendNotification SMethod_TextDocumentDidClose params
 
 -- | Changes a text document and sends a textDocument/didOpen notification to the server.
-changeDoc :: MonadUnliftIO m => TextDocumentIdentifier -> [TextDocumentContentChangeEvent] -> Session m ()
+changeDoc :: (MonadUnliftIO m, MonadLoggerIO m) => TextDocumentIdentifier -> [TextDocumentContentChangeEvent] -> Session m ()
 changeDoc docId changes = do
   verDoc <- getVersionedDoc docId
   let params = DidChangeTextDocumentParams (verDoc & L.version +~ 1) changes
@@ -773,7 +773,7 @@ getIncompleteProgressSessions :: MonadIO m => Session m (Set.Set ProgressToken)
 getIncompleteProgressSessions = curProgressSessions <$> get
 
 -- | Executes a command.
-executeCommand :: MonadUnliftIO m => Command -> Session m ()
+executeCommand :: (MonadUnliftIO m, MonadLoggerIO m) => Command -> Session m ()
 executeCommand cmd = do
   let args = decode $ encode $ fromJust $ cmd ^. L.arguments
       execParams = ExecuteCommandParams Nothing (cmd ^. L.command) args
