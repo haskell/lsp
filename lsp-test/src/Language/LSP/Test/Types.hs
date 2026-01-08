@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 
 module Language.LSP.Test.Types where
@@ -12,14 +13,17 @@ import Data.Aeson hiding (Error, Null)
 import Data.Aeson.Lens ()
 import Data.Default
 import qualified Data.Map.Strict as Map
+import Data.Maybe
 import qualified Data.Set as Set
 import qualified Data.Text as T
 import Language.LSP.Protocol.Message as LSP
 import Language.LSP.Protocol.Types as LSP
 import Language.LSP.Test.Decoding
+import Language.LSP.Test.Exceptions
 import Language.LSP.VFS
 import System.IO
 import UnliftIO.Concurrent
+import UnliftIO.Exception
 
 -- | A session representing one instance of launching and connecting to a server.
 --
@@ -30,6 +34,19 @@ import UnliftIO.Concurrent
 
 newtype Session m a = Session { unwrapSession :: ReaderT SessionContext m a }
   deriving (Functor, Applicative, Alternative, Monad, MonadIO, MonadLogger, MonadLoggerIO, MonadThrow, MonadReader SessionContext, MonadUnliftIO, MonadMask, MonadCatch, MonadTrans)
+
+#if !MIN_VERSION_monad_logger(0,3,40)
+instance (Alternative m) => Alternative (LoggingT m) where
+  empty = LoggingT (\_ -> empty)
+  LoggingT x <|> LoggingT y = LoggingT (\f -> x f <|> y f)
+#endif
+
+#if __GLASGOW_HASKELL__ >= 806
+instance MonadIO m => MonadFail (Session m) where
+  fail s = do
+    lastMsg <- fromJust . lastReceivedMessage <$> (asks sessionState >>= readMVar)
+    liftIO $ throwIO (UnexpectedMessage s lastMsg)
+#endif
 
 -- | Stuff you can configure for a 'Session'.
 data SessionConfig = SessionConfig
