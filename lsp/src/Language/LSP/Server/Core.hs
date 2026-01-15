@@ -297,6 +297,18 @@ data Options = Options
   -- ^ The delay before starting a progress reporting session, in microseconds
   , optProgressUpdateDelay :: Int
   -- ^ The delay between sending progress updates, in microseconds
+  , optWorkspaceDidCreateFileOperationRegistrationOptions :: Maybe FileOperationRegistrationOptions
+  -- ^ Options for the 'Method_WorkspaceDidCreateFiles' request, in case the language server supports it
+  , optWorkspaceWillCreateFileOperationRegistrationOptions :: Maybe FileOperationRegistrationOptions
+  -- ^ Options for the 'Method_WorkspaceWillCreateFiles' notification, in case the language server supports it
+  , optWorkspaceDidRenameFileOperationRegistrationOptions :: Maybe FileOperationRegistrationOptions
+  -- ^ Options for the 'Method_WorkspaceDidRenameFiles' request, in case the language server supports it
+  , optWorkspaceWillRenameFileOperationRegistrationOptions :: Maybe FileOperationRegistrationOptions
+  -- ^ Options for the 'Method_WorkspaceWillRenameFiles' notification, in case the language server supports it
+  , optWorkspaceDidDeleteFileOperationRegistrationOptions :: Maybe FileOperationRegistrationOptions
+  -- ^ Options for the 'Method_WorkspaceDidDeleteFiles' request, in case the language server supports it
+  , optWorkspaceWillDeleteFileOperationRegistrationOptions :: Maybe FileOperationRegistrationOptions
+  -- ^ Options for the 'Method_WorkspaceWillDeleteFiles' notification, in case the language server supports it
   }
 
 instance Default Options where
@@ -315,6 +327,12 @@ instance Default Options where
       -- See Note [Delayed progress reporting]
       0
       0
+      Nothing
+      Nothing
+      Nothing
+      Nothing
+      Nothing
+      Nothing
 
 defaultOptions :: Options
 defaultOptions = def
