@@ -416,11 +416,22 @@ inferServerCapabilities _clientCaps o h =
     Just x -> Just (InL x)
     Nothing -> Nothing
 
-  workspace = WorkspaceOptions{_workspaceFolders = workspaceFolder, _fileOperations = Nothing}
+  workspace = WorkspaceOptions{_workspaceFolders = workspaceFolder, _fileOperations = Just fileOperations}
+
   workspaceFolder =
     supported' SMethod_WorkspaceDidChangeWorkspaceFolders $
       -- sign up to receive notifications
       WorkspaceFoldersServerCapabilities (Just True) (Just (InR True))
+
+  fileOperations =
+    FileOperationOptions
+      { _didCreate = join $ supported' SMethod_WorkspaceDidCreateFiles $ optWorkspaceDidCreateFileOperationRegistrationOptions o
+      , _willCreate = join $ supported' SMethod_WorkspaceWillCreateFiles $ optWorkspaceWillCreateFileOperationRegistrationOptions o
+      , _didRename = join $ supported' SMethod_WorkspaceDidRenameFiles $ optWorkspaceDidRenameFileOperationRegistrationOptions o
+      , _willRename = join $ supported' SMethod_WorkspaceWillRenameFiles $ optWorkspaceWillRenameFileOperationRegistrationOptions o
+      , _didDelete = join $ supported' SMethod_WorkspaceDidDeleteFiles $ optWorkspaceDidDeleteFileOperationRegistrationOptions o
+      , _willDelete = join $ supported' SMethod_WorkspaceWillDeleteFiles $ optWorkspaceWillDeleteFileOperationRegistrationOptions o
+      }
 
   diagnosticProvider =
     supported' SMethod_TextDocumentDiagnostic $
