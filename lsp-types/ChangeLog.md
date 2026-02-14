@@ -1,13 +1,14 @@
 # Revision history for lsp-types
 
-## Unreleased 
+## 2.4.0.0 -- 2026-02-14
 
 - export `emptyNormalizedUri` from `Language.LSP.Protocol.Types.Uri`
+- Relax dependency version bounds
 
 ## 2.3.0.1 -- 2024-12-31
 
 - Relax dependency version bounds
- 
+
 ## 2.3.0.0 -- 2024-06-06
 
 - Add support for identifying client and server capabilities associated with a method.
