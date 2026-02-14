@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               lsp-types
-version:            2.3.0.1
+version:            2.4.0.0
 synopsis:
   Haskell library for the Microsoft Language Server Protocol, data types
 
@@ -16,10 +16,11 @@ maintainer:         alan.zimm@gmail.com
 copyright:          Alan Zimmerman, 2016-2021
 category:           Development
 build-type:         Simple
-extra-source-files:
+extra-doc-files:
   ChangeLog.md
-  metaModel.json
   README.md
+extra-source-files:
+  metaModel.json
 
 source-repository head
   type:     git
@@ -65,7 +66,7 @@ library
     , aeson                          >=2     && <2.3
     , base                           >=4.11  && <5
     , binary                         ^>=0.8
-    , containers                     >=0.6 && < 0.8
+    , containers                     >=0.6 && < 0.9
     , data-default                   >=0.7 && < 0.9
     , deepseq                        >=1.4   && <1.6
     , Diff                           >=0.4   && <1.1
@@ -81,7 +82,7 @@ library
     , row-types                      ^>=1.0
     , safe                           ^>=0.3
     , some                           ^>=1.0
-    , template-haskell               >=2.7   && <2.24
+    , template-haskell               >=2.7   && <2.25
     , text                           >=1     && <2.2
 
   -- This version of filepath comes with GHC 9.6, so
@@ -584,7 +585,7 @@ library metamodel
     , base              >=4.11    && <5
     , file-embed        ^>=0.0.15
     , lens              >=5.1     && <5.4
-    , template-haskell  >=2.7     && <2.24
+    , template-haskell  >=2.7     && <2.25
     , text              >=1       && <2.2
 
 library lsp-types-quickcheck
