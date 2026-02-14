@@ -1,5 +1,18 @@
 # Revision history for lsp
 
+## 2.8.0.0 -- 2026-02-14
+
+- Fix link to swarm LSP server
+- Add support for FileOperationOptions
+- Replace forkIO with async for server listener
+- Graceful server exit
+- Add support for setting up language servers to use websockets
+- Allow flushing diagnostics by source and uri
+- Track closed files in the VFS
+- Track the languageId in Virtual File
+- Treat undefined and null initialization options the same way
+- Relax dependency version bounds
+
 ## 2.7.0.1 -- 2024-12-31
 
 - Relax dependency version bounds
@@ -24,13 +37,13 @@
 
 ## 2.4.0.0
 
-- Server-created progress now will not send reports until and unless the client 
+- Server-created progress now will not send reports until and unless the client
   confirms the progress token creation.
-- Progress helper functions now can take a progress token provided by the client, 
+- Progress helper functions now can take a progress token provided by the client,
   so client-initiated progress can now be supported properly.
 - The server options now allow the user to say whether the server should advertise
   support for client-initiated progress or not.
-- The server now dynamically registers for `workspace/didChangeConfiguration` 
+- The server now dynamically registers for `workspace/didChangeConfiguration`
   notifications, to ensure that newer clients continue to send them.
 - Removed `getCompletionPrefix` from the `VFS` module. This is specific to completing
   Haskell identifiers and doesn't belong here. It has already been moved to `ghcide`
@@ -52,13 +65,13 @@
     - `parseConfig` will now be called on the object corresponding to the configuration
       section, not the whole object.
     - New callback for when configuration changes, to allow servers to react.
-- The logging of messages sent by the protocol has been disabled, as this can prove 
+- The logging of messages sent by the protocol has been disabled, as this can prove
   troublesome for servers that log these to the client: https://github.com/haskell/lsp/issues/447
 
 ## 2.1.0.0
 
 * Fix handling of optional methods.
-* `staticHandlers` now takes the client capabilities as an argument. 
+* `staticHandlers` now takes the client capabilities as an argument.
   These are static across the lifecycle of the server, so this allows
   a server to decide at construction e.g. whether to provide handlers
   for resolve methods depending on whether the client supports it.
@@ -235,10 +248,10 @@ can use the result returned from `doInitialize` to pass along the
 `LanguageContextEnv` needed to run an `LspT`, as well as anything else your
 monad needs.
 ```haskell
-type 
+type
 ServerDefinition { ...
 , doInitialize = \env _req -> pure $ Right env
-, interpretHandler = \env -> Iso 
+, interpretHandler = \env -> Iso
    (runLspT env) -- how to convert from IO ~> m
    liftIO        -- how to convert from m ~> IO
 }

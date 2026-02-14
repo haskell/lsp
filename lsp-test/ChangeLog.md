@@ -1,5 +1,13 @@
 # Revision history for lsp-test
 
+## 0.18.0.0 -- 2026-02-14
+
+- Add a context parameter for getSignatureHelp
+- Add signature help request
+- Add workspace symbol request
+- Relax dependency version bounds
+- Expose resolveCompletion helper
+
 ## 0.17.1.1 -- 2024-12-31
 
 - Relax dependency version bounds
@@ -20,7 +28,7 @@
 
 - `ignoreRegistrationRequests` option to ignore `client/registerCapability` requests, on
   by default.
-- New functions `setIgnoringRegistrationRequests` to change whether such messages are 
+- New functions `setIgnoringRegistrationRequests` to change whether such messages are
   ignored during a `Session` without having to change the `SessionConfig`.
 - `lsp-test` will no longer send `workspace/didChangConfiguration` notifications unless
   the server dynamically registers for them.
@@ -60,7 +68,7 @@
 
 * Compatibility with new `lsp-types` major version.
 
-## 0.14.0.2 
+## 0.14.0.2
 
 * Compatibility with new `lsp-types` major version.
 
