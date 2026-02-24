@@ -80,6 +80,7 @@ library
     , network-uri                    ^>=2.6
     , prettyprinter                  ^>=1.7
     , row-types                      ^>=1.0
+    , text-rope                      ^>=0.3
     , safe                           ^>=0.3
     , some                           ^>=1.0
     , template-haskell               >=2.7   && <2.25
@@ -667,6 +668,7 @@ test-suite lsp-types-test
     , prettyprinter
     , QuickCheck
     , quickcheck-instances
+    , text-rope
     , text
 
   build-tool-depends: hspec-discover:hspec-discover

@@ -7,10 +7,13 @@ module Language.LSP.Protocol.Types.SemanticTokens where
 import Data.Text (Text)
 
 import Control.Monad.Except
+import Data.Text.Utf16.Rope.Mixed (Rope)
+import Data.Text.Utf16.Rope.Mixed qualified as Rope
 
 import Language.LSP.Protocol.Internal.Types.SemanticTokenModifiers
 import Language.LSP.Protocol.Internal.Types.SemanticTokenTypes
 import Language.LSP.Protocol.Internal.Types.SemanticTokens
+import Language.LSP.Protocol.Internal.Types.SemanticTokensClientCapabilities
 import Language.LSP.Protocol.Internal.Types.SemanticTokensDelta
 import Language.LSP.Protocol.Internal.Types.SemanticTokensEdit
 import Language.LSP.Protocol.Internal.Types.SemanticTokensLegend
@@ -18,6 +21,7 @@ import Language.LSP.Protocol.Types.Common
 import Language.LSP.Protocol.Types.LspEnum
 
 import Data.Algorithm.Diff qualified as Diff
+import Data.List qualified
 import Data.Bits qualified as Bits
 import Data.DList qualified as DList
 import Data.Foldable hiding (
@@ -171,12 +175,114 @@ computeEdits l r = DList.toList $ go 0 Nothing (Diff.getGroupedDiff l r) mempty
     let bothCount = fromIntegral $ Prelude.length bs
      in go (ix + bothCount) Nothing rest (acc <> DList.fromList (maybeToList e))
 
--- | Convenience method for making a 'SemanticTokens' from a list of 'SemanticTokenAbsolute's. An error may be returned if
+{- | Split tokens that span multiple lines into separate tokens for each line.
+Uses the document rope to accurately determine line break positions.
+Rope provides O(log n) line access, making this efficient even for large documents.
+-}
+splitMultilineTokens :: Rope -> [SemanticTokenAbsolute] -> [SemanticTokenAbsolute]
+splitMultilineTokens docRope = concatMap splitSingleToken
+  where
+    -- Get the UTF-16 length of a specific line (O(log n) with Rope)
+    getLineLength :: UInt -> UInt
+    getLineLength lineNum =
+      case Rope.splitAtLine (fromIntegral lineNum) docRope of
+        (_, suffix) -> case Rope.splitAtLine 1 suffix of
+          (lineRope, _) -> fromIntegral $ Rope.utf16Length lineRope
 
--- The resulting 'SemanticTokens' lacks a result ID, which must be set separately if you are using that.
-makeSemanticTokens :: SemanticTokensLegend -> [SemanticTokenAbsolute] -> Either Text SemanticTokens
-makeSemanticTokens legend sts = do
-  encoded <- encodeTokens legend $ relativizeTokens sts
+    splitSingleToken :: SemanticTokenAbsolute -> [SemanticTokenAbsolute]
+    splitSingleToken token@(SemanticTokenAbsolute line startChar len tokenType tokenMods) =
+      if len == 0 then [token]
+      else
+        let endChar = startChar + len
+            lineLen = getLineLength line
+            extendsToNextLine = endChar > lineLen
+
+            splitAcrossLines :: UInt -> UInt -> UInt -> [SemanticTokenAbsolute]
+            splitAcrossLines currentLine currentStartChar remainingLen
+              | remainingLen == 0 = []
+              | otherwise =
+                  let currentLineLen = getLineLength currentLine
+                      -- If we're past the end of the document, stop
+                      charsOnThisLine = if currentLineLen == 0 && currentStartChar == 0
+                                       then remainingLen  -- Include remaining length on this phantom line
+                                       else if currentStartChar >= currentLineLen
+                                       then 0
+                                       else min remainingLen (currentLineLen - currentStartChar)
+                      newToken = SemanticTokenAbsolute currentLine currentStartChar charsOnThisLine tokenType tokenMods
+                  in if charsOnThisLine > 0
+                     then newToken : splitAcrossLines (currentLine + 1) 0 (remainingLen - charsOnThisLine)
+                     else []  -- Stop if we can't make progress
+
+        in if extendsToNextLine
+           then splitAcrossLines line startChar len
+           else [token]
+
+{- | Resolve overlapping tokens by splitting them into non-overlapping segments.
+When tokens overlap, the second token's type is preserved in the overlap region.
+-}
+resolveOverlappingTokens :: [SemanticTokenAbsolute] -> [SemanticTokenAbsolute]
+resolveOverlappingTokens tokens =
+  let sortedTokens = Data.List.sortBy compareTokenPosition tokens
+  in resolveOverlaps sortedTokens []
+  where
+    compareTokenPosition :: SemanticTokenAbsolute -> SemanticTokenAbsolute -> Ordering
+    compareTokenPosition (SemanticTokenAbsolute l1 c1 _ _ _) (SemanticTokenAbsolute l2 c2 _ _ _) =
+      compare (l1, c1) (l2, c2)
+
+    tokenEnd :: SemanticTokenAbsolute -> (UInt, UInt)
+    tokenEnd (SemanticTokenAbsolute line startChar len _ _) = (line, startChar + len)
+
+    resolveOverlaps :: [SemanticTokenAbsolute] -> [SemanticTokenAbsolute] -> [SemanticTokenAbsolute]
+    resolveOverlaps [] acc = reverse acc
+    resolveOverlaps [token] acc = reverse (token : acc)
+    resolveOverlaps (token1@(SemanticTokenAbsolute l1 c1 len1 ty1 mods1) : token2@(SemanticTokenAbsolute l2 c2 len2 ty2 mods2) : rest) acc =
+      let (endL1, endC1) = tokenEnd token1
+          overlaps = l2 < endL1 || (l2 == endL1 && c2 < endC1)
+      in if overlaps
+         then
+           let (endL2, endC2) = tokenEnd token2
+               beforeOverlap = if l1 < l2 || (l1 == l2 && c1 < c2)
+                              then [SemanticTokenAbsolute l1 c1 (if l1 == l2 then c2 - c1 else len1) ty1 mods1]
+                              else []
+               overlapToken = SemanticTokenAbsolute l2 c2 len2 ty2 mods2
+               afterOverlap = if endL1 > endL2 || (endL1 == endL2 && endC1 > endC2)
+                             then [SemanticTokenAbsolute endL2 endC2
+                                   (if endL1 == endL2 then endC1 - endC2 else len1) ty1 mods1]
+                             else []
+           in resolveOverlaps rest (afterOverlap ++ [overlapToken] ++ beforeOverlap ++ acc)
+         else resolveOverlaps (token2 : rest) (token1 : acc)
+
+{- | Transform tokens based on client capabilities.
+If multiline tokens are not supported, split tokens that span multiple lines.
+If overlapping tokens are not supported, resolve overlapping tokens.
+-}
+transformTokensForCapabilities :: Maybe SemanticTokensClientCapabilities -> Rope -> [SemanticTokenAbsolute] -> [SemanticTokenAbsolute]
+transformTokensForCapabilities Nothing _ tokens = tokens
+transformTokensForCapabilities (Just caps) docRope tokens =
+  let supportsMultiline = fromMaybe False (_multilineTokenSupport caps)
+      supportsOverlapping = fromMaybe False (_overlappingTokenSupport caps)
+      tokens' = if supportsMultiline then tokens else splitMultilineTokens docRope tokens
+      tokens'' = if supportsOverlapping then tokens' else resolveOverlappingTokens tokens'
+  in tokens''
+
+{- | Convenience method for making a 'SemanticTokens' from a list of 'SemanticTokenAbsolute's.
+Automatically transforms tokens based on client capabilities:
+- Splits multiline tokens if client doesn't support them
+- Resolves overlapping tokens if client doesn't support them
+
+The document rope is required to properly split multiline tokens at actual line boundaries.
+Using Rope provides O(log n) line access for efficient processing of large documents.
+The resulting 'SemanticTokens' lacks a result ID, which must be set separately if you are using that.
+-}
+makeSemanticTokens ::
+  SemanticTokensLegend ->
+  Maybe SemanticTokensClientCapabilities ->
+  Rope ->
+  [SemanticTokenAbsolute] ->
+  Either Text SemanticTokens
+makeSemanticTokens legend caps docRope sts = do
+  let transformedTokens = transformTokensForCapabilities caps docRope sts
+  encoded <- encodeTokens legend $ relativizeTokens transformedTokens
   pure $ SemanticTokens Nothing encoded
 
 {- | Convenience function for making a 'SemanticTokensDelta' from a previous and current 'SemanticTokens'.
