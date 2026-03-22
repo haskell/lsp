@@ -620,7 +620,7 @@ trySendRegistration logger method regOpts = do
 
       pure (Just $ RegistrationToken method regId)
     else do
-      logger <& CantRegister SMethod_WorkspaceDidChangeConfiguration `WithSeverity` Warning
+      logger <& CantRegister method `WithSeverity` Warning
       pure Nothing
 
 {- | Sends a @client/unregisterCapability@ request and removes the handler
