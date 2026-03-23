@@ -298,9 +298,10 @@ dynamicRegistrationSupported m caps = fromMaybe False $ case m of
   SMethod_TextDocumentMoniker -> caps ^? dyn m
   SMethod_TextDocumentPrepareTypeHierarchy -> caps ^? dyn m
   SMethod_TextDocumentDiagnostic -> caps ^? dyn m
-  -- semantic tokens is messed up due to it having you register with an otherwise non-existent method
-  -- SMethod_TextDocumentSemanticTokens       -> capDyn $ clientCaps ^? L.textDocument . _Just . L.semanticTokens . _Just
-  -- Notebook document methods alway support dynamic registration, it seems?
+  SMethod_TextDocumentSemanticTokensFull -> caps ^? dyn m
+  SMethod_TextDocumentSemanticTokensFullDelta -> caps ^? dyn m
+  SMethod_TextDocumentSemanticTokensRange -> caps ^? dyn m
+  -- Notebook document methods always support dynamic registration, it seems?
   _ -> Just False
  where
   dyn :: L.HasDynamicRegistration (ClientCapability m) (Maybe Bool) => SMethod m -> Traversal' ClientCapabilities Bool
