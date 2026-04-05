@@ -6,6 +6,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module Language.LSP.Test.Session
   ( Session(..)
@@ -302,7 +303,7 @@ runSession' serverIn serverOut mServerProc serverHandler config caps rootDir exi
         (ignoreRegistrationRequests config)
       runSession' = runSessionMonad context initState
 
-      errorHandler = throwTo mainThreadId :: SessionException -> IO ()
+      errorHandler e = throwTo mainThreadId (SomeAsyncException (e :: SessionException))
       serverListenerLauncher =
         async $ catch (serverHandler serverOut context) errorHandler
       msgTimeoutMs = messageTimeout config * 10^6
@@ -316,10 +317,20 @@ runSession' serverIn serverOut mServerProc serverHandler config caps rootDir exi
 #endif
                   cleanupProcess (Just serverIn, Just serverOut, Nothing, sp)
               | otherwise = pure ()
-        finally (timeout msgTimeoutMs (runSession' exitServer))
-                -- Make sure to kill the listener first, before closing
-                -- handles etc via cleanupProcess
-                (cancel async >> cleanup)
+
+        finally
+          -- If we get interrupted by the listener thread, we may be waiting
+          -- for a message that won't come / reading from a handle that's been
+          -- closed.
+          --
+          -- Seeing as we're in the cleanup stage already, ignore that specific
+          -- class of errors.
+          (void (timeout msgTimeoutMs (runSession' exitServer)) `catch`
+            (\(asyncExceptionFromException -> Just (_ :: SessionException)) -> pure ()))
+
+          -- Make sure to kill the listener first, before closing
+          -- handles etc via cleanupProcess
+          (cancel async >> cleanup)
 
   (result, _) <- bracket serverListenerLauncher
                          serverAndListenerFinalizer
