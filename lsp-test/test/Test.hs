@@ -470,3 +470,9 @@ main = hspec $ around withDummyServer $ do
       doc <- openDoc "test/data/renamePass/Desktop/simple.hs" "haskell"
       inlayHints <- getAndResolveInlayHints doc (Range (Position 1 2) (Position 3 4))
       liftIO $ head inlayHints ^. L.tooltip `shouldBe` Just (InL $ "start at " <> T.pack (show (Position 1 2)))
+
+  describe "getDocumentLinks" $
+    it "works" $ \(hin, hout) -> runSessionWithHandles hin hout def fullLatestClientCaps "." $ do
+      let doc = TextDocumentIdentifier (Uri "")
+      documentLinks <- getDocumentLinks doc
+      liftIO $ documentLinks `shouldSatisfy` isJust

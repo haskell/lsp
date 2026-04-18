@@ -284,4 +284,14 @@ handlers =
             Success start = fromJSON data_
             ih = InlayHint{_data_ = Nothing, _tooltip = Just $ InL $ "start at " <> T.pack (show start), ..}
         resp $ Right ih
+    , requestHandler SMethod_TextDocumentDocumentLink $ \_req resp -> do
+        resp $
+          Right $
+            InL
+              [ DocumentLink
+                  (mkRange 0 0 0 5)
+                  (Just (Uri "file://..."))
+                  Nothing
+                  Nothing
+              ]
     ]
