@@ -145,6 +145,9 @@ module Language.LSP.Test (
   getWorkspaceSymbols,
   resolveWorkspaceSymbols,
 
+  -- ** Document Links
+  getDocumentLinks,
+
   -- ** Capabilities
   getRegisteredCapabilities,
 ) where
@@ -1062,6 +1065,11 @@ resolveWorkspaceSymbols :: WorkspaceSymbol -> Session WorkspaceSymbol
 resolveWorkspaceSymbols item = do
   rsp <- request SMethod_WorkspaceSymbolResolve item
   pure $ getResponseResult rsp
+
+getDocumentLinks :: TextDocumentIdentifier -> Session (Maybe [DocumentLink])
+getDocumentLinks doc =
+  let params = DocumentLinkParams Nothing Nothing doc
+   in nullToMaybe . getResponseResult <$> request SMethod_TextDocumentDocumentLink params
 
 {- | Returns a list of capabilities that the server has requested to /dynamically/
  register during the 'Session'.
