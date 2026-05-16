@@ -399,12 +399,18 @@ inferServerCapabilities _clientCaps o h =
         Just cmds -> ExecuteCommandOptions clientInitiatedProgress cmds
         Nothing -> error "executeCommandCommands needs to be set if a executeCommandHandler is set"
 
-  -- Always provide the default legend
+  -- Only advertise semantic tokens if the server has registered a handler for
+  -- at least one of the semantic-token request methods. Otherwise clients that
+  -- honor server capabilities (e.g. Neovim's built-in LSP client) will fire
+  -- requests we can't answer, producing spurious "no handler for" errors.
   -- TODO: allow user-provided legend via 'Options', or at least user-provided types
-  semanticTokensProvider =
-    Just $
-      InL $
-        SemanticTokensOptions clientInitiatedProgress defaultSemanticTokensLegend semanticTokenRangeProvider semanticTokenFullProvider
+  semanticTokensProvider
+    | supported_b SMethod_TextDocumentSemanticTokensFull
+        || supported_b SMethod_TextDocumentSemanticTokensRange =
+        Just $
+          InL $
+            SemanticTokensOptions clientInitiatedProgress defaultSemanticTokensLegend semanticTokenRangeProvider semanticTokenFullProvider
+    | otherwise = Nothing
   semanticTokenRangeProvider
     | supported_b SMethod_TextDocumentSemanticTokensRange = Just $ InL True
     | otherwise = Nothing
