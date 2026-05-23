@@ -4,6 +4,7 @@ module SemanticTokensSpec where
 
 import Data.Either (isRight)
 import Data.List (unfoldr)
+import Data.Text.Utf16.Rope.Mixed qualified as Rope
 import Language.LSP.Protocol.Types
 import Test.Hspec
 
@@ -77,3 +78,72 @@ spec = do
     it "handles big tokens" $
       -- It's a little hard to specify a useful predicate here, the main point is that it should not take too long
       computeEdits @UInt bigInts bigInts2 `shouldSatisfy` (not . null)
+
+  describe "splitMultilineTokens" $ do
+    it "splits a token spanning two lines" $ do
+      let docRope = Rope.fromText "hello\nworld"
+          token = SemanticTokenAbsolute 0 3 7 SemanticTokenTypes_String []
+          result = splitMultilineTokens docRope [token]
+      result `shouldBe`
+        -- Note: Rope.splitAtLine includes the newline in the first line, so line 0 has length 6 ("hello\n") and line 1 has length 5 ("world")
+        [ SemanticTokenAbsolute 0 3 3 SemanticTokenTypes_String []  -- "lo\n" on line 0 (chars 3-5, length 3)
+        , SemanticTokenAbsolute 1 0 4 SemanticTokenTypes_String []  -- "worl" on line 1 (remaining 4 chars of the token)
+        ]
+
+    it "doesn't split single-line tokens" $ do
+      let docRope = Rope.fromText "hello world"
+          token = SemanticTokenAbsolute 0 0 5 SemanticTokenTypes_String []
+          result = splitMultilineTokens docRope [token]
+      result `shouldBe` [token]
+
+    it "handles empty tokens" $ do
+      let docRope = Rope.fromText "test"
+          token = SemanticTokenAbsolute 0 0 0 SemanticTokenTypes_String []
+          result = splitMultilineTokens docRope [token]
+      result `shouldBe` [token]
+
+  describe "resolveOverlappingTokens" $ do
+    it "splits overlapping tokens correctly" $ do
+      let token1 = SemanticTokenAbsolute 0 0 10 SemanticTokenTypes_String []
+          token2 = SemanticTokenAbsolute 0 5 3 SemanticTokenTypes_Variable []
+          result = resolveOverlappingTokens [token1, token2]
+      result `shouldBe`
+        [ SemanticTokenAbsolute 0 0 5 SemanticTokenTypes_String []    -- before overlap
+        , SemanticTokenAbsolute 0 5 3 SemanticTokenTypes_Variable []  -- overlap (token2 wins)
+        , SemanticTokenAbsolute 0 8 2 SemanticTokenTypes_String []    -- after overlap
+        ]
+
+    it "doesn't modify non-overlapping tokens" $ do
+      let token1 = SemanticTokenAbsolute 0 0 5 SemanticTokenTypes_String []
+          token2 = SemanticTokenAbsolute 0 10 3 SemanticTokenTypes_Variable []
+          result = resolveOverlappingTokens [token1, token2]
+      result `shouldBe` [token1, token2]
+
+  describe "makeSemanticTokens with capabilities" $ do
+    it "splits multiline when not supported" $ do
+      let legend = defaultSemanticTokensLegend
+          caps = Just $ SemanticTokensClientCapabilities
+                   Nothing
+                   (ClientSemanticTokensRequestOptions Nothing Nothing)
+                   [] [] []
+                   Nothing
+                   (Just False)  -- multilineTokenSupport = False
+                   Nothing Nothing
+          docRope = Rope.fromText "ab\ncd"
+          tokens = [SemanticTokenAbsolute 0 0 5 SemanticTokenTypes_String []]
+          result = makeSemanticTokens legend caps docRope tokens
+      isRight result `shouldBe` True
+
+    it "preserves multiline when supported" $ do
+      let legend = defaultSemanticTokensLegend
+          caps = Just $ SemanticTokensClientCapabilities
+                   Nothing
+                   (ClientSemanticTokensRequestOptions Nothing Nothing)
+                   [] [] []
+                   Nothing
+                   (Just True)  -- multilineTokenSupport = True
+                   Nothing Nothing
+          docRope = Rope.fromText "ab\ncd"
+          tokens = [SemanticTokenAbsolute 0 0 5 SemanticTokenTypes_String []]
+          result = makeSemanticTokens legend caps docRope tokens
+      isRight result `shouldBe` True
