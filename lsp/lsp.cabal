@@ -79,7 +79,11 @@ library
     , unliftio              ^>=0.2
     , unliftio-core         ^>=0.2
     , unordered-containers  ^>=0.2
-    , websockets            ^>=0.13
+
+  if flag(websocket)
+    cpp-options:      -DENABLE_WEBSOCKET
+    build-depends:
+      websockets            ^>=0.13
 
 executable lsp-demo-reactor-server
   import:             warnings
@@ -117,6 +121,10 @@ executable lsp-demo-simple-server
 flag demo
   description: Build the demo executables
   default:     False
+
+flag websocket
+  description: Enable WebSocket support
+  default:     True
 
 test-suite lsp-test
   import:             warnings

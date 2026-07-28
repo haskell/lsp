@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -18,20 +19,20 @@ module Language.LSP.Server.Control (
   prependHeader,
   parseHeaders,
 
+#ifdef ENABLE_WEBSOCKET
   -- **  Using websockets
   WebsocketConfig (..),
   withWebsocket,
   withWebsocketRunServer,
+#endif  /* ENABLE_WEBSOCKET */
 ) where
 
 import Colog.Core (LogAction (..), Severity (..), WithSeverity (..), (<&))
 import Colog.Core qualified as L
 import Control.Applicative ((<|>))
-import Control.Concurrent
 import Control.Concurrent.Async
 import Control.Concurrent.STM.TChan
-import Control.Exception (catchJust, finally, throwIO)
-import Control.Monad
+import Control.Exception (catchJust, throwIO)
 import Control.Monad.IO.Class
 import Control.Monad.STM
 import Data.Aeson qualified as J
@@ -49,10 +50,16 @@ import Language.LSP.Protocol.Message
 import Language.LSP.Server.Core
 import Language.LSP.Server.Processing qualified as Processing
 import Language.LSP.VFS
-import Network.WebSockets qualified as WS
 import Prettyprinter
 import System.IO
 import System.IO.Error (isResourceVanishedError)
+
+#ifdef ENABLE_WEBSOCKET
+import Control.Concurrent
+import Control.Monad
+import Control.Exception (finally)
+import Network.WebSockets qualified as WS
+#endif  /* ENABLE_WEBSOCKET */
 
 data LspServerLog
   = LspProcessingLog Processing.LspProcessingLog
@@ -64,7 +71,9 @@ data LspServerLog
   | ServerStopped
   | ParsedMsg T.Text
   | SendMsg TL.Text
+#ifdef ENABLE_WEBSOCKET
   | WebsocketLog WebsocketLog
+#endif  /* ENABLE_WEBSOCKET */
   deriving (Show)
 
 instance Pretty LspServerLog where
@@ -89,7 +98,9 @@ instance Pretty LspServerLog where
   pretty Starting = "Server starting"
   pretty (ParsedMsg msg) = "---> " <> pretty msg
   pretty (SendMsg msg) = "<--2-- " <> pretty msg
+#ifdef ENABLE_WEBSOCKET
   pretty (WebsocketLog msg) = "Websocket:" <+> pretty msg
+#endif  /* ENABLE_WEBSOCKET */
 
 -- ---------------------------------------------------------------------
 
@@ -269,6 +280,8 @@ parseOne logger clientIn = go
 
 -- ---------------------------------------------------------------------
 
+#ifdef ENABLE_WEBSOCKET
+
 data WebsocketLog
   = WebsocketShutDown
   | WebsocketNewConnection
@@ -381,6 +394,8 @@ withWebsocketRunServer wsConf withLspDefinition ioLogger lspLogger =
           , parseInwards = Attoparsec.takeByteString
           }
         lspDefinition
+
+#endif  /* ENABLE_WEBSOCKET */
 
 -- ---------------------------------------------------------------------
 
