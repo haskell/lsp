@@ -29,6 +29,10 @@ source-repository head
 common warnings
   ghc-options: -Wall -Wunused-packages -Wno-unticked-promoted-constructors
 
+flag websocket
+  description: Enable WebSocket support
+  default:     True
+
 library
   import: warnings
   hs-source-dirs:     src
@@ -51,6 +55,10 @@ library
     Language.LSP.Server.Core
     Language.LSP.Server.Processing
     Language.LSP.Server.Progress
+
+  if flag(websocket)
+    other-modules:
+      Language.LSP.Server.Control.Websocket
 
   build-depends:
     , aeson                 >=2      && <2.3
@@ -81,7 +89,6 @@ library
     , unordered-containers  ^>=0.2
 
   if flag(websocket)
-    cpp-options:      -DENABLE_WEBSOCKET
     build-depends:
       websockets            ^>=0.13
 
@@ -121,10 +128,6 @@ executable lsp-demo-simple-server
 flag demo
   description: Build the demo executables
   default:     False
-
-flag websocket
-  description: Enable WebSocket support
-  default:     True
 
 test-suite lsp-test
   import:             warnings
