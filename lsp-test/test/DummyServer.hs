@@ -14,6 +14,7 @@ import Data.Map.Strict qualified as M
 import Data.Proxy
 import Data.String
 import Data.Text qualified as T
+import Data.Text.Utf16.Rope.Mixed qualified as Rope
 import Language.LSP.Protocol.Message
 import Language.LSP.Protocol.Types
 import Language.LSP.Server
@@ -259,7 +260,7 @@ handlers =
             InL
               [CallHierarchyOutgoingCall item [Range (Position 4 5) (Position 2 3)]]
     , requestHandler SMethod_TextDocumentSemanticTokensFull $ \_req resp -> do
-        let tokens = makeSemanticTokens defaultSemanticTokensLegend [SemanticTokenAbsolute 0 1 2 SemanticTokenTypes_Type []]
+        let tokens = makeSemanticTokens defaultSemanticTokensLegend Nothing (Rope.fromText "") [SemanticTokenAbsolute 0 1 2 SemanticTokenTypes_Type []]
         case tokens of
           Left t -> resp $ Left $ TResponseError (InR ErrorCodes_InternalError) t Nothing
           Right tokens -> resp $ Right $ InL tokens
