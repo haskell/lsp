@@ -21,9 +21,11 @@ import qualified Language.LSP.Protocol.Internal.Types.DidChangeConfigurationClie
 import qualified Language.LSP.Protocol.Internal.Types.DidChangeWatchedFilesClientCapabilities
 import qualified Language.LSP.Protocol.Internal.Types.ExecuteCommandClientCapabilities
 import qualified Language.LSP.Protocol.Internal.Types.FileOperationClientCapabilities
+import qualified Language.LSP.Protocol.Internal.Types.FoldingRangeWorkspaceClientCapabilities
 import qualified Language.LSP.Protocol.Internal.Types.InlayHintWorkspaceClientCapabilities
 import qualified Language.LSP.Protocol.Internal.Types.InlineValueWorkspaceClientCapabilities
 import qualified Language.LSP.Protocol.Internal.Types.SemanticTokensWorkspaceClientCapabilities
+import qualified Language.LSP.Protocol.Internal.Types.TextDocumentContentClientCapabilities
 import qualified Language.LSP.Protocol.Internal.Types.WorkspaceEditClientCapabilities
 import qualified Language.LSP.Protocol.Internal.Types.WorkspaceSymbolClientCapabilities
 import qualified Language.LSP.Protocol.Types.Common
@@ -111,13 +113,25 @@ data WorkspaceClientCapabilities = WorkspaceClientCapabilities
   @since 3.17.0.
   -}
   _diagnostics :: (Maybe Language.LSP.Protocol.Internal.Types.DiagnosticWorkspaceClientCapabilities.DiagnosticWorkspaceClientCapabilities)
+  , {-|
+  Capabilities specific to the folding range requests scoped to the workspace.
+
+  @since 3.18.0
+  -}
+  _foldingRange :: (Maybe Language.LSP.Protocol.Internal.Types.FoldingRangeWorkspaceClientCapabilities.FoldingRangeWorkspaceClientCapabilities)
+  , {-|
+  Capabilities specific to the `workspace/textDocumentContent` request.
+
+  @since 3.18.0
+  -}
+  _textDocumentContent :: (Maybe Language.LSP.Protocol.Internal.Types.TextDocumentContentClientCapabilities.TextDocumentContentClientCapabilities)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
   deriving Pretty via (ViaJSON WorkspaceClientCapabilities)
 
 instance Aeson.ToJSON WorkspaceClientCapabilities where
-  toJSON (WorkspaceClientCapabilities arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8 arg9 arg10 arg11 arg12 arg13) = Aeson.object $ concat $  ["applyEdit" Language.LSP.Protocol.Types.Common..=? arg0
+  toJSON (WorkspaceClientCapabilities arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8 arg9 arg10 arg11 arg12 arg13 arg14 arg15) = Aeson.object $ concat $  ["applyEdit" Language.LSP.Protocol.Types.Common..=? arg0
     ,"workspaceEdit" Language.LSP.Protocol.Types.Common..=? arg1
     ,"didChangeConfiguration" Language.LSP.Protocol.Types.Common..=? arg2
     ,"didChangeWatchedFiles" Language.LSP.Protocol.Types.Common..=? arg3
@@ -130,7 +144,9 @@ instance Aeson.ToJSON WorkspaceClientCapabilities where
     ,"fileOperations" Language.LSP.Protocol.Types.Common..=? arg10
     ,"inlineValue" Language.LSP.Protocol.Types.Common..=? arg11
     ,"inlayHint" Language.LSP.Protocol.Types.Common..=? arg12
-    ,"diagnostics" Language.LSP.Protocol.Types.Common..=? arg13]
+    ,"diagnostics" Language.LSP.Protocol.Types.Common..=? arg13
+    ,"foldingRange" Language.LSP.Protocol.Types.Common..=? arg14
+    ,"textDocumentContent" Language.LSP.Protocol.Types.Common..=? arg15]
 
 instance Aeson.FromJSON WorkspaceClientCapabilities where
-  parseJSON = Aeson.withObject "WorkspaceClientCapabilities" $ \arg -> WorkspaceClientCapabilities <$> arg Language.LSP.Protocol.Types.Common..:!? "applyEdit" <*> arg Language.LSP.Protocol.Types.Common..:!? "workspaceEdit" <*> arg Language.LSP.Protocol.Types.Common..:!? "didChangeConfiguration" <*> arg Language.LSP.Protocol.Types.Common..:!? "didChangeWatchedFiles" <*> arg Language.LSP.Protocol.Types.Common..:!? "symbol" <*> arg Language.LSP.Protocol.Types.Common..:!? "executeCommand" <*> arg Language.LSP.Protocol.Types.Common..:!? "workspaceFolders" <*> arg Language.LSP.Protocol.Types.Common..:!? "configuration" <*> arg Language.LSP.Protocol.Types.Common..:!? "semanticTokens" <*> arg Language.LSP.Protocol.Types.Common..:!? "codeLens" <*> arg Language.LSP.Protocol.Types.Common..:!? "fileOperations" <*> arg Language.LSP.Protocol.Types.Common..:!? "inlineValue" <*> arg Language.LSP.Protocol.Types.Common..:!? "inlayHint" <*> arg Language.LSP.Protocol.Types.Common..:!? "diagnostics"
+  parseJSON = Aeson.withObject "WorkspaceClientCapabilities" $ \arg -> WorkspaceClientCapabilities <$> arg Language.LSP.Protocol.Types.Common..:!? "applyEdit" <*> arg Language.LSP.Protocol.Types.Common..:!? "workspaceEdit" <*> arg Language.LSP.Protocol.Types.Common..:!? "didChangeConfiguration" <*> arg Language.LSP.Protocol.Types.Common..:!? "didChangeWatchedFiles" <*> arg Language.LSP.Protocol.Types.Common..:!? "symbol" <*> arg Language.LSP.Protocol.Types.Common..:!? "executeCommand" <*> arg Language.LSP.Protocol.Types.Common..:!? "workspaceFolders" <*> arg Language.LSP.Protocol.Types.Common..:!? "configuration" <*> arg Language.LSP.Protocol.Types.Common..:!? "semanticTokens" <*> arg Language.LSP.Protocol.Types.Common..:!? "codeLens" <*> arg Language.LSP.Protocol.Types.Common..:!? "fileOperations" <*> arg Language.LSP.Protocol.Types.Common..:!? "inlineValue" <*> arg Language.LSP.Protocol.Types.Common..:!? "inlayHint" <*> arg Language.LSP.Protocol.Types.Common..:!? "diagnostics" <*> arg Language.LSP.Protocol.Types.Common..:!? "foldingRange" <*> arg Language.LSP.Protocol.Types.Common..:!? "textDocumentContent"

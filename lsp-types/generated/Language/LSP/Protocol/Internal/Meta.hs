@@ -24,8 +24,6 @@ structNames = [''Language.LSP.Protocol.Internal.Types.ImplementationParams
   ,''Language.LSP.Protocol.Internal.Types.DocumentColorRegistrationOptions
   ,''Language.LSP.Protocol.Internal.Types.ColorPresentationParams
   ,''Language.LSP.Protocol.Internal.Types.ColorPresentation
-  ,''Language.LSP.Protocol.Internal.Types.WorkDoneProgressOptions
-  ,''Language.LSP.Protocol.Internal.Types.TextDocumentRegistrationOptions
   ,''Language.LSP.Protocol.Internal.Types.FoldingRangeParams
   ,''Language.LSP.Protocol.Internal.Types.FoldingRange
   ,''Language.LSP.Protocol.Internal.Types.FoldingRangeRegistrationOptions
@@ -75,7 +73,6 @@ structNames = [''Language.LSP.Protocol.Internal.Types.ImplementationParams
   ,''Language.LSP.Protocol.Internal.Types.InlayHint
   ,''Language.LSP.Protocol.Internal.Types.InlayHintRegistrationOptions
   ,''Language.LSP.Protocol.Internal.Types.DocumentDiagnosticParams
-  ,''Language.LSP.Protocol.Internal.Types.DocumentDiagnosticReportPartialResult
   ,''Language.LSP.Protocol.Internal.Types.DiagnosticServerCancellationData
   ,''Language.LSP.Protocol.Internal.Types.DiagnosticRegistrationOptions
   ,''Language.LSP.Protocol.Internal.Types.WorkspaceDiagnosticParams
@@ -86,6 +83,14 @@ structNames = [''Language.LSP.Protocol.Internal.Types.ImplementationParams
   ,''Language.LSP.Protocol.Internal.Types.DidChangeNotebookDocumentParams
   ,''Language.LSP.Protocol.Internal.Types.DidSaveNotebookDocumentParams
   ,''Language.LSP.Protocol.Internal.Types.DidCloseNotebookDocumentParams
+  ,''Language.LSP.Protocol.Internal.Types.InlineCompletionParams
+  ,''Language.LSP.Protocol.Internal.Types.InlineCompletionList
+  ,''Language.LSP.Protocol.Internal.Types.InlineCompletionItem
+  ,''Language.LSP.Protocol.Internal.Types.InlineCompletionRegistrationOptions
+  ,''Language.LSP.Protocol.Internal.Types.TextDocumentContentParams
+  ,''Language.LSP.Protocol.Internal.Types.TextDocumentContentResult
+  ,''Language.LSP.Protocol.Internal.Types.TextDocumentContentRegistrationOptions
+  ,''Language.LSP.Protocol.Internal.Types.TextDocumentContentRefreshParams
   ,''Language.LSP.Protocol.Internal.Types.RegistrationParams
   ,''Language.LSP.Protocol.Internal.Types.UnregistrationParams
   ,''Language.LSP.Protocol.Internal.Types.InitializeParams
@@ -99,6 +104,7 @@ structNames = [''Language.LSP.Protocol.Internal.Types.ImplementationParams
   ,''Language.LSP.Protocol.Internal.Types.MessageActionItem
   ,''Language.LSP.Protocol.Internal.Types.LogMessageParams
   ,''Language.LSP.Protocol.Internal.Types.DidOpenTextDocumentParams
+  ,''Language.LSP.Protocol.Internal.Types.TextDocumentRegistrationOptions
   ,''Language.LSP.Protocol.Internal.Types.DidChangeTextDocumentParams
   ,''Language.LSP.Protocol.Internal.Types.TextDocumentChangeRegistrationOptions
   ,''Language.LSP.Protocol.Internal.Types.DidCloseTextDocumentParams
@@ -147,6 +153,7 @@ structNames = [''Language.LSP.Protocol.Internal.Types.ImplementationParams
   ,''Language.LSP.Protocol.Internal.Types.DocumentFormattingRegistrationOptions
   ,''Language.LSP.Protocol.Internal.Types.DocumentRangeFormattingParams
   ,''Language.LSP.Protocol.Internal.Types.DocumentRangeFormattingRegistrationOptions
+  ,''Language.LSP.Protocol.Internal.Types.DocumentRangesFormattingParams
   ,''Language.LSP.Protocol.Internal.Types.DocumentOnTypeFormattingParams
   ,''Language.LSP.Protocol.Internal.Types.DocumentOnTypeFormattingRegistrationOptions
   ,''Language.LSP.Protocol.Internal.Types.RenameParams
@@ -205,8 +212,7 @@ structNames = [''Language.LSP.Protocol.Internal.Types.ImplementationParams
   ,''Language.LSP.Protocol.Internal.Types.InlayHintOptions
   ,''Language.LSP.Protocol.Internal.Types.RelatedFullDocumentDiagnosticReport
   ,''Language.LSP.Protocol.Internal.Types.RelatedUnchangedDocumentDiagnosticReport
-  ,''Language.LSP.Protocol.Internal.Types.FullDocumentDiagnosticReport
-  ,''Language.LSP.Protocol.Internal.Types.UnchangedDocumentDiagnosticReport
+  ,''Language.LSP.Protocol.Internal.Types.DocumentDiagnosticReportPartialResult
   ,''Language.LSP.Protocol.Internal.Types.DiagnosticOptions
   ,''Language.LSP.Protocol.Internal.Types.PreviousResultId
   ,''Language.LSP.Protocol.Internal.Types.NotebookDocument
@@ -215,6 +221,10 @@ structNames = [''Language.LSP.Protocol.Internal.Types.ImplementationParams
   ,''Language.LSP.Protocol.Internal.Types.VersionedNotebookDocumentIdentifier
   ,''Language.LSP.Protocol.Internal.Types.NotebookDocumentChangeEvent
   ,''Language.LSP.Protocol.Internal.Types.NotebookDocumentIdentifier
+  ,''Language.LSP.Protocol.Internal.Types.InlineCompletionContext
+  ,''Language.LSP.Protocol.Internal.Types.StringValue
+  ,''Language.LSP.Protocol.Internal.Types.InlineCompletionOptions
+  ,''Language.LSP.Protocol.Internal.Types.TextDocumentContentOptions
   ,''Language.LSP.Protocol.Internal.Types.Registration
   ,''Language.LSP.Protocol.Internal.Types.Unregistration
   ,''Language.LSP.Protocol.Internal.Types.UInitializeParams
@@ -230,6 +240,7 @@ structNames = [''Language.LSP.Protocol.Internal.Types.ImplementationParams
   ,''Language.LSP.Protocol.Internal.Types.CompletionItemLabelDetails
   ,''Language.LSP.Protocol.Internal.Types.InsertReplaceEdit
   ,''Language.LSP.Protocol.Internal.Types.CompletionItemDefaults
+  ,''Language.LSP.Protocol.Internal.Types.CompletionItemApplyKinds
   ,''Language.LSP.Protocol.Internal.Types.CompletionOptions
   ,''Language.LSP.Protocol.Internal.Types.HoverOptions
   ,''Language.LSP.Protocol.Internal.Types.SignatureHelpContext
@@ -256,21 +267,27 @@ structNames = [''Language.LSP.Protocol.Internal.Types.ImplementationParams
   ,''Language.LSP.Protocol.Internal.Types.PrepareRenamePlaceholder
   ,''Language.LSP.Protocol.Internal.Types.PrepareRenameDefaultBehavior
   ,''Language.LSP.Protocol.Internal.Types.ExecuteCommandOptions
+  ,''Language.LSP.Protocol.Internal.Types.WorkspaceEditMetadata
+  ,''Language.LSP.Protocol.Internal.Types.WorkDoneProgressOptions
   ,''Language.LSP.Protocol.Internal.Types.SemanticTokensLegend
   ,''Language.LSP.Protocol.Internal.Types.SemanticTokensFullDelta
   ,''Language.LSP.Protocol.Internal.Types.OptionalVersionedTextDocumentIdentifier
   ,''Language.LSP.Protocol.Internal.Types.AnnotatedTextEdit
+  ,''Language.LSP.Protocol.Internal.Types.SnippetTextEdit
   ,''Language.LSP.Protocol.Internal.Types.ResourceOperation
   ,''Language.LSP.Protocol.Internal.Types.CreateFileOptions
   ,''Language.LSP.Protocol.Internal.Types.RenameFileOptions
   ,''Language.LSP.Protocol.Internal.Types.DeleteFileOptions
   ,''Language.LSP.Protocol.Internal.Types.FileOperationPattern
+  ,''Language.LSP.Protocol.Internal.Types.FullDocumentDiagnosticReport
+  ,''Language.LSP.Protocol.Internal.Types.UnchangedDocumentDiagnosticReport
   ,''Language.LSP.Protocol.Internal.Types.WorkspaceFullDocumentDiagnosticReport
   ,''Language.LSP.Protocol.Internal.Types.WorkspaceUnchangedDocumentDiagnosticReport
   ,''Language.LSP.Protocol.Internal.Types.NotebookCell
   ,''Language.LSP.Protocol.Internal.Types.NotebookDocumentFilterWithNotebook
   ,''Language.LSP.Protocol.Internal.Types.NotebookDocumentFilterWithCells
   ,''Language.LSP.Protocol.Internal.Types.NotebookDocumentCellChanges
+  ,''Language.LSP.Protocol.Internal.Types.SelectedCompletionInfo
   ,''Language.LSP.Protocol.Internal.Types.ClientInfo
   ,''Language.LSP.Protocol.Internal.Types.ClientCapabilities
   ,''Language.LSP.Protocol.Internal.Types.TextDocumentSyncOptions
@@ -283,7 +300,7 @@ structNames = [''Language.LSP.Protocol.Internal.Types.ImplementationParams
   ,''Language.LSP.Protocol.Internal.Types.ServerCompletionItemOptions
   ,''Language.LSP.Protocol.Internal.Types.MarkedStringWithLanguage
   ,''Language.LSP.Protocol.Internal.Types.ParameterInformation
-  ,''Language.LSP.Protocol.Internal.Types.NotebookCellTextDocumentFilter
+  ,''Language.LSP.Protocol.Internal.Types.CodeActionKindDocumentation
   ,''Language.LSP.Protocol.Internal.Types.FileOperationPatternOptions
   ,''Language.LSP.Protocol.Internal.Types.ExecutionSummary
   ,''Language.LSP.Protocol.Internal.Types.NotebookCellLanguage
@@ -296,10 +313,8 @@ structNames = [''Language.LSP.Protocol.Internal.Types.ImplementationParams
   ,''Language.LSP.Protocol.Internal.Types.GeneralClientCapabilities
   ,''Language.LSP.Protocol.Internal.Types.WorkspaceFoldersServerCapabilities
   ,''Language.LSP.Protocol.Internal.Types.FileOperationOptions
+  ,''Language.LSP.Protocol.Internal.Types.NotebookCellTextDocumentFilter
   ,''Language.LSP.Protocol.Internal.Types.RelativePattern
-  ,''Language.LSP.Protocol.Internal.Types.TextDocumentFilterLanguage
-  ,''Language.LSP.Protocol.Internal.Types.TextDocumentFilterScheme
-  ,''Language.LSP.Protocol.Internal.Types.TextDocumentFilterPattern
   ,''Language.LSP.Protocol.Internal.Types.NotebookDocumentFilterNotebookType
   ,''Language.LSP.Protocol.Internal.Types.NotebookDocumentFilterScheme
   ,''Language.LSP.Protocol.Internal.Types.NotebookDocumentFilterPattern
@@ -315,7 +330,10 @@ structNames = [''Language.LSP.Protocol.Internal.Types.ImplementationParams
   ,''Language.LSP.Protocol.Internal.Types.InlineValueWorkspaceClientCapabilities
   ,''Language.LSP.Protocol.Internal.Types.InlayHintWorkspaceClientCapabilities
   ,''Language.LSP.Protocol.Internal.Types.DiagnosticWorkspaceClientCapabilities
+  ,''Language.LSP.Protocol.Internal.Types.FoldingRangeWorkspaceClientCapabilities
+  ,''Language.LSP.Protocol.Internal.Types.TextDocumentContentClientCapabilities
   ,''Language.LSP.Protocol.Internal.Types.TextDocumentSyncClientCapabilities
+  ,''Language.LSP.Protocol.Internal.Types.TextDocumentFilterClientCapabilities
   ,''Language.LSP.Protocol.Internal.Types.CompletionClientCapabilities
   ,''Language.LSP.Protocol.Internal.Types.HoverClientCapabilities
   ,''Language.LSP.Protocol.Internal.Types.SignatureHelpClientCapabilities
@@ -345,12 +363,16 @@ structNames = [''Language.LSP.Protocol.Internal.Types.ImplementationParams
   ,''Language.LSP.Protocol.Internal.Types.InlineValueClientCapabilities
   ,''Language.LSP.Protocol.Internal.Types.InlayHintClientCapabilities
   ,''Language.LSP.Protocol.Internal.Types.DiagnosticClientCapabilities
+  ,''Language.LSP.Protocol.Internal.Types.InlineCompletionClientCapabilities
   ,''Language.LSP.Protocol.Internal.Types.NotebookDocumentSyncClientCapabilities
   ,''Language.LSP.Protocol.Internal.Types.ShowMessageRequestClientCapabilities
   ,''Language.LSP.Protocol.Internal.Types.ShowDocumentClientCapabilities
   ,''Language.LSP.Protocol.Internal.Types.StaleRequestSupportOptions
   ,''Language.LSP.Protocol.Internal.Types.RegularExpressionsClientCapabilities
   ,''Language.LSP.Protocol.Internal.Types.MarkdownClientCapabilities
+  ,''Language.LSP.Protocol.Internal.Types.TextDocumentFilterLanguage
+  ,''Language.LSP.Protocol.Internal.Types.TextDocumentFilterScheme
+  ,''Language.LSP.Protocol.Internal.Types.TextDocumentFilterPattern
   ,''Language.LSP.Protocol.Internal.Types.ChangeAnnotationsSupportOptions
   ,''Language.LSP.Protocol.Internal.Types.ClientSymbolKindOptions
   ,''Language.LSP.Protocol.Internal.Types.ClientSymbolTagOptions
@@ -361,9 +383,11 @@ structNames = [''Language.LSP.Protocol.Internal.Types.ImplementationParams
   ,''Language.LSP.Protocol.Internal.Types.ClientSignatureInformationOptions
   ,''Language.LSP.Protocol.Internal.Types.ClientCodeActionLiteralOptions
   ,''Language.LSP.Protocol.Internal.Types.ClientCodeActionResolveOptions
+  ,''Language.LSP.Protocol.Internal.Types.CodeActionTagOptions
+  ,''Language.LSP.Protocol.Internal.Types.ClientCodeLensResolveOptions
   ,''Language.LSP.Protocol.Internal.Types.ClientFoldingRangeKindOptions
   ,''Language.LSP.Protocol.Internal.Types.ClientFoldingRangeOptions
-  ,''Language.LSP.Protocol.Internal.Types.ClientDiagnosticsTagOptions
+  ,''Language.LSP.Protocol.Internal.Types.DiagnosticsCapabilities
   ,''Language.LSP.Protocol.Internal.Types.ClientSemanticTokensRequestOptions
   ,''Language.LSP.Protocol.Internal.Types.ClientInlayHintResolveOptions
   ,''Language.LSP.Protocol.Internal.Types.ClientShowMessageActionItemOptions
@@ -372,6 +396,7 @@ structNames = [''Language.LSP.Protocol.Internal.Types.ImplementationParams
   ,''Language.LSP.Protocol.Internal.Types.ClientCompletionItemInsertTextModeOptions
   ,''Language.LSP.Protocol.Internal.Types.ClientSignatureParameterInformationOptions
   ,''Language.LSP.Protocol.Internal.Types.ClientCodeActionKindOptions
+  ,''Language.LSP.Protocol.Internal.Types.ClientDiagnosticsTagOptions
   ,''Language.LSP.Protocol.Internal.Types.ClientSemanticTokensRequestFullDelta]
 aliasNames :: [TH.Name]
 aliasNames = [''Language.LSP.Protocol.Internal.Types.Definition
@@ -380,17 +405,18 @@ aliasNames = [''Language.LSP.Protocol.Internal.Types.Definition
   ,''Language.LSP.Protocol.Internal.Types.DeclarationLink
   ,''Language.LSP.Protocol.Internal.Types.InlineValue
   ,''Language.LSP.Protocol.Internal.Types.DocumentDiagnosticReport
+  ,''Language.LSP.Protocol.Internal.Types.DocumentDiagnosticReportProgress
   ,''Language.LSP.Protocol.Internal.Types.PrepareRenameResult
-  ,''Language.LSP.Protocol.Internal.Types.DocumentSelector
   ,''Language.LSP.Protocol.Internal.Types.ProgressToken
   ,''Language.LSP.Protocol.Internal.Types.ChangeAnnotationIdentifier
   ,''Language.LSP.Protocol.Internal.Types.WorkspaceDocumentDiagnosticReport
+  ,''Language.LSP.Protocol.Internal.Types.DocumentSelector
   ,''Language.LSP.Protocol.Internal.Types.TextDocumentContentChangeEvent
   ,''Language.LSP.Protocol.Internal.Types.MarkedString
   ,''Language.LSP.Protocol.Internal.Types.DocumentFilter
   ,''Language.LSP.Protocol.Internal.Types.GlobPattern
-  ,''Language.LSP.Protocol.Internal.Types.TextDocumentFilter
   ,''Language.LSP.Protocol.Internal.Types.NotebookDocumentFilter
+  ,''Language.LSP.Protocol.Internal.Types.TextDocumentFilter
   ,''Language.LSP.Protocol.Internal.Types.Pattern
   ,''Language.LSP.Protocol.Internal.Types.RegularExpressionEngineKind]
 enumNames :: [TH.Name]
@@ -414,15 +440,18 @@ enumNames = [''Language.LSP.Protocol.Internal.Types.SemanticTokenTypes
   ,''Language.LSP.Protocol.Internal.Types.InsertTextMode
   ,''Language.LSP.Protocol.Internal.Types.DocumentHighlightKind
   ,''Language.LSP.Protocol.Internal.Types.CodeActionKind
+  ,''Language.LSP.Protocol.Internal.Types.CodeActionTag
   ,''Language.LSP.Protocol.Internal.Types.TraceValue
   ,''Language.LSP.Protocol.Internal.Types.MarkupKind
   ,''Language.LSP.Protocol.Internal.Types.LanguageKind
+  ,''Language.LSP.Protocol.Internal.Types.InlineCompletionTriggerKind
   ,''Language.LSP.Protocol.Internal.Types.PositionEncodingKind
   ,''Language.LSP.Protocol.Internal.Types.FileChangeType
   ,''Language.LSP.Protocol.Internal.Types.WatchKind
   ,''Language.LSP.Protocol.Internal.Types.DiagnosticSeverity
   ,''Language.LSP.Protocol.Internal.Types.DiagnosticTag
   ,''Language.LSP.Protocol.Internal.Types.CompletionTriggerKind
+  ,''Language.LSP.Protocol.Internal.Types.ApplyKind
   ,''Language.LSP.Protocol.Internal.Types.SignatureHelpTriggerKind
   ,''Language.LSP.Protocol.Internal.Types.CodeActionTriggerKind
   ,''Language.LSP.Protocol.Internal.Types.FileOperationPatternKind

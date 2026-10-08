@@ -23,7 +23,6 @@ Information about the server
 
 @since 3.15.0
 @since 3.18.0 ServerInfo type name added.
-@proposed
 -}
 data ServerInfo = ServerInfo 
   { {-|

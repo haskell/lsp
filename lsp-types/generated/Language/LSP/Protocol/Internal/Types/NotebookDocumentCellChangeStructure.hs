@@ -24,7 +24,6 @@ import qualified Language.LSP.Protocol.Types.Common
 Structural changes to cells in a notebook document.
 
 @since 3.18.0
-@proposed
 -}
 data NotebookDocumentCellChangeStructure = NotebookDocumentCellChangeStructure 
   { {-|

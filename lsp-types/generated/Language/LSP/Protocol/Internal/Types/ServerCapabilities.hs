@@ -42,6 +42,7 @@ import qualified Language.LSP.Protocol.Internal.Types.ImplementationOptions
 import qualified Language.LSP.Protocol.Internal.Types.ImplementationRegistrationOptions
 import qualified Language.LSP.Protocol.Internal.Types.InlayHintOptions
 import qualified Language.LSP.Protocol.Internal.Types.InlayHintRegistrationOptions
+import qualified Language.LSP.Protocol.Internal.Types.InlineCompletionOptions
 import qualified Language.LSP.Protocol.Internal.Types.InlineValueOptions
 import qualified Language.LSP.Protocol.Internal.Types.InlineValueRegistrationOptions
 import qualified Language.LSP.Protocol.Internal.Types.LinkedEditingRangeOptions
@@ -238,6 +239,12 @@ data ServerCapabilities = ServerCapabilities
   -}
   _diagnosticProvider :: (Maybe (Language.LSP.Protocol.Internal.Types.DiagnosticOptions.DiagnosticOptions Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.DiagnosticRegistrationOptions.DiagnosticRegistrationOptions))
   , {-|
+  Inline completion options used during static registration.
+
+  @since 3.18.0
+  -}
+  _inlineCompletionProvider :: (Maybe (Bool Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.InlineCompletionOptions.InlineCompletionOptions))
+  , {-|
   Workspace specific server capabilities.
   -}
   _workspace :: (Maybe Language.LSP.Protocol.Internal.Types.WorkspaceOptions.WorkspaceOptions)
@@ -251,7 +258,7 @@ data ServerCapabilities = ServerCapabilities
   deriving Pretty via (ViaJSON ServerCapabilities)
 
 instance Aeson.ToJSON ServerCapabilities where
-  toJSON (ServerCapabilities arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8 arg9 arg10 arg11 arg12 arg13 arg14 arg15 arg16 arg17 arg18 arg19 arg20 arg21 arg22 arg23 arg24 arg25 arg26 arg27 arg28 arg29 arg30 arg31 arg32 arg33 arg34) = Aeson.object $ concat $  ["positionEncoding" Language.LSP.Protocol.Types.Common..=? arg0
+  toJSON (ServerCapabilities arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8 arg9 arg10 arg11 arg12 arg13 arg14 arg15 arg16 arg17 arg18 arg19 arg20 arg21 arg22 arg23 arg24 arg25 arg26 arg27 arg28 arg29 arg30 arg31 arg32 arg33 arg34 arg35) = Aeson.object $ concat $  ["positionEncoding" Language.LSP.Protocol.Types.Common..=? arg0
     ,"textDocumentSync" Language.LSP.Protocol.Types.Common..=? arg1
     ,"notebookDocumentSync" Language.LSP.Protocol.Types.Common..=? arg2
     ,"completionProvider" Language.LSP.Protocol.Types.Common..=? arg3
@@ -284,8 +291,9 @@ instance Aeson.ToJSON ServerCapabilities where
     ,"inlineValueProvider" Language.LSP.Protocol.Types.Common..=? arg30
     ,"inlayHintProvider" Language.LSP.Protocol.Types.Common..=? arg31
     ,"diagnosticProvider" Language.LSP.Protocol.Types.Common..=? arg32
-    ,"workspace" Language.LSP.Protocol.Types.Common..=? arg33
-    ,"experimental" Language.LSP.Protocol.Types.Common..=? arg34]
+    ,"inlineCompletionProvider" Language.LSP.Protocol.Types.Common..=? arg33
+    ,"workspace" Language.LSP.Protocol.Types.Common..=? arg34
+    ,"experimental" Language.LSP.Protocol.Types.Common..=? arg35]
 
 instance Aeson.FromJSON ServerCapabilities where
-  parseJSON = Aeson.withObject "ServerCapabilities" $ \arg -> ServerCapabilities <$> arg Language.LSP.Protocol.Types.Common..:!? "positionEncoding" <*> arg Language.LSP.Protocol.Types.Common..:!? "textDocumentSync" <*> arg Language.LSP.Protocol.Types.Common..:!? "notebookDocumentSync" <*> arg Language.LSP.Protocol.Types.Common..:!? "completionProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "hoverProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "signatureHelpProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "declarationProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "definitionProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "typeDefinitionProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "implementationProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "referencesProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "documentHighlightProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "documentSymbolProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "codeActionProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "codeLensProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "documentLinkProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "colorProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "workspaceSymbolProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "documentFormattingProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "documentRangeFormattingProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "documentOnTypeFormattingProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "renameProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "foldingRangeProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "selectionRangeProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "executeCommandProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "callHierarchyProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "linkedEditingRangeProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "semanticTokensProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "monikerProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "typeHierarchyProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "inlineValueProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "inlayHintProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "diagnosticProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "workspace" <*> arg Language.LSP.Protocol.Types.Common..:!? "experimental"
+  parseJSON = Aeson.withObject "ServerCapabilities" $ \arg -> ServerCapabilities <$> arg Language.LSP.Protocol.Types.Common..:!? "positionEncoding" <*> arg Language.LSP.Protocol.Types.Common..:!? "textDocumentSync" <*> arg Language.LSP.Protocol.Types.Common..:!? "notebookDocumentSync" <*> arg Language.LSP.Protocol.Types.Common..:!? "completionProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "hoverProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "signatureHelpProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "declarationProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "definitionProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "typeDefinitionProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "implementationProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "referencesProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "documentHighlightProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "documentSymbolProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "codeActionProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "codeLensProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "documentLinkProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "colorProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "workspaceSymbolProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "documentFormattingProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "documentRangeFormattingProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "documentOnTypeFormattingProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "renameProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "foldingRangeProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "selectionRangeProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "executeCommandProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "callHierarchyProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "linkedEditingRangeProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "semanticTokensProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "monikerProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "typeHierarchyProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "inlineValueProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "inlayHintProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "diagnosticProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "inlineCompletionProvider" <*> arg Language.LSP.Protocol.Types.Common..:!? "workspace" <*> arg Language.LSP.Protocol.Types.Common..:!? "experimental"

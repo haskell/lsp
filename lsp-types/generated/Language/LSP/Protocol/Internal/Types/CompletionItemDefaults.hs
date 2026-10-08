@@ -30,7 +30,9 @@ edit. A completion list can therefore define item defaults which will
 be used if a completion item itself doesn't specify the value.
 
 If a completion list specifies a default value and a completion item
-also specifies a corresponding value the one from the item is used.
+also specifies a corresponding value, the rules for combining these are
+defined by `applyKinds` (if the client supports it), defaulting to
+ApplyKind.Replace.
 
 Servers are only allowed to return default values if the client
 signals support for this via the `completionList.itemDefaults`

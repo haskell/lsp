@@ -22,7 +22,6 @@ import qualified Language.LSP.Protocol.Types.Uri
 Location with only uri and does not include range.
 
 @since 3.18.0
-@proposed
 -}
 data LocationUriOnly = LocationUriOnly 
   { {-|

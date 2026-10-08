@@ -26,17 +26,17 @@ The parameters of a `RenameRequest`.
 -}
 data RenameParams = RenameParams 
   { {-|
-  An optional token that a server can use to report work done progress.
-  -}
-  _workDoneToken :: (Maybe Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken)
-  , {-|
-  The document to rename.
+  The text document.
   -}
   _textDocument :: Language.LSP.Protocol.Internal.Types.TextDocumentIdentifier.TextDocumentIdentifier
   , {-|
-  The position at which this request was sent.
+  The position inside the text document.
   -}
   _position :: Language.LSP.Protocol.Internal.Types.Position.Position
+  , {-|
+  An optional token that a server can use to report work done progress.
+  -}
+  _workDoneToken :: (Maybe Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken)
   , {-|
   The new name of the symbol. If the given name is not valid the
   request must return a `ResponseError` with an
@@ -49,10 +49,10 @@ data RenameParams = RenameParams
   deriving Pretty via (ViaJSON RenameParams)
 
 instance Aeson.ToJSON RenameParams where
-  toJSON (RenameParams arg0 arg1 arg2 arg3) = Aeson.object $ concat $  ["workDoneToken" Language.LSP.Protocol.Types.Common..=? arg0
-    ,["textDocument" Aeson..= arg1]
-    ,["position" Aeson..= arg2]
+  toJSON (RenameParams arg0 arg1 arg2 arg3) = Aeson.object $ concat $  [["textDocument" Aeson..= arg0]
+    ,["position" Aeson..= arg1]
+    ,"workDoneToken" Language.LSP.Protocol.Types.Common..=? arg2
     ,["newName" Aeson..= arg3]]
 
 instance Aeson.FromJSON RenameParams where
-  parseJSON = Aeson.withObject "RenameParams" $ \arg -> RenameParams <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneToken" <*> arg Aeson..: "textDocument" <*> arg Aeson..: "position" <*> arg Aeson..: "newName"
+  parseJSON = Aeson.withObject "RenameParams" $ \arg -> RenameParams <$> arg Aeson..: "textDocument" <*> arg Aeson..: "position" <*> arg Language.LSP.Protocol.Types.Common..:!? "workDoneToken" <*> arg Aeson..: "newName"

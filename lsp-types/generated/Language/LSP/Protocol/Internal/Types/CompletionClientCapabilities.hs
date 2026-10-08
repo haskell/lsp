@@ -35,7 +35,7 @@ data CompletionClientCapabilities = CompletionClientCapabilities
   -}
   _completionItem :: (Maybe Language.LSP.Protocol.Internal.Types.ClientCompletionItemOptions.ClientCompletionItemOptions)
   , {-|
-
+  The client supports the following completion item kinds.
   -}
   _completionItemKind :: (Maybe Language.LSP.Protocol.Internal.Types.ClientCompletionItemOptionsKind.ClientCompletionItemOptionsKind)
   , {-|

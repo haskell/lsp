@@ -21,7 +21,6 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 @since 3.18.0
-@proposed
 -}
 data ClientSignatureInformationOptions = ClientSignatureInformationOptions 
   { {-|
@@ -40,15 +39,24 @@ data ClientSignatureInformationOptions = ClientSignatureInformationOptions
   @since 3.16.0
   -}
   _activeParameterSupport :: (Maybe Bool)
+  , {-|
+  The client supports the `activeParameter` property on
+  `SignatureHelp`/`SignatureInformation` being set to `null` to
+  indicate that no parameter should be active.
+
+  @since 3.18.0
+  -}
+  _noActiveParameterSupport :: (Maybe Bool)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
   deriving Pretty via (ViaJSON ClientSignatureInformationOptions)
 
 instance Aeson.ToJSON ClientSignatureInformationOptions where
-  toJSON (ClientSignatureInformationOptions arg0 arg1 arg2) = Aeson.object $ concat $  ["documentationFormat" Language.LSP.Protocol.Types.Common..=? arg0
+  toJSON (ClientSignatureInformationOptions arg0 arg1 arg2 arg3) = Aeson.object $ concat $  ["documentationFormat" Language.LSP.Protocol.Types.Common..=? arg0
     ,"parameterInformation" Language.LSP.Protocol.Types.Common..=? arg1
-    ,"activeParameterSupport" Language.LSP.Protocol.Types.Common..=? arg2]
+    ,"activeParameterSupport" Language.LSP.Protocol.Types.Common..=? arg2
+    ,"noActiveParameterSupport" Language.LSP.Protocol.Types.Common..=? arg3]
 
 instance Aeson.FromJSON ClientSignatureInformationOptions where
-  parseJSON = Aeson.withObject "ClientSignatureInformationOptions" $ \arg -> ClientSignatureInformationOptions <$> arg Language.LSP.Protocol.Types.Common..:!? "documentationFormat" <*> arg Language.LSP.Protocol.Types.Common..:!? "parameterInformation" <*> arg Language.LSP.Protocol.Types.Common..:!? "activeParameterSupport"
+  parseJSON = Aeson.withObject "ClientSignatureInformationOptions" $ \arg -> ClientSignatureInformationOptions <$> arg Language.LSP.Protocol.Types.Common..:!? "documentationFormat" <*> arg Language.LSP.Protocol.Types.Common..:!? "parameterInformation" <*> arg Language.LSP.Protocol.Types.Common..:!? "activeParameterSupport" <*> arg Language.LSP.Protocol.Types.Common..:!? "noActiveParameterSupport"

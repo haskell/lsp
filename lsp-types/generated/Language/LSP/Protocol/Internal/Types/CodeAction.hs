@@ -19,6 +19,7 @@ import qualified Data.Row.Hashable as Hashable
 import qualified Data.Text
 import qualified Language.LSP.Protocol.Internal.Types.CodeActionDisabled
 import qualified Language.LSP.Protocol.Internal.Types.CodeActionKind
+import qualified Language.LSP.Protocol.Internal.Types.CodeActionTag
 import qualified Language.LSP.Protocol.Internal.Types.Command
 import qualified Language.LSP.Protocol.Internal.Types.Diagnostic
 import qualified Language.LSP.Protocol.Internal.Types.WorkspaceEdit
@@ -90,20 +91,27 @@ data CodeAction = CodeAction
   @since 3.16.0
   -}
   _data_ :: (Maybe Data.Aeson.Value)
+  , {-|
+  Tags for this code action.
+
+  @since 3.18.0
+  -}
+  _tags :: (Maybe [Language.LSP.Protocol.Internal.Types.CodeActionTag.CodeActionTag])
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
   deriving Pretty via (ViaJSON CodeAction)
 
 instance Aeson.ToJSON CodeAction where
-  toJSON (CodeAction arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7) = Aeson.object $ concat $  [["title" Aeson..= arg0]
+  toJSON (CodeAction arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8) = Aeson.object $ concat $  [["title" Aeson..= arg0]
     ,"kind" Language.LSP.Protocol.Types.Common..=? arg1
     ,"diagnostics" Language.LSP.Protocol.Types.Common..=? arg2
     ,"isPreferred" Language.LSP.Protocol.Types.Common..=? arg3
     ,"disabled" Language.LSP.Protocol.Types.Common..=? arg4
     ,"edit" Language.LSP.Protocol.Types.Common..=? arg5
     ,"command" Language.LSP.Protocol.Types.Common..=? arg6
-    ,"data" Language.LSP.Protocol.Types.Common..=? arg7]
+    ,"data" Language.LSP.Protocol.Types.Common..=? arg7
+    ,"tags" Language.LSP.Protocol.Types.Common..=? arg8]
 
 instance Aeson.FromJSON CodeAction where
-  parseJSON = Aeson.withObject "CodeAction" $ \arg -> CodeAction <$> arg Aeson..: "title" <*> arg Language.LSP.Protocol.Types.Common..:!? "kind" <*> arg Language.LSP.Protocol.Types.Common..:!? "diagnostics" <*> arg Language.LSP.Protocol.Types.Common..:!? "isPreferred" <*> arg Language.LSP.Protocol.Types.Common..:!? "disabled" <*> arg Language.LSP.Protocol.Types.Common..:!? "edit" <*> arg Language.LSP.Protocol.Types.Common..:!? "command" <*> arg Language.LSP.Protocol.Types.Common..:!? "data"
+  parseJSON = Aeson.withObject "CodeAction" $ \arg -> CodeAction <$> arg Aeson..: "title" <*> arg Language.LSP.Protocol.Types.Common..:!? "kind" <*> arg Language.LSP.Protocol.Types.Common..:!? "diagnostics" <*> arg Language.LSP.Protocol.Types.Common..:!? "isPreferred" <*> arg Language.LSP.Protocol.Types.Common..:!? "disabled" <*> arg Language.LSP.Protocol.Types.Common..:!? "edit" <*> arg Language.LSP.Protocol.Types.Common..:!? "command" <*> arg Language.LSP.Protocol.Types.Common..:!? "data" <*> arg Language.LSP.Protocol.Types.Common..:!? "tags"

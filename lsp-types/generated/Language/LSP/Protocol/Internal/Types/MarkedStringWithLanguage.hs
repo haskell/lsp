@@ -21,7 +21,6 @@ import qualified Language.LSP.Protocol.Types.Common
 {-# DEPRECATED MarkedStringWithLanguage "use MarkupContent instead." #-}
 {-|
 @since 3.18.0
-@proposed
 @deprecated use MarkupContent instead.
 -}
 data MarkedStringWithLanguage = MarkedStringWithLanguage 

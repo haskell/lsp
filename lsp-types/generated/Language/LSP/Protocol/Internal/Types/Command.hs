@@ -31,6 +31,12 @@ data Command = Command
   -}
   _title :: Data.Text.Text
   , {-|
+  An optional tooltip.
+
+  @since 3.18.0
+  -}
+  _tooltip :: (Maybe Data.Text.Text)
+  , {-|
   The identifier of the actual command handler.
   -}
   _command :: Data.Text.Text
@@ -45,9 +51,10 @@ data Command = Command
   deriving Pretty via (ViaJSON Command)
 
 instance Aeson.ToJSON Command where
-  toJSON (Command arg0 arg1 arg2) = Aeson.object $ concat $  [["title" Aeson..= arg0]
-    ,["command" Aeson..= arg1]
-    ,"arguments" Language.LSP.Protocol.Types.Common..=? arg2]
+  toJSON (Command arg0 arg1 arg2 arg3) = Aeson.object $ concat $  [["title" Aeson..= arg0]
+    ,"tooltip" Language.LSP.Protocol.Types.Common..=? arg1
+    ,["command" Aeson..= arg2]
+    ,"arguments" Language.LSP.Protocol.Types.Common..=? arg3]
 
 instance Aeson.FromJSON Command where
-  parseJSON = Aeson.withObject "Command" $ \arg -> Command <$> arg Aeson..: "title" <*> arg Aeson..: "command" <*> arg Language.LSP.Protocol.Types.Common..:!? "arguments"
+  parseJSON = Aeson.withObject "Command" $ \arg -> Command <$> arg Aeson..: "title" <*> arg Language.LSP.Protocol.Types.Common..:!? "tooltip" <*> arg Aeson..: "command" <*> arg Language.LSP.Protocol.Types.Common..:!? "arguments"

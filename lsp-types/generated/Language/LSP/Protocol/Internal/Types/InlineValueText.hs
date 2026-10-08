@@ -20,7 +20,7 @@ import qualified Language.LSP.Protocol.Internal.Types.Range
 import qualified Language.LSP.Protocol.Types.Common
 
 {-|
-Provide inline value as text.
+Returns inline value information as the complete text to be shown.
 
 @since 3.17.0
 -}

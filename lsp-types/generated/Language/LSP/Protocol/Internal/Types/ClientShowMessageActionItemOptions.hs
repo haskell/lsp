@@ -19,7 +19,6 @@ import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 @since 3.18.0
-@proposed
 -}
 data ClientShowMessageActionItemOptions = ClientShowMessageActionItemOptions 
   { {-|

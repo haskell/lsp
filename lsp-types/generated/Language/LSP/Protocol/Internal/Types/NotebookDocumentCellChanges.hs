@@ -24,7 +24,6 @@ import qualified Language.LSP.Protocol.Types.Common
 Cell changes to a notebook document.
 
 @since 3.18.0
-@proposed
 -}
 data NotebookDocumentCellChanges = NotebookDocumentCellChanges 
   { {-|

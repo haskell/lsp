@@ -23,7 +23,6 @@ import qualified Language.LSP.Protocol.Types.LspEnum
 {-|
 Predefined Language kinds
 @since 3.18.0
-@proposed
 -}
 data LanguageKind = 
     {-|
@@ -62,6 +61,14 @@ data LanguageKind =
 
   -}
   LanguageKind_CSS
+  | {-|
+  @since 3.18.0
+  -}
+  LanguageKind_D
+  | {-|
+  @since 3.18.0
+  -}
+  LanguageKind_Delphi
   | {-|
 
   -}
@@ -163,6 +170,10 @@ data LanguageKind =
   -}
   LanguageKind_ObjectiveCPP
   | {-|
+  @since 3.18.0
+  -}
+  LanguageKind_Pascal
+  | {-|
 
   -}
   LanguageKind_Perl
@@ -174,6 +185,10 @@ data LanguageKind =
 
   -}
   LanguageKind_PHP
+  | {-|
+
+  -}
+  LanguageKind_Plaintext
   | {-|
 
   -}
@@ -276,6 +291,8 @@ instance Language.LSP.Protocol.Types.LspEnum.LspEnum LanguageKind where
     ,LanguageKind_CPP
     ,LanguageKind_CSharp
     ,LanguageKind_CSS
+    ,LanguageKind_D
+    ,LanguageKind_Delphi
     ,LanguageKind_Diff
     ,LanguageKind_Dart
     ,LanguageKind_Dockerfile
@@ -301,9 +318,11 @@ instance Language.LSP.Protocol.Types.LspEnum.LspEnum LanguageKind where
     ,LanguageKind_Markdown
     ,LanguageKind_ObjectiveC
     ,LanguageKind_ObjectiveCPP
+    ,LanguageKind_Pascal
     ,LanguageKind_Perl
     ,LanguageKind_Perl6
     ,LanguageKind_PHP
+    ,LanguageKind_Plaintext
     ,LanguageKind_Powershell
     ,LanguageKind_Pug
     ,LanguageKind_Python
@@ -335,6 +354,8 @@ instance Language.LSP.Protocol.Types.LspEnum.LspEnum LanguageKind where
   toEnumBaseType LanguageKind_CPP = "cpp"
   toEnumBaseType LanguageKind_CSharp = "csharp"
   toEnumBaseType LanguageKind_CSS = "css"
+  toEnumBaseType LanguageKind_D = "d"
+  toEnumBaseType LanguageKind_Delphi = "pascal"
   toEnumBaseType LanguageKind_Diff = "diff"
   toEnumBaseType LanguageKind_Dart = "dart"
   toEnumBaseType LanguageKind_Dockerfile = "dockerfile"
@@ -342,7 +363,7 @@ instance Language.LSP.Protocol.Types.LspEnum.LspEnum LanguageKind where
   toEnumBaseType LanguageKind_Erlang = "erlang"
   toEnumBaseType LanguageKind_FSharp = "fsharp"
   toEnumBaseType LanguageKind_GitCommit = "git-commit"
-  toEnumBaseType LanguageKind_GitRebase = "rebase"
+  toEnumBaseType LanguageKind_GitRebase = "git-rebase"
   toEnumBaseType LanguageKind_Go = "go"
   toEnumBaseType LanguageKind_Groovy = "groovy"
   toEnumBaseType LanguageKind_Handlebars = "handlebars"
@@ -360,9 +381,11 @@ instance Language.LSP.Protocol.Types.LspEnum.LspEnum LanguageKind where
   toEnumBaseType LanguageKind_Markdown = "markdown"
   toEnumBaseType LanguageKind_ObjectiveC = "objective-c"
   toEnumBaseType LanguageKind_ObjectiveCPP = "objective-cpp"
+  toEnumBaseType LanguageKind_Pascal = "pascal"
   toEnumBaseType LanguageKind_Perl = "perl"
   toEnumBaseType LanguageKind_Perl6 = "perl6"
   toEnumBaseType LanguageKind_PHP = "php"
+  toEnumBaseType LanguageKind_Plaintext = "plaintext"
   toEnumBaseType LanguageKind_Powershell = "powershell"
   toEnumBaseType LanguageKind_Pug = "jade"
   toEnumBaseType LanguageKind_Python = "python"
@@ -396,6 +419,8 @@ instance Language.LSP.Protocol.Types.LspEnum.LspOpenEnum LanguageKind where
   fromOpenEnumBaseType "cpp" = LanguageKind_CPP
   fromOpenEnumBaseType "csharp" = LanguageKind_CSharp
   fromOpenEnumBaseType "css" = LanguageKind_CSS
+  fromOpenEnumBaseType "d" = LanguageKind_D
+  fromOpenEnumBaseType "pascal" = LanguageKind_Delphi
   fromOpenEnumBaseType "diff" = LanguageKind_Diff
   fromOpenEnumBaseType "dart" = LanguageKind_Dart
   fromOpenEnumBaseType "dockerfile" = LanguageKind_Dockerfile
@@ -403,7 +428,7 @@ instance Language.LSP.Protocol.Types.LspEnum.LspOpenEnum LanguageKind where
   fromOpenEnumBaseType "erlang" = LanguageKind_Erlang
   fromOpenEnumBaseType "fsharp" = LanguageKind_FSharp
   fromOpenEnumBaseType "git-commit" = LanguageKind_GitCommit
-  fromOpenEnumBaseType "rebase" = LanguageKind_GitRebase
+  fromOpenEnumBaseType "git-rebase" = LanguageKind_GitRebase
   fromOpenEnumBaseType "go" = LanguageKind_Go
   fromOpenEnumBaseType "groovy" = LanguageKind_Groovy
   fromOpenEnumBaseType "handlebars" = LanguageKind_Handlebars
@@ -421,9 +446,11 @@ instance Language.LSP.Protocol.Types.LspEnum.LspOpenEnum LanguageKind where
   fromOpenEnumBaseType "markdown" = LanguageKind_Markdown
   fromOpenEnumBaseType "objective-c" = LanguageKind_ObjectiveC
   fromOpenEnumBaseType "objective-cpp" = LanguageKind_ObjectiveCPP
+  fromOpenEnumBaseType "pascal" = LanguageKind_Pascal
   fromOpenEnumBaseType "perl" = LanguageKind_Perl
   fromOpenEnumBaseType "perl6" = LanguageKind_Perl6
   fromOpenEnumBaseType "php" = LanguageKind_PHP
+  fromOpenEnumBaseType "plaintext" = LanguageKind_Plaintext
   fromOpenEnumBaseType "powershell" = LanguageKind_Powershell
   fromOpenEnumBaseType "jade" = LanguageKind_Pug
   fromOpenEnumBaseType "python" = LanguageKind_Python

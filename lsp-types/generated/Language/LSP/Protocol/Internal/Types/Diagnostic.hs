@@ -21,6 +21,7 @@ import qualified Language.LSP.Protocol.Internal.Types.CodeDescription
 import qualified Language.LSP.Protocol.Internal.Types.DiagnosticRelatedInformation
 import qualified Language.LSP.Protocol.Internal.Types.DiagnosticSeverity
 import qualified Language.LSP.Protocol.Internal.Types.DiagnosticTag
+import qualified Language.LSP.Protocol.Internal.Types.MarkupContent
 import qualified Language.LSP.Protocol.Internal.Types.Range
 import qualified Language.LSP.Protocol.Types.Common
 
@@ -34,8 +35,9 @@ data Diagnostic = Diagnostic
   -}
   _range :: Language.LSP.Protocol.Internal.Types.Range.Range
   , {-|
-  The diagnostic's severity. Can be omitted. If omitted it is up to the
-  client to interpret diagnostics as error, warning, info or hint.
+  The diagnostic's severity. To avoid interpretation mismatches when a
+  server is used with different clients it is highly recommended that servers
+  always provide a severity value.
   -}
   _severity :: (Maybe Language.LSP.Protocol.Internal.Types.DiagnosticSeverity.DiagnosticSeverity)
   , {-|
@@ -56,9 +58,12 @@ data Diagnostic = Diagnostic
   -}
   _source :: (Maybe Data.Text.Text)
   , {-|
-  The diagnostic's message. It usually appears in the user interface
+  The diagnostic's message. It usually appears in the user interface.
+
+  @since 3.18.0 - support for MarkupContent. This is guarded by the client
+  capability `textDocument.diagnostic.markupMessageSupport`.
   -}
-  _message :: Data.Text.Text
+  _message :: (Data.Text.Text Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.MarkupContent.MarkupContent)
   , {-|
   Additional metadata about the diagnostic.
 

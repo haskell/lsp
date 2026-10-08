@@ -121,6 +121,10 @@ data SemanticTokenTypes =
   @since 3.17.0
   -}
   SemanticTokenTypes_Decorator
+  | {-|
+  @since 3.18.0
+  -}
+  SemanticTokenTypes_Label
   | SemanticTokenTypes_Custom Data.Text.Text
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
@@ -152,7 +156,8 @@ instance Language.LSP.Protocol.Types.LspEnum.LspEnum SemanticTokenTypes where
     ,SemanticTokenTypes_Number
     ,SemanticTokenTypes_Regexp
     ,SemanticTokenTypes_Operator
-    ,SemanticTokenTypes_Decorator]
+    ,SemanticTokenTypes_Decorator
+    ,SemanticTokenTypes_Label]
   type EnumBaseType SemanticTokenTypes = Data.Text.Text
   toEnumBaseType SemanticTokenTypes_Namespace = "namespace"
   toEnumBaseType SemanticTokenTypes_Type = "type"
@@ -177,6 +182,7 @@ instance Language.LSP.Protocol.Types.LspEnum.LspEnum SemanticTokenTypes where
   toEnumBaseType SemanticTokenTypes_Regexp = "regexp"
   toEnumBaseType SemanticTokenTypes_Operator = "operator"
   toEnumBaseType SemanticTokenTypes_Decorator = "decorator"
+  toEnumBaseType SemanticTokenTypes_Label = "label"
   toEnumBaseType (SemanticTokenTypes_Custom arg) = arg
 
 instance Language.LSP.Protocol.Types.LspEnum.LspOpenEnum SemanticTokenTypes where
@@ -203,6 +209,7 @@ instance Language.LSP.Protocol.Types.LspEnum.LspOpenEnum SemanticTokenTypes wher
   fromOpenEnumBaseType "regexp" = SemanticTokenTypes_Regexp
   fromOpenEnumBaseType "operator" = SemanticTokenTypes_Operator
   fromOpenEnumBaseType "decorator" = SemanticTokenTypes_Decorator
+  fromOpenEnumBaseType "label" = SemanticTokenTypes_Label
   fromOpenEnumBaseType arg = SemanticTokenTypes_Custom arg
 
 

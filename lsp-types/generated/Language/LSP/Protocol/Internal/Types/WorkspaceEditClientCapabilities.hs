@@ -59,17 +59,31 @@ data WorkspaceEditClientCapabilities = WorkspaceEditClientCapabilities
   @since 3.16.0
   -}
   _changeAnnotationSupport :: (Maybe Language.LSP.Protocol.Internal.Types.ChangeAnnotationsSupportOptions.ChangeAnnotationsSupportOptions)
+  , {-|
+  Whether the client supports `WorkspaceEditMetadata` in `WorkspaceEdit`s.
+
+  @since 3.18.0
+  -}
+  _metadataSupport :: (Maybe Bool)
+  , {-|
+  Whether the client supports snippets as text edits.
+
+  @since 3.18.0
+  -}
+  _snippetEditSupport :: (Maybe Bool)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
   deriving Pretty via (ViaJSON WorkspaceEditClientCapabilities)
 
 instance Aeson.ToJSON WorkspaceEditClientCapabilities where
-  toJSON (WorkspaceEditClientCapabilities arg0 arg1 arg2 arg3 arg4) = Aeson.object $ concat $  ["documentChanges" Language.LSP.Protocol.Types.Common..=? arg0
+  toJSON (WorkspaceEditClientCapabilities arg0 arg1 arg2 arg3 arg4 arg5 arg6) = Aeson.object $ concat $  ["documentChanges" Language.LSP.Protocol.Types.Common..=? arg0
     ,"resourceOperations" Language.LSP.Protocol.Types.Common..=? arg1
     ,"failureHandling" Language.LSP.Protocol.Types.Common..=? arg2
     ,"normalizesLineEndings" Language.LSP.Protocol.Types.Common..=? arg3
-    ,"changeAnnotationSupport" Language.LSP.Protocol.Types.Common..=? arg4]
+    ,"changeAnnotationSupport" Language.LSP.Protocol.Types.Common..=? arg4
+    ,"metadataSupport" Language.LSP.Protocol.Types.Common..=? arg5
+    ,"snippetEditSupport" Language.LSP.Protocol.Types.Common..=? arg6]
 
 instance Aeson.FromJSON WorkspaceEditClientCapabilities where
-  parseJSON = Aeson.withObject "WorkspaceEditClientCapabilities" $ \arg -> WorkspaceEditClientCapabilities <$> arg Language.LSP.Protocol.Types.Common..:!? "documentChanges" <*> arg Language.LSP.Protocol.Types.Common..:!? "resourceOperations" <*> arg Language.LSP.Protocol.Types.Common..:!? "failureHandling" <*> arg Language.LSP.Protocol.Types.Common..:!? "normalizesLineEndings" <*> arg Language.LSP.Protocol.Types.Common..:!? "changeAnnotationSupport"
+  parseJSON = Aeson.withObject "WorkspaceEditClientCapabilities" $ \arg -> WorkspaceEditClientCapabilities <$> arg Language.LSP.Protocol.Types.Common..:!? "documentChanges" <*> arg Language.LSP.Protocol.Types.Common..:!? "resourceOperations" <*> arg Language.LSP.Protocol.Types.Common..:!? "failureHandling" <*> arg Language.LSP.Protocol.Types.Common..:!? "normalizesLineEndings" <*> arg Language.LSP.Protocol.Types.Common..:!? "changeAnnotationSupport" <*> arg Language.LSP.Protocol.Types.Common..:!? "metadataSupport" <*> arg Language.LSP.Protocol.Types.Common..:!? "snippetEditSupport"

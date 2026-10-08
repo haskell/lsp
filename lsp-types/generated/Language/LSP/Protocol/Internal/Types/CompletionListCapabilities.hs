@@ -36,13 +36,28 @@ data CompletionListCapabilities = CompletionListCapabilities
   @since 3.17.0
   -}
   _itemDefaults :: (Maybe [Data.Text.Text])
+  , {-|
+  Specifies whether the client supports `CompletionList.applyKind` to
+  indicate how supported values from `completionList.itemDefaults`
+  and `completion` will be combined.
+
+  If a client supports `applyKind` it must support it for all fields
+  that it supports that are listed in `CompletionList.applyKind`. This
+  means when clients add support for new/future fields in completion
+  items the MUST also support merge for them if those fields are
+  defined in `CompletionList.applyKind`.
+
+  @since 3.18.0
+  -}
+  _applyKindSupport :: (Maybe Bool)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
   deriving Pretty via (ViaJSON CompletionListCapabilities)
 
 instance Aeson.ToJSON CompletionListCapabilities where
-  toJSON (CompletionListCapabilities arg0) = Aeson.object $ concat $  ["itemDefaults" Language.LSP.Protocol.Types.Common..=? arg0]
+  toJSON (CompletionListCapabilities arg0 arg1) = Aeson.object $ concat $  ["itemDefaults" Language.LSP.Protocol.Types.Common..=? arg0
+    ,"applyKindSupport" Language.LSP.Protocol.Types.Common..=? arg1]
 
 instance Aeson.FromJSON CompletionListCapabilities where
-  parseJSON = Aeson.withObject "CompletionListCapabilities" $ \arg -> CompletionListCapabilities <$> arg Language.LSP.Protocol.Types.Common..:!? "itemDefaults"
+  parseJSON = Aeson.withObject "CompletionListCapabilities" $ \arg -> CompletionListCapabilities <$> arg Language.LSP.Protocol.Types.Common..:!? "itemDefaults" <*> arg Language.LSP.Protocol.Types.Common..:!? "applyKindSupport"

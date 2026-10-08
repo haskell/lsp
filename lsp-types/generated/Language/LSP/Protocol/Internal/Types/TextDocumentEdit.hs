@@ -17,6 +17,7 @@ import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
 import qualified Language.LSP.Protocol.Internal.Types.AnnotatedTextEdit
 import qualified Language.LSP.Protocol.Internal.Types.OptionalVersionedTextDocumentIdentifier
+import qualified Language.LSP.Protocol.Internal.Types.SnippetTextEdit
 import qualified Language.LSP.Protocol.Internal.Types.TextEdit
 import qualified Language.LSP.Protocol.Types.Common
 
@@ -36,8 +37,11 @@ data TextDocumentEdit = TextDocumentEdit
 
   @since 3.16.0 - support for AnnotatedTextEdit. This is guarded using a
   client capability.
+
+  @since 3.18.0 - support for SnippetTextEdit. This is guarded using a
+  client capability.
   -}
-  _edits :: [(Language.LSP.Protocol.Internal.Types.TextEdit.TextEdit Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.AnnotatedTextEdit.AnnotatedTextEdit)]
+  _edits :: [(Language.LSP.Protocol.Internal.Types.TextEdit.TextEdit Language.LSP.Protocol.Types.Common.|? (Language.LSP.Protocol.Internal.Types.AnnotatedTextEdit.AnnotatedTextEdit Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.SnippetTextEdit.SnippetTextEdit))]
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

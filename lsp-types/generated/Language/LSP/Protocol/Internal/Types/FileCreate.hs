@@ -15,8 +15,8 @@ import Prettyprinter
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
-import qualified Data.Text
 import qualified Language.LSP.Protocol.Types.Common
+import qualified Language.LSP.Protocol.Types.Uri
 
 {-|
 Represents information on a file/folder create.
@@ -25,9 +25,9 @@ Represents information on a file/folder create.
 -}
 data FileCreate = FileCreate 
   { {-|
-  A file:// URI for the location of the file/folder being created.
+  A URI for the location of the file/folder being created.
   -}
-  _uri :: Data.Text.Text
+  _uri :: Language.LSP.Protocol.Types.Uri.Uri
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
