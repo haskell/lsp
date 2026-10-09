@@ -231,6 +231,11 @@ clientCapability = \case
   SMethod_SetTrace -> noCap
   SMethod_LogTrace -> noCap
   SMethod_CancelRequest -> noCap
+  SMethod_WorkspaceFoldingRangeRefresh -> undefined
+  SMethod_TextDocumentInlineCompletion -> undefined
+  SMethod_WorkspaceTextDocumentContent -> undefined
+  SMethod_WorkspaceTextDocumentContentRefresh -> undefined
+  SMethod_TextDocumentRangesFormatting -> undefined
   (SMethod_CustomMethod _s) -> noCap
  where
   ws :: Lens' ClientCapabilities WorkspaceClientCapabilities
@@ -359,6 +364,8 @@ fullClientCapsForVersion v@(LSPVersion maj min) = caps
                 Nothing
                 (since 3 16 True)
                 (since 3 16 (ChangeAnnotationsSupportOptions{_groupsOnLabel = Just True}))
+                undefined
+                undefined
             )
       , _didChangeConfiguration = methCaps SMethod_WorkspaceDidChangeConfiguration
       , _didChangeWatchedFiles = methCaps SMethod_WorkspaceDidChangeWatchedFiles
@@ -372,6 +379,8 @@ fullClientCapsForVersion v@(LSPVersion maj min) = caps
       , _fileOperations = methCaps SMethod_WorkspaceDidCreateFiles
       , _inlineValue = methCaps SMethod_WorkspaceInlineValueRefresh
       , _diagnostics = methCaps SMethod_WorkspaceDiagnostic
+      , _foldingRange = undefined
+      , _textDocumentContent = undefined
       }
 
   td =
@@ -406,6 +415,8 @@ fullClientCapsForVersion v@(LSPVersion maj min) = caps
       , _typeHierarchy = methCaps SMethod_TextDocumentPrepareTypeHierarchy
       , _inlineValue = methCaps SMethod_TextDocumentInlineValue
       , _diagnostic = methCaps SMethod_TextDocumentDiagnostic
+      , _filters = undefined
+      , _inlineCompletion = undefined
       }
 
   since :: Int -> Int -> a -> Maybe a
@@ -509,6 +520,11 @@ fullClientCapsForVersionAndMethod (LSPVersion maj min) = \case
   SMethod_SetTrace -> Nothing
   SMethod_LogTrace -> Nothing
   SMethod_CancelRequest -> Nothing
+  SMethod_WorkspaceFoldingRangeRefresh -> undefined
+  SMethod_TextDocumentInlineCompletion -> undefined
+  SMethod_WorkspaceTextDocumentContent -> undefined
+  SMethod_WorkspaceTextDocumentContentRefresh -> undefined
+  SMethod_TextDocumentRangesFormatting -> undefined
   (SMethod_CustomMethod _s) -> Nothing
  where
   workDoneProgress = since 3 15 True
@@ -556,7 +572,7 @@ fullClientCapsForVersionAndMethod (LSPVersion maj min) = \case
         , _completionItemKind = since 3 4 (ClientCompletionItemOptionsKind{_valueSet = Just ciKs})
         , _insertTextMode = since 3 17 InsertTextMode_AsIs
         , _contextSupport = since 3 3 True
-        , _completionList = since 3 17 (CompletionListCapabilities{_itemDefaults = Just []})
+        , _completionList = since 3 17 (CompletionListCapabilities{_itemDefaults = Just [], _applyKindSupport = undefined })
         }
   hover =
     Just $
@@ -574,6 +590,7 @@ fullClientCapsForVersionAndMethod (LSPVersion maj min) = \case
                 { _documentationFormat = Just allMarkups
                 , _parameterInformation = Just (ClientSignatureParameterInformationOptions{_labelOffsetSupport = Just True})
                 , _activeParameterSupport = Just True
+                , _noActiveParameterSupport = Nothing
                 }
         , _contextSupport = since 3 16 True
         }
@@ -590,7 +607,7 @@ fullClientCapsForVersionAndMethod (LSPVersion maj min) = \case
         , _labelSupport = since 3 16 True
         }
   formatting = Just $ DocumentFormattingClientCapabilities dynamicReg
-  rangeFormatting = Just $ DocumentRangeFormattingClientCapabilities dynamicReg
+  rangeFormatting = Just $ DocumentRangeFormattingClientCapabilities dynamicReg (since 3 18 undefined)
   onTypeFormatting = Just $ DocumentOnTypeFormattingClientCapabilities dynamicReg
   declaration = since 3 14 (DeclarationClientCapabilities dynamicReg (Just True))
   definition = Just (DefinitionClientCapabilities dynamicReg (since 3 14 True))
@@ -606,8 +623,10 @@ fullClientCapsForVersionAndMethod (LSPVersion maj min) = \case
         , _dataSupport = since 3 16 True
         , _resolveSupport = since 3 16 (ClientCodeActionResolveOptions{_properties = []})
         , _honorsChangeAnnotations = since 3 16 True
+        , _documentationSupport = since 3 18 undefined
+        , _tagSupport = since 3 18 undefined
         }
-  codeLens = Just (CodeLensClientCapabilities dynamicReg)
+  codeLens = Just (CodeLensClientCapabilities dynamicReg (since 3 18 clientCodeLensResolveOptions))
   documentLink = Just (DocumentLinkClientCapabilities dynamicReg (since 3 15 True))
   colorProvider = since 3 6 (DocumentColorClientCapabilities dynamicReg)
   rename = Just (RenameClientCapabilities dynamicReg (since 3 12 True) (since 3 16 PrepareSupportDefaultBehavior_Identifier) (since 3 16 True))
@@ -654,7 +673,7 @@ fullClientCapsForVersionAndMethod (LSPVersion maj min) = \case
         }
   typeHierarchy = since 3 17 (TypeHierarchyClientCapabilities dynamicReg)
   inlineValue = since 3 17 (InlineValueClientCapabilities dynamicReg)
-  diagnostic = since 3 17 (DiagnosticClientCapabilities dynamicReg (Just True))
+  diagnostic = since 3 17 diagnosticClientCapabilities
 
   completionItemCapabilities =
     ClientCompletionItemOptions
@@ -668,6 +687,27 @@ fullClientCapsForVersionAndMethod (LSPVersion maj min) = \case
       , _resolveSupport = since 3 16 (ClientCompletionItemResolveOptions{_properties = ["documentation", "details"]})
       , _insertTextModeSupport = since 3 16 (ClientCompletionItemInsertTextModeOptions{_valueSet = []})
       , _labelDetailsSupport = since 3 17 True
+      }
+
+  clientCodeLensResolveOptions =
+    ClientCodeLensResolveOptions
+      { _properties = undefined
+      }
+
+  diagnosticClientCapabilities =
+    DiagnosticClientCapabilities
+      { _dynamicRegistration = dynamicReg
+      , _relatedInformation = Just True
+      , _tagSupport = since 3 18 clientDiagnosticsTagOptions
+      , _codeDescriptionSupport = undefined
+      , _dataSupport = undefined
+      , _relatedDocumentSupport = undefined
+      , _markupMessageSupport = undefined
+      }
+
+  clientDiagnosticsTagOptions =
+    ClientDiagnosticsTagOptions
+      { _valueSet = []
       }
 
   sKs
@@ -961,6 +1001,11 @@ serverCapability = \case
   SMethod_SetTrace -> noCap
   SMethod_LogTrace -> noCap
   SMethod_CancelRequest -> noCap
+  SMethod_WorkspaceFoldingRangeRefresh -> undefined
+  SMethod_TextDocumentInlineCompletion -> undefined
+  SMethod_WorkspaceTextDocumentContent -> undefined
+  SMethod_WorkspaceTextDocumentContentRefresh -> undefined
+  SMethod_TextDocumentRangesFormatting -> undefined
   (SMethod_CustomMethod _s) -> noCap
  where
   fileOps :: Lens' ServerCapabilities (Maybe FileOperationOptions)
@@ -979,16 +1024,16 @@ noCap = lens g s
 
 -- TODO: this is silly
 emptyWorkspaceClientCaps :: WorkspaceClientCapabilities
-emptyWorkspaceClientCaps = WorkspaceClientCapabilities Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+emptyWorkspaceClientCaps = WorkspaceClientCapabilities Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
 emptyWindowClientCaps :: WindowClientCapabilities
 emptyWindowClientCaps = WindowClientCapabilities Nothing Nothing Nothing
 emptyTextDocumentClientCaps :: TextDocumentClientCapabilities
-emptyTextDocumentClientCaps = TextDocumentClientCapabilities Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+emptyTextDocumentClientCaps = TextDocumentClientCapabilities Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
 emptyNotebookDocumentClientCaps :: NotebookDocumentClientCapabilities
 emptyNotebookDocumentClientCaps = NotebookDocumentClientCapabilities (NotebookDocumentSyncClientCapabilities Nothing Nothing)
 
 emptyWorkspaceServerCaps :: WorkspaceOptions
-emptyWorkspaceServerCaps = WorkspaceOptions Nothing Nothing
+emptyWorkspaceServerCaps = WorkspaceOptions Nothing Nothing Nothing
 
 {- Note [Capability mappings]
 Sadly these are all manually defined as we don't have the information in the metamodel to do them automatically.
