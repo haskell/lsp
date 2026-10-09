@@ -29,6 +29,7 @@ import Data.List (stripPrefix)
 import Data.String (IsString (fromString))
 import Data.Text (Text)
 import Data.Text qualified as T
+import Data.Text.From (fromText)
 import GHC.Generics
 import GHC.IO.Encoding (getFileSystemEncoding)
 import Network.URI hiding (authority)
@@ -36,9 +37,9 @@ import Prettyprinter
 import Safe (tailMay)
 import System.FilePath.Posix qualified as FPP
 import System.FilePath.Windows qualified as FPW
-import System.Info qualified
 import System.IO (TextEncoding, utf16le)
 import System.IO.Unsafe (unsafePerformIO)
+import System.Info qualified
 import System.OsPath qualified as OSP
 
 -- | The @Uri@ type in the LSP specification.
@@ -108,13 +109,15 @@ systemEnc :: TextEncoding
 systemEnc = unsafePerformIO getFileSystemEncoding
 {-# NOINLINE systemEnc #-}
 
--- | Encode a 'FilePath' into an 'OsPath' using the system encoding.
--- Imprecise-exception (error) on pathological encodings.
+{- | Encode a 'FilePath' into an 'OsPath' using the system encoding.
+Imprecise-exception (error) on pathological encodings.
+-}
 pathToOsPath :: FilePath -> OSP.OsPath
 pathToOsPath = either (error . show) id . OSP.encodeWith systemEnc utf16le
 
--- | Decode an 'OsPath' into a 'FilePath' using the system encoding.
--- Imprecise-exception (error) on pathological encodings.
+{- | Decode an 'OsPath' into a 'FilePath' using the system encoding.
+Imprecise-exception (error) on pathological encodings.
+-}
 osPathToPath :: OSP.OsPath -> FilePath
 osPathToPath = either (error . show) id . OSP.decodeWith systemEnc utf16le
 
@@ -129,8 +132,9 @@ platformAwareUriToFilePath systemOS uri =
   uriToFilePathString systemOS uri >>= \fp ->
     either (const Nothing) Just (OSP.encodeWith systemEnc utf16le fp)
 
--- | Internal String-returning pipeline, shared by 'platformAwareUriToFilePath'
--- and 'uriToNormalizedFilePath'.
+{- | Internal String-returning pipeline, shared by 'platformAwareUriToFilePath'
+and 'uriToNormalizedFilePath'.
+-}
 uriToFilePathString :: String -> Uri -> Maybe FilePath
 uriToFilePathString systemOS (Uri uri) = do
   URI{..} <- parseURI $ T.unpack uri
@@ -270,9 +274,15 @@ toNormalizedFilePath osp = NormalizedFilePath nuri . T.pack $ nfp
   nfp = osPathToPath osp'
   nuri = internalNormalizedFilePathToUri nfp
 
--- | Extracts 'OsPath' from 'NormalizedFilePath'.
+{- | Extracts 'OsPath' from 'NormalizedFilePath'.
+
+Note that 'fromText' encodes UTF-8 (POSIX) or UTF-16 LE (Windows)
+independently of the locale, unlike 'pathToOsPath'. It is therefore the
+exact inverse of 'toNormalizedFilePath' only under a UTF-8 filesystem
+encoding.
+-}
 fromNormalizedFilePath :: NormalizedFilePath -> OSP.OsPath
-fromNormalizedFilePath (NormalizedFilePath _ fp) = pathToOsPath (T.unpack fp)
+fromNormalizedFilePath (NormalizedFilePath _ fp) = fromText fp
 
 normalizedFilePathToUri :: NormalizedFilePath -> NormalizedUri
 normalizedFilePathToUri (NormalizedFilePath uri _) = uri

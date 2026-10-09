@@ -12,11 +12,12 @@ import Control.Lens
 import Data.Map.Strict qualified as M
 import Data.Maybe
 import Data.Text qualified as T
+import Data.Text.From (fromText)
 import Data.Time.Clock
 import Language.LSP.Protocol.Lens qualified as L
 import Language.LSP.Protocol.Message
 import Language.LSP.Protocol.Types
-import System.Directory
+import System.Directory.OsPath qualified as OsPath
 import System.IO.Unsafe (unsafePerformIO)
 import System.OsPath (OsPath)
 import System.OsPath qualified as OsPath
@@ -25,13 +26,17 @@ data Event
   = ClientEv UTCTime FromClientMessage
   | ServerEv UTCTime FromServerMessage
 
--- | Pure shims around 'encodeFS'/'decodeFS' used by the (pure) replay URI
--- transformation. 'getFileSystemEncoding' returns the roundtrip variant of
--- the locale encoding, which is quasi-total and stable for the lifetime of
--- the process, so forcing it with 'unsafePerformIO' here cannot throw and
--- yields consistent results across calls.
+{- | 'osFromText' is pure: 'fromText' encodes UTF-8 (POSIX) or UTF-16 LE
+(Windows) without touching the locale, so it is the exact inverse of
+'osToText' only under a UTF-8 locale.
+
+'osToText' decodes with the (roundtrip variant of the) locale encoding,
+which is quasi-total and stable for the lifetime of the process, so
+forcing it with 'unsafePerformIO' here cannot throw and yields
+consistent results across calls.
+-}
 osFromText :: T.Text -> OsPath
-osFromText = unsafePerformIO . OsPath.encodeFS . T.unpack
+osFromText = fromText
 
 osToText :: OsPath -> T.Text
 osToText = T.pack . unsafePerformIO . OsPath.decodeFS
@@ -40,7 +45,7 @@ swapFiles :: OsPath -> [Event] -> IO [Event]
 swapFiles relCurBaseDir msgs = do
   let capturedBaseDir = rootDir msgs
 
-  curBaseDir <- (OsPath.</> relCurBaseDir) <$> (OsPath.encodeFS =<< getCurrentDirectory)
+  curBaseDir <- (OsPath.</> relCurBaseDir) <$> OsPath.getCurrentDirectory
   let transform uri =
         let fp = fromMaybe (error "Couldn't transform uri") (uriToFilePath uri)
             newFp = curBaseDir OsPath.</> OsPath.makeRelative capturedBaseDir fp

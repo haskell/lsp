@@ -61,7 +61,7 @@ import Data.List
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Text as T
-import qualified Data.Text.IO as T
+import Data.Text.Encoding qualified as T
 import Data.Maybe
 import Data.Function
 import Language.LSP.Protocol.Types as LSP
@@ -72,9 +72,9 @@ import Language.LSP.Test.Compat
 import Language.LSP.Test.Decoding
 import Language.LSP.Test.Exceptions
 import System.Console.ANSI
-import System.Directory
 import System.IO
-import System.OsPath (OsPath, encodeFS, decodeFS)
+import System.OsPath (OsPath)
+import System.File.OsPath qualified as FileIO
 import System.Process (ProcessHandle())
 #ifndef mingw32_HOST_OS
 import System.Process (waitForProcess)
@@ -457,7 +457,7 @@ updateState (FromServerMess SMethod_WorkspaceApplyEdit r) = do
           -- if its not open, open it
           unless (has (vfsMap . ix (toNormalizedUri uri)) oldVFS) $ do
             let fp = fromJust $ uriToFilePath uri
-            contents <- liftIO $ decodeFS fp >>= T.readFile
+            contents <- liftIO $ T.decodeUtf8Lenient <$> FileIO.readFile' fp
             let item = TextDocumentItem (filePathToUri fp) "" 0 contents
                 msg = TNotificationMessage "2.0" SMethod_TextDocumentDidOpen (DidOpenTextDocumentParams item)
             sendMessage msg

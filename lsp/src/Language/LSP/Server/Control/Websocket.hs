@@ -117,10 +117,9 @@ This combines 'withWebsocket' and 'runServerWithConfig'.
 withWebsocketRunServer ::
   -- | Configuration for the websocket
   WebsocketConfig ->
-  {- | How to set up a new 'ServerDefinition' for a specific configuration. z
-  This is passed as CPS'd 'IO' to allow for setting (- and cleaning) up
-  a server per websocket connection
-  -}
+  -- | How to set up a new 'ServerDefinition' for a specific configuration. z
+  --   This is passed as CPS'd 'IO' to allow for setting (- and cleaning) up
+  --   a server per websocket connection
   ((ServerDefinition config -> IO Int) -> IO Int) ->
   -- | The 'IO' logger
   LogAction IO (WithSeverity WebsocketServerLog) ->

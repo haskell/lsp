@@ -170,7 +170,7 @@ import Data.Maybe
 import Data.Set qualified as Set
 import Data.String (fromString)
 import Data.Text qualified as T
-import Data.Text.IO qualified as T
+import Data.Text.Encoding qualified as T
 import Data.Traversable (for)
 import Language.LSP.Protocol.Capabilities qualified as C
 import Language.LSP.Protocol.Lens qualified as L
@@ -183,8 +183,9 @@ import Language.LSP.Test.Parsing
 import Language.LSP.Test.Server
 import Language.LSP.Test.Session
 import Language.LSP.VFS
-import System.Directory
+import System.Directory.OsPath qualified as OsPath
 import System.Environment
+import System.File.OsPath qualified as FileIO
 import System.FilePath
 import System.FilePath.Glob qualified as Glob
 import System.IO
@@ -290,9 +291,8 @@ runSessionWithHandles' ::
   IO a
 runSessionWithHandles' serverProc serverIn serverOut config' caps rootDir session = do
   pid <- getCurrentProcessID
-  rootDirFp <- OsPath.decodeFS rootDir
-  absRootDirFp <- canonicalizePath rootDirFp
-  absRootDir <- OsPath.encodeFS absRootDirFp
+  absRootDir <- OsPath.canonicalizePath rootDir
+  absRootDirFp <- OsPath.decodeFS absRootDir
 
   config <- envOverrideConfig config'
 
@@ -577,7 +577,7 @@ createDoc file languageId contents = do
   rootDir <- asks rootDir
   caps <- asks sessionCapabilities
   fileFp <- liftIO $ OsPath.decodeFS file
-  absFile <- liftIO $ OsPath.decodeFS (rootDir OsPath.</> file) >>= canonicalizePath
+  absFile <- liftIO $ OsPath.decodeFS =<< OsPath.canonicalizePath (rootDir OsPath.</> file)
   let pred :: SomeRegistration -> [TRegistration Method_WorkspaceDidChangeWatchedFiles]
       pred (SomeRegistration r@(TRegistration _ SMethod_WorkspaceDidChangeWatchedFiles _)) = [r]
       pred _ = mempty
@@ -617,7 +617,7 @@ openDoc :: OsPath -> LanguageKind -> Session TextDocumentIdentifier
 openDoc file languageId = do
   context <- ask
   let fp = rootDir context OsPath.</> file
-  contents <- liftIO $ OsPath.decodeFS fp >>= T.readFile
+  contents <- liftIO $ T.decodeUtf8Lenient <$> FileIO.readFile' fp
   openDoc' file languageId contents
 
 {- | This is a variant of `openDoc` that takes the file content as an argument.

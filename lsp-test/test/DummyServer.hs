@@ -19,8 +19,8 @@ import Language.LSP.Protocol.Types
 import Language.LSP.Server
 import System.Directory
 import System.FilePath
-import System.OsPath (decodeFS)
 import System.IO
+import System.OsPath (decodeFS)
 import System.Process
 import UnliftIO
 import UnliftIO.Concurrent

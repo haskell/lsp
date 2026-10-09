@@ -15,8 +15,8 @@ import Network.URI
 import System.FilePath (normalise)
 import System.FilePath.Windows qualified as FPW
 import System.IO
-import System.Info qualified
 import System.IO.Unsafe (unsafePerformIO)
+import System.Info qualified
 import System.OsPath (OsPath)
 import System.OsPath qualified as OsPath
 import Test.Hspec
@@ -27,8 +27,9 @@ import Test.QuickCheck
 isWindows :: Bool
 isWindows = System.Info.os == "mingw32"
 
--- | Deterministic 'OsPath' from a 'FilePath' literal (requires the
--- file-system encoding to be set, see 'spec').
+{- | Deterministic 'OsPath' from a 'FilePath' literal (requires the
+file-system encoding to be set, see 'spec').
+-}
 toOsPath :: FilePath -> OsPath
 toOsPath = unsafePerformIO . OsPath.encodeFS
 
@@ -279,7 +280,8 @@ genValidUnicodeChar :: Gen Char
 genValidUnicodeChar = arbitraryUnicodeChar `suchThat` isCharacter
  where
   isCharacter x =
-    x /= '\65534' && x /= '\65535'
+    x /= '\65534'
+      && x /= '\65535'
       && not ('\xD800' <= x && x <= '\xDFFF') -- lone surrogates are rejected by encodeFS
 
 normalizedFilePathSpec :: Spec
@@ -311,6 +313,7 @@ normalizedFilePathSpec = do
     nuri `shouldBe` oldNuri
 
   it "roundtrips OsPath through NormalizedFilePath and Uri" $
-    property $ forAll (toOsPath <$> genFilePath) $ \fp -> do
-      fromNormalizedFilePath (toNormalizedFilePath fp) `shouldBe` OsPath.normalise fp
-      uriToFilePath (filePathToUri fp) `shouldBe` Just (OsPath.normalise fp)
+    property $
+      forAll (toOsPath <$> genFilePath) $ \fp -> do
+        fromNormalizedFilePath (toNormalizedFilePath fp) `shouldBe` OsPath.normalise fp
+        uriToFilePath (filePathToUri fp) `shouldBe` Just (OsPath.normalise fp)

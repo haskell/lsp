@@ -5,7 +5,6 @@
 
 module Main where
 
-import System.OsPath qualified as OsPath
 import Control.Concurrent
 import Control.Monad
 import Control.Monad.IO.Class
@@ -15,6 +14,7 @@ import Language.LSP.Protocol.Types
 import Language.LSP.Server
 import Language.LSP.Test qualified as Test
 import System.Environment
+import System.OsPath qualified as OsPath
 import System.Process hiding (env)
 import System.Time.Extra
 

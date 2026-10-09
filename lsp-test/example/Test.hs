@@ -1,12 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
 
-import System.OsPath qualified as OsPath
 import Control.Applicative.Combinators
 import Control.Monad.IO.Class
 import Language.LSP.Protocol.Message
 import Language.LSP.Protocol.Types
 import Language.LSP.Test
+import System.OsPath qualified as OsPath
 
 main :: IO ()
 main = runSession "lsp-demo-reactor-server" fullLatestClientCaps [OsPath.osp|test/data/|] $ do

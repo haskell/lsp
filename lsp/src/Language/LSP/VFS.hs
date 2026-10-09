@@ -78,15 +78,15 @@ import Data.Text.IO qualified as T
 import Data.Text.Utf16.Lines as Utf16 (Position (..))
 import Data.Text.Utf16.Rope.Mixed (Rope)
 import Data.Text.Utf16.Rope.Mixed qualified as Rope
+import GHC.IO.Encoding (getFileSystemEncoding, utf16le)
 import Language.LSP.Protocol.Lens qualified as J
 import Language.LSP.Protocol.Message qualified as J
 import Language.LSP.Protocol.Types qualified as J
 import Prettyprinter hiding (line)
 import System.Directory
-import System.OsPath (OsPath, encodeWith, takeFileName, takeExtensions, (</>), (<.>), decodeFS)
-import GHC.IO.Encoding (getFileSystemEncoding, utf16le)
 import System.IO
 import System.IO.Unsafe (unsafePerformIO)
+import System.OsPath (OsPath, decodeFS, encodeWith, takeExtensions, takeFileName, (<.>), (</>))
 
 -- ---------------------------------------------------------------------
 {-# ANN module ("hlint: ignore Eta reduce" :: String) #-}
@@ -330,8 +330,10 @@ changeFromServerVFS logger msg = do
   project _ = Nothing
 
 -- ---------------------------------------------------------------------
--- | Encode ASCII-ish 'String' to 'OsPath' with the system encoding.
--- Imprecise-exception (error) on pathological encodings.
+
+{- | Encode ASCII-ish 'String' to 'OsPath' with the system encoding.
+Imprecise-exception (error) on pathological encodings.
+-}
 systemEnc :: TextEncoding
 systemEnc = unsafePerformIO getFileSystemEncoding
 {-# NOINLINE systemEnc #-}
@@ -354,7 +356,7 @@ virtualFileName prefix uri (VirtualFile _ file_ver _ _) =
         </> ( basename
                 <> osFromString
                   ("-" ++ padLeft 5 file_ver ++ "-" ++ show (hash uri_raw))
-                <.> takeExtensions basename
+                  <.> takeExtensions basename
             )
 
 -- | Write a virtual file to a file in the given directory if it exists in the VFS.
