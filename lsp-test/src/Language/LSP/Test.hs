@@ -186,7 +186,6 @@ import Language.LSP.Test.Session
 import Language.LSP.VFS
 import System.Directory.OsPath qualified as OsPath
 import System.Environment
-import System.File.OsPath qualified as FileIO
 import System.FilePath
 import System.FilePath.Glob qualified as Glob
 import System.IO
@@ -612,12 +611,16 @@ createDoc file languageId contents = do
 
 {- | Opens a text document that /exists on disk/, and sends a
  textDocument/didOpen notification to the server.
+
+ The file is read as UTF-8 (undecodable bytes become U+FFFD) and its line
+ endings are normalized to LF. Use 'openDoc'' to open a document with
+ verbatim contents.
 -}
 openDoc :: OsPath -> LanguageKind -> Session TextDocumentIdentifier
 openDoc file languageId = do
   context <- ask
   let fp = rootDir context OsPath.</> file
-  contents <- liftIO $ T.decodeUtf8Lenient <$> FileIO.readFile' fp
+  contents <- liftIO $ readFileUtf8Lenient fp
   openDoc' file languageId contents
 
 {- | This is a variant of `openDoc` that takes the file content as an argument.

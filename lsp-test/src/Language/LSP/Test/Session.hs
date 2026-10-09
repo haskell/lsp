@@ -29,6 +29,7 @@ module Language.LSP.Test.Session
   , logMsg
   , LogMsgType(..)
   , documentChangeUri
+  , readFileUtf8Lenient
   )
 
 where
@@ -85,6 +86,13 @@ import Colog.Core (LogAction (..), WithSeverity (..), Severity (..))
 import Data.String (fromString)
 import Data.Either (partitionEithers)
 import Control.Concurrent.Async (async, cancel)
+
+-- | Reads a file as UTF-8 'T.Text', replacing undecodable bytes and
+-- normalizing CRLF (and lone CR) line endings to LF. 'FileIO.readFile'' is
+-- binary, so unlike text-mode reads it does not translate line endings on
+-- Windows; LSP text content is compared against LF-normalized text.
+readFileUtf8Lenient :: OsPath -> IO T.Text
+readFileUtf8Lenient fp = T.replace "\r" "\n" . T.replace "\r\n" "\n" . T.decodeUtf8Lenient <$> FileIO.readFile' fp
 
 -- | A session representing one instance of launching and connecting to a server.
 --
@@ -457,7 +465,7 @@ updateState (FromServerMess SMethod_WorkspaceApplyEdit r) = do
           -- if its not open, open it
           unless (has (vfsMap . ix (toNormalizedUri uri)) oldVFS) $ do
             let fp = fromJust $ uriToFilePath uri
-            contents <- liftIO $ T.decodeUtf8Lenient <$> FileIO.readFile' fp
+            contents <- liftIO $ readFileUtf8Lenient fp
             let item = TextDocumentItem (filePathToUri fp) "" 0 contents
                 msg = TNotificationMessage "2.0" SMethod_TextDocumentDidOpen (DidOpenTextDocumentParams item)
             sendMessage msg
