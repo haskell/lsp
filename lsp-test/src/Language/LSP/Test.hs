@@ -179,6 +179,7 @@ import Language.LSP.Protocol.Types
 import Language.LSP.Test.Compat
 import Language.LSP.Test.Decoding
 import Language.LSP.Test.Exceptions
+import Language.LSP.Test.Files (osToText)
 import Language.LSP.Test.Parsing
 import Language.LSP.Test.Server
 import Language.LSP.Test.Session
@@ -292,7 +293,6 @@ runSessionWithHandles' ::
 runSessionWithHandles' serverProc serverIn serverOut config' caps rootDir session = do
   pid <- getCurrentProcessID
   absRootDir <- OsPath.canonicalizePath rootDir
-  absRootDirFp <- OsPath.decodeFS absRootDir
 
   config <- envOverrideConfig config'
 
@@ -304,7 +304,7 @@ runSessionWithHandles' serverProc serverIn serverOut config' caps rootDir sessio
             _processId = InL $ fromIntegral pid
           , _clientInfo = Just lspTestClientInfo
           , _locale = Nothing
-          , _rootPath = Just (InL $ T.pack absRootDirFp)
+          , _rootPath = Just (InL $ osToText absRootDir)
           , _rootUri = InL $ filePathToUri absRootDir
           , _capabilities = caps
           , -- TODO: make this configurable?

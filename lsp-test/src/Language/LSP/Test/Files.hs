@@ -5,6 +5,7 @@
 module Language.LSP.Test.Files (
   swapFiles,
   rootDir,
+  osToText,
 )
 where
 

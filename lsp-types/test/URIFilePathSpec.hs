@@ -6,6 +6,7 @@
 module URIFilePathSpec where
 
 import Control.Monad (when)
+import Data.Char (GeneralCategory (..), generalCategory)
 import Data.List
 import Data.Text (Text, pack)
 import Language.LSP.Protocol.Types
@@ -282,7 +283,7 @@ genValidUnicodeChar = arbitraryUnicodeChar `suchThat` isCharacter
   isCharacter x =
     x /= '\65534'
       && x /= '\65535'
-      && not ('\xD800' <= x && x <= '\xDFFF') -- lone surrogates are rejected by encodeFS
+      && generalCategory x /= Surrogate -- lone surrogates are rejected by encodeFS
 
 normalizedFilePathSpec :: Spec
 normalizedFilePathSpec = do

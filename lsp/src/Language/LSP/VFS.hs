@@ -83,10 +83,11 @@ import Language.LSP.Protocol.Lens qualified as J
 import Language.LSP.Protocol.Message qualified as J
 import Language.LSP.Protocol.Types qualified as J
 import Prettyprinter hiding (line)
-import System.Directory
+import System.Directory.OsPath qualified as Dir
+import System.File.OsPath qualified as FileIO
 import System.IO
 import System.IO.Unsafe (unsafePerformIO)
-import System.OsPath (OsPath, decodeFS, encodeWith, takeExtensions, takeFileName, (<.>), (</>))
+import System.OsPath (OsPath, encodeWith, takeExtensions, takeFileName, (<.>), (</>))
 
 -- ---------------------------------------------------------------------
 {-# ANN module ("hlint: ignore Eta reduce" :: String) #-}
@@ -368,8 +369,7 @@ persistFileVFS logger dir vfs uri =
     (Just (Open vf)) ->
       let tfn = virtualFileName dir uri vf
           action = do
-            fp <- liftIO $ decodeFS tfn
-            exists <- liftIO $ doesFileExist fp
+            exists <- liftIO $ Dir.doesFileExist tfn
             unless exists $ do
               let contents = Rope.toText (_file_text vf)
                   writeRaw h = do
@@ -378,7 +378,7 @@ persistFileVFS logger dir vfs uri =
                     hSetEncoding h utf8
                     T.hPutStr h contents
               logger <& PersistingFile uri tfn `WithSeverity` Debug
-              liftIO $ withFile fp WriteMode writeRaw
+              liftIO $ FileIO.withFile' tfn WriteMode writeRaw
        in Just (tfn, action)
 
 -- ---------------------------------------------------------------------

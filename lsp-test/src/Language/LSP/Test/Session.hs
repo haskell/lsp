@@ -259,7 +259,7 @@ runSession' :: Handle -- ^ Server in
             -> (Handle -> SessionContext -> IO ()) -- ^ Server listener
             -> SessionConfig
             -> ClientCapabilities
-            -> OsPath -- ^ Root directory
+            -> OsPath -- ^ Root directory; must already be canonical (see 'Language.LSP.Test.runSessionWithHandles', which canonicalises before calling this)
             -> Session () -- ^ To exit the Server properly
             -> Session a
             -> IO a

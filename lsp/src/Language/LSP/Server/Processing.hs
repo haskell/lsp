@@ -50,6 +50,7 @@ import Data.Map.Strict qualified as Map
 import Data.Monoid
 import Data.String (fromString)
 import Data.Text qualified as T
+import Data.Text.From (fromText)
 import Data.Text.Lazy.Encoding qualified as TL
 import Language.LSP.Protocol.Lens qualified as L
 import Language.LSP.Protocol.Message
@@ -59,7 +60,6 @@ import Language.LSP.Protocol.Utils.SMethodMap qualified as SMethodMap
 import Language.LSP.Server.Core
 import Language.LSP.VFS as VFS
 import Prettyprinter
-import System.OsPath qualified as OsPath
 
 data LspProcessingLog
   = VfsLog VfsLog
@@ -136,7 +136,7 @@ initializeRequestHandler logger ServerDefinition{..} vfs sendFunc waitSender req
         getFirst . foldMap First
           <$> sequence
             [ pure (p ^? L.rootUri . _L >>= uriToFilePath)
-            , traverse (liftIO . OsPath.encodeFS . T.unpack) (p ^? L.rootPath . _Just . _L)
+            , traverse (pure . fromText) (p ^? L.rootPath . _Just . _L)
             ]
     let clientCaps = p ^. L.capabilities
 
