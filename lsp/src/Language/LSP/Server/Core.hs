@@ -60,6 +60,7 @@ import Language.LSP.Protocol.Utils.SMethodMap (SMethodMap)
 import Language.LSP.Protocol.Utils.SMethodMap qualified as SMethodMap
 import Language.LSP.VFS hiding (end)
 import Prettyprinter
+import System.OsPath (OsPath)
 
 -- ---------------------------------------------------------------------
 {-# ANN module ("HLint: ignore Eta reduce" :: String) #-}
@@ -132,7 +133,7 @@ data LanguageContextEnv config = LanguageContextEnv
   , -- We keep the state in a TVar to be thread safe
     resState :: !(LanguageContextState config)
   , resClientCapabilities :: !L.ClientCapabilities
-  , resRootPath :: !(Maybe FilePath)
+  , resRootPath :: !(Maybe OsPath)
   , resProgressStartDelay :: Int
   -- ^ The delay before starting a progress reporting session, in microseconds
   , resProgressUpdateDelay :: Int
@@ -234,7 +235,7 @@ data ProgressData = ProgressData
 
 data VFSData = VFSData
   { vfsData :: !VFS
-  , reverseMap :: !(Map.Map FilePath FilePath)
+  , reverseMap :: !(Map.Map OsPath OsPath)
   }
 
 {-# INLINE modifyState #-}
@@ -469,7 +470,7 @@ snapshotVirtualFiles env = vfsData <$> readTVar (resVFS $ resState env)
 {- | Dump the current text for a given VFS file to a file
  in the given directory and return the path to the file.
 -}
-persistVirtualFile :: MonadLsp config m => LogAction m (WithSeverity VfsLog) -> FilePath -> NormalizedUri -> m (Maybe FilePath)
+persistVirtualFile :: MonadLsp config m => LogAction m (WithSeverity VfsLog) -> OsPath -> NormalizedUri -> m (Maybe OsPath)
 persistVirtualFile logger dir uri = do
   join $ stateState resVFS $ \vfs ->
     case persistFileVFS logger dir (vfsData vfs) uri of
@@ -502,7 +503,7 @@ getVersionedTextDoc doc = do
 {- | If the contents of a VFS has been dumped to a temporary file, map
  the temporary file name back to the original one.
 -}
-reverseFileMap :: MonadLsp config m => m (FilePath -> FilePath)
+reverseFileMap :: MonadLsp config m => m (OsPath -> OsPath)
 reverseFileMap = do
   vfs <- getsState resVFS
   let f fp = Map.findWithDefault fp fp $ reverseMap vfs
@@ -543,7 +544,7 @@ getClientCapabilities :: MonadLsp config m => m L.ClientCapabilities
 getClientCapabilities = resClientCapabilities <$> getLspEnv
 {-# INLINE getClientCapabilities #-}
 
-getRootPath :: MonadLsp config m => m (Maybe FilePath)
+getRootPath :: MonadLsp config m => m (Maybe OsPath)
 getRootPath = resRootPath <$> getLspEnv
 {-# INLINE getRootPath #-}
 

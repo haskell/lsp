@@ -26,12 +26,6 @@ source-repository head
   type:     git
   location: https://github.com/haskell/lsp
 
-flag force-ospath
-  default:     False
-  manual:      False
-  description:
-    Force a version bound on filepath library, to enable 'OsPath'.
-
 common warnings
   ghc-options: -Wunused-packages
 
@@ -64,7 +58,7 @@ library
 
   build-depends:
     , aeson                          >=2     && <2.3
-    , base                           >=4.11  && <5
+    , base                           >=4.18  && <5
     , binary                         ^>=0.8
     , containers                     >=0.6 && < 0.9
     , data-default                   >=0.7 && < 0.9
@@ -85,17 +79,7 @@ library
     , template-haskell               >=2.7   && <2.25
     , text                           >=1     && <2.2
 
-  -- This version of filepath comes with GHC 9.6, so
-  -- we should be able to drop this flag once we only
-  -- support 9.6 or higher
-  if flag(force-ospath)
-    build-depends: filepath >=1.4.100.0 && < 1.6
-
-  else
-    build-depends: filepath >=1.4 && < 1.6
-
-  if impl(ghc >= 9.6)
-    build-depends: exceptions ^>=0.10
+  build-depends: filepath >=1.4.100.0 && < 1.6
 
   ghc-options:
     -Wall -Wmissing-deriving-strategies
@@ -133,7 +117,6 @@ library
     Language.LSP.Protocol.Types.SemanticTokens
     Language.LSP.Protocol.Types.Singletons
     Language.LSP.Protocol.Types.Uri
-    Language.LSP.Protocol.Types.Uri.OsPath
     Language.LSP.Protocol.Types.WatchKinds
 
 
@@ -582,7 +565,7 @@ library metamodel
 
   build-depends:
     , aeson             >=2
-    , base              >=4.11    && <5
+    , base              >=4.18    && <5
     , file-embed        ^>=0.0.15
     , lens              >=5.1     && <5.4
     , template-haskell  >=2.7     && <2.25
@@ -607,7 +590,7 @@ library lsp-types-quickcheck
     Language.LSP.Protocol.QuickCheck.Types
 
   build-depends:
-    , base              >=4.11    && <5
+    , base              >=4.18    && <5
     , lsp-types
     , row-types
     , QuickCheck

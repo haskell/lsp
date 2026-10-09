@@ -53,5 +53,4 @@ import Language.LSP.Protocol.Types.Progress as Progress
 import Language.LSP.Protocol.Types.SemanticTokens as SemanticTokens
 import Language.LSP.Protocol.Types.Singletons as Singletons
 import Language.LSP.Protocol.Types.Uri as Uri
-import Language.LSP.Protocol.Types.Uri.OsPath as Uri
 import Language.LSP.Protocol.Types.WatchKinds as WatchKinds

@@ -83,8 +83,10 @@ import Language.LSP.Protocol.Message qualified as J
 import Language.LSP.Protocol.Types qualified as J
 import Prettyprinter hiding (line)
 import System.Directory
-import System.FilePath
+import System.OsPath (OsPath, encodeWith, takeFileName, takeExtensions, (</>), (<.>), decodeFS)
+import GHC.IO.Encoding (getFileSystemEncoding, utf16le)
 import System.IO
+import System.IO.Unsafe (unsafePerformIO)
 
 -- ---------------------------------------------------------------------
 {-# ANN module ("hlint: ignore Eta reduce" :: String) #-}
@@ -133,7 +135,7 @@ data VfsLog
   | URINotFound J.NormalizedUri
   | Opening J.NormalizedUri
   | Closing J.NormalizedUri
-  | PersistingFile J.NormalizedUri FilePath
+  | PersistingFile J.NormalizedUri OsPath
   | CantRecursiveDelete J.NormalizedUri
   | DeleteNonExistent J.NormalizedUri
   deriving (Show)
@@ -328,10 +330,19 @@ changeFromServerVFS logger msg = do
   project _ = Nothing
 
 -- ---------------------------------------------------------------------
-virtualFileName :: FilePath -> J.NormalizedUri -> VirtualFile -> FilePath
+-- | Encode ASCII-ish 'String' to 'OsPath' with the system encoding.
+-- Imprecise-exception (error) on pathological encodings.
+systemEnc :: TextEncoding
+systemEnc = unsafePerformIO getFileSystemEncoding
+{-# NOINLINE systemEnc #-}
+
+osFromString :: String -> OsPath
+osFromString = either (error . show) id . encodeWith systemEnc utf16le
+
+virtualFileName :: OsPath -> J.NormalizedUri -> VirtualFile -> OsPath
 virtualFileName prefix uri (VirtualFile _ file_ver _ _) =
   let uri_raw = J.fromNormalizedUri uri
-      basename = maybe "" takeFileName (J.uriToFilePath uri_raw)
+      basename = maybe mempty takeFileName (J.uriToFilePath uri_raw)
       -- Given a length and a version number, pad the version number to
       -- the given n. Does nothing if the version number string is longer
       -- than the given length.
@@ -339,10 +350,15 @@ virtualFileName prefix uri (VirtualFile _ file_ver _ _) =
       padLeft n num =
         let numString = show num
          in replicate (n - length numString) '0' ++ numString
-   in prefix </> basename ++ "-" ++ padLeft 5 file_ver ++ "-" ++ show (hash uri_raw) <.> takeExtensions basename
+   in prefix
+        </> ( basename
+                <> osFromString
+                  ("-" ++ padLeft 5 file_ver ++ "-" ++ show (hash uri_raw))
+                <.> takeExtensions basename
+            )
 
 -- | Write a virtual file to a file in the given directory if it exists in the VFS.
-persistFileVFS :: (MonadIO m) => LogAction m (WithSeverity VfsLog) -> FilePath -> VFS -> J.NormalizedUri -> Maybe (FilePath, m ())
+persistFileVFS :: (MonadIO m) => LogAction m (WithSeverity VfsLog) -> OsPath -> VFS -> J.NormalizedUri -> Maybe (OsPath, m ())
 persistFileVFS logger dir vfs uri =
   case vfs ^. vfsMap . at uri of
     Nothing -> Nothing
@@ -350,7 +366,8 @@ persistFileVFS logger dir vfs uri =
     (Just (Open vf)) ->
       let tfn = virtualFileName dir uri vf
           action = do
-            exists <- liftIO $ doesFileExist tfn
+            fp <- liftIO $ decodeFS tfn
+            exists <- liftIO $ doesFileExist fp
             unless exists $ do
               let contents = Rope.toText (_file_text vf)
                   writeRaw h = do
@@ -359,7 +376,7 @@ persistFileVFS logger dir vfs uri =
                     hSetEncoding h utf8
                     T.hPutStr h contents
               logger <& PersistingFile uri tfn `WithSeverity` Debug
-              liftIO $ withFile tfn WriteMode writeRaw
+              liftIO $ withFile fp WriteMode writeRaw
        in Just (tfn, action)
 
 -- ---------------------------------------------------------------------

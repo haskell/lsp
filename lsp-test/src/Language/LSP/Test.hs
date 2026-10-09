@@ -188,6 +188,8 @@ import System.Environment
 import System.FilePath
 import System.FilePath.Glob qualified as Glob
 import System.IO
+import System.OsPath (OsPath)
+import System.OsPath qualified as OsPath
 import System.Process (CreateProcess, ProcessHandle)
 
 {- | Starts a new session.
@@ -205,7 +207,7 @@ runSession ::
   -- | The capabilities that the client should declare.
   ClientCapabilities ->
   -- | The filepath to the root directory for the session.
-  FilePath ->
+  OsPath ->
   -- | The session to run.
   Session a ->
   IO a
@@ -220,7 +222,7 @@ runSessionWithConfig ::
   -- | The capabilities that the client should declare.
   ClientCapabilities ->
   -- | The filepath to the root directory for the session.
-  FilePath ->
+  OsPath ->
   -- | The session to run.
   Session a ->
   IO a
@@ -237,7 +239,7 @@ runSessionWithConfigCustomProcess ::
   -- | The capabilities that the client should declare.
   ClientCapabilities ->
   -- | The filepath to the root directory for the session.
-  FilePath ->
+  OsPath ->
   -- | The session to run.
   Session a ->
   IO a
@@ -266,7 +268,7 @@ runSessionWithHandles ::
   -- | The capabilities that the client should declare.
   ClientCapabilities ->
   -- | The filepath to the root directory for the session.
-  FilePath ->
+  OsPath ->
   -- | The session to run.
   Session a ->
   IO a
@@ -282,13 +284,15 @@ runSessionWithHandles' ::
   -- | The capabilities that the client should declare.
   ClientCapabilities ->
   -- | The filepath to the root directory for the session.
-  FilePath ->
+  OsPath ->
   -- | The session to run.
   Session a ->
   IO a
 runSessionWithHandles' serverProc serverIn serverOut config' caps rootDir session = do
   pid <- getCurrentProcessID
-  absRootDir <- canonicalizePath rootDir
+  rootDirFp <- OsPath.decodeFS rootDir
+  absRootDirFp <- canonicalizePath rootDirFp
+  absRootDir <- OsPath.encodeFS absRootDirFp
 
   config <- envOverrideConfig config'
 
@@ -300,7 +304,7 @@ runSessionWithHandles' serverProc serverIn serverOut config' caps rootDir sessio
             _processId = InL $ fromIntegral pid
           , _clientInfo = Just lspTestClientInfo
           , _locale = Nothing
-          , _rootPath = Just (InL $ T.pack absRootDir)
+          , _rootPath = Just (InL $ T.pack absRootDirFp)
           , _rootUri = InL $ filePathToUri absRootDir
           , _capabilities = caps
           , -- TODO: make this configurable?
@@ -308,7 +312,7 @@ runSessionWithHandles' serverProc serverIn serverOut config' caps rootDir sessio
           , _trace = Just TraceValue_Off
           , _workspaceFolders = InL <$> initialWorkspaceFolders config
           }
-  runSession' serverIn serverOut serverProc listenServer config caps rootDir exitServer $ do
+  runSession' serverIn serverOut serverProc listenServer config caps absRootDir exitServer $ do
     -- Wrap the session around initialize and shutdown calls
     initReqId <- sendRequest SMethod_Initialize initializeParams
 
@@ -561,7 +565,7 @@ setConfigSection section settings = modifyConfig (\o -> o & at (fromString secti
 -}
 createDoc ::
   -- | The path to the document to open, __relative to the root directory__.
-  FilePath ->
+  OsPath ->
   -- | The text document's language identifier, e.g. @"haskell"@.
   LanguageKind ->
   -- | The content of the text document to create.
@@ -572,7 +576,8 @@ createDoc file languageId contents = do
   dynCaps <- curDynCaps <$> get
   rootDir <- asks rootDir
   caps <- asks sessionCapabilities
-  absFile <- liftIO $ canonicalizePath (rootDir </> file)
+  fileFp <- liftIO $ OsPath.decodeFS file
+  absFile <- liftIO $ OsPath.decodeFS (rootDir OsPath.</> file) >>= canonicalizePath
   let pred :: SomeRegistration -> [TRegistration Method_WorkspaceDidChangeWatchedFiles]
       pred (SomeRegistration r@(TRegistration _ SMethod_WorkspaceDidChangeWatchedFiles _)) = [r]
       pred _ = mempty
@@ -589,7 +594,7 @@ createDoc file languageId contents = do
         -- If the pattern is absolute then match against the absolute fp
         relOrAbs
           | isAbsolute pattern = absFile
-          | otherwise = file
+          | otherwise = fileFp
 
       regHits :: TRegistration Method_WorkspaceDidChangeWatchedFiles -> Bool
       regHits reg = foldl' (\acc w -> acc || watchHits w) False (reg ^. L.registerOptions . _Just . L.watchers)
@@ -602,26 +607,26 @@ createDoc file languageId contents = do
   when shouldSend $
     sendNotification SMethod_WorkspaceDidChangeWatchedFiles $
       DidChangeWatchedFilesParams $
-        [FileEvent (filePathToUri (rootDir </> file)) FileChangeType_Created]
+        [FileEvent (filePathToUri (rootDir OsPath.</> file)) FileChangeType_Created]
   openDoc' file languageId contents
 
 {- | Opens a text document that /exists on disk/, and sends a
  textDocument/didOpen notification to the server.
 -}
-openDoc :: FilePath -> LanguageKind -> Session TextDocumentIdentifier
+openDoc :: OsPath -> LanguageKind -> Session TextDocumentIdentifier
 openDoc file languageId = do
   context <- ask
-  let fp = rootDir context </> file
-  contents <- liftIO $ T.readFile fp
+  let fp = rootDir context OsPath.</> file
+  contents <- liftIO $ OsPath.decodeFS fp >>= T.readFile
   openDoc' file languageId contents
 
 {- | This is a variant of `openDoc` that takes the file content as an argument.
  Use this is the file exists /outside/ of the current workspace.
 -}
-openDoc' :: FilePath -> LanguageKind -> T.Text -> Session TextDocumentIdentifier
+openDoc' :: OsPath -> LanguageKind -> T.Text -> Session TextDocumentIdentifier
 openDoc' file languageId contents = do
   context <- ask
-  let fp = rootDir context </> file
+  let fp = rootDir context OsPath.</> file
       uri = filePathToUri fp
       item = TextDocumentItem uri languageId 0 contents
   sendNotification SMethod_TextDocumentDidOpen (DidOpenTextDocumentParams item)
@@ -641,10 +646,10 @@ changeDoc docId changes = do
   sendNotification SMethod_TextDocumentDidChange params
 
 -- | Gets the Uri for the file corrected to the session directory.
-getDocUri :: FilePath -> Session Uri
+getDocUri :: OsPath -> Session Uri
 getDocUri file = do
   context <- ask
-  let fp = rootDir context </> file
+  let fp = rootDir context OsPath.</> file
   return $ filePathToUri fp
 
 -- | Waits for diagnostics to be published and returns them.

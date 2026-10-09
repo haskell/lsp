@@ -51,7 +51,7 @@ library
     , aeson-pretty        ^>=0.8
     , ansi-terminal       >=0.10  && <1.2
     , async               ^>=2.2
-    , base                >=4.10  && <5
+    , base                >=4.18  && <5
     , bytestring          >=0.10  && <0.13
     , co-log-core         ^>=0.3
     , conduit             ^>=1.3
@@ -62,7 +62,7 @@ library
     , directory           ^>=1.3
     , exceptions          ^>=0.10
     , extra               >=1.7 && < 1.9
-    , filepath            >=1.4 && < 1.6
+    , filepath            >=1.4.100.0 && < 1.6
     , Glob                >=0.9   && <0.11
     , lens                >=5.1   && <5.4
     , lens-aeson          ^>=1.2
@@ -128,6 +128,7 @@ test-suite func-test
   build-depends:
     , base
     , aeson
+    , filepath
     , co-log-core
     , extra
     , hspec
@@ -146,6 +147,7 @@ test-suite example
   main-is:            Test.hs
   build-depends:
     , base
+    , filepath
     , lsp-test
     , parser-combinators
 
@@ -161,6 +163,7 @@ benchmark simple-bench
   build-depends:
     , base
     , extra
+    , filepath
     , lsp
     , lsp-test
     , process

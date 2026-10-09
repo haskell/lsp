@@ -17,26 +17,39 @@ import Language.LSP.Protocol.Lens qualified as L
 import Language.LSP.Protocol.Message
 import Language.LSP.Protocol.Types
 import System.Directory
-import System.FilePath
+import System.IO.Unsafe (unsafePerformIO)
+import System.OsPath (OsPath)
+import System.OsPath qualified as OsPath
 
 data Event
   = ClientEv UTCTime FromClientMessage
   | ServerEv UTCTime FromServerMessage
 
-swapFiles :: FilePath -> [Event] -> IO [Event]
+-- | Pure shims around 'encodeFS'/'decodeFS' used by the (pure) replay URI
+-- transformation. 'getFileSystemEncoding' returns the roundtrip variant of
+-- the locale encoding, which is quasi-total and stable for the lifetime of
+-- the process, so forcing it with 'unsafePerformIO' here cannot throw and
+-- yields consistent results across calls.
+osFromText :: T.Text -> OsPath
+osFromText = unsafePerformIO . OsPath.encodeFS . T.unpack
+
+osToText :: OsPath -> T.Text
+osToText = T.pack . unsafePerformIO . OsPath.decodeFS
+
+swapFiles :: OsPath -> [Event] -> IO [Event]
 swapFiles relCurBaseDir msgs = do
   let capturedBaseDir = rootDir msgs
 
-  curBaseDir <- (</> relCurBaseDir) <$> getCurrentDirectory
+  curBaseDir <- (OsPath.</> relCurBaseDir) <$> (OsPath.encodeFS =<< getCurrentDirectory)
   let transform uri =
         let fp = fromMaybe (error "Couldn't transform uri") (uriToFilePath uri)
-            newFp = curBaseDir </> makeRelative capturedBaseDir fp
+            newFp = curBaseDir OsPath.</> OsPath.makeRelative capturedBaseDir fp
          in filePathToUri newFp
       newMsgs = map (mapUris transform) msgs
 
   return newMsgs
 
-rootDir :: [Event] -> FilePath
+rootDir :: [Event] -> OsPath
 rootDir (ClientEv _ (FromClientMess SMethod_Initialize req) : _) =
   fromMaybe (error "Couldn't find root dir") $ do
     rootUri <- case req ^. L.params . L.rootUri of
@@ -93,10 +106,10 @@ mapUris f event =
   transformInit :: InitializeParams -> InitializeParams
   transformInit x =
     let modifyRootPath p =
-          let fp = T.unpack p
+          let fp = osFromText p
               uri = filePathToUri fp
            in case uriToFilePath (f uri) of
-                Just fp -> T.pack fp
+                Just fp' -> osToText fp'
                 Nothing -> p
      in x
           & L.rootUri . _L %~ f

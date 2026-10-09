@@ -1,9 +1,11 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuasiQuotes #-}
 
 module Main where
 
+import System.OsPath qualified as OsPath
 import Control.Concurrent
 import Control.Monad
 import Control.Monad.IO.Class
@@ -56,7 +58,7 @@ main = do
 
   i <- newIORef (0 :: Integer)
 
-  Test.runSessionWithHandles hinWrite houtRead Test.defaultConfig Test.fullLatestClientCaps "." $ do
+  Test.runSessionWithHandles hinWrite houtRead Test.defaultConfig Test.fullLatestClientCaps [OsPath.osp|.|] $ do
     start <- liftIO offsetTime
     replicateM_ n $ do
       v <- liftIO $ readIORef i

@@ -59,6 +59,7 @@ import Language.LSP.Protocol.Utils.SMethodMap qualified as SMethodMap
 import Language.LSP.Server.Core
 import Language.LSP.VFS as VFS
 import Prettyprinter
+import System.OsPath qualified as OsPath
 
 data LspProcessingLog
   = VfsLog VfsLog
@@ -130,14 +131,14 @@ initializeRequestHandler logger ServerDefinition{..} vfs sendFunc waitSender req
       handleErr (Right a) = pure $ Just a
   E.handle (initializeErrorHandler $ sendResp . makeResponseError (req ^. L.id)) $ handleErr <=< runExceptT $ mdo
     let p = req ^. L.params
-        rootDir =
-          getFirst $
-            foldMap
-              First
-              [ p ^? L.rootUri . _L >>= uriToFilePath
-              , p ^? L.rootPath . _Just . _L <&> T.unpack
-              ]
-        clientCaps = p ^. L.capabilities
+    rootDir <-
+      liftIO $
+        getFirst . foldMap First
+          <$> sequence
+            [ pure (p ^? L.rootUri . _L >>= uriToFilePath)
+            , traverse (liftIO . OsPath.encodeFS . T.unpack) (p ^? L.rootPath . _Just . _L)
+            ]
+    let clientCaps = p ^. L.capabilities
 
     let initialWfs = case p ^. L.workspaceFolders of
           Just (InL xs) -> xs

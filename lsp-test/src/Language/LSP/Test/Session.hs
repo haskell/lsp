@@ -74,6 +74,7 @@ import Language.LSP.Test.Exceptions
 import System.Console.ANSI
 import System.Directory
 import System.IO
+import System.OsPath (OsPath, encodeFS, decodeFS)
 import System.Process (ProcessHandle())
 #ifndef mingw32_HOST_OS
 import System.Process (waitForProcess)
@@ -146,7 +147,7 @@ data SessionMessage = ServerMessage FromServerMessage
 data SessionContext = SessionContext
   {
     serverIn :: Handle
-  , rootDir :: FilePath
+  , rootDir :: OsPath
   , messageChan :: Chan SessionMessage -- ^ Where all messages come through
   -- Keep curTimeoutId in SessionContext, as its tied to messageChan
   , curTimeoutId :: IORef Int -- ^ The current timeout we are waiting on
@@ -258,13 +259,11 @@ runSession' :: Handle -- ^ Server in
             -> (Handle -> SessionContext -> IO ()) -- ^ Server listener
             -> SessionConfig
             -> ClientCapabilities
-            -> FilePath -- ^ Root directory
+            -> OsPath -- ^ Root directory
             -> Session () -- ^ To exit the Server properly
             -> Session a
             -> IO a
 runSession' serverIn serverOut mServerProc serverHandler config caps rootDir exitServer session = do
-  absRootDir <- canonicalizePath rootDir
-
   hSetBuffering serverIn  NoBuffering
   hSetBuffering serverOut NoBuffering
   -- This is required to make sure that we don’t get any
@@ -281,7 +280,7 @@ runSession' serverIn serverOut mServerProc serverHandler config caps rootDir exi
 
   let context = SessionContext
         serverIn
-        absRootDir
+        rootDir
         messageChan
         timeoutIdVar
         reqMap
@@ -458,7 +457,7 @@ updateState (FromServerMess SMethod_WorkspaceApplyEdit r) = do
           -- if its not open, open it
           unless (has (vfsMap . ix (toNormalizedUri uri)) oldVFS) $ do
             let fp = fromJust $ uriToFilePath uri
-            contents <- liftIO $ T.readFile fp
+            contents <- liftIO $ decodeFS fp >>= T.readFile
             let item = TextDocumentItem (filePathToUri fp) "" 0 contents
                 msg = TNotificationMessage "2.0" SMethod_TextDocumentDidOpen (DidOpenTextDocumentParams item)
             sendMessage msg

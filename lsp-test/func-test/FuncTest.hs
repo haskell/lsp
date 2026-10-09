@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE ViewPatterns #-}
 
 module Main where
@@ -22,6 +23,8 @@ import Language.LSP.Protocol.Types
 import Language.LSP.Server
 import Language.LSP.Test qualified as Test
 import System.Exit
+import System.OsPath (OsPath)
+import System.OsPath qualified as OsPath
 import System.Process
 import Test.Hspec
 import UnliftIO
@@ -32,7 +35,7 @@ runSessionWithServer ::
   ServerDefinition config ->
   Test.SessionConfig ->
   ClientCapabilities ->
-  FilePath ->
+  OsPath ->
   Test.Session a ->
   IO a
 runSessionWithServer logger defn testConfig caps root session = do
@@ -85,7 +88,7 @@ spec = do
                 updater $ ProgressAmount (Just 75) (Just "step3")
                 liftIO $ waitBarrier b3
 
-      runSessionWithServer logger definition Test.defaultConfig Test.fullLatestClientCaps "." $ do
+      runSessionWithServer logger definition Test.defaultConfig Test.fullLatestClientCaps [OsPath.osp|.|] $ do
         Test.sendRequest (SMethod_CustomMethod (Proxy @"something")) J.Null
 
         -- Wait until we have seen a begin messsage. This means that the token setup
@@ -146,7 +149,7 @@ spec = do
                 -- Wait around to be cancelled, set the MVar only if we are
                 liftIO $ threadDelay (5 * 1000000) `Control.Exception.catch` (\(e :: ProgressCancelledException) -> modifyMVar_ wasCancelled (\_ -> pure True))
 
-      runSessionWithServer logger definition Test.defaultConfig Test.fullLatestClientCaps "." $ do
+      runSessionWithServer logger definition Test.defaultConfig Test.fullLatestClientCaps [OsPath.osp|.|] $ do
         Test.sendRequest (SMethod_CustomMethod (Proxy @"something")) J.Null
 
         -- Wait until we have created the progress so the updates will be sent individually
@@ -192,7 +195,7 @@ spec = do
                   takeMVar killVar
                   Control.Exception.throwIO AsyncCancelled
 
-      runSessionWithServer logger definition Test.defaultConfig Test.fullLatestClientCaps "." $ do
+      runSessionWithServer logger definition Test.defaultConfig Test.fullLatestClientCaps [OsPath.osp|.|] $ do
         -- First make sure that we get a $/progress begin notification
         skipManyTill Test.anyMessage $ do
           x <- Test.message SMethod_Progress
@@ -237,7 +240,7 @@ spec = do
                 updater $ ProgressAmount (Just 75) (Just "step3")
                 liftIO $ waitBarrier b3
 
-      runSessionWithServer logger definition Test.defaultConfig Test.fullLatestClientCaps "." $ do
+      runSessionWithServer logger definition Test.defaultConfig Test.fullLatestClientCaps [OsPath.osp|.|] $ do
         Test.sendRequest SMethod_TextDocumentCodeLens (CodeLensParams (Just $ ProgressToken $ InR "hello") Nothing (TextDocumentIdentifier $ Uri "."))
 
         -- First make sure that we get a $/progress begin notification
@@ -277,9 +280,9 @@ spec = do
     it "keeps track of open workspace folders" $ do
       countVar <- newMVar 0
 
-      let wf0 = WorkspaceFolder (filePathToUri "one") "Starter workspace"
-          wf1 = WorkspaceFolder (filePathToUri "/foo/bar") "My workspace"
-          wf2 = WorkspaceFolder (filePathToUri "/foo/baz") "My other workspace"
+      let wf0 = WorkspaceFolder (filePathToUri [OsPath.osp|one|]) "Starter workspace"
+          wf1 = WorkspaceFolder (filePathToUri [OsPath.osp|/foo/bar|]) "My workspace"
+          wf2 = WorkspaceFolder (filePathToUri [OsPath.osp|/foo/baz|]) "My other workspace"
 
           definition =
             ServerDefinition
@@ -320,7 +323,7 @@ spec = do
                 ps = DidChangeWorkspaceFoldersParams ev
              in Test.sendNotification SMethod_WorkspaceDidChangeWorkspaceFolders ps
 
-      runSessionWithServer logger definition config Test.fullLatestClientCaps "." $ do
+      runSessionWithServer logger definition config Test.fullLatestClientCaps [OsPath.osp|.|] $ do
         changeFolders [wf1] []
         changeFolders [wf2] [wf1]
 
