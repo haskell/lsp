@@ -15,8 +15,8 @@ import Prettyprinter
 import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
-import qualified Data.Text
 import qualified Language.LSP.Protocol.Types.Common
+import qualified Language.LSP.Protocol.Types.Uri
 
 {-|
 Represents information on a file/folder rename.
@@ -25,13 +25,13 @@ Represents information on a file/folder rename.
 -}
 data FileRename = FileRename 
   { {-|
-  A file:// URI for the original location of the file/folder being renamed.
+  A URI for the original location of the file/folder being renamed.
   -}
-  _oldUri :: Data.Text.Text
+  _oldUri :: Language.LSP.Protocol.Types.Uri.Uri
   , {-|
-  A file:// URI for the new location of the file/folder being renamed.
+  A URI for the new location of the file/folder being renamed.
   -}
-  _newUri :: Data.Text.Text
+  _newUri :: Language.LSP.Protocol.Types.Uri.Uri
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

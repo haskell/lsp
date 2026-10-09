@@ -25,13 +25,20 @@ data DocumentRangeFormattingOptions = DocumentRangeFormattingOptions
 
   -}
   _workDoneProgress :: (Maybe Bool)
+  , {-|
+  Whether the server supports formatting multiple ranges at once.
+
+  @since 3.18.0
+  -}
+  _rangesSupport :: (Maybe Bool)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
   deriving Pretty via (ViaJSON DocumentRangeFormattingOptions)
 
 instance Aeson.ToJSON DocumentRangeFormattingOptions where
-  toJSON (DocumentRangeFormattingOptions arg0) = Aeson.object $ concat $  ["workDoneProgress" Language.LSP.Protocol.Types.Common..=? arg0]
+  toJSON (DocumentRangeFormattingOptions arg0 arg1) = Aeson.object $ concat $  ["workDoneProgress" Language.LSP.Protocol.Types.Common..=? arg0
+    ,"rangesSupport" Language.LSP.Protocol.Types.Common..=? arg1]
 
 instance Aeson.FromJSON DocumentRangeFormattingOptions where
-  parseJSON = Aeson.withObject "DocumentRangeFormattingOptions" $ \arg -> DocumentRangeFormattingOptions <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneProgress"
+  parseJSON = Aeson.withObject "DocumentRangeFormattingOptions" $ \arg -> DocumentRangeFormattingOptions <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneProgress" <*> arg Language.LSP.Protocol.Types.Common..:!? "rangesSupport"

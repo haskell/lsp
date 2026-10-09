@@ -40,6 +40,12 @@ data MessageType =
   A log message.
   -}
   MessageType_Log
+  | {-|
+  A debug message.
+
+  @since 3.18.0
+  -}
+  MessageType_Debug
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
   deriving ( Aeson.ToJSON
@@ -50,16 +56,19 @@ instance Language.LSP.Protocol.Types.LspEnum.LspEnum MessageType where
   knownValues = Data.Set.fromList [MessageType_Error
     ,MessageType_Warning
     ,MessageType_Info
-    ,MessageType_Log]
+    ,MessageType_Log
+    ,MessageType_Debug]
   type EnumBaseType MessageType = Language.LSP.Protocol.Types.Common.UInt
   toEnumBaseType MessageType_Error = 1
   toEnumBaseType MessageType_Warning = 2
   toEnumBaseType MessageType_Info = 3
   toEnumBaseType MessageType_Log = 4
+  toEnumBaseType MessageType_Debug = 5
   fromEnumBaseType 1 = pure MessageType_Error
   fromEnumBaseType 2 = pure MessageType_Warning
   fromEnumBaseType 3 = pure MessageType_Info
   fromEnumBaseType 4 = pure MessageType_Log
+  fromEnumBaseType 5 = pure MessageType_Debug
   fromEnumBaseType _ = Nothing
 
 

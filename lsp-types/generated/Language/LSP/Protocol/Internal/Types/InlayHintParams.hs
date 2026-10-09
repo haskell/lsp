@@ -31,6 +31,11 @@ data InlayHintParams = InlayHintParams
   -}
   _workDoneToken :: (Maybe Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken)
   , {-|
+  An optional token that a server can use to report partial results (e.g. streaming) to
+  the client.
+  -}
+  _partialResultToken :: (Maybe Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken)
+  , {-|
   The text document.
   -}
   _textDocument :: Language.LSP.Protocol.Internal.Types.TextDocumentIdentifier.TextDocumentIdentifier
@@ -44,9 +49,10 @@ data InlayHintParams = InlayHintParams
   deriving Pretty via (ViaJSON InlayHintParams)
 
 instance Aeson.ToJSON InlayHintParams where
-  toJSON (InlayHintParams arg0 arg1 arg2) = Aeson.object $ concat $  ["workDoneToken" Language.LSP.Protocol.Types.Common..=? arg0
-    ,["textDocument" Aeson..= arg1]
-    ,["range" Aeson..= arg2]]
+  toJSON (InlayHintParams arg0 arg1 arg2 arg3) = Aeson.object $ concat $  ["workDoneToken" Language.LSP.Protocol.Types.Common..=? arg0
+    ,"partialResultToken" Language.LSP.Protocol.Types.Common..=? arg1
+    ,["textDocument" Aeson..= arg2]
+    ,["range" Aeson..= arg3]]
 
 instance Aeson.FromJSON InlayHintParams where
-  parseJSON = Aeson.withObject "InlayHintParams" $ \arg -> InlayHintParams <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneToken" <*> arg Aeson..: "textDocument" <*> arg Aeson..: "range"
+  parseJSON = Aeson.withObject "InlayHintParams" $ \arg -> InlayHintParams <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneToken" <*> arg Language.LSP.Protocol.Types.Common..:!? "partialResultToken" <*> arg Aeson..: "textDocument" <*> arg Aeson..: "range"

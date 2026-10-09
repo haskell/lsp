@@ -17,6 +17,7 @@ import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
 import qualified Language.LSP.Protocol.Internal.Types.ClientCodeActionLiteralOptions
 import qualified Language.LSP.Protocol.Internal.Types.ClientCodeActionResolveOptions
+import qualified Language.LSP.Protocol.Internal.Types.CodeActionTagOptions
 import qualified Language.LSP.Protocol.Types.Common
 
 {-|
@@ -72,19 +73,35 @@ data CodeActionClientCapabilities = CodeActionClientCapabilities
   @since 3.16.0
   -}
   _honorsChangeAnnotations :: (Maybe Bool)
+  , {-|
+  Whether the client supports documentation for a class of
+  code actions.
+
+  @since 3.18.0
+  -}
+  _documentationSupport :: (Maybe Bool)
+  , {-|
+  Client supports the tag property on a code action. Clients
+  supporting tags have to handle unknown tags gracefully.
+
+  @since 3.18.0
+  -}
+  _tagSupport :: (Maybe Language.LSP.Protocol.Internal.Types.CodeActionTagOptions.CodeActionTagOptions)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
   deriving Pretty via (ViaJSON CodeActionClientCapabilities)
 
 instance Aeson.ToJSON CodeActionClientCapabilities where
-  toJSON (CodeActionClientCapabilities arg0 arg1 arg2 arg3 arg4 arg5 arg6) = Aeson.object $ concat $  ["dynamicRegistration" Language.LSP.Protocol.Types.Common..=? arg0
+  toJSON (CodeActionClientCapabilities arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8) = Aeson.object $ concat $  ["dynamicRegistration" Language.LSP.Protocol.Types.Common..=? arg0
     ,"codeActionLiteralSupport" Language.LSP.Protocol.Types.Common..=? arg1
     ,"isPreferredSupport" Language.LSP.Protocol.Types.Common..=? arg2
     ,"disabledSupport" Language.LSP.Protocol.Types.Common..=? arg3
     ,"dataSupport" Language.LSP.Protocol.Types.Common..=? arg4
     ,"resolveSupport" Language.LSP.Protocol.Types.Common..=? arg5
-    ,"honorsChangeAnnotations" Language.LSP.Protocol.Types.Common..=? arg6]
+    ,"honorsChangeAnnotations" Language.LSP.Protocol.Types.Common..=? arg6
+    ,"documentationSupport" Language.LSP.Protocol.Types.Common..=? arg7
+    ,"tagSupport" Language.LSP.Protocol.Types.Common..=? arg8]
 
 instance Aeson.FromJSON CodeActionClientCapabilities where
-  parseJSON = Aeson.withObject "CodeActionClientCapabilities" $ \arg -> CodeActionClientCapabilities <$> arg Language.LSP.Protocol.Types.Common..:!? "dynamicRegistration" <*> arg Language.LSP.Protocol.Types.Common..:!? "codeActionLiteralSupport" <*> arg Language.LSP.Protocol.Types.Common..:!? "isPreferredSupport" <*> arg Language.LSP.Protocol.Types.Common..:!? "disabledSupport" <*> arg Language.LSP.Protocol.Types.Common..:!? "dataSupport" <*> arg Language.LSP.Protocol.Types.Common..:!? "resolveSupport" <*> arg Language.LSP.Protocol.Types.Common..:!? "honorsChangeAnnotations"
+  parseJSON = Aeson.withObject "CodeActionClientCapabilities" $ \arg -> CodeActionClientCapabilities <$> arg Language.LSP.Protocol.Types.Common..:!? "dynamicRegistration" <*> arg Language.LSP.Protocol.Types.Common..:!? "codeActionLiteralSupport" <*> arg Language.LSP.Protocol.Types.Common..:!? "isPreferredSupport" <*> arg Language.LSP.Protocol.Types.Common..:!? "disabledSupport" <*> arg Language.LSP.Protocol.Types.Common..:!? "dataSupport" <*> arg Language.LSP.Protocol.Types.Common..:!? "resolveSupport" <*> arg Language.LSP.Protocol.Types.Common..:!? "honorsChangeAnnotations" <*> arg Language.LSP.Protocol.Types.Common..:!? "documentationSupport" <*> arg Language.LSP.Protocol.Types.Common..:!? "tagSupport"

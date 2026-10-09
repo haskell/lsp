@@ -32,15 +32,20 @@ data InlineValueParams = InlineValueParams
   -}
   _workDoneToken :: (Maybe Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken)
   , {-|
+  An optional token that a server can use to report partial results (e.g. streaming) to
+  the client.
+  -}
+  _partialResultToken :: (Maybe Language.LSP.Protocol.Internal.Types.ProgressToken.ProgressToken)
+  , {-|
   The text document.
   -}
   _textDocument :: Language.LSP.Protocol.Internal.Types.TextDocumentIdentifier.TextDocumentIdentifier
   , {-|
-  The document range for which inline values should be computed.
+  The document range for which inline values information will be returned.
   -}
   _range :: Language.LSP.Protocol.Internal.Types.Range.Range
   , {-|
-  Additional information about the context in which inline values were
+  Additional information about the context in which inline values information was
   requested.
   -}
   _context :: Language.LSP.Protocol.Internal.Types.InlineValueContext.InlineValueContext
@@ -50,10 +55,11 @@ data InlineValueParams = InlineValueParams
   deriving Pretty via (ViaJSON InlineValueParams)
 
 instance Aeson.ToJSON InlineValueParams where
-  toJSON (InlineValueParams arg0 arg1 arg2 arg3) = Aeson.object $ concat $  ["workDoneToken" Language.LSP.Protocol.Types.Common..=? arg0
-    ,["textDocument" Aeson..= arg1]
-    ,["range" Aeson..= arg2]
-    ,["context" Aeson..= arg3]]
+  toJSON (InlineValueParams arg0 arg1 arg2 arg3 arg4) = Aeson.object $ concat $  ["workDoneToken" Language.LSP.Protocol.Types.Common..=? arg0
+    ,"partialResultToken" Language.LSP.Protocol.Types.Common..=? arg1
+    ,["textDocument" Aeson..= arg2]
+    ,["range" Aeson..= arg3]
+    ,["context" Aeson..= arg4]]
 
 instance Aeson.FromJSON InlineValueParams where
-  parseJSON = Aeson.withObject "InlineValueParams" $ \arg -> InlineValueParams <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneToken" <*> arg Aeson..: "textDocument" <*> arg Aeson..: "range" <*> arg Aeson..: "context"
+  parseJSON = Aeson.withObject "InlineValueParams" $ \arg -> InlineValueParams <$> arg Language.LSP.Protocol.Types.Common..:!? "workDoneToken" <*> arg Language.LSP.Protocol.Types.Common..:!? "partialResultToken" <*> arg Aeson..: "textDocument" <*> arg Aeson..: "range" <*> arg Aeson..: "context"

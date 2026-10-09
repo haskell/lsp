@@ -1,0 +1,62 @@
+{- ORMOLU_DISABLE -}
+{- HLINT ignore -}
+-- THIS IS A GENERATED FILE, DO NOT EDIT
+
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+{-# OPTIONS_GHC -Wno-unused-matches #-}
+{-# OPTIONS_GHC -Wno-deprecations #-}
+module Language.LSP.Protocol.Internal.Types.DiagnosticsCapabilities where
+
+import Control.DeepSeq
+import Data.Hashable
+import GHC.Generics
+import Language.LSP.Protocol.Utils.Misc
+import Prettyprinter
+import qualified Data.Aeson as Aeson
+import qualified Data.Row.Aeson as Aeson
+import qualified Data.Row.Hashable as Hashable
+import qualified Language.LSP.Protocol.Internal.Types.ClientDiagnosticsTagOptions
+import qualified Language.LSP.Protocol.Types.Common
+
+{-|
+General diagnostics capabilities for pull and push model.
+-}
+data DiagnosticsCapabilities = DiagnosticsCapabilities 
+  { {-|
+  Whether the clients accepts diagnostics with related information.
+  -}
+  _relatedInformation :: (Maybe Bool)
+  , {-|
+  Client supports the tag property to provide meta data about a diagnostic.
+  Clients supporting tags have to handle unknown tags gracefully.
+
+  @since 3.15.0
+  -}
+  _tagSupport :: (Maybe Language.LSP.Protocol.Internal.Types.ClientDiagnosticsTagOptions.ClientDiagnosticsTagOptions)
+  , {-|
+  Client supports a codeDescription property
+
+  @since 3.16.0
+  -}
+  _codeDescriptionSupport :: (Maybe Bool)
+  , {-|
+  Whether code action supports the `data` property which is
+  preserved between a `textDocument/publishDiagnostics` and
+  `textDocument/codeAction` request.
+
+  @since 3.16.0
+  -}
+  _dataSupport :: (Maybe Bool)
+  }
+  deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData, Hashable)
+  deriving Pretty via (ViaJSON DiagnosticsCapabilities)
+
+instance Aeson.ToJSON DiagnosticsCapabilities where
+  toJSON (DiagnosticsCapabilities arg0 arg1 arg2 arg3) = Aeson.object $ concat $  ["relatedInformation" Language.LSP.Protocol.Types.Common..=? arg0
+    ,"tagSupport" Language.LSP.Protocol.Types.Common..=? arg1
+    ,"codeDescriptionSupport" Language.LSP.Protocol.Types.Common..=? arg2
+    ,"dataSupport" Language.LSP.Protocol.Types.Common..=? arg3]
+
+instance Aeson.FromJSON DiagnosticsCapabilities where
+  parseJSON = Aeson.withObject "DiagnosticsCapabilities" $ \arg -> DiagnosticsCapabilities <$> arg Language.LSP.Protocol.Types.Common..:!? "relatedInformation" <*> arg Language.LSP.Protocol.Types.Common..:!? "tagSupport" <*> arg Language.LSP.Protocol.Types.Common..:!? "codeDescriptionSupport" <*> arg Language.LSP.Protocol.Types.Common..:!? "dataSupport"

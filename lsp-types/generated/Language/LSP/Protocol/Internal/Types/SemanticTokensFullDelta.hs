@@ -21,7 +21,6 @@ import qualified Language.LSP.Protocol.Types.Common
 Semantic tokens options to support deltas for full documents
 
 @since 3.18.0
-@proposed
 -}
 data SemanticTokensFullDelta = SemanticTokensFullDelta 
   { {-|

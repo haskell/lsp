@@ -25,13 +25,20 @@ data DocumentRangeFormattingClientCapabilities = DocumentRangeFormattingClientCa
   Whether range formatting supports dynamic registration.
   -}
   _dynamicRegistration :: (Maybe Bool)
+  , {-|
+  Whether the client supports formatting multiple ranges at once.
+
+  @since 3.18.0
+  -}
+  _rangesSupport :: (Maybe Bool)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
   deriving Pretty via (ViaJSON DocumentRangeFormattingClientCapabilities)
 
 instance Aeson.ToJSON DocumentRangeFormattingClientCapabilities where
-  toJSON (DocumentRangeFormattingClientCapabilities arg0) = Aeson.object $ concat $  ["dynamicRegistration" Language.LSP.Protocol.Types.Common..=? arg0]
+  toJSON (DocumentRangeFormattingClientCapabilities arg0 arg1) = Aeson.object $ concat $  ["dynamicRegistration" Language.LSP.Protocol.Types.Common..=? arg0
+    ,"rangesSupport" Language.LSP.Protocol.Types.Common..=? arg1]
 
 instance Aeson.FromJSON DocumentRangeFormattingClientCapabilities where
-  parseJSON = Aeson.withObject "DocumentRangeFormattingClientCapabilities" $ \arg -> DocumentRangeFormattingClientCapabilities <$> arg Language.LSP.Protocol.Types.Common..:!? "dynamicRegistration"
+  parseJSON = Aeson.withObject "DocumentRangeFormattingClientCapabilities" $ \arg -> DocumentRangeFormattingClientCapabilities <$> arg Language.LSP.Protocol.Types.Common..:!? "dynamicRegistration" <*> arg Language.LSP.Protocol.Types.Common..:!? "rangesSupport"

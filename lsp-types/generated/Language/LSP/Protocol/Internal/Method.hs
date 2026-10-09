@@ -11,7 +11,6 @@ import qualified Data.Aeson
 import qualified Data.Aeson as Aeson
 import qualified Data.Kind as Kind
 import qualified Data.Proxy
-import qualified Data.Row as Row
 import qualified Data.Void
 import qualified GHC.TypeLits
 import qualified Language.LSP.Protocol.Internal.Types.ApplyWorkspaceEditParams
@@ -80,7 +79,7 @@ import qualified Language.LSP.Protocol.Internal.Types.DocumentOnTypeFormattingPa
 import qualified Language.LSP.Protocol.Internal.Types.DocumentOnTypeFormattingRegistrationOptions
 import qualified Language.LSP.Protocol.Internal.Types.DocumentRangeFormattingParams
 import qualified Language.LSP.Protocol.Internal.Types.DocumentRangeFormattingRegistrationOptions
-import qualified Language.LSP.Protocol.Internal.Types.DocumentSelector
+import qualified Language.LSP.Protocol.Internal.Types.DocumentRangesFormattingParams
 import qualified Language.LSP.Protocol.Internal.Types.DocumentSymbol
 import qualified Language.LSP.Protocol.Internal.Types.DocumentSymbolParams
 import qualified Language.LSP.Protocol.Internal.Types.DocumentSymbolRegistrationOptions
@@ -102,6 +101,10 @@ import qualified Language.LSP.Protocol.Internal.Types.InitializedParams
 import qualified Language.LSP.Protocol.Internal.Types.InlayHint
 import qualified Language.LSP.Protocol.Internal.Types.InlayHintParams
 import qualified Language.LSP.Protocol.Internal.Types.InlayHintRegistrationOptions
+import qualified Language.LSP.Protocol.Internal.Types.InlineCompletionItem
+import qualified Language.LSP.Protocol.Internal.Types.InlineCompletionList
+import qualified Language.LSP.Protocol.Internal.Types.InlineCompletionParams
+import qualified Language.LSP.Protocol.Internal.Types.InlineCompletionRegistrationOptions
 import qualified Language.LSP.Protocol.Internal.Types.InlineValue
 import qualified Language.LSP.Protocol.Internal.Types.InlineValueParams
 import qualified Language.LSP.Protocol.Internal.Types.InlineValueRegistrationOptions
@@ -145,6 +148,10 @@ import qualified Language.LSP.Protocol.Internal.Types.SignatureHelpParams
 import qualified Language.LSP.Protocol.Internal.Types.SignatureHelpRegistrationOptions
 import qualified Language.LSP.Protocol.Internal.Types.SymbolInformation
 import qualified Language.LSP.Protocol.Internal.Types.TextDocumentChangeRegistrationOptions
+import qualified Language.LSP.Protocol.Internal.Types.TextDocumentContentParams
+import qualified Language.LSP.Protocol.Internal.Types.TextDocumentContentRefreshParams
+import qualified Language.LSP.Protocol.Internal.Types.TextDocumentContentRegistrationOptions
+import qualified Language.LSP.Protocol.Internal.Types.TextDocumentContentResult
 import qualified Language.LSP.Protocol.Internal.Types.TextDocumentRegistrationOptions
 import qualified Language.LSP.Protocol.Internal.Types.TextDocumentSaveRegistrationOptions
 import qualified Language.LSP.Protocol.Internal.Types.TextEdit
@@ -179,6 +186,7 @@ data Method f t where
   Method_TextDocumentDocumentColor :: Method MM.ClientToServer MM.Request
   Method_TextDocumentColorPresentation :: Method MM.ClientToServer MM.Request
   Method_TextDocumentFoldingRange :: Method MM.ClientToServer MM.Request
+  Method_WorkspaceFoldingRangeRefresh :: Method MM.ServerToClient MM.Request
   Method_TextDocumentDeclaration :: Method MM.ClientToServer MM.Request
   Method_TextDocumentSelectionRange :: Method MM.ClientToServer MM.Request
   Method_WindowWorkDoneProgressCreate :: Method MM.ServerToClient MM.Request
@@ -206,6 +214,9 @@ data Method f t where
   Method_TextDocumentDiagnostic :: Method MM.ClientToServer MM.Request
   Method_WorkspaceDiagnostic :: Method MM.ClientToServer MM.Request
   Method_WorkspaceDiagnosticRefresh :: Method MM.ServerToClient MM.Request
+  Method_TextDocumentInlineCompletion :: Method MM.ClientToServer MM.Request
+  Method_WorkspaceTextDocumentContent :: Method MM.ClientToServer MM.Request
+  Method_WorkspaceTextDocumentContentRefresh :: Method MM.ServerToClient MM.Request
   Method_ClientRegisterCapability :: Method MM.ServerToClient MM.Request
   Method_ClientUnregisterCapability :: Method MM.ServerToClient MM.Request
   Method_Initialize :: Method MM.ClientToServer MM.Request
@@ -231,6 +242,7 @@ data Method f t where
   Method_DocumentLinkResolve :: Method MM.ClientToServer MM.Request
   Method_TextDocumentFormatting :: Method MM.ClientToServer MM.Request
   Method_TextDocumentRangeFormatting :: Method MM.ClientToServer MM.Request
+  Method_TextDocumentRangesFormatting :: Method MM.ClientToServer MM.Request
   Method_TextDocumentOnTypeFormatting :: Method MM.ClientToServer MM.Request
   Method_TextDocumentRename :: Method MM.ClientToServer MM.Request
   Method_TextDocumentPrepareRename :: Method MM.ClientToServer MM.Request
@@ -274,6 +286,7 @@ type family MessageParams (m ::  Method f t) where
   MessageParams Method_TextDocumentDocumentColor = Language.LSP.Protocol.Internal.Types.DocumentColorParams.DocumentColorParams
   MessageParams Method_TextDocumentColorPresentation = Language.LSP.Protocol.Internal.Types.ColorPresentationParams.ColorPresentationParams
   MessageParams Method_TextDocumentFoldingRange = Language.LSP.Protocol.Internal.Types.FoldingRangeParams.FoldingRangeParams
+  MessageParams Method_WorkspaceFoldingRangeRefresh = Maybe Data.Void.Void
   MessageParams Method_TextDocumentDeclaration = Language.LSP.Protocol.Internal.Types.DeclarationParams.DeclarationParams
   MessageParams Method_TextDocumentSelectionRange = Language.LSP.Protocol.Internal.Types.SelectionRangeParams.SelectionRangeParams
   MessageParams Method_WindowWorkDoneProgressCreate = Language.LSP.Protocol.Internal.Types.WorkDoneProgressCreateParams.WorkDoneProgressCreateParams
@@ -301,6 +314,9 @@ type family MessageParams (m ::  Method f t) where
   MessageParams Method_TextDocumentDiagnostic = Language.LSP.Protocol.Internal.Types.DocumentDiagnosticParams.DocumentDiagnosticParams
   MessageParams Method_WorkspaceDiagnostic = Language.LSP.Protocol.Internal.Types.WorkspaceDiagnosticParams.WorkspaceDiagnosticParams
   MessageParams Method_WorkspaceDiagnosticRefresh = Maybe Data.Void.Void
+  MessageParams Method_TextDocumentInlineCompletion = Language.LSP.Protocol.Internal.Types.InlineCompletionParams.InlineCompletionParams
+  MessageParams Method_WorkspaceTextDocumentContent = Language.LSP.Protocol.Internal.Types.TextDocumentContentParams.TextDocumentContentParams
+  MessageParams Method_WorkspaceTextDocumentContentRefresh = Language.LSP.Protocol.Internal.Types.TextDocumentContentRefreshParams.TextDocumentContentRefreshParams
   MessageParams Method_ClientRegisterCapability = Language.LSP.Protocol.Internal.Types.RegistrationParams.RegistrationParams
   MessageParams Method_ClientUnregisterCapability = Language.LSP.Protocol.Internal.Types.UnregistrationParams.UnregistrationParams
   MessageParams Method_Initialize = Language.LSP.Protocol.Internal.Types.InitializeParams.InitializeParams
@@ -326,6 +342,7 @@ type family MessageParams (m ::  Method f t) where
   MessageParams Method_DocumentLinkResolve = Language.LSP.Protocol.Internal.Types.DocumentLink.DocumentLink
   MessageParams Method_TextDocumentFormatting = Language.LSP.Protocol.Internal.Types.DocumentFormattingParams.DocumentFormattingParams
   MessageParams Method_TextDocumentRangeFormatting = Language.LSP.Protocol.Internal.Types.DocumentRangeFormattingParams.DocumentRangeFormattingParams
+  MessageParams Method_TextDocumentRangesFormatting = Language.LSP.Protocol.Internal.Types.DocumentRangesFormattingParams.DocumentRangesFormattingParams
   MessageParams Method_TextDocumentOnTypeFormatting = Language.LSP.Protocol.Internal.Types.DocumentOnTypeFormattingParams.DocumentOnTypeFormattingParams
   MessageParams Method_TextDocumentRename = Language.LSP.Protocol.Internal.Types.RenameParams.RenameParams
   MessageParams Method_TextDocumentPrepareRename = Language.LSP.Protocol.Internal.Types.PrepareRenameParams.PrepareRenameParams
@@ -369,6 +386,7 @@ type family MessageResult (m ::  Method f t) where
   MessageResult Method_TextDocumentDocumentColor = [Language.LSP.Protocol.Internal.Types.ColorInformation.ColorInformation]
   MessageResult Method_TextDocumentColorPresentation = [Language.LSP.Protocol.Internal.Types.ColorPresentation.ColorPresentation]
   MessageResult Method_TextDocumentFoldingRange = ([Language.LSP.Protocol.Internal.Types.FoldingRange.FoldingRange] Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Types.Common.Null)
+  MessageResult Method_WorkspaceFoldingRangeRefresh = Language.LSP.Protocol.Types.Common.Null
   MessageResult Method_TextDocumentDeclaration = (Language.LSP.Protocol.Internal.Types.Declaration.Declaration Language.LSP.Protocol.Types.Common.|? ([Language.LSP.Protocol.Internal.Types.DeclarationLink.DeclarationLink] Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Types.Common.Null))
   MessageResult Method_TextDocumentSelectionRange = ([Language.LSP.Protocol.Internal.Types.SelectionRange.SelectionRange] Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Types.Common.Null)
   MessageResult Method_WindowWorkDoneProgressCreate = Language.LSP.Protocol.Types.Common.Null
@@ -396,6 +414,9 @@ type family MessageResult (m ::  Method f t) where
   MessageResult Method_TextDocumentDiagnostic = Language.LSP.Protocol.Internal.Types.DocumentDiagnosticReport.DocumentDiagnosticReport
   MessageResult Method_WorkspaceDiagnostic = Language.LSP.Protocol.Internal.Types.WorkspaceDiagnosticReport.WorkspaceDiagnosticReport
   MessageResult Method_WorkspaceDiagnosticRefresh = Language.LSP.Protocol.Types.Common.Null
+  MessageResult Method_TextDocumentInlineCompletion = (Language.LSP.Protocol.Internal.Types.InlineCompletionList.InlineCompletionList Language.LSP.Protocol.Types.Common.|? ([Language.LSP.Protocol.Internal.Types.InlineCompletionItem.InlineCompletionItem] Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Types.Common.Null))
+  MessageResult Method_WorkspaceTextDocumentContent = Language.LSP.Protocol.Internal.Types.TextDocumentContentResult.TextDocumentContentResult
+  MessageResult Method_WorkspaceTextDocumentContentRefresh = Language.LSP.Protocol.Types.Common.Null
   MessageResult Method_ClientRegisterCapability = Language.LSP.Protocol.Types.Common.Null
   MessageResult Method_ClientUnregisterCapability = Language.LSP.Protocol.Types.Common.Null
   MessageResult Method_Initialize = Language.LSP.Protocol.Internal.Types.InitializeResult.InitializeResult
@@ -421,6 +442,7 @@ type family MessageResult (m ::  Method f t) where
   MessageResult Method_DocumentLinkResolve = Language.LSP.Protocol.Internal.Types.DocumentLink.DocumentLink
   MessageResult Method_TextDocumentFormatting = ([Language.LSP.Protocol.Internal.Types.TextEdit.TextEdit] Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Types.Common.Null)
   MessageResult Method_TextDocumentRangeFormatting = ([Language.LSP.Protocol.Internal.Types.TextEdit.TextEdit] Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Types.Common.Null)
+  MessageResult Method_TextDocumentRangesFormatting = ([Language.LSP.Protocol.Internal.Types.TextEdit.TextEdit] Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Types.Common.Null)
   MessageResult Method_TextDocumentOnTypeFormatting = ([Language.LSP.Protocol.Internal.Types.TextEdit.TextEdit] Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Types.Common.Null)
   MessageResult Method_TextDocumentRename = (Language.LSP.Protocol.Internal.Types.WorkspaceEdit.WorkspaceEdit Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Types.Common.Null)
   MessageResult Method_TextDocumentPrepareRename = (Language.LSP.Protocol.Internal.Types.PrepareRenameResult.PrepareRenameResult Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Types.Common.Null)
@@ -438,6 +460,7 @@ type family ErrorData (m ::  Method f t) where
   ErrorData Method_TextDocumentDocumentColor = Maybe Data.Void.Void
   ErrorData Method_TextDocumentColorPresentation = Maybe Data.Void.Void
   ErrorData Method_TextDocumentFoldingRange = Maybe Data.Void.Void
+  ErrorData Method_WorkspaceFoldingRangeRefresh = Maybe Data.Void.Void
   ErrorData Method_TextDocumentDeclaration = Maybe Data.Void.Void
   ErrorData Method_TextDocumentSelectionRange = Maybe Data.Void.Void
   ErrorData Method_WindowWorkDoneProgressCreate = Maybe Data.Void.Void
@@ -465,6 +488,9 @@ type family ErrorData (m ::  Method f t) where
   ErrorData Method_TextDocumentDiagnostic = Language.LSP.Protocol.Internal.Types.DiagnosticServerCancellationData.DiagnosticServerCancellationData
   ErrorData Method_WorkspaceDiagnostic = Language.LSP.Protocol.Internal.Types.DiagnosticServerCancellationData.DiagnosticServerCancellationData
   ErrorData Method_WorkspaceDiagnosticRefresh = Maybe Data.Void.Void
+  ErrorData Method_TextDocumentInlineCompletion = Maybe Data.Void.Void
+  ErrorData Method_WorkspaceTextDocumentContent = Maybe Data.Void.Void
+  ErrorData Method_WorkspaceTextDocumentContentRefresh = Maybe Data.Void.Void
   ErrorData Method_ClientRegisterCapability = Maybe Data.Void.Void
   ErrorData Method_ClientUnregisterCapability = Maybe Data.Void.Void
   ErrorData Method_Initialize = Language.LSP.Protocol.Internal.Types.InitializeError.InitializeError
@@ -490,6 +516,7 @@ type family ErrorData (m ::  Method f t) where
   ErrorData Method_DocumentLinkResolve = Maybe Data.Void.Void
   ErrorData Method_TextDocumentFormatting = Maybe Data.Void.Void
   ErrorData Method_TextDocumentRangeFormatting = Maybe Data.Void.Void
+  ErrorData Method_TextDocumentRangesFormatting = Maybe Data.Void.Void
   ErrorData Method_TextDocumentOnTypeFormatting = Maybe Data.Void.Void
   ErrorData Method_TextDocumentRename = Maybe Data.Void.Void
   ErrorData Method_TextDocumentPrepareRename = Maybe Data.Void.Void
@@ -505,8 +532,9 @@ type family RegistrationOptions (m ::  Method f t) where
   RegistrationOptions Method_WorkspaceWorkspaceFolders = Maybe Data.Void.Void
   RegistrationOptions Method_WorkspaceConfiguration = Maybe Data.Void.Void
   RegistrationOptions Method_TextDocumentDocumentColor = Language.LSP.Protocol.Internal.Types.DocumentColorRegistrationOptions.DocumentColorRegistrationOptions
-  RegistrationOptions Method_TextDocumentColorPresentation = (Row.Rec ("workDoneProgress" Row..== (Maybe Bool) Row..+ ("documentSelector" Row..== (Language.LSP.Protocol.Internal.Types.DocumentSelector.DocumentSelector Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Types.Common.Null) Row..+ Row.Empty)))
+  RegistrationOptions Method_TextDocumentColorPresentation = Language.LSP.Protocol.Internal.Types.DocumentColorRegistrationOptions.DocumentColorRegistrationOptions
   RegistrationOptions Method_TextDocumentFoldingRange = Language.LSP.Protocol.Internal.Types.FoldingRangeRegistrationOptions.FoldingRangeRegistrationOptions
+  RegistrationOptions Method_WorkspaceFoldingRangeRefresh = Maybe Data.Void.Void
   RegistrationOptions Method_TextDocumentDeclaration = Language.LSP.Protocol.Internal.Types.DeclarationRegistrationOptions.DeclarationRegistrationOptions
   RegistrationOptions Method_TextDocumentSelectionRange = Language.LSP.Protocol.Internal.Types.SelectionRangeRegistrationOptions.SelectionRangeRegistrationOptions
   RegistrationOptions Method_WindowWorkDoneProgressCreate = Maybe Data.Void.Void
@@ -534,6 +562,9 @@ type family RegistrationOptions (m ::  Method f t) where
   RegistrationOptions Method_TextDocumentDiagnostic = Language.LSP.Protocol.Internal.Types.DiagnosticRegistrationOptions.DiagnosticRegistrationOptions
   RegistrationOptions Method_WorkspaceDiagnostic = Maybe Data.Void.Void
   RegistrationOptions Method_WorkspaceDiagnosticRefresh = Maybe Data.Void.Void
+  RegistrationOptions Method_TextDocumentInlineCompletion = Language.LSP.Protocol.Internal.Types.InlineCompletionRegistrationOptions.InlineCompletionRegistrationOptions
+  RegistrationOptions Method_WorkspaceTextDocumentContent = Language.LSP.Protocol.Internal.Types.TextDocumentContentRegistrationOptions.TextDocumentContentRegistrationOptions
+  RegistrationOptions Method_WorkspaceTextDocumentContentRefresh = Maybe Data.Void.Void
   RegistrationOptions Method_ClientRegisterCapability = Maybe Data.Void.Void
   RegistrationOptions Method_ClientUnregisterCapability = Maybe Data.Void.Void
   RegistrationOptions Method_Initialize = Maybe Data.Void.Void
@@ -559,6 +590,7 @@ type family RegistrationOptions (m ::  Method f t) where
   RegistrationOptions Method_DocumentLinkResolve = Maybe Data.Void.Void
   RegistrationOptions Method_TextDocumentFormatting = Language.LSP.Protocol.Internal.Types.DocumentFormattingRegistrationOptions.DocumentFormattingRegistrationOptions
   RegistrationOptions Method_TextDocumentRangeFormatting = Language.LSP.Protocol.Internal.Types.DocumentRangeFormattingRegistrationOptions.DocumentRangeFormattingRegistrationOptions
+  RegistrationOptions Method_TextDocumentRangesFormatting = Language.LSP.Protocol.Internal.Types.DocumentRangeFormattingRegistrationOptions.DocumentRangeFormattingRegistrationOptions
   RegistrationOptions Method_TextDocumentOnTypeFormatting = Language.LSP.Protocol.Internal.Types.DocumentOnTypeFormattingRegistrationOptions.DocumentOnTypeFormattingRegistrationOptions
   RegistrationOptions Method_TextDocumentRename = Language.LSP.Protocol.Internal.Types.RenameRegistrationOptions.RenameRegistrationOptions
   RegistrationOptions Method_TextDocumentPrepareRename = Maybe Data.Void.Void
@@ -602,6 +634,7 @@ data SMethod m where
   SMethod_TextDocumentDocumentColor :: SMethod Method_TextDocumentDocumentColor
   SMethod_TextDocumentColorPresentation :: SMethod Method_TextDocumentColorPresentation
   SMethod_TextDocumentFoldingRange :: SMethod Method_TextDocumentFoldingRange
+  SMethod_WorkspaceFoldingRangeRefresh :: SMethod Method_WorkspaceFoldingRangeRefresh
   SMethod_TextDocumentDeclaration :: SMethod Method_TextDocumentDeclaration
   SMethod_TextDocumentSelectionRange :: SMethod Method_TextDocumentSelectionRange
   SMethod_WindowWorkDoneProgressCreate :: SMethod Method_WindowWorkDoneProgressCreate
@@ -629,6 +662,9 @@ data SMethod m where
   SMethod_TextDocumentDiagnostic :: SMethod Method_TextDocumentDiagnostic
   SMethod_WorkspaceDiagnostic :: SMethod Method_WorkspaceDiagnostic
   SMethod_WorkspaceDiagnosticRefresh :: SMethod Method_WorkspaceDiagnosticRefresh
+  SMethod_TextDocumentInlineCompletion :: SMethod Method_TextDocumentInlineCompletion
+  SMethod_WorkspaceTextDocumentContent :: SMethod Method_WorkspaceTextDocumentContent
+  SMethod_WorkspaceTextDocumentContentRefresh :: SMethod Method_WorkspaceTextDocumentContentRefresh
   SMethod_ClientRegisterCapability :: SMethod Method_ClientRegisterCapability
   SMethod_ClientUnregisterCapability :: SMethod Method_ClientUnregisterCapability
   SMethod_Initialize :: SMethod Method_Initialize
@@ -654,6 +690,7 @@ data SMethod m where
   SMethod_DocumentLinkResolve :: SMethod Method_DocumentLinkResolve
   SMethod_TextDocumentFormatting :: SMethod Method_TextDocumentFormatting
   SMethod_TextDocumentRangeFormatting :: SMethod Method_TextDocumentRangeFormatting
+  SMethod_TextDocumentRangesFormatting :: SMethod Method_TextDocumentRangesFormatting
   SMethod_TextDocumentOnTypeFormatting :: SMethod Method_TextDocumentOnTypeFormatting
   SMethod_TextDocumentRename :: SMethod Method_TextDocumentRename
   SMethod_TextDocumentPrepareRename :: SMethod Method_TextDocumentPrepareRename
@@ -700,6 +737,7 @@ someMethodToMethodString (SomeMethod SMethod_WorkspaceConfiguration) = "workspac
 someMethodToMethodString (SomeMethod SMethod_TextDocumentDocumentColor) = "textDocument/documentColor"
 someMethodToMethodString (SomeMethod SMethod_TextDocumentColorPresentation) = "textDocument/colorPresentation"
 someMethodToMethodString (SomeMethod SMethod_TextDocumentFoldingRange) = "textDocument/foldingRange"
+someMethodToMethodString (SomeMethod SMethod_WorkspaceFoldingRangeRefresh) = "workspace/foldingRange/refresh"
 someMethodToMethodString (SomeMethod SMethod_TextDocumentDeclaration) = "textDocument/declaration"
 someMethodToMethodString (SomeMethod SMethod_TextDocumentSelectionRange) = "textDocument/selectionRange"
 someMethodToMethodString (SomeMethod SMethod_WindowWorkDoneProgressCreate) = "window/workDoneProgress/create"
@@ -727,6 +765,9 @@ someMethodToMethodString (SomeMethod SMethod_WorkspaceInlayHintRefresh) = "works
 someMethodToMethodString (SomeMethod SMethod_TextDocumentDiagnostic) = "textDocument/diagnostic"
 someMethodToMethodString (SomeMethod SMethod_WorkspaceDiagnostic) = "workspace/diagnostic"
 someMethodToMethodString (SomeMethod SMethod_WorkspaceDiagnosticRefresh) = "workspace/diagnostic/refresh"
+someMethodToMethodString (SomeMethod SMethod_TextDocumentInlineCompletion) = "textDocument/inlineCompletion"
+someMethodToMethodString (SomeMethod SMethod_WorkspaceTextDocumentContent) = "workspace/textDocumentContent"
+someMethodToMethodString (SomeMethod SMethod_WorkspaceTextDocumentContentRefresh) = "workspace/textDocumentContent/refresh"
 someMethodToMethodString (SomeMethod SMethod_ClientRegisterCapability) = "client/registerCapability"
 someMethodToMethodString (SomeMethod SMethod_ClientUnregisterCapability) = "client/unregisterCapability"
 someMethodToMethodString (SomeMethod SMethod_Initialize) = "initialize"
@@ -752,6 +793,7 @@ someMethodToMethodString (SomeMethod SMethod_TextDocumentDocumentLink) = "textDo
 someMethodToMethodString (SomeMethod SMethod_DocumentLinkResolve) = "documentLink/resolve"
 someMethodToMethodString (SomeMethod SMethod_TextDocumentFormatting) = "textDocument/formatting"
 someMethodToMethodString (SomeMethod SMethod_TextDocumentRangeFormatting) = "textDocument/rangeFormatting"
+someMethodToMethodString (SomeMethod SMethod_TextDocumentRangesFormatting) = "textDocument/rangesFormatting"
 someMethodToMethodString (SomeMethod SMethod_TextDocumentOnTypeFormatting) = "textDocument/onTypeFormatting"
 someMethodToMethodString (SomeMethod SMethod_TextDocumentRename) = "textDocument/rename"
 someMethodToMethodString (SomeMethod SMethod_TextDocumentPrepareRename) = "textDocument/prepareRename"
@@ -794,6 +836,7 @@ methodStringToSomeMethod "workspace/configuration" = SomeMethod SMethod_Workspac
 methodStringToSomeMethod "textDocument/documentColor" = SomeMethod SMethod_TextDocumentDocumentColor
 methodStringToSomeMethod "textDocument/colorPresentation" = SomeMethod SMethod_TextDocumentColorPresentation
 methodStringToSomeMethod "textDocument/foldingRange" = SomeMethod SMethod_TextDocumentFoldingRange
+methodStringToSomeMethod "workspace/foldingRange/refresh" = SomeMethod SMethod_WorkspaceFoldingRangeRefresh
 methodStringToSomeMethod "textDocument/declaration" = SomeMethod SMethod_TextDocumentDeclaration
 methodStringToSomeMethod "textDocument/selectionRange" = SomeMethod SMethod_TextDocumentSelectionRange
 methodStringToSomeMethod "window/workDoneProgress/create" = SomeMethod SMethod_WindowWorkDoneProgressCreate
@@ -821,6 +864,9 @@ methodStringToSomeMethod "workspace/inlayHint/refresh" = SomeMethod SMethod_Work
 methodStringToSomeMethod "textDocument/diagnostic" = SomeMethod SMethod_TextDocumentDiagnostic
 methodStringToSomeMethod "workspace/diagnostic" = SomeMethod SMethod_WorkspaceDiagnostic
 methodStringToSomeMethod "workspace/diagnostic/refresh" = SomeMethod SMethod_WorkspaceDiagnosticRefresh
+methodStringToSomeMethod "textDocument/inlineCompletion" = SomeMethod SMethod_TextDocumentInlineCompletion
+methodStringToSomeMethod "workspace/textDocumentContent" = SomeMethod SMethod_WorkspaceTextDocumentContent
+methodStringToSomeMethod "workspace/textDocumentContent/refresh" = SomeMethod SMethod_WorkspaceTextDocumentContentRefresh
 methodStringToSomeMethod "client/registerCapability" = SomeMethod SMethod_ClientRegisterCapability
 methodStringToSomeMethod "client/unregisterCapability" = SomeMethod SMethod_ClientUnregisterCapability
 methodStringToSomeMethod "initialize" = SomeMethod SMethod_Initialize
@@ -846,6 +892,7 @@ methodStringToSomeMethod "textDocument/documentLink" = SomeMethod SMethod_TextDo
 methodStringToSomeMethod "documentLink/resolve" = SomeMethod SMethod_DocumentLinkResolve
 methodStringToSomeMethod "textDocument/formatting" = SomeMethod SMethod_TextDocumentFormatting
 methodStringToSomeMethod "textDocument/rangeFormatting" = SomeMethod SMethod_TextDocumentRangeFormatting
+methodStringToSomeMethod "textDocument/rangesFormatting" = SomeMethod SMethod_TextDocumentRangesFormatting
 methodStringToSomeMethod "textDocument/onTypeFormatting" = SomeMethod SMethod_TextDocumentOnTypeFormatting
 methodStringToSomeMethod "textDocument/rename" = SomeMethod SMethod_TextDocumentRename
 methodStringToSomeMethod "textDocument/prepareRename" = SomeMethod SMethod_TextDocumentPrepareRename
@@ -888,6 +935,7 @@ messageDirection SMethod_WorkspaceConfiguration = MM.SServerToClient
 messageDirection SMethod_TextDocumentDocumentColor = MM.SClientToServer
 messageDirection SMethod_TextDocumentColorPresentation = MM.SClientToServer
 messageDirection SMethod_TextDocumentFoldingRange = MM.SClientToServer
+messageDirection SMethod_WorkspaceFoldingRangeRefresh = MM.SServerToClient
 messageDirection SMethod_TextDocumentDeclaration = MM.SClientToServer
 messageDirection SMethod_TextDocumentSelectionRange = MM.SClientToServer
 messageDirection SMethod_WindowWorkDoneProgressCreate = MM.SServerToClient
@@ -915,6 +963,9 @@ messageDirection SMethod_WorkspaceInlayHintRefresh = MM.SServerToClient
 messageDirection SMethod_TextDocumentDiagnostic = MM.SClientToServer
 messageDirection SMethod_WorkspaceDiagnostic = MM.SClientToServer
 messageDirection SMethod_WorkspaceDiagnosticRefresh = MM.SServerToClient
+messageDirection SMethod_TextDocumentInlineCompletion = MM.SClientToServer
+messageDirection SMethod_WorkspaceTextDocumentContent = MM.SClientToServer
+messageDirection SMethod_WorkspaceTextDocumentContentRefresh = MM.SServerToClient
 messageDirection SMethod_ClientRegisterCapability = MM.SServerToClient
 messageDirection SMethod_ClientUnregisterCapability = MM.SServerToClient
 messageDirection SMethod_Initialize = MM.SClientToServer
@@ -940,6 +991,7 @@ messageDirection SMethod_TextDocumentDocumentLink = MM.SClientToServer
 messageDirection SMethod_DocumentLinkResolve = MM.SClientToServer
 messageDirection SMethod_TextDocumentFormatting = MM.SClientToServer
 messageDirection SMethod_TextDocumentRangeFormatting = MM.SClientToServer
+messageDirection SMethod_TextDocumentRangesFormatting = MM.SClientToServer
 messageDirection SMethod_TextDocumentOnTypeFormatting = MM.SClientToServer
 messageDirection SMethod_TextDocumentRename = MM.SClientToServer
 messageDirection SMethod_TextDocumentPrepareRename = MM.SClientToServer
@@ -982,6 +1034,7 @@ messageKind SMethod_WorkspaceConfiguration = MM.SRequest
 messageKind SMethod_TextDocumentDocumentColor = MM.SRequest
 messageKind SMethod_TextDocumentColorPresentation = MM.SRequest
 messageKind SMethod_TextDocumentFoldingRange = MM.SRequest
+messageKind SMethod_WorkspaceFoldingRangeRefresh = MM.SRequest
 messageKind SMethod_TextDocumentDeclaration = MM.SRequest
 messageKind SMethod_TextDocumentSelectionRange = MM.SRequest
 messageKind SMethod_WindowWorkDoneProgressCreate = MM.SRequest
@@ -1009,6 +1062,9 @@ messageKind SMethod_WorkspaceInlayHintRefresh = MM.SRequest
 messageKind SMethod_TextDocumentDiagnostic = MM.SRequest
 messageKind SMethod_WorkspaceDiagnostic = MM.SRequest
 messageKind SMethod_WorkspaceDiagnosticRefresh = MM.SRequest
+messageKind SMethod_TextDocumentInlineCompletion = MM.SRequest
+messageKind SMethod_WorkspaceTextDocumentContent = MM.SRequest
+messageKind SMethod_WorkspaceTextDocumentContentRefresh = MM.SRequest
 messageKind SMethod_ClientRegisterCapability = MM.SRequest
 messageKind SMethod_ClientUnregisterCapability = MM.SRequest
 messageKind SMethod_Initialize = MM.SRequest
@@ -1034,6 +1090,7 @@ messageKind SMethod_TextDocumentDocumentLink = MM.SRequest
 messageKind SMethod_DocumentLinkResolve = MM.SRequest
 messageKind SMethod_TextDocumentFormatting = MM.SRequest
 messageKind SMethod_TextDocumentRangeFormatting = MM.SRequest
+messageKind SMethod_TextDocumentRangesFormatting = MM.SRequest
 messageKind SMethod_TextDocumentOnTypeFormatting = MM.SRequest
 messageKind SMethod_TextDocumentRename = MM.SRequest
 messageKind SMethod_TextDocumentPrepareRename = MM.SRequest

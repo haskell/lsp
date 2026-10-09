@@ -23,7 +23,7 @@ import qualified Language.LSP.Protocol.Types.Common
 A document filter describes a top level text document or
 a notebook cell document.
 
-@since 3.17.0 - proposed support for NotebookCellTextDocumentFilter.
+@since 3.17.0 - support for NotebookCellTextDocumentFilter.
 -}
 newtype DocumentFilter = DocumentFilter (Language.LSP.Protocol.Internal.Types.TextDocumentFilter.TextDocumentFilter Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Internal.Types.NotebookCellTextDocumentFilter.NotebookCellTextDocumentFilter)
   deriving newtype (Aeson.ToJSON, Aeson.FromJSON)

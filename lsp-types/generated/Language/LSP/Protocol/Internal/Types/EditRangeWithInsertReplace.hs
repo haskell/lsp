@@ -22,7 +22,6 @@ import qualified Language.LSP.Protocol.Types.Common
 Edit range variant that includes ranges for insert and replace operations.
 
 @since 3.18.0
-@proposed
 -}
 data EditRangeWithInsertReplace = EditRangeWithInsertReplace 
   { {-|

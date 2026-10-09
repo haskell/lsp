@@ -22,7 +22,6 @@ import qualified Language.LSP.Protocol.Types.Common
 Captures why the code action is currently disabled.
 
 @since 3.18.0
-@proposed
 -}
 data CodeActionDisabled = CodeActionDisabled 
   { {-|

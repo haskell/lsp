@@ -34,13 +34,6 @@ data PublishDiagnosticsClientCapabilities = PublishDiagnosticsClientCapabilities
   -}
   _tagSupport :: (Maybe Language.LSP.Protocol.Internal.Types.ClientDiagnosticsTagOptions.ClientDiagnosticsTagOptions)
   , {-|
-  Whether the client interprets the version property of the
-  `textDocument/publishDiagnostics` notification's parameter.
-
-  @since 3.15.0
-  -}
-  _versionSupport :: (Maybe Bool)
-  , {-|
   Client supports a codeDescription property
 
   @since 3.16.0
@@ -54,6 +47,13 @@ data PublishDiagnosticsClientCapabilities = PublishDiagnosticsClientCapabilities
   @since 3.16.0
   -}
   _dataSupport :: (Maybe Bool)
+  , {-|
+  Whether the client interprets the version property of the
+  `textDocument/publishDiagnostics` notification's parameter.
+
+  @since 3.15.0
+  -}
+  _versionSupport :: (Maybe Bool)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
@@ -62,9 +62,9 @@ data PublishDiagnosticsClientCapabilities = PublishDiagnosticsClientCapabilities
 instance Aeson.ToJSON PublishDiagnosticsClientCapabilities where
   toJSON (PublishDiagnosticsClientCapabilities arg0 arg1 arg2 arg3 arg4) = Aeson.object $ concat $  ["relatedInformation" Language.LSP.Protocol.Types.Common..=? arg0
     ,"tagSupport" Language.LSP.Protocol.Types.Common..=? arg1
-    ,"versionSupport" Language.LSP.Protocol.Types.Common..=? arg2
-    ,"codeDescriptionSupport" Language.LSP.Protocol.Types.Common..=? arg3
-    ,"dataSupport" Language.LSP.Protocol.Types.Common..=? arg4]
+    ,"codeDescriptionSupport" Language.LSP.Protocol.Types.Common..=? arg2
+    ,"dataSupport" Language.LSP.Protocol.Types.Common..=? arg3
+    ,"versionSupport" Language.LSP.Protocol.Types.Common..=? arg4]
 
 instance Aeson.FromJSON PublishDiagnosticsClientCapabilities where
-  parseJSON = Aeson.withObject "PublishDiagnosticsClientCapabilities" $ \arg -> PublishDiagnosticsClientCapabilities <$> arg Language.LSP.Protocol.Types.Common..:!? "relatedInformation" <*> arg Language.LSP.Protocol.Types.Common..:!? "tagSupport" <*> arg Language.LSP.Protocol.Types.Common..:!? "versionSupport" <*> arg Language.LSP.Protocol.Types.Common..:!? "codeDescriptionSupport" <*> arg Language.LSP.Protocol.Types.Common..:!? "dataSupport"
+  parseJSON = Aeson.withObject "PublishDiagnosticsClientCapabilities" $ \arg -> PublishDiagnosticsClientCapabilities <$> arg Language.LSP.Protocol.Types.Common..:!? "relatedInformation" <*> arg Language.LSP.Protocol.Types.Common..:!? "tagSupport" <*> arg Language.LSP.Protocol.Types.Common..:!? "codeDescriptionSupport" <*> arg Language.LSP.Protocol.Types.Common..:!? "dataSupport" <*> arg Language.LSP.Protocol.Types.Common..:!? "versionSupport"

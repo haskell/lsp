@@ -16,6 +16,7 @@ import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
 import qualified Language.LSP.Protocol.Internal.Types.CodeActionKind
+import qualified Language.LSP.Protocol.Internal.Types.CodeActionKindDocumentation
 import qualified Language.LSP.Protocol.Internal.Types.DocumentSelector
 import qualified Language.LSP.Protocol.Types.Common
 
@@ -40,6 +41,23 @@ data CodeActionRegistrationOptions = CodeActionRegistrationOptions
   -}
   _codeActionKinds :: (Maybe [Language.LSP.Protocol.Internal.Types.CodeActionKind.CodeActionKind])
   , {-|
+  Static documentation for a class of code actions.
+
+  Documentation from the provider should be shown in the code actions menu if either:
+
+  - Code actions of `kind` are requested by the editor. In this case, the editor will show the documentation that
+    most closely matches the requested code action kind. For example, if a provider has documentation for
+    both `Refactor` and `RefactorExtract`, when the user requests code actions for `RefactorExtract`,
+    the editor will use the documentation for `RefactorExtract` instead of the documentation for `Refactor`.
+
+  - Any code actions of `kind` are returned by the provider.
+
+  At most one documentation entry should be shown per provider.
+
+  @since 3.18.0
+  -}
+  _documentation :: (Maybe [Language.LSP.Protocol.Internal.Types.CodeActionKindDocumentation.CodeActionKindDocumentation])
+  , {-|
   The server provides support to resolve additional
   information for a code action.
 
@@ -52,10 +70,11 @@ data CodeActionRegistrationOptions = CodeActionRegistrationOptions
   deriving Pretty via (ViaJSON CodeActionRegistrationOptions)
 
 instance Aeson.ToJSON CodeActionRegistrationOptions where
-  toJSON (CodeActionRegistrationOptions arg0 arg1 arg2 arg3) = Aeson.object $ concat $  [["documentSelector" Aeson..= arg0]
+  toJSON (CodeActionRegistrationOptions arg0 arg1 arg2 arg3 arg4) = Aeson.object $ concat $  [["documentSelector" Aeson..= arg0]
     ,"workDoneProgress" Language.LSP.Protocol.Types.Common..=? arg1
     ,"codeActionKinds" Language.LSP.Protocol.Types.Common..=? arg2
-    ,"resolveProvider" Language.LSP.Protocol.Types.Common..=? arg3]
+    ,"documentation" Language.LSP.Protocol.Types.Common..=? arg3
+    ,"resolveProvider" Language.LSP.Protocol.Types.Common..=? arg4]
 
 instance Aeson.FromJSON CodeActionRegistrationOptions where
-  parseJSON = Aeson.withObject "CodeActionRegistrationOptions" $ \arg -> CodeActionRegistrationOptions <$> arg Aeson..: "documentSelector" <*> arg Language.LSP.Protocol.Types.Common..:!? "workDoneProgress" <*> arg Language.LSP.Protocol.Types.Common..:!? "codeActionKinds" <*> arg Language.LSP.Protocol.Types.Common..:!? "resolveProvider"
+  parseJSON = Aeson.withObject "CodeActionRegistrationOptions" $ \arg -> CodeActionRegistrationOptions <$> arg Aeson..: "documentSelector" <*> arg Language.LSP.Protocol.Types.Common..:!? "workDoneProgress" <*> arg Language.LSP.Protocol.Types.Common..:!? "codeActionKinds" <*> arg Language.LSP.Protocol.Types.Common..:!? "documentation" <*> arg Language.LSP.Protocol.Types.Common..:!? "resolveProvider"

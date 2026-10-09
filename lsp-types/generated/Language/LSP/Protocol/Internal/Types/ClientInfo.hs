@@ -23,7 +23,6 @@ Information about the client
 
 @since 3.15.0
 @since 3.18.0 ClientInfo type name added.
-@proposed
 -}
 data ClientInfo = ClientInfo 
   { {-|

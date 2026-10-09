@@ -16,13 +16,13 @@ import qualified Data.Aeson as Aeson
 import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
 import qualified Data.Text
+import qualified Language.LSP.Protocol.Internal.Types.GlobPattern
 import qualified Language.LSP.Protocol.Types.Common
 
 {-|
 A notebook document filter where `scheme` is required field.
 
 @since 3.18.0
-@proposed
 -}
 data NotebookDocumentFilterScheme = NotebookDocumentFilterScheme 
   { {-|
@@ -36,7 +36,7 @@ data NotebookDocumentFilterScheme = NotebookDocumentFilterScheme
   , {-|
   A glob pattern.
   -}
-  _pattern :: (Maybe Data.Text.Text)
+  _pattern :: (Maybe Language.LSP.Protocol.Internal.Types.GlobPattern.GlobPattern)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)

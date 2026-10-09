@@ -60,6 +60,19 @@ data CodeActionKind =
   -}
   CodeActionKind_RefactorInline
   | {-|
+  Base kind for refactoring move actions: `refactor.move`
+
+  Example move actions:
+
+  - Move a function to a new file
+  - Move a property between classes
+  - Move method to base class
+  - ...
+
+  @since 3.18.0
+  -}
+  CodeActionKind_RefactorMove
+  | {-|
   Base kind for refactoring rewrite actions: 'refactor.rewrite'
 
   Example rewrite actions:
@@ -112,6 +125,7 @@ instance Language.LSP.Protocol.Types.LspEnum.LspEnum CodeActionKind where
     ,CodeActionKind_Refactor
     ,CodeActionKind_RefactorExtract
     ,CodeActionKind_RefactorInline
+    ,CodeActionKind_RefactorMove
     ,CodeActionKind_RefactorRewrite
     ,CodeActionKind_Source
     ,CodeActionKind_SourceOrganizeImports
@@ -123,6 +137,7 @@ instance Language.LSP.Protocol.Types.LspEnum.LspEnum CodeActionKind where
   toEnumBaseType CodeActionKind_Refactor = "refactor"
   toEnumBaseType CodeActionKind_RefactorExtract = "refactor.extract"
   toEnumBaseType CodeActionKind_RefactorInline = "refactor.inline"
+  toEnumBaseType CodeActionKind_RefactorMove = "refactor.move"
   toEnumBaseType CodeActionKind_RefactorRewrite = "refactor.rewrite"
   toEnumBaseType CodeActionKind_Source = "source"
   toEnumBaseType CodeActionKind_SourceOrganizeImports = "source.organizeImports"
@@ -136,6 +151,7 @@ instance Language.LSP.Protocol.Types.LspEnum.LspOpenEnum CodeActionKind where
   fromOpenEnumBaseType "refactor" = CodeActionKind_Refactor
   fromOpenEnumBaseType "refactor.extract" = CodeActionKind_RefactorExtract
   fromOpenEnumBaseType "refactor.inline" = CodeActionKind_RefactorInline
+  fromOpenEnumBaseType "refactor.move" = CodeActionKind_RefactorMove
   fromOpenEnumBaseType "refactor.rewrite" = CodeActionKind_RefactorRewrite
   fromOpenEnumBaseType "source" = CodeActionKind_Source
   fromOpenEnumBaseType "source.organizeImports" = CodeActionKind_SourceOrganizeImports

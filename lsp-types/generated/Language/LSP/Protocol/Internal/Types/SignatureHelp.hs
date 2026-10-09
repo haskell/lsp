@@ -57,6 +57,9 @@ data SignatureHelp = SignatureHelp
   In future version of the protocol this property might become
   mandatory (but still nullable) to better express the active parameter if
   the active signature does have any.
+
+  Since version 3.16.0 the `SignatureInformation` itself provides a
+  `activeParameter` property and it should be used instead of this one.
   -}
   _activeParameter :: (Maybe (Language.LSP.Protocol.Types.Common.UInt Language.LSP.Protocol.Types.Common.|? Language.LSP.Protocol.Types.Common.Null))
   }

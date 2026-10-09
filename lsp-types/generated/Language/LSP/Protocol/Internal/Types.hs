@@ -8,6 +8,7 @@
 module Language.LSP.Protocol.Internal.Types (module Export) where
 
 import Language.LSP.Protocol.Internal.Types.AnnotatedTextEdit as Export
+import Language.LSP.Protocol.Internal.Types.ApplyKind as Export
 import Language.LSP.Protocol.Internal.Types.ApplyWorkspaceEditParams as Export
 import Language.LSP.Protocol.Internal.Types.ApplyWorkspaceEditResult as Export
 import Language.LSP.Protocol.Internal.Types.BaseSymbolInformation as Export
@@ -28,6 +29,7 @@ import Language.LSP.Protocol.Internal.Types.ClientCapabilities as Export
 import Language.LSP.Protocol.Internal.Types.ClientCodeActionKindOptions as Export
 import Language.LSP.Protocol.Internal.Types.ClientCodeActionLiteralOptions as Export
 import Language.LSP.Protocol.Internal.Types.ClientCodeActionResolveOptions as Export
+import Language.LSP.Protocol.Internal.Types.ClientCodeLensResolveOptions as Export
 import Language.LSP.Protocol.Internal.Types.ClientCompletionItemInsertTextModeOptions as Export
 import Language.LSP.Protocol.Internal.Types.ClientCompletionItemOptions as Export
 import Language.LSP.Protocol.Internal.Types.ClientCompletionItemOptionsKind as Export
@@ -50,9 +52,12 @@ import Language.LSP.Protocol.Internal.Types.CodeActionClientCapabilities as Expo
 import Language.LSP.Protocol.Internal.Types.CodeActionContext as Export
 import Language.LSP.Protocol.Internal.Types.CodeActionDisabled as Export
 import Language.LSP.Protocol.Internal.Types.CodeActionKind as Export
+import Language.LSP.Protocol.Internal.Types.CodeActionKindDocumentation as Export
 import Language.LSP.Protocol.Internal.Types.CodeActionOptions as Export
 import Language.LSP.Protocol.Internal.Types.CodeActionParams as Export
 import Language.LSP.Protocol.Internal.Types.CodeActionRegistrationOptions as Export
+import Language.LSP.Protocol.Internal.Types.CodeActionTag as Export
+import Language.LSP.Protocol.Internal.Types.CodeActionTagOptions as Export
 import Language.LSP.Protocol.Internal.Types.CodeActionTriggerKind as Export
 import Language.LSP.Protocol.Internal.Types.CodeDescription as Export
 import Language.LSP.Protocol.Internal.Types.CodeLens as Export
@@ -69,6 +74,7 @@ import Language.LSP.Protocol.Internal.Types.Command as Export
 import Language.LSP.Protocol.Internal.Types.CompletionClientCapabilities as Export
 import Language.LSP.Protocol.Internal.Types.CompletionContext as Export
 import Language.LSP.Protocol.Internal.Types.CompletionItem as Export
+import Language.LSP.Protocol.Internal.Types.CompletionItemApplyKinds as Export
 import Language.LSP.Protocol.Internal.Types.CompletionItemDefaults as Export
 import Language.LSP.Protocol.Internal.Types.CompletionItemKind as Export
 import Language.LSP.Protocol.Internal.Types.CompletionItemLabelDetails as Export
@@ -109,6 +115,7 @@ import Language.LSP.Protocol.Internal.Types.DiagnosticServerCancellationData as 
 import Language.LSP.Protocol.Internal.Types.DiagnosticSeverity as Export
 import Language.LSP.Protocol.Internal.Types.DiagnosticTag as Export
 import Language.LSP.Protocol.Internal.Types.DiagnosticWorkspaceClientCapabilities as Export
+import Language.LSP.Protocol.Internal.Types.DiagnosticsCapabilities as Export
 import Language.LSP.Protocol.Internal.Types.DidChangeConfigurationClientCapabilities as Export
 import Language.LSP.Protocol.Internal.Types.DidChangeConfigurationParams as Export
 import Language.LSP.Protocol.Internal.Types.DidChangeConfigurationRegistrationOptions as Export
@@ -132,6 +139,7 @@ import Language.LSP.Protocol.Internal.Types.DocumentDiagnosticParams as Export
 import Language.LSP.Protocol.Internal.Types.DocumentDiagnosticReport as Export
 import Language.LSP.Protocol.Internal.Types.DocumentDiagnosticReportKind as Export
 import Language.LSP.Protocol.Internal.Types.DocumentDiagnosticReportPartialResult as Export
+import Language.LSP.Protocol.Internal.Types.DocumentDiagnosticReportProgress as Export
 import Language.LSP.Protocol.Internal.Types.DocumentFilter as Export
 import Language.LSP.Protocol.Internal.Types.DocumentFormattingClientCapabilities as Export
 import Language.LSP.Protocol.Internal.Types.DocumentFormattingOptions as Export
@@ -156,6 +164,7 @@ import Language.LSP.Protocol.Internal.Types.DocumentRangeFormattingClientCapabil
 import Language.LSP.Protocol.Internal.Types.DocumentRangeFormattingOptions as Export
 import Language.LSP.Protocol.Internal.Types.DocumentRangeFormattingParams as Export
 import Language.LSP.Protocol.Internal.Types.DocumentRangeFormattingRegistrationOptions as Export
+import Language.LSP.Protocol.Internal.Types.DocumentRangesFormattingParams as Export
 import Language.LSP.Protocol.Internal.Types.DocumentSelector as Export
 import Language.LSP.Protocol.Internal.Types.DocumentSymbol as Export
 import Language.LSP.Protocol.Internal.Types.DocumentSymbolClientCapabilities as Export
@@ -189,6 +198,7 @@ import Language.LSP.Protocol.Internal.Types.FoldingRangeKind as Export
 import Language.LSP.Protocol.Internal.Types.FoldingRangeOptions as Export
 import Language.LSP.Protocol.Internal.Types.FoldingRangeParams as Export
 import Language.LSP.Protocol.Internal.Types.FoldingRangeRegistrationOptions as Export
+import Language.LSP.Protocol.Internal.Types.FoldingRangeWorkspaceClientCapabilities as Export
 import Language.LSP.Protocol.Internal.Types.FormattingOptions as Export
 import Language.LSP.Protocol.Internal.Types.FullDocumentDiagnosticReport as Export
 import Language.LSP.Protocol.Internal.Types.GeneralClientCapabilities as Export
@@ -214,6 +224,14 @@ import Language.LSP.Protocol.Internal.Types.InlayHintOptions as Export
 import Language.LSP.Protocol.Internal.Types.InlayHintParams as Export
 import Language.LSP.Protocol.Internal.Types.InlayHintRegistrationOptions as Export
 import Language.LSP.Protocol.Internal.Types.InlayHintWorkspaceClientCapabilities as Export
+import Language.LSP.Protocol.Internal.Types.InlineCompletionClientCapabilities as Export
+import Language.LSP.Protocol.Internal.Types.InlineCompletionContext as Export
+import Language.LSP.Protocol.Internal.Types.InlineCompletionItem as Export
+import Language.LSP.Protocol.Internal.Types.InlineCompletionList as Export
+import Language.LSP.Protocol.Internal.Types.InlineCompletionOptions as Export
+import Language.LSP.Protocol.Internal.Types.InlineCompletionParams as Export
+import Language.LSP.Protocol.Internal.Types.InlineCompletionRegistrationOptions as Export
+import Language.LSP.Protocol.Internal.Types.InlineCompletionTriggerKind as Export
 import Language.LSP.Protocol.Internal.Types.InlineValue as Export
 import Language.LSP.Protocol.Internal.Types.InlineValueClientCapabilities as Export
 import Language.LSP.Protocol.Internal.Types.InlineValueContext as Export
@@ -312,6 +330,7 @@ import Language.LSP.Protocol.Internal.Types.RenameRegistrationOptions as Export
 import Language.LSP.Protocol.Internal.Types.ResourceOperation as Export
 import Language.LSP.Protocol.Internal.Types.ResourceOperationKind as Export
 import Language.LSP.Protocol.Internal.Types.SaveOptions as Export
+import Language.LSP.Protocol.Internal.Types.SelectedCompletionInfo as Export
 import Language.LSP.Protocol.Internal.Types.SelectionRange as Export
 import Language.LSP.Protocol.Internal.Types.SelectionRangeClientCapabilities as Export
 import Language.LSP.Protocol.Internal.Types.SelectionRangeOptions as Export
@@ -351,8 +370,10 @@ import Language.LSP.Protocol.Internal.Types.SignatureHelpParams as Export
 import Language.LSP.Protocol.Internal.Types.SignatureHelpRegistrationOptions as Export
 import Language.LSP.Protocol.Internal.Types.SignatureHelpTriggerKind as Export
 import Language.LSP.Protocol.Internal.Types.SignatureInformation as Export
+import Language.LSP.Protocol.Internal.Types.SnippetTextEdit as Export
 import Language.LSP.Protocol.Internal.Types.StaleRequestSupportOptions as Export
 import Language.LSP.Protocol.Internal.Types.StaticRegistrationOptions as Export
+import Language.LSP.Protocol.Internal.Types.StringValue as Export
 import Language.LSP.Protocol.Internal.Types.SymbolInformation as Export
 import Language.LSP.Protocol.Internal.Types.SymbolKind as Export
 import Language.LSP.Protocol.Internal.Types.SymbolTag as Export
@@ -361,8 +382,15 @@ import Language.LSP.Protocol.Internal.Types.TextDocumentClientCapabilities as Ex
 import Language.LSP.Protocol.Internal.Types.TextDocumentContentChangeEvent as Export
 import Language.LSP.Protocol.Internal.Types.TextDocumentContentChangePartial as Export
 import Language.LSP.Protocol.Internal.Types.TextDocumentContentChangeWholeDocument as Export
+import Language.LSP.Protocol.Internal.Types.TextDocumentContentClientCapabilities as Export
+import Language.LSP.Protocol.Internal.Types.TextDocumentContentOptions as Export
+import Language.LSP.Protocol.Internal.Types.TextDocumentContentParams as Export
+import Language.LSP.Protocol.Internal.Types.TextDocumentContentRefreshParams as Export
+import Language.LSP.Protocol.Internal.Types.TextDocumentContentRegistrationOptions as Export
+import Language.LSP.Protocol.Internal.Types.TextDocumentContentResult as Export
 import Language.LSP.Protocol.Internal.Types.TextDocumentEdit as Export
 import Language.LSP.Protocol.Internal.Types.TextDocumentFilter as Export
+import Language.LSP.Protocol.Internal.Types.TextDocumentFilterClientCapabilities as Export
 import Language.LSP.Protocol.Internal.Types.TextDocumentFilterLanguage as Export
 import Language.LSP.Protocol.Internal.Types.TextDocumentFilterPattern as Export
 import Language.LSP.Protocol.Internal.Types.TextDocumentFilterScheme as Export
@@ -413,6 +441,7 @@ import Language.LSP.Protocol.Internal.Types.WorkspaceDiagnosticReportPartialResu
 import Language.LSP.Protocol.Internal.Types.WorkspaceDocumentDiagnosticReport as Export
 import Language.LSP.Protocol.Internal.Types.WorkspaceEdit as Export
 import Language.LSP.Protocol.Internal.Types.WorkspaceEditClientCapabilities as Export
+import Language.LSP.Protocol.Internal.Types.WorkspaceEditMetadata as Export
 import Language.LSP.Protocol.Internal.Types.WorkspaceFolder as Export
 import Language.LSP.Protocol.Internal.Types.WorkspaceFoldersChangeEvent as Export
 import Language.LSP.Protocol.Internal.Types.WorkspaceFoldersInitializeParams as Export

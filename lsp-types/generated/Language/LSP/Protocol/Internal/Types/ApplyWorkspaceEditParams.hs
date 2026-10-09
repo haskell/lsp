@@ -17,6 +17,7 @@ import qualified Data.Row.Aeson as Aeson
 import qualified Data.Row.Hashable as Hashable
 import qualified Data.Text
 import qualified Language.LSP.Protocol.Internal.Types.WorkspaceEdit
+import qualified Language.LSP.Protocol.Internal.Types.WorkspaceEditMetadata
 import qualified Language.LSP.Protocol.Types.Common
 
 {-|
@@ -33,14 +34,21 @@ data ApplyWorkspaceEditParams = ApplyWorkspaceEditParams
   The edits to apply.
   -}
   _edit :: Language.LSP.Protocol.Internal.Types.WorkspaceEdit.WorkspaceEdit
+  , {-|
+  Additional data about the edit.
+
+  @since 3.18.0
+  -}
+  _metadata :: (Maybe Language.LSP.Protocol.Internal.Types.WorkspaceEditMetadata.WorkspaceEditMetadata)
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData, Hashable)
   deriving Pretty via (ViaJSON ApplyWorkspaceEditParams)
 
 instance Aeson.ToJSON ApplyWorkspaceEditParams where
-  toJSON (ApplyWorkspaceEditParams arg0 arg1) = Aeson.object $ concat $  ["label" Language.LSP.Protocol.Types.Common..=? arg0
-    ,["edit" Aeson..= arg1]]
+  toJSON (ApplyWorkspaceEditParams arg0 arg1 arg2) = Aeson.object $ concat $  ["label" Language.LSP.Protocol.Types.Common..=? arg0
+    ,["edit" Aeson..= arg1]
+    ,"metadata" Language.LSP.Protocol.Types.Common..=? arg2]
 
 instance Aeson.FromJSON ApplyWorkspaceEditParams where
-  parseJSON = Aeson.withObject "ApplyWorkspaceEditParams" $ \arg -> ApplyWorkspaceEditParams <$> arg Language.LSP.Protocol.Types.Common..:!? "label" <*> arg Aeson..: "edit"
+  parseJSON = Aeson.withObject "ApplyWorkspaceEditParams" $ \arg -> ApplyWorkspaceEditParams <$> arg Language.LSP.Protocol.Types.Common..:!? "label" <*> arg Aeson..: "edit" <*> arg Language.LSP.Protocol.Types.Common..:!? "metadata"
