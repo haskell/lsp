@@ -96,6 +96,7 @@ import Control.Concurrent.Async (async, cancel)
 readFileUtf8 :: OsPath -> IO T.Text
 readFileUtf8 fp = FileIO.withFile fp ReadMode $ \h -> do
   hSetEncoding h utf8
+  hSetNewlineMode h nativeNewlineMode
   T.hGetContents h
 
 -- | A session representing one instance of launching and connecting to a server.

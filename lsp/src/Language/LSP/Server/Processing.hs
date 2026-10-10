@@ -131,12 +131,14 @@ initializeRequestHandler logger ServerDefinition{..} vfs sendFunc waitSender req
       handleErr (Right a) = pure $ Just a
   E.handle (initializeErrorHandler $ sendResp . makeResponseError (req ^. L.id)) $ handleErr <=< runExceptT $ mdo
     let p = req ^. L.params
-    let rootDir =
-          getFirst . foldMap First $
-            [ p ^? L.rootUri . _L >>= uriToFilePath
-            , fromText <$> (p ^? L.rootPath . _Just . _L)
-            ]
-    let clientCaps = p ^. L.capabilities
+        rootDir =
+          getFirst $
+            foldMap
+              First
+              [ p ^? L.rootUri . _L >>= uriToFilePath
+              , p ^? L.rootPath . _Just . _L <&> fromText
+              ]
+        clientCaps = p ^. L.capabilities
 
     let initialWfs = case p ^. L.workspaceFolders of
           Just (InL xs) -> xs
