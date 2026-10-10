@@ -170,7 +170,6 @@ import Data.Maybe
 import Data.Set qualified as Set
 import Data.String (fromString)
 import Data.Text qualified as T
-import Data.Text.Encoding qualified as T
 import Data.Traversable (for)
 import Language.LSP.Protocol.Capabilities qualified as C
 import Language.LSP.Protocol.Lens qualified as L
@@ -612,15 +611,15 @@ createDoc file languageId contents = do
 {- | Opens a text document that /exists on disk/, and sends a
  textDocument/didOpen notification to the server.
 
- The file is read as UTF-8 (undecodable bytes become U+FFFD) and its line
- endings are normalized to LF. Use 'openDoc'' to open a document with
+ The file is read as UTF-8 text with native newline handling (CRLF is
+ translated to LF on Windows). Use 'openDoc'' to open a document with
  verbatim contents.
 -}
 openDoc :: OsPath -> LanguageKind -> Session TextDocumentIdentifier
 openDoc file languageId = do
   context <- ask
   let fp = rootDir context OsPath.</> file
-  contents <- liftIO $ readFileUtf8Lenient fp
+  contents <- liftIO $ readFileUtf8 fp
   openDoc' file languageId contents
 
 {- | This is a variant of `openDoc` that takes the file content as an argument.
