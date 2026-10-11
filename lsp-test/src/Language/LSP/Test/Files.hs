@@ -5,6 +5,7 @@
 module Language.LSP.Test.Files (
   swapFiles,
   rootDir,
+  osToText,
 )
 where
 
@@ -12,22 +13,39 @@ import Control.Lens
 import Data.Map.Strict qualified as M
 import Data.Maybe
 import Data.Text qualified as T
+import Data.Text.From (fromText)
 import Data.Time.Clock
 import Language.LSP.Protocol.Lens qualified as L
 import Language.LSP.Protocol.Message
 import Language.LSP.Protocol.Types
-import System.Directory
-import System.FilePath
+import System.Directory.OsPath qualified as Dir
+import System.IO.Unsafe (unsafePerformIO)
+import System.OsPath (OsPath, decodeFS, makeRelative, (</>))
 
 data Event
   = ClientEv UTCTime FromClientMessage
   | ServerEv UTCTime FromServerMessage
 
-swapFiles :: FilePath -> [Event] -> IO [Event]
+{- | 'osFromText' is pure: 'fromText' encodes UTF-8 (POSIX) or UTF-16 LE
+(Windows) without touching the locale, so it is the exact inverse of
+'osToText' only under a UTF-8 locale.
+
+'osToText' decodes with the (roundtrip variant of the) locale encoding,
+which is quasi-total and stable for the lifetime of the process, so
+forcing it with 'unsafePerformIO' here cannot throw and yields
+consistent results across calls.
+-}
+osFromText :: T.Text -> OsPath
+osFromText = fromText
+
+osToText :: OsPath -> T.Text
+osToText = T.pack . unsafePerformIO . decodeFS
+
+swapFiles :: OsPath -> [Event] -> IO [Event]
 swapFiles relCurBaseDir msgs = do
   let capturedBaseDir = rootDir msgs
 
-  curBaseDir <- (</> relCurBaseDir) <$> getCurrentDirectory
+  curBaseDir <- (</> relCurBaseDir) <$> Dir.getCurrentDirectory
   let transform uri =
         let fp = fromMaybe (error "Couldn't transform uri") (uriToFilePath uri)
             newFp = curBaseDir </> makeRelative capturedBaseDir fp
@@ -36,7 +54,7 @@ swapFiles relCurBaseDir msgs = do
 
   return newMsgs
 
-rootDir :: [Event] -> FilePath
+rootDir :: [Event] -> OsPath
 rootDir (ClientEv _ (FromClientMess SMethod_Initialize req) : _) =
   fromMaybe (error "Couldn't find root dir") $ do
     rootUri <- case req ^. L.params . L.rootUri of
@@ -93,10 +111,10 @@ mapUris f event =
   transformInit :: InitializeParams -> InitializeParams
   transformInit x =
     let modifyRootPath p =
-          let fp = T.unpack p
+          let fp = osFromText p
               uri = filePathToUri fp
            in case uriToFilePath (f uri) of
-                Just fp -> T.pack fp
+                Just fp' -> osToText fp'
                 Nothing -> p
      in x
           & L.rootUri . _L %~ f

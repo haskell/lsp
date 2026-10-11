@@ -20,6 +20,7 @@ import Language.LSP.Server
 import System.Directory
 import System.FilePath
 import System.IO
+import System.OsPath (decodeFS)
 import System.Process
 import UnliftIO
 import UnliftIO.Concurrent
@@ -98,8 +99,9 @@ handlers =
         \noti -> do
           let TNotificationMessage _ _ (DidOpenTextDocumentParams doc) = noti
               TextDocumentItem uri _ _ _ = doc
-              Just fp = uriToFilePath uri
-              diag =
+              Just fpOsp = uriToFilePath uri
+          fp <- liftIO $ decodeFS fpOsp
+          let diag =
                 Diagnostic
                   (mkRange 0 0 0 1)
                   (Just DiagnosticSeverity_Warning)

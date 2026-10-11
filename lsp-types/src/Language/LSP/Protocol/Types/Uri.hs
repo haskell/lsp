@@ -29,14 +29,19 @@ import Data.List (stripPrefix)
 import Data.String (IsString (fromString))
 import Data.Text (Text)
 import Data.Text qualified as T
+import Data.Text.From (fromText)
 import GHC.Generics
+import GHC.IO.Encoding (getFileSystemEncoding)
 import Network.URI hiding (authority)
 import Prettyprinter
 import Safe (tailMay)
-import System.FilePath qualified as FP
 import System.FilePath.Posix qualified as FPP
 import System.FilePath.Windows qualified as FPW
+import System.IO (TextEncoding, utf16le)
+import System.IO.Unsafe (unsafePerformIO)
 import System.Info qualified
+import System.OsPath (OsPath)
+import System.OsPath qualified as OSP
 
 -- | The @Uri@ type in the LSP specification.
 newtype Uri = Uri {getUri :: Text}
@@ -100,18 +105,45 @@ windowsOS = "mingw32"
 
 type SystemOS = String
 
-uriToFilePath :: Uri -> Maybe FilePath
+-- | Encoding of the underlying filesystem.
+systemEnc :: TextEncoding
+systemEnc = unsafePerformIO getFileSystemEncoding
+{-# NOINLINE systemEnc #-}
+
+{- | Encode a 'FilePath' into an 'OsPath' using the system encoding.
+Imprecise-exception (error) on pathological encodings.
+-}
+pathToOsPath :: FilePath -> OSP.OsPath
+pathToOsPath = either (error . show) id . OSP.encodeWith systemEnc utf16le
+
+{- | Decode an 'OsPath' into a 'FilePath' using the system encoding.
+Imprecise-exception (error) on pathological encodings.
+-}
+osPathToPath :: OSP.OsPath -> FilePath
+osPathToPath = either (error . show) id . OSP.decodeWith systemEnc utf16le
+
+uriToFilePath :: Uri -> Maybe OSP.OsPath
 uriToFilePath = platformAwareUriToFilePath System.Info.os
 
 {-# WARNING platformAwareUriToFilePath "This function is considered private. Use normalizedFilePathToUri instead." #-}
-platformAwareUriToFilePath :: String -> Uri -> Maybe FilePath
-platformAwareUriToFilePath systemOS (Uri uri) = do
+platformAwareUriToFilePath :: String -> Uri -> Maybe OSP.OsPath
+platformAwareUriToFilePath =
+  -- Total: unencodable paths yield Nothing rather than throwing, since this
+  -- is reachable from peer-supplied URIs (e.g. via 'toNormalizedUri').
+  uriToOsPath
+
+{- | Internal OsPath-returning pipeline, shared by 'platformAwareUriToFilePath'
+and 'uriToNormalizedFilePath'.
+-}
+uriToOsPath :: String -> Uri -> Maybe OSP.OsPath
+uriToOsPath systemOS (Uri uri) = do
   URI{..} <- parseURI $ T.unpack uri
   if uriScheme == fileScheme
     then
-      return $
-        platformAdjustFromUriPath systemOS (uriRegName <$> uriAuthority) $
-          unEscapeString uriPath
+      either (const Nothing) Just $
+        OSP.encodeWith systemEnc utf16le $
+          platformAdjustFromUriPath systemOS (uriRegName <$> uriAuthority) $
+            unEscapeString uriPath
     else Nothing
 
 {- | We pull in the authority because in relative file paths the Uri likes to put everything before the slash
@@ -138,12 +170,12 @@ platformAdjustFromUriPath systemOS authority srcPath =
            in FPW.joinDrive drive $ FPW.joinPath rest
         _ -> srcPath
 
-filePathToUri :: FilePath -> Uri
-filePathToUri = platformAwareFilePathToUri System.Info.os . FP.normalise
+filePathToUri :: OSP.OsPath -> Uri
+filePathToUri = platformAwareFilePathToUri System.Info.os . OSP.normalise
 
 {-# WARNING platformAwareFilePathToUri "This function is considered private. Use normalizedUriToFilePath instead." #-}
-platformAwareFilePathToUri :: SystemOS -> FilePath -> Uri
-platformAwareFilePathToUri systemOS fp =
+platformAwareFilePathToUri :: SystemOS -> OSP.OsPath -> Uri
+platformAwareFilePathToUri systemOS osp =
   Uri . T.pack . show $
     URI
       { uriScheme = fileScheme
@@ -152,6 +184,8 @@ platformAwareFilePathToUri systemOS fp =
       , uriQuery = ""
       , uriFragment = ""
       }
+ where
+  fp = osPathToPath osp
 
 platformAdjustToUriPath :: SystemOS -> FilePath -> String
 platformAdjustToUriPath systemOS srcPath
@@ -175,21 +209,6 @@ platformAdjustToUriPath systemOS srcPath
         FPP.addTrailingPathSeparator (init drv)
     | otherwise = drv
 
-{- Note [Adoption Plan of OsPath]
-Currently we store 'Text' in 'NormalizedFilePath'. We may change it to OsPath in the future if
-the following steps are executed.
-
-1. In the client codebase, use 'osPathToNormalizedFilePath' and 'normalizedFilePathToOsPath' instead of 'fromNormalizedFilePath'
-  and 'toNormalizedFilePath'. For HLS, we could wait until GHC 9.6 becomes the oldest
-  GHC we support, then change 'FilePath' to OsPath everywhere in the codebase.
-2. Deprecate and remove 'fromNormalizedFilePath' and 'toNormalizedFilePath'.
-3. Change 'Text' to OsPath and benchmark it to make sure performance doesn't go down. Don't forget to check Windows,
-  as OsPath on Windows uses UTF-16, which may consume more memory.
-
-See [#453](https://github.com/haskell/lsp/pull/453) and [#446](https://github.com/haskell/lsp/pull/446)
-for more discussions on this topic.
--}
-
 {- | A file path that is already normalized.
 
 The 'NormalizedUri' is cached to avoided
@@ -198,28 +217,32 @@ repeated normalisation when we need to compute them (which is a lot).
 This is one of the most performance critical parts of HLS, do not
 modify it without profiling.
 -}
-data NormalizedFilePath = NormalizedFilePath !NormalizedUri {-# UNPACK #-} !Text
+data NormalizedFilePath = NormalizedFilePath !NormalizedUri {-# UNPACK #-} !OsPath
   deriving stock (Generic, Eq, Ord)
 
 instance NFData NormalizedFilePath
 
 instance Binary NormalizedFilePath where
-  put (NormalizedFilePath _ fp) = put fp
+  put (NormalizedFilePath _ fp) = put (T.pack (osPathToPath fp))
   get = do
     v <- Data.Binary.get :: Get Text
-    return (NormalizedFilePath (internalNormalizedFilePathToUri (T.unpack v)) v)
+    let fp = fromText v
+    return (NormalizedFilePath (internalNormalizedFilePathToUri fp) fp)
 
 {- | Internal helper that takes a file path that is assumed to
  already be normalized to a URI. It is up to the caller
  to ensure normalization.
 -}
-internalNormalizedFilePathToUri :: FilePath -> NormalizedUri
+internalNormalizedFilePathToUri :: OSP.OsPath -> NormalizedUri
 internalNormalizedFilePathToUri fp = nuri
  where
-  uriPath = platformAdjustToUriPath System.Info.os fp
+  uriPath = platformAdjustToUriPath System.Info.os (osPathToPath fp)
   nuriStr = T.pack $ fileScheme <> "//" <> uriPath
   nuri = NormalizedUri (hash nuriStr) nuriStr
 
+-- Show output is the 'OsPath''s own rendering: raw bytes on POSIX (non-ASCII
+-- paths appear as escapes\/mojibake), UCS-2-decoded on Windows. Total;
+-- see Note [OsPath adoption].
 instance Show NormalizedFilePath where
   show (NormalizedFilePath _ fp) = "NormalizedFilePath " ++ show fp
 
@@ -229,25 +252,23 @@ instance Hashable NormalizedFilePath where
 
 instance IsString NormalizedFilePath where
   fromString :: String -> NormalizedFilePath
-  fromString = toNormalizedFilePath
+  fromString = toNormalizedFilePath . pathToOsPath
 
-toNormalizedFilePath :: FilePath -> NormalizedFilePath
-toNormalizedFilePath fp = NormalizedFilePath nuri . T.pack $ nfp
+toNormalizedFilePath :: OSP.OsPath -> NormalizedFilePath
+toNormalizedFilePath osp = NormalizedFilePath nuri osp'
  where
-  nfp = FP.normalise fp
-  nuri = internalNormalizedFilePathToUri nfp
+  osp' = OSP.normalise osp
+  nuri = internalNormalizedFilePathToUri osp'
 
--- | Extracts 'FilePath' from 'NormalizedFilePath'.
-fromNormalizedFilePath :: NormalizedFilePath -> FilePath
-fromNormalizedFilePath (NormalizedFilePath _ fp) = T.unpack fp
+-- | Returns the stored 'OsPath' without any encoding step.
+fromNormalizedFilePath :: NormalizedFilePath -> OSP.OsPath
+fromNormalizedFilePath (NormalizedFilePath _ fp) = fp
 
 normalizedFilePathToUri :: NormalizedFilePath -> NormalizedUri
 normalizedFilePathToUri (NormalizedFilePath uri _) = uri
 
 uriToNormalizedFilePath :: NormalizedUri -> Maybe NormalizedFilePath
-uriToNormalizedFilePath nuri = fmap (NormalizedFilePath nuri . T.pack) mbFilePath
- where
-  mbFilePath = platformAwareUriToFilePath System.Info.os (fromNormalizedUri nuri)
+uriToNormalizedFilePath nuri = NormalizedFilePath nuri <$> uriToOsPath System.Info.os (fromNormalizedUri nuri)
 
 emptyNormalizedUri :: NormalizedUri
 emptyNormalizedUri =
@@ -256,4 +277,4 @@ emptyNormalizedUri =
 
 -- | 'NormalizedFilePath' that contains an empty file path
 emptyNormalizedFilePath :: NormalizedFilePath
-emptyNormalizedFilePath = NormalizedFilePath emptyNormalizedUri ""
+emptyNormalizedFilePath = NormalizedFilePath emptyNormalizedUri mempty

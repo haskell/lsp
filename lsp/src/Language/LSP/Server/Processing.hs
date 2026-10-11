@@ -50,6 +50,7 @@ import Data.Map.Strict qualified as Map
 import Data.Monoid
 import Data.String (fromString)
 import Data.Text qualified as T
+import Data.Text.From (fromText)
 import Data.Text.Lazy.Encoding qualified as TL
 import Language.LSP.Protocol.Lens qualified as L
 import Language.LSP.Protocol.Message
@@ -135,7 +136,7 @@ initializeRequestHandler logger ServerDefinition{..} vfs sendFunc waitSender req
             foldMap
               First
               [ p ^? L.rootUri . _L >>= uriToFilePath
-              , p ^? L.rootPath . _Just . _L <&> T.unpack
+              , p ^? L.rootPath . _Just . _L <&> fromText
               ]
         clientCaps = p ^. L.capabilities
 

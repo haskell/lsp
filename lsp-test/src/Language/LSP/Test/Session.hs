@@ -29,6 +29,7 @@ module Language.LSP.Test.Session
   , logMsg
   , LogMsgType(..)
   , documentChangeUri
+  , readFileUtf8
   )
 
 where
@@ -61,7 +62,7 @@ import Data.List
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Text as T
-import qualified Data.Text.IO as T
+import Data.Text.IO qualified as T
 import Data.Maybe
 import Data.Function
 import Language.LSP.Protocol.Types as LSP
@@ -72,8 +73,9 @@ import Language.LSP.Test.Compat
 import Language.LSP.Test.Decoding
 import Language.LSP.Test.Exceptions
 import System.Console.ANSI
-import System.Directory
 import System.IO
+import System.OsPath (OsPath)
+import System.File.OsPath qualified as FileIO
 import System.Process (ProcessHandle())
 #ifndef mingw32_HOST_OS
 import System.Process (waitForProcess)
@@ -84,6 +86,18 @@ import Colog.Core (LogAction (..), WithSeverity (..), Severity (..))
 import Data.String (fromString)
 import Data.Either (partitionEithers)
 import Control.Concurrent.Async (async, cancel)
+
+-- | Reads a file as UTF-8 'T.Text' via a text-mode handle: line endings get
+-- the RTS's native newline translation (on Windows, CRLF is translated to
+-- LF), matching the 'Data.Text.IO.readFile' behaviour this replaced.
+-- 'FileIO.readFile'' is binary and performs no newline translation.
+-- Decoding is strict: invalid UTF-8 raises an 'IOException' rather than
+-- being replaced.
+readFileUtf8 :: OsPath -> IO T.Text
+readFileUtf8 fp = FileIO.withFile fp ReadMode $ \h -> do
+  hSetEncoding h utf8
+  hSetNewlineMode h nativeNewlineMode
+  T.hGetContents h
 
 -- | A session representing one instance of launching and connecting to a server.
 --
@@ -146,7 +160,7 @@ data SessionMessage = ServerMessage FromServerMessage
 data SessionContext = SessionContext
   {
     serverIn :: Handle
-  , rootDir :: FilePath
+  , rootDir :: OsPath
   , messageChan :: Chan SessionMessage -- ^ Where all messages come through
   -- Keep curTimeoutId in SessionContext, as its tied to messageChan
   , curTimeoutId :: IORef Int -- ^ The current timeout we are waiting on
@@ -258,13 +272,11 @@ runSession' :: Handle -- ^ Server in
             -> (Handle -> SessionContext -> IO ()) -- ^ Server listener
             -> SessionConfig
             -> ClientCapabilities
-            -> FilePath -- ^ Root directory
+            -> OsPath -- ^ Root directory; must already be canonical (see 'Language.LSP.Test.runSessionWithHandles', which canonicalises before calling this)
             -> Session () -- ^ To exit the Server properly
             -> Session a
             -> IO a
 runSession' serverIn serverOut mServerProc serverHandler config caps rootDir exitServer session = do
-  absRootDir <- canonicalizePath rootDir
-
   hSetBuffering serverIn  NoBuffering
   hSetBuffering serverOut NoBuffering
   -- This is required to make sure that we don’t get any
@@ -281,7 +293,7 @@ runSession' serverIn serverOut mServerProc serverHandler config caps rootDir exi
 
   let context = SessionContext
         serverIn
-        absRootDir
+        rootDir
         messageChan
         timeoutIdVar
         reqMap
@@ -458,7 +470,7 @@ updateState (FromServerMess SMethod_WorkspaceApplyEdit r) = do
           -- if its not open, open it
           unless (has (vfsMap . ix (toNormalizedUri uri)) oldVFS) $ do
             let fp = fromJust $ uriToFilePath uri
-            contents <- liftIO $ T.readFile fp
+            contents <- liftIO $ readFileUtf8 fp
             let item = TextDocumentItem (filePathToUri fp) "" 0 contents
                 msg = TNotificationMessage "2.0" SMethod_TextDocumentDidOpen (DidOpenTextDocumentParams item)
             sendMessage msg

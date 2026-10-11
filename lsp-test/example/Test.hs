@@ -1,14 +1,16 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuasiQuotes #-}
 
 import Control.Applicative.Combinators
 import Control.Monad.IO.Class
 import Language.LSP.Protocol.Message
 import Language.LSP.Protocol.Types
 import Language.LSP.Test
+import System.OsPath qualified as OsPath
 
 main :: IO ()
-main = runSession "lsp-demo-reactor-server" fullLatestClientCaps "test/data/" $ do
-  doc <- openDoc "Rename.hs" "haskell"
+main = runSession "lsp-demo-reactor-server" fullLatestClientCaps [OsPath.osp|test/data/|] $ do
+  doc <- openDoc [OsPath.osp|Rename.hs|] "haskell"
 
   -- Use your favourite favourite combinators.
   skipManyTill loggingNotification (count 1 publishDiagnosticsNotification)

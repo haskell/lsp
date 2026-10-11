@@ -1,23 +1,13 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE OverloadedStrings #-}
 -- We're testing our own deprecated function here!
 {-# OPTIONS_GHC -Wno-deprecations #-}
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
-#if MIN_VERSION_filepath(1,4,100)
-
-#define OS_PATH
-#endif
-
 module URIFilePathSpec where
 
-#ifdef OS_PATH
-import qualified System.OsPath           as OsPath
-import Control.Exception (throwIO)
-import Data.Maybe (fromJust)
-#endif
-
 import Control.Monad (when)
+import Data.Binary (decode, encode)
+import Data.Char (GeneralCategory (..), generalCategory)
 import Data.List
 import Data.Text (Text, pack)
 import Language.LSP.Protocol.Types
@@ -27,7 +17,10 @@ import Network.URI
 import System.FilePath (normalise)
 import System.FilePath.Windows qualified as FPW
 import System.IO
+import System.IO.Unsafe (unsafePerformIO)
 import System.Info qualified
+import System.OsPath (OsPath)
+import System.OsPath qualified as OsPath
 import Test.Hspec
 import Test.QuickCheck
 
@@ -36,11 +29,17 @@ import Test.QuickCheck
 isWindows :: Bool
 isWindows = System.Info.os == "mingw32"
 
+{- | Deterministic 'OsPath' from a 'FilePath' literal (requires the
+file-system encoding to be set, see 'spec').
+-}
+toOsPath :: FilePath -> OsPath
+toOsPath = unsafePerformIO . OsPath.encodeFS
+
 main :: IO ()
 main = hspec spec
 
 spec :: Spec
-spec = do
+spec = beforeAll (setFileSystemEncoding utf8) $ do
   describe "Platform aware URI file path functions" platformAwareUriFilePathSpec
   describe "URI file path functions" uriFilePathSpec
   describe "URI normalization functions" uriNormalizeSpec
@@ -68,34 +67,34 @@ platformAwareUriFilePathSpec :: Spec
 platformAwareUriFilePathSpec = do
   it "converts a URI to a POSIX file path" $ do
     let theFilePath = platformAwareUriToFilePath "posix" testPosixUri
-    theFilePath `shouldBe` Just testPosixFilePath
+    theFilePath `shouldBe` Just (toOsPath testPosixFilePath)
 
   it "converts a POSIX file path to a URI" $ do
-    let theUri = platformAwareFilePathToUri "posix" testPosixFilePath
+    let theUri = platformAwareFilePathToUri "posix" (toOsPath testPosixFilePath)
     theUri `shouldBe` testPosixUri
 
   it "converts a URI to a Windows file path" $ do
     let theFilePath = platformAwareUriToFilePath windowsOS testWindowsUri
-    theFilePath `shouldBe` Just testWindowsFilePath
+    theFilePath `shouldBe` Just (toOsPath testWindowsFilePath)
 
   it "converts a Windows file path to a URI" $ do
-    let theUri = platformAwareFilePathToUri windowsOS testWindowsFilePath
+    let theUri = platformAwareFilePathToUri windowsOS (toOsPath testWindowsFilePath)
     theUri `shouldBe` testWindowsUri
 
   it "converts a POSIX file path to a URI" $ do
-    let theFilePath = platformAwareFilePathToUri "posix" "./Functional.hs"
+    let theFilePath = platformAwareFilePathToUri "posix" (toOsPath "./Functional.hs")
     theFilePath `shouldBe` (Uri "file://./Functional.hs")
 
   it "converts a Windows file path to a URI" $ do
-    let theFilePath = platformAwareFilePathToUri windowsOS "./Functional.hs"
+    let theFilePath = platformAwareFilePathToUri windowsOS (toOsPath "./Functional.hs")
     theFilePath `shouldBe` (Uri "file:///./Functional.hs")
 
   it "converts a Windows file path to a URI" $ do
-    let theFilePath = platformAwareFilePathToUri windowsOS "c:/Functional.hs"
+    let theFilePath = platformAwareFilePathToUri windowsOS (toOsPath "c:/Functional.hs")
     theFilePath `shouldBe` Uri "file:///c:/Functional.hs"
 
   it "converts a POSIX file path to a URI and back" $ do
-    let theFilePath = platformAwareFilePathToUri "posix" "./Functional.hs"
+    let theFilePath = platformAwareFilePathToUri "posix" (toOsPath "./Functional.hs")
     theFilePath `shouldBe` Uri "file://./Functional.hs"
     let Just (URI scheme' auth' path' query' frag') = parseURI "file://./Functional.hs"
     (scheme', auth', path', query', frag')
@@ -105,24 +104,24 @@ platformAwareUriFilePathSpec = do
                  , ""
                  , ""
                  )
-    Just "./Functional.hs" `shouldBe` platformAwareUriToFilePath "posix" theFilePath
+    Just (toOsPath "./Functional.hs") `shouldBe` platformAwareUriToFilePath "posix" theFilePath
 
   it "converts a Posix file path to a URI and back" $ property $ forAll genPosixFilePath $ \fp -> do
-    let uri = platformAwareFilePathToUri "posix" fp
-    platformAwareUriToFilePath "posix" uri `shouldBe` Just fp
+    let uri = platformAwareFilePathToUri "posix" (toOsPath fp)
+    platformAwareUriToFilePath "posix" uri `shouldBe` Just (toOsPath fp)
 
   it "converts a Windows file path to a URI and back" $ property $ forAll genWindowsFilePath $ \fp -> do
-    let uri = platformAwareFilePathToUri windowsOS fp
+    let uri = platformAwareFilePathToUri windowsOS (toOsPath fp)
     -- We normalise to account for changes in the path separator.
     -- But driver letters are *not* normalized so we skip them
     when (not $ "c:" `isPrefixOf` fp) $
-      platformAwareUriToFilePath windowsOS uri `shouldBe` Just (FPW.normalise fp)
+      platformAwareUriToFilePath windowsOS uri `shouldBe` Just (toOsPath (FPW.normalise fp))
 
   it "converts a relative POSIX file path to a URI and back" $ do
-    let uri = platformAwareFilePathToUri "posix" relativePosixFilePath
+    let uri = platformAwareFilePathToUri "posix" (toOsPath relativePosixFilePath)
     uri `shouldBe` Uri "file://myself/example.hs"
     let back = platformAwareUriToFilePath "posix" uri
-    back `shouldBe` Just relativePosixFilePath
+    back `shouldBe` Just (toOsPath relativePosixFilePath)
 
 testUri :: Uri
 testUri
@@ -191,37 +190,37 @@ uriFilePathSpec :: Spec
 uriFilePathSpec = do
   it "converts a URI to a file path" $ do
     let theFilePath = uriToFilePath testUri
-    theFilePath `shouldBe` Just testFilePath
+    theFilePath `shouldBe` Just (toOsPath testFilePath)
 
   it "converts a file path to a URI" $ do
-    let theUri = filePathToUri testFilePath
+    let theUri = filePathToUri (toOsPath testFilePath)
     theUri `shouldBe` testUri
 
   it "removes unnecessary current directory paths" $ do
-    let theUri = filePathToUri withCurrentDirFilePath
+    let theUri = filePathToUri (toOsPath withCurrentDirFilePath)
     theUri `shouldBe` testUri
 
   when isWindows $
     it "make the drive letter upper case when converting a Windows file path to a URI" $ do
-      let theUri = filePathToUri withLowerCaseDriveLetterFilePath
+      let theUri = filePathToUri (toOsPath withLowerCaseDriveLetterFilePath)
       theUri `shouldBe` testUri
 
   it "converts a file path to a URI and back" $ property $ forAll genFilePath $ \fp -> do
-    let uri = filePathToUri fp
-    uriToFilePath uri `shouldBe` Just (normalise fp)
+    let uri = filePathToUri (toOsPath fp)
+    uriToFilePath uri `shouldBe` Just (toOsPath (normalise fp))
 
   it "converts a relative file path to a URI and back" $ do
-    let uri = filePathToUri relativeFilePath
+    let uri = filePathToUri (toOsPath relativeFilePath)
     uri `shouldBe` fromRelativefilePathUri
     let back = uriToFilePath uri
-    back `shouldBe` Just relativeFilePath
+    back `shouldBe` Just (toOsPath relativeFilePath)
 
   it "converts a file path with initial current dir to a URI and back" $ do
-    let uri = filePathToUri withInitialCurrentDirFilePath
+    let uri = filePathToUri (toOsPath withInitialCurrentDirFilePath)
     uri `shouldBe` Uri (pack withInitialCurrentDirUriStr)
     let Just (URI scheme' auth' path' query' frag') = parseURI withInitialCurrentDirUriStr
     (scheme', auth', path', query', frag') `shouldBe` withInitialCurrentDirUriParts
-    Just "Functional.hs" `shouldBe` uriToFilePath uri
+    Just (toOsPath "Functional.hs") `shouldBe` uriToFilePath uri
 
 uriNormalizeSpec :: Spec
 uriNormalizeSpec = do
@@ -243,19 +242,19 @@ uriNormalizeSpec = do
   it "converts a file path with reserved uri chars to a normalized URI and back" $ do
     let start = if isWindows then "C:\\" else "/"
     let fp = start ++ "path;part#fragmen?param=val"
-    let nuri = toNormalizedUri (filePathToUri fp)
-    uriToFilePath (fromNormalizedUri nuri) `shouldBe` Just fp
+    let nuri = toNormalizedUri (filePathToUri (toOsPath fp))
+    uriToFilePath (fromNormalizedUri nuri) `shouldBe` Just (toOsPath fp)
 
   it "converts a file path with substrings that looks like uri escaped chars and back" $ do
     let start = if isWindows then "C:\\" else "/"
     let fp = start ++ "ca%C3%B1a"
-    let nuri = toNormalizedUri (filePathToUri fp)
-    uriToFilePath (fromNormalizedUri nuri) `shouldBe` Just fp
+    let nuri = toNormalizedUri (filePathToUri (toOsPath fp))
+    uriToFilePath (fromNormalizedUri nuri) `shouldBe` Just (toOsPath fp)
 
   it "converts a file path to a normalized URI and back" $ property $ forAll genFilePath $ \fp -> do
-    let nuri = toNormalizedUri (filePathToUri fp)
+    let nuri = toNormalizedUri (filePathToUri (toOsPath fp))
     case uriToFilePath (fromNormalizedUri nuri) of
-      Just nfp -> nfp `shouldBe` (normalise fp)
+      Just nfp -> nfp `shouldBe` toOsPath (normalise fp)
       Nothing -> return () -- Some unicode paths creates invalid uris, ignoring for now
 
 genFilePath :: Gen FilePath
@@ -282,49 +281,45 @@ genPosixFilePath = do
 genValidUnicodeChar :: Gen Char
 genValidUnicodeChar = arbitraryUnicodeChar `suchThat` isCharacter
  where
-  isCharacter x = x /= '\65534' && x /= '\65535'
+  isCharacter x =
+    x /= '\65534'
+      && x /= '\65535'
+      && generalCategory x /= Surrogate -- lone surrogates are rejected by encodeFS
 
 normalizedFilePathSpec :: Spec
-normalizedFilePathSpec = beforeAll (setFileSystemEncoding utf8) $ do
+normalizedFilePathSpec = do
   it "makes file path normalized" $ property $ forAll genFilePath $ \fp -> do
-    let nfp = toNormalizedFilePath fp
-    fromNormalizedFilePath nfp `shouldBe` (normalise fp)
+    let nfp = toNormalizedFilePath (toOsPath fp)
+    fromNormalizedFilePath nfp `shouldBe` toOsPath (normalise fp)
+
+  it "roundtrips through Binary" $ property $ forAll genFilePath $ \fp -> do
+    let nfp = toNormalizedFilePath (toOsPath fp)
+    decode (encode nfp) `shouldBe` nfp
 
   it "converts to a normalized uri and back" $ property $ forAll genFilePath $ \fp -> do
-    let nuri = normalizedFilePathToUri (toNormalizedFilePath fp)
+    let nuri = normalizedFilePathToUri (toNormalizedFilePath (toOsPath fp))
     case uriToNormalizedFilePath nuri of
-      Just nfp -> fromNormalizedFilePath nfp `shouldBe` (normalise fp)
+      Just nfp -> fromNormalizedFilePath nfp `shouldBe` toOsPath (normalise fp)
       Nothing -> return () -- Some unicode paths creates invalid uris, ignoring for now
   it "converts a file path with reserved uri chars to a normalized URI and back" $ do
     let start = if isWindows then "C:\\" else "/"
     let fp = start ++ "path;part#fragmen?param=val"
-    let nuri = normalizedFilePathToUri (toNormalizedFilePath fp)
-    fmap fromNormalizedFilePath (uriToNormalizedFilePath nuri) `shouldBe` Just fp
+    let nuri = normalizedFilePathToUri (toNormalizedFilePath (toOsPath fp))
+    fmap fromNormalizedFilePath (uriToNormalizedFilePath nuri) `shouldBe` Just (toOsPath fp)
 
   it "converts a file path with substrings that looks like uri escaped chars and back" $ do
     let start = if isWindows then "C:\\" else "/"
     let fp = start ++ "ca%C3%B1a"
-    let nuri = normalizedFilePathToUri (toNormalizedFilePath fp)
-    fmap fromNormalizedFilePath (uriToNormalizedFilePath nuri) `shouldBe` Just fp
+    let nuri = normalizedFilePathToUri (toNormalizedFilePath (toOsPath fp))
+    fmap fromNormalizedFilePath (uriToNormalizedFilePath nuri) `shouldBe` Just (toOsPath fp)
 
   it "creates the same NormalizedUri than the older implementation" $ property $ forAll genFilePath $ \fp -> do
-    let nuri = normalizedFilePathToUri (toNormalizedFilePath fp)
-    let oldNuri = toNormalizedUri (filePathToUri fp)
+    let nuri = normalizedFilePathToUri (toNormalizedFilePath (toOsPath fp))
+    let oldNuri = toNormalizedUri (filePathToUri (toOsPath fp))
     nuri `shouldBe` oldNuri
 
-#ifdef OS_PATH
-  it "converts to NormalizedFilePath and back sucessfully" $ property $ forAll genFilePath $ \fp -> do
-    let osPath = fromJust (OsPath.encodeUtf fp)
-    osPath' <- osPathToNormalizedFilePath osPath >>= normalizedFilePathToOsPath
-    osPath' `shouldBe` OsPath.normalise osPath
-
-  it "can not convert OsPath in non-standard encoding to NormalizedFilePath" $
-    -- Windows always use UTF16LE, the following test case doesn't apply
-    when (not isWindows) $
-      -- \184921 is an example that the raw bytes of UTF16 is not valid UTF8.
-      -- Case like this is not very common. I found it with the help of QuickCheck.
-      case OsPath.encodeWith utf16be utf16be "\184921" of
-        Left err -> throwIO err
-        Right osPath  -> do
-          osPathToNormalizedFilePath osPath `shouldThrow` \(_ :: EncodingException) -> True
-#endif
+  it "roundtrips OsPath through NormalizedFilePath and Uri" $
+    property $
+      forAll (toOsPath <$> genFilePath) $ \fp -> do
+        fromNormalizedFilePath (toNormalizedFilePath fp) `shouldBe` OsPath.normalise fp
+        uriToFilePath (filePathToUri fp) `shouldBe` Just (OsPath.normalise fp)

@@ -12,6 +12,7 @@ import Language.LSP.Protocol.Message
 import Language.LSP.Protocol.Types
 import Language.LSP.Server
 import Language.LSP.Test qualified as Test
+import System.Directory.OsPath qualified as OsPath
 import System.Environment
 import System.Process hiding (env)
 import System.Time.Extra
@@ -56,7 +57,9 @@ main = do
 
   i <- newIORef (0 :: Integer)
 
-  Test.runSessionWithHandles hinWrite houtRead Test.defaultConfig Test.fullLatestClientCaps "." $ do
+  rootDir <- OsPath.getCurrentDirectory
+
+  Test.runSessionWithHandles hinWrite houtRead Test.defaultConfig Test.fullLatestClientCaps rootDir $ do
     start <- liftIO offsetTime
     replicateM_ n $ do
       v <- liftIO $ readIORef i
