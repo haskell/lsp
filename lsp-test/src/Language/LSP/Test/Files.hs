@@ -18,10 +18,9 @@ import Data.Time.Clock
 import Language.LSP.Protocol.Lens qualified as L
 import Language.LSP.Protocol.Message
 import Language.LSP.Protocol.Types
-import System.Directory.OsPath qualified as OsPath
+import System.Directory.OsPath qualified as Dir
 import System.IO.Unsafe (unsafePerformIO)
-import System.OsPath (OsPath)
-import System.OsPath qualified as OsPath
+import System.OsPath (OsPath, decodeFS, makeRelative, (</>))
 
 data Event
   = ClientEv UTCTime FromClientMessage
@@ -40,16 +39,16 @@ osFromText :: T.Text -> OsPath
 osFromText = fromText
 
 osToText :: OsPath -> T.Text
-osToText = T.pack . unsafePerformIO . OsPath.decodeFS
+osToText = T.pack . unsafePerformIO . decodeFS
 
 swapFiles :: OsPath -> [Event] -> IO [Event]
 swapFiles relCurBaseDir msgs = do
   let capturedBaseDir = rootDir msgs
 
-  curBaseDir <- (OsPath.</> relCurBaseDir) <$> OsPath.getCurrentDirectory
+  curBaseDir <- (</> relCurBaseDir) <$> Dir.getCurrentDirectory
   let transform uri =
         let fp = fromMaybe (error "Couldn't transform uri") (uriToFilePath uri)
-            newFp = curBaseDir OsPath.</> OsPath.makeRelative capturedBaseDir fp
+            newFp = curBaseDir </> makeRelative capturedBaseDir fp
          in filePathToUri newFp
       newMsgs = map (mapUris transform) msgs
 

@@ -164,8 +164,8 @@ benchmark simple-bench
   ghc-options:        -Wall -O2 -rtsopts
   build-depends:
     , base
+    , directory
     , extra
-    , filepath
     , lsp
     , lsp-test
     , process
