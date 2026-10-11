@@ -29,6 +29,7 @@ import Data.List (stripPrefix)
 import Data.String (IsString (fromString))
 import Data.Text (Text)
 import Data.Text qualified as T
+import Data.Text.From (fromText)
 import GHC.Generics
 import GHC.IO.Encoding (getFileSystemEncoding)
 import Network.URI hiding (authority)
@@ -225,7 +226,7 @@ instance Binary NormalizedFilePath where
   put (NormalizedFilePath _ fp) = put (T.pack (osPathToPath fp))
   get = do
     v <- Data.Binary.get :: Get Text
-    let fp = pathToOsPath (T.unpack v)
+    let fp = fromText v
     return (NormalizedFilePath (internalNormalizedFilePathToUri fp) fp)
 
 {- | Internal helper that takes a file path that is assumed to
@@ -259,8 +260,7 @@ toNormalizedFilePath osp = NormalizedFilePath nuri osp'
   osp' = OSP.normalise osp
   nuri = internalNormalizedFilePathToUri osp'
 
-{- | Returns the stored 'OsPath' without any encoding step.
--}
+-- | Returns the stored 'OsPath' without any encoding step.
 fromNormalizedFilePath :: NormalizedFilePath -> OSP.OsPath
 fromNormalizedFilePath (NormalizedFilePath _ fp) = fp
 

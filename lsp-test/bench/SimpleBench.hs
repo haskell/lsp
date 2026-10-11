@@ -12,8 +12,8 @@ import Language.LSP.Protocol.Message
 import Language.LSP.Protocol.Types
 import Language.LSP.Server
 import Language.LSP.Test qualified as Test
-import System.Environment
 import System.Directory.OsPath qualified as OsPath
+import System.Environment
 import System.Process hiding (env)
 import System.Time.Extra
 

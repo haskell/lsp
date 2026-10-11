@@ -6,6 +6,7 @@
 module URIFilePathSpec where
 
 import Control.Monad (when)
+import Data.Binary (decode, encode)
 import Data.Char (GeneralCategory (..), generalCategory)
 import Data.List
 import Data.Text (Text, pack)
@@ -290,6 +291,10 @@ normalizedFilePathSpec = do
   it "makes file path normalized" $ property $ forAll genFilePath $ \fp -> do
     let nfp = toNormalizedFilePath (toOsPath fp)
     fromNormalizedFilePath nfp `shouldBe` toOsPath (normalise fp)
+
+  it "roundtrips through Binary" $ property $ forAll genFilePath $ \fp -> do
+    let nfp = toNormalizedFilePath (toOsPath fp)
+    decode (encode nfp) `shouldBe` nfp
 
   it "converts to a normalized uri and back" $ property $ forAll genFilePath $ \fp -> do
     let nuri = normalizedFilePathToUri (toNormalizedFilePath (toOsPath fp))

@@ -66,6 +66,7 @@ library
     , Diff                           >=0.4   && <1.1
     , dlist                          ^>=1.0
     , filepath
+    , from-text                      ^>=0.1
     , hashable                       >=1.4 && <1.6
     , indexed-traversable            ^>=0.1
     , indexed-traversable-instances  ^>=0.1
@@ -641,6 +642,7 @@ test-suite lsp-types-test
   build-depends:
     , aeson
     , base
+    , binary
     , filepath
     , hspec
     , hspec-golden
