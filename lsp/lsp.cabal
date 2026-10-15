@@ -97,18 +97,19 @@ executable lsp-demo-reactor-server
   main-is:            Reactor.hs
   hs-source-dirs:     example
   default-language:   GHC2021
-  build-depends:
-    , aeson
-    , base
-    , co-log-core
-    , lens
-    , lsp
-    , prettyprinter
-    , stm
-    , text
 
   -- the package library. Comment this out if you want repl changes to propagate
-  if !flag(demo)
+  if flag(demo)
+    build-depends:
+      , aeson
+      , base
+      , co-log-core
+      , lens
+      , lsp
+      , prettyprinter
+      , stm
+      , text
+  else
     buildable: False
 
 executable lsp-demo-simple-server
@@ -116,13 +117,14 @@ executable lsp-demo-simple-server
   main-is:            Simple.hs
   hs-source-dirs:     example
   default-language:   GHC2021
-  build-depends:
-    , base
-    , lsp
-    , text
 
   -- the package library. Comment this out if you want repl changes to propagate
-  if !flag(demo)
+  if flag(demo)
+    build-depends:
+      , base
+      , lsp
+      , text
+  else
     buildable: False
 
 flag demo
